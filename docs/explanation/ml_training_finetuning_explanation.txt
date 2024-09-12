@@ -1,0 +1,1 @@
+Model: Scripts and frameworks for model training.\nPurpose: Training and fine-tuning custom AI models.

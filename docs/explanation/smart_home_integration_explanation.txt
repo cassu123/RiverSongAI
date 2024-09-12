@@ -1,0 +1,1 @@
+Model: Custom scripts/libraries for smart home device control.\nPurpose: Integrating with Google Home, SmartThings, and Home Assistant.

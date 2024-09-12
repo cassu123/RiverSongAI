@@ -1,0 +1,30 @@
+2024-08-25 01:45:43,254 - INFO - Security Manager initialized with new encryption key.
+2024-08-25 01:45:43,259 - INFO - Data encrypted successfully.
+2024-08-25 01:45:43,260 - INFO - Data decrypted successfully.
+2024-08-25 01:45:43,260 - INFO - Security Manager initialized with new encryption key.
+2024-08-25 01:45:43,672 - INFO - Password hashed successfully using bcrypt.
+2024-08-25 01:45:44,060 - INFO - Password verification completed.
+2024-08-25 01:45:44,061 - INFO - Security Manager initialized with new encryption key.
+2024-08-25 01:45:44,218 - INFO - Encryption key rotated successfully.
+2024-08-25 01:45:44,219 - INFO - Data encrypted successfully.
+2024-08-25 01:45:44,220 - INFO - Data decrypted successfully.
+2024-08-25 01:45:44,221 - INFO - Security Manager initialized with new encryption key.
+2024-08-25 01:45:44,221 - INFO - Encryption key saved to file successfully.
+2024-08-25 01:45:44,222 - INFO - Security Manager initialized with new encryption key.
+2024-08-25 01:45:44,222 - ERROR - Insecure file permissions for the key file.
+2024-08-25 01:51:09,778 - INFO - Security Manager initialized with new encryption key.
+2024-08-25 01:51:09,782 - INFO - Data encrypted successfully.
+2024-08-25 01:51:09,783 - INFO - Data decrypted successfully.
+2024-08-25 01:51:09,783 - INFO - Security Manager initialized with new encryption key.
+2024-08-25 01:51:10,134 - INFO - Password hashed successfully using bcrypt.
+2024-08-25 01:51:10,486 - INFO - Password verification completed.
+2024-08-25 01:51:10,487 - INFO - Security Manager initialized with new encryption key.
+2024-08-25 01:51:10,624 - INFO - Encryption key rotated successfully.
+2024-08-25 01:51:10,624 - INFO - Data encrypted successfully.
+2024-08-25 01:51:10,625 - INFO - Data decrypted successfully.
+2024-08-25 01:51:10,626 - INFO - Security Manager initialized with new encryption key.
+2024-08-25 01:51:10,626 - INFO - Encryption key saved to file successfully.
+2024-08-25 01:51:10,626 - INFO - Security Manager initialized with new encryption key.
+2024-08-25 01:51:10,851 - INFO - Encryption key loaded from file successfully.
+2024-08-25 01:51:10,852 - INFO - Data encrypted successfully.
+2024-08-25 01:51:10,852 - INFO - Data decrypted successfully.

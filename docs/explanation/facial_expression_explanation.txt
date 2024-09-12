@@ -1,0 +1,1 @@
+Model: Facial Expression Emotion Detection\nPurpose: Detect emotions from facial expressions.

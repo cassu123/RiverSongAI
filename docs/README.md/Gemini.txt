@@ -1,0 +1,37 @@
+# GeminiAI Core Module
+
+## Overview
+
+GeminiAI is a core AI module for the River Song AI project, providing functionalities for natural language processing, computer vision, and machine learning.
+
+## Setup Instructions
+
+1. **Clone the Repository**:
+    ```bash
+    git clone https://github.com/yourusername/riversong-ai.git
+    cd riversong-ai
+    ```
+
+2. **Create and Activate Virtual Environment**:
+    ```bash
+    python -m venv venv
+    # Windows
+    venv\Scripts\activate
+    # macOS/Linux
+    source venv/bin/activate
+    ```
+
+3. **Install Dependencies**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4. **Run Unit Tests**:
+    ```bash
+    python -m unittest discover tests
+    ```
+
+## Usage
+
+```bash
+python gemini_ai.py
