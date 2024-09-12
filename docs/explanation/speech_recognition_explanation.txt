@@ -1,0 +1,1 @@
+Model: Google Speech-to-Text\nPurpose: Converting speech to text for voice commands.

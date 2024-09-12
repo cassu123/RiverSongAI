@@ -1,0 +1,1 @@
+Model: Text-Based Emotion Detection\nPurpose: Detect emotions from text input.

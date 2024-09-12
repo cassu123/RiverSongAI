@@ -1,0 +1,87 @@
+import time
+import threading
+import logging
+from typing import Callable, Dict, Any, List
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+class Scheduler:
+    """
+    A class for scheduling tasks to run at specific intervals.
+    """
+
+    def __init__(self):
+        """
+        Initialize the Scheduler class with an empty task list.
+        """
+        self.tasks: List[Dict[str, Any]] = []
+        self._stop_event = threading.Event()  # Event to stop the scheduler gracefully
+        logging.info("Scheduler initialized.")
+
+    def add_task(self, task_name: str, function: Callable, interval: int) -> None:
+        """
+        Adds a task to the scheduler.
+
+        Args:
+            task_name (str): The name of the task.
+            function (Callable): The function to run.
+            interval (int): The interval in seconds to run the task.
+        """
+        task = {
+            'task_name': task_name,
+            'function': function,
+            'interval': interval,
+            'next_run': time.time() + interval
+        }
+        self.tasks.append(task)
+        logging.info(f"Task '{task_name}' added to the scheduler.")
+
+    def remove_task(self, task_name: str) -> None:
+        """
+        Removes a task from the scheduler.
+
+        Args:
+            task_name (str): The name of the task to remove.
+        """
+        self.tasks = [task for task in self.tasks if task['task_name'] != task_name]
+        logging.info(f"Task '{task_name}' removed from the scheduler.")
+
+    def run(self) -> None:
+        """
+        Runs the scheduler, executing tasks at their scheduled intervals.
+        """
+        logging.info("Scheduler started.")
+        try:
+            while not self._stop_event.is_set():
+                now = time.time()
+                for task in self.tasks:
+                    if now >= task['next_run']:
+                        logging.info(f"Running task '{task['task_name']}'")
+                        thread = threading.Thread(target=task['function'])
+                        thread.start()
+                        task['next_run'] = now + task['interval']
+                time.sleep(1)
+        except Exception as e:
+            logging.error(f"Error running scheduler: {e}")
+
+    def stop(self) -> None:
+        """
+        Stops the scheduler gracefully.
+        """
+        logging.info("Stopping scheduler...")
+        self._stop_event.set()
+
+if __name__ == "__main__":
+    # Example usage of the Scheduler
+    def example_task():
+        print("Task executed!")
+
+    scheduler = Scheduler()
+    scheduler.add_task("Example Task", example_task, 5)
+    
+    try:
+        scheduler.run()
+    except KeyboardInterrupt:
+        scheduler.stop()
+        logging.info("Scheduler stopped.")

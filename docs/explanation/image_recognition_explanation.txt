@@ -1,0 +1,1 @@
+Model: TensorFlow/PyTorch for image classification.\nPurpose: Image recognition for activity detection.

@@ -1,0 +1,100 @@
+<<<<<<<<<<<<<<  ✨ Codeium Command 🌟  >>>>>>>>>>>>>>>>
+# Suggestion for managing environment variables securely:
+# Use a secure environment variable management service like Hashicorp's Vault or AWS Secrets Manager to store and retrieve the OpenAI API key.
+import logging
+from typing import Optional, Callable
+import openai
+import os
+
+# Recommendation for handling more specific errors in the user_friendly_error function:
+# Expand the error mapping to include specific error types and their corresponding user-friendly messages. For example, handle errors like "ConnectionError", "TimeoutError", and "ValueError" with more descriptive messages.
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Enhancements to make the retry decorator more robust and flexible:
+# Add an option to specify the retry delay between attempts. This can be useful for scenarios where the error is temporary and a short delay is sufficient.
+# Implement a backoff strategy to increase the retry delay between attempts. This can be useful for scenarios where the error is more persistent and a longer delay is needed.
+# Add support for custom error handling logic. This can be useful for scenarios where the error is not covered by the current retry logic.
+# Set up OpenAI API Key from environment variable
+openai.api_key = os.getenv('OPENAI_API_KEY', 'YOUR_OPENAI_API_KEY')  # Replace with your key if not using environment variable
+
+# General code improvement tips to make the script more efficient and clean:
+# Use type hints for function parameters and return types to improve code readability and type safety.
+# Use docstrings to provide documentation for functions and their parameters.
+# Use a consistent naming convention for functions and variables.
+def log_error(error_message: str) -> None:
+    """
+    Logs an error message to the logging system.
+
+    Args:
+        error_message (str): The error message to log.
+    """
+    logging.error(error_message)
+
+def user_friendly_error(error_message: str) -> str:
+    """
+    Converts a technical error message into a user-friendly message.
+
+    Args:
+        error_message (str): The technical error message.
+
+    Returns:
+        str: A user-friendly error message.
+    """
+    if "ConnectionError" in error_message:
+        return "We are experiencing network issues. Please check your internet connection."
+    elif "Timeout" in error_message:
+        return "The request timed out. Please try again later."
+    else:
+        return "An unexpected error occurred. Please try again."
+
+def analyze_error_with_ai(error_message: str) -> Optional[str]:
+    """
+    Uses an AI model to analyze and suggest a solution for an error message.
+
+    Args:
+        error_message (str): The error message to analyze.
+
+    Returns:
+        Optional[str]: Suggested solution or analysis of the error.
+    """
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an expert Python developer."},
+                {"role": "user", "content": f"Analyze the following error message and suggest a solution: {error_message}"}
+            ],
+            max_tokens=150
+        )
+        return response.choices[0].message['content'].strip()
+    except Exception as e:
+        log_error(f"AI analysis failed: {e}")
+        return None
+
+def retry_on_error(func: Callable, retries: int = 3) -> Callable:
+    """
+    Decorator to retry a function if an error occurs.
+
+    Args:
+        func (Callable): The function to retry.
+        retries (int): The number of retries to attempt.
+
+    Returns:
+        Callable: A wrapped function that retries on error.
+    """
+    def wrapper(*args, **kwargs):
+        attempt = 0
+        while attempt < retries:
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                attempt += 1
+                log_error(f"Error on attempt {attempt}: {e}")
+                if attempt >= retries:
+                    user_message = user_friendly_error(str(e))
+                    logging.info(user_message)
+                    return None
+    return wrapper
+
+<<<<<<<  63d47aea-a361-475b-b77a-dab1b4ea734a  >>>>>>>

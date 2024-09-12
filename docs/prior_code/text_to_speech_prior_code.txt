@@ -1,0 +1,183 @@
+# Placeholder for text-to-speech prior code
+<<<<<<<<<<<<<<  ✨ Codeium Command 🌟  >>>>>>>>>>>>>>>>
+import logging
+from gtts import gTTS
+from typing import Optional
+import playsound
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+class TextToSpeech:
+    """
+    A class to handle text-to-speech conversion using Google Text-to-Speech (gTTS).
+    A class to handle text-to-speech conversion.
+    """
+
+    def __init__(self, language: str = 'en', slow: bool = False):
+        """
+        Initializes the TextToSpeech class.
+
+        Args:
+            language (str): The language for the TTS (default is 'en' for English).
+            slow (bool): Whether the speech should be slow (default is False).
+        """
+        self.language = language
+        self.slow = slow
+        logging.info("TextToSpeech module initialized with language: %s, slow: %s", self.language, self.slow)
+
+    def text_to_speech(self, text: str, output_file: Optional[str] = None) -> str:
+        """
+        Converts text to speech and saves it to a file.
+
+        Args:
+            text (str): The text to convert to speech.
+            output_file (Optional[str]): The file path to save the audio. If None, saves as 'output.mp3'.
+
+        Returns:
+            str: The path to the saved audio file.
+        """
+        if not output_file:
+            output_file = "output.mp3"
+        
+        try:
+            tts = gTTS(text=text, lang=self.language, slow=self.slow)
+            tts.save(output_file)
+            logging.info(f"Text converted to speech and saved to {output_file}.")
+            return output_file
+        except Exception as e:
+            logging.error(f"Error in text_to_speech: {e}")
+            raise
+
+    def play_audio(self, file_path: str):
+        """
+        Plays the audio file.
+
+        Args:
+            file_path (str): The path to the audio file to play.
+        """
+        try:
+            playsound.playsound(file_path)
+            from playsound import playsound
+            playsound(file_path)
+            logging.info(f"Playing audio file: {file_path}")
+        except Exception as e:
+            logging.error(f"Error playing audio file: {e}")
+            raise
+
+if __name__ == "__main__":
+    # Example usage of TextToSpeech
+    tts = TextToSpeech()
+    audio_file = tts.text_to_speech("Hello, welcome to the River Song project!")
+    tts.play_audio(audio_file)
+
+<<<<<<<  1a99980d-600a-4fd3-a016-a29d9b49d1f7  >>>>>>>
+
+
+
+
+import logging
+from gtts import gTTS
+from typing import Optional
+import playsound
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+class TextToSpeech:
+    """
+    A class to handle text-to-speech conversion using Google Text-to-Speech (gTTS).
+    """
+
+    def __init__(self, language: str = 'en', slow: bool = False):
+        """
+        Initializes the TextToSpeech class.
+
+        Args:
+            language (str): The language for the TTS (default is 'en' for English).
+            slow (bool): Whether the speech should be slow (default is False).
+        """
+        self.language = language
+        self.slow = slow
+        logging.info("TextToSpeech module initialized with language: %s, slow: %s", self.language, self.slow)
+
+    def set_language(self, language: str):
+        """
+        Sets the language for the TTS.
+
+        Args:
+            language (str): The new language code for TTS.
+        """
+        self.language = language
+        logging.info(f"Language set to: {self.language}")
+
+    def set_speed(self, slow: bool):
+        """
+        Sets the speed for the TTS.
+
+        Args:
+            slow (bool): Whether the speech should be slow.
+        """
+        self.slow = slow
+        logging.info(f"Speed set to slow: {self.slow}")
+
+    def text_to_speech(self, text: str, output_file: Optional[str] = None) -> str:
+        """
+        Converts text to speech and saves it to a file.
+
+        Args:
+            text (str): The text to convert to speech.
+            output_file (Optional[str]): The file path to save the audio. If None, saves as 'output.mp3'.
+
+        Returns:
+            str: The path to the saved audio file.
+
+        Raises:
+            ValueError: If the text is empty.
+            Exception: If an error occurs during the TTS conversion or file saving.
+        """
+        if not text.strip():
+            logging.error("The text for conversion is empty.")
+            raise ValueError("The text for conversion must not be empty.")
+
+        if not output_file:
+            output_file = "output.mp3"
+
+        try:
+            tts = gTTS(text=text, lang=self.language, slow=self.slow)
+            tts.save(output_file)
+            logging.info(f"Text converted to speech and saved to {output_file}.")
+            return output_file
+        except Exception as e:
+            logging.error(f"Error in text_to_speech: {e}")
+            raise
+
+    def play_audio(self, file_path: str):
+        """
+        Plays the audio file.
+
+        Args:
+            file_path (str): The path to the audio file to play.
+
+        Raises:
+            FileNotFoundError: If the audio file does not exist.
+            Exception: If an error occurs while playing the audio file.
+        """
+        try:
+            playsound.playsound(file_path)
+            logging.info(f"Playing audio file: {file_path}")
+        except FileNotFoundError:
+            logging.error(f"Audio file not found: {file_path}")
+            raise
+        except Exception as e:
+            logging.error(f"Error playing audio file: {e}")
+            raise
+
+if __name__ == "__main__":
+    # Example usage of TextToSpeech
+    tts = TextToSpeech()
+    try:
+        audio_file = tts.text_to_speech("Hello, welcome to the River Song project!")
+        tts.play_audio(audio_file)
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")

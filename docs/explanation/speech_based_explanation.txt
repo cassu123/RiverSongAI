@@ -1,0 +1,1 @@
+Model: Speech-Based Emotion Detection\nPurpose: Detect emotions from speech input.

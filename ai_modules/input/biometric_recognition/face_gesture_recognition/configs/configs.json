@@ -1,0 +1,8 @@
+{
+    "model_path": "models/face_gesture_recognition_model.pth",
+    "train_data_path": "data/train",
+    "test_data_path": "data/test",
+    "batch_size": 32,
+    "learning_rate": 0.001,
+    "epochs": 10
+}

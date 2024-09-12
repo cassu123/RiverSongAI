@@ -1,0 +1,397 @@
+import logging
+from controller.communication import Communication
+from controller.error_handler import ErrorHandler
+from controller.resource_manager import ResourceManager
+from controller.scheduler import Scheduler
+from controller.security import SecurityManager
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+class Controller:
+    def __init__(self):
+        # Initialize components
+        self.communication = Communication()
+        self.error_handler = ErrorHandler()
+        self.resource_manager = ResourceManager()
+        self.scheduler = Scheduler()
+        self.security_manager = SecurityManager()
+
+        logging.info("Controller initialized with all components.")
+
+    def start(self):
+        # Example of starting some components or workflows
+        self.scheduler.run()
+        logging.info("Controller started.")
+
+    def stop(self):
+        # Example of stopping components or workflows
+        self.scheduler.stop()
+        logging.info("Controller stopped.")
+
+if __name__ == "__main__":
+    controller = Controller()
+    try:
+        controller.start()
+    except KeyboardInterrupt:
+        controller.stop()
+
+
+
+
+
+before removing router 
+
+
+class Communication:
+    # class implementation
+
+import logging
+from typing import Any, Callable, Dict, Optional
+from threading import Lock
+from controller.communication import Communication
+from controller.error_handler import ErrorHandler
+from controller.resource_manager import ResourceManager
+from controller.scheduler import Scheduler
+from controller.security import SecurityManager
+# Import Router if exists
+from controller.router import Router
+
+# Setup logging with secure practices
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+class Controller:
+    """
+    A central controller to manage inputs, route them to appropriate AI models,
+    maintain context, handle errors, and integrate all system components.
+    """
+
+    def __init__(self):
+        """
+        Initializes the Controller class with all components.
+        """
+        self._lock = Lock()  # Ensuring thread safety
+        self._communication = Communication()
+        self._error_handler = ErrorHandler()
+        self._resource_manager = ResourceManager()
+        self._scheduler = Scheduler()
+        self._security_manager = SecurityManager()
+        self._context = {}  # A dictionary to maintain context/state
+        self._models: Dict[str, Callable] = {}  # A dictionary to manage AI models
+        self._routes: Dict[str, Callable] = {}  # A dictionary to manage routing rules
+        self._router = Router()  # Router instance for routing input to models
+
+        logging.info("Controller initialized with all components.")
+
+    def add_model(self, model_name: str, model: Callable):
+        """
+        Adds an AI model to the controller.
+
+        Args:
+            model_name (str): The name of the model.
+            model (Callable): The model callable (e.g., function or class instance).
+        """
+        with self._lock:
+            if model_name in self._models:
+                logging.warning(f"Model '{model_name}' already exists. Replacing the existing model.")
+            self._models[model_name] = model
+        logging.info(f"Model '{model_name}' added to the controller.")
+
+    def remove_model(self, model_name: str):
+        """
+        Removes an AI model from the controller.
+
+        Args:
+            model_name (str): The name of the model to remove.
+        """
+        with self._lock:
+            if model_name in self._models:
+                del self._models[model_name]
+                logging.info(f"Model '{model_name}' removed from the controller.")
+            else:
+                logging.warning(f"Attempted to remove non-existent model '{model_name}'.")
+
+    def add_route(self, input_type: str, model_name: str):
+        """
+        Defines a route for a specific input type to a model.
+
+        Args:
+            input_type (str): The type of input (e.g., 'text', 'voice').
+            model_name (str): The name of the model to handle this input type.
+        """
+        with self._lock:
+            if model_name in self._models:
+                self._routes[input_type] = model_name
+                logging.info(f"Route added for input type '{input_type}' to model '{model_name}'.")
+            else:
+                logging.error(f"Model '{model_name}' not found. Cannot add route.")
+
+    def remove_route(self, input_type: str):
+        """
+        Removes a route for a specific input type.
+
+        Args:
+            input_type (str): The type of input to remove the route for.
+        """
+        with self._lock:
+            if input_type in self._routes:
+                del self._routes[input_type]
+                logging.info(f"Route for input type '{input_type}' removed.")
+            else:
+                logging.warning(f"Attempted to remove non-existent route for input type '{input_type}'.")
+
+    def process_input(self, input_data: Any, input_type: str) -> Optional[Any]:
+        """
+        Processes an input by routing it to the appropriate model.
+
+        Args:
+            input_data (Any): The input data to process.
+            input_type (str): The type of input (e.g., 'text', 'voice').
+
+        Returns:
+            Optional[Any]: The response from the AI model or None if an error occurs.
+        """
+        with self._lock:
+            if input_type in self._routes:
+                model_name = self._routes[input_type]
+                model = self._models.get(model_name)
+                if model:
+                    try:
+                        response = model(input_data)
+                        logging.info(f"Processed input of type '{input_type}' successfully with model '{model_name}'.")
+                        return response
+                    except Exception as e:
+                        logging.error(f"Error processing input with model '{model_name}': {e}")
+                        self._handle_error(e)
+                        return None
+                else:
+                    logging.error(f"Model '{model_name}' not found in models. Cannot process input.")
+            else:
+                logging.error(f"No route found for input type '{input_type}'.")
+                self._handle_error(f"No route found for input type '{input_type}'.")
+                return None
+
+    def _handle_error(self, error: Any):
+        """
+        Handles errors that occur during processing.
+
+        Args:
+            error (Any): The error or exception that occurred.
+        """
+        self._error_handler.log_error(str(error))
+        # Implement additional error handling or recovery logic here
+
+    def update_context(self, key: str, value: Any):
+        """
+        Updates the context state.
+
+        Args:
+            key (str): The context key.
+            value (Any): The value to update in the context.
+        """
+        with self._lock:
+            self._context[key] = value
+        logging.info(f"Context updated: {key} = {value}")
+
+    def start(self):
+        """
+        Starts the controller by initiating any required components or workflows.
+        """
+        self._scheduler.run()
+        logging.info("Controller started.")
+
+    def stop(self):
+        """
+        Stops the controller by terminating any ongoing components or workflows.
+        """
+        self._scheduler.stop()
+        logging.info("Controller stopped.")
+
+if __name__ == "__main__":
+    # Example usage of Controller
+    controller = Controller()
+
+    # Placeholder functions for AI models
+    def text_model(input_data):
+        return f"Processed text: {input_data}"
+
+    def voice_model(input_data):
+        return f"Processed voice: {input_data}"
+
+    # Add models to the controller
+    controller.add_model('TextModel', text_model)
+    controller.add_model('VoiceModel', voice_model)
+
+    # Add routing rules
+    controller.add_route('text', 'TextModel')
+    controller.add_route('voice', 'VoiceModel')
+
+    # Process inputs
+    print(controller.process_input("Hello, this is a text input.", 'text'))
+    print(controller.process_input("Hello, this is a voice input.", 'voice'))
+
+    # Start and stop the controller
+    try:
+        controller.start()
+    except KeyboardInterrupt:
+        controller.stop()
+
+
+
+this was working code. 
+
+import logging
+from typing import Any, Callable, Dict, Optional
+from threading import Lock
+from controller.communication import Communication
+from controller.error_handler import ErrorHandler
+from controller.resource_manager import ResourceManager
+from controller.scheduler import Scheduler
+from controller.security import SecurityManager
+from controller.router.router import Router  # Corrected import statement
+from .controller_module import Controller
+
+
+
+# Setup logging with secure practices
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+class Controller:
+    """
+    A central controller to manage inputs, route them to appropriate AI models,
+    maintain context, handle errors, and integrate all system components.
+    """
+
+    def __init__(self):
+        """
+        Initializes the Controller class with all components.
+        """
+        self._lock = Lock()  # Ensuring thread safety
+        self._communication = Communication()
+        self._error_handler = ErrorHandler()
+        self._resource_manager = ResourceManager()
+        self._scheduler = Scheduler()
+        self._security_manager = SecurityManager()
+        self._context = {}  # A dictionary to maintain context/state
+        self._models: Dict[str, Callable] = {}  # A dictionary to manage AI models
+        self._router = Router()  # Router instance for routing input to models
+
+        logging.info("Controller initialized with all components.")
+
+    def add_model(self, model_name: str, model: Callable):
+        """
+        Adds an AI model to the controller.
+
+        Args:
+            model_name (str): The name of the model.
+            model (Callable): The model callable (e.g., function or class instance).
+        """
+        with self._lock:
+            if model_name in self._models:
+                logging.warning(f"Model '{model_name}' already exists. Replacing the existing model.")
+            self._models[model_name] = model
+            self._router.update_model(model_name, model)  # Keep router in sync with models
+        logging.info(f"Model '{model_name}' added to the controller.")
+
+    def remove_model(self, model_name: str):
+        """
+        Removes an AI model from the controller.
+
+        Args:
+            model_name (str): The name of the model to remove.
+        """
+        with self._lock:
+            if model_name in self._models:
+                del self._models[model_name]
+                self._router.remove_model(model_name)  # Keep router in sync with models
+                logging.info(f"Model '{model_name}' removed from the controller.")
+            else:
+                logging.warning(f"Attempted to remove non-existent model '{model_name}'.")
+
+    def process_input(self, input_data: Any, input_type: str) -> Optional[Any]:
+        """
+        Processes an input by routing it to the appropriate model.
+
+        Args:
+            input_data (Any): The input data to process.
+            input_type (str): The type of input (e.g., 'text', 'voice').
+
+        Returns:
+            Optional[Any]: The response from the AI model or None if an error occurs.
+        """
+        with self._lock:
+            model = self._router.route_input(input_type)  # Use router to get the model
+            if model:
+                try:
+                    response = model(input_data)
+                    logging.info(f"Processed input of type '{input_type}' successfully.")
+                    return response
+                except Exception as e:
+                    logging.error(f"Error processing input: {e}")
+                    self._handle_error(e)
+                    return None
+            else:
+                logging.error(f"No model found for input type '{input_type}'.")
+                self._handle_error(f"No model found for input type '{input_type}'.")
+                return None
+
+    def _handle_error(self, error: Any):
+        """
+        Handles errors that occur during processing.
+
+        Args:
+            error (Any): The error or exception that occurred.
+        """
+        self._error_handler.log_error(str(error))
+        # Implement additional error handling or recovery logic here
+
+    def update_context(self, key: str, value: Any):
+        """
+        Updates the context state.
+
+        Args:
+            key (str): The context key.
+            value (Any): The value to update in the context.
+        """
+        with self._lock:
+            self._context[key] = value
+        logging.info(f"Context updated: {key} = {value}")
+
+    def start(self):
+        """
+        Starts the controller by initiating any required components or workflows.
+        """
+        self._scheduler.run()
+        logging.info("Controller started.")
+
+    def stop(self):
+        """
+        Stops the controller by terminating any ongoing components or workflows.
+        """
+        self._scheduler.stop()
+        logging.info("Controller stopped.")
+
+if __name__ == "__main__":
+    # Example usage of Controller
+    controller = Controller()
+
+    # Placeholder functions for AI models
+    def text_model(input_data):
+        return f"Processed text: {input_data}"
+
+    def voice_model(input_data):
+        return f"Processed voice: {input_data}"
+
+    # Add models to the controller
+    controller.add_model('TextModel', text_model)
+    controller.add_model('VoiceModel', voice_model)
+
+    # Process inputs
+    print(controller.process_input("Hello, this is a text input.", 'text'))
+    print(controller.process_input("Hello, this is a voice input.", 'voice'))
+
+    # Start and stop the controller
+    try:
+        controller.start()
+    except KeyboardInterrupt:
+        controller.stop()

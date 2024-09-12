@@ -1,0 +1,13 @@
+# Medical Image Analysis Project
+
+## Overview
+
+This project focuses on analyzing medical images like MRI scans, X-rays, and CT scans using Python. It supports various functionalities such as image loading, processing, visualization, segmentation, classification, and anomaly detection.
+
+## Setup Instructions
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/medical_image_analysis.git
+cd medical_image_analysis

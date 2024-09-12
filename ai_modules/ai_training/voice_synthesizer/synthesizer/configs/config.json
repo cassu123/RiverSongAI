@@ -1,0 +1,9 @@
+{
+    "model": "tacotron2",
+    "learning_rate": 1e-4,
+    "batch_size": 16,
+    "epochs": 100,
+    "dataset_path": "data/my_custom_dataset/",
+    "save_path": "models/tacotron2_finetuned.pt"
+  }
+  
