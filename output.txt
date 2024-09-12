@@ -1,0 +1,937 @@
+[        280]  .
+├── [         74]  ai_modules
+│   ├── [         78]  ai_training
+│   │   ├── [        154]  ml_training_finetuning
+│   │   │   ├── [        567]  config.py
+│   │   │   ├── [        473]  data_loader.py
+│   │   │   ├── [       1081]  ml_training_finetuning_ai.py
+│   │   │   ├── [        302]  model_builder.py
+│   │   │   └── [        505]  trainer.py
+│   │   └── [         68]  voice_synthesizer
+│   │       ├── [         22]  synthesizer
+│   │       │   ├── [         22]  configs
+│   │       │   │   └── [        206]  config.json
+│   │       │   └── [         88]  logs
+│   │       │       ├── [         30]  checkpoints
+│   │       │       │   └── [          0]  final_model.pth
+│   │       │       ├── [          0]  tensorboard_logs
+│   │       │       └── [          0]  training_logs.txt
+│   │       └── [          0]  voice_synthesizer_ai.py
+│   ├── [        332]  input
+│   │   ├── [         82]  audio_processing
+│   │   │   ├── [          0]  noise_detection.py
+│   │   │   └── [          0]  sound_classificaiton.py
+│   │   ├── [        170]  biometric_recognition
+│   │   │   ├── [        138]  body_recognition
+│   │   │   │   ├── [        502]  body_recognition_ai.py
+│   │   │   │   ├── [         22]  configs
+│   │   │   │   │   └── [        146]  config.json
+│   │   │   │   ├── [         24]  logs
+│   │   │   │   │   └── [          0]  training.log
+│   │   │   │   ├── [         76]  models
+│   │   │   │   │   ├── [          0]  checkpoint_epoch_10.pth
+│   │   │   │   │   └── [          0]  final_model.pth
+│   │   │   │   ├── [       1518]  train_body_recognition.py
+│   │   │   │   └── [         78]  utils
+│   │   │   │       ├── [          0]  data_loader.py
+│   │   │   │       ├── [          0]  metrics.py
+│   │   │   │       └── [          0]  visulization.py
+│   │   │   ├── [        244]  face_gesture_recognition
+│   │   │   │   ├── [         24]  configs
+│   │   │   │   │   └── [        214]  configs.json
+│   │   │   │   ├── [       1202]  evaluate_face_gesture_recognition.py
+│   │   │   │   ├── [       1224]  face_gesture_recognition_ai.py
+│   │   │   │   ├── [         82]  __init__.py
+│   │   │   │   ├── [       1635]  train_face_gesture_recognition.py
+│   │   │   │   └── [         42]  utils
+│   │   │   │       └── [        585]  data_preprocessing.py
+│   │   │   ├── [         42]  gait_recognition
+│   │   │   │   └── [          0]  gait_recogntion_ai.py
+│   │   │   ├── [         92]  gesture_control
+│   │   │   │   ├── [          0]  gesture_control.py
+│   │   │   │   └── [          0]  sign_language_interpreter.py
+│   │   │   └── [         78]  voice_commands
+│   │   │       ├── [          0]  command_recognition.py
+│   │   │       └── [          0]  language_model.py
+│   │   ├── [         80]  contextual_awareness
+│   │   │   ├── [         40]  activity_recognition
+│   │   │   │   └── [          0]  activity_tracking.py
+│   │   │   └── [          0]  context_detection.py
+│   │   ├── [         70]  data_feeds
+│   │   │   ├── [         30]  api_data_feeds
+│   │   │   │   └── [          0]  weather_feed.py
+│   │   │   └── [         64]  social_media_analysis
+│   │   │       ├── [          0]  reddit_scraper.py
+│   │   │       └── [          0]  twitter_feed.py
+│   │   ├── [         78]  environmental_sensors
+│   │   │   ├── [          0]  motion_detector.py
+│   │   │   └── [          0]  temperature_sensor.py
+│   │   ├── [         34]  image_input
+│   │   │   └── [         32]  image_recognition
+│   │   │       └── [         36]  object_detection
+│   │   │           └── [          0]  object_detector.py
+│   │   ├── [         72]  location_awareness
+│   │   │   ├── [          0]  gps_input.py
+│   │   │   └── [          0]  wifi_location_tracker.py
+│   │   ├── [         82]  smart_home_inputs
+│   │   │   ├── [          0]  light_sensor_input.py
+│   │   │   └── [          0]  thermostat_status.py
+│   │   ├── [         86]  video_processing
+│   │   │   ├── [          0]  event_detection.py
+│   │   │   └── [          0]  video_stream_processor.py
+│   │   └── [         72]  wearable_sensors
+│   │       ├── [          0]  heart_rate_monitor.py
+│   │       └── [          0]  step_counter.py
+│   ├── [         66]  output
+│   │   ├── [         12]  nlp_output
+│   │   │   └── [        132]  Gemini
+│   │   │       ├── [          0]  gemini_ai.py
+│   │   │       ├── [          0]  gemini_explanation.txt
+│   │   │       ├── [          0]  gemini_prior_code.txt
+│   │   │       └── [          0]  __init__.py
+│   │   ├── [         30]  scheduler
+│   │   │   └── [       4298]  scheduler_ai.py
+│   │   └── [         62]  text_to_speech
+│   │       ├── [        114]  __pycache__
+│   │       │   ├── [        233]  __init__.cpython-312.pyc
+│   │       │   └── [       7309]  text_to_speech_ai.cpython-312.pyc
+│   │       └── [       5675]  text_to_speech_ai.py
+│   └── [          8]  version_control
+│       ├── [         40]  v1
+│       │   ├── [        186]  model_v1.py
+│       │   └── [          0]  README.md
+│       └── [         40]  v2
+│           ├── [          0]  model_v2.py
+│           └── [          0]  README.md
+├── [         70]  automation
+│   ├── [        164]  amazon_automation
+│   │   ├── [        104]  amazon_intergration
+│   │   │   ├── [          0]  amazon_api.py
+│   │   │   ├── [          0]  amazon_inventory.py
+│   │   │   └── [          0]  amazon_order_sync.py
+│   │   ├── [        112]  dropshipping
+│   │   │   ├── [          0]  dropshipping_controller.py
+│   │   │   ├── [          0]  product_sync.py
+│   │   │   └── [          0]  supplier_api.py
+│   │   ├── [        118]  inventory_management
+│   │   │   ├── [          0]  inventory_controller.py
+│   │   │   ├── [          0]  inventory_sync.py
+│   │   │   └── [          0]  low_stock_alerts.py
+│   │   ├── [         96]  order_managment
+│   │   │   ├── [          0]  order_processor.py
+│   │   │   ├── [          0]  order_sync.py
+│   │   │   └── [          0]  return_handler.py
+│   │   └── [        110]  product_research
+│   │       ├── [          0]  keyword_research.py
+│   │       ├── [          0]  market_analysis.py
+│   │       └── [          0]  pricing_scraper.py
+│   └── [        166]  walmart_automation
+│       ├── [        112]  dropshipping
+│       │   ├── [          0]  dropshipping_controller.py
+│       │   ├── [          0]  product_sync.py
+│       │   └── [          0]  supplier_api.py
+│       ├── [        118]  inventory_management
+│       │   ├── [          0]  inventory_controller.py
+│       │   ├── [          0]  inventory_sync.py
+│       │   └── [          0]  low_stock_alerts.py
+│       ├── [         96]  order_managment
+│       │   ├── [          0]  order_processor.py
+│       │   ├── [          0]  order_sync.py
+│       │   └── [          0]  return_handler.py
+│       ├── [        110]  product_research
+│       │   ├── [          0]  keyword_research.py
+│       │   ├── [          0]  market_analysis.py
+│       │   └── [          0]  pricing_scraper.py
+│       └── [        104]  walmart_intergration
+│           ├── [          0]  amazon_api.py
+│           ├── [          0]  amazon_inventory.py
+│           └── [          0]  amazon_order_sync.py
+├── [        124]  config
+│   ├── [          0]  ai_settings.json
+│   ├── [        602]  config.py
+│   ├── [          0]  dynamic_config.py
+│   └── [          0]  home_automation.yaml
+├── [         38]  config_files
+│   └── [        401]  client_secrets.json
+├── [        284]  controllers
+│   ├── [         76]  communication
+│   │   ├── [       6942]  communication.py
+│   │   ├── [         58]  __init__.py
+│   │   └── [        106]  __pycache__
+│   │       ├── [       9907]  communication.cpython-312.pyc
+│   │       └── [        147]  __init__.cpython-312.pyc
+│   ├── [         36]  controller_base
+│   │   └── [          0]  controller_base.py
+│   ├── [         84]  controller_module
+│   │   ├── [       7192]  controller_module.py
+│   │   ├── [        107]  __init__.py
+│   │   └── [        166]  __pycache__
+│   │       ├── [       9722]  controller.cpython-312.pyc
+│   │       ├── [       9438]  controller_module.cpython-312.pyc
+│   │       └── [        208]  __init__.cpython-312.pyc
+│   ├── [         38]  dropshipping_controller
+│   │   └── [        184]  amazon_dropshipping
+│   │       ├── [         40]  amazon_controller
+│   │       │   └── [          0]  amazon_controller.py
+│   │       ├── [         34]  api_controller
+│   │       │   └── [          0]  api_controller.py
+│   │       ├── [         32]  event_handler
+│   │       │   └── [          0]  event_handler.py
+│   │       ├── [         46]  inventory_controller
+│   │       │   └── [          0]  inventory_controller.py
+│   │       ├── [         38]  order_controller
+│   │       │   └── [          0]  order_controller.py
+│   │       └── [         30]  task_manager
+│   │           └── [          0]  task_manager.py
+│   ├── [        112]  emotion_detection
+│   │   ├── [         68]  Emotion_detection
+│   │   │   ├── [          0]  emotion_detection_ai.py
+│   │   │   └── [          0]  __init__.py
+│   │   ├── [         98]  facial_expression
+│   │   │   ├── [       1451]  facial_expression_emotion_detection.py
+│   │   │   └── [          0]  __init__.py
+│   │   ├── [         88]  speech_based
+│   │   │   ├── [          0]  __init__.py
+│   │   │   └── [       1988]  speech_based_emotion_detection.py
+│   │   └── [         84]  text_based
+│   │       ├── [          0]  __init__.py
+│   │       └── [       1538]  text_based_emotion_detection.py
+│   ├── [         76]  error_handler
+│   │   ├── [       3740]  error_handler.py
+│   │   ├── [        137]  __init__.py
+│   │   └── [         48]  __pycache__
+│   │       └── [        330]  __init__.cpython-312.pyc
+│   ├── [          0]  __init__.py
+│   ├── [         82]  resource_manager
+│   │   ├── [        146]  __init__.py
+│   │   ├── [        112]  __pycache__
+│   │   │   ├── [        339]  __init__.cpython-312.pyc
+│   │   │   └── [       6998]  resource_manager.cpython-312.pyc
+│   │   └── [       4584]  resource_manager.py
+│   ├── [         68]  scheduler
+│   │   ├── [        125]  __init__.py
+│   │   ├── [         98]  __pycache__
+│   │   │   ├── [        318]  __init__.cpython-312.pyc
+│   │   │   └── [       4577]  scheduler.cpython-312.pyc
+│   │   └── [       2881]  scheduler.py
+│   └── [         66]  security
+│       ├── [        122]  __init__.py
+│       ├── [         96]  __pycache__
+│       │   ├── [        315]  __init__.cpython-312.pyc
+│       │   └── [      12165]  security.cpython-312.pyc
+│       └── [       8541]  security.py
+├── [          0]  data
+├── [        276]  docs
+│   ├── [          0]  API_DOCUMENTATION.md
+│   ├── [         96]  api_intergration
+│   │   ├── [          0]  amazon_api.md
+│   │   ├── [          0]  intergration_guide.md
+│   │   └── [          0]  walmart_api.md
+│   ├── [        208]  dependencies
+│   │   ├── [          2]  dependency_links.txt
+│   │   ├── [         48]  entry_points.txt
+│   │   ├── [        119]  installed-files.txt
+│   │   ├── [       4700]  requirement.txt
+│   │   ├── [        212]  SOURCES.txt
+│   │   ├── [          6]  top_level.txt
+│   │   └── [        499]  vendor.txt
+│   ├── [       1260]  explanation
+│   │   ├── [       1805]  communication_explained.txt
+│   │   ├── [       6501]  controller_explained.txt
+│   │   ├── [        114]  emotion_detection_explanation.txt
+│   │   ├── [          0]  error_handler_explained.txt
+│   │   ├── [        105]  face_gesture_recognition_explanation.txt
+│   │   ├── [         95]  facial_expression_explanation.txt
+│   │   ├── [         57]  gemini_explanation.txt
+│   │   ├── [          0]  Gemini_explination.txt
+│   │   ├── [        105]  image_recognition_explanation.txt
+│   │   ├── [        121]  medical_image_analysis_explanation.txt
+│   │   ├── [        104]  ml_training_finetuning_explanation.txt
+│   │   ├── [       4798]  resource_manager explained.txt
+│   │   ├── [          0]  scheduler_explained.txt
+│   │   ├── [          0]  scheduler_explanation.txt
+│   │   ├── [        109]  scheduling_automation_explanation.txt
+│   │   ├── [          0]  security_explained.txt
+│   │   ├── [        137]  smart_home_integration_explanation.txt
+│   │   ├── [         84]  speech_based_explanation.txt
+│   │   ├── [         86]  speech_recognition_explanation.txt
+│   │   ├── [         80]  text_based_explanation.txt
+│   │   └── [         86]  text_to_speech_explanation.txt
+│   ├── [        102]  future_updates
+│   │   ├── [          0]  feature_requests.md
+│   │   ├── [          0]  future_imporvements.md
+│   │   └── [          0]  roadmap.md
+│   ├── [         22]  licenses
+│   │   └── [       1114]  LICENSE.txt
+│   ├── [         50]  performance_benchmarks
+│   │   └── [          0]  performance_benchmarks.md
+│   ├── [       1138]  prior_code
+│   │   ├── [      14453]  controller_prior_code.txt
+│   │   ├── [         48]  emotion_detection_prior_code.txt
+│   │   ├── [       4373]  error_handler prior code.txt
+│   │   ├── [         59]  face_gesture_recognition_prior_code.txt
+│   │   ├── [         66]  facial_expression_prior_code.txt
+│   │   ├── [         36]  gemini_prior_code.txt
+│   │   ├── [         48]  image_recognition_prior_code.txt
+│   │   ├── [         53]  medical_image_analysis_prior_code.txt
+│   │   ├── [         58]  ml_training_finetuning_prior_code.txt
+│   │   ├── [       4904]  resource_manager prior code.txt
+│   │   ├── [       8138]  router_prior_code.txt
+│   │   ├── [       2774]  scheduler_prior_code.txt
+│   │   ├── [         56]  scheduling_automation_prior_code.txt
+│   │   ├── [      11424]  security_prior_code.txt
+│   │   ├── [         53]  smart_home_integration_prior_code.txt
+│   │   ├── [         61]  speech_based_prior_code.txt
+│   │   ├── [         49]  speech_recognition_prior_code.txt
+│   │   ├── [         59]  text_based_prior_code.txt
+│   │   └── [       6108]  text_to_speech_prior_code.txt
+│   ├── [         78]  README.md
+│   │   ├── [        775]  Gemini.txt
+│   │   └── [        455]  medical_image_analysis_ai.txt
+│   ├── [         88]  structure
+│   │   ├── [     154517]  project_structure-1.txt
+│   │   └── [      95499]  project_structure.txt
+│   └── [         90]  testing
+│       ├── [        189]  test_cli_test_ascii.txt
+│       └── [        237]  test_cli_test_utf8.txt
+├── [        182]  .git
+│   ├── [          0]  branches
+│   ├── [         15]  COMMIT_EDITMSG
+│   ├── [        264]  config
+│   ├── [         73]  description
+│   ├── [         99]  FETCH_HEAD
+│   ├── [         21]  HEAD
+│   ├── [        506]  hooks
+│   │   ├── [        478]  applypatch-msg.sample
+│   │   ├── [        896]  commit-msg.sample
+│   │   ├── [       4726]  fsmonitor-watchman.sample
+│   │   ├── [        189]  post-update.sample
+│   │   ├── [        424]  pre-applypatch.sample
+│   │   ├── [       1643]  pre-commit.sample
+│   │   ├── [        416]  pre-merge-commit.sample
+│   │   ├── [       1492]  prepare-commit-msg.sample
+│   │   ├── [       1374]  pre-push.sample
+│   │   ├── [       4898]  pre-rebase.sample
+│   │   ├── [        544]  pre-receive.sample
+│   │   ├── [       2783]  push-to-checkout.sample
+│   │   └── [       3650]  update.sample
+│   ├── [      31304]  index
+│   ├── [         14]  info
+│   │   └── [        240]  exclude
+│   ├── [         16]  logs
+│   │   ├── [       1287]  HEAD
+│   │   └── [         24]  refs
+│   │       ├── [          8]  heads
+│   │       │   └── [       1100]  main
+│   │       └── [         12]  remotes
+│   │           └── [          8]  origin
+│   │               └── [        636]  main
+│   ├── [        676]  objects
+│   │   ├── [        152]  00
+│   │   │   ├── [        373]  e27cb9c96b40de97e5f10dc6454862acb74811
+│   │   │   └── [         85]  ef7f680560a2f92c34286b48ad8b5d3cc6ed06
+│   │   ├── [         76]  01
+│   │   │   └── [        206]  46ff5e42a24ed23c09acad4666d80b22e83843
+│   │   ├── [        228]  02
+│   │   │   ├── [       2355]  03352707a829207ad4c3b698c153e9154904d6
+│   │   │   ├── [       2001]  43c20957369459bebffec97cc63f66b4ce5e3e
+│   │   │   └── [         72]  694838ce36b9af280924394c4850698619d8d4
+│   │   ├── [         76]  03
+│   │   │   └── [        131]  55cd9a3cb963d1c3dec6b5b56e5fd5b8622635
+│   │   ├── [         76]  04
+│   │   │   └── [         99]  432f323e43c2251c5880bb20eddf4d84e9aedb
+│   │   ├── [         76]  05
+│   │   │   └── [        166]  c16a8617b471d576dd0f2415af1e267e71f483
+│   │   ├── [        152]  07
+│   │   │   ├── [        236]  a4426fadff43f91f32f62b37414f1a895b1c16
+│   │   │   └── [         95]  e3908d13e3850e5aab7609063c0d3a821be1b2
+│   │   ├── [         76]  08
+│   │   │   └── [        167]  8b423818a2cda0a9b96a0afeaa1c63f193365c
+│   │   ├── [        152]  09
+│   │   │   ├── [        108]  1937372b1715daf6fe51480ab9d8e850c30910
+│   │   │   └── [        104]  3a6b401b5202b2d99e53e679a09c620ebc750d
+│   │   ├── [         76]  0a
+│   │   │   └── [       1055]  378a832040ae12eb21ff2ccf9b643a782e0aba
+│   │   ├── [         76]  0b
+│   │   │   └── [         64]  effc8abf2010c4caec69f5c4e26e36acb7a105
+│   │   ├── [        152]  0c
+│   │   │   ├── [       2982]  25dca88f922ce99bb690e27dda130b2c7c250a
+│   │   │   └── [         57]  7a0c3446d9bf7ca6156431d50582f5b9bb46b0
+│   │   ├── [        228]  0d
+│   │   │   ├── [       3112]  063187369bb68dd6893e80240754bf5bf313d7
+│   │   │   ├── [         74]  42a104359df7877f18ea57e3c0c187cd3ffa44
+│   │   │   └── [      16687]  e31f0bcc2de7d4d3029ddd837a897214ec7a9f
+│   │   ├── [         76]  0f
+│   │   │   └── [         65]  96fc173b34cda3c90d73e2e658ffecb9ce507b
+│   │   ├── [        152]  10
+│   │   │   ├── [       2474]  a4912b025b9f794036be821891ba14e16a87fd
+│   │   │   └── [         53]  d2901bc3454fa88be157514d525d83d494ce93
+│   │   ├── [         76]  11
+│   │   │   └── [         56]  022444979230ed142c83b71b2607db50ba3682
+│   │   ├── [         76]  12
+│   │   │   └── [         57]  07d47fb003f433dc3cfe28348b192856bd32a7
+│   │   ├── [         76]  14
+│   │   │   └── [        101]  26ba2c12652916cae941894a377a9b9fbaef54
+│   │   ├── [        152]  15
+│   │   │   ├── [       1755]  18a9b8b68cbd695616e840e590ca787c03724d
+│   │   │   └── [       2440]  6f7f0557f238b45be7542cc60ef0b148900d0b
+│   │   ├── [        152]  18
+│   │   │   ├── [        237]  bb7f75dadd9a6d54b4503637d244adab414b6e
+│   │   │   └── [        150]  c3ea6ee165fe758c7ad556420c0f6a516f5a61
+│   │   ├── [         76]  19
+│   │   │   └── [        103]  570b1a162579b5b190a3d37e3f042a9f9ef914
+│   │   ├── [        228]  1a
+│   │   │   ├── [        195]  1987555ddfb666078fe6f86c0b700d07e89093
+│   │   │   ├── [         64]  31c52d210802681eae9e310ac59ea6c25b14f0
+│   │   │   └── [        134]  4d1982ae394741c80f0de53ba84a14e150f879
+│   │   ├── [        152]  1e
+│   │   │   ├── [         83]  23c26ae2ad9dc55695b7e58c79a730a3420d23
+│   │   │   └── [        190]  7fadf213e515ca7d08b0f8ac4133ffca3c33bc
+│   │   ├── [         76]  22
+│   │   │   └── [        716]  276557296bae7cdbaac2d075b073828f57b722
+│   │   ├── [         76]  23
+│   │   │   └── [        112]  85e2d54484a8ff60806a0f1876c357d81df557
+│   │   ├── [         76]  24
+│   │   │   └── [        102]  3e3e9c7539fd4f6ae40b6abec05186d37a9936
+│   │   ├── [        152]  26
+│   │   │   ├── [        415]  38e9f879c10178d5061269f510d3f864f14a11
+│   │   │   └── [       2411]  98e3ab2d90b1f70dbdff6eb0e8b1d9f7d1d823
+│   │   ├── [        152]  27
+│   │   │   ├── [       1798]  7ea04a76ac642f4ecf393a898caec7c3c7b099
+│   │   │   └── [        126]  aa53c19a71b6790c1af8824704c9b4fd5562a3
+│   │   ├── [         76]  2c
+│   │   │   └── [         96]  c8ea3e6f1e58cf86296b7c2e1a92dd7880a1fc
+│   │   ├── [         76]  2d
+│   │   │   └── [       1637]  95f14599071bddaf5d23b82f8d7544873fe2b2
+│   │   ├── [         76]  2e
+│   │   │   └── [        380]  adf9ff5c59493a333453c107e4fc73f1ed8788
+│   │   ├── [         76]  2f
+│   │   │   └── [        315]  c905054b36ed8231846640652d2558ba228454
+│   │   ├── [         76]  30
+│   │   │   └── [        108]  bb8f0203a69da9546942820d6714c178a5d335
+│   │   ├── [         76]  32
+│   │   │   └── [         59]  8c2baab87a5a27fca063c0a0698449cf14cad5
+│   │   ├── [         76]  33
+│   │   │   └── [         70]  b8e7cf3b8eb04fb196ab1fca51e7bf52b9b3a9
+│   │   ├── [        152]  34
+│   │   │   ├── [        105]  9619410c50a7c572414834d2daefde2771750a
+│   │   │   └── [        281]  9d2a517a51787c94b46c4074a065b9c723b920
+│   │   ├── [        228]  36
+│   │   │   ├── [        150]  4d1ddb2f4a68dbcb34ade1e1e797472ae675bd
+│   │   │   ├── [        316]  ae58c65f8742d0020b753f4422a6a06d5aab57
+│   │   │   └── [        393]  f7f7f3a87f19927b02d4ebbd5424433ccd23d6
+│   │   ├── [        152]  37
+│   │   │   ├── [         68]  01b845937d1cba6097259b1f2ab17886f017e3
+│   │   │   └── [       1494]  eb87255828687f006dc4d8c184e34dd1bb5db2
+│   │   ├── [        152]  39
+│   │   │   ├── [        151]  4e3711f9fb82e18c743aa75441560639be34cf
+│   │   │   └── [         62]  cf15f6359f1d07ba64e0b5bd9dcfd5626c8a16
+│   │   ├── [         76]  3a
+│   │   │   └── [         81]  a1c4e588d97cb39fb0a62d2cf83c627cdbe01a
+│   │   ├── [        152]  3d
+│   │   │   ├── [         89]  59f945663c357d096ae042c55a8128fe805cb0
+│   │   │   └── [        325]  69a834601487990619cec07c8a19cb05767bba
+│   │   ├── [         76]  3f
+│   │   │   └── [        201]  650a75d072c88ded1052b330eae1da624eb99b
+│   │   ├── [         76]  40
+│   │   │   └── [         85]  88be34d2a0dac8c6f9d0eeca98f8a864073466
+│   │   ├── [        304]  43
+│   │   │   ├── [         64]  33f18207c319597351958a03293bd0afb9cc72
+│   │   │   ├── [         50]  75d0110506980d0e86143fcb50ea79600c4778
+│   │   │   ├── [        373]  8d87d78892bce6fd4acbe83239d20aa34322c9
+│   │   │   └── [         92]  a490a8fcdd5fdb3413ec8e53f8c5d2c40ad4a9
+│   │   ├── [        152]  44
+│   │   │   ├── [         68]  13a0eaba62887ad6bb1b057aa5a2216d8bdad3
+│   │   │   └── [       1389]  3ed1ad47c2889921553435ce30afbfc6fbaf83
+│   │   ├── [        152]  45
+│   │   │   ├── [         85]  409859766eb1e6336e150e468aed78f472656c
+│   │   │   └── [         69]  85a4463d63cdf57449fa78c9881336085d79b4
+│   │   ├── [         76]  49
+│   │   │   └── [         95]  045079f645bdeef5b8c3458ad55cc38f42b611
+│   │   ├── [         76]  4a
+│   │   │   └── [        150]  acdfd160607c9664b43215102078044d09ec5b
+│   │   ├── [         76]  4d
+│   │   │   └── [         69]  29c04cd7121e66eb0081736351ebd2519cddf4
+│   │   ├── [         76]  4e
+│   │   │   └── [        132]  d3d2055ef946305dd462033a4c45316f88b6fe
+│   │   ├── [         76]  51
+│   │   │   └── [         68]  a0ae895cbf22a96110f06dbd92e54ceb31fecf
+│   │   ├── [         76]  53
+│   │   │   └── [        248]  aeb1556d56954ebda59c8d3549014274ff04bd
+│   │   ├── [         76]  58
+│   │   │   └── [       2542]  7bbe3bbbc9c38a6a3fcd1a7eafd80c3501252b
+│   │   ├── [         76]  5a
+│   │   │   └── [         60]  b63cc8a6e04b226e99404ee0579d411ac4aa2a
+│   │   ├── [        152]  5b
+│   │   │   ├── [         86]  7baea699371bfeecf31c9cca33932defedbd0b
+│   │   │   └── [        339]  bc78b07ad363370631db376b65022208215fa4
+│   │   ├── [         76]  5d
+│   │   │   └── [       2108]  a651103684495dcedfc7562f4f35ceb4f2dec4
+│   │   ├── [         76]  62
+│   │   │   └── [        150]  b9c5727aa85136261564e91d4c7335cd533e9f
+│   │   ├── [        152]  65
+│   │   │   ├── [         53]  02a379e092d33070a8f8c03f8fb51d5d77984b
+│   │   │   └── [         54]  4dad5e708e9aabb2d45a719131aa56d11062e5
+│   │   ├── [         76]  67
+│   │   │   └── [        135]  b9d2b2667e78ae8a5b7a56c3747dca10913ae9
+│   │   ├── [         76]  68
+│   │   │   └── [        393]  cb2cf1b3b0af0909b8e31f22b0b0616dcb65e8
+│   │   ├── [        152]  69
+│   │   │   ├── [        430]  5927ac8998814b50ddf668c5f311cbe11f2c4b
+│   │   │   └── [        105]  ce9f4078e7f454cfc794da264642a31a5e6de2
+│   │   ├── [         76]  6a
+│   │   │   └── [         66]  a6b896eb105c1f42f0c0fcc9252a32c67dd071
+│   │   ├── [        152]  6c
+│   │   │   ├── [         99]  17f581c272252bd25c7f164fcb2e907cadb1bc
+│   │   │   └── [         73]  b0d3df9f87d9ffa7cc5fa28d36b2d9e698fbf7
+│   │   ├── [        152]  6d
+│   │   │   ├── [         60]  0b62df2e0c0d67ef25a44827fd37bd29fe8f64
+│   │   │   └── [        127]  d523c58423ccdb200af454a1691ab0f8511456
+│   │   ├── [         76]  6f
+│   │   │   └── [         71]  4ed77ff321debd8ae396ef7ed057b5cc468937
+│   │   ├── [        152]  70
+│   │   │   ├── [         89]  557de61de4c8354d82151b9bebd9e76d3ea355
+│   │   │   └── [        111]  6c911d093da127bd98df2ce4fb57deda288923
+│   │   ├── [        152]  71
+│   │   │   ├── [         92]  0264d210b81cd332d51ea4095869cb5c18a45c
+│   │   │   └── [         60]  8bb6185ec777cde6c423410d5486298bad8f2c
+│   │   ├── [        152]  72
+│   │   │   ├── [        146]  4867560a65bb5d19722e75679a1cbcc9bbdcfd
+│   │   │   └── [         48]  d4789c586e66500b528c7efa41ce261a8696a4
+│   │   ├── [         76]  73
+│   │   │   └── [        250]  afa11a7b8438ac8c05e308a420e1be1dba0385
+│   │   ├── [         76]  74
+│   │   │   └── [       5093]  ae836e9cb46a84fe03f916db6c9ecbc0f00787
+│   │   ├── [        152]  75
+│   │   │   ├── [        104]  856a41169b77d670e878b20d06461245f5543b
+│   │   │   └── [         68]  9812632de83ce8ca7e3f82759bed734f7a915a
+│   │   ├── [         76]  77
+│   │   │   └── [       1738]  fceacbc148f6af1d8210a8be5e3abe14bf91ef
+│   │   ├── [         76]  7d
+│   │   │   └── [         92]  f89f9fd13fb6b289461e1350bcfb09fbe4b5ab
+│   │   ├── [         76]  7e
+│   │   │   └── [      32589]  e1b84d6096261450252d6ead9d08a7a27486e6
+│   │   ├── [         76]  80
+│   │   │   └── [         95]  b81b8c5b5096b617cc58b8c49b97bc54dbd6ae
+│   │   ├── [         76]  81
+│   │   │   └── [        441]  7349a792da1ffa0c54c1082786eb4f22bafef0
+│   │   ├── [        228]  82
+│   │   │   ├── [         65]  4436aa0b218d143daaf38b0617b52911362732
+│   │   │   ├── [        123]  6c6d2624aca609193ee21653cdc2cd2d1b411c
+│   │   │   └── [        111]  bd7124c88501231ff46d8f89eda1278bb7bcab
+│   │   ├── [         76]  84
+│   │   │   └── [        151]  6e76f55a30091244c9399d2512d94adc5ae731
+│   │   ├── [        152]  85
+│   │   │   ├── [        138]  45123f3e8f2b3c609279145f100a61975424c1
+│   │   │   └── [        199]  e5d8fcd76d72f59cb8631a3cece0b39b92df61
+│   │   ├── [        152]  87
+│   │   │   ├── [        272]  27699e9a6e08243055085f79debc1f0c9e086e
+│   │   │   └── [         66]  2bfdf78ddf6bfd8b7261e1985c141317cd1a98
+│   │   ├── [         76]  88
+│   │   │   └── [         61]  bf53f47b1b03dd5e477b21907e3d7ab61d5073
+│   │   ├── [         76]  89
+│   │   │   └── [         68]  3e73b16939dddd817f07a77f6830d55d617b7d
+│   │   ├── [         76]  8b
+│   │   │   └── [         60]  ab6741571bc90510efc78cd0d27aebfbee3779
+│   │   ├── [         76]  8c
+│   │   │   └── [       1616]  412a5f9ed3209bec6c33cab9bdb86759120a7d
+│   │   ├── [        152]  8d
+│   │   │   ├── [         21]  0f5df3d94dd93f27d02b84305782e20e1b3daa
+│   │   │   └── [         85]  59c70c88f0938c3f1db98b9835e84f921893f2
+│   │   ├── [         76]  8e
+│   │   │   └── [         92]  021fdc6c24038055c512d77ec7999770b4585c
+│   │   ├── [         76]  8f
+│   │   │   └── [       1437]  37228ecd3bf4823b538ce601250d23072042a1
+│   │   ├── [         76]  91
+│   │   │   └── [       4434]  7c0c703b2be704d1e8c0ab404096c0a7344d19
+│   │   ├── [         76]  92
+│   │   │   └── [       2000]  7e04b11b41907500070e54a5acefb8eb9839e6
+│   │   ├── [         76]  93
+│   │   │   └── [        373]  f8e39e1486a1e4387edc2fd9468f84fa2225cc
+│   │   ├── [         76]  94
+│   │   │   └── [        102]  ae737cf41aa133b09a838f06e4cab8162386b7
+│   │   ├── [         76]  95
+│   │   │   └── [        121]  d277c9f0c3efaf773b14320f7ed0ad44f20707
+│   │   ├── [         76]  96
+│   │   │   └── [         57]  41c263a1b399addd73f1934725d15a8ee3edd0
+│   │   ├── [         76]  98
+│   │   │   └── [       1642]  e1da258567b128330a068b1907dca80cd1fd7e
+│   │   ├── [        152]  99
+│   │   │   ├── [         63]  e64ad005011bcb05dfcff70d13ed121f53d217
+│   │   │   └── [         57]  fb4fe3722053fc5c528bd3d062992a6dba9c2a
+│   │   ├── [         76]  9b
+│   │   │   └── [         60]  05c1d508dcdc120d82eebd29d7dfadc4a0cb31
+│   │   ├── [        304]  9d
+│   │   │   ├── [        104]  1c88a52f154ce4440bd5033d451f080d01ae6d
+│   │   │   ├── [         78]  64be71333c2cf091cca7ce1ab5575562792466
+│   │   │   ├── [         76]  afae8b31debc0117f99c7bee977479611f807f
+│   │   │   └── [       2495]  b098d37a5a996a6cde411057d7218da5a0f81e
+│   │   ├── [         76]  a0
+│   │   │   └── [       5504]  f9826564fe8fe476b0aac74c6a91560fe0e4b6
+│   │   ├── [         76]  a2
+│   │   │   └── [        164]  9352f0445d115fc042f2f2abd7f84ca023c301
+│   │   ├── [        152]  a3
+│   │   │   ├── [        203]  448db94dfa0c9294c4204f2c2274f8bc957cc2
+│   │   │   └── [        306]  66450dc1f765a7421f9dc589e89e567a9a9efd
+│   │   ├── [         76]  a4
+│   │   │   └── [        855]  3721b46f2bbcbf0abbae6c0f8703243e4d1180
+│   │   ├── [         76]  a5
+│   │   │   └── [        214]  d7aae121bdc77aaa46027613fad9ab45edd394
+│   │   ├── [         76]  a6
+│   │   │   └── [         62]  a57f4c56dee2a7f8222c88b844f294935fa54c
+│   │   ├── [         76]  a7
+│   │   │   └── [        135]  14e2d57fee444169475fdc3110384fbbb2dbae
+│   │   ├── [         76]  a8
+│   │   │   └── [       2791]  3441b188df52724f01b487180dff9406a752a8
+│   │   ├── [        304]  a9
+│   │   │   ├── [        124]  1cf4c98bf76e4fdb43ce805662f0859bb3dcb4
+│   │   │   ├── [        532]  46b05d994c8f1c682848118605436f0f7c11bf
+│   │   │   ├── [         61]  5da0c201b339ab37fbac9567b658b3ab728677
+│   │   │   └── [        134]  e4cffda231fc8f3e98be7685399a268ab839ec
+│   │   ├── [        152]  ac
+│   │   │   ├── [        221]  479c214f29edd614d85037c58713abf0695497
+│   │   │   └── [         82]  92c10d83b8fb05c214ac67d2dca3a46dd0a5da
+│   │   ├── [         76]  af
+│   │   │   └── [        145]  465c2eaf4a94987450b785d36fd6bce2e0ff54
+│   │   ├── [         76]  b1
+│   │   │   └── [         93]  50fd9349b037901b387d54e9226adec1cf7073
+│   │   ├── [        228]  b5
+│   │   │   ├── [         56]  b510e08191f11a100760885ed0851cdd70433b
+│   │   │   ├── [        133]  d72e4b5b341d427878a3ee3cfc05aa0c4ef291
+│   │   │   └── [         74]  e9e46876bffe794cef5d8ccf935efa83d2a3ea
+│   │   ├── [        152]  b6
+│   │   │   ├── [         95]  653de2ca4a56d65cca222a80aba68c2682124b
+│   │   │   └── [         60]  da0abfe7d24e235f465ea36a7274c27590ad85
+│   │   ├── [        152]  b7
+│   │   │   ├── [         63]  29426d0e2afa9114ef5d3c41ba7be6eb47e531
+│   │   │   └── [         57]  cbebfcb8b9b6b7d39c569c2ef6e72fd9e487e4
+│   │   ├── [         76]  b8
+│   │   │   └── [         64]  bfbad39cad7e911a2622fce958edc22460f260
+│   │   ├── [        152]  b9
+│   │   │   ├── [        112]  0fe5c549e0eb45b3ddab6d752742a0e8323f4a
+│   │   │   └── [         55]  55a71725690877abe1cb9aec2e264ba7919a89
+│   │   ├── [        152]  bb
+│   │   │   ├── [        705]  783e41f8feeaa094a7c458a3d5f2bdd5be9a5a
+│   │   │   └── [       2693]  b99a0f242e30784436fbc7c40791c98f850340
+│   │   ├── [         76]  bc
+│   │   │   └── [         61]  ba8f90d75b92d9a68aef1dc7e1cafa6995ec96
+│   │   ├── [         76]  c3
+│   │   │   └── [         84]  887bdef0fc3a863af708cd0aa0f266e80f0d30
+│   │   ├── [        152]  c4
+│   │   │   ├── [       2611]  08c11a92a1c2852a8177b1b92c1c37e8b757d5
+│   │   │   └── [         77]  6535b75be36659730ad9f1d24adbbc06a11f9c
+│   │   ├── [         76]  c7
+│   │   │   └── [        103]  3b87f26085eeff04a47767583e8d0a6c5d3ad0
+│   │   ├── [         76]  c8
+│   │   │   └── [        108]  ebbb433cd2dd6ff5f34c2ad38831cbf91f03e0
+│   │   ├── [         76]  c9
+│   │   │   └── [         85]  efcc2fef2fa8a093a0f0baba8ee9937cb51397
+│   │   ├── [         76]  ca
+│   │   │   └── [         84]  e42388399ed6bfd14e758691c360b5d46514dc
+│   │   ├── [         76]  cb
+│   │   │   └── [         83]  36b7241c298c06ee6827514999bf595f25aa5a
+│   │   ├── [        152]  cc
+│   │   │   ├── [       2204]  90ad7a90ff0ced20d0bf6eb0f40964cf94622f
+│   │   │   └── [         99]  d7e7a54f70871be306b100cceb898142e2c85b
+│   │   ├── [         76]  cd
+│   │   │   └── [         69]  47579529b4527688b736da9310b15804a2d639
+│   │   ├── [         76]  cf
+│   │   │   └── [        239]  ba40fbc70c2c6554071aa29c1df4564fcb2f4b
+│   │   ├── [         76]  d0
+│   │   │   └── [        684]  5c722f5cbb0b73950fc03f80c5aefeda00ecfc
+│   │   ├── [        152]  d1
+│   │   │   ├── [         56]  6c595eb19e911249515c2bcac4d26208cc05ee
+│   │   │   └── [         73]  dca9a36b29822d11ecf330adb113c9cf541c7f
+│   │   ├── [        152]  d3
+│   │   │   ├── [        126]  627a94c775873daf0eb629fdc8bfa50f8d669f
+│   │   │   └── [         17]  f5a12faa99758192ecc4ed3fc22c9249232e86
+│   │   ├── [        152]  d4
+│   │   │   ├── [        256]  67eefacce9dc25d0b08fd29b196e3662212088
+│   │   │   └── [         88]  83235a1513b81907872c9d6457b8cfe4b7c1be
+│   │   ├── [         76]  d5
+│   │   │   └── [        305]  fc648fb02dec110983e9c5e5ca86d6717d4792
+│   │   ├── [         76]  d6
+│   │   │   └── [       1149]  a99c43f1b9082d4c8142ed2db947f74b95724a
+│   │   ├── [        152]  d7
+│   │   │   ├── [        162]  01bee72e0a6a117dce548d8d16af3ab087ec1f
+│   │   │   └── [         83]  225017cdc2be20c42268d93041b7f79e2299a0
+│   │   ├── [        152]  d9
+│   │   │   ├── [        154]  e50d02a61a0a321243502efebbd670edb4d9e8
+│   │   │   └── [         73]  ef8ce8fa7de5ac986a4819d8820aebdccfa07e
+│   │   ├── [        152]  da
+│   │   │   ├── [         49]  8d105de02c241e715551d6542f3b2a078d4f6c
+│   │   │   └── [        166]  ae2cb62df2f9979386a0dca6c7c989d002f414
+│   │   ├── [         76]  db
+│   │   │   └── [        130]  49e1288bc850df7500741a6e0feb158b0cc350
+│   │   ├── [         76]  dc
+│   │   │   └── [        115]  d6c7d09cf575a64fc7a917f9dd4a5b40f7ab52
+│   │   ├── [         76]  dd
+│   │   │   └── [        124]  d8256dc290f9767b52dd462f385fb8de28efdc
+│   │   ├── [        152]  df
+│   │   │   ├── [         81]  0e4eab2c31e33bd4e3ae8b629cf82db9d4d361
+│   │   │   └── [        944]  b8c601ee97c3f3e387e707bb0d8c111d31688e
+│   │   ├── [         76]  e0
+│   │   │   └── [        627]  8d2e24fca412150e3ba6fd217e2767dff710ca
+│   │   ├── [        152]  e1
+│   │   │   ├── [        103]  4f674d6c9c039df154b6f970806db5be594f58
+│   │   │   └── [        135]  cbccf3e4e3f5f743ef5faaa9258e0cf72f7de4
+│   │   ├── [         76]  e2
+│   │   │   └── [        183]  c2f94f65f8cbfafc744962d7ce76fc47660115
+│   │   ├── [         76]  e5
+│   │   │   └── [        131]  26d7e13fa3687e9840c6b23885a20fd0bcfef5
+│   │   ├── [         76]  e6
+│   │   │   └── [         15]  9de29bb2d1d6434b8b29ae775ad8c2e48c5391
+│   │   ├── [         76]  e7
+│   │   │   └── [        221]  7746c686723a1b5415de3782ec17d11caa192a
+│   │   ├── [        152]  e8
+│   │   │   ├── [       2256]  88253c815a42346002fb1af4ac6db72a588262
+│   │   │   └── [        751]  f6422a190bc1afdf41521f0fd28bcdd3232b45
+│   │   ├── [         76]  e9
+│   │   │   └── [         71]  3d7bb2bb83cc0479e6a020c0d0b8e671146d69
+│   │   ├── [        152]  ea
+│   │   │   ├── [       1120]  0c6eeab05efc49df15fd3fc1f6da7cc48670cd
+│   │   │   └── [         85]  27863e1cc4471bd0fbb691f96d9ef419093fef
+│   │   ├── [        152]  ec
+│   │   │   ├── [        117]  b1da853b47b31bfb72c0bf4e73a2d6a31a8966
+│   │   │   └── [        117]  f55490435eedace99e138507ba401b0de96890
+│   │   ├── [         76]  ed
+│   │   │   └── [       2908]  eef4f8fd9fd38bf3f4c9bf09b933e7cf4f5f7f
+│   │   ├── [         76]  ef
+│   │   │   └── [         97]  4924bc78699ec6f7794ceb76b7a0a1997bf9a5
+│   │   ├── [         76]  f0
+│   │   │   └── [         71]  13e61826cea992112715990700143962ab6167
+│   │   ├── [        152]  f1
+│   │   │   ├── [        113]  8cfe71605754fc2c5d995d9933a3116981d807
+│   │   │   └── [         70]  b0495cfeeff0844b374df0d03d86aa6e6f42dc
+│   │   ├── [        380]  f2
+│   │   │   ├── [        697]  275c0eaebb5642f23ab4fc4f4d33bf27e0e823
+│   │   │   ├── [        706]  97e3d60657800b6b44c5f674c050e00bccccde
+│   │   │   ├── [       3040]  9aba1c953c67995de83c2e88cc496f68088af1
+│   │   │   ├── [         90]  ecef366b0e3bedba7fb12fb790cfbefa9e74d1
+│   │   │   └── [         46]  ffda334088fe2d46c0334951a4d3e1047533ba
+│   │   ├── [        304]  f4
+│   │   │   ├── [        111]  82db5f28a6c943b97ec704dae3188aac6ae283
+│   │   │   ├── [        988]  a1cc22a24386580ba6e7908531c51ff68307ad
+│   │   │   ├── [        162]  d1a4d2171d65b8a6520939143a59cf45e1a324
+│   │   │   └── [       4394]  dc926341379d95c4ab23a8c36d6cd9313618ae
+│   │   ├── [        152]  f6
+│   │   │   ├── [        213]  4f57ec1fdaec0984232a63bef4f524d12e241a
+│   │   │   └── [        574]  90fad037b25806d347146b693b64a14c6cbfe3
+│   │   ├── [         76]  f7
+│   │   │   └── [         63]  75276575d7fb50ded739db7d1c69f2da5a0d91
+│   │   ├── [        228]  f8
+│   │   │   ├── [         93]  6f2ceda8faed637a39e581be3a3981abb49850
+│   │   │   ├── [        108]  892acc30d6ef9f193c667b68f4b34e132438df
+│   │   │   └── [         66]  9a0c8d75b757b6f5ce8858be01915c64bbb388
+│   │   ├── [         76]  f9
+│   │   │   └── [         60]  c843d1596d5d77916fdc3752529573c5c97917
+│   │   ├── [        152]  fa
+│   │   │   ├── [        124]  bce53549ca4cf3a14e7025d987a976f0b6b2a7
+│   │   │   └── [         75]  fcff58882448d3a5340981377889e5e3108580
+│   │   ├── [        152]  fb
+│   │   │   ├── [        373]  0bc6ff5cdec9d98bdcc90d859fe0b580394187
+│   │   │   └── [         72]  c5a09982e389ad0256568e064fb2d8f961a2cc
+│   │   ├── [        152]  fc
+│   │   │   ├── [         56]  48beddf2b8983186ac78eadf441db769224e7e
+│   │   │   └── [        167]  f72f6284e31f8294358d7632fba67cd3e82d3d
+│   │   ├── [        152]  fd
+│   │   │   ├── [        245]  d5b1c38e9c7ab0f6ee0bc902621c7ecc9444d3
+│   │   │   └── [         86]  e97557a8af560f502ae66ee95e50d108b6b8a6
+│   │   ├── [        152]  fe
+│   │   │   ├── [         69]  808a64c54d525d7450f553fb7954957cd1f76b
+│   │   │   └── [        131]  9357902b82bdbd0797446938efc79ea71cd4c1
+│   │   ├── [        152]  ff
+│   │   │   ├── [        106]  46c2123f798b9ee75fa6f2657948196d82b040
+│   │   │   └── [         48]  e5c55a263f70f5908bab3a354216306802d692
+│   │   ├── [          0]  info
+│   │   └── [          0]  pack
+│   ├── [         41]  ORIG_HEAD
+│   └── [         32]  refs
+│       ├── [          8]  heads
+│       │   └── [         41]  main
+│       ├── [         12]  remotes
+│       │   └── [          8]  origin
+│       │       └── [         41]  main
+│       └── [          0]  tags
+├── [         62]  handler
+│   ├── [         68]  input_processer
+│   │   ├── [         92]  image
+│   │   │   ├── [         26]  image_processing
+│   │   │   │   └── [          8]  body_tracking
+│   │   │   │       └── [         48]  face
+│   │   │   │           └── [         60]  face_gesture_recognition
+│   │   │   │               └── [       5394]  face_gesture_recognition_ai.py
+│   │   │   ├── [         34]  image_recognition
+│   │   │   │   └── [         46]  image_recognition
+│   │   │   │       └── [          0]  image_recognition_ai.py
+│   │   │   └── [         24]  vision_models
+│   │   │       └── [       8544]  vision_ai.py
+│   │   ├── [         44]  medical_ai
+│   │   │   └── [         56]  medical_image_analysis
+│   │   │       └── [       9088]  medical_image_analysis_ai.py
+│   │   ├── [         66]  nlp_input
+│   │   │   ├── [         12]  language_models
+│   │   │   │   └── [         24]  Gemini
+│   │   │   │       └── [       6991]  gemini_ai.py
+│   │   │   └── [         48]  speech_recognition
+│   │   │       └── [       8275]  speech_recognition_ai.py
+│   │   └── [         86]  smart_home
+│   │       ├── [         54]  scheduling_automation
+│   │       │   └── [       5828]  scheduling_automation_ai.py
+│   │       └── [         56]  smart_home_integration
+│   │           └── [       6342]  smart_home_integration_ai.py
+│   └── [         22]  output_processer
+│       └── [         12]  automations
+│           └── [         70]  amazon
+│               ├── [          0]  report_generator.py
+│               └── [          0]  status_alerts.py
+├── [          0]  interfaces
+├── [          0]  logs
+├── [         52]  .mypy_cache
+│   ├── [       2752]  3.11
+│   │   ├── [      29546]  abc.data.json
+│   │   ├── [       1716]  abc.meta.json
+│   │   ├── [       1556]  activity_tracking.data.json
+│   │   ├── [       1646]  activity_tracking.meta.json
+│   │   ├── [     319069]  _ast.data.json
+│   │   ├── [       1709]  _ast.meta.json
+│   │   ├── [    1788305]  builtins.data.json
+│   │   ├── [       1770]  builtins.meta.json
+│   │   ├── [      60237]  _codecs.data.json
+│   │   ├── [     133437]  codecs.data.json
+│   │   ├── [       1749]  _codecs.meta.json
+│   │   ├── [       1736]  codecs.meta.json
+│   │   ├── [        124]  collections
+│   │   │   ├── [       3991]  abc.data.json
+│   │   │   ├── [       1687]  abc.meta.json
+│   │   │   ├── [     830498]  __init__.data.json
+│   │   │   └── [       1776]  __init__.meta.json
+│   │   ├── [      25358]  _collections_abc.data.json
+│   │   ├── [       1706]  _collections_abc.meta.json
+│   │   ├── [       1535]  context_detection.data.json
+│   │   ├── [       1625]  context_detection.meta.json
+│   │   ├── [     156396]  contextlib.data.json
+│   │   ├── [       1739]  contextlib.meta.json
+│   │   ├── [      84610]  dataclasses.data.json
+│   │   ├── [       1754]  dataclasses.meta.json
+│   │   ├── [        580]  email
+│   │   │   ├── [      17363]  charset.data.json
+│   │   │   ├── [       1716]  charset.meta.json
+│   │   │   ├── [       7932]  contentmanager.data.json
+│   │   │   ├── [       1729]  contentmanager.meta.json
+│   │   │   ├── [      25477]  errors.data.json
+│   │   │   ├── [       1701]  errors.meta.json
+│   │   │   ├── [      10145]  header.data.json
+│   │   │   ├── [       1714]  header.meta.json
+│   │   │   ├── [       9076]  __init__.data.json
+│   │   │   ├── [       1777]  __init__.meta.json
+│   │   │   ├── [     197173]  message.data.json
+│   │   │   ├── [       1842]  message.meta.json
+│   │   │   ├── [      27200]  _policybase.data.json
+│   │   │   ├── [       1785]  _policybase.meta.json
+│   │   │   ├── [      12601]  policy.data.json
+│   │   │   └── [       1765]  policy.meta.json
+│   │   ├── [     120006]  enum.data.json
+│   │   ├── [       1730]  enum.meta.json
+│   │   ├── [       1561]  gait_recogntion_ai.data.json
+│   │   ├── [       1645]  gait_recogntion_ai.meta.json
+│   │   ├── [      33264]  genericpath.data.json
+│   │   ├── [       1740]  genericpath.meta.json
+│   │   ├── [       1469]  gps_input.data.json
+│   │   ├── [       1607]  gps_input.meta.json
+│   │   ├── [        358]  importlib
+│   │   │   ├── [       5650]  _abc.data.json
+│   │   │   ├── [      60086]  abc.data.json
+│   │   │   ├── [       1685]  _abc.meta.json
+│   │   │   ├── [       1782]  abc.meta.json
+│   │   │   ├── [       6931]  __init__.data.json
+│   │   │   ├── [       1749]  __init__.meta.json
+│   │   │   ├── [      80197]  machinery.data.json
+│   │   │   ├── [       1827]  machinery.meta.json
+│   │   │   ├── [        132]  metadata
+│   │   │   │   ├── [     121292]  __init__.data.json
+│   │   │   │   ├── [       1879]  __init__.meta.json
+│   │   │   │   ├── [      20948]  _meta.data.json
+│   │   │   │   └── [       1729]  _meta.meta.json
+│   │   │   ├── [      23120]  readers.data.json
+│   │   │   ├── [       1889]  readers.meta.json
+│   │   │   └── [        124]  resources
+│   │   │       ├── [       2050]  abc.data.json
+│   │   │       ├── [       1712]  abc.meta.json
+│   │   │       ├── [      11512]  __init__.data.json
+│   │   │       └── [       1813]  __init__.meta.json
+│   │   ├── [     110327]  io.data.json
+│   │   ├── [       1749]  io.meta.json
+│   │   ├── [       1540]  light_sensor_input.data.json
+│   │   ├── [       1624]  light_sensor_input.meta.json
+│   │   ├── [        128]  os
+│   │   │   ├── [     413847]  __init__.data.json
+│   │   │   ├── [       1818]  __init__.meta.json
+│   │   │   ├── [       5160]  path.data.json
+│   │   │   └── [       1676]  path.meta.json
+│   │   ├── [     107070]  pathlib.data.json
+│   │   ├── [       1758]  pathlib.meta.json
+│   │   ├── [          2]  @plugins_snapshot.json
+│   │   ├── [     131665]  posixpath.data.json
+│   │   ├── [       1756]  posixpath.meta.json
+│   │   ├── [     259617]  re.data.json
+│   │   ├── [       1523]  reddit_scraper.data.json
+│   │   ├── [       1631]  reddit_scraper.meta.json
+│   │   ├── [       1777]  re.meta.json
+│   │   ├── [      45980]  resource.data.json
+│   │   ├── [       1691]  resource.meta.json
+│   │   ├── [      14800]  sre_compile.data.json
+│   │   ├── [       1701]  sre_compile.meta.json
+│   │   ├── [      29493]  sre_constants.data.json
+│   │   ├── [       1726]  sre_constants.meta.json
+│   │   ├── [      54043]  sre_parse.data.json
+│   │   ├── [       1769]  sre_parse.meta.json
+│   │   ├── [     250386]  subprocess.data.json
+│   │   ├── [       1751]  subprocess.meta.json
+│   │   ├── [         72]  sys
+│   │   │   ├── [     159118]  __init__.data.json
+│   │   │   └── [       1760]  __init__.meta.json
+│   │   ├── [       1532]  thermostat_status.data.json
+│   │   ├── [       1622]  thermostat_status.meta.json
+│   │   ├── [       1507]  twitter_feed.data.json
+│   │   ├── [       1627]  twitter_feed.meta.json
+│   │   ├── [     316485]  types.data.json
+│   │   ├── [        148]  _typeshed
+│   │   │   ├── [       7673]  importlib.data.json
+│   │   │   ├── [       1705]  importlib.meta.json
+│   │   │   ├── [     124074]  __init__.data.json
+│   │   │   └── [       1774]  __init__.meta.json
+│   │   ├── [       1749]  types.meta.json
+│   │   ├── [     614964]  typing.data.json
+│   │   ├── [     131221]  typing_extensions.data.json
+│   │   ├── [       1750]  typing_extensions.meta.json
+│   │   ├── [       1770]  typing.meta.json
+│   │   ├── [       1500]  weather_feed.data.json
+│   │   ├── [       1620]  weather_feed.meta.json
+│   │   ├── [       1565]  wifi_location_tracker.data.json
+│   │   ├── [       1631]  wifi_location_tracker.meta.json
+│   │   └── [         72]  zipfile
+│   │       ├── [     101552]  __init__.data.json
+│   │       └── [       1762]  __init__.meta.json
+│   ├── [        190]  CACHEDIR.TAG
+│   └── [         34]  .gitignore
+├── [          0]  output.txt
+├── [       8680]  requirements.txt
+├── [         82]  router
+│   ├── [         74]  dropshipping_router
+│   │   ├── [         32]  amazon_router
+│   │   │   └── [          0]  amazon_router.py
+│   │   └── [         46]  main_dropshipping_router
+│   │       └── [          0]  dropshiipping_router.py
+│   ├── [         77]  __init__.py
+│   └── [         18]  router_base
+│       └── [       7267]  router.py
+├── [         30]  scripts
+│   └── [          0]  setup_script.py
+└── [         70]  security
+    ├── [         84]  security_manager
+    │   ├── [       6415]  security_manager_ai.py
+    │   └── [       2253]  security_manager.log
+    └── [          0]  security_manager.py
+
+325 directories, 610 files
