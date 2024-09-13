@@ -1,3 +1,4 @@
+import os
 import pyaudio
 import numpy as np
 import time
@@ -11,6 +12,11 @@ class NoiseDetector:
         self.channels = channels
         self.rate = rate
         self.audio = pyaudio.PyAudio()
+        
+        # Ensure the logs/noise_detection_log directory exists
+        self.log_directory = 'logs/noise_detection_log'
+        if not os.path.exists(self.log_directory):
+            os.makedirs(self.log_directory)
         
     def start_stream(self):
         self.stream = self.audio.open(format=self.format,
@@ -43,9 +49,12 @@ class NoiseDetector:
             data = self.stream.read(self.chunk_size)
             frames.append(data)
         
-        # Save the recorded audio to a .wav file
-        wavfile.write(filename, self.rate, np.frombuffer(b''.join(frames), dtype=np.int16))
-        print(f"Audio saved as {filename}")
+        # Create the full path for saving the audio
+        full_path = os.path.join(self.log_directory, filename)
+        
+        # Save the recorded audio to a .wav file in the specified folder
+        wavfile.write(full_path, self.rate, np.frombuffer(b''.join(frames), dtype=np.int16))
+        print(f"Audio saved as {full_path}")
 
 if __name__ == "__main__":
     detector = NoiseDetector(threshold=1200)  # Adjust the threshold based on environment
