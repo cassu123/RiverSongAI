@@ -2,13 +2,14 @@ import os
 import base64
 import logging
 import threading
+import time
+import platform
 from typing import Optional
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 import bcrypt
-import platform
 
 # Setup logging with secure practices
 logging.basicConfig(
@@ -19,24 +20,27 @@ logging.basicConfig(
 
 class SecurityManager:
     """
-    A class to handle security-related operations such as encryption, decryption, and password management.
+    A class to handle security-related operations such as encryption, decryption, key management, and password hashing.
     """
 
-    def __init__(self, key: Optional[bytes] = None):
+    def __init__(self, key: Optional[bytes] = None, rotations: int = 10000, rotation_time: int = 3600):
         """
         Initializes the SecurityManager class.
 
         Args:
             key (Optional[bytes]): An optional encryption key. If not provided, a new key will be generated.
+            rotations (int): The number of times the key should be rotated before triggering a new rotation.
+            rotation_time (int): The time in seconds after which the key should be rotated.
         """
         self.lock = threading.Lock()  # Ensuring thread safety
-        if key:
-            self.key = key
-            logging.info("Security Manager initialized with provided encryption key.")
-        else:
-            self.key = self.generate_key()
-            logging.info("Security Manager initialized with new encryption key.")
+        self.key = key or self.generate_key()
         self.cipher_suite = Fernet(self.key)
+        self.key_version = 1  # Track the version of the key for rotation
+        self.rotation_count = 0  # Count the number of encryption operations
+        self.rotation_time = rotation_time  # Time in seconds after which the key should be rotated
+        self.last_rotation = time.time()  # Track the last rotation time
+        self.rotations = rotations  # The number of times the key should be rotated before triggering a new rotation
+        logging.info("Security Manager initialized.")
 
     def generate_key(self) -> bytes:
         """
@@ -67,17 +71,26 @@ class SecurityManager:
         )
         return base64.urlsafe_b64encode(kdf.derive(password.encode()))
 
-    def rotate_key(self, password: str) -> None:
+    def rotate_key(self, password: Optional[str] = None) -> None:
         """
-        Rotates the encryption key using a new key derived from the provided password.
+        Rotates the encryption key using a new key derived from the provided password or a new random key.
+        The new key is stored securely, and the version is updated.
 
         Args:
-            password (str): The password to derive the new key from.
+            password (Optional[str]): The password to derive the new key from. If None, a random key is used.
         """
-        salt = os.urandom(16)  # Secure random salt
-        self.key = self.derive_key_from_password(password, salt)
-        self.cipher_suite = Fernet(self.key)
-        logging.info("Encryption key rotated successfully.")
+        with self.lock:
+            if self.rotation_count >= self.rotations or time.time() - self.last_rotation > self.rotation_time:
+                salt = os.urandom(16)
+                if password:
+                    self.key = self.derive_key_from_password(password, salt)
+                else:
+                    self.key = self.generate_key()
+                self.cipher_suite = Fernet(self.key)
+                self.key_version += 1
+                self.rotation_count = 0
+                self.last_rotation = time.time()
+                logging.info(f"Encryption key rotated successfully. New version: {self.key_version}")
 
     def encrypt(self, data: str) -> str:
         """
@@ -93,6 +106,8 @@ class SecurityManager:
             if not isinstance(data, str):
                 logging.error("Data to encrypt must be a string.")
                 raise ValueError("Data to encrypt must be a string.")
+            self.rotation_count += 1
+            self.rotate_key()
             encrypted_data = self.cipher_suite.encrypt(data.encode())
             logging.info("Data encrypted successfully.")
             return base64.urlsafe_b64encode(encrypted_data).decode()
@@ -122,7 +137,7 @@ class SecurityManager:
 
     def hash_password(self, password: str) -> str:
         """
-        Hashes a password using bcrypt.
+        Hashes a password using bcrypt after validating its strength.
 
         Args:
             password (str): The password to hash.
@@ -133,10 +148,36 @@ class SecurityManager:
         if not isinstance(password, str):
             logging.error("Password must be a string.")
             raise ValueError("Password must be a string.")
+        
+        # Validate password strength
+        if not self.validate_password_strength(password):
+            logging.error("Password does not meet strength requirements.")
+            raise ValueError("Password does not meet strength requirements.")
+        
         salt = bcrypt.gensalt()
         hashed_password = bcrypt.hashpw(password.encode(), salt)
         logging.info("Password hashed successfully using bcrypt.")
         return hashed_password.decode()
+
+    def validate_password_strength(self, password: str) -> bool:
+        """
+        Validates the strength of a password by checking its length and complexity.
+
+        Args:
+            password (str): The password to validate.
+
+        Returns:
+            bool: True if the password is strong enough, False otherwise.
+        """
+        if len(password) < 8:
+            return False
+        if not any(c.isdigit() for c in password):
+            return False
+        if not any(c.isalpha() for c in password):
+            return False
+        if not any(c in "!@#$%^&*()-_=+[]{};:,.<>?/|" for c in password):
+            return False
+        return True
 
     def verify_password(self, stored_password: str, provided_password: str) -> bool:
         """
@@ -215,9 +256,9 @@ if __name__ == "__main__":
     print(f"Decrypted Data: {decrypted_data}")
 
     # Password hashing example
-    hashed_password = sec_manager.hash_password("securepassword123")
+    hashed_password = sec_manager.hash_password("Secure@Password123")
     print(f"Hashed Password: {hashed_password}")
-    is_valid = sec_manager.verify_password(hashed_password, "securepassword123")
+    is_valid = sec_manager.verify_password(hashed_password, "Secure@Password123")
     print(f"Password is valid: {is_valid}")
 
     # Saving and loading the encryption key example
