@@ -1,9 +1,9 @@
 import requests
 
-class AmazonInventory:
+class WalmartInventory:
     def __init__(self, api_key):
         self.api_key = api_key
-        self.base_url = "https://api.amazon.com/inventory"
+        self.base_url = "https://api.walmart.com/inventory"
 
     def check_inventory(self, product_id):
         """Check current inventory for a given product ID."""
@@ -27,3 +27,15 @@ class AmazonInventory:
             return {"message": f"Inventory updated for {product_id} to {quantity} units."}
         else:
             return {"error": f"Failed to update inventory for {product_id}, Status Code: {response.status_code}"}
+
+
+
+
+
+
+
+
+
+
+
+

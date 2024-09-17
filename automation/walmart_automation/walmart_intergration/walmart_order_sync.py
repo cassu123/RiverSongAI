@@ -1,12 +1,12 @@
 import requests
 
-class AmazonOrderSync:
+class WalmartOrderSync:
     def __init__(self, api_key):
         self.api_key = api_key
-        self.base_url = "https://api.amazon.com/orders"
+        self.base_url = "https://api.walmart.com/orders"
 
     def sync_orders(self):
-        """Sync orders from Amazon to local system."""
+        """Sync orders from Walmart to local system."""
         url = f"{self.base_url}/sync"
         headers = {"Authorization": f"Bearer {self.api_key}"}
         response = requests.get(url, headers=headers)
