@@ -1,12 +1,12 @@
 import requests
 
-class AmazonAPI:
+class WalmartAPI:
     def __init__(self, api_key):
         self.api_key = api_key
-        self.base_url = "https://api.amazon.com"
+        self.base_url = "https://api.walmart.com"
 
     def get_product_details(self, product_id):
-        """Fetch product details by product ID from Amazon API."""
+        """Fetch product details by product ID from Walmart API."""
         url = f"{self.base_url}/products/{product_id}"
         headers = {"Authorization": f"Bearer {self.api_key}"}
         response = requests.get(url, headers=headers)
@@ -17,7 +17,7 @@ class AmazonAPI:
             return {"error": f"Failed to get product details for {product_id}, Status Code: {response.status_code}"}
 
     def place_order(self, order_data):
-        """Place an order through Amazon API."""
+        """Place an order through Walmart API."""
         url = f"{self.base_url}/orders"
         headers = {"Authorization": f"Bearer {self.api_key}"}
         response = requests.post(url, json=order_data, headers=headers)
