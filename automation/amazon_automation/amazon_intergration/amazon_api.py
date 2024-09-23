@@ -1,4 +1,15 @@
 import requests
+from kill_switch.program_kill_switch.module_kill_switch import ModuleKillSwitch
+
+module_kill_switch = ModuleKillSwitch()
+
+def make_amazon_api_call():
+    if module_kill_switch.is_active('AmazonAPI'):
+        print("Amazon API module is disabled. Shutting down operation.")
+        return
+    print("Making API call to Amazon...")
+    # Your Amazon API call logic here
+
 
 class AmazonAPI:
     def __init__(self, api_key):

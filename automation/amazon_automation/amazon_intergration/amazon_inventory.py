@@ -1,5 +1,16 @@
 import requests
 
+from kill_switch.program_kill_switch.module_kill_switch import ModuleKillSwitch
+
+module_kill_switch = ModuleKillSwitch()
+
+def manage_inventory():
+    if module_kill_switch.is_active('AmazonInventory'):
+        print("Amazon Inventory module is disabled. Shutting down operation.")
+        return
+    print("Managing Amazon inventory...")
+    # Your inventory management logic here
+
 class AmazonInventory:
     def __init__(self, api_key):
         self.api_key = api_key

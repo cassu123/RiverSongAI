@@ -1,5 +1,16 @@
 import requests
 
+from kill_switch.program_kill_switch.module_kill_switch import ModuleKillSwitch
+
+module_kill_switch = ModuleKillSwitch()
+
+def sync_orders():
+    if module_kill_switch.is_active('AmazonOrderSync'):
+        print("Amazon Order Sync module is disabled. Shutting down operation.")
+        return
+    print("Syncing orders with Amazon...")
+    # Your order sync logic here
+
 class AmazonOrderSync:
     def __init__(self, api_key):
         self.api_key = api_key
