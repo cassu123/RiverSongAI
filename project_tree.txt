@@ -1,0 +1,601 @@
+.
+├── ai_modules
+│   ├── ai_training
+│   │   ├── ml_training_finetuning
+│   │   │   ├── config.py
+│   │   │   ├── data_loader.py
+│   │   │   ├── ml_training_finetuning_ai.py
+│   │   │   ├── model_builder.py
+│   │   │   └── trainer.py
+│   │   ├── version_control
+│   │   │   ├── v1
+│   │   │   │   ├── model_v1.py
+│   │   │   │   └── README.md
+│   │   │   └── v2
+│   │   │       ├── model_v2.py
+│   │   │       └── README.md
+│   │   └── voice_synthesizer
+│   │       ├── synthesizer
+│   │       │   ├── configs
+│   │       │   │   └── config.json
+│   │       │   └── logs
+│   │       │       ├── checkpoints
+│   │       │       │   └── final_model.pth
+│   │       │       ├── tensorboard_logs
+│   │       │       └── training_logs.txt
+│   │       └── voice_synthesizer_ai.py
+│   ├── input
+│   │   ├── audio_processing
+│   │   │   ├── noise_detection
+│   │   │   │   └── noise_detection.py
+│   │   │   ├── sound_classification
+│   │   │   │   └── sound_classificaiton.py
+│   │   │   └── speech_recognition
+│   │   ├── biometric_recognition
+│   │   │   ├── body_recognition
+│   │   │   │   ├── body_recognition_ai.py
+│   │   │   │   ├── configs
+│   │   │   │   │   └── config.json
+│   │   │   │   ├── logs
+│   │   │   │   │   └── training.log
+│   │   │   │   ├── models
+│   │   │   │   │   ├── checkpoint_epoch_10.pth
+│   │   │   │   │   └── final_model.pth
+│   │   │   │   ├── train_body_recognition.py
+│   │   │   │   └── utils
+│   │   │   │       ├── data_loader.py
+│   │   │   │       ├── metrics.py
+│   │   │   │       └── visulization.py
+│   │   │   ├── emotion_detection
+│   │   │   ├── face_gesture_recognition
+│   │   │   │   ├── configs
+│   │   │   │   │   └── configs.json
+│   │   │   │   ├── evaluate_face_gesture_recognition.py
+│   │   │   │   ├── face_gesture_recognition_ai.py
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── train_face_gesture_recognition.py
+│   │   │   │   └── utils
+│   │   │   │       └── data_preprocessing.py
+│   │   │   ├── face_recognition
+│   │   │   ├── gait_recognition
+│   │   │   │   ├── datasets
+│   │   │   │   │   ├── biometric_recognition
+│   │   │   │   │   └── gait_dataset.csv
+│   │   │   │   ├── feature_extraction
+│   │   │   │   │   └── extract_gait_features.py
+│   │   │   │   ├── gait_recognition_ai.py
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── logs
+│   │   │   │   │   └── gait_recognition_log.txt
+│   │   │   │   ├── models
+│   │   │   │   │   └── gait_model_weights.h5
+│   │   │   │   └── training
+│   │   │   │       └── train_gait_model.py
+│   │   │   ├── gesture_control
+│   │   │   │   ├── dataset
+│   │   │   │   │   └── gesture_dataset.csv
+│   │   │   │   ├── feature_extraction
+│   │   │   │   │   └── extract_gesture_features.py
+│   │   │   │   ├── gesture_control_ai.py
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── logs
+│   │   │   │   │   └── gesture_control_logs.txt
+│   │   │   │   ├── model
+│   │   │   │   │   └── geture_model.py
+│   │   │   │   ├── sign_language_interpreter.py
+│   │   │   │   └── training
+│   │   │   │       └── train_gesture_model.py
+│   │   │   ├── gesture_recognition
+│   │   │   └── voice_commands
+│   │   │       ├── datasets
+│   │   │       │   └── voice_command_dataset.csv
+│   │   │       ├── feature_extraction
+│   │   │       │   └── extract_voice_features.py
+│   │   │       ├── __init__.py
+│   │   │       ├── logs
+│   │   │       │   └── voice_command_log.txt
+│   │   │       ├── models
+│   │   │       │   └── voice_command_model.py
+│   │   │       ├── training
+│   │   │       │   └── train_voice_command_model.py
+│   │   │       └── voice_commands_ai.py
+│   │   ├── contextual_awareness
+│   │   │   ├── activity_recognition
+│   │   │   │   ├── activity_tracking.py
+│   │   │   │   └── __init__.py
+│   │   │   ├── context_detection
+│   │   │   │   ├── context_detection.py
+│   │   │   │   └── __init__.py
+│   │   │   ├── environmental_state
+│   │   │   │   ├── environmental_state.py
+│   │   │   │   └── __init__.py
+│   │   │   ├── __init__.py
+│   │   │   ├── logs
+│   │   │   │   └── contextual_awareness_log.txt
+│   │   │   ├── presence_detection
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── presence_detection.py
+│   │   │   ├── proximity_detection
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── proximity_detection.py
+│   │   │   └── time_based_context
+│   │   │       ├── __init__.py
+│   │   │       └── time_based_context.py
+│   │   ├── data_feeds
+│   │   │   ├── api_data_feeds
+│   │   │   │   └── weather_feed.py
+│   │   │   ├── common
+│   │   │   │   └── common_utils.py
+│   │   │   ├── logs
+│   │   │   │   ├── news_feed_log.txt
+│   │   │   │   ├── sports_feed_log.txt
+│   │   │   │   ├── stock_feed_log.txt
+│   │   │   │   └── weather_feed_log.txt
+│   │   │   ├── news_feeds
+│   │   │   │   └── news_feed.py
+│   │   │   ├── schedulers
+│   │   │   │   └── weather_feed_scheduler.py
+│   │   │   ├── social_media_analysis
+│   │   │   │   ├── reddit_scraper.py
+│   │   │   │   └── twitter_feed.py
+│   │   │   ├── sports_feeds
+│   │   │   │   └── sports_feed.py
+│   │   │   ├── stock_market
+│   │   │   │   └── stock_feed.py
+│   │   │   └── storage
+│   │   │       ├── news_data.json
+│   │   │       ├── sports_data.json
+│   │   │       ├── stock_data.json
+│   │   │       └── weather_data.json
+│   │   ├── environmental_sensors
+│   │   │   ├── humidity_sensor
+│   │   │   │   └── humidity_sensor.py
+│   │   │   ├── light_sensor
+│   │   │   │   └── light_sensor.py
+│   │   │   ├── motion_detector
+│   │   │   │   └── motion_detector.py
+│   │   │   ├── sound_detector
+│   │   │   │   └── sound_detector.py
+│   │   │   └── temperature_sensor
+│   │   │       └── temperature_sensor.py
+│   │   ├── image_input
+│   │   │   ├── 3d_reconstruction
+│   │   │   │   └── image_to_3d.py
+│   │   │   ├── activity_recognition
+│   │   │   │   └── activity_recognition.py
+│   │   │   ├── anomaly_detection
+│   │   │   │   └── anomaly_detector.py
+│   │   │   ├── augmented_reality
+│   │   │   │   └── ar_visualizer.py
+│   │   │   ├── image_classification
+│   │   │   │   └── image_classifier.py
+│   │   │   ├── image_enhancement
+│   │   │   │   └── image_enhancer.py
+│   │   │   ├── image_recognition
+│   │   │   │   └── object_detection
+│   │   │   ├── image_segmentation
+│   │   │   │   └── image_segmenter.py
+│   │   │   ├── motion_analysis
+│   │   │   │   └── optical_flow.py
+│   │   │   ├── object_detection
+│   │   │   │   └── object_detector.py
+│   │   │   ├── object_tracking
+│   │   │   │   └── object_tracker.py
+│   │   │   ├── scene_recognition
+│   │   │   │   └── scene_understanding.py
+│   │   │   └── text_recognition
+│   │   ├── location_awareness
+│   │   │   ├── geofencing
+│   │   │   │   └── geofencing.py
+│   │   │   ├── gps_tracker
+│   │   │   │   └── gps_tracker.py
+│   │   │   ├── indoor_localization
+│   │   │   │   └── indoor_localization.py
+│   │   │   ├── motion_location
+│   │   │   │   └── motion_location.py
+│   │   │   └── proximity_detection
+│   │   │       └── proximity_detection.py
+│   │   ├── logs
+│   │   │   ├── humidity_sensor_log.txt
+│   │   │   ├── light_sensor_log.txt
+│   │   │   ├── motion_detector_log.txt
+│   │   │   ├── sound_detector_log.txt
+│   │   │   └── temperature_sensor_log.txt
+│   │   ├── nlp_models
+│   │   │   ├── conversation_management
+│   │   │   │   └── conversation_manager.py
+│   │   │   ├── dialogue_state_tracking
+│   │   │   │   └── dialogue_state_tracker.py
+│   │   │   ├── intent_classification
+│   │   │   │   └── intent_classification.py
+│   │   │   ├── question_answering
+│   │   │   │   └── qa_engine.py
+│   │   │   ├── sentiment_analysis
+│   │   │   │   └── sentiment_analysis.py
+│   │   │   ├── summarization
+│   │   │   │   └── summarization.py
+│   │   │   └── translation
+│   │   │       └── translation.py
+│   │   ├── smart_home_inputs
+│   │   │   ├── appliance_control
+│   │   │   │   └── appliance_control.py
+│   │   │   ├── camera_feed
+│   │   │   │   └── camera_feed.py
+│   │   │   ├── lighting_control
+│   │   │   │   └── lighting_control.py
+│   │   │   ├── motion_sensor
+│   │   │   │   └── motion_sensor.py
+│   │   │   ├── smart_lock_control
+│   │   │   │   └── smart_lock_control.py
+│   │   │   ├── smart_speaker_control
+│   │   │   │   └── smart_speaker_control.py
+│   │   │   └── thermostat_control
+│   │   │       └── thermostat_control.py
+│   │   ├── sound_classification
+│   │   └── video_processing
+│   │       ├── event_detection
+│   │       │   └── event_detection.py
+│   │       └── video_stream_processor
+│   │           └── video_stream_processor.py
+│   ├── mod
+│   ├── models
+│   │   ├── automation
+│   │   │   ├── task_prioritization
+│   │   │   │   └── task_prioritization_ai.py
+│   │   │   └── workflow_automation
+│   │   │       └── workflow_automation_ai.py
+│   │   ├── data_analytics
+│   │   │   ├── data_insights
+│   │   │   │   └── data_insights_ai.py
+│   │   │   └── system_monitoring
+│   │   │       └── system_monitoring_ai.py
+│   │   ├── Gemini
+│   │   │   ├── gemini_explanation.txt
+│   │   │   ├── gemini_prior_code.txt
+│   │   │   └── __init__.py
+│   │   ├── image_video
+│   │   │   ├── facial_emotion
+│   │   │   │   └── facial_emotion_ai.py
+│   │   │   ├── scene_recognition
+│   │   │   │   └── scene_recognition_ai.py
+│   │   │   └── video_analytics
+│   │   │       └── video_analytics_ai.py
+│   │   ├── medical_image_analysis
+│   │   │   ├── ct_scan_analysis
+│   │   │   │   └── ct_scan_analysis_ai.py
+│   │   │   ├── ecg_reader
+│   │   │   │   └── ecg_reader_ai.py
+│   │   │   ├── medical_notes
+│   │   │   │   └── medical_notes_ai.py
+│   │   │   ├── mri_reader
+│   │   │   │   └── mri_reader_ai.py
+│   │   │   ├── pathology_report_analyzer
+│   │   │   │   └── pathology_report_analyzer_ai.py
+│   │   │   ├── ultrasound_image_analysis
+│   │   │   │   └── ultrasound_image_analysis_ai.py
+│   │   │   └── xray_reader
+│   │   │       └── xray_reader_ai.py
+│   │   ├── nlp
+│   │   │   ├── dialogue_manager
+│   │   │   │   └── dialogue_manager_ai.py
+│   │   │   ├── entity_recognition
+│   │   │   │   └── entity_recognition_ai.py
+│   │   │   ├── faq_matcher
+│   │   │   │   └── faq_matcher_ai.py
+│   │   │   └── knowledge_base
+│   │   │       └── knowledge_base_ai.py
+│   │   ├── openai_integration
+│   │   │   └── openai_api.py
+│   │   ├── recommendation
+│   │   │   ├── personalization
+│   │   │   │   └── personalization_ai.py
+│   │   │   └── recommendation
+│   │   │       └── recommendation_ai.py
+│   │   ├── security
+│   │   │   └── intrusion_detection
+│   │   │       └── intrusion_detection_ai.py
+│   │   └── smart_home
+│   │       ├── device_state_prediction
+│   │       │   └── device_state_prediction_ai.py
+│   │       └── energy_optimization
+│   │           └── energy_optimization_ai.py
+│   └── output
+│       ├── audio_output
+│       │   └── audio_output.py
+│       ├── data_export
+│       │   └── data_export.py
+│       ├── notification_output
+│       │   └── notification_output.py
+│       ├── scheduler
+│       │   ├── scheduler_ai.py
+│       │   └── task_manager.py
+│       ├── text_to_speech
+│       │   ├── __pycache__
+│       │   │   ├── __init__.cpython-312.pyc
+│       │   │   └── text_to_speech_ai.cpython-312.pyc
+│       │   └── text_to_speech_ai.py
+│       └── visual_output
+│           └── visual_output.py
+├── automation
+│   ├── amazon_automation
+│   │   ├── amazon_intergration
+│   │   │   ├── amazon_api.py
+│   │   │   ├── amazon_inventory.py
+│   │   │   └── amazon_order_sync.py
+│   │   ├── dropshipping
+│   │   │   ├── dropshipping_controller.py
+│   │   │   ├── product_sync.py
+│   │   │   └── supplier_api.py
+│   │   ├── inventory_management
+│   │   │   ├── inventory_controller.py
+│   │   │   ├── inventory_sync.py
+│   │   │   └── low_stock_alerts.py
+│   │   ├── order_managment
+│   │   │   ├── order_processor.py
+│   │   │   ├── order_sync.py
+│   │   │   └── return_handler.py
+│   │   └── product_research
+│   │       ├── keyword_research.py
+│   │       ├── market_analysis.py
+│   │       └── pricing_scraper.py
+│   ├── gsheets
+│   │   ├── categorize
+│   │   │   └── categorize_product.py
+│   │   └── scheduler
+│   │       └── gsheet_scheduler.py
+│   └── walmart_automation
+│       ├── dropshipping
+│       │   ├── dropshipping_controller.py
+│       │   ├── product_sync.py
+│       │   └── supplier_api.py
+│       ├── inventory_management
+│       │   ├── inventory_controller.py
+│       │   ├── inventory_sync.py
+│       │   └── low_stock_alerts.py
+│       ├── order_managment
+│       │   ├── order_processor.py
+│       │   ├── order_sync.py
+│       │   └── return_handler.py
+│       ├── product_research
+│       │   ├── keyword_research.py
+│       │   ├── market_analysis.py
+│       │   └── pricing_scraper.py
+│       └── walmart_intergration
+│           ├── walmart_api.py
+│           ├── walmart_inventory.py
+│           └── walmart_order_sync.py
+├── config
+│   ├── ai_settings.json
+│   ├── config.py
+│   ├── dynamic_config.py
+│   └── home_automation.yaml
+├── config_files
+│   └── client_secrets.json
+├── controllers
+│   ├── communication
+│   │   ├── communication.py
+│   │   ├── __init__.py
+│   │   └── __pycache__
+│   │       ├── communication.cpython-312.pyc
+│   │       └── __init__.cpython-312.pyc
+│   ├── controller_base
+│   │   ├── amazon
+│   │   │   ├── amazon_controller.py
+│   │   │   └── __init__.py
+│   │   ├── controller_base.py
+│   │   ├── email
+│   │   │   ├── email_controller.py
+│   │   │   └── __init__.py
+│   │   ├── facebook
+│   │   │   ├── facebook_controller.py
+│   │   │   └── __init__.py
+│   │   ├── google
+│   │   │   ├── google_controller.py
+│   │   │   └── __init__.py
+│   │   ├── _init_.py
+│   │   ├── news
+│   │   │   ├── __init__.py
+│   │   │   └── news_controller.py
+│   │   ├── smart_home
+│   │   │   ├── __init__.py
+│   │   │   └── smart_home_controller.py
+│   │   ├── stock_market
+│   │   │   ├── __init__.py
+│   │   │   └── stock_market_controller.py
+│   │   ├── twitter
+│   │   │   ├── __init__.py
+│   │   │   └── twitter_controller.py
+│   │   └── weather
+│   │       ├── __init__.py
+│   │       └── weather_controller.py
+│   ├── controller_module
+│   │   ├── controller_module.py
+│   │   ├── __init__.py
+│   │   └── __pycache__
+│   │       ├── controller.cpython-312.pyc
+│   │       ├── controller_module.cpython-312.pyc
+│   │       └── __init__.cpython-312.pyc
+│   ├── error_handler
+│   │   ├── error_handler.py
+│   │   ├── __init__.py
+│   │   └── __pycache__
+│   │       └── __init__.cpython-312.pyc
+│   ├── __init__.py
+│   ├── resource_manager
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-312.pyc
+│   │   │   └── resource_manager.cpython-312.pyc
+│   │   └── resource_manager.py
+│   ├── scheduler
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-312.pyc
+│   │   │   └── scheduler.cpython-312.pyc
+│   │   └── scheduler.py
+│   └── security
+│       ├── __init__.py
+│       ├── __pycache__
+│       │   ├── __init__.cpython-312.pyc
+│       │   └── security.cpython-312.pyc
+│       └── security.py
+├── data
+├── docs
+│   ├── API_DOCUMENTATION.md
+│   ├── api_intergration
+│   │   ├── amazon_api.md
+│   │   ├── intergration_guide.md
+│   │   └── walmart_api.md
+│   ├── dependencies
+│   │   ├── dependency_links.txt
+│   │   ├── entry_points.txt
+│   │   ├── installed-files.txt
+│   │   ├── requirement.txt
+│   │   ├── SOURCES.txt
+│   │   ├── top_level.txt
+│   │   └── vendor.txt
+│   ├── explanation
+│   │   ├── communication_explained.txt
+│   │   ├── controller_explained.txt
+│   │   ├── emotion_detection_explanation.txt
+│   │   ├── error_handler_explained.txt
+│   │   ├── face_gesture_recognition_explanation.txt
+│   │   ├── facial_expression_explanation.txt
+│   │   ├── gemini_explanation.txt
+│   │   ├── Gemini_explination.txt
+│   │   ├── image_recognition_explanation.txt
+│   │   ├── medical_image_analysis_explanation.txt
+│   │   ├── ml_training_finetuning_explanation.txt
+│   │   ├── resource_manager explained.txt
+│   │   ├── scheduler_explained.txt
+│   │   ├── scheduler_explanation.txt
+│   │   ├── scheduling_automation_explanation.txt
+│   │   ├── security_explained.txt
+│   │   ├── smart_home_integration_explanation.txt
+│   │   ├── speech_based_explanation.txt
+│   │   ├── speech_recognition_explanation.txt
+│   │   ├── text_based_explanation.txt
+│   │   └── text_to_speech_explanation.txt
+│   ├── future_updates
+│   │   ├── feature_requests.md
+│   │   ├── future_imporvements.md
+│   │   └── roadmap.md
+│   ├── licenses
+│   │   └── LICENSE.txt
+│   ├── performance_benchmarks
+│   │   └── performance_benchmarks.md
+│   ├── prior_code
+│   │   ├── controller_prior_code.txt
+│   │   ├── emotion_detection_prior_code.txt
+│   │   ├── error_handler prior code.txt
+│   │   ├── face_gesture_recognition_prior_code.txt
+│   │   ├── facial_expression_prior_code.txt
+│   │   ├── gemini_prior_code.txt
+│   │   ├── image_recognition_prior_code.txt
+│   │   ├── medical_image_analysis_prior_code.txt
+│   │   ├── ml_training_finetuning_prior_code.txt
+│   │   ├── resource_manager prior code.txt
+│   │   ├── router_prior_code.txt
+│   │   ├── scheduler_prior_code.txt
+│   │   ├── scheduling_automation_prior_code.txt
+│   │   ├── security_prior_code.txt
+│   │   ├── smart_home_integration_prior_code.txt
+│   │   ├── speech_based_prior_code.txt
+│   │   ├── speech_recognition_prior_code.txt
+│   │   ├── text_based_prior_code.txt
+│   │   └── text_to_speech_prior_code.txt
+│   ├── README.md
+│   │   ├── Gemini.txt
+│   │   └── medical_image_analysis_ai.txt
+│   ├── structure
+│   │   ├── project_structure-1.txt
+│   │   └── project_structure.txt
+│   └── testing
+│       ├── test_cli_test_ascii.txt
+│       └── test_cli_test_utf8.txt
+├── handler
+│   ├── input_processer
+│   │   ├── image
+│   │   │   ├── image_processing
+│   │   │   │   └── body_tracking
+│   │   │   │       └── face
+│   │   │   │           └── face_gesture_recognition
+│   │   │   │               └── face_gesture_recognition_ai.py
+│   │   │   ├── image_recognition
+│   │   │   │   └── image_recognition
+│   │   │   │       └── image_recognition_ai.py
+│   │   │   └── vision_models
+│   │   │       └── vision_ai.py
+│   │   ├── medical_ai
+│   │   │   └── medical_image_analysis
+│   │   │       └── medical_image_analysis_ai.py
+│   │   ├── nlp_input
+│   │   │   ├── language_models
+│   │   │   │   └── Gemini
+│   │   │   │       └── gemini_ai.py
+│   │   │   └── speech_recognition
+│   │   │       └── speech_recognition_ai.py
+│   │   └── smart_home
+│   │       ├── scheduling_automation
+│   │       │   └── scheduling_automation_ai.py
+│   │       └── smart_home_integration
+│   │           └── smart_home_integration_ai.py
+│   └── output_processer
+│       └── automations
+│           └── amazon
+│               ├── report_generator.py
+│               └── status_alerts.py
+├── interfaces
+├── kill_switch
+│   ├── global_kill_switch
+│   │   └── global_kill_switch.py
+│   └── program_kill_switch
+│       └── module_kill_switch.py
+├── logs
+│   ├── noise_detection_log
+│   └── sound_classification_log
+├── output.txt
+├── project_tree.txt
+├── requirements.txt
+├── router
+│   ├── dropshipping_router
+│   │   ├── amazon_router
+│   │   │   └── amazon_router.py
+│   │   └── main_dropshipping_router
+│   │       └── dropshiipping_router.py
+│   ├── __init__.py
+│   └── router_base
+│       └── router.py
+├── scripts
+│   └── setup_script.py
+├── security
+│   ├── security_manager
+│   │   ├── security_manager_ai.py
+│   │   └── security_manager.log
+│   └── security_manager.py
+└── users
+    ├── main.py
+    ├── roles
+    │   ├── permission.py
+    │   └── roles.py
+    ├── user_management
+    │   └── user_management.py
+    ├── user_preferences
+    │   └── user_preference.json
+    ├── user_profiles
+    │   └── user_profile.py
+    └── user_roles
+        ├── admin
+        │   └── admin_dashboard.py
+        ├── child
+        │   ├── child_activity_monitor.py
+        │   ├── child_dashboard.py
+        │   ├── child_device_control.py
+        │   ├── child_location_tracker.py
+        │   └── geo_fencing.py
+        ├── guest
+        │   └── guest_access.py
+        └── parent
+            └── parent_control_panel.py
+
+257 directories, 342 files

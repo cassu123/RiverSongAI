@@ -1,4 +1,15 @@
 import requests
+from kill_switch.program_kill_switch.module_kill_switch import ModuleKillSwitch
+
+
+module_kill_switch = ModuleKillSwitch()
+
+def sync_supplier_data():
+    if module_kill_switch.is_active('Dropshipping'):
+        print("Supplier sync is disabled. Shutting down operation.")
+        return
+    print("Syncing supplier data...")
+    # Your existing supplier API logic here
 
 class SupplierAPI:
     def __init__(self, api_key):

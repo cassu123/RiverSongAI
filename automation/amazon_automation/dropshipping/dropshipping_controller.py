@@ -1,5 +1,16 @@
 from amazon_automation.dropshipping.product_sync import ProductSync
 from amazon_automation.dropshipping.supplier_api import SupplierAPI
+from kill_switch.program_kill_switch.module_kill_switch import ModuleKillSwitch
+
+module_kill_switch = ModuleKillSwitch()
+
+def manage_dropshipping():
+    if module_kill_switch.is_active('Dropshipping'):
+        print("Dropshipping module is disabled. Shutting down operation.")
+        return
+    # Continue with the dropshipping process if the kill switch is not active
+    print("Running Dropshipping module...")
+    # Your existing logic for managing dropshipping here
 
 class DropshippingController:
     def __init__(self, api_key):
