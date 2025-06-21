@@ -1,0 +1,65 @@
+# This is a sample .gitignore file for a Python project with AI/ML components.
+# It includes common ignores for Python, OS, IDEs, and large files.
+# General ignores
+# Ignore all files that are not necessary for version control
+# This includes compiled files, logs, and environment-specific files.
+# General ignores
+# Compiled files
+
+# Python specific ignores
+*.pyc
+__pycache__/
+.Python/
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.sqlite3
+.coverage
+.pytest_cache/
+htmlcov/
+.nox/
+.venv/
+venv/
+env/
+# Venv by tool
+.direnv/
+.pip-modules/
+
+# OS and IDE specific ignores
+.DS_Store
+.vscode/
+*.sublime-workspace
+*.idea/
+.project
+.settings/
+.classpath
+
+# Compiled/binary files (from AI models, logs, etc.)
+*.log
+*.sqlite
+*.db
+*.jsonl
+*.csv # Only ignore if these are large generated data files, not source data you want to track
+*.txt # Only ignore if these are large generated log/data files, not source data/docs
+
+# Environment variables and sensitive files
+.env
+.flaskenv
+instance/
+config_files/client_secrets.json # Explicitly ignore this file based on your tree output
+# If you have specific folders for large data that are not LFS tracked, add them here
+data/ # If 'data' folder contains generated or very large raw datasets you don't version with LFS
+logs/ # If logs folder contains runtime logs you don't need to version
+models/ # If this folder contains large trained models that are NOT Git LFS tracked.
+        # If your models ARE Git LFS tracked, DO NOT add this line.
+        # Based on your tree, you have models/ subdirectories that might contain large files,
+        # so ensure LFS is tracking these, or explicitly ignore them here if LFS is not used for them.
