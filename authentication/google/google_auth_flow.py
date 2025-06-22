@@ -25,21 +25,15 @@ if not logger.handlers:
 DEFAULT_SCOPES = [
     'https://www.googleapis.com/auth/calendar.readonly', # From google_controller.py
     'https://www.googleapis.com/auth/drive.readonly',    # From google_controller.py
-    'https://www.googleapis.com/auth/gmail.readonly',    # From google_controller.py
-    'https://www.googleapis.com/auth/gmail.send',        # Added: If you want to send emails
-    'https://www.googleapis.com/auth/gmail.compose',     # Added: For saving drafts
-    'https://www.googleapis.com/auth/gmail.modify',      # Added: For marking as read/seen (relevant for check_inbox)
-    'https://www.googleapis.com/auth/tasks'              # Example: If integrating with Google Tasks
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/gmail.compose',
+    'https://www.googleapis.com/auth/gmail.modify',
+    'https://www.googleapis.com/auth/tasks'
 ]
 
 # Path to your client_secrets.json file in the project root
-# This is a relative path from the main RiverSongAI directory, assuming it's imported from there.
-# If imported from within authentication/Google, then adjust:
-# CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'config_files', 'client_secrets.json')
-# A more robust way might be to pass this path during initialization if it's managed centrally by config/
-# For now, let's assume `config_files/client_secrets.json` is accessed relative to the project root.
-# We'll adjust this if needed based on how the main application loads config_files.
-CLIENT_SECRETS_FILE = 'config_files/client_secrets.json' # Assuming main.py sets up working dir.
+CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'config_files', 'google_client_secrets.json')
 
 class GoogleAuthFlow:
     """
@@ -47,23 +41,12 @@ class GoogleAuthFlow:
     Handles authorization, token storage, and refreshing of access tokens.
     """
     def __init__(self, token_storage_path: str = "data/google_tokens", scopes: Optional[List[str]] = None):
-        """
-        Initializes the GoogleAuthFlow manager.
-        Args:
-            token_storage_path (str): Directory where user-specific token files will be stored.
-                                      This should be managed by a secure user_management system.
-            scopes (Optional[List[str]]): List of Google API scopes to request.
-        """
         self.scopes = scopes if scopes is not None else DEFAULT_SCOPES
         self.token_storage_path = token_storage_path
-        # Ensure the token storage directory exists
         os.makedirs(self.token_storage_path, exist_ok=True)
         logger.info(f"GoogleAuthFlow initialized. Token storage at: {self.token_storage_path}")
 
     def _get_user_token_file(self, user_id: str) -> str:
-        """Helper to get the user-specific token file path."""
-        # Use a hash or secure filename to avoid easily guessing other user's files
-        # For simplicity, using user_id.json for now. In production, use hashed user_id.
         return os.path.join(self.token_storage_path, f"{user_id}.json")
 
     def authorize_user(self, user_id: str) -> Optional[Dict[str, Any]]:
@@ -74,16 +57,14 @@ class GoogleAuthFlow:
         creds = None
         token_file = self._get_user_token_file(user_id)
 
-        # 1. Load existing credentials if they exist
         if os.path.exists(token_file):
             try:
                 creds = Credentials.from_authorized_user_file(token_file, self.scopes)
                 logger.info(f"Loaded existing Google credentials for user: {user_id}")
             except Exception as e:
                 logger.warning(f"Error loading existing token for {user_id}, re-authenticating: {e}")
-                creds = None # Force re-authentication
+                creds = None
 
-        # 2. If no valid credentials, initiate new flow or refresh expired ones
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 logger.info(f"Refreshing Google access token for user: {user_id}")
@@ -91,16 +72,12 @@ class GoogleAuthFlow:
                     creds.refresh(Request())
                 except Exception as e:
                     logger.error(f"Error refreshing token for {user_id}, full re-auth required: {e}")
-                    creds = None # Fallback to full re-auth if refresh fails
+                    creds = None
             else:
                 logger.info(f"Initiating new Google OAuth flow for user: {user_id}")
                 try:
-                    # 'credentials.json' here refers to your client_secrets.json
-                    # Note: InstalledAppFlow expects the file name 'client_secrets.json'
-                    # if the file is copied to current working directory, or a path.
-                    # We are using the project-level CLIENT_SECRETS_FILE path.
                     flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, self.scopes)
-                    creds = flow.run_local_server(port=0) # Opens browser for user consent
+                    creds = flow.run_local_server(port=0)
                 except FileNotFoundError:
                     logger.critical(f"'{CLIENT_SECRETS_FILE}' not found. Google API authentication cannot proceed. Please ensure it's correctly placed and named.")
                     return None
@@ -108,23 +85,19 @@ class GoogleAuthFlow:
                     logger.error(f"Error during new Google OAuth flow for {user_id}: {e}")
                     return None
 
-        # 3. Save new/refreshed credentials
         if creds and creds.valid:
             try:
-                # Store the credentials as a dictionary that can be reloaded
                 creds_dict = {
                     'token': creds.token,
                     'refresh_token': creds.refresh_token,
                     'token_uri': creds.token_uri,
-                    'client_id': creds.client_id,
-                    'client_secret': creds.client_secret,
                     'scopes': creds.scopes,
-                    'id_token': creds.id_token # if applicable
+                    'id_token': creds.id_token if hasattr(creds, 'id_token') else None
                 }
                 with open(token_file, 'w') as token:
                     json.dump(creds_dict, token, indent=4)
                 logger.info(f"Google credentials saved for user: {user_id} to '{token_file}'.")
-                return creds_dict # Return dictionary for secure storage elsewhere
+                return creds_dict
             except Exception as e:
                 logger.error(f"Error saving Google credentials for user {user_id}: {e}")
                 return None
@@ -145,22 +118,22 @@ class GoogleAuthFlow:
             with open(token_file, 'r') as f:
                 creds_dict = json.load(f)
 
-            # Reconstruct Credentials object
-            creds = Credentials(**creds_dict)
+            # Load client_secrets to get client_id and client_secret for reconstructing Credentials
+            with open(CLIENT_SECRETS_FILE, 'r') as cs_file:
+                client_secrets_data = json.load(cs_file)['installed']
+                client_id = client_secrets_data['client_id']
+                client_secret = client_secrets_data['client_secret']
 
-            # Ensure credentials are valid and refresh if expired
-            if not creds.valid:
-                if creds.expired and creds.refresh_token:
-                    logger.info(f"Refreshing Gmail access token for user {user_id}.")
-                    creds.refresh(Request())
-                    # Save refreshed token back to file
-                    with open(token_file, 'w') as token:
-                        json.dump(creds.to_json(), token, indent=4)
-                else:
-                    logger.warning(f"Google credentials for user {user_id} are invalid or expired. Re-authorization may be needed.")
-                    return None
-
-            service = build('gmail', 'v1', credentials=creds)
+            # Reconstruct Credentials object, providing client_id and client_secret explicitly
+            creds = Credentials(
+                token=creds_dict.get('token'),
+                refresh_token=creds_dict.get('refresh_token'),
+                token_uri=creds_dict.get('token_uri'),
+                client_id=client_id, # Provide from client_secrets.json
+                client_secret=client_secret, # Provide from client_secrets.json
+                scopes=creds_dict.get('scopes')
+            )
+            return build('gmail', 'v1', credentials=creds)
             logger.info(f"Gmail service built for user {user_id}.")
             return service
         except Exception as e:

@@ -1,0 +1,19 @@
+{
+  "api_settings": {
+    "gmail_api_version": "v1",
+    "calendar_api_version": "v3",
+    "drive_api_version": "v3"
+  },
+  "integration_settings": {
+    "default_email_label_to_monitor": "INBOX",
+    "monitor_only_starred_emails": false,
+    "calendar_event_sync_interval_minutes": 15
+  },
+  "oauth_flow_settings": {
+    "custom_scopes_enabled": false,
+    "custom_scopes": [
+      "https://www.googleapis.com/auth/tasks"
+    ],
+    "token_storage_path": "data/google_tokens"
+  }
+}
