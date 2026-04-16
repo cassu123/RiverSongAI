@@ -1,0 +1,327 @@
+/* ============================================================
+   River Song AI -- Global Stylesheet
+   Halo-inspired holographic aesthetic:
+     Dark near-black background
+     Electric blue primary palette
+     Military-technical typography
+   ============================================================ */
+
+:root {
+  --color-bg:          #050a10;
+  --color-bg-panel:    #060c18;
+  --color-primary:     #00aaff;
+  --color-secondary:   #00ffcc;
+  --color-accent:      #0066cc;
+  --color-error:       #ff4422;
+  --color-text:        #b8d4ee;
+  --color-text-dim:    #3a6080;
+  --color-border:      #0a2236;
+  --font-display:      'Orbitron', 'Courier New', monospace;
+  --font-body:         'Rajdhani', 'Segoe UI', sans-serif;
+  --glow-sm:           0 0 8px  rgba(0, 170, 255, 0.45);
+  --glow-md:           0 0 16px rgba(0, 170, 255, 0.70);
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   App Layout
+   ============================================================ */
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0 12px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.app-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--color-primary);
+  text-shadow: var(--glow-sm);
+}
+
+.connection-status {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  padding: 4px 10px;
+  border-radius: 2px;
+  border: 1px solid currentColor;
+  transition: color 0.3s, border-color 0.3s;
+}
+
+.connection-status--connected    { color: var(--color-secondary); }
+.connection-status--disconnected { color: var(--color-text-dim); }
+.connection-status--reconnecting { color: #ffaa00; }
+.connection-status--error        { color: var(--color-error); }
+
+.app-main {
+  display: flex;
+  flex: 1;
+  gap: 28px;
+  overflow: hidden;
+  padding: 24px 0 16px;
+}
+
+/* ============================================================
+   Visual Section (left column)
+   ============================================================ */
+
+.visual-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 320px;
+}
+
+.figure-wrapper {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  flex-shrink: 0;
+}
+
+/* Both canvases overlap the same 300x300 cell */
+.river-song-canvas,
+.audio-visualizer-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 300px;
+  height: 300px;
+}
+
+/* Visualizer bars sit behind the figure */
+.audio-visualizer-canvas {
+  z-index: 0;
+  pointer-events: none;
+}
+
+.river-song-canvas {
+  z-index: 1;
+}
+
+.state-label {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.28em;
+  color: var(--color-primary);
+  text-shadow: var(--glow-sm);
+  min-height: 1.2em;
+  text-align: center;
+}
+
+.error-banner {
+  width: 100%;
+  max-width: 300px;
+  background: rgba(255, 68, 34, 0.08);
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  font-size: 0.8rem;
+  padding: 8px 12px;
+  border-radius: 2px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ============================================================
+   Controls
+   ============================================================ */
+
+.controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-listen,
+.btn-reset {
+  font-family: var(--font-display);
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  border-radius: 2px;
+  border: 1px solid var(--color-primary);
+  background: transparent;
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-listen {
+  font-size: 0.75rem;
+  padding: 10px 28px;
+}
+
+.btn-reset {
+  font-size: 0.6rem;
+  padding: 10px 14px;
+  border-color: var(--color-text-dim);
+  color: var(--color-text-dim);
+}
+
+.btn-listen:hover:not(:disabled) {
+  background: rgba(0, 170, 255, 0.10);
+  box-shadow: var(--glow-sm);
+}
+
+.btn-reset:hover:not(:disabled) {
+  background: rgba(58, 96, 128, 0.18);
+}
+
+.btn-listen:disabled,
+.btn-reset:disabled {
+  opacity: 0.30;
+  cursor: not-allowed;
+}
+
+.btn-listen--active {
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+  animation: pulse-border 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 4px  rgba(0, 255, 204, 0.25); }
+  50%       { box-shadow: 0 0 18px rgba(0, 255, 204, 0.75); }
+}
+
+/* ============================================================
+   Live Streaming Response
+   ============================================================ */
+
+.streaming-response {
+  width: 100%;
+  max-width: 300px;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  line-height: 1.65;
+  padding: 10px 14px;
+  border-left: 2px solid var(--color-primary);
+  background: rgba(0, 170, 255, 0.04);
+  word-break: break-word;
+}
+
+.cursor-blink {
+  color: var(--color-primary);
+  animation: blink 0.75s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ============================================================
+   Conversation Panel (right column)
+   ============================================================ */
+
+.conversation-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: var(--color-bg-panel);
+  overflow: hidden;
+  min-width: 0;  /* Prevent flex blowout */
+}
+
+.conversation-panel--empty {
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-label {
+  color: var(--color-text-dim);
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  color: var(--color-text-dim);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.messages::-webkit-scrollbar       { width: 4px; }
+.messages::-webkit-scrollbar-track { background: transparent; }
+.messages::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.message-role {
+  font-family: var(--font-display);
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+}
+
+.message--user      .message-role { color: var(--color-text-dim); }
+.message--assistant .message-role { color: var(--color-primary); text-shadow: var(--glow-sm); }
+
+.message-text {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  word-break: break-word;
+}
+
+.message--user      .message-text { color: #7aaccf; }
+.message--assistant .message-text { color: var(--color-text); }
