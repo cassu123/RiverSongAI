@@ -1,6 +1,6 @@
 # main.py
-from user_profiles import UserProfile
-from roles import Role
+from user_profiles.user_profile import UserProfile
+from roles.roles import Role
 from user_roles.admin.admin_dashboard import admin_dashboard
 from user_roles.parent.parent_control_panel import parent_control_panel
 from user_roles.child.child_dashboard import child_dashboard

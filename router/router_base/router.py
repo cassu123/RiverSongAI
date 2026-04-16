@@ -2,20 +2,75 @@ import logging
 from typing import Any, Callable, Dict, Optional
 from threading import Lock
 
-# Import necessary components
-from controller.communication import Communication
-from controller.error_handler import ErrorHandler
-from controller.resource_manager import ResourceManager
-from controller.scheduler import Scheduler
-from controller.security import SecurityManager
+# ---------------------------------------------------------------------------
+# Controller imports
+# Fixed: package name was 'controller' (wrong), correct name is 'controllers'.
+# Each submodule also needed its full dotted path.
+# ---------------------------------------------------------------------------
+from controllers.communication.communication import Communication
+from controllers.resource_manager.resource_manager import ResourceManager
+from controllers.scheduler.scheduler import Scheduler
+from controllers.security.security import SecurityManager
 
-# Import AI modules
-from ai_modules.text_to_speech import TextToSpeech
-from ai_modules.speech_recognition_ai import SpeechRecognitionAI
-from ai_modules.medical_image_analysis_ai import MedicalImageAnalysisAI
-from ai_modules.gemini_ai import GeminiAI
-from ai_modules.smart_home_integration import SmartHomeIntegration
-from ai_modules.vision_ai import VisionAI
+# ErrorHandler: the file exists at controllers/error_handler/error_handler.py
+# but defines only module-level functions, not an ErrorHandler class.
+# Stubbed here so this module remains importable until a class is added.
+try:
+    from controllers.error_handler.error_handler import ErrorHandler
+except ImportError:
+    class ErrorHandler:  # type: ignore[no-redef]
+        """Stub -- controllers/error_handler/error_handler.py has no ErrorHandler class."""
+        def handle_error(self, error: Exception) -> None:
+            raise NotImplementedError("ErrorHandler class not yet implemented in error_handler.py")
+
+# ---------------------------------------------------------------------------
+# AI module imports
+# Fixed: TextToSpeech path corrected to its actual location.
+# The remaining four classes do not exist anywhere in the codebase.
+# Each is stubbed with a NotImplementedError so this file stays importable.
+# Replace each stub import with the real path when the module is implemented.
+# ---------------------------------------------------------------------------
+from ai_modules.output.text_to_speech.text_to_speech_ai import TextToSpeech
+
+try:
+    from ai_modules.input.biometric_recognition.voice_commands.voice_commands_ai import SpeechRecognitionAI
+except ImportError:
+    class SpeechRecognitionAI:  # type: ignore[no-redef]
+        """Stub -- no SpeechRecognitionAI class found in ai_modules."""
+        def __init__(self):
+            raise NotImplementedError("SpeechRecognitionAI not yet implemented")
+
+try:
+    from ai_modules.models.medical_image_analysis.medical_notes.medical_notes_ai import MedicalImageAnalysisAI
+except ImportError:
+    class MedicalImageAnalysisAI:  # type: ignore[no-redef]
+        """Stub -- no MedicalImageAnalysisAI class found in ai_modules."""
+        def __init__(self):
+            raise NotImplementedError("MedicalImageAnalysisAI not yet implemented")
+
+try:
+    from ai_modules.models.Gemini import GeminiAI
+except ImportError:
+    class GeminiAI:  # type: ignore[no-redef]
+        """Stub -- no GeminiAI class found in ai_modules.models.Gemini."""
+        def __init__(self):
+            raise NotImplementedError("GeminiAI not yet implemented")
+
+try:
+    from ai_modules.input.smart_home_inputs.appliance_control.appliance_control import SmartHomeIntegration
+except ImportError:
+    class SmartHomeIntegration:  # type: ignore[no-redef]
+        """Stub -- no SmartHomeIntegration class found in ai_modules."""
+        def __init__(self):
+            raise NotImplementedError("SmartHomeIntegration not yet implemented")
+
+try:
+    from ai_modules.models.image_video.video_analytics.video_analytics_ai import VisionAI
+except ImportError:
+    class VisionAI:  # type: ignore[no-redef]
+        """Stub -- no VisionAI class found in ai_modules."""
+        def __init__(self):
+            raise NotImplementedError("VisionAI not yet implemented")
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

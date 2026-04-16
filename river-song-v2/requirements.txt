@@ -1,0 +1,60 @@
+# =============================================================================
+# River Song AI -- Python Dependencies
+# Phase 1: Core conversation loop only
+# =============================================================================
+# Install with: pip install -r requirements.txt
+# Tested on Python 3.11+
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# Web framework
+# -----------------------------------------------------------------------------
+fastapi==0.115.5
+uvicorn[standard]==0.32.1        # ASGI server with websocket support
+websockets==13.1                 # WebSocket protocol support
+
+
+# -----------------------------------------------------------------------------
+# Configuration
+# -----------------------------------------------------------------------------
+pydantic==2.9.2                  # Data validation
+pydantic-settings==2.6.1         # BaseSettings for .env loading
+python-dotenv==1.0.1             # .env file support
+
+
+# -----------------------------------------------------------------------------
+# STT -- Whisper (local)
+# -----------------------------------------------------------------------------
+openai-whisper==20240930         # Local Whisper inference
+sounddevice==0.5.1               # Cross-platform audio I/O
+numpy==1.26.4                    # Audio buffer handling (whisper dep)
+scipy==1.14.1                    # Audio resampling utilities
+
+
+# -----------------------------------------------------------------------------
+# LLM -- Ollama client
+# -----------------------------------------------------------------------------
+ollama==0.3.3                    # Official Ollama Python client
+
+
+# -----------------------------------------------------------------------------
+# TTS -- Piper (local)
+# Uses the Piper binary via subprocess -- no Python package required.
+# Install Piper separately: https://github.com/rhasspy/piper
+# Voice models: https://huggingface.co/rhasspy/piper-voices
+# -----------------------------------------------------------------------------
+soundfile==0.12.1                # Read synthesized WAV output for playback
+
+
+# -----------------------------------------------------------------------------
+# Kill switch
+# -----------------------------------------------------------------------------
+bcrypt==4.2.1                    # Password hashing for kill switch reset
+
+
+# -----------------------------------------------------------------------------
+# Utilities
+# -----------------------------------------------------------------------------
+httpx==0.27.2                    # Async HTTP client (used by health checks)
+python-multipart==0.0.12         # Form data parsing for FastAPI
