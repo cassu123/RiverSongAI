@@ -1,0 +1,16 @@
+SERVICE: Alpha Vantage (Stocks)
+WHAT IT DOES: Gives River Song real-time stock quotes including current price, daily change, and percentage change for any publicly traded company.
+HOW TO GET IT:
+  1. Go to alphavantage.co/support/#api-key.
+  2. Fill in your name, email, and what you plan to use the API for. Click "GET FREE API KEY".
+  3. Your API key is shown immediately on the next screen. Copy it.
+  4. Paste the key as the value for ALPHA_VANTAGE_API_KEY in your .env file.
+  Link: https://www.alphavantage.co/support/#api-key
+VARIABLE NAME: ALPHA_VANTAGE_API_KEY
+WHERE TO PUT IT: .env
+NOTES:
+  - The free tier allows 25 API requests per day and 5 requests per minute.
+  - River Song supports asking by company name ("what is Apple stock at") or ticker symbol ("what is AAPL at"). A built-in name-to-ticker map covers 50+ major companies.
+  - If the free rate limit is hit, Alpha Vantage returns a "Note" field in the response instead of data. River Song detects this and reads an appropriate message aloud.
+  - River Song uses the GLOBAL_QUOTE endpoint only, which counts as 1 request per stock lookup.
+  - If ALPHA_VANTAGE_API_KEY is empty, stock intent calls will return an error message in speech. All other features still work.

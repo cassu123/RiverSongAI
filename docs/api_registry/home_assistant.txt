@@ -1,0 +1,23 @@
+SERVICE: Home Assistant
+WHAT IT DOES: Lets River Song control smart home devices (lights, locks, thermostats, fans, covers) by connecting to your local Home Assistant instance.
+HOW TO GET IT:
+  1. Open your Home Assistant web interface (usually http://homeassistant.local:8123).
+  2. Click your profile picture or username in the bottom-left corner.
+  3. Scroll down to the "Security" section.
+  4. Under "Long-lived access tokens", click "Create Token".
+  5. Give it a name (e.g. "river-song") and click "OK".
+  6. Copy the token that appears -- you will only see it once.
+  7. Paste it as the value for HOME_ASSISTANT_TOKEN in your .env file.
+  8. Set HOME_ASSISTANT_URL to the address of your Home Assistant instance (e.g. http://homeassistant.local:8123 or the local IP like http://192.168.1.100:8123).
+  9. Copy config_files/device_registry.example.json to config_files/device_registry.json.
+  10. Open device_registry.json and replace the example entity IDs with your actual HA entity IDs.
+      - To find entity IDs in HA: Settings -> Devices & Services -> Entities. Search by room or device name.
+  Link: http://homeassistant.local:8123/profile/security
+VARIABLE NAME: HOME_ASSISTANT_URL, HOME_ASSISTANT_TOKEN, DEVICE_REGISTRY_PATH
+WHERE TO PUT IT: .env
+NOTES:
+  - Long-lived access tokens do not expire. Treat this token like a password -- never commit it.
+  - Use a local LAN address for HOME_ASSISTANT_URL, not the remote cloud relay. Local is faster and works without internet.
+  - DEVICE_REGISTRY_PATH default is config_files/device_registry.json. The .example version is committed; the real one is gitignored.
+  - Entity IDs follow the format domain.name (e.g. light.living_room, switch.bedroom_fan). Wrong IDs cause silent failures.
+  - Groups in the device registry let you control multiple devices with one command (e.g. "turn off all the lights").

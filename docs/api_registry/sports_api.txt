@@ -1,0 +1,14 @@
+SERVICE: Sports API (TheSportsDB)
+WHAT IT DOES: Gives River Song recent game results and upcoming events for any professional sports team, including score, date, and win/loss status.
+HOW TO GET IT:
+  1. No registration is required for the free tier. The free API key is literally the number 1.
+  2. Set SPORTS_API_KEY to 1 in your .env file. That is the entire setup.
+  Link: https://www.thesportsdb.com/api.php
+VARIABLE NAME: SPORTS_API_KEY
+WHERE TO PUT IT: .env
+NOTES:
+  - The free tier (key "1") gives access to team search, last event results, and next upcoming events -- which is everything River Song uses.
+  - No rate limit is published for the free tier, but avoid hammering it. River Song only calls it on demand.
+  - River Song has a built-in alias map for 100+ team names across MLB, NFL, and NBA (e.g. "Cubs" -> "Chicago Cubs", "Lakers" -> "Los Angeles Lakers").
+  - If you say a team name that isn't in the alias map, River Song passes the phrase directly to the team search endpoint. It will usually still find the right team.
+  - Paid tiers at thesportsdb.com/api.php unlock additional leagues, live scores, and player stats. The paid key replaces the "1" value in SPORTS_API_KEY.
