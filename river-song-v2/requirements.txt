@@ -2,6 +2,7 @@
 # River Song AI -- Python Dependencies
 # Phase 1: Core conversation loop
 # Phase 2: Google Services + Intent Router
+# Phase 5: Information Feeds (Weather, News, Stocks, Sports)
 # =============================================================================
 # Install with: pip install -r requirements.txt
 # Tested on Python 3.11+

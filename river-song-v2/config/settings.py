@@ -153,7 +153,65 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
-    # Intent Router (Phase 2)
+    # Information Feeds (Phase 5)
+    # -------------------------------------------------------------------------
+    weather_api_key: str = Field(
+        default="",
+        description="OpenWeatherMap API key. Register free at openweathermap.org/api.",
+    )
+    default_location: str = Field(
+        default="New York,US",
+        description=(
+            "Default location for weather queries when no city is spoken. "
+            "Format: 'City,CountryCode' e.g. 'Chicago,US'."
+        ),
+    )
+    weather_units: str = Field(
+        default="imperial",
+        description="Temperature units for weather output: 'imperial' (F) or 'metric' (C).",
+    )
+    news_api_key: str = Field(
+        default="",
+        description="NewsAPI.org key. Register free at newsapi.org/register.",
+    )
+    alpha_vantage_api_key: str = Field(
+        default="",
+        description="Alpha Vantage key for stock quotes. Register free at alphavantage.co.",
+    )
+    sports_api_key: str = Field(
+        default="1",
+        description=(
+            "TheSportsDB API key. Free tier uses the literal value '1'. "
+            "Upgrade at thesportsdb.com/api.php for additional endpoints."
+        ),
+    )
+
+    # -------------------------------------------------------------------------
+    # Home Assistant (Phase 3)
+    # -------------------------------------------------------------------------
+    home_assistant_url: str = Field(
+        default="http://homeassistant.local:8123",
+        description="Base URL of your Home Assistant instance.",
+    )
+    home_assistant_token: str = Field(
+        default="",
+        description=(
+            "Long-lived access token generated in HA: "
+            "Profile -> Security -> Long-lived access tokens. "
+            "Required for all HA API calls."
+        ),
+    )
+    device_registry_path: str = Field(
+        default="config_files/device_registry.json",
+        description=(
+            "Path to the device registry JSON file mapping plain-English device "
+            "names to Home Assistant entity IDs. Relative paths resolve from the "
+            "project root."
+        ),
+    )
+
+    # -------------------------------------------------------------------------
+    # Intent Router (Phase 2+)
     # -------------------------------------------------------------------------
     intent_confidence_threshold: float = Field(
         default=0.7,
