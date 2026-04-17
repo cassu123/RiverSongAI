@@ -1,1 +1,0 @@
-Model: Rule-based AI for task scheduling and automation.\nPurpose: Managing schedules and automating tasks.

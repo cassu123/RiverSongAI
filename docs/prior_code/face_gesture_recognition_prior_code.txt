@@ -1,1 +1,0 @@
-# Placeholder for face and gesture recognition prior code
