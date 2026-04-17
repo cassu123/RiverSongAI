@@ -1,11 +1,40 @@
-# This is a sample .gitignore file for a Python project with AI/ML components.
-# It includes common ignores for Python, OS, IDEs, and large files.
+# =============================================================================
+# RiverSongAI -- .gitignore
+# Covers: Python backend, React/Vite frontend, AI models, credentials, OS/IDE
+# =============================================================================
 
-# Python specific ignores
+
+# -----------------------------------------------------------------------------
+# Environment and secrets -- NEVER commit these
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+.flaskenv
+instance/
+
+# OAuth credentials and tokens
+*client_secrets.json
+data/google_tokens/
+*.oauth2.credentials
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Device registry (user-specific entity IDs -- commit only the .example version)
+river-song-v2/config_files/device_registry.json
+
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+__pycache__/
 *.py[cod]
 *$py.class
-__pycache__/
 .Python/
+
+# Distribution / packaging
 build/
 develop-eggs/
 dist/
@@ -18,14 +47,110 @@ var/
 wheels/
 *.egg-info/
 .installed.cfg
-*.sqlite3
-*.db
+MANIFEST
+
+# Testing and coverage
 .coverage
 .pytest_cache/
 htmlcov/
 .nox/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
 
-# Virtual Environments
+# Type checkers
+.mypy_cache/
+.dmypy.json
+.pyright/
+
+# Databases
+*.sqlite
+*.sqlite3
+*.db
+
+
+# -----------------------------------------------------------------------------
+# AI model files -- large binaries, never commit
+# -----------------------------------------------------------------------------
+# Whisper / PyTorch
+*.pt
+*.pth
+*.safetensors
+
+# Piper TTS voice models
+*.onnx
+*.onnx.json
+
+# Generic model weights
+*.bin
+*.gguf
+*.ggml
+
+# Hugging Face cache (if downloaded locally)
+.cache/huggingface/
+
+
+# -----------------------------------------------------------------------------
+# Node.js / Frontend
+# -----------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# Vite build output and cache
+river-song-v2/frontend/dist/
+river-song-v2/frontend/.vite/
+
+
+# -----------------------------------------------------------------------------
+# Logs and runtime state
+# -----------------------------------------------------------------------------
+*.log
+logs/
+river-song-v2/logs/
+
+# Kill switch state file (runtime, not source)
+river-song-v2/logs/kill_switch_state.txt
+
+
+# -----------------------------------------------------------------------------
+# Data directories (OAuth tokens, user data, downloaded content)
+# -----------------------------------------------------------------------------
+data/
+river-song-v2/data/
+
+
+# -----------------------------------------------------------------------------
+# OS artifacts
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+
+# -----------------------------------------------------------------------------
+# IDE and editor
+# -----------------------------------------------------------------------------
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+.project
+.settings/
+.classpath
+
+
+# -----------------------------------------------------------------------------
+# Virtual environments
+# -----------------------------------------------------------------------------
 .venv/
 venv/
 env/
@@ -35,50 +160,12 @@ venv.bak/
 .direnv/
 .pip-modules/
 
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
-# OS and IDE specific ignores
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-.vscode/
-*.sublime-workspace
-*.idea/
-.project
-.settings/
-.classpath
-
-# Compiled/binary files (from AI models, logs, etc.)
-*.log
-*.sqlite
-*.jsonl
-# Only ignore if these are large generated data files, not source data you want to track
-# *.csv
-# *.txt
-
-# Environment variables and sensitive files
-.env
-.flaskenv
-instance/
-
-# Specific credentials and configuration files
-*client_secrets.json
-*config.json
-*.oauth2.credentials
-
-# Generated outputs and tree files
+# -----------------------------------------------------------------------------
+# Misc project artifacts
+# -----------------------------------------------------------------------------
 output.txt
 project_tree.txt
 
-# Specific project directories for data/logs/models
-data/
-logs/
-models/
+# Conversation transcript files (Claude Code session logs)
+*.jsonl
