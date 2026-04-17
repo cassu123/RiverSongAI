@@ -52,7 +52,7 @@ soundfile==0.12.1                # Read synthesized WAV output for playback
 # -----------------------------------------------------------------------------
 # Kill switch
 # -----------------------------------------------------------------------------
-bcrypt==4.2.1                    # Password hashing for kill switch reset
+bcrypt==5.0.0                    # Password hashing for kill switch reset
 
 
 # -----------------------------------------------------------------------------
