@@ -9,9 +9,9 @@
 #   individual keyword matches (lower confidence). The highest-scoring intent
 #   above INTENT_CONFIDENCE_THRESHOLD is selected.
 #
-# Stage 2 -- Google provider dispatch:
+# Stage 2 -- Provider dispatch:
 #   The winning intent is routed to its handler, which calls the appropriate
-#   Google provider and returns a (intent_name, spoken_response) tuple.
+#   provider and returns a (intent_name, spoken_response) tuple.
 #   An empty spoken_response signals the caller to use the Ollama path instead.
 #
 # Confidence scoring:
@@ -25,11 +25,20 @@
 #   2. Write the handler function: async def _handle_<name>(transcript, user_id)
 #      -> str. Return a spoken response string.
 #   3. No other code changes needed -- the router picks it up automatically.
+#
+# Registered intents (in priority order):
+#   smart_home    - Home Assistant device control (Phase 3)
+#   calendar      - Google Calendar (Phase 2)
+#   gmail         - Gmail (Phase 2)
+#   youtube_music - YouTube Music (Phase 2)
+#   maps          - Google Maps (Phase 2)
+#   conversation  - Ollama fallback (always last)
 # =============================================================================
 
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
 
@@ -67,6 +76,194 @@ class Intent:
 # =============================================================================
 # Intent handlers
 # =============================================================================
+
+# =============================================================================
+# Smart home command parser
+# =============================================================================
+
+# Patterns that identify the action. Checked in order -- first match wins.
+# Each entry is (action_name, regex_pattern).
+_ACTION_PATTERNS: List[tuple] = [
+    ("turn_on",         r"\bturn\s+on\b"),
+    ("turn_off",        r"\bturn\s+off\b"),
+    ("toggle",          r"\btoggle\b"),
+    ("dim",             r"\bdim\b|\bdarken\b"),
+    ("brighten",        r"\bbrighten\b|\braise\b|\bbrighter\b"),
+    ("lock",            r"\block\b"),
+    ("unlock",          r"\bunlock\b"),
+    ("open",            r"\bopen\b"),
+    ("close",           r"\bclose\b"),
+    ("activate",        r"\bactivate\b|\brun scene\b"),
+    ("run",             r"\brun script\b"),
+]
+
+# Patterns stripped from the transcript to isolate the device name.
+_DEVICE_STRIP_PATTERNS: List[str] = [
+    r"\bturn\s+(?:on|off)\b",
+    r"\bset\b",
+    r"\bto\s+\d+\s*(?:percent|%)?",
+    r"\b\d+\s*(?:percent|%)\b",
+    r"\bdim\b|\bdarken\b",
+    r"\bbrighten\b|\braise\b|\bbrighter\b",
+    r"\btoggle\b",
+    r"\block\b|\bunlock\b",
+    r"\bopen\b|\bclose\b",
+    r"\bactivate\b|\brun\b",
+    r"\bscene\b|\bscript\b",
+    r"\bthe\b|\bmy\b|\ba\b|\ban\b|\ball\b",
+    r"\bplease\b",
+    r"\bcan you\b|\bwould you\b",
+    r"\bright now\b|\bfor me\b",
+]
+
+
+def _parse_smart_home_command(transcript: str) -> Dict[str, Any]:
+    """
+    Parse action, device name, and optional numeric value from a transcript.
+
+    Args:
+        transcript: Raw transcription string.
+
+    Returns:
+        Dict with keys:
+          'action'      - str action name, or None if unrecognized.
+          'device_name' - cleaned device name string for registry lookup.
+          'value'       - int or None (brightness %, temperature, position).
+    """
+    lower = transcript.lower()
+
+    # Detect action.
+    action: Optional[str] = None
+    for action_name, pattern in _ACTION_PATTERNS:
+        if re.search(pattern, lower):
+            action = action_name
+            break
+
+    # Detect numeric value (e.g., "50 percent", "set to 72").
+    value: Optional[int] = None
+    m = re.search(r"\b(\d+)\s*(?:percent|%|degrees?)?\b", lower)
+    if m:
+        value = int(m.group(1))
+
+    # If a numeric value is present alongside a directional verb (set/put/turn),
+    # override the action so the handler can resolve set_brightness vs set_temperature.
+    # Covers: "set to 50%", "turn to 50%", "put at 50%", "lights to 50%".
+    if value is not None and re.search(r"\bto\s+\d+", lower):
+        action = "set_value"  # Resolved to set_brightness or set_temperature in handler.
+
+    # Strip action/filler words to isolate the device name.
+    device_name = lower
+    for pattern in _DEVICE_STRIP_PATTERNS:
+        device_name = re.sub(pattern, " ", device_name)
+    device_name = " ".join(device_name.split())
+
+    return {"action": action, "device_name": device_name, "value": value}
+
+
+async def _handle_smart_home(transcript: str, user_id: str) -> str:
+    """
+    Parse a smart home command and execute it via Home Assistant.
+
+    Resolves the device name through the DeviceRegistry, then dispatches
+    the action to the HomeAssistantClient.
+
+    Returns a spoken confirmation or error message.
+    """
+    try:
+        from providers.smart_home.home_assistant import build_ha_client
+        from providers.smart_home.device_registry import get_device_registry
+
+        cmd = _parse_smart_home_command(transcript)
+        action = cmd["action"]
+        device_name = cmd["device_name"]
+        value = cmd["value"]
+
+        if not action:
+            return (
+                "I heard a smart home command but could not determine what action "
+                "to take. Try saying 'turn on the living room lights' or "
+                "'set the bedroom lights to 50 percent'."
+            )
+
+        if not device_name:
+            return (
+                "I understood the action but could not identify which device. "
+                "Try naming the device, like 'turn off the kitchen lights'."
+            )
+
+        registry = get_device_registry()
+        resolved = registry.resolve(device_name)
+
+        if resolved is None:
+            return (
+                f"I could not find a device called '{device_name}' in your registry. "
+                "Check that it is listed in your device_registry.json file."
+            )
+
+        # Resolve "set_value" to a domain-specific action.
+        if action == "set_value":
+            entity_list = resolved if isinstance(resolved, list) else [resolved]
+            domain = entity_list[0].split(".")[0]
+            action = "set_temperature" if domain == "climate" else "set_brightness"
+
+        async with build_ha_client() as client:
+            if isinstance(resolved, list):
+                ok = await client.execute_action_on_many(resolved, action, value)
+                friendly_name = device_name
+            else:
+                ok = await client.execute_action(resolved, action, value)
+                friendly_name = device_name
+
+        if not ok:
+            return (
+                f"I tried to {action.replace('_', ' ')} the {friendly_name} "
+                "but Home Assistant reported an error. Check your HA logs."
+            )
+
+        return _build_confirmation(action, friendly_name, value)
+
+    except FileNotFoundError as exc:
+        logger.error("Smart home handler -- device registry missing: %s", exc)
+        return (
+            "Your device registry file is missing. "
+            "Copy device_registry.example.json to device_registry.json "
+            "and fill in your entity IDs."
+        )
+    except Exception as exc:
+        logger.error("Smart home handler failed: %s", exc)
+        return "Sorry, I had trouble controlling that device right now."
+
+
+def _build_confirmation(action: str, device_name: str, value: Optional[int]) -> str:
+    """Build a natural-sounding spoken confirmation for a completed action."""
+    if action == "turn_on":
+        return f"Turning on the {device_name}."
+    if action == "turn_off":
+        return f"Turning off the {device_name}."
+    if action == "toggle":
+        return f"Toggling the {device_name}."
+    if action == "set_brightness":
+        return f"Setting the {device_name} to {value} percent."
+    if action == "set_temperature":
+        return f"Setting the thermostat to {value} degrees."
+    if action == "dim":
+        return f"Dimming the {device_name}."
+    if action == "brighten":
+        return f"Brightening the {device_name}."
+    if action == "lock":
+        return f"Locking the {device_name}."
+    if action == "unlock":
+        return f"Unlocking the {device_name}."
+    if action == "open":
+        return f"Opening the {device_name}."
+    if action == "close":
+        return f"Closing the {device_name}."
+    if action == "activate":
+        return f"Activating {device_name}."
+    if action == "run":
+        return f"Running {device_name}."
+    return f"Done -- {action.replace('_', ' ')} the {device_name}."
+
 
 async def _handle_calendar(transcript: str, user_id: str) -> str:
     """Fetch upcoming calendar events and return a spoken summary."""
@@ -157,6 +354,109 @@ async def _handle_maps(transcript: str, user_id: str) -> str:
         return "Sorry, I had trouble accessing maps right now."
 
 
+async def _handle_weather(transcript: str, user_id: str) -> str:
+    """Fetch weather for the detected location and day, return a spoken summary."""
+    try:
+        from providers.feeds.weather import (
+            build_weather_provider,
+            extract_location_from_transcript,
+            extract_day_from_transcript,
+        )
+        from config.settings import get_settings
+
+        provider = build_weather_provider()
+        location = extract_location_from_transcript(transcript, get_settings().default_location)
+        day = extract_day_from_transcript(transcript)
+
+        if day or any(kw in transcript.lower() for kw in ("forecast", "weekend", "this week", "week")):
+            periods = await provider.get_forecast(location=location, day_name=day)
+            return provider.format_forecast_for_speech(periods, day_name=day)
+        else:
+            current = await provider.get_current(location=location)
+            return provider.format_current_for_speech(current)
+
+    except Exception as exc:
+        logger.error("Weather handler failed: %s", exc)
+        return "Sorry, I had trouble fetching the weather right now."
+
+
+async def _handle_news(transcript: str, user_id: str) -> str:
+    """Fetch news headlines or a topic search, return a spoken summary."""
+    try:
+        from providers.feeds.news import (
+            build_news_provider,
+            extract_category_from_transcript,
+            extract_topic_from_transcript,
+        )
+
+        provider = build_news_provider()
+        topic = extract_topic_from_transcript(transcript)
+        category = extract_category_from_transcript(transcript)
+
+        if topic:
+            articles = await provider.search_news(topic)
+            return provider.format_for_speech(articles, query=topic)
+        else:
+            articles = await provider.get_headlines(category=category)
+            return provider.format_for_speech(articles, category=category)
+
+    except Exception as exc:
+        logger.error("News handler failed: %s", exc)
+        return "Sorry, I had trouble fetching the news right now."
+
+
+async def _handle_stocks(transcript: str, user_id: str) -> str:
+    """Fetch a stock quote for the detected ticker, return a spoken summary."""
+    try:
+        from providers.feeds.stocks import (
+            build_stocks_provider,
+            extract_ticker_from_transcript,
+        )
+
+        provider = build_stocks_provider()
+        ticker = extract_ticker_from_transcript(transcript)
+
+        if not ticker:
+            return (
+                "I heard a stock query but could not identify which company or ticker. "
+                "Try saying the company name, like 'what's Tesla at'."
+            )
+
+        quote = await provider.get_quote(ticker)
+        return provider.format_for_speech(ticker, quote)
+
+    except ValueError as exc:
+        return str(exc)
+    except Exception as exc:
+        logger.error("Stocks handler failed: %s", exc)
+        return "Sorry, I had trouble fetching that stock quote right now."
+
+
+async def _handle_sports(transcript: str, user_id: str) -> str:
+    """Fetch the most recent result for the detected team, return a spoken summary."""
+    try:
+        from providers.feeds.sports import (
+            build_sports_provider,
+            extract_team_from_transcript,
+        )
+
+        provider = build_sports_provider()
+        team_name = extract_team_from_transcript(transcript)
+
+        if not team_name:
+            return (
+                "I heard a sports query but could not identify the team. "
+                "Try saying the team name, like 'how did the Cubs do'."
+            )
+
+        data = await provider.get_team_results(team_name)
+        return provider.format_results_for_speech(data, requested_name=team_name)
+
+    except Exception as exc:
+        logger.error("Sports handler failed: %s", exc)
+        return "Sorry, I had trouble fetching those sports results right now."
+
+
 async def _handle_conversation(transcript: str, user_id: str) -> str:
     """
     Fallback handler -- signals the conversation loop to use Ollama.
@@ -172,6 +472,55 @@ async def _handle_conversation(transcript: str, user_id: str) -> str:
 # =============================================================================
 
 INTENT_REGISTRY: List[Intent] = [
+    Intent(
+        name="smart_home",
+        phrases=[
+            "turn on the",
+            "turn off the",
+            "turn on all",
+            "turn off all",
+            "turn the lights",
+            "turn the living room",
+            "turn the kitchen",
+            "turn the bedroom",
+            "turn the office",
+            "dim the",
+            "brighten the",
+            "set the lights to",
+            "set the thermostat to",
+            "lights to",
+            "light to",
+            "lock the",
+            "unlock the",
+            "open the garage",
+            "close the garage",
+            "open the blinds",
+            "close the blinds",
+            "toggle the",
+            "activate scene",
+            "run script",
+        ],
+        keywords=[
+            "lights",
+            "light",
+            "lamp",
+            "fan",
+            "thermostat",
+            "lock",
+            "unlock",
+            "garage",
+            "blinds",
+            "shades",
+            "switch",
+            "dim",
+            "brighten",
+            "scene",
+            "script",
+            "turn on",
+            "turn off",
+        ],
+        handler=_handle_smart_home,
+    ),
     Intent(
         name="calendar",
         phrases=[
@@ -266,6 +615,132 @@ INTENT_REGISTRY: List[Intent] = [
             "address",
         ],
         handler=_handle_maps,
+    ),
+    Intent(
+        name="weather",
+        phrases=[
+            "what's the weather",
+            "what is the weather",
+            "how's the weather",
+            "weather today",
+            "weather tomorrow",
+            "weather this weekend",
+            "weather this week",
+            "weather forecast",
+            "what will it be like",
+            "will it rain",
+            "will it snow",
+            "how cold",
+            "how hot",
+            "do i need an umbrella",
+            "should i bring a jacket",
+        ],
+        keywords=[
+            "weather",
+            "forecast",
+            "temperature",
+            "rain",
+            "snow",
+            "sunny",
+            "cloudy",
+            "humid",
+            "wind",
+            "storm",
+            "umbrella",
+            "jacket",
+        ],
+        handler=_handle_weather,
+    ),
+    Intent(
+        name="news",
+        phrases=[
+            "what's in the news",
+            "what is in the news",
+            "latest news",
+            "top headlines",
+            "what happened today",
+            "what's going on in the world",
+            "any news",
+            "tell me the news",
+            "morning briefing",
+            "news update",
+            "news about",
+            "what happened with",
+        ],
+        keywords=[
+            "news",
+            "headlines",
+            "briefing",
+            "stories",
+            "report",
+            "happening",
+            "update",
+        ],
+        handler=_handle_news,
+    ),
+    Intent(
+        name="stocks",
+        phrases=[
+            "what's tesla at",
+            "what is apple at",
+            "stock price",
+            "stock quote",
+            "how is the market",
+            "how are stocks",
+            "check the stock",
+            "look up the stock",
+            "what's the market doing",
+        ],
+        keywords=[
+            "stock",
+            "stocks",
+            "share",
+            "shares",
+            "market",
+            "ticker",
+            "trading",
+            "price",
+            "nasdaq",
+            "dow",
+            "s&p",
+        ],
+        handler=_handle_stocks,
+    ),
+    Intent(
+        name="sports",
+        phrases=[
+            "how did the",
+            "did the cubs",
+            "did the bears",
+            "did the bulls",
+            "did the sox",
+            "did the lakers",
+            "did the patriots",
+            "what was the score",
+            "did they win",
+            "how did they do",
+            "last night's game",
+            "sports score",
+            "game result",
+        ],
+        keywords=[
+            "game",
+            "score",
+            "win",
+            "won",
+            "lost",
+            "loss",
+            "beat",
+            "defeated",
+            "match",
+            "inning",
+            "quarter",
+            "period",
+            "touchdown",
+            "home run",
+            "playoffs",
+        ],
+        handler=_handle_sports,
     ),
     # "conversation" must always be last -- it is the catch-all fallback.
     Intent(
