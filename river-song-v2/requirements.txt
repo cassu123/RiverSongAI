@@ -69,11 +69,11 @@ googlemaps==4.10.0                 # Google Maps Platform Python client
 # YouTube Music (Phase 2)
 # -----------------------------------------------------------------------------
 ytmusicapi==1.8.2                  # Unofficial YouTube Music API client
-yt-dlp==2024.11.18                 # Audio stream extraction for playback
+yt-dlp==2026.3.17                  # Audio stream extraction for playback
 
 
 # -----------------------------------------------------------------------------
 # Utilities
 # -----------------------------------------------------------------------------
 httpx==0.27.2                    # Async HTTP client (used by health checks)
-python-multipart==0.0.12         # Form data parsing for FastAPI
+python-multipart==0.0.26         # Form data parsing for FastAPI
