@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # river-song-v2 Python backend
+  - package-ecosystem: pip
+    directory: /river-song-v2
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  # river-song-v2 React/Vite frontend
+  - package-ecosystem: npm
+    directory: /river-song-v2/frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  # The root requirements.txt is a legacy Home Assistant pip-freeze from a
+  # Windows environment -- it is not used by river-song-v2 and is not
+  # maintained here. Dependabot scanning is intentionally excluded.
