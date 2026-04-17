@@ -233,6 +233,14 @@ class Settings(BaseSettings):
     # Validators
     # -------------------------------------------------------------------------
 
+    @field_validator("audio_input_device", "audio_output_device", mode="before")
+    @classmethod
+    def coerce_empty_string_to_none(cls, v):
+        """Treat an empty string in .env as None for Optional[int] device fields."""
+        if v == "" or v is None:
+            return None
+        return v
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:
