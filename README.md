@@ -1,3 +1,248 @@
-# RiverSong AI
+# RIVER SONG AI
+### Responsive Intelligent Virtual Environment for Recognition, Scheduling, Organization, and Networked Governance
 
-RiverSong is a home-based AI assistant for activity recognition, device control, and more.
+> One interface. Your rules. Your data. Everything else is background noise.
+
+---
+
+## What This Is
+
+River Song is a personal AI operating system -- not a smart home hub, not a voice assistant, not another app. She is the single interface that sits in front of everything you own, everything you use, and every decision you make daily.
+
+Inspired by Cortana from Halo -- the visual, the voice, the presence -- River Song is built to understand intent, not just commands. You do not configure routines from a menu. You describe your life in plain language and she figures out the rest.
+
+She replaces 47 apps with one conversation.
+
+---
+
+## Phase 1 -- The Core Loop (Current)
+
+```
+You speak
+    Whisper (local STT) hears it
+        Ollama (local LLM) thinks
+            Piper (local TTS) responds
+                Cortana visual reacts
+```
+
+Everything runs on your hardware. No cloud calls required. When you are ready to scale, swap one line in `.env` and she upgrades herself.
+
+---
+
+## Architecture
+
+```
+river-song-v2/
+├── .env.example              # Provider contract -- fill before first run
+├── requirements.txt
+├── main.py                   # Application entry point
+├── config/
+│   └── settings.py           # Single source of truth for all config
+├── providers/
+│   ├── base.py               # Abstract interfaces -- swap anything
+│   ├── stt/
+│   │   └── whisper_local.py  # Speech to text
+│   ├── llm/
+│   │   └── ollama.py         # Language model
+│   └── tts/
+│       └── piper.py          # Text to speech
+├── core/
+│   ├── conversation_loop.py  # The main loop
+│   └── kill_switch.py        # Global and module kill switches
+├── api/
+│   └── routes/
+│       ├── health.py
+│       └── conversation.py
+├── frontend/                 # React/Vite -- Cortana visual interface
+└── routines/                 # Agentic routine programs (Phase 2)
+```
+
+---
+
+## Provider Abstraction
+
+River Song does not care what is running the brain. Change one line.
+
+```env
+# Local (default)
+LLM_PROVIDER=ollama
+LLM_MODEL=llama3.1:8b
+TTS_PROVIDER=piper
+STT_PROVIDER=whisper_local
+
+# Cloud (when ready)
+LLM_PROVIDER=anthropic
+LLM_MODEL=claude-sonnet-4-6
+TTS_PROVIDER=elevenlabs
+STT_PROVIDER=deepgram
+```
+
+No code changes. No rebuilds. One line.
+
+---
+
+## Running Phase 1
+
+### Backend
+
+```bash
+cd river-song-v2
+cp .env.example .env
+# Set PIPER_EXECUTABLE_PATH, PIPER_MODEL_PATH, KILL_SWITCH_PASSWORD_HASH
+pip install -r requirements.txt
+python main.py
+```
+
+### Frontend
+
+```bash
+cd river-song-v2/frontend
+npm install
+npm run dev
+# Opens at http://localhost:5173
+```
+
+### Prerequisites
+
+| Dependency | Notes |
+|---|---|
+| Ollama | Run `ollama serve` in a separate terminal. Pull `llama3.1:8b` before first use. |
+| Whisper model | Downloads automatically on first launch (~145MB for base). Instant on subsequent starts. |
+| Piper binary | Not pip-installable. Download from [Piper releases](https://github.com/rhasspy/piper/releases). Set path in `.env`. |
+| Kill switch hash | Generate with `python -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt()))"` and set in `.env`. |
+| Mic access | Backend uses `sounddevice` (system default mic). Frontend requests mic via Web Audio API for the visualizer only. |
+
+---
+
+## Integration Roadmap
+
+### Phase 1 -- Core Loop (Complete)
+- [x] Local STT via Whisper
+- [x] Local LLM via Ollama
+- [x] Local TTS via Piper
+- [x] Cortana visual interface (React)
+- [x] Provider abstraction layer
+- [x] Kill switch (global and module)
+- [x] FastAPI backend with health and conversation routes
+
+### Phase 2 -- Integrations
+- [ ] Google OAuth stack (Calendar, YouTube Music, Maps, Gmail)
+- [ ] Home Assistant middleware
+  - Replaces: LIFX, Govee, Hue, Kasa, Lutron, Nest, SmartThings,
+    geeni, iDevices, RYOBI, Bestway, ConnectLife, Twinkly, Alexa,
+    Google Home -- all of them
+- [ ] Agentic Routine Builder
+- [ ] Reading interfaces (Audible, Libby -- interface only)
+
+### Phase 3 -- Agentic Routine Builder
+River Song builds her own advisory programs from plain English.
+
+You say: "I ride a motorcycle. Tell me if it's safe and what to wear."
+
+She reasons about what data she needs, builds a scoring model,
+stores it as a routine, and pushes an advisory to your phone every
+morning without being asked again.
+
+```
+You describe a need
+    LLM reasons about required factors
+        LLM generates advisory program (JSON)
+            Stored in routines/
+                Scheduler runs on cadence
+                    River Song delivers to your phone
+```
+
+No preset routines. No menus. Judgment built from your life.
+
+### Phase 4 -- Android App
+- [ ] React Native app
+- [ ] Push notifications for advisories
+- [ ] Full Cortana visual on mobile
+- [ ] Voice in/out on device
+
+### Phase 5 -- Security Integrations
+- [ ] ADT+ (flagged for careful implementation -- built last)
+- [ ] myQ garage (same caution level)
+
+---
+
+## Users and Roles
+
+```
+ADMIN    -- Full system access
+PARENT   -- Device control, child oversight, routines
+CHILD    -- Restricted access, geo-fencing, monitored
+GUEST    -- Limited, session-based, no personal data access
+```
+
+---
+
+## Kill Switch
+
+Two levels of shutdown:
+
+**Module kill switch** -- disables a single integration without
+stopping the system.
+
+**Global kill switch** -- signals the entire system to gracefully
+shut down. State is persisted to disk. System stays down on restart
+until explicitly reset with a bcrypt-verified password.
+
+```python
+# Check from any module
+from core.kill_switch import is_kill_switch_active
+if is_kill_switch_active():
+    return
+```
+
+---
+
+## Security Philosophy
+
+River Song handles sensitive parts of your life. The rules are:
+
+- No credentials ever in code. Everything in `.env`.
+- All security integrations (ADT+, locks, garage) are built last
+  with explicit safeguards reviewed before implementation.
+- Local-first processing means your conversations stay on your
+  hardware by default.
+- All external API calls are logged and auditable.
+
+---
+
+## Project Standards
+
+- Python 3.11+
+- Type hints on everything
+- Docstrings on every class and function
+- Defensive programming -- every error handled explicitly
+- No hardcoded values anywhere
+- Production-ready from file one
+
+---
+
+## Status
+
+| Component | Status |
+|---|---|
+| Phase 1 backend | Complete -- 31 files, zero gaps |
+| Phase 1 frontend | Complete |
+| Repo cleanup (legacy) | In progress |
+| Phase 2 planning | Complete |
+| Phase 2 build | Not started |
+
+---
+
+## Origin
+
+Built because every smart home product on the market is a receiver,
+not a thinker. Google Home hears you and pattern matches to a command.
+If your words do not fit the pattern, it dumps you to a web search.
+
+River Song understands what you mean. Not just what you said.
+
+---
+
+*River Song AI -- Personal project. Not affiliated with Microsoft,
+343 Industries, or any Halo IP holder. Cortana aesthetic used as
+personal inspiration only.*
