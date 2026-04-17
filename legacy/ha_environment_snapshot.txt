@@ -5,7 +5,7 @@ aiohappyeyeballs==2.4.0
 aiohttp==3.13.5
 aiohttp-cors==0.7.0
 aiohttp-fast-zlib==0.1.1
-aiooui==0.1.6
+aiooui==0.1.9
 aiosignal==1.3.1
 aiozoneinfo==0.2.1
 annotated-types==0.7.0
