@@ -129,6 +129,49 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
+    # Google Services (Phase 2)
+    # -------------------------------------------------------------------------
+    google_client_secrets_path: str = Field(
+        default="config_files/google_client_secrets.json",
+        description=(
+            "Path to the OAuth 2.0 client secrets JSON downloaded from "
+            "Google Cloud Console. Relative paths are resolved from the "
+            "project root (where main.py lives)."
+        ),
+    )
+    google_token_storage_path: str = Field(
+        default="data/google_tokens",
+        description=(
+            "Directory where per-user OAuth tokens are stored as JSON files. "
+            "Created automatically on first authorization. Never commit this "
+            "directory -- add it to .gitignore."
+        ),
+    )
+    google_maps_api_key: str = Field(
+        default="",
+        description="Google Maps Platform API key. Required for maps/navigation intents.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Intent Router (Phase 2)
+    # -------------------------------------------------------------------------
+    intent_confidence_threshold: float = Field(
+        default=0.7,
+        description=(
+            "Minimum confidence score (0.0 - 1.0) required to route a transcript "
+            "to a Google provider. Below this threshold the conversation falls "
+            "through to the Ollama path."
+        ),
+    )
+    default_user_id: str = Field(
+        default="primary_user",
+        description=(
+            "User ID used when looking up Google OAuth tokens. Must match the "
+            "user_id passed to authorize_user() during the initial OAuth flow."
+        ),
+    )
+
+    # -------------------------------------------------------------------------
     # Validators
     # -------------------------------------------------------------------------
 
@@ -149,6 +192,16 @@ class Settings(BaseSettings):
         if not 0.0 <= v <= 2.0:
             raise ValueError(
                 f"llm_temperature must be between 0.0 and 2.0, got {v}"
+            )
+        return v
+
+    @field_validator("intent_confidence_threshold")
+    @classmethod
+    def validate_confidence_threshold(cls, v: float) -> float:
+        """Confidence must be a valid probability."""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(
+                f"intent_confidence_threshold must be between 0.0 and 1.0, got {v}"
             )
         return v
 

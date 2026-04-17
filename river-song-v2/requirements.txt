@@ -1,6 +1,7 @@
 # =============================================================================
 # River Song AI -- Python Dependencies
-# Phase 1: Core conversation loop only
+# Phase 1: Core conversation loop
+# Phase 2: Google Services + Intent Router
 # =============================================================================
 # Install with: pip install -r requirements.txt
 # Tested on Python 3.11+
@@ -51,6 +52,23 @@ soundfile==0.12.1                # Read synthesized WAV output for playback
 # Kill switch
 # -----------------------------------------------------------------------------
 bcrypt==4.2.1                    # Password hashing for kill switch reset
+
+
+# -----------------------------------------------------------------------------
+# Google Services (Phase 2)
+# -----------------------------------------------------------------------------
+google-api-python-client==2.151.0  # Calendar, Gmail, Drive REST clients
+google-auth==2.36.0                # Google OAuth 2.0 core library
+google-auth-oauthlib==1.2.1        # InstalledAppFlow for desktop OAuth
+google-auth-httplib2==0.2.0        # httplib2 transport for google-auth
+googlemaps==4.10.0                 # Google Maps Platform Python client
+
+
+# -----------------------------------------------------------------------------
+# YouTube Music (Phase 2)
+# -----------------------------------------------------------------------------
+ytmusicapi==1.8.2                  # Unofficial YouTube Music API client
+yt-dlp==2024.11.18                 # Audio stream extraction for playback
 
 
 # -----------------------------------------------------------------------------
