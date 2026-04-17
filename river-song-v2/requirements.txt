@@ -30,7 +30,7 @@ python-dotenv==1.0.1             # .env file support
 # -----------------------------------------------------------------------------
 openai-whisper==20240930         # Local Whisper inference
 sounddevice==0.5.1               # Cross-platform audio I/O
-numpy==1.26.4                    # Audio buffer handling (whisper dep)
+numpy==2.4.4                    # Audio buffer handling (whisper dep)
 scipy==1.14.1                    # Audio resampling utilities
 
 
