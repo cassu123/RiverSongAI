@@ -12,7 +12,7 @@
 # -----------------------------------------------------------------------------
 # Web framework
 # -----------------------------------------------------------------------------
-fastapi==0.115.5
+fastapi==0.136.0
 uvicorn[standard]==0.32.1        # ASGI server with websocket support
 websockets==13.1                 # WebSocket protocol support
 
