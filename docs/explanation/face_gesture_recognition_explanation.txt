@@ -1,1 +1,0 @@
-Model: OpenCV/Dlib for face and gesture recognition.\nPurpose: User identification and gesture control.

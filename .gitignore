@@ -23,7 +23,7 @@ data/google_tokens/
 *.pfx
 
 # Device registry (user-specific entity IDs -- commit only the .example version)
-river-song-v2/config_files/device_registry.json
+config_files/device_registry.json
 
 
 # -----------------------------------------------------------------------------
@@ -102,8 +102,8 @@ pnpm-debug.log*
 .pnpm-store/
 
 # Vite build output and cache
-river-song-v2/frontend/dist/
-river-song-v2/frontend/.vite/
+frontend/dist/
+frontend/.vite/
 
 
 # -----------------------------------------------------------------------------
@@ -111,17 +111,15 @@ river-song-v2/frontend/.vite/
 # -----------------------------------------------------------------------------
 *.log
 logs/
-river-song-v2/logs/
 
 # Kill switch state file (runtime, not source)
-river-song-v2/logs/kill_switch_state.txt
+logs/kill_switch_state.txt
 
 
 # -----------------------------------------------------------------------------
 # Data directories (OAuth tokens, user data, downloaded content)
 # -----------------------------------------------------------------------------
 data/
-river-song-v2/data/
 
 
 # -----------------------------------------------------------------------------
