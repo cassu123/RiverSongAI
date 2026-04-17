@@ -58,7 +58,7 @@ bcrypt==4.2.1                    # Password hashing for kill switch reset
 # -----------------------------------------------------------------------------
 # Google Services (Phase 2)
 # -----------------------------------------------------------------------------
-google-api-python-client==2.151.0  # Calendar, Gmail, Drive REST clients
+google-api-python-client==2.194.0  # Calendar, Gmail, Drive REST clients
 google-auth==2.36.0                # Google OAuth 2.0 core library
 google-auth-oauthlib==1.2.1        # InstalledAppFlow for desktop OAuth
 google-auth-httplib2==0.2.0        # httplib2 transport for google-auth
