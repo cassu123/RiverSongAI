@@ -1,185 +1,139 @@
-# admin_dashboard.py
+"""
+File: users/user_roles/admin/admin_dashboard.py
+Purpose: Provides functionality for the admin dashboard, including user and system management.
+Author: River Song Project
+"""
 
-# Mocked user object class for demonstration
-class User:
-    def __init__(self, username, role):
-        self.username = username
-        self.role = role
+from typing import Any, Dict, List, Optional
+from users.user_profiles.user_profile import UserProfile
+from users.roles.roles import Role
 
-# Simulated user profiles
-user_profiles = [
-    {"username": "parent_user", "role": "Parent", "children": ["Alice", "Bob"]},
-    {"username": "child_user_1", "role": "Child", "activity": "Browsing videos"},
-    {"username": "guest_user", "role": "Guest", "access_level": "Limited"}
-]
+def log_action(action: str) -> None:
+    """
+    Log an administrative action.
 
-# Simulated system settings
-system_settings = {
-    "default_screen_time": 3,  # Default screen time limit in hours
-    "location_tracking_enabled": True,
-    "activity_logging_enabled": True
-}
+    Args:
+        action (str): The action to log.
 
-# Simulated system logs
-system_logs = [
-    "User parent_user logged in",
-    "User child_user_1 accessed restricted app",
-    "User guest_user attempted to bypass screen time limit"
-]
+    Raises:
+        NotImplementedError: This function is currently a stub.
+    """
+    raise NotImplementedError("log_action is not yet implemented.")
 
-# Function to log admin actions
-def log_action(action):
-    system_logs.append(action)
-    print(f"Action logged: {action}")
+def view_all_user_profiles() -> List[Dict[str, Any]]:
+    """
+    Retrieve all user profiles for viewing in the dashboard.
 
-# View all user profiles
-def view_all_user_profiles():
-    print("\n-- All User Profiles --")
-    for profile in user_profiles:
-        print(f"Username: {profile['username']}, Role: {profile['role']}")
-        if "children" in profile:
-            print(f"Children: {', '.join(profile['children'])}")
-        if "activity" in profile:
-            print(f"Current Activity: {profile['activity']}")
-        print("-" * 30)
+    Returns:
+        List[Dict[str, Any]]: A list of all user profiles.
 
-# Add a new user profile
-def add_user_profile():
-    print("\n-- Add New User --")
-    username = input("Enter the new user's username: ")
-    role = input("Enter the new user's role (Admin, Parent, Child, Guest): ")
+    Raises:
+        NotImplementedError: This function is currently a stub.
+    """
+    raise NotImplementedError("view_all_user_profiles is not yet implemented.")
+
+def add_user_profile(username: str, role: Role) -> bool:
+    """
+    Add a new user profile to the system.
+
+    Args:
+        username (str): The username of the new user.
+        role (Role): The role to assign to the new user.
+
+    Returns:
+        bool: True if the user was successfully added.
+
+    Raises:
+        NotImplementedError: This function is currently a stub.
+    """
+    raise NotImplementedError("add_user_profile is not yet implemented.")
+
+def edit_user_profile(username: str, new_role: Role) -> bool:
+    """
+    Edit an existing user profile's role.
+
+    Args:
+        username (str): The username of the user to edit.
+        new_role (Role): The new role to assign to the user.
+
+    Returns:
+        bool: True if the user was successfully edited.
+
+    Raises:
+        NotImplementedError: This function is currently a stub.
+    """
+    raise NotImplementedError("edit_user_profile is not yet implemented.")
+
+def delete_user_profile(username: str) -> bool:
+    """
+    Delete a user profile from the system.
+
+    Args:
+        username (str): The username of the user to delete.
+
+    Returns:
+        bool: True if the user was successfully deleted.
+
+    Raises:
+        NotImplementedError: This function is currently a stub.
+    """
+    raise NotImplementedError("delete_user_profile is not yet implemented.")
+
+def control_user_devices(username: str) -> bool:
+    """
+    Gain control or manage devices for a specific user.
+
+    Args:
+        username (str): The username of the user whose devices are to be controlled.
+
+    Returns:
+        bool: True if control was successfully established.
+
+    Raises:
+        NotImplementedError: This function is currently a stub.
+    """
+    raise NotImplementedError("control_user_devices is not yet implemented.")
+
+def modify_system_settings(setting_key: str, new_value: Any) -> bool:
+    """
+    Modify a system-wide setting.
+
+    Args:
+        setting_key (str): The key of the setting to modify.
+        new_value (Any): The new value to apply to the setting.
+
+    Returns:
+        bool: True if the setting was successfully modified.
+
+    Raises:
+        NotImplementedError: This function is currently a stub.
+    """
+    raise NotImplementedError("modify_system_settings is not yet implemented.")
+
+def view_system_logs() -> List[str]:
+    """
+    Retrieve system logs for viewing.
+
+    Returns:
+        List[str]: A list of system log entries.
+
+    Raises:
+        NotImplementedError: This function is currently a stub.
+    """
+    raise NotImplementedError("view_system_logs is not yet implemented.")
+
+def admin_dashboard(user: UserProfile) -> None:
+    """
+    Initialize and load the admin dashboard for the given user.
+
+    Args:
+        user (UserProfile): The user attempting to access the dashboard.
+
+    Raises:
+        PermissionError: If the user does not have the Admin role.
+        NotImplementedError: This function is currently a stub.
+    """
+    if user.role != Role.ADMIN:
+        raise PermissionError(f"Access denied. User '{user.username}' is not an Admin.")
     
-    if role not in ["Admin", "Parent", "Child", "Guest"]:
-        print("Invalid role. Please choose from Admin, Parent, Child, or Guest.")
-        return
-    
-    new_user = {"username": username, "role": role}
-    user_profiles.append(new_user)
-    log_action(f"Admin added new user {username} with role {role}.")
-    print(f"New user {username} added with role {role}.")
-
-# Edit an existing user profile
-def edit_user_profile():
-    print("\n-- Edit User Profile --")
-    view_all_user_profiles()
-    
-    username = input("Enter the username of the profile to edit: ")
-    for profile in user_profiles:
-        if profile["username"] == username:
-            new_role = input(f"Enter the new role for {username} (Admin, Parent, Child, Guest): ")
-            if new_role not in ["Admin", "Parent", "Child", "Guest"]:
-                print("Invalid role. Please choose from Admin, Parent, Child, or Guest.")
-                return
-            profile["role"] = new_role
-            log_action(f"Admin updated {username}'s role to {new_role}.")
-            print(f"Updated {username}'s role to {new_role}.")
-            return
-    print(f"User {username} not found.")
-
-# Delete a user profile
-def delete_user_profile():
-    print("\n-- Delete User Profile --")
-    view_all_user_profiles()
-    
-    username = input("Enter the username of the profile to delete: ")
-    global user_profiles
-    if any(profile["username"] == username for profile in user_profiles):
-        user_profiles = [profile for profile in user_profiles if profile["username"] != username]
-        log_action(f"Admin deleted user {username}.")
-        print(f"User {username} has been deleted.")
-    else:
-        print(f"User {username} not found.")
-
-# Simulate device control (reuse from parent panel)
-def control_user_devices():
-    print("\n-- Control User Devices --")
-    view_all_user_profiles()
-    
-    username = input("Enter the username to control their device: ")
-    selected_user = next((user for user in user_profiles if user["username"] == username), None)
-    
-    if selected_user:
-        log_action(f"Admin controlled devices for {username}.")
-        print(f"Controlling devices for {username}... (Simulated)")
-    else:
-        print(f"User {username} not found.")
-
-# Modify system settings
-def modify_system_settings():
-    print("\n-- Modify System Settings --")
-    print(f"1. Default Screen Time: {system_settings['default_screen_time']} hours")
-    print(f"2. Location Tracking Enabled: {system_settings['location_tracking_enabled']}")
-    print(f"3. Activity Logging Enabled: {system_settings['activity_logging_enabled']}")
-    
-    choice = input("Select a setting to change (1-3): ")
-    
-    if choice == "1":
-        new_time = int(input("Enter the new default screen time (in hours): "))
-        system_settings["default_screen_time"] = new_time
-        log_action(f"Admin set default screen time to {new_time} hours.")
-        print(f"Default screen time set to {new_time} hours.")
-    elif choice == "2":
-        status = input("Enable location tracking? (yes/no): ").lower()
-        system_settings["location_tracking_enabled"] = status == "yes"
-        log_action(f"Admin set location tracking to {status}.")
-        print(f"Location tracking set to {status}.")
-    elif choice == "3":
-        status = input("Enable activity logging? (yes/no): ").lower()
-        system_settings["activity_logging_enabled"] = status == "yes"
-        log_action(f"Admin set activity logging to {status}.")
-        print(f"Activity logging set to {status}.")
-    else:
-        print("Invalid option.")
-
-# View system logs
-def view_system_logs():
-    print("\n-- System Logs --")
-    for log in system_logs:
-        print(log)
-    print("-" * 30)
-
-# Admin dashboard with user role validation
-def admin_dashboard(user):
-    if user.role != "Admin":
-        print(f"Access denied. {user.username} is not an Admin.")
-        return
-    
-    print(f"\nWelcome {user.username}, you are logged in as an Admin.")
-    
-    while True:
-        print("\n-- Admin Dashboard --")
-        print("1. View All User Profiles")
-        print("2. Add New User")
-        print("3. Edit User Profile")
-        print("4. Delete User Profile")
-        print("5. Control User Devices")
-        print("6. Modify System-Wide Settings")
-        print("7. View System Logs")
-        print("8. Exit")
-        
-        choice = input("Choose an option: ")
-
-        if choice == "1":
-            view_all_user_profiles()
-        elif choice == "2":
-            add_user_profile()
-        elif choice == "3":
-            edit_user_profile()
-        elif choice == "4":
-            delete_user_profile()
-        elif choice == "5":
-            control_user_devices()
-        elif choice == "6":
-            modify_system_settings()
-        elif choice == "7":
-            view_system_logs()
-        elif choice == "8":
-            print("Exiting Admin Dashboard.")
-            break
-        else:
-            print("Invalid option. Please select a valid option from 1 to 8.")
-
-# Example usage
-if __name__ == "__main__":
-    admin_user = User(username="admin_user", role="Admin")
-    admin_dashboard(admin_user)
+    raise NotImplementedError("admin_dashboard is not yet implemented.")

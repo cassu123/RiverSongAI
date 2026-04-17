@@ -3,11 +3,14 @@
 #
 # Orchestrates the River Song AI conversation loop.
 #
-# One complete turn:
+# One complete turn (Phase 2 flow):
 #   1. Record audio from the microphone  (STT provider)
 #   2. Transcribe audio to text          (STT provider)
-#   3. Stream LLM response               (LLM provider)
-#   4. Synthesize and play TTS           (TTS provider)
+#   3. Route transcript via IntentRouter
+#        a. Google intent matched -> speak response, skip LLM
+#        b. No match -> fall through to Ollama
+#   4. Stream LLM response               (LLM provider) -- Ollama path only
+#   5. Synthesize and play TTS           (TTS provider)
 #
 # Each step fires an async event callback so the WebSocket route can forward
 # state changes to the frontend in real time as they happen.
@@ -28,6 +31,7 @@ from typing import Any, Callable, Coroutine, List, Optional
 
 from config.settings import get_settings
 from core.kill_switch import is_kill_switch_active
+from core.intent_router import get_intent_router
 from providers.base import LLMProvider, STTProvider, TTSProvider
 
 
@@ -117,8 +121,9 @@ class ConversationLoop:
     initialize() before the first run_once().
 
     Event flow per turn:
-        listening -> transcribing -> transcript -> thinking ->
-        response_chunk* -> response_complete -> speaking -> idle
+        listening -> transcribing -> transcript -> routing ->
+        [Google path] response_complete -> speaking -> idle
+        [Ollama path] thinking -> response_chunk* -> response_complete -> speaking -> idle
 
     Any step that fails fires an error event and then idle, so the
     frontend always returns to a ready state.
@@ -127,6 +132,7 @@ class ConversationLoop:
     def __init__(self) -> None:
         settings = get_settings()
         self._system_prompt: str = settings.river_song_system_prompt
+        self._user_id: str = settings.default_user_id
         self._stt: Optional[STTProvider] = None
         self._llm: Optional[LLMProvider] = None
         self._tts: Optional[TTSProvider] = None
@@ -176,8 +182,13 @@ class ConversationLoop:
           {"type": "transcript", "text": "..."}
               Transcription complete. text is what the user said.
 
+          {"type": "routing"}
+              Intent router is evaluating the transcript. Fires before both
+              the Google path and the Ollama path.
+
           {"type": "thinking"}
-              Transcript sent to LLM; waiting for first token.
+              Transcript scored below the intent threshold; request sent to
+              Ollama LLM. Waiting for the first streaming token.
 
           {"type": "response_chunk", "text": "..."}
               One streaming token from the LLM (fires many times per turn).
@@ -245,7 +256,40 @@ class ConversationLoop:
         await on_event({"type": "transcript", "text": transcript})
 
         # -----------------------------------------------------------------
-        # Step 3: LLM response (streaming)
+        # Step 3: Intent routing
+        # -----------------------------------------------------------------
+        # The intent router checks for Google-service phrases first (calendar,
+        # gmail, youtube_music, maps). If a match is found above the confidence
+        # threshold, the spoken_response is used directly and we skip the LLM.
+        # An empty spoken_response means "no match -- use Ollama."
+        # -----------------------------------------------------------------
+        try:
+            await on_event({"type": "routing"})
+            intent_name, spoken_response = await get_intent_router().route(
+                transcript, self._user_id
+            )
+        except Exception as exc:
+            logger.error("Intent routing failed: %s", exc)
+            spoken_response = ""
+            intent_name = "conversation"
+
+        if intent_name != "conversation" and spoken_response:
+            # Google provider handled this turn. Add to history and speak.
+            logger.info("Intent '%s' handled. Skipping LLM.", intent_name)
+            self._history.append({"role": "user", "content": transcript})
+            self._history.append({"role": "assistant", "content": spoken_response})
+            await on_event({"type": "response_complete", "text": spoken_response})
+            try:
+                await on_event({"type": "speaking"})
+                await self._tts.speak(spoken_response)
+            except Exception as exc:
+                logger.error("TTS playback failed (intent response): %s", exc)
+                await on_event({"type": "error", "message": f"TTS error: {exc}"})
+            await on_event({"type": "idle"})
+            return
+
+        # -----------------------------------------------------------------
+        # Step 4: LLM response (streaming) -- Ollama path
         # -----------------------------------------------------------------
         self._history.append({"role": "user", "content": transcript})
 
@@ -269,7 +313,7 @@ class ConversationLoop:
         await on_event({"type": "response_complete", "text": full_response})
 
         # -----------------------------------------------------------------
-        # Step 4: TTS playback
+        # Step 5: TTS playback
         # -----------------------------------------------------------------
         try:
             await on_event({"type": "speaking"})
