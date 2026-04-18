@@ -129,10 +129,10 @@ class ConversationLoop:
     frontend always returns to a ready state.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, user_id: Optional[str] = None) -> None:
         settings = get_settings()
         self._system_prompt: str = settings.river_song_system_prompt
-        self._user_id: str = settings.default_user_id
+        self._user_id: str = user_id or settings.default_user_id
         self._stt: Optional[STTProvider] = None
         self._llm: Optional[LLMProvider] = None
         self._tts: Optional[TTSProvider] = None

@@ -55,11 +55,17 @@ async def conversation_websocket(websocket: WebSocket) -> None:
 
     The connection is closed gracefully on WebSocketDisconnect or on a
     fatal initialization error (code 1011 = internal server error).
+
+    Query params:
+        user_id: Identifies the caller. Used to load per-user auth files
+                 (Audible, Libby). Defaults to "default" when omitted.
     """
     await websocket.accept()
-    logger.info("WebSocket connection from %s.", websocket.client)
 
-    loop = ConversationLoop()
+    user_id: str = websocket.query_params.get("user_id", "default")
+    logger.info("WebSocket connection from %s (user_id=%s).", websocket.client, user_id)
+
+    loop = ConversationLoop(user_id=user_id)
 
     # Notify the client that the socket is open and providers are loading
     await _send(websocket, {"type": "connected"})
