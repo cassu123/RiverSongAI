@@ -1,0 +1,45 @@
+SERVICE: Amazon Selling Partner API (SP-API)
+WHAT IT DOES: Lets River Song check your Amazon seller inventory, flag low-stock items, and pull pending orders by voice.
+HOW TO GET IT:
+  1. Sign in to your Amazon Seller Central account at sellercentral.amazon.com.
+  2. Go to Apps & Services -> Develop Apps -> Create new app.
+     Name it anything (e.g. "River Song"). Set the type to "Private".
+  3. Copy the LWA Client ID and LWA Client Secret shown on the app page.
+     These go in AMAZON_SP_LWA_APP_ID and AMAZON_SP_LWA_CLIENT_SECRET.
+  4. On that same page, click "Authorize" to generate a refresh token for your seller account.
+     Copy the refresh token. This goes in AMAZON_SP_REFRESH_TOKEN.
+  5. Sign in to the AWS Console at console.aws.amazon.com.
+  6. Go to IAM -> Users -> Create user. Name it anything (e.g. "river-song-spapi").
+  7. Attach the policy "AmazonSPAPISellerFull" to the user.
+     If that policy does not exist, attach "AmazonSPAPIAllActions" or create a custom policy
+     that allows sp:* on *.
+  8. Go to the user -> Security credentials -> Create access key. Choose "Application running
+     outside AWS". Copy the Access Key ID and Secret Access Key.
+     These go in AMAZON_AWS_ACCESS_KEY and AMAZON_AWS_SECRET_KEY.
+  9. Find your Seller ID: Seller Central -> Account Info -> Business Information -> Merchant Token.
+     This goes in AMAZON_SELLER_ID.
+  10. Set AMAZON_MARKETPLACE_ID to the marketplace where you sell:
+      US: ATVPDKIKX0DER
+      CA: A2EUQ1WTGCTBG2
+      MX: A1AM78C64UM0Y8
+      UK: A1F83G8C2ARO7P
+      DE: A1PA6795UKMFR9
+      FR: A13V1IB3VIYZZH
+      IT: APJ6JRA9NG5V4
+      ES: A1RKKUPIHCS9HS
+      JP: A1VC38T7YXB528
+  Link: https://developer.amazon.com/seller
+VARIABLE NAME: AMAZON_SP_LWA_APP_ID, AMAZON_SP_LWA_CLIENT_SECRET, AMAZON_SP_REFRESH_TOKEN, AMAZON_AWS_ACCESS_KEY, AMAZON_AWS_SECRET_KEY, AMAZON_SELLER_ID, AMAZON_MARKETPLACE_ID, AMAZON_LOW_STOCK_THRESHOLD
+WHERE TO PUT IT: .env
+NOTES:
+  - The LWA refresh token does not expire as long as your app remains authorized.
+    If you ever deauthorize the app in Seller Central, you must reauthenticate and get a new one.
+  - The SP-API enforces per-endpoint rate limits. River Song does not hammer the API --
+    inventory and orders are fetched on demand (voice query) only.
+  - River Song uses the FBA Inventory Summaries API for inventory. If you do MFN (merchant-fulfilled)
+    only, your FBA inventory results will be empty. MFN inventory queries require the Listings API
+    instead -- this is a future enhancement.
+  - AMAZON_LOW_STOCK_THRESHOLD defaults to 5. Items at or below this fulfillable quantity trigger
+    the low-stock alert. Set it higher if you have fast-moving products.
+  - The python-amazon-sp-api library handles token refresh and AWS SigV4 signing automatically.
+    You do not need to rotate credentials manually.

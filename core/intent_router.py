@@ -27,6 +27,7 @@
 #   3. No other code changes needed -- the router picks it up automatically.
 #
 # Registered intents (in priority order):
+#   commerce      - Amazon + Walmart seller inventory/orders (Phase 8)
 #   smart_home    - Home Assistant device control (Phase 3)
 #   calendar      - Google Calendar (Phase 2)
 #   gmail         - Gmail (Phase 2)
@@ -463,6 +464,64 @@ async def _handle_sports(transcript: str, user_id: str) -> str:
         return "Sorry, I had trouble fetching those sports results right now."
 
 
+async def _handle_commerce(transcript: str, user_id: str) -> str:
+    """
+    Handle commerce queries: inventory, low stock, and order status.
+
+    Sub-intent detection:
+      - "low stock", "running low", "out of stock"  -> low stock report (both platforms)
+      - "orders", "pending", "ship", "unshipped"    -> pending orders
+      - "walmart" present                            -> Walmart-specific query
+      - "amazon" present or default                 -> Amazon-specific query
+    """
+    try:
+        lower = transcript.lower()
+        want_walmart = "walmart" in lower
+        want_amazon = "amazon" in lower or not want_walmart  # default to Amazon
+
+        want_orders = any(
+            kw in lower
+            for kw in ("order", "orders", "pending", "ship", "unshipped", "fulfill")
+        )
+        want_low_stock = any(
+            kw in lower
+            for kw in ("low stock", "running low", "out of stock", "restock", "inventory")
+        )
+
+        parts: List[str] = []
+
+        if want_amazon:
+            from providers.commerce.amazon import build_amazon_provider
+            amazon = build_amazon_provider()
+
+            if want_orders:
+                orders = await amazon.get_pending_shipments()
+                parts.append(amazon.format_orders_for_speech(orders))
+            else:
+                items = await amazon.get_low_stock_items()
+                parts.append(amazon.format_low_stock_for_speech(items))
+
+        if want_walmart:
+            from providers.commerce.walmart import build_walmart_provider
+            walmart = build_walmart_provider()
+
+            if want_orders:
+                orders = await walmart.get_orders(status="Created")
+                parts.append(walmart.format_orders_for_speech(orders))
+            else:
+                items = await walmart.get_low_stock_items()
+                parts.append(walmart.format_low_stock_for_speech(items))
+
+        return " ".join(parts) if parts else (
+            "I heard a commerce query but could not determine what to look up. "
+            "Try saying 'what are my low stock items' or 'do I have any pending orders'."
+        )
+
+    except Exception as exc:
+        logger.error("Commerce handler failed: %s", exc)
+        return "Sorry, I had trouble accessing your seller account right now."
+
+
 async def _handle_audiobook(transcript: str, user_id: str) -> str:
     """
     Handle Audible audiobook queries: resume, library listing, or current-book info.
@@ -542,6 +601,39 @@ async def _handle_conversation(transcript: str, user_id: str) -> str:
 # =============================================================================
 
 INTENT_REGISTRY: List[Intent] = [
+    Intent(
+        name="commerce",
+        phrases=[
+            "what are my low stock items",
+            "what's running low",
+            "low stock alert",
+            "check my inventory",
+            "my amazon inventory",
+            "my walmart inventory",
+            "what's out of stock",
+            "do i have any pending orders",
+            "my pending orders",
+            "check my orders",
+            "how many orders do i have",
+            "orders to ship",
+            "what needs to be shipped",
+        ],
+        keywords=[
+            "inventory",
+            "low stock",
+            "out of stock",
+            "restock",
+            "sku",
+            "listing",
+            "fba",
+            "fulfillment",
+            "seller",
+            "marketplace",
+            "pending orders",
+            "unshipped",
+        ],
+        handler=_handle_commerce,
+    ),
     Intent(
         name="smart_home",
         phrases=[
