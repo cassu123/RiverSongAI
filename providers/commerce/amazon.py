@@ -58,7 +58,6 @@ logger = logging.getLogger(__name__)
 try:
     from sp_api.api import Inventories, Orders, Catalog
     from sp_api.base import Marketplaces, SellingApiException
-    from sp_api.base.credential_provider import FromCodeOrFile
     _SPAPI_AVAILABLE = True
 except ImportError:
     _SPAPI_AVAILABLE = False

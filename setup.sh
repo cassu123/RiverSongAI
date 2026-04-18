@@ -160,7 +160,17 @@ step "Step 2/7 -- Python packages (pip install -r requirements.txt)"
 info "This installs Whisper, FastAPI, Ollama client, and all providers."
 info "Whisper pulls PyTorch -- this can take several minutes on first run."
 
-pip3 install -r requirements.txt --quiet 2>&1 | \
+# Ensure setuptools<71 is present -- openai-whisper's setup.py requires
+# pkg_resources which was removed in setuptools>=71. Must be pinned before
+# any other install so pip's build isolation inherits a compatible version.
+python3 -c "import pkg_resources" 2>/dev/null || {
+  info "Pinning setuptools<71 to restore pkg_resources..."
+  pip3 install "setuptools<71" --quiet 2>&1 | grep -v "already satisfied" | sed 's/^/  /' || true
+}
+
+# --no-build-isolation lets the build environment use the pinned setuptools
+# instead of pulling the latest (which lacks pkg_resources).
+pip3 install -r requirements.txt --no-build-isolation --quiet 2>&1 | \
   grep -v "^$\|Requirement already\|already satisfied" | \
   head -30 | sed 's/^/  /' || soft_error "pip install had warnings -- check output above"
 
