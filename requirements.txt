@@ -75,13 +75,13 @@ yt-dlp==2026.3.17                  # Audio stream extraction for playback
 # -----------------------------------------------------------------------------
 # Commerce Automation (Phase 8)
 # -----------------------------------------------------------------------------
-python-amazon-sp-api==0.14.17    # Amazon Selling Partner API client (auth + endpoints)
+python-amazon-sp-api==2.1.8      # Amazon Selling Partner API client (auth + endpoints)
 
 
 # -----------------------------------------------------------------------------
 # Reading Providers (Phase 6)
 # -----------------------------------------------------------------------------
-audible==0.9.2                   # Audible library access and device auth
+audible==0.10.0                  # Audible library access and device auth
 
 
 # -----------------------------------------------------------------------------
