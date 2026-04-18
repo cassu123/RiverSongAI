@@ -57,7 +57,7 @@ fnvhash==0.1.0
 fonttools==4.53.1
 frozenlist==1.4.1
 fsspec==2024.6.1
-gast==0.6.0
+gast==0.7.0
 git-filter-repo==2.45.0
 google-pasta==0.2.0
 greenlet==3.0.3
