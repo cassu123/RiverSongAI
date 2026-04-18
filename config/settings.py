@@ -211,6 +211,33 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
+    # Reading Providers (Phase 6)
+    # -------------------------------------------------------------------------
+    audible_auth_base_path: str = Field(
+        default="data/audible",
+        description=(
+            "Base directory for per-user Audible auth files. "
+            "Files are stored as {user_id}.json inside this directory. "
+            "Created automatically on first setup. Never commit this directory."
+        ),
+    )
+    audible_country_code: str = Field(
+        default="us",
+        description=(
+            "Audible marketplace country code. "
+            "Supported: us | uk | de | fr | es | it | jp | au | ca | in"
+        ),
+    )
+    libby_chip_base_path: str = Field(
+        default="data/libby",
+        description=(
+            "Base directory for per-user Libby chip files. "
+            "Files are stored as {user_id}.json inside this directory. "
+            "Created automatically on first setup. Never commit this directory."
+        ),
+    )
+
+    # -------------------------------------------------------------------------
     # Intent Router (Phase 2+)
     # -------------------------------------------------------------------------
     intent_confidence_threshold: float = Field(
