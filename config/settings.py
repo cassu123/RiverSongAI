@@ -211,6 +211,61 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
+    # Commerce Automation (Phase 8)
+    # -------------------------------------------------------------------------
+
+    # Amazon SP-API
+    amazon_sp_lwa_app_id: str = Field(
+        default="",
+        description="LWA client ID from the Amazon Developer Console.",
+    )
+    amazon_sp_lwa_client_secret: str = Field(
+        default="",
+        description="LWA client secret from the Amazon Developer Console.",
+    )
+    amazon_sp_refresh_token: str = Field(
+        default="",
+        description="LWA refresh token. Generated when you authorize your app as a seller.",
+    )
+    amazon_aws_access_key: str = Field(
+        default="",
+        description="AWS IAM access key ID for SP-API request signing.",
+    )
+    amazon_aws_secret_key: str = Field(
+        default="",
+        description="AWS IAM secret access key for SP-API request signing.",
+    )
+    amazon_marketplace_id: str = Field(
+        default="ATVPDKIKX0DER",
+        description=(
+            "Amazon marketplace ID. Default is US. "
+            "See docs/api_registry/amazon_seller.txt for other regions."
+        ),
+    )
+    amazon_seller_id: str = Field(
+        default="",
+        description="Your Amazon seller account ID (starts with A).",
+    )
+    amazon_low_stock_threshold: int = Field(
+        default=5,
+        description="FBA units at or below this count are flagged as low stock.",
+    )
+
+    # Walmart Marketplace
+    walmart_client_id: str = Field(
+        default="",
+        description="Walmart Marketplace OAuth2 client ID.",
+    )
+    walmart_client_secret: str = Field(
+        default="",
+        description="Walmart Marketplace OAuth2 client secret.",
+    )
+    walmart_low_stock_threshold: int = Field(
+        default=5,
+        description="Walmart units at or below this count are flagged as low stock.",
+    )
+
+    # -------------------------------------------------------------------------
     # Reading Providers (Phase 6)
     # -------------------------------------------------------------------------
     audible_auth_base_path: str = Field(
