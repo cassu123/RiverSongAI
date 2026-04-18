@@ -85,7 +85,7 @@ Jinja2==3.1.6
 jiter==0.5.0
 jmespath==1.0.1
 joblib==1.4.2
-josepy==1.14.0
+josepy==2.2.0
 keras==3.5.0
 kiwisolver==1.4.5
 langcodes==3.4.0
