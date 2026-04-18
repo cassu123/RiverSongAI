@@ -154,7 +154,7 @@ rfc3987-syntax==1.1.0
 rich==15.0.0
 rpds-py==0.29.0
 rsa==4.9.1
-scipy==1.14.1
+scipy==1.17.1
 Send2Trash==1.8.3
 setuptools==70.3.0
 six==1.17.0
