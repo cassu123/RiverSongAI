@@ -26,6 +26,7 @@
 
 from __future__ import annotations
 
+import base64
 import logging
 from typing import Any, Callable, Coroutine, List, Optional
 
@@ -168,23 +169,23 @@ class ConversationLoop:
         self._initialized = True
         logger.info("ConversationLoop ready.")
 
-    async def run_once(self, on_event: EventCallback) -> None:
+    async def run_once(self, audio_bytes: bytes, on_event: EventCallback) -> None:
         """
-        Execute one full conversation turn: listen -> transcribe -> respond -> speak.
+        Execute one full conversation turn: transcribe -> respond -> speak.
+
+        Audio bytes come from the browser (WAV file captured by Web Audio API
+        and sent over the WebSocket). TTS output is returned as WAV bytes in
+        an "audio" event rather than played server-side.
 
         Events fired via on_event during a successful turn:
-          {"type": "listening"}
-              Mic is open and waiting for speech to begin.
-
           {"type": "transcribing"}
-              Audio captured; Whisper is running.
+              Whisper is running on the received audio bytes.
 
           {"type": "transcript", "text": "..."}
               Transcription complete. text is what the user said.
 
           {"type": "routing"}
-              Intent router is evaluating the transcript. Fires before both
-              the Google path and the Ollama path.
+              Intent router is evaluating the transcript.
 
           {"type": "thinking"}
               Transcript scored below the intent threshold; request sent to
@@ -197,7 +198,10 @@ class ConversationLoop:
               Full assembled LLM response.
 
           {"type": "speaking"}
-              TTS playback has started.
+              TTS synthesis complete; audio event follows immediately.
+
+          {"type": "audio", "data": "<base64-wav>"}
+              WAV audio for the browser to decode and play.
 
           {"type": "idle"}
               Turn complete; ready for the next command.
@@ -206,8 +210,8 @@ class ConversationLoop:
               A step failed. idle always follows an error event.
 
         Args:
-            on_event: Async callable that accepts a dict event payload.
-                      Typically wraps websocket.send_json().
+            audio_bytes: Raw WAV bytes from the browser mic.
+            on_event:    Async callable that accepts a dict event payload.
 
         Raises:
             RuntimeError: If initialize() has not been called.
@@ -224,23 +228,11 @@ class ConversationLoop:
             return
 
         # -----------------------------------------------------------------
-        # Step 1: Record audio from microphone
-        # -----------------------------------------------------------------
-        try:
-            await on_event({"type": "listening"})
-            audio = await self._stt.record_until_silence()
-        except Exception as exc:
-            logger.error("Audio recording failed: %s", exc)
-            await on_event({"type": "error", "message": f"Microphone error: {exc}"})
-            await on_event({"type": "idle"})
-            return
-
-        # -----------------------------------------------------------------
-        # Step 2: Transcribe
+        # Step 1: Transcribe audio bytes received from the browser
         # -----------------------------------------------------------------
         try:
             await on_event({"type": "transcribing"})
-            transcript = await self._stt.transcribe(audio)
+            transcript = await self._stt.transcribe(audio_bytes)
         except Exception as exc:
             logger.error("Transcription failed: %s", exc)
             await on_event({"type": "error", "message": f"Transcription error: {exc}"})
@@ -279,12 +271,7 @@ class ConversationLoop:
             self._history.append({"role": "user", "content": transcript})
             self._history.append({"role": "assistant", "content": spoken_response})
             await on_event({"type": "response_complete", "text": spoken_response})
-            try:
-                await on_event({"type": "speaking"})
-                await self._tts.speak(spoken_response)
-            except Exception as exc:
-                logger.error("TTS playback failed (intent response): %s", exc)
-                await on_event({"type": "error", "message": f"TTS error: {exc}"})
+            await self._speak_and_send(spoken_response, on_event)
             await on_event({"type": "idle"})
             return
 
@@ -302,7 +289,6 @@ class ConversationLoop:
                 await on_event({"type": "response_chunk", "text": chunk})
 
         except Exception as exc:
-            # Remove the user message so history stays coherent on the next turn
             self._history.pop()
             logger.error("LLM streaming failed: %s", exc)
             await on_event({"type": "error", "message": f"LLM error: {exc}"})
@@ -313,17 +299,24 @@ class ConversationLoop:
         await on_event({"type": "response_complete", "text": full_response})
 
         # -----------------------------------------------------------------
-        # Step 5: TTS playback
+        # Step 5: TTS synthesis -> send WAV to browser
         # -----------------------------------------------------------------
+        await self._speak_and_send(full_response, on_event)
+        await on_event({"type": "idle"})
+
+    async def _speak_and_send(self, text: str, on_event: EventCallback) -> None:
+        """Synthesize text with Piper and send WAV bytes to the browser."""
         try:
             await on_event({"type": "speaking"})
-            await self._tts.speak(full_response)
+            wav_bytes = await self._tts.synthesize(text)
+            if wav_bytes:
+                await on_event({
+                    "type": "audio",
+                    "data": base64.b64encode(wav_bytes).decode("ascii"),
+                })
         except Exception as exc:
-            # TTS failure is non-fatal -- the user already received the text response
-            logger.error("TTS playback failed: %s", exc)
+            logger.error("TTS synthesis failed: %s", exc)
             await on_event({"type": "error", "message": f"TTS error: {exc}"})
-
-        await on_event({"type": "idle"})
 
     def reset_history(self) -> None:
         """

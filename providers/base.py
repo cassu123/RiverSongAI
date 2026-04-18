@@ -8,6 +8,18 @@
 # never on concrete implementations -- so any provider can be swapped by
 # changing a single line in .env.
 #
+# Audio architecture (Codespaces / remote server):
+#   Recording happens in the browser (Web Audio API). The browser encodes
+#   PCM audio as a WAV file, base64-encodes it, and sends it over the
+#   WebSocket as {"type": "audio_data", "data": "<b64>"}.
+#   The server calls STTProvider.transcribe(audio_bytes) directly.
+#
+#   TTS synthesis produces WAV bytes on the server. Those bytes are
+#   base64-encoded and sent to the browser as {"type": "audio", "data": "<b64>"}.
+#   The browser decodes and plays them via the Web Audio API.
+#
+#   sounddevice is NOT used for recording or playback anywhere in the pipeline.
+#
 # Adding a new provider:
 #   1. Create a new file under providers/<type>/<name>.py
 #   2. Subclass the appropriate abstract base class here
@@ -21,8 +33,6 @@ import logging
 from abc import ABC, abstractmethod
 from typing import AsyncGenerator, List
 
-import numpy as np
-
 
 logger = logging.getLogger(__name__)
 
@@ -31,38 +41,19 @@ class STTProvider(ABC):
     """
     Abstract base class for Speech-to-Text providers.
 
-    Implementors handle both audio capture from the microphone and
-    transcription of that audio to text. Both methods are async to
-    avoid blocking the event loop during I/O-bound audio operations.
-    All blocking device calls must be dispatched to a thread pool
-    by the concrete implementation.
+    Audio bytes arrive from the browser over the WebSocket as a WAV file.
+    Concrete implementations receive those bytes and return transcribed text.
     """
 
     @abstractmethod
-    async def record_until_silence(self) -> np.ndarray:
+    async def transcribe(self, audio_bytes: bytes) -> str:
         """
-        Capture audio from the microphone until a silence threshold is reached.
-
-        Implementations should:
-        - Wait for speech to begin before accumulating audio
-        - Stop recording after a configurable silence duration
-        - Enforce a hard upper cap on recording length
-
-        Returns:
-            np.ndarray: 1-D float32 array of audio samples at 16 000 Hz.
-
-        Raises:
-            RuntimeError: If the audio device is unavailable or capture fails.
-        """
-        ...
-
-    @abstractmethod
-    async def transcribe(self, audio: np.ndarray) -> str:
-        """
-        Transcribe a numpy audio array to plain text.
+        Transcribe audio bytes (WAV format) to plain text.
 
         Args:
-            audio: 1-D float32 numpy array sampled at 16 000 Hz.
+            audio_bytes: Raw WAV file bytes captured by the browser mic.
+                         May be at any sample rate -- implementations must
+                         resample to 16 kHz if the model requires it.
 
         Returns:
             Transcribed text string. Empty string if nothing was recognized.
@@ -114,22 +105,24 @@ class TTSProvider(ABC):
     """
     Abstract base class for Text-to-Speech providers.
 
-    Implementors convert text to audio and play it through the system audio
-    output device. Awaiting speak() must block until playback has fully
-    completed so the conversation loop knows when it is safe to start
-    listening again.
+    Implementors convert text to a WAV audio file and return the raw bytes.
+    The caller (ConversationLoop) base64-encodes those bytes and sends them
+    to the browser over the WebSocket. Playback happens entirely in the browser.
     """
 
     @abstractmethod
-    async def speak(self, text: str) -> None:
+    async def synthesize(self, text: str) -> bytes:
         """
-        Synthesize text to speech and play it through the audio output device.
+        Synthesize text to speech and return the audio as WAV bytes.
 
         Args:
             text: Plain text to synthesize. No SSML or markup expected.
-                  Empty strings should be silently ignored.
+                  Empty strings should return empty bytes without error.
+
+        Returns:
+            Raw WAV file bytes. Empty bytes if text was empty.
 
         Raises:
-            RuntimeError: If synthesis or audio playback fails.
+            RuntimeError: If synthesis fails (binary not found, model error, etc.).
         """
         ...
