@@ -1,15 +1,11 @@
 version: 2
 updates:
-  # Python backend (promoted to repo root after refactor)
-  - package-ecosystem: pip
-    directory: /
+  - package-ecosystem: "pip"
+    directory: "/"
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 10
-
-  # React/Vite frontend
-  - package-ecosystem: npm
-    directory: /frontend
+      interval: "weekly"
+      
+  - package-ecosystem: "npm"
+    directory: "/frontend"
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 10
+      interval: "weekly"
