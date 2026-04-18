@@ -31,7 +31,13 @@
 #   calendar      - Google Calendar (Phase 2)
 #   gmail         - Gmail (Phase 2)
 #   youtube_music - YouTube Music (Phase 2)
+#   audiobook     - Audible library and playback (Phase 6)
 #   maps          - Google Maps (Phase 2)
+#   weather       - OpenWeatherMap (Phase 5)
+#   news          - NewsAPI (Phase 5)
+#   stocks        - Alpha Vantage (Phase 5)
+#   sports        - TheSportsDB (Phase 5)
+#   library       - Libby holds and loans (Phase 6)
 #   conversation  - Ollama fallback (always last)
 # =============================================================================
 
@@ -457,6 +463,70 @@ async def _handle_sports(transcript: str, user_id: str) -> str:
         return "Sorry, I had trouble fetching those sports results right now."
 
 
+async def _handle_audiobook(transcript: str, user_id: str) -> str:
+    """
+    Handle Audible audiobook queries: resume, library listing, or current-book info.
+
+    Sub-intent detection:
+      - "resume", "play", "continue", "left off" -> resume last book
+      - "library", "have", "list"                -> list library
+      - default                                  -> describe current book
+    """
+    try:
+        from providers.reading.audible import build_audible_provider
+        provider = build_audible_provider()
+        lower = transcript.lower()
+
+        if any(kw in lower for kw in ("resume", "continue", "left off", "play")):
+            return await provider.resume(user_id)
+
+        if any(kw in lower for kw in ("library", "have", "list", "all my")):
+            books = await provider.get_library(user_id, limit=20)
+            return provider.format_library_for_speech(books)
+
+        # Default: describe the current book.
+        book = await provider.get_last_listened(user_id)
+        if book is None:
+            return "I did not find any audiobooks in your Audible library."
+        return provider.format_book_for_speech(book)
+
+    except FileNotFoundError as exc:
+        return str(exc)
+    except Exception as exc:
+        logger.error("Audiobook handler failed for '%s': %s", user_id, exc)
+        return "Sorry, I had trouble accessing your Audible library right now."
+
+
+async def _handle_library(transcript: str, user_id: str) -> str:
+    """
+    Handle Libby/OverDrive queries: loans (borrowed books) or holds queue.
+
+    Sub-intent detection:
+      - "loan", "borrowed", "due", "borrow" -> get_loans
+      - default (hold, wait, queue)          -> get_holds
+    """
+    try:
+        from providers.reading.libby import build_libby_provider
+        provider = build_libby_provider()
+        lower = transcript.lower()
+
+        if any(kw in lower for kw in ("loan", "borrowed", "borrow", "due", "checked out")):
+            loans = await provider.get_loans(user_id)
+            return provider.format_loans_for_speech(loans)
+
+        # Default: holds queue.
+        holds = await provider.get_holds(user_id)
+        return provider.format_holds_for_speech(holds)
+
+    except FileNotFoundError as exc:
+        return str(exc)
+    except PermissionError as exc:
+        return str(exc)
+    except Exception as exc:
+        logger.error("Library handler failed for '%s': %s", user_id, exc)
+        return "Sorry, I had trouble accessing your Libby account right now."
+
+
 async def _handle_conversation(transcript: str, user_id: str) -> str:
     """
     Fallback handler -- signals the conversation loop to use Ollama.
@@ -591,6 +661,31 @@ INTENT_REGISTRY: List[Intent] = [
             "listen",
         ],
         handler=_handle_youtube_music,
+    ),
+    Intent(
+        name="audiobook",
+        phrases=[
+            "resume my audiobook",
+            "play my audiobook",
+            "continue my audiobook",
+            "continue listening",
+            "play where i left off",
+            "pick up where i left off",
+            "what am i listening to",
+            "my current audiobook",
+            "what audiobooks do i have",
+            "my audible library",
+            "list my audiobooks",
+            "what book am i on",
+        ],
+        keywords=[
+            "audiobook",
+            "audible",
+            "narrator",
+            "resume listening",
+            "listening to",
+        ],
+        handler=_handle_audiobook,
     ),
     Intent(
         name="maps",
@@ -741,6 +836,36 @@ INTENT_REGISTRY: List[Intent] = [
             "playoffs",
         ],
         handler=_handle_sports,
+    ),
+    Intent(
+        name="library",
+        phrases=[
+            "my library holds",
+            "check my holds",
+            "what's on hold",
+            "how long is my hold",
+            "my library loans",
+            "check my loans",
+            "what do i have borrowed",
+            "what's checked out",
+            "when is my book due",
+            "what's due at the library",
+            "libby holds",
+            "libby loans",
+        ],
+        keywords=[
+            "holds",
+            "loans",
+            "libby",
+            "overdrive",
+            "library card",
+            "borrowed",
+            "checked out",
+            "due",
+            "wait list",
+            "waitlist",
+        ],
+        handler=_handle_library,
     ),
     # "conversation" must always be last -- it is the catch-all fallback.
     Intent(
