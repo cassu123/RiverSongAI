@@ -1,91 +1,195 @@
-# =============================================================================
-# River Song AI -- Python Dependencies
-# Phase 1: Core conversation loop
-# Phase 2: Google Services + Intent Router
-# Phase 5: Information Feeds (Weather, News, Stocks, Sports)
-# =============================================================================
-# Install with: pip install -r requirements.txt
-# Tested on Python 3.11+
-# =============================================================================
-
-
-# -----------------------------------------------------------------------------
-# Web framework
-# -----------------------------------------------------------------------------
+annotated-doc==0.0.4
+annotated-types==0.7.0
+anyio==4.11.0
+argon2-cffi==25.1.0
+argon2-cffi-bindings==25.1.0
+arrow==1.4.0
+asttokens==3.0.1
+async-lru==2.0.5
+attrs==25.4.0
+audible==0.10.0
+babel==2.17.0
+bcrypt==4.2.1
+beautifulsoup4==4.14.2
+bleach==6.3.0
+boolean.py==5.0
+CacheControl==0.14.4
+cachetools==5.5.2
+certifi==2025.11.12
+cffi==2.0.0
+charset-normalizer==3.4.4
+click==8.3.2
+colorama==0.4.6
+comm==0.2.3
+confuse==2.2.0
+cuda-bindings==13.2.0
+cuda-pathfinder==1.5.3
+cuda-toolkit==13.0.2
+cyclonedx-python-lib==11.7.0
+debugpy==1.8.17
+decorator==5.2.1
+defusedxml==0.7.1
+executing==2.2.1
 fastapi==0.115.5
-uvicorn[standard]==0.32.1        # ASGI server with websocket support
-websockets==13.1                 # WebSocket protocol support
-
-
-# -----------------------------------------------------------------------------
-# Configuration
-# -----------------------------------------------------------------------------
-pydantic==2.9.2                  # Data validation
-pydantic-settings==2.6.1         # BaseSettings for .env loading
-python-dotenv==1.0.1             # .env file support
-
-
-# -----------------------------------------------------------------------------
-# STT -- Whisper (local)
-# -----------------------------------------------------------------------------
-openai-whisper==20240930         # Local Whisper inference
-sounddevice==0.5.1               # Cross-platform audio I/O
-numpy==1.26.4                    # Audio buffer handling (whisper dep)
-scipy==1.14.1                    # Audio resampling utilities
-
-
-# -----------------------------------------------------------------------------
-# LLM -- Ollama client
-# -----------------------------------------------------------------------------
-ollama==0.3.3                    # Official Ollama Python client
-
-
-# -----------------------------------------------------------------------------
-# TTS -- Piper (local)
-# Uses the Piper binary via subprocess -- no Python package required.
-# Install Piper separately: https://github.com/rhasspy/piper
-# Voice models: https://huggingface.co/rhasspy/piper-voices
-# -----------------------------------------------------------------------------
-soundfile==0.12.1                # Read synthesized WAV output for playback
-
-
-# -----------------------------------------------------------------------------
-# Kill switch
-# -----------------------------------------------------------------------------
-bcrypt==4.2.1                    # Password hashing for kill switch reset
-
-
-# -----------------------------------------------------------------------------
-# Google Services (Phase 2)
-# -----------------------------------------------------------------------------
-google-api-python-client==2.151.0  # Calendar, Gmail, Drive REST clients
-google-auth==2.36.0                # Google OAuth 2.0 core library
-google-auth-oauthlib==1.2.1        # InstalledAppFlow for desktop OAuth
-google-auth-httplib2==0.2.0        # httplib2 transport for google-auth
-googlemaps==4.10.0                 # Google Maps Platform Python client
-
-
-# -----------------------------------------------------------------------------
-# YouTube Music (Phase 2)
-# -----------------------------------------------------------------------------
-ytmusicapi==1.8.2                  # Unofficial YouTube Music API client
-yt-dlp==2026.3.17                  # Audio stream extraction for playback
-
-
-# -----------------------------------------------------------------------------
-# Commerce Automation (Phase 8)
-# -----------------------------------------------------------------------------
-python-amazon-sp-api==2.1.8      # Amazon Selling Partner API client (auth + endpoints)
-
-
-# -----------------------------------------------------------------------------
-# Reading Providers (Phase 6)
-# -----------------------------------------------------------------------------
-audible==0.10.0                  # Audible library access and device auth
-
-
-# -----------------------------------------------------------------------------
-# Utilities
-# -----------------------------------------------------------------------------
-httpx==0.27.2                    # Async HTTP client (used by health checks, Libby)
-python-multipart==0.0.26         # Form data parsing for FastAPI
+fastjsonschema==2.21.2
+filelock==3.28.0
+fqdn==1.5.1
+fsspec==2026.3.0
+gitdb==4.0.12
+GitPython==3.1.45
+google-api-core==2.30.3
+google-api-python-client==2.151.0
+google-auth==2.36.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.1
+googleapis-common-protos==1.74.0
+googlemaps==4.10.0
+h11==0.16.0
+httpcore==1.0.9
+httplib2==0.31.2
+httptools==0.7.1
+httpx==0.27.2
+idna==3.11
+ipykernel==7.1.0
+ipython==9.7.0
+ipython_pygments_lexers==1.1.1
+isoduration==20.11.0
+jedi==0.19.2
+Jinja2==3.1.6
+json5==0.12.1
+jsonpointer==3.0.0
+jsonschema==4.25.1
+jsonschema-specifications==2025.9.1
+jupyter-events==0.12.0
+jupyter-lsp==2.3.0
+jupyter-server-mathjax==0.2.6
+jupyter_client==8.6.3
+jupyter_core==5.9.1
+jupyter_server==2.17.0
+jupyter_server_terminals==0.5.3
+jupyterlab==4.5.0
+jupyterlab_git==0.51.2
+jupyterlab_pygments==0.3.0
+jupyterlab_server==2.28.0
+lark==1.3.1
+license-expression==30.4.4
+llvmlite==0.47.0
+markdown-it-py==4.0.0
+MarkupSafe==3.0.3
+matplotlib-inline==0.2.1
+mdurl==0.1.2
+mistune==3.1.4
+more-itertools==11.0.2
+mpmath==1.3.0
+msgpack==1.1.2
+nbclient==0.10.2
+nbconvert==7.16.6
+nbdime==4.0.2
+nbformat==5.10.4
+nest-asyncio==1.6.0
+networkx==3.6.1
+notebook_shim==0.2.4
+numba==0.65.0
+numpy==1.26.4
+nvidia-cublas==13.1.0.3
+nvidia-cuda-cupti==13.0.85
+nvidia-cuda-nvrtc==13.0.88
+nvidia-cuda-runtime==13.0.96
+nvidia-cudnn-cu13==9.19.0.56
+nvidia-cufft==12.0.0.61
+nvidia-cufile==1.15.1.6
+nvidia-curand==10.4.0.35
+nvidia-cusolver==12.0.4.66
+nvidia-cusparse==12.6.3.3
+nvidia-cusparselt-cu13==0.8.0
+nvidia-nccl-cu13==2.28.9
+nvidia-nvjitlink==13.0.88
+nvidia-nvshmem-cu13==3.4.5
+nvidia-nvtx==13.0.85
+oauthlib==3.3.1
+ollama==0.3.3
+openai-whisper==20240930
+packageurl-python==0.17.6
+packaging==25.0
+pandocfilters==1.5.1
+parso==0.8.5
+pbkdf2==1.3
+pexpect==4.9.0
+pillow==12.2.0
+pip-api==0.0.34
+pip-requirements-parser==32.0.1
+pip_audit==2.10.0
+platformdirs==4.5.0
+prometheus_client==0.23.1
+prompt_toolkit==3.0.52
+proto-plus==1.27.2
+protobuf==7.34.1
+psutil==7.1.3
+ptyprocess==0.7.0
+pure_eval==0.2.3
+py-serializable==2.1.0
+pyaes==1.6.1
+pyasn1==0.6.3
+pyasn1_modules==0.4.2
+pycparser==2.23
+pydantic==2.9.2
+pydantic-settings==2.6.1
+pydantic_core==2.23.4
+Pygments==2.19.2
+pyparsing==3.3.2
+python-amazon-sp-api==2.1.8
+python-dateutil==2.9.0.post0
+python-dotenv==1.0.1
+python-json-logger==4.0.0
+python-multipart==0.0.26
+PyYAML==6.0.3
+pyzmq==27.1.0
+referencing==0.37.0
+regex==2026.4.4
+requests==2.32.5
+requests-oauthlib==2.0.0
+rfc3339-validator==0.1.4
+rfc3986-validator==0.1.1
+rfc3987-syntax==1.1.0
+rich==15.0.0
+rpds-py==0.29.0
+rsa==4.9.1
+scipy==1.14.1
+Send2Trash==1.8.3
+setuptools==70.3.0
+six==1.17.0
+smmap==5.0.2
+sniffio==1.3.1
+sortedcontainers==2.4.0
+sounddevice==0.5.1
+soundfile==0.12.1
+soupsieve==2.8
+stack-data==0.6.3
+starlette==0.41.3
+sympy==1.14.0
+terminado==0.18.1
+tiktoken==0.12.0
+tinycss2==1.4.0
+tomli==2.4.1
+tomli_w==1.2.0
+torch==2.11.0
+tornado==6.5.2
+tqdm==4.67.3
+traitlets==5.14.3
+triton==3.6.0
+typing-inspection==0.4.2
+typing_extensions==4.15.0
+tzdata==2025.2
+uri-template==1.3.0
+uritemplate==4.2.0
+urllib3==2.5.0
+uvicorn==0.32.1
+uvloop==0.22.1
+watchfiles==1.1.1
+wcwidth==0.2.14
+webcolors==25.10.0
+webencodings==0.5.1
+websocket-client==1.9.0
+websockets==13.1
+yt-dlp==2026.3.17
+ytmusicapi==1.8.2
