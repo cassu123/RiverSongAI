@@ -1,0 +1,216 @@
+/* ============================================================
+   ProfilePage
+   ============================================================ */
+
+.profile-page {
+  overflow-y: auto;
+  height: 100%;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+  max-width: 960px;
+}
+
+.profile-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Identity card */
+
+.profile-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.profile-avatar-lg {
+  width: 56px;
+  height: 56px;
+  border-radius: 3px;
+  border: 1px solid var(--primary);
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-shadow: var(--glow-sm);
+  box-shadow: var(--glow-sm);
+  flex-shrink: 0;
+}
+
+.profile-avatar-name {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.profile-avatar-handle {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* Fields */
+
+.profile-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.profile-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+}
+
+.profile-input {
+  background: var(--bg);
+  border: 1px solid var(--border-bright);
+  border-radius: 2px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+}
+
+.profile-input:focus {
+  border-color: var(--primary);
+  box-shadow: var(--glow-sm);
+}
+
+.profile-input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.5);
+  cursor: pointer;
+}
+
+/* Save row */
+
+.profile-save-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profile-saved-msg {
+  font-family: var(--font-display);
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  color: var(--secondary);
+  text-shadow: var(--glow-teal);
+}
+
+/* Password error */
+
+.profile-pw-error {
+  font-size: 0.78rem;
+  color: var(--error);
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  border-left: 2px solid var(--error);
+  background: rgba(255,68,51,0.06);
+}
+
+/* Hint text */
+.profile-hint {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+/* ---- Theme grid ---- */
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.theme-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 10px 10px;
+  border-radius: 3px;
+  border: 1px solid var(--border-bright);
+  background: var(--tc-bg, var(--bg-card));
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.theme-card:hover {
+  border-color: var(--tc-primary, var(--primary));
+  box-shadow: 0 0 10px rgba(0,0,0,0.4);
+}
+
+.theme-card--active {
+  border-color: var(--tc-primary, var(--primary));
+  box-shadow: 0 0 0 1px var(--tc-primary, var(--primary)),
+              0 0 12px rgba(0,0,0,0.5);
+}
+
+.theme-card-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.theme-card-ring {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--tc-primary, var(--primary));
+  box-shadow: 0 0 8px var(--tc-primary, var(--primary));
+}
+
+.theme-card-bar {
+  width: 70%;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--tc-primary, var(--primary));
+  box-shadow: 0 0 6px var(--tc-primary, var(--primary));
+}
+
+.theme-card-label {
+  font-family: var(--font-display);
+  font-size: 0.46rem;
+  letter-spacing: 0.14em;
+  color: var(--tc-primary, var(--primary));
+}
+
+.theme-card-active-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tc-primary, var(--primary));
+  box-shadow: 0 0 5px var(--tc-primary, var(--primary));
+}

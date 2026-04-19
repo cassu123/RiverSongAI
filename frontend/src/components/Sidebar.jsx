@@ -1,17 +1,27 @@
 import React, { useState } from 'react'
 
-const NAV_ITEMS = [
-  { key: 'dashboard',  label: 'DASHBOARD',  icon: IconDashboard },
-  { key: 'speak',      label: 'SPEAK',       icon: IconSpeak },
-  { key: 'memory',     label: 'MEMORY',      icon: IconMemory },
-  { key: 'routines',   label: 'ROUTINES',    icon: IconRoutines },
-  { key: 'home',       label: 'HOME',        icon: IconHome },
-  { key: 'users',      label: 'USERS',       icon: IconUsers },
-  { key: 'killswitch', label: 'KILL SW.',    icon: IconKill },
+const USER_ITEMS = [
+  { key: 'speak',  label: 'SPEAK',  icon: IconSpeak },
+  { key: 'memory', label: 'MEMORY', icon: IconMemory },
 ]
 
-export default function Sidebar({ currentPage, onNavigate }) {
+const ADMIN_ITEMS = [
+  { key: 'dashboard',  label: 'DASHBOARD', icon: IconDashboard },
+  { key: 'speak',      label: 'SPEAK',      icon: IconSpeak },
+  { key: 'memory',     label: 'MEMORY',     icon: IconMemory },
+  { key: 'routines',   label: 'ROUTINES',   icon: IconRoutines },
+  { key: 'home',       label: 'HOME',       icon: IconHome },
+  { key: 'users',      label: 'USERS',      icon: IconUsers },
+  { key: 'killswitch', label: 'KILL SW.',   icon: IconKill },
+]
+
+export default function Sidebar({ currentPage, onNavigate, isAdmin, onAdminToggle, displayName }) {
   const [collapsed, setCollapsed] = useState(false)
+  const items = isAdmin ? ADMIN_ITEMS : USER_ITEMS
+
+  const initials = displayName
+    ? displayName.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    : 'CW'
 
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
@@ -21,7 +31,7 @@ export default function Sidebar({ currentPage, onNavigate }) {
       </div>
 
       <nav className="sidebar-nav" aria-label="Main navigation">
-        {NAV_ITEMS.map(({ key, label, icon: Icon }) => (
+        {items.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             className={`sidebar-item ${currentPage === key ? 'sidebar-item--active' : ''} ${key === 'killswitch' ? 'sidebar-item--kill' : ''}`}
@@ -34,6 +44,56 @@ export default function Sidebar({ currentPage, onNavigate }) {
           </button>
         ))}
       </nav>
+
+      {/* Bottom utility buttons */}
+      <div className={`sidebar-utils ${collapsed ? 'sidebar-utils--collapsed' : ''}`}>
+        {/* Profile */}
+        <button
+          className={`sidebar-profile ${currentPage === 'profile' ? 'sidebar-profile--active' : ''}`}
+          onClick={() => onNavigate('profile')}
+          title={collapsed ? 'Profile' : undefined}
+          aria-current={currentPage === 'profile' ? 'page' : undefined}
+          style={{ flex: 1, borderRight: collapsed ? 'none' : '1px solid var(--border)' }}
+        >
+          <div className="sidebar-avatar">{initials}</div>
+          {!collapsed && (
+            <div className="sidebar-profile-info">
+              <span className="sidebar-profile-name">{displayName || 'Charlie W.'}</span>
+              <span className="sidebar-profile-sub">Profile</span>
+            </div>
+          )}
+        </button>
+
+        {/* Settings gear */}
+        <button
+          className={`sidebar-util-btn ${currentPage === 'settings' ? 'sidebar-util-btn--active' : ''}`}
+          onClick={() => onNavigate('settings')}
+          title="Settings"
+          aria-current={currentPage === 'settings' ? 'page' : undefined}
+        >
+          <IconGear />
+        </button>
+      </div>
+
+      {/* Admin mode toggle */}
+      <div
+        className={`sidebar-admin-toggle ${collapsed ? 'sidebar-admin-toggle--collapsed' : ''}`}
+        title={collapsed ? (isAdmin ? 'Admin mode on' : 'Admin mode off') : undefined}
+      >
+        {!collapsed && (
+          <span className={`sidebar-admin-label ${isAdmin ? 'sidebar-admin-label--on' : ''}`}>
+            ADMIN
+          </span>
+        )}
+        <button
+          className={`sidebar-toggle-switch ${isAdmin ? 'sidebar-toggle-switch--on' : ''}`}
+          onClick={() => onAdminToggle(!isAdmin)}
+          aria-pressed={isAdmin}
+          aria-label="Toggle admin mode"
+        >
+          <span className="sidebar-toggle-knob" />
+        </button>
+      </div>
 
       <button
         className="sidebar-collapse"
@@ -106,6 +166,16 @@ function IconKill() {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M5 3.5A6 6 0 1 0 11 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
       <line x1="8" y1="1" x2="8" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function IconGear() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"
+        stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
     </svg>
   )
 }

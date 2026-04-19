@@ -1,0 +1,158 @@
+/* ============================================================
+   River Song AI — Theme Palettes
+   Applied via data-theme on <html>. All component code unchanged.
+   Shared tokens (fonts, radii, navbar-h) defined in global.css :root.
+   ============================================================ */
+
+/* ---- Halo Blue (default — already set in :root, listed for completeness) ---- */
+[data-theme="halo"] {
+  --bg:           #050a10;
+  --bg-panel:     #060d1a;
+  --bg-card:      #07101f;
+  --bg-card-sel:  #091626;
+  --primary:      #00aaff;
+  --secondary:    #00ffcc;
+  --accent:       #0066cc;
+  --error:        #ff4433;
+  --warn:         #ffaa00;
+  --text:         #b8d4ee;
+  --text-dim:     #3a6080;
+  --text-muted:   #1e3a52;
+  --border:       #0a2236;
+  --border-bright:#0d2f4a;
+  --glow-sm:      0 0 8px  rgba(0,170,255,0.45);
+  --glow-md:      0 0 18px rgba(0,170,255,0.70);
+  --glow-teal:    0 0 10px rgba(0,255,204,0.55);
+}
+
+/* ---- Red Ops — tactical red, alert stance ---- */
+[data-theme="redops"] {
+  --bg:           #0e0404;
+  --bg-panel:     #130505;
+  --bg-card:      #160606;
+  --bg-card-sel:  #1c0707;
+  --primary:      #ff3322;
+  --secondary:    #ff6644;
+  --accent:       #cc1100;
+  --error:        #ff6655;
+  --warn:         #ffaa00;
+  --text:         #f0c8c0;
+  --text-dim:     #7a3028;
+  --text-muted:   #3e1810;
+  --border:       #2a0a08;
+  --border-bright:#3e1010;
+  --glow-sm:      0 0 8px  rgba(255,51,34,0.45);
+  --glow-md:      0 0 18px rgba(255,51,34,0.70);
+  --glow-teal:    0 0 10px rgba(255,102,68,0.55);
+}
+
+/* ---- Combat — terminal green, night-vision ---- */
+[data-theme="combat"] {
+  --bg:           #030e04;
+  --bg-panel:     #051205;
+  --bg-card:      #061506;
+  --bg-card-sel:  #081a08;
+  --primary:      #00ff44;
+  --secondary:    #44ffaa;
+  --accent:       #008822;
+  --error:        #ff4433;
+  --warn:         #aaff00;
+  --text:         #b0f0c0;
+  --text-dim:     #2a6030;
+  --text-muted:   #163a1a;
+  --border:       #0a2210;
+  --border-bright:#0f3018;
+  --glow-sm:      0 0 8px  rgba(0,255,68,0.45);
+  --glow-md:      0 0 18px rgba(0,255,68,0.70);
+  --glow-teal:    0 0 10px rgba(68,255,170,0.55);
+}
+
+/* ---- Violet — deep plum, magenta accents ---- */
+[data-theme="violet"] {
+  --bg:           #080510;
+  --bg-panel:     #0c0718;
+  --bg-card:      #0e081c;
+  --bg-card-sel:  #120a22;
+  --primary:      #cc44ff;
+  --secondary:    #ff44cc;
+  --accent:       #6622aa;
+  --error:        #ff4455;
+  --warn:         #ffaa44;
+  --text:         #ddc8f5;
+  --text-dim:     #6a3888;
+  --text-muted:   #361a50;
+  --border:       #1a0a2e;
+  --border-bright:#260e42;
+  --glow-sm:      0 0 8px  rgba(204,68,255,0.45);
+  --glow-md:      0 0 18px rgba(204,68,255,0.70);
+  --glow-teal:    0 0 10px rgba(255,68,204,0.55);
+}
+
+/* ---- Amber — warm monochrome, honey over coal ---- */
+[data-theme="amber"] {
+  --bg:           #0c0800;
+  --bg-panel:     #110b00;
+  --bg-card:      #140d00;
+  --bg-card-sel:  #1a1000;
+  --primary:      #ffaa00;
+  --secondary:    #ffcc44;
+  --accent:       #cc7700;
+  --error:        #ff4433;
+  --warn:         #ffdd44;
+  --text:         #f5dfa0;
+  --text-dim:     #7a5510;
+  --text-muted:   #3e2c08;
+  --border:       #241800;
+  --border-bright:#342200;
+  --glow-sm:      0 0 8px  rgba(255,170,0,0.45);
+  --glow-md:      0 0 18px rgba(255,170,0,0.70);
+  --glow-teal:    0 0 10px rgba(255,204,68,0.55);
+}
+
+/* ---- Arctic — daylight / accessibility, only light theme ---- */
+[data-theme="arctic"] {
+  --bg:           #eef3f8;
+  --bg-panel:     #e4ecf4;
+  --bg-card:      #dce6f0;
+  --bg-card-sel:  #cddae8;
+  --primary:      #0066cc;
+  --secondary:    #0099aa;
+  --accent:       #004499;
+  --error:        #cc2211;
+  --warn:         #cc7700;
+  --text:         #1a2a3a;
+  --text-dim:     #4a6880;
+  --text-muted:   #8aaabf;
+  --border:       #b8ccdd;
+  --border-bright:#9ab8cf;
+  --glow-sm:      0 1px 4px rgba(0,102,204,0.20);
+  --glow-md:      0 2px 8px rgba(0,102,204,0.30);
+  --glow-teal:    0 1px 4px rgba(0,153,170,0.25);
+}
+
+/* Arctic needs a few structural overrides since it's light */
+[data-theme="arctic"] .sidebar,
+[data-theme="arctic"] .conv-input-bar {
+  background: rgba(220,230,240,0.98);
+}
+
+[data-theme="arctic"] .sidebar-brand {
+  border-bottom-color: var(--border);
+}
+
+[data-theme="arctic"] .navbar {
+  background: rgba(220,230,240,0.96);
+}
+
+[data-theme="arctic"] .card {
+  background: var(--bg-card);
+}
+
+[data-theme="arctic"] .conv-text-input {
+  background: #ffffff;
+  color: var(--text);
+}
+
+[data-theme="arctic"] .conv-text-input::placeholder {
+  color: var(--text-muted);
+}

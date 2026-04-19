@@ -174,6 +174,170 @@ select { font-family: inherit; }
 
 .sidebar-label { white-space: nowrap; }
 
+/* Utility row (profile + gear) */
+
+.sidebar-utils {
+  display: flex;
+  align-items: stretch;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sidebar-utils--collapsed {
+  flex-direction: column;
+}
+
+.sidebar-util-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  flex-shrink: 0;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  border: none;
+}
+
+.sidebar-util-btn:hover       { color: var(--primary); background: rgba(0,170,255,0.05); }
+.sidebar-util-btn--active     { color: var(--primary); background: rgba(0,170,255,0.08); }
+
+.sidebar-utils--collapsed .sidebar-util-btn {
+  width: 100%;
+  height: 38px;
+  border-top: 1px solid var(--border);
+}
+
+/* Profile button */
+
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.sidebar-profile:hover { background: rgba(0,170,255,0.05); }
+
+.sidebar-profile--active { background: rgba(0,170,255,0.08); }
+
+.sidebar-profile--collapsed { justify-content: center; }
+
+.sidebar-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  border: 1px solid var(--primary);
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-shadow: var(--glow-sm);
+  flex-shrink: 0;
+}
+
+.sidebar-profile--active .sidebar-avatar {
+  box-shadow: var(--glow-sm);
+}
+
+.sidebar-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.sidebar-profile-name {
+  font-family: var(--font-display);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-profile-sub {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Admin mode toggle */
+
+.sidebar-admin-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sidebar-admin-toggle--collapsed {
+  justify-content: center;
+}
+
+.sidebar-admin-label {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+  transition: color 0.2s;
+  user-select: none;
+}
+
+.sidebar-admin-label--on {
+  color: var(--warn);
+  text-shadow: 0 0 6px rgba(255,170,0,0.5);
+}
+
+.sidebar-toggle-switch {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  border: 1px solid var(--border-bright);
+  background: rgba(5,12,22,0.8);
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+
+.sidebar-toggle-switch--on {
+  background: rgba(255,170,0,0.15);
+  border-color: var(--warn);
+  box-shadow: 0 0 8px rgba(255,170,0,0.3);
+}
+
+.sidebar-toggle-knob {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: transform 0.25s, background 0.25s;
+  pointer-events: none;
+}
+
+.sidebar-toggle-switch--on .sidebar-toggle-knob {
+  transform: translateX(16px);
+  background: var(--warn);
+}
+
 .sidebar-collapse {
   display: flex;
   align-items: center;
@@ -190,6 +354,29 @@ select { font-family: inherit; }
 .sidebar-collapse:hover {
   color: var(--primary);
   background: rgba(0,170,255,0.05);
+}
+
+/* ============================================================
+   Page transition
+   ============================================================ */
+
+.page-enter {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  animation: page-fade-in 0.18s ease-out both;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ============================================================

@@ -1,0 +1,54 @@
+.eb-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px;
+}
+
+.eb-card {
+  max-width: 480px;
+  width: 100%;
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 60, 60, 0.35);
+  border-radius: 4px;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.eb-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 0.44rem;
+  letter-spacing: 0.16em;
+  color: rgba(255, 100, 100, 0.7);
+}
+
+.eb-sep { opacity: 0.4; }
+
+.eb-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
+  color: rgba(255, 100, 100, 0.9);
+}
+
+.eb-msg {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  background: rgba(255, 60, 60, 0.05);
+  border: 1px solid rgba(255, 60, 60, 0.15);
+  border-radius: 2px;
+  padding: 10px 14px;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.eb-btn {
+  align-self: flex-start;
+}
