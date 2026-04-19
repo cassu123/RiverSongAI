@@ -73,15 +73,51 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     llm_provider: str = Field(
         default="ollama",
-        description="LLM provider key. Supported: ollama",
+        description="LLM provider key. Supported: ollama | anthropic | gemini | openai | mistral_ai",
     )
     ollama_base_url: str = Field(
         default="http://localhost:11434",
         description="Base URL for the Ollama REST API",
     )
     llm_model: str = Field(
-        default="llama3.1:8b",
-        description="Ollama model tag (must be pulled before use)",
+        default="llama3.2:3b",
+        description="Model ID for the selected LLM provider",
+    )
+
+    # Cloud LLM API keys (all optional -- leave blank if not used)
+    anthropic_api_key: str = Field(
+        default="",
+        description="Anthropic Claude API key. Get one at console.anthropic.com.",
+    )
+    gemini_api_key: str = Field(
+        default="",
+        description="Google Gemini API key. Get one at aistudio.google.com.",
+    )
+    openai_api_key: str = Field(
+        default="",
+        description="OpenAI API key. Get one at platform.openai.com.",
+    )
+    mistral_api_key: str = Field(
+        default="",
+        description="Mistral AI API key. Get one at console.mistral.ai.",
+    )
+
+    # Cloud provider enable flags (cost control -- disabled by default)
+    anthropic_enabled: bool = Field(
+        default=False,
+        description="Allow Anthropic Claude as a selectable LLM provider.",
+    )
+    gemini_enabled: bool = Field(
+        default=False,
+        description="Allow Google Gemini as a selectable LLM provider.",
+    )
+    openai_enabled: bool = Field(
+        default=False,
+        description="Allow OpenAI as a selectable LLM provider.",
+    )
+    mistral_ai_enabled: bool = Field(
+        default=False,
+        description="Allow Mistral AI as a selectable LLM provider.",
     )
     river_song_system_prompt: str = Field(
         default=(
@@ -290,6 +326,30 @@ class Settings(BaseSettings):
             "Files are stored as {user_id}.json inside this directory. "
             "Created automatically on first setup. Never commit this directory."
         ),
+    )
+
+    # -------------------------------------------------------------------------
+    # Memory / Database (Phase 1)
+    # -------------------------------------------------------------------------
+    db_path: str = Field(
+        default="data/river_song.db",
+        description="Path to the SQLite database file. Created automatically.",
+    )
+    memory_summaries_enabled: bool = Field(
+        default=True,
+        description="Generate and store conversation summaries (on by default).",
+    )
+    memory_default_ttl: str = Field(
+        default="standard",
+        description="Default TTL for conversation summaries: short|standard|extended|long|forever",
+    )
+    memory_auto_extend: bool = Field(
+        default=True,
+        description="Reset a summary's TTL from today each time it is pulled into context.",
+    )
+    memory_max_summaries_in_context: int = Field(
+        default=10,
+        description="Maximum number of recent summaries injected into the LLM context.",
     )
 
     # -------------------------------------------------------------------------
