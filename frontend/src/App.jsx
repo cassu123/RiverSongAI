@@ -1,26 +1,28 @@
-// =============================================================================
-// src/App.jsx
-//
-// Root application shell. Renders the NavBar and switches between pages.
-// All conversation state lives in ConversationPage; settings state in
-// SettingsPage. This component owns nothing except the current page key.
-// =============================================================================
-
 import React, { useState } from 'react'
-import NavBar          from './components/NavBar.jsx'
+import Sidebar          from './components/Sidebar.jsx'
+import DashboardPage    from './pages/DashboardPage.jsx'
 import ConversationPage from './pages/ConversationPage.jsx'
-import SettingsPage     from './pages/SettingsPage.jsx'
+import MemoryPage       from './pages/MemoryPage.jsx'
+import RoutinesPage     from './pages/RoutinesPage.jsx'
+import HomeNodePage     from './pages/HomeNodePage.jsx'
+import UsersPage        from './pages/UsersPage.jsx'
+import KillSwitchPage   from './pages/KillSwitchPage.jsx'
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('conversation')
+  const [currentPage, setCurrentPage] = useState('dashboard')
 
   return (
     <div className="app-shell">
-      <NavBar currentPage={currentPage} onNavigate={setCurrentPage} />
+      <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
 
       <main className="app-main">
-        {currentPage === 'conversation' && <ConversationPage />}
-        {currentPage === 'settings'     && <SettingsPage />}
+        {currentPage === 'dashboard'  && <DashboardPage  onNavigate={setCurrentPage} />}
+        {currentPage === 'speak'      && <ConversationPage />}
+        {currentPage === 'memory'     && <MemoryPage />}
+        {currentPage === 'routines'   && <RoutinesPage />}
+        {currentPage === 'home'       && <HomeNodePage />}
+        {currentPage === 'users'      && <UsersPage />}
+        {currentPage === 'killswitch' && <KillSwitchPage />}
       </main>
     </div>
   )
