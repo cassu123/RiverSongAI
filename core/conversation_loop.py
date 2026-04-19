@@ -126,8 +126,11 @@ def _build_tts_provider() -> TTSProvider:
     if key == "piper":
         from providers.tts.piper import PiperTTS
         return PiperTTS()
+    if key in ("none", "disabled", ""):
+        from providers.tts.null_tts import NullTTS
+        return NullTTS()
     raise ValueError(
-        f"Unsupported TTS_PROVIDER '{key}'. Supported values: piper"
+        f"Unsupported TTS_PROVIDER '{key}'. Supported values: piper, none"
     )
 
 
@@ -378,6 +381,69 @@ class ConversationLoop:
         except Exception as exc:
             logger.error("TTS synthesis failed: %s", exc)
             await on_event({"type": "error", "message": f"TTS error: {exc}"})
+
+    async def run_text(self, text: str, on_event: EventCallback) -> None:
+        """Execute one conversation turn from typed text, skipping STT."""
+        if not self._initialized:
+            raise RuntimeError("ConversationLoop.initialize() must be called before run_text().")
+
+        if is_kill_switch_active():
+            await on_event({"type": "error", "message": "System kill switch is active."})
+            await on_event({"type": "idle"})
+            return
+
+        if self._memory:
+            await self._rebuild_system_prompt()
+
+        await on_event({"type": "transcript", "text": text})
+
+        try:
+            await on_event({"type": "routing"})
+            intent_name, spoken_response = await get_intent_router().route(text, self._user_id)
+        except Exception as exc:
+            logger.error("Intent routing failed: %s", exc)
+            spoken_response = ""
+            intent_name = "conversation"
+
+        if intent_name != "conversation" and spoken_response:
+            self._history.append({"role": "user", "content": text})
+            self._history.append({"role": "assistant", "content": spoken_response})
+            await on_event({"type": "response_complete", "text": spoken_response})
+            await self._speak_and_send(spoken_response, on_event)
+            await on_event({"type": "idle"})
+            return
+
+        self._history.append({"role": "user", "content": text})
+
+        full_response = ""
+        try:
+            await on_event({"type": "thinking"})
+            async for chunk in self._llm.stream_response(self._history):
+                full_response += chunk
+                await on_event({"type": "response_chunk", "text": chunk})
+        except Exception as exc:
+            self._history.pop()
+            logger.error("LLM streaming failed: %s", exc)
+            await on_event({"type": "error", "message": f"LLM error: {exc}"})
+            await on_event({"type": "idle"})
+            return
+
+        self._history.append({"role": "assistant", "content": full_response})
+        await on_event({"type": "response_complete", "text": full_response})
+
+        await self._speak_and_send(full_response, on_event)
+
+        if self._memory:
+            try:
+                summary_text = (
+                    f"User said: \"{text[:200]}\". "
+                    f"River Song responded: \"{full_response[:200]}\"."
+                )
+                await self._memory.record_summary(self._user_id, summary_text)
+            except Exception as exc:
+                logger.warning("Summary recording failed (user=%s): %s", self._user_id, exc)
+
+        await on_event({"type": "idle"})
 
     async def reset_history(self) -> None:
         """

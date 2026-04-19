@@ -124,38 +124,21 @@ env_set() {
 
 step "Step 1/7 -- System packages (PortAudio)"
 
-if python3 -c "import sounddevice" &>/dev/null; then
-  ok "sounddevice already importable -- skipping apt-get"
-else
-  if [[ "$OS" == "Linux" ]]; then
-    if command -v apt-get &>/dev/null; then
-      info "Installing libportaudio2 and portaudio19-dev..."
-      sudo apt-get install -y -q libportaudio2 portaudio19-dev 2>&1 | \
-        grep -E "^(Setting|Unpacking|Get:)" | sed 's/^/  /' || true
-      ok "PortAudio system library installed"
-    elif command -v dnf &>/dev/null; then
-      sudo dnf install -y portaudio portaudio-devel
-      ok "PortAudio installed via dnf"
-    elif command -v pacman &>/dev/null; then
-      sudo pacman -S --noconfirm portaudio
-      ok "PortAudio installed via pacman"
-    else
-      soft_error "Could not find apt-get/dnf/pacman. Install libportaudio2 manually."
-    fi
-  elif [[ "$OS" == "Darwin" ]]; then
-    if command -v brew &>/dev/null; then
-      brew install portaudio &>/dev/null && ok "PortAudio installed via Homebrew"
-    else
-      soft_error "Homebrew not found. Install PortAudio manually: brew install portaudio"
-    fi
-  fi
-fi
+ok "Skipping -- audio now runs in the browser, PortAudio no longer needed."
 
 # ---------------------------------------------------------------------------
 # STEP 2: Python packages
 # ---------------------------------------------------------------------------
 
 step "Step 2/7 -- Python packages (pip install -r requirements.txt)"
+
+if [[ ! -d "venv" ]]; then
+  info "Creating Python virtual environment (venv)..."
+  python3 -m venv venv || die "Failed to create venv. You may need to install it first: sudo apt-get install python3-venv"
+fi
+
+info "Activating virtual environment..."
+source venv/bin/activate
 
 info "This installs Whisper, FastAPI, Ollama client, and all providers."
 info "Whisper pulls PyTorch -- this can take several minutes on first run."
@@ -168,15 +151,18 @@ python3 -c "import pkg_resources" 2>/dev/null || {
   pip3 install "setuptools<71" --quiet 2>&1 | grep -v "already satisfied" | sed 's/^/  /' || true
 }
 
+info "Installing wheel to support package building..."
+pip3 install wheel --quiet 2>&1 | grep -v "already satisfied" | sed 's/^/  /' || true
+
 # --no-build-isolation lets the build environment use the pinned setuptools
 # instead of pulling the latest (which lacks pkg_resources).
 pip3 install -r requirements.txt --no-build-isolation --quiet 2>&1 | \
-  grep -v "^$\|Requirement already\|already satisfied" | \
-  head -30 | sed 's/^/  /' || soft_error "pip install had warnings -- check output above"
+  grep -v "^$\|Requirement already\|already satisfied\|yanked" | \
+  head -30 | sed 's/^/  /' || true
 
 # Spot-check the critical imports
 IMPORT_ERRORS=()
-for pkg in fastapi uvicorn whisper sounddevice soundfile ollama bcrypt httpx pydantic; do
+for pkg in fastapi uvicorn whisper soundfile ollama bcrypt httpx pydantic; do
   python3 -c "import ${pkg}" 2>/dev/null || IMPORT_ERRORS+=("$pkg")
 done
 
@@ -388,7 +374,55 @@ fi
 # STEP 7: Frontend npm install
 # ---------------------------------------------------------------------------
 
-step "Step 7/7 -- Frontend (npm install)"
+step "Step 7/8 -- Ollama models"
+
+OLLAMA_MODELS=(
+  "deepseek-r1:1.5b"
+  "deepseek-r1:7b"
+  "deepseek-r1:8b"
+  "llama3.2:1b"
+  "llama3.2:3b"
+  "llama3.1:8b"
+  "phi3.5"
+  "phi4-mini"
+  "gemma3:1b"
+  "gemma3:4b"
+  "qwen2.5:3b"
+  "qwen2.5:7b"
+  "mistral:7b"
+  "mistral-nemo"
+)
+
+# Heavy models (optional -- require 16GB+ RAM):
+# "phi4"         ~9GB
+# "gemma3:12b"   ~8GB
+# "gemma2:9b"    ~6GB
+# "llama3.1:70b" ~43GB
+# "qwq"          ~20GB
+
+if command -v ollama &>/dev/null; then
+  info "Ollama found. Pulling all configured models (~49 GB total)."
+  info "This will take a long time. Models already downloaded will be skipped."
+  echo ""
+  for model in "${OLLAMA_MODELS[@]}"; do
+    if ollama list 2>/dev/null | grep -q "^${model}"; then
+      ok "Already pulled: $model"
+    else
+      info "Pulling $model ..."
+      ollama pull "$model" || soft_error "Failed to pull $model"
+    fi
+  done
+  ok "Ollama models done"
+else
+  warn "Ollama not installed -- skipping model downloads."
+  warn "Install from https://ollama.com then re-run ./setup.sh to pull models."
+fi
+
+# ---------------------------------------------------------------------------
+# STEP 8: Frontend npm install
+# ---------------------------------------------------------------------------
+
+step "Step 8/8 -- Frontend (npm install)"
 
 if [[ ! -d "frontend" ]]; then
   soft_error "frontend/ directory not found. Is this the correct project root?"
@@ -413,7 +447,7 @@ echo ""
 VERIFY_PASS=true
 
 # Python imports
-VERIFY_IMPORTS=(fastapi uvicorn whisper sounddevice soundfile ollama bcrypt httpx)
+VERIFY_IMPORTS=(fastapi uvicorn whisper soundfile ollama bcrypt httpx)
 for pkg in "${VERIFY_IMPORTS[@]}"; do
   if python3 -c "import ${pkg}" 2>/dev/null; then
     ok "import $pkg"
@@ -481,7 +515,8 @@ if [[ ${#ERRORS[@]} -eq 0 ]] && $VERIFY_PASS; then
   echo -e "${GREEN}${BOLD}  River Song is ready.${RESET}"
   echo ""
   echo -e "  Start the backend:"
-  echo -e "    ${BOLD}python3 main.py${RESET}"
+  echo -e "    ${BOLD}source venv/bin/activate${RESET}"
+  echo -e "    ${BOLD}python main.py${RESET}"
   echo ""
   echo -e "  Start the frontend (in a separate terminal):"
   echo -e "    ${BOLD}cd frontend && npm run dev${RESET}"

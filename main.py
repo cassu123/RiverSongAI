@@ -129,6 +129,7 @@ def create_app() -> FastAPI:
 
     # Register API routers
     from api.routes.health import router as health_router
+    from api.routes.auth import router as auth_router
     from api.routes.conversation import router as conversation_router
     from api.routes.models_settings import router as settings_router
     from api.routes.dashboard import router as dashboard_router
@@ -136,6 +137,7 @@ def create_app() -> FastAPI:
     from api.routes.killswitch import router as killswitch_router
     from api.routes.home import router as home_router
 
+    app.include_router(auth_router)
     app.include_router(health_router)
     app.include_router(dashboard_router)
     app.include_router(memory_router)
