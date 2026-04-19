@@ -15,7 +15,7 @@ const ADMIN_ITEMS = [
   { key: 'killswitch', label: 'KILL SW.',   icon: IconKill },
 ]
 
-export default function Sidebar({ currentPage, onNavigate, isAdmin, onAdminToggle, displayName }) {
+export default function Sidebar({ currentPage, onNavigate, isAdmin, onAdminToggle, displayName, onLogout }) {
   const [collapsed, setCollapsed] = useState(false)
   const items = isAdmin ? ADMIN_ITEMS : USER_ITEMS
 
@@ -73,6 +73,18 @@ export default function Sidebar({ currentPage, onNavigate, isAdmin, onAdminToggl
         >
           <IconGear />
         </button>
+
+        {/* Logout */}
+        {onLogout && (
+          <button
+            className="sidebar-util-btn"
+            onClick={onLogout}
+            title="Sign out"
+            style={{ color: 'var(--text-dim)' }}
+          >
+            <IconLogout />
+          </button>
+        )}
       </div>
 
       {/* Admin mode toggle */}
@@ -166,6 +178,16 @@ function IconKill() {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M5 3.5A6 6 0 1 0 11 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
       <line x1="8" y1="1" x2="8" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function IconLogout() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <polyline points="11,5 14,8 11,11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="14" y1="8" x2="6" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
     </svg>
   )
 }

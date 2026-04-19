@@ -120,6 +120,16 @@ CREATE TABLE IF NOT EXISTS llm_settings (
     cloud_fallback_provider TEXT,
     cloud_fallback_model    TEXT
 );
+
+CREATE TABLE IF NOT EXISTS users (
+    id           TEXT PRIMARY KEY,
+    email        TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    role         TEXT NOT NULL DEFAULT 'user',
+    created_at   TEXT NOT NULL,
+    updated_at   TEXT NOT NULL
+);
 """
 
 
@@ -554,3 +564,53 @@ class SQLiteStore:
             },
         )
         conn.commit()
+
+    # =========================================================================
+    # User auth methods
+    # =========================================================================
+
+    async def create_user(self, id: str, email: str, password_hash: str, display_name: str, role: str = "user") -> None:
+        await self._run(self._sync_create_user, id, email, password_hash, display_name, role)
+
+    def _sync_create_user(self, id: str, email: str, password_hash: str, display_name: str, role: str) -> None:
+        conn = self._get_conn()
+        now = _now_str()
+        conn.execute(
+            "INSERT INTO users (id, email, password_hash, display_name, role, created_at, updated_at) VALUES (?,?,?,?,?,?,?)",
+            (id, email, password_hash, display_name, role, now, now),
+        )
+        conn.commit()
+
+    async def get_user_by_email(self, email: str) -> Optional[dict]:
+        return await self._run(self._sync_get_user_by_email, email)
+
+    def _sync_get_user_by_email(self, email: str) -> Optional[dict]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT id, email, password_hash, display_name, role, created_at FROM users WHERE email=?",
+            (email,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {"id": row[0], "email": row[1], "password_hash": row[2], "display_name": row[3], "role": row[4], "created_at": row[5]}
+
+    async def get_user_by_id(self, user_id: str) -> Optional[dict]:
+        return await self._run(self._sync_get_user_by_id, user_id)
+
+    def _sync_get_user_by_id(self, user_id: str) -> Optional[dict]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT id, email, display_name, role, created_at FROM users WHERE id=?",
+            (user_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {"id": row[0], "email": row[1], "display_name": row[2], "role": row[3], "created_at": row[4]}
+
+    async def email_exists(self, email: str) -> bool:
+        return await self._run(self._sync_email_exists, email)
+
+    def _sync_email_exists(self, email: str) -> bool:
+        conn = self._get_conn()
+        row = conn.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone()
+        return row is not None

@@ -157,6 +157,16 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
+    # Auth / JWT
+    # -------------------------------------------------------------------------
+    jwt_secret_key: str = Field(
+        default="change-me-in-production-use-a-long-random-string",
+        description="Secret key for signing JWT tokens. Must be set in .env.",
+    )
+    jwt_algorithm: str = Field(default="HS256", description="JWT signing algorithm.")
+    jwt_expire_minutes: int = Field(default=10080, description="JWT token lifetime in minutes (default 7 days).")
+
+    # -------------------------------------------------------------------------
     # Kill switch
     # -------------------------------------------------------------------------
     kill_switch_password_hash: str = Field(

@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react'
-import Sidebar          from './components/Sidebar.jsx'
-import ErrorBoundary    from './components/ErrorBoundary.jsx'
-import DashboardPage    from './pages/DashboardPage.jsx'
-import ConversationPage from './pages/ConversationPage.jsx'
-import MemoryPage       from './pages/MemoryPage.jsx'
-import RoutinesPage     from './pages/RoutinesPage.jsx'
-import HomeNodePage     from './pages/HomeNodePage.jsx'
-import UsersPage        from './pages/UsersPage.jsx'
-import KillSwitchPage   from './pages/KillSwitchPage.jsx'
-import ProfilePage      from './pages/ProfilePage.jsx'
-import SettingsPage     from './pages/SettingsPage.jsx'
+import { useAuth }        from './context/AuthContext.jsx'
+import Sidebar            from './components/Sidebar.jsx'
+import ErrorBoundary      from './components/ErrorBoundary.jsx'
+import LoginPage          from './pages/LoginPage.jsx'
+import SignupPage         from './pages/SignupPage.jsx'
+import DashboardPage      from './pages/DashboardPage.jsx'
+import ConversationPage   from './pages/ConversationPage.jsx'
+import MemoryPage         from './pages/MemoryPage.jsx'
+import RoutinesPage       from './pages/RoutinesPage.jsx'
+import HomeNodePage       from './pages/HomeNodePage.jsx'
+import UsersPage          from './pages/UsersPage.jsx'
+import KillSwitchPage     from './pages/KillSwitchPage.jsx'
+import ProfilePage        from './pages/ProfilePage.jsx'
+import SettingsPage       from './pages/SettingsPage.jsx'
 
 const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch'])
 
@@ -22,13 +25,16 @@ function save(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)) } catch {}
 }
 
-const DEFAULT_PROFILE = { displayName: 'Charlie W.', username: '', birthday: '' }
-
 export default function App() {
+  const { user, loading, logout } = useAuth()
+  const [authView,    setAuthView]    = useState('login') // 'login' | 'signup'
   const [currentPage, setCurrentPage] = useState(() => load('rs-page',    'speak'))
   const [isAdmin,     setIsAdmin]     = useState(() => load('rs-admin',   false))
   const [theme,       setTheme]       = useState(() => load('rs-theme',   'halo'))
-  const [profile,     setProfile]     = useState(() => load('rs-profile', DEFAULT_PROFILE))
+  const [profile,     setProfile]     = useState(() => {
+    if (user) return { displayName: user.display_name, username: user.email, birthday: '' }
+    return load('rs-profile', { displayName: 'User', username: '', birthday: '' })
+  })
 
   useEffect(() => { save('rs-page',    currentPage) }, [currentPage])
   useEffect(() => { save('rs-admin',   isAdmin)     }, [isAdmin])
@@ -41,6 +47,25 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync display name from auth user
+  useEffect(() => {
+    if (user) setProfile(p => ({ ...p, displayName: user.display_name, username: user.email }))
+  }, [user])
+
+  if (loading) {
+    return (
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', color:'var(--primary)', fontFamily:'var(--font-display)', letterSpacing:'0.15em' }}>
+        LOADING...
+      </div>
+    )
+  }
+
+  if (!user) {
+    return authView === 'login'
+      ? <LoginPage  onSwitchToSignup={() => setAuthView('signup')} />
+      : <SignupPage onSwitchToLogin={()  => setAuthView('login')}  />
+  }
 
   const handleNavigate = (page) => {
     if (ADMIN_PAGES.has(page) && !isAdmin) return
@@ -60,6 +85,7 @@ export default function App() {
         isAdmin={isAdmin}
         onAdminToggle={handleAdminToggle}
         displayName={profile.displayName}
+        onLogout={logout}
       />
 
       <main className="app-main">

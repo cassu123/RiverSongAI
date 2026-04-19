@@ -150,6 +150,16 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                     on_event=lambda evt: _send(websocket, evt),
                 )
 
+            elif msg_type == "text_input":
+                text = message.get("text", "").strip()
+                if not text:
+                    await _send(websocket, {"type": "idle"})
+                    continue
+                await loop.run_text(
+                    text=text,
+                    on_event=lambda evt: _send(websocket, evt),
+                )
+
             elif msg_type == "reset_history":
                 await loop.reset_history()
                 waiting_for_audio = False
