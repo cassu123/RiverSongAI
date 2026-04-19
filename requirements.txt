@@ -34,10 +34,13 @@ soundfile==0.13.1               # WAV decode (bytes -> numpy array)
 
 
 # -----------------------------------------------------------------------------
-# LLM -- Claude API (primary) + Ollama (local fallback)
+# LLM -- Ollama (local primary) + cloud providers (optional, key required)
 # -----------------------------------------------------------------------------
-anthropic==0.96.0               # Claude API -- primary LLM, no local install needed
-ollama==0.6.1                   # Ollama client -- local LLM fallback
+ollama==0.6.1                   # Ollama client -- local LLM (primary)
+anthropic==0.96.0               # Claude API cloud LLM
+google-genai==1.16.0            # Google Gemini cloud LLM
+openai==1.82.0                  # OpenAI cloud LLM
+mistralai==1.7.0                # Mistral AI cloud LLM
 
 
 # -----------------------------------------------------------------------------

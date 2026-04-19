@@ -43,10 +43,11 @@ import base64
 import json
 import logging
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 
 from core.conversation_loop import ConversationLoop
+from core.memory_manager import MemoryManager
 
 
 logger = logging.getLogger(__name__)
@@ -72,7 +73,8 @@ async def conversation_websocket(websocket: WebSocket) -> None:
     user_id: str = websocket.query_params.get("user_id", "default")
     logger.info("WebSocket connection from %s (user_id=%s).", websocket.client, user_id)
 
-    loop = ConversationLoop(user_id=user_id)
+    memory_manager: MemoryManager | None = getattr(websocket.app.state, "memory_manager", None)
+    loop = ConversationLoop(user_id=user_id, memory_manager=memory_manager)
 
     await _send(websocket, {"type": "connected"})
 
@@ -149,7 +151,7 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                 )
 
             elif msg_type == "reset_history":
-                loop.reset_history()
+                await loop.reset_history()
                 waiting_for_audio = False
                 await _send(websocket, {"type": "idle"})
 

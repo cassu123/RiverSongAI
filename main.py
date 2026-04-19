@@ -28,6 +28,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config.settings import get_settings
 from core.kill_switch import is_kill_switch_active
+from core.memory_manager import MemoryManager
+from providers.memory.sqlite_store import SQLiteStore
 
 
 def _configure_logging(log_level: str) -> None:
@@ -56,10 +58,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Code before yield runs at application startup.
     Code after yield runs at application shutdown.
 
-    Used here for startup logging and kill switch warning. Providers are
-    initialized lazily per WebSocket connection in conversation.py, not
-    here, so startup is always fast regardless of model size.
+    Initializes the SQLiteStore and MemoryManager once at startup and stores
+    them on app.state so WebSocket routes can access the shared instances.
+    LLM/STT/TTS providers are still initialized lazily per-connection.
     """
+    import os
     settings = get_settings()
     logger = logging.getLogger(__name__)
 
@@ -79,8 +82,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "Reset the kill switch and restart to resume normal operation."
         )
 
+    # Initialize memory layer
+    os.makedirs(os.path.dirname(settings.db_path) or ".", exist_ok=True)
+    store = SQLiteStore(settings.db_path)
+    memory_manager = MemoryManager(store)
+    await memory_manager.initialize()
+    app.state.memory_manager = memory_manager
+    logger.info("Memory layer ready (db=%s).", settings.db_path)
+
     yield  # Application runs here
 
+    store.close()
     logger.info("River Song AI shutting down.")
 
 

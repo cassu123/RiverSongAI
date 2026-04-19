@@ -33,6 +33,7 @@ from typing import Any, Callable, Coroutine, List, Optional
 from config.settings import get_settings
 from core.kill_switch import is_kill_switch_active
 from core.intent_router import get_intent_router
+from core.memory_manager import MemoryManager
 from providers.base import LLMProvider, STTProvider, TTSProvider
 
 
@@ -78,12 +79,34 @@ def _build_llm_provider() -> LLMProvider:
         ValueError: If the configured provider key is not supported.
         RuntimeError: If the provider fails to initialize.
     """
-    key = get_settings().llm_provider
+    settings = get_settings()
+    key = settings.llm_provider
     if key == "ollama":
         from providers.llm.ollama import OllamaLLM
         return OllamaLLM()
+    if key == "anthropic":
+        if not settings.anthropic_enabled:
+            raise ValueError("Anthropic LLM is disabled. Set ANTHROPIC_ENABLED=true in .env.")
+        from providers.llm.claude_api import ClaudeAPILLM
+        return ClaudeAPILLM()
+    if key == "gemini":
+        if not settings.gemini_enabled:
+            raise ValueError("Gemini LLM is disabled. Set GEMINI_ENABLED=true in .env.")
+        from providers.llm.gemini import GeminiLLM
+        return GeminiLLM()
+    if key == "openai":
+        if not settings.openai_enabled:
+            raise ValueError("OpenAI LLM is disabled. Set OPENAI_ENABLED=true in .env.")
+        from providers.llm.openai_api import OpenAILLM
+        return OpenAILLM()
+    if key == "mistral_ai":
+        if not settings.mistral_ai_enabled:
+            raise ValueError("Mistral AI LLM is disabled. Set MISTRAL_AI_ENABLED=true in .env.")
+        from providers.llm.mistral_api import MistralAILLM
+        return MistralAILLM()
     raise ValueError(
-        f"Unsupported LLM_PROVIDER '{key}'. Supported values: ollama"
+        f"Unsupported LLM_PROVIDER '{key}'. "
+        f"Supported values: ollama | anthropic | gemini | openai | mistral_ai"
     )
 
 
@@ -130,15 +153,21 @@ class ConversationLoop:
     frontend always returns to a ready state.
     """
 
-    def __init__(self, user_id: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        user_id: Optional[str] = None,
+        memory_manager: Optional[MemoryManager] = None,
+    ) -> None:
         settings = get_settings()
         self._system_prompt: str = settings.river_song_system_prompt
         self._user_id: str = user_id or settings.default_user_id
+        self._memory: Optional[MemoryManager] = memory_manager
         self._stt: Optional[STTProvider] = None
         self._llm: Optional[LLMProvider] = None
         self._tts: Optional[TTSProvider] = None
         self._history: List[dict] = []
         self._initialized: bool = False
+        self._turn_transcript: str = ""
 
     async def initialize(self) -> None:
         """
@@ -165,9 +194,21 @@ class ConversationLoop:
                 f"ConversationLoop failed to initialize: {exc}"
             ) from exc
 
-        self._history = [{"role": "system", "content": self._system_prompt}]
+        await self._rebuild_system_prompt()
         self._initialized = True
         logger.info("ConversationLoop ready.")
+
+    async def _rebuild_system_prompt(self) -> None:
+        """Rebuild the system prompt with current memory context, then reset history."""
+        memory_block = ""
+        if self._memory:
+            try:
+                memory_block = await self._memory.build_context_block(self._user_id)
+            except Exception as exc:
+                logger.warning("Memory context build failed (user=%s): %s", self._user_id, exc)
+
+        full_system = self._system_prompt + memory_block
+        self._history = [{"role": "system", "content": full_system}]
 
     async def run_once(self, audio_bytes: bytes, on_event: EventCallback) -> None:
         """
@@ -226,6 +267,12 @@ class ConversationLoop:
             await on_event({"type": "error", "message": "System kill switch is active."})
             await on_event({"type": "idle"})
             return
+
+        # -----------------------------------------------------------------
+        # Step 0: Refresh memory context into system prompt for this turn
+        # -----------------------------------------------------------------
+        if self._memory:
+            await self._rebuild_system_prompt()
 
         # -----------------------------------------------------------------
         # Step 1: Transcribe audio bytes received from the browser
@@ -302,6 +349,20 @@ class ConversationLoop:
         # Step 5: TTS synthesis -> send WAV to browser
         # -----------------------------------------------------------------
         await self._speak_and_send(full_response, on_event)
+
+        # -----------------------------------------------------------------
+        # Step 6: Record conversation summary (fire-and-forget on error)
+        # -----------------------------------------------------------------
+        if self._memory:
+            try:
+                summary_text = (
+                    f"User said: \"{transcript[:200]}\". "
+                    f"River Song responded: \"{full_response[:200]}\"."
+                )
+                await self._memory.record_summary(self._user_id, summary_text)
+            except Exception as exc:
+                logger.warning("Summary recording failed (user=%s): %s", self._user_id, exc)
+
         await on_event({"type": "idle"})
 
     async def _speak_and_send(self, text: str, on_event: EventCallback) -> None:
@@ -318,12 +379,12 @@ class ConversationLoop:
             logger.error("TTS synthesis failed: %s", exc)
             await on_event({"type": "error", "message": f"TTS error: {exc}"})
 
-    def reset_history(self) -> None:
+    async def reset_history(self) -> None:
         """
-        Clear conversation history while preserving the system prompt.
+        Clear conversation history and rebuild the system prompt with fresh memory context.
 
         Call this to start a fresh conversation without reinitializing
         all providers (which would reload the Whisper model, etc.).
         """
-        self._history = [{"role": "system", "content": self._system_prompt}]
-        logger.info("Conversation history reset.")
+        await self._rebuild_system_prompt()
+        logger.info("Conversation history reset (user=%s).", self._user_id)
