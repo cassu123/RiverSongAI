@@ -1,0 +1,255 @@
+/* ============================================================
+   MemoryPage
+   ============================================================ */
+
+.memory-page-wrap {
+  overflow-y: auto;
+  height: 100%;
+}
+
+/* Stats in header */
+.mem-page-stats {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+}
+
+.mem-page-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.mem-page-stat-val {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--secondary);
+  line-height: 1;
+}
+
+.mem-page-stat-label {
+  font-family: var(--font-display);
+  font-size: 0.42rem;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+}
+
+/* Toolbar (tabs + search) */
+.mem-page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.mem-page-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.mem-page-tab {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  padding: 5px 14px;
+  border-radius: 2px;
+  border: 1px solid var(--border-bright);
+  color: var(--text-dim);
+  cursor: pointer;
+  background: transparent;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.mem-page-tab--on {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: rgba(0,170,255,0.06);
+}
+
+.mem-page-tab:not(.mem-page-tab--on):hover {
+  color: var(--text-primary);
+  border-color: var(--text-dim);
+}
+
+/* Search row */
+.mem-page-search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mem-page-search {
+  background: var(--input-bg, rgba(255,255,255,0.04));
+  border: 1px solid var(--border-bright);
+  border-radius: 2px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 5px 10px;
+  width: 200px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.mem-page-search:focus {
+  border-color: var(--primary);
+}
+
+.mem-page-search::placeholder {
+  color: var(--text-muted);
+}
+
+.mem-page-forget-btn {
+  font-size: 0.44rem;
+  padding: 5px 12px;
+  border-color: rgba(255,60,60,0.5);
+  color: rgba(255,100,100,0.8);
+}
+
+.mem-page-forget-btn:hover:not(:disabled) {
+  border-color: rgba(255,60,60,0.9);
+  color: rgba(255,100,100,1);
+  background: rgba(255,60,60,0.06);
+}
+
+/* Card */
+.mem-page-card {
+  padding: 0;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Empty state */
+.mem-page-empty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 20px;
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+/* Header row */
+.mem-row--header {
+  display: grid;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-bright);
+  font-family: var(--font-display);
+  font-size: 0.42rem;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.02);
+}
+
+/* Data rows container */
+.mem-rows {
+  overflow-y: auto;
+  max-height: 520px;
+}
+
+/* Individual row */
+.mem-row {
+  display: grid;
+  padding: 9px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  align-items: center;
+  transition: background 0.1s;
+}
+
+.mem-row--facts       { grid-template-columns: 28px 160px 1fr 90px 110px; cursor: pointer; }
+.mem-row--preferences { grid-template-columns: 160px 1fr 100px 110px; }
+.mem-row--summaries   { grid-template-columns: 110px 1fr 60px 80px; }
+
+.mem-row--facts:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.mem-row--selected {
+  background: rgba(0,170,255,0.06) !important;
+}
+
+/* Columns */
+.mem-col-check {
+  display: flex;
+  align-items: center;
+}
+
+.mem-col-check input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+}
+
+.mem-col-key {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mem-col-value {
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  padding-right: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mem-col-summary {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  padding-right: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mem-col-date {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--text-muted);
+}
+
+.mem-col-badge {
+  display: flex;
+  align-items: center;
+}
+
+/* Badges */
+.mem-badge {
+  font-family: var(--font-display);
+  font-size: 0.4rem;
+  letter-spacing: 0.12em;
+  padding: 2px 7px;
+  border-radius: 2px;
+  border: 1px solid var(--border-bright);
+  color: var(--text-dim);
+}
+
+.mem-badge--explicit {
+  border-color: rgba(0,255,204,0.35);
+  color: var(--secondary);
+}
+
+.mem-badge--inferred {
+  border-color: rgba(255,170,0,0.35);
+  color: var(--warn);
+}
+
+.mem-badge--expired {
+  border-color: rgba(255,60,60,0.35);
+  color: rgba(255,100,100,0.8);
+}

@@ -203,7 +203,14 @@ export default function SettingsPage() {
   const currentModel    = llmSettings?.model    || ''
 
   return (
-    <div className="settings-page">
+    <div className="settings-page page-wrap">
+
+      <div className="page-breadcrumb">
+        <span>◢</span><span>SYSTEM</span>
+        <span className="page-breadcrumb-sep">/</span>
+        <span>CONFIGURATION</span>
+      </div>
+      <h1 className="page-title" style={{ marginBottom: 22 }}>Settings</h1>
 
       {/* Save status toast */}
       {saveStatus && (

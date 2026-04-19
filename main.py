@@ -131,8 +131,16 @@ def create_app() -> FastAPI:
     from api.routes.health import router as health_router
     from api.routes.conversation import router as conversation_router
     from api.routes.models_settings import router as settings_router
+    from api.routes.dashboard import router as dashboard_router
+    from api.routes.memory import router as memory_router
+    from api.routes.killswitch import router as killswitch_router
+    from api.routes.home import router as home_router
 
     app.include_router(health_router)
+    app.include_router(dashboard_router)
+    app.include_router(memory_router)
+    app.include_router(killswitch_router)
+    app.include_router(home_router)
     app.include_router(conversation_router)
     app.include_router(settings_router)
 
