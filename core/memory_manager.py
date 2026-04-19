@@ -278,6 +278,17 @@ class MemoryManager:
         await self._store.save_memory_settings(settings)
 
     # =========================================================================
+    # LLM settings
+    # =========================================================================
+
+    async def get_llm_settings(self, user_id: str):
+        from providers.memory.models import LLMSettings
+        return await self._store.get_llm_settings(user_id)
+
+    async def save_llm_settings(self, settings) -> None:
+        await self._store.save_llm_settings(settings)
+
+    # =========================================================================
     # Cleanup
     # =========================================================================
 
