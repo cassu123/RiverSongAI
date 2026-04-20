@@ -954,10 +954,79 @@ select { font-family: inherit; }
   position: relative;
 }
 
+/* ---- Holographic avatar wrapper ---- */
+.river-song-wrapper {
+  position: relative;
+  width: 300px;
+  height: 420px;
+  flex-shrink: 0;
+  /* Subtle theme-colored background gradient so she doesn't float on nothing */
+  background: radial-gradient(ellipse at 50% 60%, rgba(var(--_primary-rgb, 0,170,255), 0.08) 0%, var(--bg) 70%);
+  border: 1px solid var(--border-bright);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
 .river-song-canvas {
   width: 300px;
   height: 420px;
   display: block;
+  position: relative;
+  z-index: 1;
+}
+
+/* Horizontal scanlines — pure CSS, no image needed */
+.river-song-scanlines {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.18) 3px,
+    rgba(0, 0, 0, 0.18) 4px
+  );
+  animation: scanline-drift 8s linear infinite;
+}
+
+@keyframes scanline-drift {
+  from { background-position-y: 0; }
+  to   { background-position-y: 40px; }
+}
+
+/* Theme-colored vignette frame */
+.river-song-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, var(--bg) 0%, transparent 18%, transparent 82%, var(--bg) 100%),
+    linear-gradient(to right,  var(--bg) 0%, transparent 14%, transparent 86%, var(--bg) 100%);
+}
+
+/* Top HUD accent line in theme primary color */
+.river-song-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: var(--primary);
+  box-shadow: var(--glow-sm);
+  z-index: 4;
+}
+
+/* Bottom HUD accent line */
+.river-song-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: var(--primary);
+  box-shadow: var(--glow-sm);
+  z-index: 4;
 }
 
 /* State label */

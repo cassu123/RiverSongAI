@@ -77,7 +77,10 @@ export default function RoutinesPage() {
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ ...form, name: form.name.trim() }),
       })
-      if (res.ok) setRoutines(prev => [...prev, await res.json()])
+      if (res.ok) {
+        const newData = await res.json()
+        setRoutines(prev => [...prev, newData])
+      }
     }
     setAdding(false)
     setEditing(null)

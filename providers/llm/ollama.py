@@ -39,7 +39,7 @@ class OllamaLLM(LLMProvider):
     (ConversationLoop) owns and manages the history.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, model: str | None = None) -> None:
         """
         Initialize the Ollama async client from application settings.
 
@@ -47,7 +47,7 @@ class OllamaLLM(LLMProvider):
             RuntimeError: If the Ollama base URL is malformed.
         """
         settings = get_settings()
-        self._model: str = settings.llm_model
+        self._model: str = model or settings.llm_model
         self._max_tokens: int = settings.llm_max_tokens
         self._temperature: float = settings.llm_temperature
         self._base_url: str = settings.ollama_base_url
