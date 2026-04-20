@@ -1,17 +1,14 @@
-"""
-users/roles/roles.py
-Purpose: Defines the available user roles within the River Song system.
-Author: River Song Project
-"""
+# =============================================================================
+# users/roles/roles.py
+#
+# File Purpose:
+#   Defines the user roles available in the River Song AI system.
+# =============================================================================
 
 from enum import Enum
 
+
 class Role(str, Enum):
-    """
-    Enumeration of all supported user roles in the system.
-    """
-    ADMIN = "ADMIN"
-    PARENT = "PARENT"
-    USER = "USER"
-    CHILD = "CHILD"
-    GUEST = "GUEST"
+    ADMIN = "admin"
+    USER = "user"
+    GUEST = "guest"

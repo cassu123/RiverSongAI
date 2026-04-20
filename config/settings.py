@@ -135,6 +135,16 @@ class Settings(BaseSettings):
         default=0.7,
         description="LLM sampling temperature (0.0 = deterministic, 2.0 = max creative)",
     )
+    llm_context_window: int = Field(
+        default=8192,
+        description="Maximum number of tokens the LLM can consider for context.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Timekeeping
+    # -------------------------------------------------------------------------
+    default_timezone: str = Field(default="UTC", description="Default IANA timezone for the system.")
+
 
     # -------------------------------------------------------------------------
     # TTS
