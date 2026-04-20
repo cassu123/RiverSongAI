@@ -1,6 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '../context/AuthContext.jsx'
 import './RoutinesPage.css'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 const TRIGGER_TYPES = [
@@ -9,17 +11,6 @@ const TRIGGER_TYPES = [
   { value: 'startup', label: 'On server start' },
   { value: 'manual',  label: 'Manual only' },
 ]
-
-function loadRoutines() {
-  try {
-    const v = localStorage.getItem('rs-routines')
-    return v ? JSON.parse(v) : []
-  } catch { return [] }
-}
-
-function saveRoutines(r) {
-  try { localStorage.setItem('rs-routines', JSON.stringify(r)) } catch {}
-}
 
 function fmtSchedule(r) {
   if (r.trigger === 'daily')   return `Daily at ${r.time || '—'}`
@@ -31,13 +22,33 @@ function fmtSchedule(r) {
 const BLANK = { name: '', trigger: 'daily', time: '07:00', days: [], prompt: '', enabled: true }
 
 export default function RoutinesPage() {
-  const [routines, setRoutines] = useState(loadRoutines)
+  const { token } = useAuth()
+  const [routines, setRoutines] = useState([])
+  const [loading,  setLoading]  = useState(true)
   const [adding,   setAdding]   = useState(false)
-  const [editing,  setEditing]  = useState(null)   // routine id being edited
+  const [editing,  setEditing]  = useState(null)
   const [form,     setForm]     = useState(BLANK)
-  const [confirm,  setConfirm]  = useState(null)   // id to confirm delete
+  const [confirm,  setConfirm]  = useState(null)
+  const [running,  setRunning]  = useState(null)   // id of routine being run
+  const [output,   setOutput]   = useState(null)   // { name, text } for output modal
 
-  const persist = (next) => { setRoutines(next); saveRoutines(next) }
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
+
+  const fetchRoutines = useCallback(async () => {
+    if (!token) return
+    try {
+      const res = await fetch(`${API_BASE}/api/routines`, { headers: authHeaders })
+      if (res.ok) setRoutines(await res.json())
+    } catch {}
+    setLoading(false)
+  }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { fetchRoutines() }, [fetchRoutines])
+
+  // Mirror to localStorage so Dashboard widget still works
+  useEffect(() => {
+    try { localStorage.setItem('rs-routines', JSON.stringify(routines)) } catch {}
+  }, [routines])
 
   const openAdd = () => { setForm(BLANK); setEditing(null); setAdding(true) }
 
@@ -47,25 +58,61 @@ export default function RoutinesPage() {
     setAdding(true)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.name.trim()) return
     if (editing) {
-      persist(routines.map(r => r.id === editing ? { ...r, ...form, name: form.name.trim() } : r))
+      const res = await fetch(`${API_BASE}/api/routines/${editing}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ ...form, name: form.name.trim() }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setRoutines(prev => prev.map(r => r.id === editing ? updated : r))
+      }
     } else {
-      persist([...routines, { id: crypto.randomUUID(), ...form, name: form.name.trim(), createdAt: new Date().toISOString() }])
+      const res = await fetch(`${API_BASE}/api/routines`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ ...form, name: form.name.trim() }),
+      })
+      if (res.ok) setRoutines(prev => [...prev, await res.json()])
     }
     setAdding(false)
     setEditing(null)
   }
 
-  const toggleEnabled = (id) => {
-    persist(routines.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r))
+  const toggleEnabled = async (r) => {
+    const res = await fetch(`${API_BASE}/api/routines/${r.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ enabled: !r.enabled }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setRoutines(prev => prev.map(x => x.id === r.id ? updated : x))
+    }
   }
 
-  const handleDelete = (id) => {
-    persist(routines.filter(r => r.id !== id))
+  const handleDelete = async (id) => {
+    const res = await fetch(`${API_BASE}/api/routines/${id}`, { method: 'DELETE', headers: authHeaders })
+    if (res.ok) setRoutines(prev => prev.filter(r => r.id !== id))
     setConfirm(null)
+  }
+
+  const handleRun = async (r) => {
+    setRunning(r.id)
+    try {
+      const res = await fetch(`${API_BASE}/api/routines/${r.id}/run`, { method: 'POST', headers: authHeaders })
+      const data = await res.json()
+      setOutput({ name: r.name, text: data.output || '(No response)' })
+      // refresh to pick up last_run
+      fetchRoutines()
+    } catch (e) {
+      setOutput({ name: r.name, text: `Error: ${e.message}` })
+    }
+    setRunning(null)
   }
 
   const toggleDay = (day) => {
@@ -75,7 +122,7 @@ export default function RoutinesPage() {
     }))
   }
 
-  const enabledCount  = routines.filter(r => r.enabled).length
+  const enabledCount = routines.filter(r => r.enabled).length
 
   return (
     <div className="page-wrap routines-wrap">
@@ -90,7 +137,7 @@ export default function RoutinesPage() {
           <h1 className="page-title">Routines</h1>
           <div className="page-subtitle">
             <span className="page-subtitle-dot" />
-            {enabledCount} active · {routines.length} total
+            {loading ? 'Loading…' : `${enabledCount} active · ${routines.length} total`}
           </div>
         </div>
         <div className="page-header-actions">
@@ -185,7 +232,7 @@ export default function RoutinesPage() {
       )}
 
       {/* Routine list */}
-      {routines.length === 0 ? (
+      {!loading && routines.length === 0 ? (
         <div className="card routines-empty">
           <div className="routines-empty-text">
             No routines yet. Create one to automate your day.
@@ -201,11 +248,24 @@ export default function RoutinesPage() {
                   <div className="routines-card-name">{r.name}</div>
                   <div className="routines-card-sched">{fmtSchedule(r)}</div>
                   {r.prompt && <div className="routines-card-prompt">{r.prompt}</div>}
+                  {r.last_run && (
+                    <div className="routines-card-last-run">
+                      Last run: {new Date(r.last_run).toLocaleString()}
+                    </div>
+                  )}
                 </div>
                 <div className="routines-card-actions">
                   <button
+                    className="btn routines-run-btn"
+                    onClick={() => handleRun(r)}
+                    disabled={running === r.id || !r.prompt}
+                    title={r.prompt ? 'Run now' : 'No prompt set'}
+                  >
+                    {running === r.id ? '…' : '▸ RUN'}
+                  </button>
+                  <button
                     className={`btn routines-toggle-btn ${r.enabled ? 'routines-toggle-btn--on' : ''}`}
-                    onClick={() => toggleEnabled(r.id)}
+                    onClick={() => toggleEnabled(r)}
                   >
                     {r.enabled ? '● ON' : '○ OFF'}
                   </button>
@@ -225,10 +285,18 @@ export default function RoutinesPage() {
         </div>
       )}
 
-      <div className="routines-footer-note">
-        Routines are stored locally. Automated execution engine coming in a future phase —
-        for now, run any routine manually by speaking its prompt to River.
-      </div>
+      {/* Output modal */}
+      {output && (
+        <div className="routines-modal-overlay" onClick={() => setOutput(null)}>
+          <div className="routines-modal" onClick={e => e.stopPropagation()}>
+            <div className="routines-modal-header">
+              <span className="routines-modal-title">{output.name} — OUTPUT</span>
+              <button className="routines-modal-close" onClick={() => setOutput(null)}>✕</button>
+            </div>
+            <div className="routines-modal-body">{output.text}</div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

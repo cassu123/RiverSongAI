@@ -96,3 +96,24 @@
   border-color: var(--warn);
   background: rgba(255,170,0,0.05);
 }
+
+.session-empty {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  padding: 8px 0;
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+}
+
+.dash-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  cursor: pointer;
+  padding: 0;
+  letter-spacing: 0.06em;
+}
+
+.dash-link:hover { text-decoration: underline; }

@@ -136,6 +136,8 @@ def create_app() -> FastAPI:
     from api.routes.memory import router as memory_router
     from api.routes.killswitch import router as killswitch_router
     from api.routes.home import router as home_router
+    from api.routes.admin import router as admin_router
+    from api.routes.routines import router as routines_router
 
     app.include_router(auth_router)
     app.include_router(health_router)
@@ -145,6 +147,22 @@ def create_app() -> FastAPI:
     app.include_router(home_router)
     app.include_router(conversation_router)
     app.include_router(settings_router)
+    app.include_router(admin_router)
+    app.include_router(routines_router)
+
+    # Serve the built React frontend — must be last so API routes take priority
+    import os
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+
+    _dist = os.path.join(os.path.dirname(__file__), "frontend", "dist")
+    if os.path.isdir(_dist):
+        app.mount("/assets", StaticFiles(directory=os.path.join(_dist, "assets")), name="assets")
+
+        @app.get("/{full_path:path}", include_in_schema=False)
+        async def spa_fallback(full_path: str):
+            index = os.path.join(_dist, "index.html")
+            return FileResponse(index)
 
     return app
 

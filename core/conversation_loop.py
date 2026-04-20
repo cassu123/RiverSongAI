@@ -68,9 +68,14 @@ def _build_stt_provider() -> STTProvider:
     )
 
 
-def _build_llm_provider() -> LLMProvider:
+def _build_llm_provider(
+    provider_override: Optional[str] = None,
+    model_override: Optional[str] = None,
+) -> LLMProvider:
     """
-    Instantiate the LLM provider named in LLM_PROVIDER.
+    Instantiate the LLM provider. If provider_override is given it takes
+    precedence over LLM_PROVIDER in .env; model_override is passed to
+    the provider constructor when supported.
 
     Returns:
         LLMProvider: Concrete provider instance ready to use.
@@ -80,30 +85,32 @@ def _build_llm_provider() -> LLMProvider:
         RuntimeError: If the provider fails to initialize.
     """
     settings = get_settings()
-    key = settings.llm_provider
+    key = provider_override or settings.llm_provider
+    model = model_override  # passed to provider constructors that support it
+
     if key == "ollama":
         from providers.llm.ollama import OllamaLLM
-        return OllamaLLM()
+        return OllamaLLM(model=model) if model else OllamaLLM()
     if key == "anthropic":
         if not settings.anthropic_enabled:
             raise ValueError("Anthropic LLM is disabled. Set ANTHROPIC_ENABLED=true in .env.")
         from providers.llm.claude_api import ClaudeAPILLM
-        return ClaudeAPILLM()
+        return ClaudeAPILLM(model=model) if model else ClaudeAPILLM()
     if key == "gemini":
         if not settings.gemini_enabled:
             raise ValueError("Gemini LLM is disabled. Set GEMINI_ENABLED=true in .env.")
         from providers.llm.gemini import GeminiLLM
-        return GeminiLLM()
+        return GeminiLLM(model=model) if model else GeminiLLM()
     if key == "openai":
         if not settings.openai_enabled:
             raise ValueError("OpenAI LLM is disabled. Set OPENAI_ENABLED=true in .env.")
         from providers.llm.openai_api import OpenAILLM
-        return OpenAILLM()
+        return OpenAILLM(model=model) if model else OpenAILLM()
     if key == "mistral_ai":
         if not settings.mistral_ai_enabled:
             raise ValueError("Mistral AI LLM is disabled. Set MISTRAL_AI_ENABLED=true in .env.")
         from providers.llm.mistral_api import MistralAILLM
-        return MistralAILLM()
+        return MistralAILLM(model=model) if model else MistralAILLM()
     raise ValueError(
         f"Unsupported LLM_PROVIDER '{key}'. "
         f"Supported values: ollama | anthropic | gemini | openai | mistral_ai"
@@ -160,11 +167,15 @@ class ConversationLoop:
         self,
         user_id: Optional[str] = None,
         memory_manager: Optional[MemoryManager] = None,
+        llm_provider_override: Optional[str] = None,
+        llm_model_override: Optional[str] = None,
     ) -> None:
         settings = get_settings()
         self._system_prompt: str = settings.river_song_system_prompt
         self._user_id: str = user_id or settings.default_user_id
         self._memory: Optional[MemoryManager] = memory_manager
+        self._llm_provider_override: Optional[str] = llm_provider_override
+        self._llm_model_override: Optional[str] = llm_model_override
         self._stt: Optional[STTProvider] = None
         self._llm: Optional[LLMProvider] = None
         self._tts: Optional[TTSProvider] = None
@@ -190,7 +201,10 @@ class ConversationLoop:
         logger.info("Initializing ConversationLoop providers...")
         try:
             self._stt = _build_stt_provider()
-            self._llm = _build_llm_provider()
+            self._llm = _build_llm_provider(
+                provider_override=self._llm_provider_override,
+                model_override=self._llm_model_override,
+            )
             self._tts = _build_tts_provider()
         except Exception as exc:
             raise RuntimeError(

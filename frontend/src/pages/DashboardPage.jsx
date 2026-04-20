@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import RiverStatusBox from '../components/RiverStatusBox.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import './DashboardPage.css'
 
 // ---------------------------------------------------------------------------
@@ -27,22 +28,29 @@ function saveWidgets(v) {
   try { localStorage.setItem('rs-dashboard-widgets', JSON.stringify(v)) } catch {}
 }
 
-// ---------------------------------------------------------------------------
-// Mock recent sessions (no session persistence in backend yet)
-// ---------------------------------------------------------------------------
-const MOCK_SESSIONS = [
-  { time: '14:22', text: 'Log today\'s training session.',       dur: '2m' },
-  { time: '11:04', text: 'Reschedule Thursday standup.',         dur: '4m' },
-  { time: '09:30', text: 'Morning brief — calendar + weather.',  dur: '6m' },
-  { time: 'Tue',   text: 'Deploy garden-watering routine.',      dur: '12m' },
-  { time: 'Mon',   text: 'Recipe — miso salmon, dinner for 4.', dur: '3m' },
-]
+function loadSessions(userId) {
+  try {
+    const all = JSON.parse(localStorage.getItem(`rs-history:${userId}`) || '[]')
+    return [...all].reverse().slice(0, 8).map(s => ({
+      time: new Date(s.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      date: s.date,
+      text: s.messages?.[0]?.text || 'Conversation',
+      count: s.messages?.length || 0,
+      model: s.model || '',
+    }))
+  } catch { return [] }
+}
 
-const MOCK_ROUTINES = [
-  { name: 'Morning Brief', sched: '06:30 daily', on: true },
-  { name: 'Garden Water',  sched: 'Tue/Thu/Sat', on: true },
-  { name: 'Away Mode',     sched: 'auto',         on: false },
-]
+function loadRoutines() {
+  try { return JSON.parse(localStorage.getItem('rs-routines') || '[]') } catch { return [] }
+}
+
+function fmtSchedule(r) {
+  if (r.trigger === 'daily')   return `Daily ${r.time || ''}`
+  if (r.trigger === 'weekly')  return (r.days?.length ? r.days.join('/') : '—') + (r.time ? ` ${r.time}` : '')
+  if (r.trigger === 'startup') return 'On startup'
+  return 'Manual'
+}
 
 function greeting() {
   const h = new Date().getHours()
@@ -59,20 +67,19 @@ function fmtDate() {
 }
 
 // ---------------------------------------------------------------------------
-// Bar chart heights (last 30 days relative activity)
-// ---------------------------------------------------------------------------
-const BAR_HEIGHTS = [22,18,30,14,26,20,35,18,28,22,38,24,30,16,
-                     32,22,36,28,40,24,34,28,42,30,38,32,44,36,46,48]
-
-// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 export default function DashboardPage({ onNavigate, isAdmin = false }) {
+  const { user, token } = useAuth()
+  const userId = user?.id || 'default'
+
   const [time,       setTime]       = useState(fmtDate())
   const [arrange,    setArrange]    = useState(false)
   const [visible,    setVisible]    = useState(loadWidgets)
   const [stats,      setStats]      = useState(null)
   const [loading,    setLoading]    = useState(true)
+  const [sessions,   setSessions]   = useState([])
+  const [routines,   setRoutines]   = useState([])
 
   // Clock tick
   useEffect(() => {
@@ -83,7 +90,9 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
   // Live data fetch
   const fetchStats = useCallback(async () => {
     try {
-      const res  = await fetch('/api/dashboard')
+      const res  = await fetch(`/api/dashboard?user_id=${userId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       if (!res.ok) throw new Error(res.status)
       const data = await res.json()
       setStats(data)
@@ -92,13 +101,19 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [userId, token])
 
   useEffect(() => {
     fetchStats()
     const id = setInterval(fetchStats, 30000)
     return () => clearInterval(id)
   }, [fetchStats])
+
+  // Load localStorage-backed data
+  useEffect(() => {
+    setSessions(loadSessions(userId))
+    setRoutines(loadRoutines())
+  }, [userId])
 
   // Widget toggle
   const toggleWidget = (key) => {
@@ -122,6 +137,14 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
   const uptime    = stats ? stats.uptime : '—'
   const factCount = stats ? stats.memory.facts.toLocaleString() : '—'
   const sumCount  = stats ? stats.memory.summaries : '—'
+  const firstName = user?.display_name?.split(' ')[0] || 'Operator'
+
+  // Bar chart: spread fact+summary count across 30 bars with some variation
+  const totalMemory = stats ? (stats.memory.facts + stats.memory.summaries) : 0
+  const barHeights  = Array.from({ length: 30 }, (_, i) => {
+    const base = totalMemory > 0 ? Math.min(48, 8 + (totalMemory / 30) * (0.5 + Math.sin(i * 1.3 + 1) * 0.5)) : 8 + Math.sin(i * 0.7) * 4
+    return Math.max(6, Math.round(base))
+  })
 
   return (
     <div className="page-wrap dashboard-wrap">
@@ -133,7 +156,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
             <span className="page-breadcrumb-sep">/</span>
             <span>NODE-CW-01</span>
           </div>
-          <h1 className="page-title">{greeting()}, Charlie.</h1>
+          <h1 className="page-title">{greeting()}, {firstName}.</h1>
           <div className="page-subtitle">
             <span className="page-subtitle-dot" />
             River is standing by.
@@ -229,11 +252,13 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
               style={{ flex: 1 }}
             >
               <div className="session-list">
-                {MOCK_SESSIONS.map((s, i) => (
+                {sessions.length === 0 ? (
+                  <div className="session-empty">No saved sessions yet. Conversations save when you reset the chat.</div>
+                ) : sessions.map((s, i) => (
                   <div className="session-row" key={i}>
                     <span className="session-time">{s.time}</span>
                     <span className="session-text">{s.text}</span>
-                    <span className="session-dur">{s.dur}</span>
+                    <span className="session-dur">{s.count} msg</span>
                   </div>
                 ))}
               </div>
@@ -260,7 +285,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
                 </div>
               </div>
               <div className="mem-bar-chart">
-                {BAR_HEIGHTS.map((h, i) => (
+                {barHeights.map((h, i) => (
                   <div key={i} className="mem-bar" style={{ height: `${h}px` }} />
                 ))}
               </div>
@@ -303,7 +328,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
                 <button className="qa-btn" onClick={() => onNavigate('home')}>
                   <span className="qa-dot" style={{ background: 'var(--text-muted)' }} />HOME SCENE
                 </button>
-                <button className="qa-btn">
+                <button className="qa-btn" onClick={() => onNavigate('memory')}>
                   <span className="qa-dot" style={{ background: 'var(--text-muted)' }} />LOG EVENT
                 </button>
               </div>
@@ -320,11 +345,16 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
               onToggle={toggleWidget}
               style={{ flex: 1 }}
             >
-              {MOCK_ROUTINES.map((r, i) => (
-                <div className="routine-row" key={i}>
-                  <span className={`dot ${r.on ? 'dot--on' : 'dot--off'}`} />
+              {routines.length === 0 ? (
+                <div className="session-empty" style={{ padding: '10px 0' }}>
+                  No routines yet.{' '}
+                  <button className="dash-link" onClick={() => onNavigate('routines')}>Create one →</button>
+                </div>
+              ) : routines.map((r) => (
+                <div className="routine-row" key={r.id}>
+                  <span className={`dot ${r.enabled ? 'dot--on' : 'dot--off'}`} />
                   <span className="routine-name">{r.name}</span>
-                  <span className="routine-sched">{r.sched}</span>
+                  <span className="routine-sched">{fmtSchedule(r)}</span>
                 </div>
               ))}
             </WidgetShell>

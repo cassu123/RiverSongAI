@@ -4,6 +4,7 @@ import Sidebar            from './components/Sidebar.jsx'
 import ErrorBoundary      from './components/ErrorBoundary.jsx'
 import LoginPage          from './pages/LoginPage.jsx'
 import SignupPage         from './pages/SignupPage.jsx'
+import SetupPage          from './pages/SetupPage.jsx'
 import DashboardPage      from './pages/DashboardPage.jsx'
 import ConversationPage   from './pages/ConversationPage.jsx'
 import MemoryPage         from './pages/MemoryPage.jsx'
@@ -26,32 +27,46 @@ function save(key, value) {
 }
 
 export default function App() {
-  const { user, loading, logout } = useAuth()
+  const { user, loading, logout, setupRequired } = useAuth()
   const [authView,    setAuthView]    = useState('login') // 'login' | 'signup'
   const [currentPage, setCurrentPage] = useState(() => load('rs-page',    'speak'))
-  const [isAdmin,     setIsAdmin]     = useState(() => load('rs-admin',   false))
-  const [theme,       setTheme]       = useState(() => load('rs-theme',   'halo'))
+  const [adminMode,   setAdminMode]   = useState(false)
+  const themeKey = user ? `rs-theme:${user.id}` : 'rs-theme'
+  const [theme,       setTheme]       = useState(() => load(user ? `rs-theme:${user.id}` : 'rs-theme', 'halo'))
   const [profile,     setProfile]     = useState(() => {
     if (user) return { displayName: user.display_name, username: user.email, birthday: '' }
     return load('rs-profile', { displayName: 'User', username: '', birthday: '' })
   })
 
   useEffect(() => { save('rs-page',    currentPage) }, [currentPage])
-  useEffect(() => { save('rs-admin',   isAdmin)     }, [isAdmin])
+  useEffect(() => { save('rs-admin',   adminMode)   }, [adminMode])
   useEffect(() => { save('rs-profile', profile)     }, [profile])
   useEffect(() => {
-    save('rs-theme', theme)
+    save(themeKey, theme)
     document.documentElement.setAttribute('data-theme', theme)
-  }, [theme])
+  }, [theme, themeKey])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync display name from auth user
+  // Sync display name and theme when user changes (login/logout)
   useEffect(() => {
-    if (user) setProfile(p => ({ ...p, displayName: user.display_name, username: user.email }))
-  }, [user])
+    if (user) {
+      setProfile(p => ({ ...p, displayName: user.display_name, username: user.email }))
+      const saved = load(`rs-theme:${user.id}`, 'halo')
+      setTheme(saved)
+      document.documentElement.setAttribute('data-theme', saved)
+    }
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // True if the logged-in user has the admin role
+  const userIsAdmin = user?.role === 'admin'
+
+  // When a new user logs in, default admin mode ON if they're an admin
+  useEffect(() => {
+    setAdminMode(userIsAdmin)
+  }, [userIsAdmin])
 
   if (loading) {
     return (
@@ -61,6 +76,10 @@ export default function App() {
     )
   }
 
+  if (setupRequired) {
+    return <SetupPage />
+  }
+
   if (!user) {
     return authView === 'login'
       ? <LoginPage  onSwitchToSignup={() => setAuthView('signup')} />
@@ -68,12 +87,12 @@ export default function App() {
   }
 
   const handleNavigate = (page) => {
-    if (ADMIN_PAGES.has(page) && !isAdmin) return
+    if (ADMIN_PAGES.has(page) && !adminMode) return
     setCurrentPage(page)
   }
 
   const handleAdminToggle = (next) => {
-    setIsAdmin(next)
+    setAdminMode(next)
     if (!next && ADMIN_PAGES.has(currentPage)) setCurrentPage('speak')
   }
 
@@ -82,7 +101,8 @@ export default function App() {
       <Sidebar
         currentPage={currentPage}
         onNavigate={handleNavigate}
-        isAdmin={isAdmin}
+        isAdmin={adminMode}
+        showAdminToggle={userIsAdmin}
         onAdminToggle={handleAdminToggle}
         displayName={profile.displayName}
         onLogout={logout}
@@ -91,7 +111,7 @@ export default function App() {
       <main className="app-main">
         <ErrorBoundary key={currentPage}>
           <div className="page-enter">
-            {currentPage === 'dashboard'  && <DashboardPage  onNavigate={handleNavigate} isAdmin={isAdmin} />}
+            {currentPage === 'dashboard'  && <DashboardPage  onNavigate={handleNavigate} isAdmin={adminMode} />}
             {currentPage === 'speak'      && <ConversationPage />}
             {currentPage === 'memory'     && <MemoryPage />}
             {currentPage === 'routines'   && <RoutinesPage />}

@@ -2,49 +2,28 @@ import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import './LoginPage.css'
 
-export default function SignupPage({ onSwitchToLogin }) {
-  const { signup } = useAuth()
+export default function SetupPage() {
+  const { setupAdmin } = useAuth()
   const [displayName, setDisplayName] = useState('')
   const [email,       setEmail]       = useState('')
   const [password,    setPassword]    = useState('')
   const [confirm,     setConfirm]     = useState('')
   const [error,       setError]       = useState('')
   const [loading,     setLoading]     = useState(false)
-  const [pending,     setPending]     = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError('')
     if (password !== confirm) { setError('Passwords do not match.'); return }
     if (password.length < 8)  { setError('Password must be at least 8 characters.'); return }
+    setError('')
     setLoading(true)
     try {
-      const data = await signup(email, password, displayName)
-      if (data.pending) setPending(true)
+      await setupAdmin(email, password, displayName)
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }
-
-  if (pending) {
-    return (
-      <div className="auth-shell">
-        <div className="auth-card">
-          <div className="auth-logo">
-            <span className="auth-logo-badge">RS</span>
-            <span className="auth-logo-name">RIVER SONG</span>
-          </div>
-          <p className="auth-tagline">Account Pending</p>
-          <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8, padding: '14px 16px', marginBottom: 18, fontSize: 14, color: '#93c5fd', lineHeight: 1.6, textAlign: 'center' }}>
-            Your account has been created.<br />
-            An admin must approve it before you can log in.
-          </div>
-          <button className="auth-btn auth-btn--primary" onClick={onSwitchToLogin}>BACK TO SIGN IN</button>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -55,7 +34,11 @@ export default function SignupPage({ onSwitchToLogin }) {
           <span className="auth-logo-name">RIVER SONG</span>
         </div>
 
-        <p className="auth-tagline">Create your account</p>
+        <p className="auth-tagline">First-Time Setup</p>
+
+        <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8, padding: '10px 14px', marginBottom: 18, fontSize: 13, color: '#93c5fd', lineHeight: 1.5 }}>
+          No admin account exists yet. Create the master admin account to get started.
+        </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="auth-field">
@@ -64,7 +47,7 @@ export default function SignupPage({ onSwitchToLogin }) {
               type="text"
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
-              placeholder="Your name"
+              placeholder="e.g. River Song"
               required
               autoFocus
             />
@@ -76,7 +59,7 @@ export default function SignupPage({ onSwitchToLogin }) {
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="admin@example.com"
               required
             />
           </div>
@@ -87,7 +70,7 @@ export default function SignupPage({ onSwitchToLogin }) {
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="Min. 8 characters"
+              placeholder="••••••••"
               required
             />
           </div>
@@ -106,16 +89,9 @@ export default function SignupPage({ onSwitchToLogin }) {
           {error && <div className="auth-error">{error}</div>}
 
           <button className="auth-btn auth-btn--primary" type="submit" disabled={loading}>
-            {loading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
+            {loading ? 'CREATING ADMIN...' : 'CREATE ADMIN ACCOUNT'}
           </button>
         </form>
-
-        <p className="auth-switch">
-          Already have an account?{' '}
-          <button type="button" className="auth-link" onClick={onSwitchToLogin}>
-            Sign in
-          </button>
-        </p>
       </div>
     </div>
   )

@@ -15,7 +15,7 @@ const ADMIN_ITEMS = [
   { key: 'killswitch', label: 'KILL SW.',   icon: IconKill },
 ]
 
-export default function Sidebar({ currentPage, onNavigate, isAdmin, onAdminToggle, displayName, onLogout }) {
+export default function Sidebar({ currentPage, onNavigate, isAdmin, showAdminToggle, onAdminToggle, displayName, onLogout }) {
   const [collapsed, setCollapsed] = useState(false)
   const items = isAdmin ? ADMIN_ITEMS : USER_ITEMS
 
@@ -87,25 +87,27 @@ export default function Sidebar({ currentPage, onNavigate, isAdmin, onAdminToggl
         )}
       </div>
 
-      {/* Admin mode toggle */}
-      <div
-        className={`sidebar-admin-toggle ${collapsed ? 'sidebar-admin-toggle--collapsed' : ''}`}
-        title={collapsed ? (isAdmin ? 'Admin mode on' : 'Admin mode off') : undefined}
-      >
-        {!collapsed && (
-          <span className={`sidebar-admin-label ${isAdmin ? 'sidebar-admin-label--on' : ''}`}>
-            ADMIN
-          </span>
-        )}
-        <button
-          className={`sidebar-toggle-switch ${isAdmin ? 'sidebar-toggle-switch--on' : ''}`}
-          onClick={() => onAdminToggle(!isAdmin)}
-          aria-pressed={isAdmin}
-          aria-label="Toggle admin mode"
+      {/* Admin mode toggle — only visible to admin role users */}
+      {showAdminToggle && (
+        <div
+          className={`sidebar-admin-toggle ${collapsed ? 'sidebar-admin-toggle--collapsed' : ''}`}
+          title={collapsed ? (isAdmin ? 'Admin mode on' : 'Admin mode off') : undefined}
         >
-          <span className="sidebar-toggle-knob" />
-        </button>
-      </div>
+          {!collapsed && (
+            <span className={`sidebar-admin-label ${isAdmin ? 'sidebar-admin-label--on' : ''}`}>
+              ADMIN
+            </span>
+          )}
+          <button
+            className={`sidebar-toggle-switch ${isAdmin ? 'sidebar-toggle-switch--on' : ''}`}
+            onClick={() => onAdminToggle(!isAdmin)}
+            aria-pressed={isAdmin}
+            aria-label="Toggle admin mode"
+          >
+            <span className="sidebar-toggle-knob" />
+          </button>
+        </div>
+      )}
 
       <button
         className="sidebar-collapse"

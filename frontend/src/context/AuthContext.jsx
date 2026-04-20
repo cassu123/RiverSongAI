@@ -7,19 +7,61 @@ const USER_KEY  = 'rs-auth-user'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [token, setToken]   = useState(() => localStorage.getItem(TOKEN_KEY))
-  const [user,  setUser]    = useState(() => { try { return JSON.parse(localStorage.getItem(USER_KEY)) } catch { return null } })
-  const [loading, setLoading] = useState(true)
+  const [token,         setToken]         = useState(() => localStorage.getItem(TOKEN_KEY))
+  const [user,          setUser]          = useState(() => { try { return JSON.parse(localStorage.getItem(USER_KEY)) } catch { return null } })
+  const [loading,       setLoading]       = useState(true)
+  const [setupRequired, setSetupRequired] = useState(false)
 
-  // Validate token on mount
+  // Check setup status and validate token on mount
   useEffect(() => {
-    if (!token) { setLoading(false); return }
-    fetch(`${API_BASE}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(u => { setUser(u); localStorage.setItem(USER_KEY, JSON.stringify(u)) })
-      .catch(() => { setToken(null); setUser(null); localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY) })
-      .finally(() => setLoading(false))
+    const init = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/setup-status`)
+        const data = await res.json()
+        if (data.setup_required) {
+          setSetupRequired(true)
+          setLoading(false)
+          return
+        }
+      } catch {
+        // server unreachable — continue to token check
+      }
+
+      if (!token) { setLoading(false); return }
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+        if (res.ok) {
+          const u = await res.json()
+          setUser(u)
+          localStorage.setItem(USER_KEY, JSON.stringify(u))
+        } else {
+          setToken(null); setUser(null)
+          localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY)
+        }
+      } catch {
+        setToken(null); setUser(null)
+        localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY)
+      }
+      setLoading(false)
+    }
+    init()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setupAdmin = useCallback(async (email, password, displayName) => {
+    const res = await fetch(`${API_BASE}/api/auth/setup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, display_name: displayName }),
+    })
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Setup failed.') }
+    const data = await res.json()
+    setSetupRequired(false)
+    setToken(data.token)
+    setUser(data.user)
+    localStorage.setItem(TOKEN_KEY, data.token)
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user))
+    return data.user
+  }, [])
 
   const login = useCallback(async (email, password) => {
     const res = await fetch(`${API_BASE}/api/auth/login`, {
@@ -44,11 +86,8 @@ export function AuthProvider({ children }) {
     })
     if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Signup failed.') }
     const data = await res.json()
-    setToken(data.token)
-    setUser(data.user)
-    localStorage.setItem(TOKEN_KEY, data.token)
-    localStorage.setItem(USER_KEY, JSON.stringify(data.user))
-    return data.user
+    // signup now returns {pending: true} — no token
+    return data
   }, [])
 
   const logout = useCallback(() => {
@@ -59,7 +98,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ token, user, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ token, user, loading, setupRequired, setupAdmin, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   )
