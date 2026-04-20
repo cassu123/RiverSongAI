@@ -78,9 +78,9 @@
   --accent:       #6622aa;
   --error:        #ff4455;
   --warn:         #ffaa44;
-  --text:         #ddc8f5;
-  --text-dim:     #6a3888;
-  --text-muted:   #361a50;
+  --text:         #f0ecfa;
+  --text-dim:     #a888c8;
+  --text-muted:   #5a3a78;
   --border:       #1a0a2e;
   --border-bright:#260e42;
   --glow-sm:      0 0 8px  rgba(204,68,255,0.45);
@@ -88,25 +88,25 @@
   --glow-teal:    0 0 10px rgba(255,68,204,0.55);
 }
 
-/* ---- Amber — warm monochrome, honey over coal ---- */
+/* ---- Amber — creamy pastel, natural neutral peach ---- */
 [data-theme="amber"] {
-  --bg:           #0c0800;
-  --bg-panel:     #110b00;
-  --bg-card:      #140d00;
-  --bg-card-sel:  #1a1000;
-  --primary:      #ffaa00;
-  --secondary:    #ffcc44;
-  --accent:       #cc7700;
-  --error:        #ff4433;
-  --warn:         #ffdd44;
-  --text:         #f5dfa0;
-  --text-dim:     #7a5510;
-  --text-muted:   #3e2c08;
-  --border:       #241800;
-  --border-bright:#342200;
-  --glow-sm:      0 0 8px  rgba(255,170,0,0.45);
-  --glow-md:      0 0 18px rgba(255,170,0,0.70);
-  --glow-teal:    0 0 10px rgba(255,204,68,0.55);
+  --bg:           #FEE7D9;
+  --bg-panel:     #F6E7D8;
+  --bg-card:      #FBD5C0;
+  --bg-card-sel:  #FDC9AD;
+  --primary:      #FDB09E;
+  --secondary:    #CDEAC0;
+  --accent:       #FEBCA6;
+  --error:        #E06B5E;
+  --warn:         #D4A373;
+  --text:         #111827;
+  --text-dim:     #5B4B4E;
+  --text-muted:   #CC9C80;
+  --border:       #FDC9AD;
+  --border-bright:#FEBCA6;
+  --glow-sm:      0 1px 4px rgba(253,176,158,0.20);
+  --glow-md:      0 2px 8px rgba(253,176,158,0.30);
+  --glow-teal:    0 1px 4px rgba(205,234,192,0.25);
 }
 
 /* ---- Arctic — daylight / accessibility, only light theme ---- */
@@ -130,29 +130,164 @@
   --glow-teal:    0 1px 4px rgba(0,153,170,0.25);
 }
 
-/* Arctic needs a few structural overrides since it's light */
+/* ---- Cyberpunk — neon yellow-green, magenta, dark desaturated ---- */
+[data-theme="cyberpunk"] {
+  --bg:           #050505;
+  --bg-panel:     #0a0a0a;
+  --bg-card:      #101010;
+  --bg-card-sel:  #181818;
+  --primary:      #e8ff00;
+  --secondary:    #ff00ff;
+  --accent:       #ccff00;
+  --error:        #ff003c;
+  --warn:         #ff8c00;
+  --text:         #fdffe6;
+  --text-dim:     #a1a38a;
+  --text-muted:   #4f5242;
+  --border:       #222222;
+  --border-bright:#3a3a3a;
+  --glow-sm:      0 0 10px rgba(232, 255, 0, 0.7);
+  --glow-md:      0 0 25px rgba(232, 255, 0, 0.9);
+  --glow-teal:    0 0 15px rgba(255, 0, 255, 0.8);
+}
+
+/* ---- Dune — deep near-black, sandy gold, warm glows ---- */
+[data-theme="dune"] {
+  --bg:           #0b0805;
+  --bg-panel:     #120d08;
+  --bg-card:      #1a120a;
+  --bg-card-sel:  #24190e;
+  --primary:      #c8a84b;
+  --secondary:    #c45518;
+  --accent:       #a38435;
+  --error:        #9e2a1b;
+  --warn:         #d2891e;
+  --text:         #faecd4;
+  --text-dim:     #ab9a80;
+  --text-muted:   #5c5040;
+  --border:       #2e2012;
+  --border-bright:#422e1a;
+  --glow-sm:      0 0 8px  rgba(200, 168, 75, 0.35);
+  --glow-md:      0 0 18px rgba(200, 168, 75, 0.55);
+  --glow-teal:    0 0 10px rgba(196, 85, 24, 0.45);
+}
+
+/* Light theme structural overrides */
 [data-theme="arctic"] .sidebar,
 [data-theme="arctic"] .conv-input-bar {
   background: rgba(220,230,240,0.98);
 }
+[data-theme="amber"] .sidebar,
+[data-theme="amber"] .conv-input-bar {
+  background: rgba(254, 231, 217, 0.98);
+}
 
-[data-theme="arctic"] .sidebar-brand {
+[data-theme="arctic"] .sidebar-brand,
+[data-theme="amber"] .sidebar-brand {
   border-bottom-color: var(--border);
 }
 
 [data-theme="arctic"] .navbar {
   background: rgba(220,230,240,0.96);
 }
+[data-theme="amber"] .navbar {
+  background: rgba(254, 231, 217, 0.96);
+}
 
-[data-theme="arctic"] .card {
+[data-theme="arctic"] .card,
+[data-theme="amber"] .card {
   background: var(--bg-card);
 }
 
-[data-theme="arctic"] .conv-text-input {
+[data-theme="arctic"] .conv-text-input,
+[data-theme="amber"] .conv-text-input {
   background: #ffffff;
   color: var(--text);
 }
 
-[data-theme="arctic"] .conv-text-input::placeholder {
+[data-theme="arctic"] .conv-text-input::placeholder,
+[data-theme="amber"] .conv-text-input::placeholder {
   color: var(--text-muted);
+}
+
+/* ============================================================
+   Theme-Specific Textures & Effects
+   ============================================================ */
+
+/* Cyberpunk Effects */
+[data-theme="cyberpunk"] body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 2px,
+    rgba(255, 255, 255, 0.03) 2px,
+    rgba(255, 255, 255, 0.03) 4px
+  );
+}
+
+[data-theme="cyberpunk"] .card {
+  box-shadow: 0 0 0 1px rgba(232, 255, 0, 0.4);
+}
+
+/* Dune Effects */
+[data-theme="dune"] body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: radial-gradient(circle at center, rgba(200, 168, 75, 0.05) 0%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+[data-theme="dune"] .card {
+  box-shadow: inset 0 0 15px rgba(200, 168, 75, 0.1);
+}
+
+/* ============================================================
+   Theme-Specific Typography
+   ============================================================ */
+
+/* Cyberpunk Typography */
+[data-theme="cyberpunk"] {
+  --font-display: 'Rajdhani', 'Share Tech Mono', 'Courier New', monospace;
+  --font-body: 'Rajdhani', 'Share Tech Mono', 'Courier New', monospace;
+}
+
+[data-theme="cyberpunk"] .page-title,
+[data-theme="cyberpunk"] .card-title,
+[data-theme="cyberpunk"] .sidebar-label {
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  font-weight: 700;
+}
+
+/* Dune Typography */
+[data-theme="dune"] {
+  --font-display: 'Cinzel', 'Times New Roman', serif;
+  --font-body: 'Optima', 'Segoe UI', sans-serif;
+}
+
+[data-theme="dune"] .page-title,
+[data-theme="dune"] .card-title,
+[data-theme="dune"] .sidebar-label {
+  letter-spacing: 0.15em;
+  font-weight: 300;
+}
+
+/* Amber Typography */
+[data-theme="amber"] {
+  --font-display: 'Playfair Display', 'Georgia', serif;
+  --font-body: 'Lato', 'Helvetica Neue', sans-serif;
+}
+
+[data-theme="amber"] .page-title,
+[data-theme="amber"] .card-title,
+[data-theme="amber"] .sidebar-label {
+  letter-spacing: 0.05em;
+  font-weight: 400;
 }

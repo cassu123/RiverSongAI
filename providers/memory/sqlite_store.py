@@ -122,14 +122,31 @@ CREATE TABLE IF NOT EXISTS llm_settings (
 );
 
 CREATE TABLE IF NOT EXISTS users (
-    id           TEXT PRIMARY KEY,
-    email        TEXT NOT NULL UNIQUE,
+    id            TEXT PRIMARY KEY,
+    email         TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    display_name TEXT NOT NULL,
-    role         TEXT NOT NULL DEFAULT 'user',
-    created_at   TEXT NOT NULL,
-    updated_at   TEXT NOT NULL
+    display_name  TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'user',
+    is_approved   INTEGER NOT NULL DEFAULT 0,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS routines (
+    id          TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL,
+    name        TEXT NOT NULL,
+    trigger     TEXT NOT NULL DEFAULT 'manual',
+    time        TEXT,
+    days        TEXT NOT NULL DEFAULT '[]',
+    prompt      TEXT NOT NULL DEFAULT '',
+    enabled     INTEGER NOT NULL DEFAULT 1,
+    last_run    TEXT,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_routines_user ON routines(user_id);
 """
 
 
@@ -186,7 +203,12 @@ class SQLiteStore:
     def _sync_initialize(self) -> None:
         conn = self._get_conn()
         conn.executescript(_DDL)
-        conn.commit()
+        # Migration: add is_approved if missing (existing databases)
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN is_approved INTEGER NOT NULL DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass  # column already exists
 
     def close(self) -> None:
         """Close the connection and shut down the thread pool."""
@@ -569,15 +591,15 @@ class SQLiteStore:
     # User auth methods
     # =========================================================================
 
-    async def create_user(self, id: str, email: str, password_hash: str, display_name: str, role: str = "user") -> None:
-        await self._run(self._sync_create_user, id, email, password_hash, display_name, role)
+    async def create_user(self, id: str, email: str, password_hash: str, display_name: str, role: str = "user", is_approved: bool = False) -> None:
+        await self._run(self._sync_create_user, id, email, password_hash, display_name, role, is_approved)
 
-    def _sync_create_user(self, id: str, email: str, password_hash: str, display_name: str, role: str) -> None:
+    def _sync_create_user(self, id: str, email: str, password_hash: str, display_name: str, role: str, is_approved: bool) -> None:
         conn = self._get_conn()
         now = _now_str()
         conn.execute(
-            "INSERT INTO users (id, email, password_hash, display_name, role, created_at, updated_at) VALUES (?,?,?,?,?,?,?)",
-            (id, email, password_hash, display_name, role, now, now),
+            "INSERT INTO users (id, email, password_hash, display_name, role, is_approved, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
+            (id, email, password_hash, display_name, role, int(is_approved), now, now),
         )
         conn.commit()
 
@@ -587,12 +609,12 @@ class SQLiteStore:
     def _sync_get_user_by_email(self, email: str) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT id, email, password_hash, display_name, role, created_at FROM users WHERE email=?",
+            "SELECT id, email, password_hash, display_name, role, is_approved, created_at FROM users WHERE email=?",
             (email,),
         ).fetchone()
         if row is None:
             return None
-        return {"id": row[0], "email": row[1], "password_hash": row[2], "display_name": row[3], "role": row[4], "created_at": row[5]}
+        return {"id": row[0], "email": row[1], "password_hash": row[2], "display_name": row[3], "role": row[4], "is_approved": bool(row[5]), "created_at": row[6]}
 
     async def get_user_by_id(self, user_id: str) -> Optional[dict]:
         return await self._run(self._sync_get_user_by_id, user_id)
@@ -600,12 +622,12 @@ class SQLiteStore:
     def _sync_get_user_by_id(self, user_id: str) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT id, email, display_name, role, created_at FROM users WHERE id=?",
+            "SELECT id, email, display_name, role, is_approved, created_at, password_hash FROM users WHERE id=?",
             (user_id,),
         ).fetchone()
         if row is None:
             return None
-        return {"id": row[0], "email": row[1], "display_name": row[2], "role": row[3], "created_at": row[4]}
+        return {"id": row[0], "email": row[1], "display_name": row[2], "role": row[3], "is_approved": bool(row[4]), "created_at": row[5], "password_hash": row[6]}
 
     async def email_exists(self, email: str) -> bool:
         return await self._run(self._sync_email_exists, email)
@@ -614,3 +636,151 @@ class SQLiteStore:
         conn = self._get_conn()
         row = conn.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone()
         return row is not None
+
+    async def has_admin(self) -> bool:
+        return await self._run(self._sync_has_admin)
+
+    def _sync_has_admin(self) -> bool:
+        conn = self._get_conn()
+        row = conn.execute("SELECT 1 FROM users WHERE role='admin' LIMIT 1").fetchone()
+        return row is not None
+
+    async def list_users(self) -> list:
+        return await self._run(self._sync_list_users)
+
+    def _sync_list_users(self) -> list:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT id, email, display_name, role, is_approved, created_at FROM users ORDER BY created_at ASC"
+        ).fetchall()
+        return [{"id": r[0], "email": r[1], "display_name": r[2], "role": r[3], "is_approved": bool(r[4]), "created_at": r[5]} for r in rows]
+
+    async def update_user(self, user_id: str, role: Optional[str] = None, is_approved: Optional[bool] = None) -> bool:
+        return await self._run(self._sync_update_user, user_id, role, is_approved)
+
+    def _sync_update_user(self, user_id: str, role: Optional[str], is_approved: Optional[bool]) -> bool:
+        conn = self._get_conn()
+        now = _now_str()
+        parts, vals = [], []
+        if role is not None:
+            parts.append("role = ?"); vals.append(role)
+        if is_approved is not None:
+            parts.append("is_approved = ?"); vals.append(int(is_approved))
+        if not parts:
+            return False
+        parts.append("updated_at = ?"); vals.append(now)
+        vals.append(user_id)
+        conn.execute(f"UPDATE users SET {', '.join(parts)} WHERE id = ?", vals)
+        conn.commit()
+        return True
+
+    async def update_user_password(self, user_id: str, password_hash: str) -> None:
+        await self._run(self._sync_update_user_password, user_id, password_hash)
+
+    def _sync_update_user_password(self, user_id: str, password_hash: str) -> None:
+        conn = self._get_conn()
+        now = _now_str()
+        conn.execute(
+            "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",
+            (password_hash, now, user_id)
+        )
+        conn.commit()
+
+    # =========================================================================
+    # Routines
+    # =========================================================================
+
+    def _row_to_routine(self, row) -> dict:
+        import json
+        return {
+            "id":         row[0],
+            "user_id":    row[1],
+            "name":       row[2],
+            "trigger":    row[3],
+            "time":       row[4],
+            "days":       json.loads(row[5] or "[]"),
+            "prompt":     row[6],
+            "enabled":    bool(row[7]),
+            "last_run":   row[8],
+            "created_at": row[9],
+            "updated_at": row[10],
+        }
+
+    async def list_routines(self, user_id: str) -> list:
+        return await self._run(self._sync_list_routines, user_id)
+
+    def _sync_list_routines(self, user_id: str) -> list:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT id,user_id,name,trigger,time,days,prompt,enabled,last_run,created_at,updated_at FROM routines WHERE user_id=? ORDER BY created_at ASC",
+            (user_id,),
+        ).fetchall()
+        return [self._row_to_routine(r) for r in rows]
+
+    async def create_routine(self, routine: dict) -> dict:
+        return await self._run(self._sync_create_routine, routine)
+
+    def _sync_create_routine(self, routine: dict) -> dict:
+        import json
+        conn = self._get_conn()
+        now = _now_str()
+        rid = routine.get("id") or str(uuid.uuid4())
+        conn.execute(
+            "INSERT INTO routines (id,user_id,name,trigger,time,days,prompt,enabled,last_run,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (rid, routine["user_id"], routine["name"], routine.get("trigger","manual"),
+             routine.get("time"), json.dumps(routine.get("days",[])), routine.get("prompt",""),
+             int(routine.get("enabled", True)), None, now, now),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT id,user_id,name,trigger,time,days,prompt,enabled,last_run,created_at,updated_at FROM routines WHERE id=?",
+            (rid,),
+        ).fetchone()
+        return self._row_to_routine(row)
+
+    async def update_routine(self, routine_id: str, user_id: str, fields: dict) -> Optional[dict]:
+        return await self._run(self._sync_update_routine, routine_id, user_id, fields)
+
+    def _sync_update_routine(self, routine_id: str, user_id: str, fields: dict) -> Optional[dict]:
+        import json
+        conn = self._get_conn()
+        allowed = {"name", "trigger", "time", "days", "prompt", "enabled", "last_run"}
+        parts, vals = [], []
+        for k, v in fields.items():
+            if k not in allowed:
+                continue
+            if k == "days":
+                v = json.dumps(v)
+            if k == "enabled":
+                v = int(v)
+            parts.append(f"{k} = ?"); vals.append(v)
+        if not parts:
+            return None
+        parts.append("updated_at = ?"); vals.append(_now_str())
+        vals += [routine_id, user_id]
+        conn.execute(f"UPDATE routines SET {', '.join(parts)} WHERE id=? AND user_id=?", vals)
+        conn.commit()
+        row = conn.execute(
+            "SELECT id,user_id,name,trigger,time,days,prompt,enabled,last_run,created_at,updated_at FROM routines WHERE id=? AND user_id=?",
+            (routine_id, user_id),
+        ).fetchone()
+        return self._row_to_routine(row) if row else None
+
+    async def delete_routine(self, routine_id: str, user_id: str) -> bool:
+        return await self._run(self._sync_delete_routine, routine_id, user_id)
+
+    def _sync_delete_routine(self, routine_id: str, user_id: str) -> bool:
+        conn = self._get_conn()
+        cur = conn.execute("DELETE FROM routines WHERE id=? AND user_id=?", (routine_id, user_id))
+        conn.commit()
+        return cur.rowcount > 0
+
+    async def get_enabled_routines(self) -> list:
+        return await self._run(self._sync_get_enabled_routines)
+
+    def _sync_get_enabled_routines(self) -> list:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT id,user_id,name,trigger,time,days,prompt,enabled,last_run,created_at,updated_at FROM routines WHERE enabled=1",
+        ).fetchall()
+        return [self._row_to_routine(r) for r in rows]

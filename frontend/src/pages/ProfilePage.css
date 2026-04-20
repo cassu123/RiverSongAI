@@ -154,47 +154,78 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 14px 10px 10px;
+  padding: 10px;
   border-radius: 3px;
   border: 1px solid var(--border-bright);
-  background: var(--tc-bg, var(--bg-card));
+  background: transparent;
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .theme-card:hover {
-  border-color: var(--tc-primary, var(--primary));
+  border-color: var(--tc-primary);
   box-shadow: 0 0 10px rgba(0,0,0,0.4);
 }
 
 .theme-card--active {
-  border-color: var(--tc-primary, var(--primary));
-  box-shadow: 0 0 0 1px var(--tc-primary, var(--primary)),
+  border-color: var(--tc-primary);
+  box-shadow: 0 0 0 1px var(--tc-primary),
               0 0 12px rgba(0,0,0,0.5);
 }
 
 .theme-card-preview {
+  position: relative;
+  width: 120px;
+  height: 72px;
+  background: var(--tc-bg);
+  border-radius: 4px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
+  justify-content: center;
+  padding-left: 24px;
+  gap: 8px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.theme-card-preview::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .theme-card-ring {
-  width: 28px;
-  height: 28px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  border: 1.5px solid var(--tc-primary, var(--primary));
-  box-shadow: 0 0 8px var(--tc-primary, var(--primary));
+  border: 2px solid var(--tc-primary);
+  box-shadow: 0 0 6px var(--tc-primary);
 }
 
 .theme-card-bar {
-  width: 70%;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--tc-primary, var(--primary));
-  box-shadow: 0 0 6px var(--tc-primary, var(--primary));
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--tc-primary);
+  position: relative;
+  opacity: 0.8;
+}
+
+.theme-card-bar::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 60px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--tc-primary);
+  opacity: 0.5;
 }
 
 .theme-card-label {

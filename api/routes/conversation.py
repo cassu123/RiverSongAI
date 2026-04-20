@@ -46,6 +46,7 @@ import logging
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 
+from core.auth import decode_token
 from core.conversation_loop import ConversationLoop
 from core.memory_manager import MemoryManager
 
@@ -70,11 +71,33 @@ async def conversation_websocket(websocket: WebSocket) -> None:
     """
     await websocket.accept()
 
-    user_id: str = websocket.query_params.get("user_id", "default")
+    # Resolve user_id from JWT token if provided, else fall back to query param
+    token: str = websocket.query_params.get("token", "")
+    payload = decode_token(token) if token else None
+    user_id: str = (payload["sub"] if payload else None) or websocket.query_params.get("user_id", "default")
     logger.info("WebSocket connection from %s (user_id=%s).", websocket.client, user_id)
 
     memory_manager: MemoryManager | None = getattr(websocket.app.state, "memory_manager", None)
-    loop = ConversationLoop(user_id=user_id, memory_manager=memory_manager)
+
+    # Load per-user LLM settings from DB
+    llm_provider = None
+    llm_model = None
+    if memory_manager and user_id != "default":
+        try:
+            store = memory_manager._store
+            user_settings = await store.get_llm_settings(user_id)
+            llm_provider = user_settings.provider
+            llm_model = user_settings.model
+            logger.info("Using user LLM settings: provider=%s model=%s", llm_provider, llm_model)
+        except Exception as exc:
+            logger.warning("Could not load user LLM settings: %s", exc)
+
+    loop = ConversationLoop(
+        user_id=user_id,
+        memory_manager=memory_manager,
+        llm_provider_override=llm_provider,
+        llm_model_override=llm_model,
+    )
 
     await _send(websocket, {"type": "connected"})
 

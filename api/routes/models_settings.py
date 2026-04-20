@@ -23,7 +23,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
+import urllib.request
+import urllib.error
+import json
+from typing import Optional, Set
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -41,7 +44,32 @@ router = APIRouter(prefix="/api", tags=["settings"])
 # Helpers
 # =============================================================================
 
-def _model_to_dict(m: ModelEntry) -> dict:
+def _get_ollama_installed_models() -> Set[str]:
+    """Query the local Ollama daemon for pulled model names. Returns empty set on failure."""
+    try:
+        settings = get_settings()
+        base = getattr(settings, "ollama_base_url", "http://localhost:11434").rstrip("/")
+        req = urllib.request.Request(f"{base}/api/tags", headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = json.loads(resp.read())
+        return {m["name"] for m in data.get("models", [])}
+    except Exception:
+        return set()
+
+
+def _model_to_dict(m: ModelEntry, installed: Optional[Set[str]] = None) -> dict:
+    available: bool
+    if m.is_cloud:
+        available = True  # cloud availability is gated by API key, handled separately
+    elif installed is None:
+        available = True  # unknown — assume available
+    else:
+        # Match exact name or base name without tag (e.g. "mistral:7b" matches "mistral:7b" or "mistral")
+        model_base = m.model_id.split(":")[0]
+        available = m.model_id in installed or any(
+            n == m.model_id or n.split(":")[0] == model_base
+            for n in installed
+        )
     return {
         "provider":              m.provider,
         "model_id":              m.model_id,
@@ -53,6 +81,7 @@ def _model_to_dict(m: ModelEntry) -> dict:
         "cost_per_1k_output_usd":m.cost_per_1k_output_usd,
         "notes":                 m.notes,
         "priority":              m.priority,
+        "available":             available,
     }
 
 
@@ -74,13 +103,24 @@ def _get_enabled_providers() -> dict:
 @router.get("/models")
 async def list_models():
     """
-    Return the full LLM model catalog split into local and cloud sections,
-    along with a map of which providers are currently enabled via .env.
+    Return the LLM model catalog split into local and cloud sections.
+    Local models include an `available` flag based on what Ollama has pulled.
+    Cloud models include an `available` flag based on configured API keys.
     """
+    installed = _get_ollama_installed_models()
+    enabled   = _get_enabled_providers()
+
+    local_models = [_model_to_dict(m, installed) for m in LLMRegistry.list_local()]
+    cloud_models = [
+        {**_model_to_dict(m), "available": enabled.get(m.provider, False)}
+        for m in LLMRegistry.list_cloud()
+    ]
+
     return {
-        "local":             [_model_to_dict(m) for m in LLMRegistry.list_local()],
-        "cloud":             [_model_to_dict(m) for m in LLMRegistry.list_cloud()],
-        "enabled_providers": _get_enabled_providers(),
+        "local":             local_models,
+        "cloud":             cloud_models,
+        "enabled_providers": enabled,
+        "ollama_reachable":  bool(installed) or True,  # True even if 0 models pulled
     }
 
 

@@ -1,16 +1,20 @@
 import React, { useState } from 'react'
 import './ProfilePage.css'
+import { useAuth } from '../context/AuthContext'
 
 const THEMES = [
-  { key: 'halo',   label: 'Halo Blue', primary: '#00aaff', bg: '#050a10' },
-  { key: 'redops', label: 'Red Ops',   primary: '#ff3322', bg: '#0e0404' },
-  { key: 'combat', label: 'Combat',    primary: '#00ff44', bg: '#030e04' },
-  { key: 'violet', label: 'Violet',    primary: '#cc44ff', bg: '#080510' },
-  { key: 'amber',  label: 'Amber',     primary: '#ffaa00', bg: '#0c0800' },
-  { key: 'arctic', label: 'Arctic',    primary: '#0066cc', bg: '#dce6f0' },
+  { key: 'halo',      label: 'Halo Blue', primary: '#00aaff', bg: '#050a10' },
+  { key: 'redops',    label: 'Red Ops',   primary: '#ff3322', bg: '#0e0404' },
+  { key: 'combat',    label: 'Combat',    primary: '#00ff44', bg: '#030e04' },
+  { key: 'violet',    label: 'Violet',    primary: '#cc44ff', bg: '#080510' },
+  { key: 'amber',     label: 'Amber',     primary: '#FDB09E', bg: '#FEE7D9' },
+  { key: 'arctic',    label: 'Arctic',    primary: '#0066cc', bg: '#dce6f0' },
+  { key: 'cyberpunk', label: 'Cyberpunk', primary: '#e8ff00', bg: '#050505' },
+  { key: 'dune',      label: 'Dune',      primary: '#c8a84b', bg: '#0a0804' },
 ]
 
 export default function ProfilePage({ profile, onSave, theme, onThemeChange }) {
+  const { token } = useAuth()
   const [form,    setForm]    = useState({ ...profile })
   const [pwForm,  setPwForm]  = useState({ current: '', next: '', confirm: '' })
   const [saved,   setSaved]   = useState(false)
@@ -38,13 +42,36 @@ export default function ProfilePage({ profile, onSave, theme, onThemeChange }) {
     setPwOk(false)
   }
 
-  const handlePwSave = () => {
+  const handlePwSave = async () => {
     if (!pwForm.current)          { setPwError('Enter your current password.'); return }
     if (pwForm.next.length < 8)   { setPwError('New password must be at least 8 characters.'); return }
     if (pwForm.next !== pwForm.confirm) { setPwError('Passwords do not match.'); return }
-    setPwOk(true)
-    setPwForm({ current: '', next: '', confirm: '' })
-    setTimeout(() => setPwOk(false), 2500)
+    
+    try {
+      const response = await fetch('/api/auth/password', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          current_password: pwForm.current,
+          new_password: pwForm.next
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        setPwError(errorData.detail || 'Failed to update password.');
+        return;
+      }
+
+      setPwOk(true)
+      setPwForm({ current: '', next: '', confirm: '' })
+      setTimeout(() => setPwOk(false), 2500)
+    } catch (err) {
+      setPwError('Network error. Could not change password.');
+    }
   }
 
   return (

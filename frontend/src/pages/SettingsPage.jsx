@@ -12,6 +12,7 @@
 // =============================================================================
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '../context/AuthContext'
 
 const API_BASE = '' // same origin
 
@@ -112,6 +113,8 @@ function Toggle({ checked, onChange, label, id }) {
 // Main settings page
 // ---------------------------------------------------------------------------
 export default function SettingsPage() {
+  const { user, token } = useAuth()
+
   const [models,         setModels]         = useState({ local: [], cloud: [] })
   const [enabledProviders, setEnabledProviders] = useState({})
   const [llmSettings,    setLlmSettings]    = useState(null)
@@ -121,10 +124,13 @@ export default function SettingsPage() {
 
   // ---- Initial data load ----
   useEffect(() => {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    const query = user?.id ? `?user_id=${user.id}` : ''
+
     Promise.all([
       fetch(`${API_BASE}/api/models`).then(r => r.json()),
-      fetch(`${API_BASE}/api/settings/llm`).then(r => r.json()),
-      fetch(`${API_BASE}/api/settings/memory`).then(r => r.json()),
+      fetch(`${API_BASE}/api/settings/llm${query}`, { headers }).then(r => r.json()),
+      fetch(`${API_BASE}/api/settings/memory${query}`, { headers }).then(r => r.json()),
     ])
       .then(([modData, llmData, memData]) => {
         setModels({ local: modData.local || [], cloud: modData.cloud || [] })
@@ -138,15 +144,19 @@ export default function SettingsPage() {
         setLoading(false)
         setSaveStatus('error')
       })
-  }, [])
+  }, [user?.id, token])
 
   // ---- Save LLM selection ----
   const selectModel = useCallback(async (model) => {
     setSaveStatus('saving')
     try {
-      const res = await fetch(`${API_BASE}/api/settings/llm`, {
+      const query = user?.id ? `?user_id=${user.id}` : ''
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+
+      const res = await fetch(`${API_BASE}/api/settings/llm${query}`, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body:    JSON.stringify({
           provider: model.provider,
           model_id: model.model_id,
@@ -164,7 +174,7 @@ export default function SettingsPage() {
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
-  }, [])
+  }, [user?.id, token])
 
   // ---- Save memory settings ----
   const saveMemory = useCallback(async (patch) => {
@@ -172,9 +182,13 @@ export default function SettingsPage() {
     setMemSettings(next)
     setSaveStatus('saving')
     try {
-      const res = await fetch(`${API_BASE}/api/settings/memory`, {
+      const query = user?.id ? `?user_id=${user.id}` : ''
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+
+      const res = await fetch(`${API_BASE}/api/settings/memory${query}`, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body:    JSON.stringify({
           summaries_enabled: next.summaries_enabled,
           default_ttl:       next.default_ttl,
@@ -188,7 +202,7 @@ export default function SettingsPage() {
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
-  }, [memSettings])
+  }, [memSettings, user?.id, token])
 
   // ---- Render ----
   if (loading) {
