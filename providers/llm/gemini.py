@@ -53,9 +53,9 @@ class GeminiLLM(LLMProvider):
         - A delay warning is logged before every request
     """
 
-    def __init__(self) -> None:
+    def __init__(self, model: Optional[str] = None) -> None:
         settings = get_settings()
-        self._model: str = settings.llm_model
+        self._model: str = model or settings.llm_model
         self._max_tokens: int = settings.llm_max_tokens
         self._temperature: float = settings.llm_temperature
         self._client = genai.Client(api_key=settings.gemini_api_key)
