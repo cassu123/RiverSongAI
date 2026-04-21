@@ -1,9 +1,11 @@
+import os
 import pyttsx3
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import NoResultFound
 from datetime import datetime, date
 from decimal import Decimal
 from sqlalchemy import and_
+from typing import Optional
 
 from .models import InventoryItem, User, Home, AssetStatus, CollaboratorRole, QRCodeStandard, collaborators_table
 from .auth import set_active_home, PermissionDeniedError, HomeNotFoundError
