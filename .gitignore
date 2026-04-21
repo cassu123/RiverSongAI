@@ -178,3 +178,9 @@ project_tree.txt
 
 # Conversation transcript files (Claude Code session logs)
 *.jsonl
+
+# Ignore NOTES folder
+NOTES/
+
+# Ignore Claude config
+CLAUDE.md
