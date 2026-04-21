@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import exists
 
-from .models import Home, collaborators_table
+from .models import InvHome, collaborators_table
 
 
 class PermissionDeniedError(Exception):
@@ -14,7 +14,7 @@ class HomeNotFoundError(Exception):
     pass
 
 
-def set_active_home(db_session: Session, user_id: str, home_id: str) -> Home:
+def set_active_home(db_session: Session, user_id: str, home_id: str) -> InvHome:
     """
     Verifies a user has permission to access a home and returns the home object.
 
@@ -27,16 +27,16 @@ def set_active_home(db_session: Session, user_id: str, home_id: str) -> Home:
         home_id: The ID of the home being accessed.
 
     Returns:
-        The Home object if access is permitted.
+        The InvHome object if access is permitted.
 
     Raises:
         HomeNotFoundError: If no home with the given home_id exists.
         PermissionDeniedError: If the user is not the owner and not a collaborator.
     """
-    home = db_session.query(Home).filter(Home.id == home_id).first()
+    home = db_session.query(InvHome).filter(InvHome.id == home_id).first()
 
     if not home:
-        raise HomeNotFoundError(f"Home with ID '{home_id}' not found.")
+        raise HomeNotFoundError(f"InvHome with ID '{home_id}' not found.")
 
     # 1. Check if the user is the owner of the home.
     if str(home.owner_id) == user_id:

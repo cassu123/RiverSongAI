@@ -38,8 +38,13 @@ export default function MemoryPage() {
   const [summaries,setSummaries]= useState([])
   const [loading,  setLoading]  = useState(true)
   const [search,   setSearch]   = useState('')
-  const [selected, setSelected] = useState(new Set())
-  const [deleting, setDeleting] = useState(false)
+  const [selected,    setSelected]    = useState(new Set())
+  const [deleting,    setDeleting]    = useState(false)
+  const [showAddFact, setShowAddFact] = useState(false)
+  const [newKey,      setNewKey]      = useState('')
+  const [newValue,    setNewValue]    = useState('')
+  const [addingFact,  setAddingFact]  = useState(false)
+  const [addError,    setAddError]    = useState('')
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -93,6 +98,31 @@ export default function MemoryPage() {
       setSelected(new Set())
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const addFact = async (e) => {
+    e.preventDefault()
+    if (!newKey.trim() || !newValue.trim()) return
+    setAddingFact(true)
+    setAddError('')
+    try {
+      const res = await fetch('/api/memory/facts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: newKey.trim(), value: newValue.trim() }),
+      })
+      if (!res.ok) throw new Error('Failed')
+      const created = await res.json()
+      if (created?.id) setFacts(prev => [...prev, created])
+      else await fetchAll()
+      setNewKey('')
+      setNewValue('')
+      setShowAddFact(false)
+    } catch {
+      setAddError('Failed to save fact. Try again.')
+    } finally {
+      setAddingFact(false)
     }
   }
 
@@ -162,17 +192,49 @@ export default function MemoryPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
+          {tab === 'FACTS' && (
+            <button
+              className="btn mem-page-add-btn"
+              onClick={() => { setShowAddFact(v => !v); setAddError('') }}
+            >
+              {showAddFact ? 'CANCEL' : '+ ADD FACT'}
+            </button>
+          )}
           {tab === 'FACTS' && selected.size > 0 && (
             <button
               className="btn mem-page-forget-btn"
               disabled={deleting}
               onClick={deleteFacts}
             >
-              {deleting ? 'REMOVING...' : `FORGET SELECTED (${selected.size})`}
+              {deleting ? 'REMOVING...' : `FORGET (${selected.size})`}
             </button>
           )}
         </div>
       </div>
+
+      {/* Add Fact inline form */}
+      {tab === 'FACTS' && showAddFact && (
+        <form className="mem-add-fact-form" onSubmit={addFact}>
+          <input
+            className="mem-add-fact-input"
+            placeholder="key  (e.g. job, city, favourite_food)"
+            value={newKey}
+            onChange={e => setNewKey(e.target.value)}
+            required
+          />
+          <input
+            className="mem-add-fact-input mem-add-fact-input--wide"
+            placeholder="value"
+            value={newValue}
+            onChange={e => setNewValue(e.target.value)}
+            required
+          />
+          <button className="btn mem-add-fact-submit" type="submit" disabled={addingFact}>
+            {addingFact ? 'SAVING…' : 'SAVE'}
+          </button>
+          {addError && <span className="mem-add-fact-error">{addError}</span>}
+        </form>
+      )}
 
       {/* Table */}
       <div className="card mem-page-card">

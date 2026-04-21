@@ -1,104 +1,194 @@
 import uuid
-from datetime import datetime, date
+from datetime import datetime, date, timezone
+from enum import Enum as PyEnum
+
+def _now():
+    return datetime.now(timezone.utc)
 
 from sqlalchemy import (
-    Enum,
+    Boolean,
     Column,
-    String,
-    Integer,
+    Date,
     DateTime,
+    Enum,
     ForeignKey,
+    Integer,
+    Numeric,
+    String,
     Table,
-    Text, # For description
-    Numeric, # For purchase_price and replacement_cost
-    Date # For purchase_date
+    Text,
+    Uuid,
 )
-from enum import Enum as PyEnum
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
 
-class AssetStatus(PyEnum):
-    SERVICEABLE = "Serviceable"
-    UNSERVICEABLE = "Unserviceable"
-    MISSING = "Missing"
-    IN_USE = "In-Use"
+# ---------------------------------------------------------------------------
+# Enums  (must be defined before they are referenced in Table/Column)
+# ---------------------------------------------------------------------------
 
-# Association table for collaborators, linking Users and Homes in a many-to-many relationship.
+class CollaboratorRole(PyEnum):
+    VIEWER = "viewer"
+    EDITOR = "editor"
+
+
+class QRCodeStandard(PyEnum):
+    QR      = "qr"        # standard QR code
+    CODE128 = "code128"   # 1-D barcode (scanners / warehouses)
+    EIN     = "ein"       # plain EIN text label (no image encoding)
+
+
+class AssetStatus(PyEnum):
+    SERVICEABLE   = "Serviceable"
+    UNSERVICEABLE = "Unserviceable"
+    MISSING       = "Missing"
+    IN_USE        = "In-Use"
+
+
+class ItemCategory(PyEnum):
+    ELECTRONICS    = "Electronics"
+    FURNITURE      = "Furniture"
+    APPLIANCE      = "Appliance"
+    TOOL           = "Tool"
+    CLOTHING       = "Clothing"
+    DOCUMENT       = "Document"
+    VEHICLE        = "Vehicle"
+    JEWELRY        = "Jewelry"
+    COLLECTIBLE    = "Collectible"
+    SPORTING_GOODS = "Sporting Goods"
+    OTHER          = "Other"
+
+
+# ---------------------------------------------------------------------------
+# Association table — collaborators (many Users ↔ many Homes)
+# ---------------------------------------------------------------------------
+
 collaborators_table = Table(
-    "collaborators",
+    "inv_collaborators",
     Base.metadata,
-    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True),
-    Column("home_id", UUID(as_uuid=True), ForeignKey("homes.id"), primary_key=True),
-    Column("role", Enum(CollaboratorRole), default=CollaboratorRole.VIEWER, nullable=False),
-    Column("created_at", DateTime, default=datetime.utcnow),
+    Column("user_id",    Uuid(as_uuid=True), ForeignKey("inv_users.id"),  primary_key=True),
+    Column("home_id",    Uuid(as_uuid=True), ForeignKey("inv_homes.id"),  primary_key=True),
+    Column("role",       Enum(CollaboratorRole), default=CollaboratorRole.VIEWER, nullable=False),
+    Column("created_at", DateTime, default=_now),
 )
 
 
-class User(Base):
-    __tablename__ = "users"
+# ---------------------------------------------------------------------------
+# Models
+# ---------------------------------------------------------------------------
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email = Column(String, unique=True, nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+class InvUser(Base):
+    """
+    Inventory-specific user record.  Linked to the main River Song user via
+    external_user_id (the JWT sub / River Song user.id).
+    """
+    __tablename__ = "inv_users"
 
-    # A user can own multiple homes.
-    homes_owned = relationship("Home", back_populates="owner", cascade="all, delete-orphan")
+    id               = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    external_user_id = Column(String, unique=True, nullable=False, index=True)
+    email            = Column(String, unique=True, nullable=False, index=True)
+    display_name     = Column(String, nullable=True)
+    created_at       = Column(DateTime, default=_now)
+    updated_at       = Column(DateTime, default=_now, onupdate=_now)
 
-    # A user can be a collaborator in multiple homes.
+    homes_owned       = relationship("InvHome", back_populates="owner", cascade="all, delete-orphan")
     homes_collaborating = relationship(
-        "Home", secondary=collaborators_table, back_populates="collaborators"
+        "InvHome", secondary=collaborators_table, back_populates="collaborators"
     )
 
 
-class Home(Base):
-    __tablename__ = "homes"
+class InvHome(Base):
+    """A named location (house, apartment, storage unit, office, etc.)."""
+    __tablename__ = "inv_homes"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False)
-    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    default_qr_code_standard = Column(Enum(QRCodeStandard), default=QRCodeStandard.STANDARD_QR, nullable=False)
+    id                    = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name                  = Column(String, nullable=False)
+    description           = Column(Text, nullable=True)
+    owner_id              = Column(Uuid(as_uuid=True), ForeignKey("inv_users.id"), nullable=False)
+    default_qr_standard   = Column(Enum(QRCodeStandard), default=QRCodeStandard.QR, nullable=False)
+    created_at            = Column(DateTime, default=_now)
+    updated_at            = Column(DateTime, default=_now, onupdate=_now)
 
-    # A home has one owner.
-    owner = relationship("User", back_populates="homes_owned")
-
-    # A home can have many inventory items.
-    inventory_items = relationship("InventoryItem", back_populates="home", cascade="all, delete-orphan")
-
-    # A home can have many collaborators.
-    collaborators = relationship(
-        "User", secondary=collaborators_table, back_populates="homes_collaborating"
+    owner            = relationship("InvUser", back_populates="homes_owned")
+    inventory_items  = relationship("InventoryItem", back_populates="home", cascade="all, delete-orphan")
+    collaborators    = relationship(
+        "InvUser", secondary=collaborators_table, back_populates="homes_collaborating"
     )
 
 
 class InventoryItem(Base):
+    """
+    A physical asset tracked within a home.
+
+    Core identification
+    -------------------
+    ein              — Equipment Identification Number, auto-generated, human-readable
+    qr_code_data     — base64-encoded PNG of the QR/barcode image
+
+    Physical details
+    ----------------
+    name, category, description, quantity
+    manufacturer, model_number, serial_number
+    location         — room or area within the home (e.g. "Kitchen", "Garage")
+
+    Financial / warranty
+    --------------------
+    purchase_price, purchase_date, replacement_cost
+    warranty_expiry_date
+    receipt_image_path, warranty_image_path
+
+    Custody / status
+    ----------------
+    asset_status, current_custodian_id, issued_at
+    """
     __tablename__ = "inventory_items"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False, index=True)
-    quantity = Column(Integer, default=1, nullable=False)
-    description = Column(Text)
-    home_id = Column(UUID(as_uuid=True), ForeignKey("homes.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # New fields for TCMax-style asset tracking
-    asset_status = Column(Enum(AssetStatus), default=AssetStatus.SERVICEABLE, nullable=False)
-    current_custodian_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    issued_at = Column(DateTime, nullable=True)
+    # --- identity ---
+    id      = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    ein     = Column(String, unique=True, nullable=False, index=True)
+    home_id = Column(Uuid(as_uuid=True), ForeignKey("inv_homes.id"), nullable=False)
 
-    # New fields for financial tracking and media
-    purchase_price = Column(Numeric(10, 2), nullable=True)
-    purchase_date = Column(Date, nullable=True)
-    replacement_cost = Column(Numeric(10, 2), nullable=True)
+    # --- core details ---
+    name        = Column(String,             nullable=False, index=True)
+    category    = Column(Enum(ItemCategory), default=ItemCategory.OTHER, nullable=False)
+    description = Column(Text,               nullable=True)
+    quantity    = Column(Integer,            default=1, nullable=False)
+    location    = Column(String,             nullable=True)   # room / area
+
+    # --- make / model ---
+    manufacturer  = Column(String, nullable=True)
+    model_number  = Column(String, nullable=True)
+    serial_number = Column(String, nullable=True, index=True)
+
+    # --- financial ---
+    purchase_price    = Column(Numeric(10, 2), nullable=True)
+    purchase_date     = Column(Date,           nullable=True)
+    replacement_cost  = Column(Numeric(10, 2), nullable=True)
+
+    # --- warranty ---
+    warranty_expiry_date = Column(Date,   nullable=True)
+    warranty_image_path  = Column(String, nullable=True)
+
+    # --- receipt ---
     receipt_image_path = Column(String, nullable=True)
-    warranty_image_path = Column(String, nullable=True)
-    # An inventory item belongs to one home.
-    home = relationship("Home", back_populates="inventory_items")
-    # Relationship to the User who is the current custodian
-    current_custodian = relationship("User", foreign_keys=[current_custodian_id])
+
+    # --- QR / label ---
+    qr_standard  = Column(Enum(QRCodeStandard), default=QRCodeStandard.QR, nullable=False)
+    qr_code_data = Column(Text, nullable=True)   # base64 PNG or SVG
+
+    # --- custody / status ---
+    asset_status         = Column(Enum(AssetStatus), default=AssetStatus.SERVICEABLE, nullable=False)
+    current_custodian_id = Column(Uuid(as_uuid=True), ForeignKey("inv_users.id"), nullable=True)
+    issued_at            = Column(DateTime, nullable=True)
+
+    # --- flags ---
+    is_insured = Column(Boolean, default=False, nullable=False)
+
+    # --- timestamps ---
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now, onupdate=_now)
+
+    # --- relationships ---
+    home              = relationship("InvHome", back_populates="inventory_items")
+    current_custodian = relationship("InvUser", foreign_keys=[current_custodian_id])

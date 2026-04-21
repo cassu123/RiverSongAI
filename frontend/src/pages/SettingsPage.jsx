@@ -112,15 +112,23 @@ function Toggle({ checked, onChange, label, id }) {
 // ---------------------------------------------------------------------------
 // Main settings page
 // ---------------------------------------------------------------------------
+const PROVIDER_NAMES = {
+  anthropic:  'Anthropic Claude',
+  gemini:     'Google Gemini',
+  openai:     'OpenAI',
+  mistral_ai: 'Mistral AI',
+  ollama:     'Ollama (local)',
+}
+
 export default function SettingsPage() {
   const { user, token } = useAuth()
 
-  const [models,         setModels]         = useState({ local: [], cloud: [] })
+  const [models,           setModels]           = useState({ local: [], cloud: [] })
   const [enabledProviders, setEnabledProviders] = useState({})
-  const [llmSettings,    setLlmSettings]    = useState(null)
-  const [memSettings,    setMemSettings]    = useState(null)
-  const [loading,        setLoading]        = useState(true)
-  const [saveStatus,     setSaveStatus]     = useState('')  // '', 'saving', 'saved', 'error'
+  const [llmSettings,      setLlmSettings]      = useState(null)
+  const [memSettings,      setMemSettings]      = useState(null)
+  const [loading,          setLoading]          = useState(true)
+  const [saveStatus,       setSaveStatus]       = useState('')  // '', 'saving', 'saved', 'error'
 
   // ---- Initial data load ----
   useEffect(() => {
@@ -175,6 +183,35 @@ export default function SettingsPage() {
       setTimeout(() => setSaveStatus(''), 4000)
     }
   }, [user?.id, token])
+
+  // ---- Save cloud fallback settings ----
+  const saveFallback = useCallback(async (patch) => {
+    const next = { ...llmSettings, ...patch }
+    setLlmSettings(next)
+    setSaveStatus('saving')
+    try {
+      const query = user?.id ? `?user_id=${user.id}` : ''
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const res = await fetch(`${API_BASE}/api/settings/llm${query}`, {
+        method:  'POST',
+        headers,
+        body:    JSON.stringify({
+          provider:               next.provider,
+          model_id:               next.model,
+          cloud_fallback_enabled: next.cloud_fallback_enabled,
+          cloud_fallback_provider: next.cloud_fallback_provider,
+          cloud_fallback_model:   next.cloud_fallback_model,
+        }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2500)
+    } catch {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }, [llmSettings, user?.id, token])
 
   // ---- Save memory settings ----
   const saveMemory = useCallback(async (patch) => {
@@ -306,6 +343,62 @@ export default function SettingsPage() {
             )
           })}
         </div>
+      </Section>
+
+      {/* ================================================================ */}
+      {/* CLOUD FALLBACK                                                   */}
+      {/* ================================================================ */}
+      <Section title="CLOUD FALLBACK">
+        <p className="settings-hint" style={{ marginBottom: 12 }}>
+          When the primary model is unavailable or overloaded, River can automatically
+          fall back to a cloud provider. Requires the provider's API key in <code>.env</code>.
+        </p>
+
+        <Toggle
+          id="fallback-toggle"
+          label="Enable cloud fallback"
+          checked={!!(llmSettings?.cloud_fallback_enabled)}
+          onChange={v => saveFallback({ cloud_fallback_enabled: v })}
+        />
+
+        {llmSettings?.cloud_fallback_enabled && (
+          <div className="fallback-config">
+            <label className="select-row">
+              <span className="select-label">Fallback provider</span>
+              <select
+                className="settings-select"
+                value={llmSettings?.cloud_fallback_provider || ''}
+                onChange={e => saveFallback({ cloud_fallback_provider: e.target.value, cloud_fallback_model: '' })}
+              >
+                <option value="">— choose —</option>
+                {['anthropic', 'gemini', 'openai', 'mistral_ai'].map(p => (
+                  <option key={p} value={p} disabled={!enabledProviders[p]}>
+                    {PROVIDER_NAMES[p]}{!enabledProviders[p] ? ' (key required)' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {llmSettings?.cloud_fallback_provider && (
+              <label className="select-row">
+                <span className="select-label">Fallback model</span>
+                <select
+                  className="settings-select"
+                  value={llmSettings?.cloud_fallback_model || ''}
+                  onChange={e => saveFallback({ cloud_fallback_model: e.target.value })}
+                >
+                  <option value="">— choose —</option>
+                  {models.cloud
+                    .filter(m => m.provider === llmSettings.cloud_fallback_provider)
+                    .map(m => (
+                      <option key={m.model_id} value={m.model_id}>{m.display_name}</option>
+                    ))
+                  }
+                </select>
+              </label>
+            )}
+          </div>
+        )}
       </Section>
 
       {/* ================================================================ */}

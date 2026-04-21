@@ -1,390 +1,484 @@
+"""
+inventory/management.py
+
+Business-logic layer for the inventory system.  All database writes go through
+here so that API routes stay thin.
+
+Functions
+---------
+create_home              -- create a new home for a user
+get_homes_for_user       -- list homes owned or collaborated on
+create_item              -- add an item to a home (generates EIN + QR code)
+update_item              -- patch any fields on an item
+delete_item              -- remove an item
+get_items_for_home       -- list all items in a home
+get_item                 -- fetch a single item by id or EIN
+fast_scan_item           -- look up by EIN and return item details
+issue_item               -- assign custody of an item to a collaborator
+return_item              -- release custody back to unassigned
+manage_collaborators     -- add / remove / update-role collaborators
+edit_home                -- rename a home or change its QR standard
+process_receipt          -- attach a receipt image and extract price/date
+generate_insurance_manifest -- produce a PDF report of serviceable items
+"""
+
+from __future__ import annotations
+
+import logging
 import os
-import pyttsx3
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import NoResultFound
-from datetime import datetime, date
+from datetime import datetime, timezone
 from decimal import Decimal
-from sqlalchemy import and_
 from typing import Optional
 
-from .models import InventoryItem, User, Home, AssetStatus, CollaboratorRole, QRCodeStandard, collaborators_table
-from .auth import set_active_home, PermissionDeniedError, HomeNotFoundError
-from .file_utils import save_file_for_home, extract_data_from_receipt, INVENTORY_FILES_BASE_DIR
+from sqlalchemy import and_
+from sqlalchemy.exc import NoResultFound
+from sqlalchemy.orm import Session
 
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import inch
-from reportlab.lib import colors
+from .auth import (
+    HomeNotFoundError,
+    PermissionDeniedError,
+    set_active_home,
+)
+from .file_utils import (
+    INVENTORY_FILES_BASE_DIR,
+    extract_data_from_receipt,
+    save_file_for_home,
+)
+from .models import (
+    AssetStatus,
+    CollaboratorRole,
+    InventoryItem,
+    InvHome,
+    InvUser,
+    ItemCategory,
+    QRCodeStandard,
+    collaborators_table,
+)
+from .qr_utils import (
+    generate_barcode_png_b64,
+    generate_ein,
+    generate_label_data,
+    generate_qr_png_b64,
+)
 
-# Initialize the TTS engine once
-# In a real application, you might want to manage this engine more robustly,
-# perhaps as a singleton or a dependency injection.
-try:
-    engine = pyttsx3.init()
-except Exception as e:
-    print(f"Warning: pyttsx3 engine could not be initialized. Audio feedback will be disabled. Error: {e}")
-    engine = None
-
-def play_audio_confirmation(text: str):
-    """
-    Plays an audio confirmation message using pyttsx3.
-    If the engine is not initialized, it prints the message instead.
-    """
-    if engine:
-        engine.say(text)
-        engine.runAndWait()
-    else:
-        print(f"Audio feedback (disabled): {text}")
+logger = logging.getLogger(__name__)
 
 
-def fast_scan_item(db_session: Session, user_id: str, item_id: str) -> InventoryItem:
-    """
-    Simulates a fast-scan operation. Retrieves an item and provides audio confirmation.
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
-    Args:
-        db_session: The SQLAlchemy session object.
-        user_id: The ID of the user performing the scan (for permission checking).
-        item_id: The ID of the inventory item (barcode/EIN).
 
-    Returns:
-        The InventoryItem object if found and accessible.
+# ---------------------------------------------------------------------------
+# User bootstrap
+# ---------------------------------------------------------------------------
 
-    Raises:
-        HomeNotFoundError: If the item's home is not found.
-        PermissionDeniedError: If the user does not have permission to access the item's home.
-        NoResultFound: If the item with the given ID is not found.
-    """
-    item = db_session.query(InventoryItem).filter(InventoryItem.id == item_id).first()
-
-    if not item:
-        play_audio_confirmation(f"Item not found: {item_id}")
-        raise NoResultFound(f"Inventory item with ID '{item_id}' not found.")
-
-    # Verify user has permission to access the home this item belongs to
-    try:
-        active_home = set_active_home(db_session, user_id, str(item.home_id))
-    except (HomeNotFoundError, PermissionDeniedError) as e:
-        play_audio_confirmation(f"Access denied for item: {item.name}")
-        raise e
-
-    confirmation_text = (
-        f"Validated: {item.name}, "
-        f"Status: {item.asset_status.value}, "
-        f"Quantity: {item.quantity}. "
+def get_or_create_inv_user(db: Session, external_user_id: str, email: str, display_name: str = "") -> InvUser:
+    """Ensure an InvUser row exists for the given River Song user."""
+    user = db.query(InvUser).filter(InvUser.external_user_id == external_user_id).first()
+    if user:
+        return user
+    user = InvUser(
+        external_user_id=external_user_id,
+        email=email,
+        display_name=display_name or email,
     )
-    if item.current_custodian:
-        confirmation_text += f"Issued to: {item.current_custodian.email}."
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
 
-    play_audio_confirmation(confirmation_text)
+
+# ---------------------------------------------------------------------------
+# Homes
+# ---------------------------------------------------------------------------
+
+def create_home(db: Session, owner: InvUser, name: str, description: str = "", qr_standard: QRCodeStandard = QRCodeStandard.QR) -> InvHome:
+    home = InvHome(
+        name=name,
+        description=description,
+        owner_id=owner.id,
+        default_qr_standard=qr_standard,
+    )
+    db.add(home)
+    db.commit()
+    db.refresh(home)
+    logger.info("Home created: %s (owner=%s)", home.id, owner.id)
+    return home
+
+
+def get_homes_for_user(db: Session, user: InvUser) -> list[InvHome]:
+    owned       = db.query(InvHome).filter(InvHome.owner_id == user.id).all()
+    collaborated = user.homes_collaborating
+    seen = {h.id for h in owned}
+    return owned + [h for h in collaborated if h.id not in seen]
+
+
+def edit_home(
+    db: Session,
+    owner_user_id: str,
+    home_id: str,
+    new_name: Optional[str] = None,
+    new_description: Optional[str] = None,
+    new_qr_standard: Optional[QRCodeStandard] = None,
+) -> InvHome:
+    home = set_active_home(db, owner_user_id, home_id)
+    if str(home.owner_id) != owner_user_id:
+        raise PermissionDeniedError(f"Only the home owner can edit home details.")
+    if new_name        is not None: home.name            = new_name
+    if new_description is not None: home.description     = new_description
+    if new_qr_standard is not None: home.default_qr_standard = new_qr_standard
+    db.commit()
+    db.refresh(home)
+    return home
+
+
+# ---------------------------------------------------------------------------
+# Items
+# ---------------------------------------------------------------------------
+
+def _attach_qr(db: Session, item: InventoryItem) -> None:
+    """Generate and persist QR / barcode data for an item."""
+    payload = generate_label_data(item)
+    if item.qr_standard == QRCodeStandard.CODE128:
+        item.qr_code_data = generate_barcode_png_b64(payload)
+    elif item.qr_standard == QRCodeStandard.EIN:
+        item.qr_code_data = None  # plain EIN label, no image
+    else:
+        item.qr_code_data = generate_qr_png_b64(payload)
+    db.commit()
+
+
+def create_item(
+    db: Session,
+    user_id: str,
+    home_id: str,
+    name: str,
+    category: ItemCategory = ItemCategory.OTHER,
+    description: str = "",
+    quantity: int = 1,
+    location: str = "",
+    manufacturer: str = "",
+    model_number: str = "",
+    serial_number: str = "",
+    purchase_price: Optional[float] = None,
+    purchase_date=None,
+    replacement_cost: Optional[float] = None,
+    warranty_expiry_date=None,
+    is_insured: bool = False,
+    qr_standard: Optional[QRCodeStandard] = None,
+) -> InventoryItem:
+    home = set_active_home(db, user_id, home_id)
+
+    # Generate a unique EIN (retry on collision, though astronomically unlikely)
+    for _ in range(5):
+        ein = generate_ein()
+        if not db.query(InventoryItem).filter(InventoryItem.ein == ein).first():
+            break
+
+    item = InventoryItem(
+        ein=ein,
+        home_id=home.id,
+        name=name,
+        category=category,
+        description=description,
+        quantity=quantity,
+        location=location,
+        manufacturer=manufacturer,
+        model_number=model_number,
+        serial_number=serial_number,
+        purchase_price=Decimal(str(purchase_price)) if purchase_price is not None else None,
+        purchase_date=purchase_date,
+        replacement_cost=Decimal(str(replacement_cost)) if replacement_cost is not None else None,
+        warranty_expiry_date=warranty_expiry_date,
+        is_insured=is_insured,
+        qr_standard=qr_standard or home.default_qr_standard,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    _attach_qr(db, item)
+    db.refresh(item)
+    logger.info("Item created: %s / EIN=%s", item.id, item.ein)
     return item
 
 
-def issue_item_to_collaborator(
-    db_session: Session, admin_user_id: str, item_id: str, collaborator_user_id: str
-) -> InventoryItem:
-    """
-    Issues an inventory item to a collaborator, updating its custodian and timestamp.
+def update_item(db: Session, user_id: str, item_id: str, **fields) -> InventoryItem:
+    item = _get_item_or_raise(db, item_id)
+    set_active_home(db, user_id, str(item.home_id))
 
-    Args:
-        db_session: The SQLAlchemy session object.
-        admin_user_id: The ID of the user performing the issuance (must be owner of the home).
-        item_id: The ID of the inventory item to issue.
-        collaborator_user_id: The ID of the user to issue the item to.
+    numeric_fields = {"purchase_price", "replacement_cost"}
+    for key, val in fields.items():
+        if val is None:
+            continue
+        if key in numeric_fields and val is not None:
+            val = Decimal(str(val))
+        setattr(item, key, val)
 
-    Returns:
-        The updated InventoryItem object.
+    # Regenerate QR if name, serial, or standard changed
+    if any(k in fields for k in ("name", "serial_number", "qr_standard")):
+        _attach_qr(db, item)
 
-    Raises:
-        NoResultFound: If the item or collaborator user is not found.
-        PermissionDeniedError: If the admin_user_id is not the owner of the home,
-                               or if the collaborator_user_id is not a collaborator of the home.
-        ValueError: If the item is already issued to the same collaborator.
-    """
-    item = db_session.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def delete_item(db: Session, user_id: str, item_id: str) -> None:
+    item = _get_item_or_raise(db, item_id)
+    set_active_home(db, user_id, str(item.home_id))
+    db.delete(item)
+    db.commit()
+
+
+def get_items_for_home(db: Session, user_id: str, home_id: str) -> list[InventoryItem]:
+    set_active_home(db, user_id, home_id)
+    return db.query(InventoryItem).filter(InventoryItem.home_id == home_id).order_by(InventoryItem.name).all()
+
+
+def get_item(db: Session, user_id: str, item_id: str) -> InventoryItem:
+    item = _get_item_or_raise(db, item_id)
+    set_active_home(db, user_id, str(item.home_id))
+    return item
+
+
+def fast_scan_item(db: Session, user_id: str, ein: str) -> InventoryItem:
+    """Look up an item by EIN (as scanned from a QR code or barcode)."""
+    item = db.query(InventoryItem).filter(InventoryItem.ein == ein).first()
     if not item:
-        raise NoResultFound(f"Inventory item with ID '{item_id}' not found.")
+        raise NoResultFound(f"No item found with EIN '{ein}'.")
+    set_active_home(db, user_id, str(item.home_id))
+    return item
 
-    home = db_session.query(Home).filter(Home.id == item.home_id).first()
+
+# ---------------------------------------------------------------------------
+# Custody
+# ---------------------------------------------------------------------------
+
+def issue_item(db: Session, admin_user_id: str, item_id: str, collaborator_user_id: str) -> InventoryItem:
+    item = _get_item_or_raise(db, item_id)
+    home = db.query(InvHome).filter(InvHome.id == item.home_id).first()
     if not home or str(home.owner_id) != admin_user_id:
-        raise PermissionDeniedError(f"User '{admin_user_id}' is not the owner of home '{home.id}' and cannot issue items.")
+        raise PermissionDeniedError("Only the home owner can issue items.")
 
-    collaborator = db_session.query(User).filter(User.id == collaborator_user_id).first()
+    collaborator = db.query(InvUser).filter(InvUser.id == collaborator_user_id).first()
     if not collaborator:
-        raise NoResultFound(f"Collaborator user with ID '{collaborator_user_id}' not found.")
-
+        raise NoResultFound(f"User '{collaborator_user_id}' not found.")
     if item.current_custodian_id == collaborator.id:
-        raise ValueError(f"Item '{item.name}' is already issued to '{collaborator.email}'.")
+        raise ValueError(f"Item '{item.name}' is already issued to that user.")
 
     item.current_custodian_id = collaborator.id
-    item.issued_at = datetime.utcnow()
-    item.asset_status = AssetStatus.IN_USE
-
-    db_session.add(item)
-    db_session.commit()
-    db_session.refresh(item)
-
-    play_audio_confirmation(f"Item {item.name} issued to {collaborator.email}.")
+    item.issued_at            = _now()
+    item.asset_status         = AssetStatus.IN_USE
+    db.commit()
+    db.refresh(item)
     return item
 
 
+def return_item(db: Session, user_id: str, item_id: str) -> InventoryItem:
+    item = _get_item_or_raise(db, item_id)
+    home = db.query(InvHome).filter(InvHome.id == item.home_id).first()
+    # Owner or current custodian can return
+    if str(home.owner_id) != user_id and str(item.current_custodian_id) != user_id:
+        raise PermissionDeniedError("Only the home owner or current custodian can return an item.")
+
+    item.current_custodian_id = None
+    item.issued_at            = None
+    item.asset_status         = AssetStatus.SERVICEABLE
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+# ---------------------------------------------------------------------------
+# Collaborators
+# ---------------------------------------------------------------------------
+
 def manage_collaborators(
-    db_session: Session,
+    db: Session,
     owner_user_id: str,
     home_id: str,
     collaborator_user_id: str,
-    action: str,  # 'add', 'remove', 'update_role'
-    role: CollaboratorRole = None,
-) -> Home:
-    """
-    Allows the home owner to add, remove, or update roles for collaborators.
-
-    Args:
-        db_session: The SQLAlchemy session object.
-        owner_user_id: The ID of the user performing the action (must be the home owner).
-        home_id: The ID of the home to manage collaborators for.
-        collaborator_user_id: The ID of the user to add, remove, or modify.
-        action: The action to perform ('add', 'remove', 'update_role').
-        role: The CollaboratorRole to assign if adding or updating. Required for 'add' and 'update_role'.
-
-    Returns:
-        The updated Home object.
-
-    Raises:
-        HomeNotFoundError: If the home is not found.
-        PermissionDeniedError: If the owner_user_id is not the owner of the home.
-        NoResultFound: If the collaborator user is not found.
-        ValueError: For invalid actions or missing roles.
-    """
-    home = db_session.query(Home).filter(Home.id == home_id).first()
+    action: str,
+    role: CollaboratorRole = CollaboratorRole.VIEWER,
+) -> InvHome:
+    home = db.query(InvHome).filter(InvHome.id == home_id).first()
     if not home:
-        raise HomeNotFoundError(f"Home with ID '{home_id}' not found.")
-
+        raise HomeNotFoundError(f"Home '{home_id}' not found.")
     if str(home.owner_id) != owner_user_id:
-        raise PermissionDeniedError(
-            f"User '{owner_user_id}' is not the owner of home '{home_id}' and cannot manage collaborators."
-        )
+        raise PermissionDeniedError("Only the home owner can manage collaborators.")
 
-    collaborator_user = db_session.query(User).filter(User.id == collaborator_user_id).first()
-    if not collaborator_user:
-        raise NoResultFound(f"Collaborator user with ID '{collaborator_user_id}' not found.")
+    collab = db.query(InvUser).filter(InvUser.id == collaborator_user_id).first()
+    if not collab:
+        raise NoResultFound(f"User '{collaborator_user_id}' not found.")
 
     if action == "add":
-        if not role:
-            raise ValueError("Role is required when adding a collaborator.")
         if collaborator_user_id == owner_user_id:
-            raise ValueError("Cannot add the home owner as a collaborator.")
-
-        # Check if already a collaborator
-        existing_collaborator = db_session.query(collaborators_table).filter(
-            and_(collaborators_table.c.user_id == collaborator_user_id,
-                 collaborators_table.c.home_id == home_id)
+            raise ValueError("Cannot add the owner as a collaborator.")
+        existing = db.execute(
+            collaborators_table.select().where(
+                and_(
+                    collaborators_table.c.user_id == collaborator_user_id,
+                    collaborators_table.c.home_id == home_id,
+                )
+            )
         ).first()
-
-        if existing_collaborator:
-            raise ValueError(f"User '{collaborator_user.email}' is already a collaborator for home '{home.name}'.")
-
-        insert_stmt = collaborators_table.insert().values(
-            user_id=collaborator_user_id, home_id=home_id, role=role.value, created_at=datetime.utcnow()
-        )
-        db_session.execute(insert_stmt)
-        db_session.commit()
-        play_audio_confirmation(f"Collaborator {collaborator_user.email} added to home {home.name} with role {role.value}.")
+        if existing:
+            raise ValueError(f"'{collab.email}' is already a collaborator.")
+        db.execute(collaborators_table.insert().values(
+            user_id=collaborator_user_id, home_id=home_id, role=role, created_at=_now()
+        ))
 
     elif action == "remove":
-        delete_stmt = collaborators_table.delete().where(
-            and_(collaborators_table.c.user_id == collaborator_user_id,
-                 collaborators_table.c.home_id == home_id)
-        )
-        result = db_session.execute(delete_stmt)
+        result = db.execute(collaborators_table.delete().where(
+            and_(
+                collaborators_table.c.user_id == collaborator_user_id,
+                collaborators_table.c.home_id == home_id,
+            )
+        ))
         if result.rowcount == 0:
-            raise NoResultFound(f"User '{collaborator_user.email}' is not a collaborator for home '{home.name}'.")
-        db_session.commit()
-        play_audio_confirmation(f"Collaborator {collaborator_user.email} removed from home {home.name}.")
+            raise NoResultFound(f"'{collab.email}' is not a collaborator of this home.")
 
     elif action == "update_role":
-        if not role:
-            raise ValueError("Role is required when updating a collaborator's role.")
-        update_stmt = collaborators_table.update().where(
-            and_(collaborators_table.c.user_id == collaborator_user_id,
-                 collaborators_table.c.home_id == home_id)
-        ).values(role=role.value)
-        result = db_session.execute(update_stmt)
+        result = db.execute(collaborators_table.update().where(
+            and_(
+                collaborators_table.c.user_id == collaborator_user_id,
+                collaborators_table.c.home_id == home_id,
+            )
+        ).values(role=role))
         if result.rowcount == 0:
-            raise NoResultFound(f"User '{collaborator_user.email}' is not a collaborator for home '{home.name}'.")
-        db_session.commit()
-        play_audio_confirmation(f"Collaborator {collaborator_user.email}'s role updated to {role.value} for home {home.name}.")
+            raise NoResultFound(f"'{collab.email}' is not a collaborator of this home.")
+
     else:
-        raise ValueError(f"Invalid action: '{action}'. Must be 'add', 'remove', or 'update_role'.")
+        raise ValueError(f"Invalid action '{action}'. Use 'add', 'remove', or 'update_role'.")
 
-    db_session.refresh(home)
+    db.commit()
+    db.refresh(home)
     return home
 
 
-def edit_home_profile(db_session: Session, owner_user_id: str, home_id: str, new_name: str = None, new_qr_standard: QRCodeStandard = None) -> Home:
-    """
-    Allows the home owner to edit the home's profile, including its name and default QR code standard.
+# ---------------------------------------------------------------------------
+# Receipt processing
+# ---------------------------------------------------------------------------
 
-    Args:
-        db_session: The SQLAlchemy session object.
-        owner_user_id: The ID of the user performing the action (must be the home owner).
-        home_id: The ID of the home to edit.
-        new_name: The optional new name for the home.
-        new_qr_standard: The optional new default QR code standard for the home.
-
-    Returns:
-        The updated Home object.
-
-    Raises:
-        HomeNotFoundError: If the home is not found.
-        PermissionDeniedError: If the owner_user_id is not the owner of the home.
-    """
-    home = db_session.query(Home).filter(Home.id == home_id).first()
-    if not home:
-        raise HomeNotFoundError(f"Home with ID '{home_id}' not found.")
-
-    if str(home.owner_id) != owner_user_id:
-        raise PermissionDeniedError(
-            f"User '{owner_user_id}' is not the owner of home '{home_id}' and cannot edit its profile."
-        )
-
-    if new_name:
-        home.name = new_name
-        play_audio_confirmation(f"Home {home.id} name updated to {new_name}.")
-    if new_qr_standard:
-        home.default_qr_code_standard = new_qr_standard
-        play_audio_confirmation(f"Home {home.name} default QR code standard updated to {new_qr_standard.value}.")
-
-    if new_name or new_qr_standard:
-        db_session.add(home)
-        db_session.commit()
-        db_session.refresh(home)
-
-    return home
-
-
-def process_receipt_for_item(
-    db_session: Session,
+def process_receipt(
+    db: Session,
     user_id: str,
     item_id: str,
-    receipt_image_data: bytes,
+    receipt_data: bytes,
     receipt_filename: str,
     manual_price: Optional[float] = None,
-    manual_date: Optional[date] = None,
+    manual_date=None,
 ) -> InventoryItem:
-    """
-    Processes a receipt image for an inventory item, extracts data, and updates the item.
+    item = _get_item_or_raise(db, item_id)
+    set_active_home(db, user_id, str(item.home_id))
 
-    Args:
-        db_session: The SQLAlchemy session object.
-        user_id: The ID of the user uploading the receipt (for permission checking).
-        item_id: The ID of the inventory item to associate the receipt with.
-        receipt_image_data: The binary data of the receipt image.
-        receipt_filename: The original filename of the receipt image.
-        manual_price: Optional manual override for the purchase price.
-        manual_date: Optional manual override for the purchase date.
+    rel_path = save_file_for_home(str(item.home_id), "receipts", receipt_data, receipt_filename)
+    item.receipt_image_path = rel_path
 
-    Returns:
-        The updated InventoryItem object.
+    full_path = os.path.join(INVENTORY_FILES_BASE_DIR, rel_path)
+    extracted_price, extracted_date = extract_data_from_receipt(full_path)
 
-    Raises:
-        NoResultFound: If the item is not found.
-        PermissionDeniedError: If the user does not have permission to access the item's home.
-    """
-    item = db_session.query(InventoryItem).filter(InventoryItem.id == item_id).first()
-    if not item:
-        raise NoResultFound(f"Inventory item with ID '{item_id}' not found.")
+    item.purchase_price = (
+        Decimal(str(manual_price)) if manual_price is not None
+        else (Decimal(str(extracted_price)) if extracted_price is not None else item.purchase_price)
+    )
+    item.purchase_date = manual_date or extracted_date or item.purchase_date
 
-    # Verify user has permission to access the home this item belongs to
-    set_active_home(db_session, user_id, str(item.home_id))
-
-    # Save the receipt image
-    relative_path = save_file_for_home(str(item.home_id), "receipts", receipt_image_data, receipt_filename)
-    item.receipt_image_path = relative_path
-
-    # Temporarily save the image to a known path for OCR processing
-    # For simplicity, let's assume INVENTORY_FILES_BASE_DIR is accessible for OCR.
-    full_image_path = os.path.join(INVENTORY_FILES_BASE_DIR, relative_path)
-
-    extracted_price, extracted_date = None, None
-    if extract_data_from_receipt: # Check if easyocr was initialized
-        extracted_price, extracted_date = extract_data_from_receipt(full_image_path)
-
-    # Apply manual overrides or extracted data
-    item.purchase_price = Decimal(str(manual_price)) if manual_price is not None else (Decimal(str(extracted_price)) if extracted_price is not None else None)
-    item.purchase_date = manual_date if manual_date is not None else extracted_date
-
-    db_session.add(item)
-    db_session.commit()
-    db_session.refresh(item)
-
-    play_audio_confirmation(f"Receipt processed for {item.name}. Price: {item.purchase_price or 'N/A'}, Date: {item.purchase_date or 'N/A'}.")
+    db.commit()
+    db.refresh(item)
     return item
 
 
-def generate_insurance_manifest(db_session: Session, user_id: str, home_id: str) -> str:
+# ---------------------------------------------------------------------------
+# Insurance PDF manifest
+# ---------------------------------------------------------------------------
+
+def generate_insurance_manifest(db: Session, user_id: str, home_id: str) -> str:
     """
-    Generates a PDF manifest for insurance claims, listing all serviceable items
-    and their replacement costs for a given home.
-
-    Args:
-        db_session: The SQLAlchemy session object.
-        user_id: The ID of the user requesting the manifest (for permission checking).
-        home_id: The ID of the home for which to generate the manifest.
-
-    Returns:
-        The path to the generated PDF file.
-
-    Raises:
-        HomeNotFoundError: If the home is not found.
-        PermissionDeniedError: If the user does not have permission to access the home.
+    Generate a PDF listing all serviceable items and their replacement costs.
+    Returns the absolute path to the generated PDF.
+    Requires reportlab: pip install reportlab
     """
-    home = set_active_home(db_session, user_id, home_id) # Verify access
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    except ImportError:
+        raise RuntimeError("reportlab is required for PDF generation. Run: pip install reportlab")
 
-    serviceable_items = db_session.query(InventoryItem).filter(
-        InventoryItem.home_id == home_id,
-        InventoryItem.asset_status == AssetStatus.SERVICEABLE
-    ).all()
+    home  = set_active_home(db, user_id, home_id)
+    items = (
+        db.query(InventoryItem)
+        .filter(
+            InventoryItem.home_id    == home_id,
+            InventoryItem.asset_status == AssetStatus.SERVICEABLE,
+        )
+        .order_by(InventoryItem.category, InventoryItem.name)
+        .all()
+    )
 
-    total_replacement_cost = Decimal('0.00')
-    for item in serviceable_items:
-        if item.replacement_cost:
-            total_replacement_cost += item.replacement_cost * item.quantity # Assuming quantity affects total cost
+    total = sum(
+        (i.replacement_cost or Decimal("0")) * i.quantity for i in items
+    )
 
-    # Generate PDF
-    output_dir = os.path.join(INVENTORY_FILES_BASE_DIR, f"home_{home_id}", "reports")
-    os.makedirs(output_dir, exist_ok=True)
-    pdf_filename = f"insurance_manifest_{home.name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
-    pdf_path = os.path.join(output_dir, pdf_filename)
+    out_dir = os.path.join(INVENTORY_FILES_BASE_DIR, f"home_{home_id}", "reports")
+    os.makedirs(out_dir, exist_ok=True)
+    ts       = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    pdf_path = os.path.join(out_dir, f"insurance_manifest_{ts}.pdf")
 
-    doc = SimpleDocTemplate(pdf_path, pagesize=letter)
     styles = getSampleStyleSheet()
-    story = []
+    story  = [
+        Paragraph(f"Insurance Manifest — {home.name}", styles["h1"]),
+        Paragraph(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", styles["Normal"]),
+        Spacer(1, 0.25 * inch),
+    ]
 
-    story.append(Paragraph(f"Insurance Manifest for Home: {home.name}", styles['h1']))
-    story.append(Paragraph(f"Generated On: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
-    story.append(Spacer(1, 0.2 * inch))
+    headers = ["EIN", "Name", "Category", "Qty", "Location", "Serial No.", "Replacement Cost", "Total"]
+    rows    = [headers]
+    for i in items:
+        rc    = i.replacement_cost or Decimal("0")
+        total_item = rc * i.quantity
+        rows.append([
+            i.ein,
+            i.name,
+            i.category.value if i.category else "",
+            str(i.quantity),
+            i.location or "",
+            i.serial_number or "",
+            f"${rc:.2f}",
+            f"${total_item:.2f}",
+        ])
 
-    data = [['Item Name', 'Quantity', 'Asset Status', 'Replacement Cost (Each)', 'Total Item Cost']]
-    for item in serviceable_items:
-        item_total_cost = item.replacement_cost * item.quantity if item.replacement_cost else Decimal('0.00')
-        data.append([item.name, str(item.quantity), item.asset_status.value, f"${item.replacement_cost:.2f}" if item.replacement_cost else "N/A", f"${item_total_cost:.2f}"])
-
-    table = Table(data)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    tbl = Table(rows, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",   (0, 0), (-1, 0),  colors.HexColor("#2b2b2b")),
+        ("TEXTCOLOR",    (0, 0), (-1, 0),  colors.whitesmoke),
+        ("FONTNAME",     (0, 0), (-1, 0),  "Helvetica-Bold"),
+        ("FONTSIZE",     (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING",(0, 0), (-1, 0),  8),
+        ("BACKGROUND",   (0, 1), (-1, -1), colors.HexColor("#f5f5f5")),
+        ("ROWBACKGROUNDS",(0,1), (-1,-1),  [colors.white, colors.HexColor("#f0f0f0")]),
+        ("GRID",         (0, 0), (-1, -1), 0.5, colors.grey),
+        ("ALIGN",        (3, 0), (3, -1),  "CENTER"),
+        ("ALIGN",        (6, 0), (7, -1),  "RIGHT"),
     ]))
-    story.append(table)
-    story.append(Spacer(1, 0.2 * inch))
-    story.append(Paragraph(f"Total Estimated Replacement Cost for Serviceable Items: ${total_replacement_cost:.2f}", styles['h2']))
+    story.append(tbl)
+    story.append(Spacer(1, 0.25 * inch))
+    story.append(Paragraph(f"<b>Total Estimated Replacement Value (Serviceable): ${total:.2f}</b>", styles["h3"]))
 
-    doc.build(story)
-
-    play_audio_confirmation(f"Insurance manifest generated for home {home.name}.")
+    SimpleDocTemplate(pdf_path, pagesize=letter).build(story)
+    logger.info("Insurance manifest written: %s", pdf_path)
     return pdf_path
+
+
+# ---------------------------------------------------------------------------
+# Internal
+# ---------------------------------------------------------------------------
+
+def _get_item_or_raise(db: Session, item_id: str) -> InventoryItem:
+    item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+    if not item:
+        raise NoResultFound(f"Item '{item_id}' not found.")
+    return item

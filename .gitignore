@@ -133,6 +133,13 @@ data/
 
 
 # -----------------------------------------------------------------------------
+# Inventory System -- user-generated files, never commit
+# -----------------------------------------------------------------------------
+inventory_files/          # uploaded receipts, warranty docs, item photos
+inventory/reports/        # generated PDF reports and label sheets
+
+
+# -----------------------------------------------------------------------------
 # OS artifacts
 # -----------------------------------------------------------------------------
 .DS_Store

@@ -1574,3 +1574,230 @@ select { font-family: inherit; }
   padding-left: 12px;
   max-width: 640px;
 }
+
+/* ============================================================
+   Sidebar — coming soon pill
+   ============================================================ */
+.sidebar-item--soon {
+  opacity: 0.7;
+}
+.sidebar-item--soon:hover {
+  opacity: 1;
+}
+.sidebar-soon-pill {
+  margin-left: auto;
+  font-size: 0.45rem;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 1px 4px;
+  line-height: 1.4;
+}
+
+/* ============================================================
+   Coming-soon page: feature card grid
+   ============================================================ */
+.coming-soon-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border-bright);
+  border-left: 3px solid var(--primary);
+  border-radius: 3px;
+  padding: 14px 18px;
+  margin-bottom: 32px;
+  max-width: 780px;
+}
+.coming-soon-tag {
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 2px;
+  padding: 3px 8px;
+  margin-top: 1px;
+}
+.coming-soon-text {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.feature-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  max-width: 900px;
+}
+.feature-card-grid--2col {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.feature-card:hover {
+  border-color: var(--border-bright);
+}
+.feature-card--locked {
+  opacity: 0.72;
+}
+.feature-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.feature-card-icon {
+  color: var(--primary);
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+.feature-card-title {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  color: var(--text);
+  flex: 1;
+}
+.feature-card-badge {
+  font-family: var(--font-display);
+  font-size: 0.45rem;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 2px 6px;
+}
+.feature-card-desc {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin: 0;
+}
+.feature-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.feature-tag {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 2px 7px;
+}
+
+/* ============================================================
+   Memory page — add fact form
+   ============================================================ */
+.mem-add-fact-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--bg-card);
+  border: 1px solid var(--border-bright);
+  border-radius: 3px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+.mem-add-fact-input {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  background: var(--bg);
+  color: var(--primary);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 7px 12px;
+  width: 180px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.mem-add-fact-input--wide {
+  flex: 1;
+  min-width: 180px;
+}
+.mem-add-fact-input:focus {
+  border-color: var(--primary);
+  box-shadow: var(--glow-sm);
+}
+.mem-add-fact-input::placeholder {
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+.mem-add-fact-submit {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  padding: 7px 18px;
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.mem-add-fact-submit:hover:not(:disabled) {
+  background: rgba(var(--primary-rgb, 0,255,180), 0.08);
+  box-shadow: var(--glow-sm);
+}
+.mem-add-fact-submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.mem-add-fact-error {
+  font-size: 0.75rem;
+  color: var(--error);
+  width: 100%;
+}
+.mem-page-add-btn {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--secondary);
+  border: 1px solid var(--secondary);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.mem-page-add-btn:hover {
+  background: rgba(0,200,255,0.06);
+}
+
+/* ============================================================
+   Settings page — cloud fallback config block
+   ============================================================ */
+.fallback-config {
+  margin-top: 10px;
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* page-subtitle used in new pages without dot */
+.page-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}

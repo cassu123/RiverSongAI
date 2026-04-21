@@ -10,7 +10,8 @@ git pull origin main
 
 echo "==> Installing Python dependencies..."
 source venv/bin/activate
-pip install -r requirements.txt --quiet
+pip install "setuptools<71" --quiet
+pip install -r requirements.txt --no-build-isolation --quiet
 
 echo "==> Building frontend..."
 cd frontend
