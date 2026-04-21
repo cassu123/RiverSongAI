@@ -3,17 +3,24 @@ api/routes/memory.py
 
 Memory CRUD endpoints for the Memory page UI.
 
-GET  /api/memory/facts?user_id=default        -- all facts for a user
-DELETE /api/memory/facts/{fact_id}             -- delete one fact by id
-GET  /api/memory/preferences?user_id=default  -- all preferences for a user
-GET  /api/memory/summaries?user_id=default    -- recent summaries for a user
+GET    /api/memory/facts?user_id=default        -- all facts for a user
+POST   /api/memory/facts?user_id=default        -- create / upsert a fact
+DELETE /api/memory/facts/{fact_id}              -- delete one fact by id
+GET    /api/memory/preferences?user_id=default  -- all preferences for a user
+GET    /api/memory/summaries?user_id=default    -- recent summaries for a user
 """
 
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/memory", tags=["memory"])
+
+
+class FactCreate(BaseModel):
+    key: str
+    value: str
 
 
 def _mm(request: Request):
@@ -38,6 +45,26 @@ async def get_facts(request: Request, user_id: str = "default"):
         }
         for f in facts
     ]
+
+
+@router.post("/facts", status_code=201)
+async def create_fact(body: FactCreate, request: Request, user_id: str = "default"):
+    if not body.key.strip() or not body.value.strip():
+        raise HTTPException(status_code=422, detail="key and value are required")
+    mm = _mm(request)
+    await mm.upsert_fact(user_id=user_id, key=body.key, value=body.value, source="manual")
+    facts = await mm.get_facts(user_id)
+    created = next((f for f in reversed(facts) if f.key == body.key.lower().strip()), None)
+    if created:
+        return {
+            "id":         created.id,
+            "key":        created.key,
+            "value":      created.value,
+            "source":     created.source,
+            "created_at": created.created_at.isoformat() if created.created_at else None,
+            "updated_at": created.updated_at.isoformat() if created.updated_at else None,
+        }
+    return {"status": "ok"}
 
 
 @router.delete("/facts/{fact_id}", status_code=204)

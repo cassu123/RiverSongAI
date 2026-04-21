@@ -14,8 +14,14 @@ import UsersPage          from './pages/UsersPage.jsx'
 import KillSwitchPage     from './pages/KillSwitchPage.jsx'
 import ProfilePage        from './pages/ProfilePage.jsx'
 import SettingsPage       from './pages/SettingsPage.jsx'
+import FeedsPage          from './pages/FeedsPage.jsx'
+import GooglePage         from './pages/GooglePage.jsx'
+import CommercePage       from './pages/CommercePage.jsx'
+import ReadingPage        from './pages/ReadingPage.jsx'
+import AnalyticsPage      from './pages/AnalyticsPage.jsx'
+import InventoryPage      from './pages/InventoryPage.jsx'
 
-const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch'])
+const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'analytics'])
 
 function load(key, fallback) {
   try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback }
@@ -127,6 +133,12 @@ export default function App() {
               />
             )}
             {currentPage === 'settings'   && <SettingsPage />}
+            {currentPage === 'feeds'      && <FeedsPage />}
+            {currentPage === 'google'     && <GooglePage />}
+            {currentPage === 'commerce'   && <CommercePage />}
+            {currentPage === 'reading'    && <ReadingPage />}
+            {currentPage === 'analytics'  && <AnalyticsPage />}
+            {currentPage === 'inventory'  && <InventoryPage />}
           </div>
         </ErrorBoundary>
       </main>

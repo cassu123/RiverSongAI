@@ -1,16 +1,27 @@
 import React, { useState } from 'react'
 
 const USER_ITEMS = [
-  { key: 'speak',  label: 'SPEAK',  icon: IconSpeak },
-  { key: 'memory', label: 'MEMORY', icon: IconMemory },
+  { key: 'speak',     label: 'SPEAK',     icon: IconSpeak },
+  { key: 'memory',    label: 'MEMORY',    icon: IconMemory },
+  { key: 'inventory', label: 'INVENTORY', icon: IconInventory },
+  { key: 'feeds',     label: 'FEEDS',     icon: IconFeeds,    soon: true },
+  { key: 'google',    label: 'GOOGLE',    icon: IconGoogle,   soon: true },
+  { key: 'commerce',  label: 'COMMERCE',  icon: IconCommerce, soon: true },
+  { key: 'reading',   label: 'READING',   icon: IconReading,  soon: true },
 ]
 
 const ADMIN_ITEMS = [
-  { key: 'dashboard',  label: 'DASHBOARD', icon: IconDashboard },
+  { key: 'dashboard',  label: 'DASHBOARD',  icon: IconDashboard },
   { key: 'speak',      label: 'SPEAK',      icon: IconSpeak },
   { key: 'memory',     label: 'MEMORY',     icon: IconMemory },
+  { key: 'inventory',  label: 'INVENTORY',  icon: IconInventory },
   { key: 'routines',   label: 'ROUTINES',   icon: IconRoutines },
   { key: 'home',       label: 'HOME',       icon: IconHome },
+  { key: 'analytics',  label: 'ANALYTICS',  icon: IconAnalytics, soon: true },
+  { key: 'feeds',      label: 'FEEDS',      icon: IconFeeds,     soon: true },
+  { key: 'google',     label: 'GOOGLE',     icon: IconGoogle,    soon: true },
+  { key: 'commerce',   label: 'COMMERCE',   icon: IconCommerce,  soon: true },
+  { key: 'reading',    label: 'READING',    icon: IconReading,   soon: true },
   { key: 'users',      label: 'USERS',      icon: IconUsers },
   { key: 'killswitch', label: 'KILL SW.',   icon: IconKill },
 ]
@@ -31,16 +42,17 @@ export default function Sidebar({ currentPage, onNavigate, isAdmin, showAdminTog
       </div>
 
       <nav className="sidebar-nav" aria-label="Main navigation">
-        {items.map(({ key, label, icon: Icon }) => (
+        {items.map(({ key, label, icon: Icon, soon }) => (
           <button
             key={key}
-            className={`sidebar-item ${currentPage === key ? 'sidebar-item--active' : ''} ${key === 'killswitch' ? 'sidebar-item--kill' : ''}`}
+            className={`sidebar-item ${currentPage === key ? 'sidebar-item--active' : ''} ${key === 'killswitch' ? 'sidebar-item--kill' : ''} ${soon ? 'sidebar-item--soon' : ''}`}
             onClick={() => onNavigate(key)}
             aria-current={currentPage === key ? 'page' : undefined}
             title={collapsed ? label : undefined}
           >
             <Icon />
             {!collapsed && <span className="sidebar-label">{label}</span>}
+            {!collapsed && soon && <span className="sidebar-soon-pill">SOON</span>}
           </button>
         ))}
       </nav>
@@ -200,6 +212,71 @@ function IconGear() {
       <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.2"/>
       <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"
         stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function IconInventory() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="1" y="3" width="14" height="10" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+      <line x1="1" y1="7" x2="15" y2="7" stroke="currentColor" strokeWidth="1.2"/>
+      <line x1="5" y1="3" x2="5" y2="13" stroke="currentColor" strokeWidth="1.2"/>
+      <line x1="7" y1="10" x2="12" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="7" y1="9" x2="9" y2="9" stroke="currentColor" strokeWidth="0" />
+    </svg>
+  )
+}
+
+function IconFeeds() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="1" y="2" width="14" height="3" rx="0.8" stroke="currentColor" strokeWidth="1.2"/>
+      <rect x="1" y="7" width="14" height="3" rx="0.8" stroke="currentColor" strokeWidth="1.2"/>
+      <rect x="1" y="12" width="9" height="3" rx="0.8" stroke="currentColor" strokeWidth="1.2"/>
+    </svg>
+  )
+}
+
+function IconGoogle() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
+      <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M2.5 5.5 C4 6.5 12 6.5 13.5 5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <path d="M2.5 10.5 C4 9.5 12 9.5 13.5 10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function IconCommerce() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M1 1h2l2 8h7l2-5H4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="7" cy="13.5" r="1.2" fill="currentColor"/>
+      <circle cx="12" cy="13.5" r="1.2" fill="currentColor"/>
+    </svg>
+  )
+}
+
+function IconReading() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M3 2a1.5 1.5 0 0 1 1.5-1.5H13v13H4.5A1.5 1.5 0 0 1 3 12V2z" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M3 12a1.5 1.5 0 0 0 1.5 1.5H13" stroke="currentColor" strokeWidth="1.2"/>
+      <line x1="6" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="6" y1="7" x2="10.5" y2="7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function IconAnalytics() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="2" y="9" width="2.5" height="5" rx="0.4" stroke="currentColor" strokeWidth="1.2"/>
+      <rect x="6.75" y="6" width="2.5" height="8" rx="0.4" stroke="currentColor" strokeWidth="1.2"/>
+      <rect x="11.5" y="3" width="2.5" height="11" rx="0.4" stroke="currentColor" strokeWidth="1.2"/>
+      <line x1="1" y1="15" x2="15" y2="15" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
     </svg>
   )
 }
