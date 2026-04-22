@@ -1,0 +1,207 @@
+/* Commerce Page — tab chrome */
+
+.commerce-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border, rgba(255,255,255,0.1));
+  padding-bottom: 0;
+}
+
+.commerce-tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim, #7a9cb8);
+  font-family: var(--font-display, 'Courier New', monospace);
+  font-size: 0.8rem;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  margin-bottom: -1px;
+}
+
+.commerce-tab-btn:hover {
+  color: var(--text, #e0f2fe);
+}
+
+.commerce-tab-btn.active {
+  color: var(--secondary, #00ffcc);
+  border-bottom-color: var(--secondary, #00ffcc);
+}
+
+.commerce-tab-content {
+  min-height: 400px;
+}
+
+/* Workspace badge in subtitle */
+.cp-ws-badge {
+  margin-left: 12px;
+  font-size: 0.75rem;
+  font-family: var(--font-display, inherit);
+  letter-spacing: 0.1em;
+  color: var(--primary);
+  border: 1px solid var(--border-bright);
+  padding: 2px 8px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+/* State messages */
+.cp-state {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+.cp-state--error {
+  color: var(--error);
+}
+
+/* Create workspace form */
+.cp-create-ws {
+  max-width: 520px;
+  margin-top: 24px;
+  padding: 24px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-bright);
+  border-radius: 4px;
+}
+
+.cp-create-ws-title {
+  font-family: var(--font-display, inherit);
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.cp-create-ws-sub {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin: 0 0 16px;
+}
+
+/* Shared form atoms for CommercePage */
+.cp-form-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.cp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.cp-label {
+  font-size: 0.68rem;
+  font-family: var(--font-display, inherit);
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.cp-input {
+  padding: 9px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 2px;
+  font-family: var(--font-body, inherit);
+  font-size: 0.9rem;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.cp-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.cp-input::placeholder {
+  color: var(--text-muted);
+}
+
+.cp-btn {
+  padding: 9px 18px;
+  font-family: var(--font-display, inherit);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.cp-btn--primary {
+  background: transparent;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.cp-btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  box-shadow: var(--glow-sm);
+}
+
+.cp-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Flash messages */
+.cp-flash {
+  padding: 8px 12px;
+  border-radius: 2px;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.cp-flash--ok {
+  background: color-mix(in srgb, var(--secondary) 12%, transparent);
+  border: 1px solid var(--secondary);
+  color: var(--secondary);
+}
+
+.cp-flash--err {
+  background: color-mix(in srgb, var(--error) 12%, transparent);
+  border: 1px solid var(--error);
+  color: var(--error);
+}
+
+/* Settings panel */
+.cp-settings-panel {
+  max-width: 560px;
+}
+
+.cp-settings-section {
+  padding: 20px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-bright);
+  border-radius: 4px;
+}
+
+.cp-settings-title {
+  font-family: var(--font-display, inherit);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  color: var(--primary);
+  margin-bottom: 16px;
+}
+
+.cp-settings-footer {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}

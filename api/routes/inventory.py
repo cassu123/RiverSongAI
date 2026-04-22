@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import logging
 import os
+import uuid as _uuid_mod
 from datetime import date
 from typing import Generator, Optional
 
@@ -61,6 +62,12 @@ from inventory.models import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
+
+
+def _uid(s) -> _uuid_mod.UUID:
+    if isinstance(s, _uuid_mod.UUID):
+        return s
+    return _uuid_mod.UUID(str(s))
 
 # ---------------------------------------------------------------------------
 # Database
@@ -265,7 +272,7 @@ def edit_home_route(home_id: str, body: HomePatch, db: Session = Depends(get_db)
 
 @router.delete("/homes/{home_id}", status_code=204)
 def delete_home_route(home_id: str, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
-    home = db.query(InvHome).filter(InvHome.id == home_id).first()
+    home = db.query(InvHome).filter(InvHome.id == _uid(home_id)).first()
     if not home:
         raise HTTPException(status_code=404, detail="Home not found")
     if str(home.owner_id) != str(user.id):
@@ -412,11 +419,11 @@ def list_collaborators(home_id: str, db: Session = Depends(get_db), user: InvUse
     try:
         set_active_home(db, str(user.id), home_id)
         rows = db.execute(
-            collaborators_table.select().where(collaborators_table.c.home_id == home_id)
+            collaborators_table.select().where(collaborators_table.c.home_id == _uid(home_id))
         ).fetchall()
         result = []
         for row in rows:
-            collab = db.query(InvUser).filter(InvUser.id == row.user_id).first()
+            collab = db.query(InvUser).filter(InvUser.id == _uid(row.user_id)).first()
             result.append({
                 "user_id": str(row.user_id),
                 "email":   collab.email if collab else None,
