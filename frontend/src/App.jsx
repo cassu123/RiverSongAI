@@ -19,7 +19,8 @@ import GooglePage         from './pages/GooglePage.jsx'
 import CommercePage       from './pages/CommercePage.jsx'
 import ReadingPage        from './pages/ReadingPage.jsx'
 import AnalyticsPage      from './pages/AnalyticsPage.jsx'
-import InventoryPage      from './pages/InventoryPage.jsx'
+import InventoryPage           from './pages/InventoryPage.jsx'
+import MaintenancePulsePage    from './pages/MaintenancePulsePage.jsx'
 
 const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'analytics'])
 
@@ -138,7 +139,8 @@ export default function App() {
             {currentPage === 'commerce'   && <CommercePage />}
             {currentPage === 'reading'    && <ReadingPage />}
             {currentPage === 'analytics'  && <AnalyticsPage />}
-            {currentPage === 'inventory'  && <InventoryPage />}
+            {currentPage === 'inventory'    && <InventoryPage />}
+            {currentPage === 'maintenance' && <MaintenancePulsePage />}
           </div>
         </ErrorBoundary>
       </main>

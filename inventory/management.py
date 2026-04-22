@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import logging
 import os
+import uuid as _uuid_mod
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
@@ -66,6 +67,13 @@ logger = logging.getLogger(__name__)
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _uid(s) -> _uuid_mod.UUID:
+    """Convert str/UUID to uuid.UUID for Uuid(as_uuid=True) column comparisons."""
+    if isinstance(s, _uuid_mod.UUID):
+        return s
+    return _uuid_mod.UUID(str(s))
 
 
 # ---------------------------------------------------------------------------
@@ -232,7 +240,7 @@ def delete_item(db: Session, user_id: str, item_id: str) -> None:
 
 def get_items_for_home(db: Session, user_id: str, home_id: str) -> list[InventoryItem]:
     set_active_home(db, user_id, home_id)
-    return db.query(InventoryItem).filter(InventoryItem.home_id == home_id).order_by(InventoryItem.name).all()
+    return db.query(InventoryItem).filter(InventoryItem.home_id == _uid(home_id)).order_by(InventoryItem.name).all()
 
 
 def get_item(db: Session, user_id: str, item_id: str) -> InventoryItem:
@@ -256,11 +264,11 @@ def fast_scan_item(db: Session, user_id: str, ein: str) -> InventoryItem:
 
 def issue_item(db: Session, admin_user_id: str, item_id: str, collaborator_user_id: str) -> InventoryItem:
     item = _get_item_or_raise(db, item_id)
-    home = db.query(InvHome).filter(InvHome.id == item.home_id).first()
+    home = db.query(InvHome).filter(InvHome.id == _uid(item.home_id)).first()
     if not home or str(home.owner_id) != admin_user_id:
         raise PermissionDeniedError("Only the home owner can issue items.")
 
-    collaborator = db.query(InvUser).filter(InvUser.id == collaborator_user_id).first()
+    collaborator = db.query(InvUser).filter(InvUser.id == _uid(collaborator_user_id)).first()
     if not collaborator:
         raise NoResultFound(f"User '{collaborator_user_id}' not found.")
     if item.current_custodian_id == collaborator.id:
@@ -276,7 +284,7 @@ def issue_item(db: Session, admin_user_id: str, item_id: str, collaborator_user_
 
 def return_item(db: Session, user_id: str, item_id: str) -> InventoryItem:
     item = _get_item_or_raise(db, item_id)
-    home = db.query(InvHome).filter(InvHome.id == item.home_id).first()
+    home = db.query(InvHome).filter(InvHome.id == _uid(item.home_id)).first()
     # Owner or current custodian can return
     if str(home.owner_id) != user_id and str(item.current_custodian_id) != user_id:
         raise PermissionDeniedError("Only the home owner or current custodian can return an item.")
@@ -301,13 +309,13 @@ def manage_collaborators(
     action: str,
     role: CollaboratorRole = CollaboratorRole.VIEWER,
 ) -> InvHome:
-    home = db.query(InvHome).filter(InvHome.id == home_id).first()
+    home = db.query(InvHome).filter(InvHome.id == _uid(home_id)).first()
     if not home:
         raise HomeNotFoundError(f"Home '{home_id}' not found.")
     if str(home.owner_id) != owner_user_id:
         raise PermissionDeniedError("Only the home owner can manage collaborators.")
 
-    collab = db.query(InvUser).filter(InvUser.id == collaborator_user_id).first()
+    collab = db.query(InvUser).filter(InvUser.id == _uid(collaborator_user_id)).first()
     if not collab:
         raise NoResultFound(f"User '{collaborator_user_id}' not found.")
 
@@ -317,22 +325,22 @@ def manage_collaborators(
         existing = db.execute(
             collaborators_table.select().where(
                 and_(
-                    collaborators_table.c.user_id == collaborator_user_id,
-                    collaborators_table.c.home_id == home_id,
+                    collaborators_table.c.user_id == _uid(collaborator_user_id),
+                    collaborators_table.c.home_id == _uid(home_id),
                 )
             )
         ).first()
         if existing:
             raise ValueError(f"'{collab.email}' is already a collaborator.")
         db.execute(collaborators_table.insert().values(
-            user_id=collaborator_user_id, home_id=home_id, role=role, created_at=_now()
+            user_id=_uid(collaborator_user_id), home_id=_uid(home_id), role=role, created_at=_now()
         ))
 
     elif action == "remove":
         result = db.execute(collaborators_table.delete().where(
             and_(
-                collaborators_table.c.user_id == collaborator_user_id,
-                collaborators_table.c.home_id == home_id,
+                collaborators_table.c.user_id == _uid(collaborator_user_id),
+                collaborators_table.c.home_id == _uid(home_id),
             )
         ))
         if result.rowcount == 0:
@@ -341,8 +349,8 @@ def manage_collaborators(
     elif action == "update_role":
         result = db.execute(collaborators_table.update().where(
             and_(
-                collaborators_table.c.user_id == collaborator_user_id,
-                collaborators_table.c.home_id == home_id,
+                collaborators_table.c.user_id == _uid(collaborator_user_id),
+                collaborators_table.c.home_id == _uid(home_id),
             )
         ).values(role=role))
         if result.rowcount == 0:
@@ -478,7 +486,7 @@ def generate_insurance_manifest(db: Session, user_id: str, home_id: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _get_item_or_raise(db: Session, item_id: str) -> InventoryItem:
-    item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+    item = db.query(InventoryItem).filter(InventoryItem.id == _uid(item_id)).first()
     if not item:
         raise NoResultFound(f"Item '{item_id}' not found.")
     return item

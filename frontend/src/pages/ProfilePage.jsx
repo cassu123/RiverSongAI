@@ -3,14 +3,15 @@ import './ProfilePage.css'
 import { useAuth } from '../context/AuthContext'
 
 const THEMES = [
-  { key: 'halo',      label: 'Halo Blue', primary: '#00aaff', bg: '#050a10' },
-  { key: 'redops',    label: 'Red Ops',   primary: '#ff3322', bg: '#0e0404' },
-  { key: 'combat',    label: 'Combat',    primary: '#00ff44', bg: '#030e04' },
-  { key: 'violet',    label: 'Violet',    primary: '#cc44ff', bg: '#080510' },
-  { key: 'amber',     label: 'Amber',     primary: '#FDB09E', bg: '#FEE7D9' },
-  { key: 'arctic',    label: 'Arctic',    primary: '#0066cc', bg: '#dce6f0' },
+  { key: 'halo',          label: 'Halo Blue',     primary: '#00aaff', bg: '#050a10' },
+  { key: 'crimson-dark',  label: 'Crimson Dark',  primary: '#c53a1f', bg: '#140c0b' },
+  { key: 'crimson-light', label: 'Crimson Light', primary: '#b91c1c', bg: '#fcf8f7' },
+  { key: 'combat',        label: 'Combat',        primary: '#00ff44', bg: '#030e04' },
+  { key: 'midnight-violet', label: 'Midnight Violet', primary: '#9b6b9e', bg: '#1a1025' },
+  { key: 'amber',     label: 'Peach Dream', primary: '#D66C59', bg: '#FEE7D9' },
+  { key: 'arctic',    label: 'Arctic',    primary: '#4A7AA8', bg: '#dce6f0' },
   { key: 'cyberpunk', label: 'Cyberpunk', primary: '#e8ff00', bg: '#050505' },
-  { key: 'dune',      label: 'Dune',      primary: '#c8a84b', bg: '#0a0804' },
+  { key: 'dune',      label: 'Dune',      primary: '#deb651', bg: '#0a0804' },
 ]
 
 export default function ProfilePage({ profile, onSave, theme, onThemeChange }) {

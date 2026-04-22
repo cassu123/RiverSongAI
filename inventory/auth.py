@@ -1,7 +1,16 @@
+import uuid as _uuid_mod
+
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import exists
 
 from .models import InvHome, collaborators_table
+
+
+def _uid(s) -> _uuid_mod.UUID:
+    """Convert a str/UUID to uuid.UUID for Uuid(as_uuid=True) column comparisons."""
+    if isinstance(s, _uuid_mod.UUID):
+        return s
+    return _uuid_mod.UUID(str(s))
 
 
 class PermissionDeniedError(Exception):
@@ -33,21 +42,20 @@ def set_active_home(db_session: Session, user_id: str, home_id: str) -> InvHome:
         HomeNotFoundError: If no home with the given home_id exists.
         PermissionDeniedError: If the user is not the owner and not a collaborator.
     """
-    home = db_session.query(InvHome).filter(InvHome.id == home_id).first()
+    home = db_session.query(InvHome).filter(InvHome.id == _uid(home_id)).first()
 
     if not home:
         raise HomeNotFoundError(f"InvHome with ID '{home_id}' not found.")
 
     # 1. Check if the user is the owner of the home.
     if str(home.owner_id) == user_id:
-        # In a real application, you would set this home in a user's session state.
         return home
 
     # 2. If not the owner, check if they are a collaborator.
     is_collaborator = db_session.query(
         exists().where(
-            collaborators_table.c.user_id == user_id,
-            collaborators_table.c.home_id == home_id,
+            collaborators_table.c.user_id == _uid(user_id),
+            collaborators_table.c.home_id == _uid(home_id),
         )
     ).scalar()
 

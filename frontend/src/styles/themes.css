@@ -25,25 +25,46 @@
   --glow-teal:    0 0 10px rgba(0,255,204,0.55);
 }
 
-/* ---- Red Ops — tactical red, alert stance ---- */
-[data-theme="redops"] {
-  --bg:           #0e0404;
-  --bg-panel:     #130505;
-  --bg-card:      #160606;
-  --bg-card-sel:  #1c0707;
-  --primary:      #ff3322;
-  --secondary:    #ff6644;
-  --accent:       #cc1100;
-  --error:        #ff6655;
-  --warn:         #ffaa00;
-  --text:         #f0c8c0;
-  --text-dim:     #7a3028;
-  --text-muted:   #3e1810;
-  --border:       #2a0a08;
-  --border-bright:#3e1010;
-  --glow-sm:      0 0 8px  rgba(255,51,34,0.45);
-  --glow-md:      0 0 18px rgba(255,51,34,0.70);
-  --glow-teal:    0 0 10px rgba(255,102,68,0.55);
+/* ---- Crimson Dark — deep, warm brick red, reduced eye strain ---- */
+[data-theme="crimson-dark"] {
+  --bg:           #140c0b;
+  --bg-panel:     #1c1110;
+  --bg-card:      #241514;
+  --bg-card-sel:  #2e1b1a;
+  --primary:      #c53a1f;
+  --secondary:    #a02b15;
+  --accent:       #8b2211;
+  --error:        #ef4444;
+  --warn:         #f59e0b;
+  --text:         #f2e8e6;
+  --text-dim:     #bda6a1;
+  --text-muted:   #8c7671;
+  --border:       #3e2422;
+  --border-bright:#54312d;
+  --glow-sm:      0 0 8px  rgba(197, 58, 31, 0.25);
+  --glow-md:      0 0 18px rgba(197, 58, 31, 0.40);
+  --glow-teal:    0 0 10px rgba(160, 43, 21, 0.35);
+}
+
+/* ---- Crimson Light — soft, professional light red variant ---- */
+[data-theme="crimson-light"] {
+  --bg:           #fcf8f7;
+  --bg-panel:     #f5ecea;
+  --bg-card:      #ede0de;
+  --bg-card-sel:  #e3d1ce;
+  --primary:      #b91c1c;
+  --secondary:    #991b1b;
+  --accent:       #7f1d1d;
+  --error:        #dc2626;
+  --warn:         #d97706;
+  --text:         #2b1d1b;
+  --text-dim:     #5c4541;
+  --text-muted:   #8f746f;
+  --border:       #d6beba;
+  --border-bright:#bda29d;
+  --glow-sm:      0 1px 4px rgba(185, 28, 28, 0.15);
+  --glow-md:      0 2px 8px rgba(185, 28, 28, 0.25);
+  --glow-teal:    0 1px 4px rgba(153, 27, 27, 0.20);
 }
 
 /* ---- Combat — terminal green, night-vision ---- */
@@ -67,46 +88,46 @@
   --glow-teal:    0 0 10px rgba(68,255,170,0.55);
 }
 
-/* ---- Violet — deep plum, magenta accents ---- */
-[data-theme="violet"] {
-  --bg:           #080510;
-  --bg-panel:     #0c0718;
-  --bg-card:      #0e081c;
-  --bg-card-sel:  #120a22;
-  --primary:      #cc44ff;
-  --secondary:    #ff44cc;
-  --accent:       #6622aa;
-  --error:        #ff4455;
-  --warn:         #ffaa44;
-  --text:         #f0ecfa;
-  --text-dim:     #a888c8;
-  --text-muted:   #5a3a78;
-  --border:       #1a0a2e;
-  --border-bright:#260e42;
-  --glow-sm:      0 0 8px  rgba(204,68,255,0.45);
-  --glow-md:      0 0 18px rgba(204,68,255,0.70);
-  --glow-teal:    0 0 10px rgba(255,68,204,0.55);
+/* ---- Midnight Violet — velvet, twilight, soft plum, elegant evening sky ---- */
+[data-theme="midnight-violet"] {
+  --bg:           #1a1025;
+  --bg-panel:     #140b1c;
+  --bg-card:      #1f142c;
+  --bg-card-sel:  #261a33;
+  --primary:      #9b6b9e;
+  --secondary:    #b38fbf;
+  --accent:       #c4a3d1;
+  --error:        #c96b6b;
+  --warn:         #c4a75a;
+  --text:         #f0eaf5;
+  --text-dim:     #b9a6cc;
+  --text-muted:   #7a6690;
+  --border:       #8b5e8f;
+  --border-bright:#a77bb8;
+  --glow-sm:      0 0 8px  rgba(155, 107, 158, 0.25);
+  --glow-md:      0 0 18px rgba(155, 107, 158, 0.40);
+  --glow-teal:    0 0 10px rgba(91, 138, 122, 0.35);
 }
 
-/* ---- Amber — creamy pastel, natural neutral peach ---- */
+/* ---- Peach Dream — creamy pastel, natural neutral peach ---- */
 [data-theme="amber"] {
   --bg:           #FEE7D9;
   --bg-panel:     #F6E7D8;
   --bg-card:      #FBD5C0;
   --bg-card-sel:  #FDC9AD;
-  --primary:      #FDB09E;
-  --secondary:    #CDEAC0;
-  --accent:       #FEBCA6;
+  --primary:      #D66C59;
+  --secondary:    #69A855;
+  --accent:       #E08573;
   --error:        #E06B5E;
   --warn:         #D4A373;
   --text:         #111827;
-  --text-dim:     #5B4B4E;
-  --text-muted:   #CC9C80;
+  --text-dim:     #4A383A;
+  --text-muted:   #9C6246;
   --border:       #FDC9AD;
   --border-bright:#FEBCA6;
-  --glow-sm:      0 1px 4px rgba(253,176,158,0.20);
-  --glow-md:      0 2px 8px rgba(253,176,158,0.30);
-  --glow-teal:    0 1px 4px rgba(205,234,192,0.25);
+  --glow-sm:      0 1px 4px rgba(214,108,89,0.20);
+  --glow-md:      0 2px 8px rgba(214,108,89,0.30);
+  --glow-teal:    0 1px 4px rgba(105,168,85,0.25);
 }
 
 /* ---- Arctic — daylight / accessibility, only light theme ---- */
@@ -115,9 +136,9 @@
   --bg-panel:     #e4ecf4;
   --bg-card:      #dce6f0;
   --bg-card-sel:  #cddae8;
-  --primary:      #0066cc;
-  --secondary:    #0099aa;
-  --accent:       #004499;
+  --primary:      #4A7AA8;
+  --secondary:    #558C96;
+  --accent:       #31577A;
   --error:        #cc2211;
   --warn:         #cc7700;
   --text:         #1a2a3a;
@@ -125,9 +146,9 @@
   --text-muted:   #8aaabf;
   --border:       #b8ccdd;
   --border-bright:#9ab8cf;
-  --glow-sm:      0 1px 4px rgba(0,102,204,0.20);
-  --glow-md:      0 2px 8px rgba(0,102,204,0.30);
-  --glow-teal:    0 1px 4px rgba(0,153,170,0.25);
+  --glow-sm:      0 1px 4px rgba(74,122,168,0.20);
+  --glow-md:      0 2px 8px rgba(74,122,168,0.30);
+  --glow-teal:    0 1px 4px rgba(85,140,150,0.25);
 }
 
 /* ---- Cyberpunk — neon yellow-green, magenta, dark desaturated ---- */
@@ -157,19 +178,19 @@
   --bg-panel:     #120d08;
   --bg-card:      #1a120a;
   --bg-card-sel:  #24190e;
-  --primary:      #c8a84b;
-  --secondary:    #c45518;
-  --accent:       #a38435;
-  --error:        #9e2a1b;
-  --warn:         #d2891e;
-  --text:         #faecd4;
-  --text-dim:     #ab9a80;
-  --text-muted:   #5c5040;
-  --border:       #2e2012;
-  --border-bright:#422e1a;
-  --glow-sm:      0 0 8px  rgba(200, 168, 75, 0.35);
-  --glow-md:      0 0 18px rgba(200, 168, 75, 0.55);
-  --glow-teal:    0 0 10px rgba(196, 85, 24, 0.45);
+  --primary:      #deb651;
+  --secondary:    #de6d33;
+  --accent:       #c29a3e;
+  --error:        #b83321;
+  --warn:         #e89f2e;
+  --text:         #fff4e0;
+  --text-dim:     #c4b396;
+  --text-muted:   #877660;
+  --border:       #422f1c;
+  --border-bright:#5e4429;
+  --glow-sm:      0 0 8px  rgba(222, 182, 81, 0.35);
+  --glow-md:      0 0 18px rgba(222, 182, 81, 0.55);
+  --glow-teal:    0 0 10px rgba(222, 109, 51, 0.45);
 }
 
 /* Light theme structural overrides */
@@ -181,9 +202,14 @@
 [data-theme="amber"] .conv-input-bar {
   background: rgba(254, 231, 217, 0.98);
 }
+[data-theme="crimson-light"] .sidebar,
+[data-theme="crimson-light"] .conv-input-bar {
+  background: rgba(252, 248, 247, 0.98);
+}
 
 [data-theme="arctic"] .sidebar-brand,
-[data-theme="amber"] .sidebar-brand {
+[data-theme="amber"] .sidebar-brand,
+[data-theme="crimson-light"] .sidebar-brand {
   border-bottom-color: var(--border);
 }
 
@@ -193,20 +219,26 @@
 [data-theme="amber"] .navbar {
   background: rgba(254, 231, 217, 0.96);
 }
+[data-theme="crimson-light"] .navbar {
+  background: rgba(252, 248, 247, 0.96);
+}
 
 [data-theme="arctic"] .card,
-[data-theme="amber"] .card {
+[data-theme="amber"] .card,
+[data-theme="crimson-light"] .card {
   background: var(--bg-card);
 }
 
 [data-theme="arctic"] .conv-text-input,
-[data-theme="amber"] .conv-text-input {
+[data-theme="amber"] .conv-text-input,
+[data-theme="crimson-light"] .conv-text-input {
   background: #ffffff;
   color: var(--text);
 }
 
 [data-theme="arctic"] .conv-text-input::placeholder,
-[data-theme="amber"] .conv-text-input::placeholder {
+[data-theme="amber"] .conv-text-input::placeholder,
+[data-theme="crimson-light"] .conv-text-input::placeholder {
   color: var(--text-muted);
 }
 
@@ -254,6 +286,7 @@
 
 /* Cyberpunk Typography */
 [data-theme="cyberpunk"] {
+  font-size: 18px; /* Slightly larger base font-size to scale all rem values */
   --font-display: 'Rajdhani', 'Share Tech Mono', 'Courier New', monospace;
   --font-body: 'Rajdhani', 'Share Tech Mono', 'Courier New', monospace;
 }
@@ -279,7 +312,7 @@
   font-weight: 300;
 }
 
-/* Amber Typography */
+/* Peach Dream Typography */
 [data-theme="amber"] {
   --font-display: 'Playfair Display', 'Georgia', serif;
   --font-body: 'Lato', 'Helvetica Neue', sans-serif;

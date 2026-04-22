@@ -1,29 +1,31 @@
 import React, { useState } from 'react'
 
 const USER_ITEMS = [
-  { key: 'speak',     label: 'SPEAK',     icon: IconSpeak },
-  { key: 'memory',    label: 'MEMORY',    icon: IconMemory },
-  { key: 'inventory', label: 'INVENTORY', icon: IconInventory },
-  { key: 'feeds',     label: 'FEEDS',     icon: IconFeeds,    soon: true },
-  { key: 'google',    label: 'GOOGLE',    icon: IconGoogle,   soon: true },
-  { key: 'commerce',  label: 'COMMERCE',  icon: IconCommerce, soon: true },
-  { key: 'reading',   label: 'READING',   icon: IconReading,  soon: true },
+  { key: 'speak',       label: 'SPEAK',       icon: IconSpeak },
+  { key: 'memory',      label: 'MEMORY',      icon: IconMemory },
+  { key: 'inventory',   label: 'INVENTORY',   icon: IconInventory },
+  { key: 'maintenance', label: 'MAINTENANCE', icon: IconWrench },
+  { key: 'commerce',    label: 'COMMERCE',    icon: IconCommerce },
+  { key: 'feeds',       label: 'FEEDS',       icon: IconFeeds,    soon: true },
+  { key: 'google',      label: 'GOOGLE',      icon: IconGoogle,   soon: true },
+  { key: 'reading',     label: 'READING',     icon: IconReading,  soon: true },
 ]
 
 const ADMIN_ITEMS = [
-  { key: 'dashboard',  label: 'DASHBOARD',  icon: IconDashboard },
-  { key: 'speak',      label: 'SPEAK',      icon: IconSpeak },
-  { key: 'memory',     label: 'MEMORY',     icon: IconMemory },
-  { key: 'inventory',  label: 'INVENTORY',  icon: IconInventory },
-  { key: 'routines',   label: 'ROUTINES',   icon: IconRoutines },
-  { key: 'home',       label: 'HOME',       icon: IconHome },
-  { key: 'analytics',  label: 'ANALYTICS',  icon: IconAnalytics, soon: true },
-  { key: 'feeds',      label: 'FEEDS',      icon: IconFeeds,     soon: true },
-  { key: 'google',     label: 'GOOGLE',     icon: IconGoogle,    soon: true },
-  { key: 'commerce',   label: 'COMMERCE',   icon: IconCommerce,  soon: true },
-  { key: 'reading',    label: 'READING',    icon: IconReading,   soon: true },
-  { key: 'users',      label: 'USERS',      icon: IconUsers },
-  { key: 'killswitch', label: 'KILL SW.',   icon: IconKill },
+  { key: 'dashboard',   label: 'DASHBOARD',   icon: IconDashboard },
+  { key: 'speak',       label: 'SPEAK',       icon: IconSpeak },
+  { key: 'memory',      label: 'MEMORY',      icon: IconMemory },
+  { key: 'inventory',   label: 'INVENTORY',   icon: IconInventory },
+  { key: 'maintenance', label: 'MAINTENANCE', icon: IconWrench },
+  { key: 'commerce',    label: 'COMMERCE',    icon: IconCommerce },
+  { key: 'routines',    label: 'ROUTINES',    icon: IconRoutines },
+  { key: 'home',        label: 'HOME',        icon: IconHome },
+  { key: 'analytics',   label: 'ANALYTICS',   icon: IconAnalytics, soon: true },
+  { key: 'feeds',       label: 'FEEDS',       icon: IconFeeds,     soon: true },
+  { key: 'google',      label: 'GOOGLE',      icon: IconGoogle,    soon: true },
+  { key: 'reading',     label: 'READING',     icon: IconReading,   soon: true },
+  { key: 'users',       label: 'USERS',       icon: IconUsers },
+  { key: 'killswitch',  label: 'KILL SW.',    icon: IconKill },
 ]
 
 export default function Sidebar({ currentPage, onNavigate, isAdmin, showAdminToggle, onAdminToggle, displayName, onLogout }) {
@@ -212,6 +214,16 @@ function IconGear() {
       <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.2"/>
       <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"
         stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function IconWrench() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M10.5 2a3.5 3.5 0 0 0-3.36 4.46L2 11.59 2.41 14 4 14.41 9.54 8.86A3.5 3.5 0 1 0 10.5 2z"
+        stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+      <circle cx="10.5" cy="5.5" r="1" fill="currentColor"/>
     </svg>
   )
 }
