@@ -23,7 +23,7 @@
 from __future__ import annotations
 
 import logging
-from typing import AsyncGenerator, List
+from typing import AsyncGenerator, List, Optional
 
 from google import genai
 from google.genai import types as genai_types

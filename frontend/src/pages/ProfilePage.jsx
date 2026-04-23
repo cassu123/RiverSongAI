@@ -3,10 +3,9 @@ import './ProfilePage.css'
 import { useAuth } from '../context/AuthContext'
 
 const THEMES = [
-  { key: 'halo',          label: 'Halo Blue',     primary: '#00aaff', bg: '#050a10' },
+  { key: 'halo',          label: 'Halo Blue',     primary: '#35a7ff', bg: '#080c13' },
   { key: 'crimson-dark',  label: 'Crimson Dark',  primary: '#c53a1f', bg: '#140c0b' },
-  { key: 'crimson-light', label: 'Crimson Light', primary: '#b91c1c', bg: '#fcf8f7' },
-  { key: 'combat',        label: 'Combat',        primary: '#00ff44', bg: '#030e04' },
+  { key: 'combat',        label: 'Combat',        primary: '#3dcc79', bg: '#0a100a' },
   { key: 'midnight-violet', label: 'Midnight Violet', primary: '#9b6b9e', bg: '#1a1025' },
   { key: 'amber',     label: 'Peach Dream', primary: '#D66C59', bg: '#FEE7D9' },
   { key: 'arctic',    label: 'Arctic',    primary: '#4A7AA8', bg: '#dce6f0' },

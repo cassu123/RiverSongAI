@@ -274,7 +274,7 @@ class AmazonProvider:
                 "python-amazon-sp-api not installed. "
                 "Run: pip install python-amazon-sp-api"
             )
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(self._executor, self._sync_get_inventory)
 
     async def get_low_stock_items(self) -> List[InventoryItem]:
@@ -308,7 +308,7 @@ class AmazonProvider:
             )
         if statuses is None:
             statuses = ["Pending", "Unshipped"]
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             self._executor, self._sync_get_orders, days_back, statuses
         )

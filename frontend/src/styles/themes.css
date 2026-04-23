@@ -4,25 +4,25 @@
    Shared tokens (fonts, radii, navbar-h) defined in global.css :root.
    ============================================================ */
 
-/* ---- Halo Blue (default — already set in :root, listed for completeness) ---- */
+/* ---- Halo Blue (Halo Video Game aesthetic) ---- */
 [data-theme="halo"] {
-  --bg:           #050a10;
-  --bg-panel:     #060d1a;
-  --bg-card:      #07101f;
-  --bg-card-sel:  #091626;
-  --primary:      #00aaff;
-  --secondary:    #00ffcc;
-  --accent:       #0066cc;
-  --error:        #ff4433;
-  --warn:         #ffaa00;
-  --text:         #b8d4ee;
-  --text-dim:     #3a6080;
-  --text-muted:   #1e3a52;
-  --border:       #0a2236;
-  --border-bright:#0d2f4a;
-  --glow-sm:      0 0 8px  rgba(0,170,255,0.45);
-  --glow-md:      0 0 18px rgba(0,170,255,0.70);
-  --glow-teal:    0 0 10px rgba(0,255,204,0.55);
+  --bg:           #050c14; /* Deeper space black/blue */
+  --bg-panel:     #08121f; /* Dark steel blue */
+  --bg-card:      #0c1a2d; /* Armor plating dark blue */
+  --bg-card-sel:  #10223a; /* Highlighted armor */
+  --primary:      #00e5ff; /* Holographic cyan / Cortana */
+  --secondary:    #0099ff; /* Deeper UI blue */
+  --accent:       #1967d2; /* ONI dark blue */
+  --error:        #e54b4b; /* Covenant red */
+  --warn:         #f5b841; /* Plasma yellow */
+  --text:         #e6f7ff; /* Frosty bright cyan text */
+  --text-dim:     #80b3ff; /* Subdued blue text */
+  --text-muted:   #4073bf;
+  --border:       #13315c; /* UNSC steel blue border */
+  --border-bright:#1d4a8a;
+  --glow-sm:      0 0 8px  rgba(0, 229, 255, 0.4);
+  --glow-md:      0 0 18px rgba(0, 229, 255, 0.6);
+  --glow-teal:    0 0 10px rgba(0, 153, 255, 0.5);
 }
 
 /* ---- Crimson Dark — deep, warm brick red, reduced eye strain ---- */
@@ -46,46 +46,25 @@
   --glow-teal:    0 0 10px rgba(160, 43, 21, 0.35);
 }
 
-/* ---- Crimson Light — soft, professional light red variant ---- */
-[data-theme="crimson-light"] {
-  --bg:           #fcf8f7;
-  --bg-panel:     #f5ecea;
-  --bg-card:      #ede0de;
-  --bg-card-sel:  #e3d1ce;
-  --primary:      #b91c1c;
-  --secondary:    #991b1b;
-  --accent:       #7f1d1d;
-  --error:        #dc2626;
-  --warn:         #d97706;
-  --text:         #2b1d1b;
-  --text-dim:     #5c4541;
-  --text-muted:   #8f746f;
-  --border:       #d6beba;
-  --border-bright:#bda29d;
-  --glow-sm:      0 1px 4px rgba(185, 28, 28, 0.15);
-  --glow-md:      0 2px 8px rgba(185, 28, 28, 0.25);
-  --glow-teal:    0 1px 4px rgba(153, 27, 27, 0.20);
-}
-
 /* ---- Combat — terminal green, night-vision ---- */
 [data-theme="combat"] {
-  --bg:           #030e04;
-  --bg-panel:     #051205;
-  --bg-card:      #061506;
-  --bg-card-sel:  #081a08;
-  --primary:      #00ff44;
-  --secondary:    #44ffaa;
-  --accent:       #008822;
-  --error:        #ff4433;
-  --warn:         #aaff00;
-  --text:         #b0f0c0;
-  --text-dim:     #2a6030;
-  --text-muted:   #163a1a;
-  --border:       #0a2210;
-  --border-bright:#0f3018;
-  --glow-sm:      0 0 8px  rgba(0,255,68,0.45);
-  --glow-md:      0 0 18px rgba(0,255,68,0.70);
-  --glow-teal:    0 0 10px rgba(68,255,170,0.55);
+  --bg:           #050805;
+  --bg-panel:     #091209;
+  --bg-card:      #0e1a0e;
+  --bg-card-sel:  #122412;
+  --primary:      #3dcc79;
+  --secondary:    #68d999;
+  --accent:       #2a8e54;
+  --error:        #ff4d4d;
+  --warn:         #ffcc00;
+  --text:         #d9ead3;
+  --text-dim:     #5c8368;
+  --text-muted:   #385240;
+  --border:       #1a331a;
+  --border-bright:#264d26;
+  --glow-sm:      0 0 8px  rgba(61, 204, 121, 0.4);
+  --glow-md:      0 0 18px rgba(61, 204, 121, 0.6);
+  --glow-teal:    0 0 10px rgba(104, 217, 153, 0.5);
 }
 
 /* ---- Midnight Violet — velvet, twilight, soft plum, elegant evening sky ---- */
@@ -202,14 +181,9 @@
 [data-theme="amber"] .conv-input-bar {
   background: rgba(254, 231, 217, 0.98);
 }
-[data-theme="crimson-light"] .sidebar,
-[data-theme="crimson-light"] .conv-input-bar {
-  background: rgba(252, 248, 247, 0.98);
-}
 
 [data-theme="arctic"] .sidebar-brand,
-[data-theme="amber"] .sidebar-brand,
-[data-theme="crimson-light"] .sidebar-brand {
+[data-theme="amber"] .sidebar-brand {
   border-bottom-color: var(--border);
 }
 
@@ -219,32 +193,66 @@
 [data-theme="amber"] .navbar {
   background: rgba(254, 231, 217, 0.96);
 }
-[data-theme="crimson-light"] .navbar {
-  background: rgba(252, 248, 247, 0.96);
-}
 
 [data-theme="arctic"] .card,
-[data-theme="amber"] .card,
-[data-theme="crimson-light"] .card {
+[data-theme="amber"] .card {
   background: var(--bg-card);
 }
 
 [data-theme="arctic"] .conv-text-input,
-[data-theme="amber"] .conv-text-input,
-[data-theme="crimson-light"] .conv-text-input {
+[data-theme="amber"] .conv-text-input {
   background: #ffffff;
   color: var(--text);
 }
 
 [data-theme="arctic"] .conv-text-input::placeholder,
-[data-theme="amber"] .conv-text-input::placeholder,
-[data-theme="crimson-light"] .conv-text-input::placeholder {
+[data-theme="amber"] .conv-text-input::placeholder {
   color: var(--text-muted);
 }
 
 /* ============================================================
    Theme-Specific Textures & Effects
    ============================================================ */
+
+/* Halo Blue Effects */
+[data-theme="halo"] body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  /* Hexagonal/grid holographic overlay feel */
+  background: 
+    linear-gradient(rgba(0, 229, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, 0.02) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+[data-theme="halo"] .card {
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.15), inset 0 0 10px rgba(0, 229, 255, 0.05);
+  border: 1px solid var(--border-bright);
+}
+
+/* Combat Effects */
+[data-theme="combat"] body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  /* CRT scanline effect */
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 3px,
+    rgba(61, 204, 121, 0.04) 3px,
+    rgba(61, 204, 121, 0.04) 6px
+  );
+}
+
+[data-theme="combat"] .card {
+  box-shadow: inset 0 0 12px rgba(61, 204, 121, 0.1);
+}
 
 /* Cyberpunk Effects */
 [data-theme="cyberpunk"] body::before {
@@ -283,6 +291,34 @@
 /* ============================================================
    Theme-Specific Typography
    ============================================================ */
+
+/* Halo Blue Typography */
+[data-theme="halo"] {
+  --font-display: 'Orbitron', 'Rajdhani', sans-serif;
+  --font-body: 'Rajdhani', 'Segoe UI', sans-serif;
+}
+
+[data-theme="halo"] .page-title,
+[data-theme="halo"] .card-title,
+[data-theme="halo"] .sidebar-label {
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Combat Typography */
+[data-theme="combat"] {
+  --font-display: 'Courier New', Courier, monospace;
+  --font-body: 'Courier New', Courier, monospace;
+}
+
+[data-theme="combat"] .page-title,
+[data-theme="combat"] .card-title,
+[data-theme="combat"] .sidebar-label {
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  text-transform: uppercase;
+}
 
 /* Cyberpunk Typography */
 [data-theme="cyberpunk"] {

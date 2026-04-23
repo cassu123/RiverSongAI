@@ -71,6 +71,7 @@ from commercial_inventory.management import (
     update_member_role,
     update_product,
     update_sale_status,
+    update_supplier,
 )
 from commercial_inventory.models import (
     Base,
@@ -113,9 +114,8 @@ def get_current_biz_user(request: Request, db: Session = Depends(get_db)) -> Biz
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
-    try:
-        payload = decode_token(auth.removeprefix("Bearer ").strip())
-    except Exception:
+    payload = decode_token(auth.removeprefix("Bearer ").strip())
+    if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     user_id      = str(payload.get("sub", ""))
@@ -517,13 +517,20 @@ async def upload_product_image(
     user: BizUser = Depends(get_current_biz_user),
 ):
     try:
-        p = get_product(db, user, product_id)
+        allowed_types = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+        mime = file.content_type or ""
+        if mime not in allowed_types:
+            raise HTTPException(status_code=415, detail="Unsupported image type. Use JPEG, PNG, WebP, or GIF.")
         data = await file.read()
-        mime = file.content_type or "image/jpeg"
+        if len(data) > 5 * 1024 * 1024:  # 5 MB limit
+            raise HTTPException(status_code=413, detail="Image must be under 5 MB.")
+        p = get_product(db, user, product_id)
         p.image_data = f"data:{mime};base64,{base64.b64encode(data).decode()}"
         db.commit()
         db.refresh(p)
         return _ser_product(p)
+    except HTTPException:
+        raise
     except Exception as e:
         raise _http(e)
 

@@ -21,8 +21,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import googlemaps
 
@@ -223,16 +224,7 @@ class GoogleMapsProvider:
 # -------------------------------------------------------------------------
 
 def _strip_html(text: str) -> str:
-    """
-    Remove HTML tags from a string.
-
-    Args:
-        text: HTML string from a Google Maps step instruction.
-
-    Returns:
-        Plain-text string with tags removed.
-    """
-    import re
+    """Remove HTML tags from a string."""
     return re.sub(r"<[^>]+>", " ", text).strip()
 
 

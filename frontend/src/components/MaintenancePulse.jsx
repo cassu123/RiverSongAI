@@ -18,7 +18,7 @@ async function apiFetch(path, token, opts = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Inline vehicle form (add or edit)
+// Vehicle form
 // ---------------------------------------------------------------------------
 
 const BLANK_VEHICLE = { make: '', model: '', year: '', trim: '', nickname: '', vehicle_type: 'auto', color: '', vin: '' };
@@ -85,7 +85,7 @@ function VehicleForm({ initial, onSave, onCancel, saveLabel }) {
 }
 
 // ---------------------------------------------------------------------------
-// Specs editor — inline, no modal
+// Specs editor
 // ---------------------------------------------------------------------------
 
 function SpecsEditor({ vehicle, token, onUpdated }) {
@@ -102,11 +102,7 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
     setNewFluid({ name: '', spec: '', volume: '' });
     onUpdated();
   });
-
-  const delFluid = async (id) => {
-    await apiFetch(`/api/vehicles/${vehicle.id}/specs/fluids/${id}`, token, { method: 'DELETE' });
-    onUpdated();
-  };
+  const delFluid = async (id) => { await apiFetch(`/api/vehicles/${vehicle.id}/specs/fluids/${id}`, token, { method: 'DELETE' }); onUpdated(); };
 
   const addTorque = () => withBusy(async () => {
     if (!newTorque.name.trim()) return;
@@ -117,11 +113,7 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
     setNewTorque({ name: '', ft_lb: '', nm: '' });
     onUpdated();
   });
-
-  const delTorque = async (id) => {
-    await apiFetch(`/api/vehicles/${vehicle.id}/specs/torques/${id}`, token, { method: 'DELETE' });
-    onUpdated();
-  };
+  const delTorque = async (id) => { await apiFetch(`/api/vehicles/${vehicle.id}/specs/torques/${id}`, token, { method: 'DELETE' }); onUpdated(); };
 
   const addPoint = () => withBusy(async () => {
     if (!newPoint.trim()) return;
@@ -132,11 +124,7 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
     setNewPoint('');
     onUpdated();
   });
-
-  const delPoint = async (id) => {
-    await apiFetch(`/api/vehicles/${vehicle.id}/specs/checkpoints/${id}`, token, { method: 'DELETE' });
-    onUpdated();
-  };
+  const delPoint = async (id) => { await apiFetch(`/api/vehicles/${vehicle.id}/specs/checkpoints/${id}`, token, { method: 'DELETE' }); onUpdated(); };
 
   return (
     <div className="specs-editor">
@@ -199,6 +187,316 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
 }
 
 // ---------------------------------------------------------------------------
+// Settings — People management
+// ---------------------------------------------------------------------------
+
+function PeopleSettings({ token, people, onRefresh }) {
+  const [emailInput, setEmailInput] = useState('');
+  const [busy, setBusy]             = useState(false);
+  const [msg, setMsg]               = useState('');
+  const [error, setError]           = useState('');
+  const [search, setSearch]         = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(null); // person id
+
+  const flash = (ok, text) => {
+    if (ok) setMsg(text); else setError(text);
+    setTimeout(() => { setMsg(''); setError(''); }, 4000);
+  };
+
+  const handleAdd = async () => {
+    if (!emailInput.trim()) return;
+    setBusy(true);
+    try {
+      await apiFetch('/api/vehicles/people', token, { method: 'POST', body: JSON.stringify({ email: emailInput.trim().toLowerCase() }) });
+      setEmailInput('');
+      flash(true, 'Person added to roster.');
+      onRefresh();
+    } catch (e) {
+      flash(false, e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemove = async (person, force = false) => {
+    setBusy(true);
+    try {
+      const path = force ? `/api/vehicles/people/${person.id}/force` : `/api/vehicles/people/${person.id}`;
+      await apiFetch(path, token, { method: 'DELETE' });
+      setConfirmDelete(null);
+      flash(true, `${person.display_name || person.email} removed.`);
+      onRefresh();
+    } catch (e) {
+      if (e.message.includes('still assigned')) {
+        setConfirmDelete(person);
+      } else {
+        flash(false, e.message);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const filtered = people.filter((p) => {
+    const q = search.toLowerCase();
+    return !q || p.email.toLowerCase().includes(q) || (p.display_name || '').toLowerCase().includes(q);
+  });
+
+  return (
+    <div className="mp-settings-section">
+      <div className="mp-settings-label">PEOPLE ROSTER</div>
+      <p className="mp-settings-hint">Add app users by email. They must have accepted an invitation before being added.</p>
+
+      {msg   && <div className="mp-flash mp-flash--ok">{msg}</div>}
+      {error && <div className="mp-flash mp-flash--err">{error}</div>}
+
+      {/* Confirm force-delete dialog */}
+      {confirmDelete && (
+        <div className="mp-confirm-box">
+          <div className="mp-confirm-msg">
+            <strong>{confirmDelete.display_name || confirmDelete.email}</strong> is still assigned to{' '}
+            {confirmDelete.vehicle_ids?.length || 'some'} vehicle(s).<br />
+            Force delete will unassign them from all vehicles. Service history will be preserved.
+          </div>
+          <div className="mp-confirm-actions">
+            <button className="cyber-btn btn-xs" onClick={() => setConfirmDelete(null)}>CANCEL</button>
+            <button className="cyber-btn btn-xs btn-danger" onClick={() => handleRemove(confirmDelete, true)} disabled={busy}>
+              FORCE DELETE
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add row */}
+      <div className="mp-add-person-row">
+        <input
+          className="cyber-input"
+          placeholder="user@example.com"
+          value={emailInput}
+          onChange={(e) => setEmailInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          style={{ flex: 1 }}
+        />
+        <button className="cyber-btn btn-xs btn-save" onClick={handleAdd} disabled={busy || !emailInput.trim()}>
+          {busy ? '...' : '+ ADD'}
+        </button>
+      </div>
+
+      {/* Search */}
+      {people.length > 3 && (
+        <input
+          className="cyber-input"
+          placeholder="Filter roster..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ marginBottom: 8 }}
+        />
+      )}
+
+      {/* People list */}
+      {filtered.length === 0 ? (
+        <div className="mp-empty-specs">
+          {people.length === 0 ? 'No people on roster yet.' : 'No matches.'}
+        </div>
+      ) : (
+        <ul className="mp-person-list">
+          {filtered.map((p) => (
+            <li key={p.id} className="mp-person-item">
+              <div className="mp-person-info">
+                <span className="mp-person-name">{p.display_name || p.email}</span>
+                <span className="mp-person-email">{p.display_name ? p.email : ''}</span>
+                {p.vehicle_ids?.length > 0 && (
+                  <span className="mp-person-tag">{p.vehicle_ids.length} vehicle{p.vehicle_ids.length !== 1 ? 's' : ''}</span>
+                )}
+              </div>
+              <button
+                className="del-spec-btn"
+                onClick={() => handleRemove(p)}
+                disabled={busy}
+                title="Remove from roster"
+              >✕</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Settings — Vehicle assignments
+// ---------------------------------------------------------------------------
+
+function AssignmentsSettings({ token, vehicles, people, onPeopleRefresh }) {
+  const [selectedVehicleId, setSelectedVehicleId] = useState(vehicles[0]?.id || '');
+  const [assignments, setAssignments]               = useState([]);
+  const [busy, setBusy]                             = useState(false);
+  const [msg, setMsg]                               = useState('');
+  const [error, setError]                           = useState('');
+
+  const flash = (ok, text) => {
+    if (ok) setMsg(text); else setError(text);
+    setTimeout(() => { setMsg(''); setError(''); }, 3000);
+  };
+
+  const fetchAssignments = useCallback(async () => {
+    if (!selectedVehicleId || !token) return;
+    try {
+      const data = await apiFetch(`/api/vehicles/${selectedVehicleId}/assignments`, token);
+      setAssignments(data);
+    } catch { setAssignments([]); }
+  }, [selectedVehicleId, token]);
+
+  useEffect(() => { fetchAssignments(); }, [fetchAssignments]);
+
+  const assignedPersonIds = new Set(assignments.map((a) => a.person_id));
+  const unassigned = people.filter((p) => !assignedPersonIds.has(p.id));
+
+  const handleAssign = async (personId) => {
+    setBusy(true);
+    try {
+      await apiFetch(`/api/vehicles/${selectedVehicleId}/assignments`, token, {
+        method: 'POST', body: JSON.stringify({ person_id: personId }),
+      });
+      flash(true, 'Assigned.');
+      fetchAssignments();
+      onPeopleRefresh();
+    } catch (e) { flash(false, e.message); }
+    finally { setBusy(false); }
+  };
+
+  const handleUnassign = async (personId) => {
+    setBusy(true);
+    try {
+      await apiFetch(`/api/vehicles/${selectedVehicleId}/assignments/${personId}`, token, { method: 'DELETE' });
+      flash(true, 'Unassigned.');
+      fetchAssignments();
+      onPeopleRefresh();
+    } catch (e) { flash(false, e.message); }
+    finally { setBusy(false); }
+  };
+
+  const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
+  const vehicleLabel = (v) => `${v.year ? v.year + ' ' : ''}${v.make} ${v.model}${v.nickname ? ` "${v.nickname}"` : ''}`;
+
+  return (
+    <div className="mp-settings-section">
+      <div className="mp-settings-label">VEHICLE ASSIGNMENTS</div>
+      <p className="mp-settings-hint">Assign people to specific vehicles. They will appear in the performer dropdown when logging maintenance.</p>
+
+      {msg   && <div className="mp-flash mp-flash--ok">{msg}</div>}
+      {error && <div className="mp-flash mp-flash--err">{error}</div>}
+
+      {vehicles.length === 0 ? (
+        <div className="mp-empty-specs">No vehicles in garage yet.</div>
+      ) : (
+        <>
+          <div className="pulse-field" style={{ marginBottom: 12 }}>
+            <label className="pulse-label">SELECT VEHICLE</label>
+            <select
+              className="pulse-select cyber-input"
+              value={selectedVehicleId}
+              onChange={(e) => setSelectedVehicleId(e.target.value)}
+            >
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id}>{vehicleLabel(v)}</option>
+              ))}
+            </select>
+          </div>
+
+          {people.length === 0 ? (
+            <div className="mp-empty-specs">Add people to the roster first (see People section above).</div>
+          ) : (
+            <div className="mp-assignment-grid">
+              {/* Assigned column */}
+              <div className="mp-assign-col">
+                <div className="mp-assign-col-label">ASSIGNED TO {selectedVehicle?.make.toUpperCase()}</div>
+                {assignments.length === 0 ? (
+                  <div className="mp-assign-empty">No one assigned yet.</div>
+                ) : (
+                  <ul className="mp-person-list">
+                    {assignments.map((a) => (
+                      <li key={a.person_id} className="mp-person-item mp-person-item--assigned">
+                        <div className="mp-person-info">
+                          <span className="mp-person-name">{a.person_display_name || a.person_email}</span>
+                          <span className="mp-person-email">{a.person_display_name ? a.person_email : ''}</span>
+                        </div>
+                        <button
+                          className="cyber-btn btn-xs btn-danger"
+                          onClick={() => handleUnassign(a.person_id)}
+                          disabled={busy}
+                        >REMOVE</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Unassigned column */}
+              {unassigned.length > 0 && (
+                <div className="mp-assign-col">
+                  <div className="mp-assign-col-label">AVAILABLE TO ASSIGN</div>
+                  <ul className="mp-person-list">
+                    {unassigned.map((p) => (
+                      <li key={p.id} className="mp-person-item">
+                        <div className="mp-person-info">
+                          <span className="mp-person-name">{p.display_name || p.email}</span>
+                          <span className="mp-person-email">{p.display_name ? p.email : ''}</span>
+                        </div>
+                        <button
+                          className="cyber-btn btn-xs btn-save"
+                          onClick={() => handleAssign(p.id)}
+                          disabled={busy}
+                        >+ ASSIGN</button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Settings tab — container
+// ---------------------------------------------------------------------------
+
+function SettingsPanel({ token, vehicles, people, onPeopleRefresh }) {
+  const [section, setSection] = useState('people');
+
+  return (
+    <div className="mp-settings-panel">
+      <div className="mp-settings-tabs">
+        <button
+          className={`mp-settings-tab ${section === 'people' ? 'active' : ''}`}
+          onClick={() => setSection('people')}
+        >PEOPLE</button>
+        <button
+          className={`mp-settings-tab ${section === 'assignments' ? 'active' : ''}`}
+          onClick={() => setSection('assignments')}
+        >VEHICLE ASSIGNMENTS</button>
+      </div>
+
+      {section === 'people' && (
+        <PeopleSettings token={token} people={people} onRefresh={onPeopleRefresh} />
+      )}
+      {section === 'assignments' && (
+        <AssignmentsSettings
+          token={token}
+          vehicles={vehicles}
+          people={people}
+          onPeopleRefresh={onPeopleRefresh}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
@@ -206,27 +504,30 @@ export default function MaintenancePulse() {
   const { token } = useAuth();
 
   const [vehicles, setVehicles]     = useState([]);
+  const [people, setPeople]         = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
 
-  // inline form state — 'none' | 'add' | 'edit'
-  const [formMode, setFormMode]     = useState('none');
+  const [formMode, setFormMode]     = useState('none'); // 'none' | 'add' | 'edit'
+  const [view, setView]             = useState('log');  // 'log' | 'specs' | 'history' | 'settings'
 
-  // view tabs — 'log' | 'specs' | 'history'
-  const [view, setView]             = useState('log');
+  // log form state
+  const [isProService, setIsProService]     = useState(false);
+  const [serviceCenter, setServiceCenter]   = useState('');
+  const [serviceType, setServiceType]       = useState('');
+  const [mileage, setMileage]               = useState('');
+  const [serviceDate, setServiceDate]       = useState(new Date().toISOString().split('T')[0]);
+  const [performedById, setPerformedById]   = useState('');
+  const [receiptFile, setReceiptFile]       = useState(null);
+  const [checkedPoints, setCheckedPoints]   = useState({});
+  const [saveStatus, setSaveStatus]         = useState('');
 
-  // log form
-  const [isProService, setIsProService] = useState(false);
-  const [serviceCenter, setServiceCenter] = useState('');
-  const [mileage, setMileage]       = useState('');
-  const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]);
-  const [receiptFile, setReceiptFile] = useState(null);
-  const [checkedPoints, setCheckedPoints] = useState({});
-  const [saveStatus, setSaveStatus] = useState('');
+  // assignments for currently selected vehicle (used in log dropdown)
+  const [vehicleAssignments, setVehicleAssignments] = useState([]);
 
   // history
-  const [logs, setLogs]             = useState([]);
+  const [logs, setLogs] = useState([]);
 
   // -------------------------------------------------------------------------
   // Data fetching
@@ -248,7 +549,24 @@ export default function MaintenancePulse() {
     }
   }, [token]);
 
-  useEffect(() => { fetchVehicles(); }, [fetchVehicles]);
+  const fetchPeople = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await apiFetch('/api/vehicles/people', token);
+      setPeople(data);
+    } catch { setPeople([]); }
+  }, [token]);
+
+  const fetchVehicleAssignments = useCallback(async () => {
+    if (!token || !selectedId) { setVehicleAssignments([]); return; }
+    try {
+      const data = await apiFetch(`/api/vehicles/${selectedId}/assignments`, token);
+      setVehicleAssignments(data);
+    } catch { setVehicleAssignments([]); }
+  }, [token, selectedId]);
+
+  useEffect(() => { fetchVehicles(); fetchPeople(); }, [fetchVehicles, fetchPeople]);
+  useEffect(() => { fetchVehicleAssignments(); }, [fetchVehicleAssignments]);
 
   const fetchLogs = useCallback(async () => {
     if (!token || !selectedId) return;
@@ -261,6 +579,9 @@ export default function MaintenancePulse() {
   useEffect(() => {
     if (view === 'history') fetchLogs();
   }, [view, fetchLogs]);
+
+  // reset performer when vehicle changes
+  useEffect(() => { setPerformedById(''); }, [selectedId]);
 
   // -------------------------------------------------------------------------
   // Vehicle CRUD
@@ -303,12 +624,14 @@ export default function MaintenancePulse() {
       passed: isProService ? true : !!checkedPoints[idx],
     }));
     const payload = {
-      service_date:   new Date(serviceDate).toISOString(),
-      odometer:       mileage ? Number(mileage) : null,
-      is_pro_service: isProService,
-      service_center: isProService ? serviceCenter : null,
-      notes:          '',
-      check_results:  checkResults,
+      service_date:    new Date(serviceDate).toISOString(),
+      odometer:        mileage ? Number(mileage) : null,
+      is_pro_service:  isProService,
+      service_center:  isProService ? serviceCenter : null,
+      service_type:    serviceType || null,
+      notes:           '',
+      performed_by_id: performedById || null,
+      check_results:   checkResults,
     };
     try {
       const log = await apiFetch(`/api/vehicles/${selectedId}/logs`, token, {
@@ -329,6 +652,8 @@ export default function MaintenancePulse() {
         setCheckedPoints({});
         setMileage('');
         setServiceCenter('');
+        setServiceType('');
+        setPerformedById('');
         setReceiptFile(null);
       }, 3000);
     } catch (e) {
@@ -360,7 +685,7 @@ export default function MaintenancePulse() {
   }
 
   // -------------------------------------------------------------------------
-  // Add Vehicle (empty garage)
+  // Empty garage
   // -------------------------------------------------------------------------
 
   if (vehicles.length === 0) {
@@ -370,15 +695,10 @@ export default function MaintenancePulse() {
           <h2 className="pulse-title">MAINTENANCE PULSE</h2>
           <div className="pulse-status-indicator" data-status="idle" />
         </div>
-
         {formMode === 'add' ? (
           <>
             <h3 className="section-subtitle">&gt; ADD FIRST VEHICLE</h3>
-            <VehicleForm
-              onSave={handleAddVehicle}
-              onCancel={() => setFormMode('none')}
-              saveLabel=">> ADD VEHICLE"
-            />
+            <VehicleForm onSave={handleAddVehicle} onCancel={() => setFormMode('none')} saveLabel=">> ADD VEHICLE" />
           </>
         ) : (
           <div className="mp-empty">
@@ -391,12 +711,19 @@ export default function MaintenancePulse() {
   }
 
   // -------------------------------------------------------------------------
-  // Main view (has vehicles)
+  // Main view
   // -------------------------------------------------------------------------
 
   const vehicleLabel = currentVehicle
     ? `${currentVehicle.year ? currentVehicle.year + ' ' : ''}${currentVehicle.make} ${currentVehicle.model}${currentVehicle.nickname ? ` "${currentVehicle.nickname}"` : ''}`
     : '';
+
+  const VIEW_TABS = [
+    { key: 'log',      label: 'LOG SERVICE' },
+    { key: 'specs',    label: 'EDIT SPECS' },
+    { key: 'history',  label: 'HISTORY' },
+    { key: 'settings', label: 'SETTINGS' },
+  ];
 
   return (
     <div className="pulse-container glass-panel">
@@ -414,15 +741,11 @@ export default function MaintenancePulse() {
       {formMode === 'add' && (
         <div className="pulse-inline-section">
           <h3 className="section-subtitle">&gt; ADD VEHICLE</h3>
-          <VehicleForm
-            onSave={handleAddVehicle}
-            onCancel={() => setFormMode('none')}
-            saveLabel=">> ADD VEHICLE"
-          />
+          <VehicleForm onSave={handleAddVehicle} onCancel={() => setFormMode('none')} saveLabel=">> ADD VEHICLE" />
         </div>
       )}
 
-      {/* ── Vehicle selector + controls ── */}
+      {/* ── Vehicle selector ── */}
       {formMode !== 'add' && (
         <div className="pulse-controls">
           <div className="pulse-field">
@@ -446,20 +769,15 @@ export default function MaintenancePulse() {
             </div>
           </div>
 
-          {/* Inline edit form */}
           {formMode === 'edit' && currentVehicle && (
             <div className="pulse-inline-section">
               <h3 className="section-subtitle">&gt; EDIT VEHICLE</h3>
               <VehicleForm
                 initial={{
-                  make: currentVehicle.make || '',
-                  model: currentVehicle.model || '',
-                  year: currentVehicle.year || '',
-                  trim: currentVehicle.trim || '',
-                  nickname: currentVehicle.nickname || '',
-                  vehicle_type: currentVehicle.vehicle_type || 'auto',
-                  color: currentVehicle.color || '',
-                  vin: currentVehicle.vin || '',
+                  make: currentVehicle.make || '', model: currentVehicle.model || '',
+                  year: currentVehicle.year || '', trim: currentVehicle.trim || '',
+                  nickname: currentVehicle.nickname || '', vehicle_type: currentVehicle.vehicle_type || 'auto',
+                  color: currentVehicle.color || '', vin: currentVehicle.vin || '',
                 }}
                 onSave={handleEditVehicle}
                 onCancel={() => setFormMode('none')}
@@ -468,16 +786,15 @@ export default function MaintenancePulse() {
             </div>
           )}
 
-          {/* View tabs */}
           {formMode !== 'edit' && (
             <div className="pulse-view-tabs">
-              {['log', 'specs', 'history'].map((t) => (
+              {VIEW_TABS.map((t) => (
                 <button
-                  key={t}
-                  className={`pulse-tab-btn ${view === t ? 'active' : ''}`}
-                  onClick={() => setView(t)}
+                  key={t.key}
+                  className={`pulse-tab-btn ${view === t.key ? 'active' : ''}`}
+                  onClick={() => setView(t.key)}
                 >
-                  {t === 'log' ? 'LOG SERVICE' : t === 'specs' ? 'EDIT SPECS' : 'HISTORY'}
+                  {t.label}
                 </button>
               ))}
             </div>
@@ -488,6 +805,42 @@ export default function MaintenancePulse() {
       {/* ── LOG VIEW ── */}
       {formMode === 'none' && view === 'log' && currentVehicle && (
         <div className="pulse-content animate-fade-in">
+
+          {/* Performer selector */}
+          {vehicleAssignments.length > 0 && (
+            <div className="pulse-field" style={{ marginBottom: 14 }}>
+              <label className="pulse-label">PERFORMED BY</label>
+              <select
+                className="pulse-select cyber-input"
+                value={performedById}
+                onChange={(e) => setPerformedById(e.target.value)}
+              >
+                <option value="">— Select person —</option>
+                {vehicleAssignments.map((a) => (
+                  <option key={a.person_id} value={a.person_id}>
+                    {a.person_display_name || a.person_email}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {vehicleAssignments.length === 0 && people.length > 0 && (
+            <div className="mp-assignment-warn">
+              ⚠ No people assigned to this vehicle. Go to <strong>SETTINGS → VEHICLE ASSIGNMENTS</strong> to assign someone.
+            </div>
+          )}
+
+          {/* Service type */}
+          <div className="pulse-field" style={{ marginBottom: 14 }}>
+            <label className="pulse-label">SERVICE TYPE</label>
+            <input
+              className="cyber-input"
+              placeholder="e.g. Oil Change, Tire Rotation, Brake Service"
+              value={serviceType}
+              onChange={(e) => setServiceType(e.target.value)}
+            />
+          </div>
+
           <label className="pulse-toggle" style={{ marginBottom: 16 }}>
             <input type="checkbox" checked={isProService} onChange={(e) => setIsProService(e.target.checked)} />
             <span className="toggle-slider"></span>
@@ -605,10 +958,18 @@ export default function MaintenancePulse() {
                     <span className={`history-type ${log.is_pro_service ? 'pro' : 'diy'}`}>
                       {log.is_pro_service ? 'PRO SERVICE' : 'DIY'}
                     </span>
+                    {log.service_type && (
+                      <span className="history-service-type">{log.service_type}</span>
+                    )}
                     {log.odometer != null && (
                       <span className="history-odo">{log.odometer.toLocaleString()} mi</span>
                     )}
                   </div>
+                  {log.performed_by && (
+                    <div className="history-performer">
+                      performed by <strong>{log.performed_by.display_name || log.performed_by.email}</strong>
+                    </div>
+                  )}
                   {log.service_center && <div className="history-center">{log.service_center}</div>}
                   {log.check_results.length > 0 && (
                     <div className="history-checks">
@@ -623,6 +984,18 @@ export default function MaintenancePulse() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── SETTINGS VIEW ── */}
+      {formMode === 'none' && view === 'settings' && (
+        <div className="pulse-content animate-fade-in">
+          <SettingsPanel
+            token={token}
+            vehicles={vehicles}
+            people={people}
+            onPeopleRefresh={() => { fetchPeople(); fetchVehicleAssignments(); }}
+          />
         </div>
       )}
 

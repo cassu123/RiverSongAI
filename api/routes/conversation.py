@@ -71,10 +71,15 @@ async def conversation_websocket(websocket: WebSocket) -> None:
     """
     await websocket.accept()
 
-    # Resolve user_id from JWT token if provided, else fall back to query param
+    # Require a valid JWT token — reject unauthenticated connections
     token: str = websocket.query_params.get("token", "")
     payload = decode_token(token) if token else None
-    user_id: str = (payload["sub"] if payload else None) or websocket.query_params.get("user_id", "default")
+    if not payload:
+        await websocket.send_json({"type": "error", "message": "Authentication required."})
+        await websocket.close(code=4001)
+        return
+
+    user_id: str = payload["sub"]
     logger.info("WebSocket connection from %s (user_id=%s).", websocket.client, user_id)
 
     memory_manager: MemoryManager | None = getattr(websocket.app.state, "memory_manager", None)

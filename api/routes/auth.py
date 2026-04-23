@@ -65,8 +65,8 @@ async def setup(request: Request, body: SetupBody):
     if await store.has_admin():
         raise HTTPException(status_code=409, detail="Admin account already exists.")
 
-    if len(body.password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
+    if len(body.password) < 12:
+        raise HTTPException(status_code=400, detail="Password must be at least 12 characters.")
 
     if await store.email_exists(body.email.lower()):
         raise HTTPException(status_code=409, detail="An account with that email already exists.")
@@ -90,8 +90,8 @@ async def setup(request: Request, body: SetupBody):
 
 @router.post("/signup")
 async def signup(request: Request, body: SignupBody):
-    if len(body.password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
+    if len(body.password) < 12:
+        raise HTTPException(status_code=400, detail="Password must be at least 12 characters.")
 
     store = _get_store(request)
 

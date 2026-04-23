@@ -135,6 +135,7 @@ class PiperTTS(TTSProvider):
                 input=text.encode("utf-8"),
                 capture_output=True,
                 timeout=60,
+                shell=False,
             )
         except subprocess.TimeoutExpired as exc:
             raise RuntimeError("Piper synthesis timed out after 60 seconds.") from exc

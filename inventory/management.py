@@ -384,6 +384,9 @@ def process_receipt(
     item.receipt_image_path = rel_path
 
     full_path = os.path.join(INVENTORY_FILES_BASE_DIR, rel_path)
+    # Path traversal guard
+    if not os.path.abspath(full_path).startswith(os.path.abspath(INVENTORY_FILES_BASE_DIR)):
+        raise ValueError("Invalid file path.")
     extracted_price, extracted_date = extract_data_from_receipt(full_path)
 
     item.purchase_price = (
