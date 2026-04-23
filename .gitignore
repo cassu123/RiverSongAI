@@ -16,6 +16,7 @@ instance/
 # OAuth credentials and tokens
 *client_secrets.json
 config_files/google_client_secrets.json
+config_files/google_config.json
 data/google_tokens/
 token.json
 token.pickle

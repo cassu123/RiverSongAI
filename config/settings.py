@@ -170,7 +170,7 @@ class Settings(BaseSettings):
     # Auth / JWT
     # -------------------------------------------------------------------------
     jwt_secret_key: str = Field(
-        default="change-me-in-production-use-a-long-random-string",
+        default="",
         description="Secret key for signing JWT tokens. Must be set in .env.",
     )
     jwt_algorithm: str = Field(default="HS256", description="JWT signing algorithm.")
@@ -401,6 +401,17 @@ class Settings(BaseSettings):
         """Treat an empty string in .env as None for Optional[int] device fields."""
         if v == "" or v is None:
             return None
+        return v
+
+    @field_validator("jwt_secret_key")
+    @classmethod
+    def validate_jwt_secret(cls, v: str) -> str:
+        """Refuse to start with a missing or weak JWT secret."""
+        if not v or len(v) < 32:
+            raise ValueError(
+                "JWT_SECRET_KEY must be set in .env and be at least 32 characters. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
         return v
 
     @field_validator("log_level")

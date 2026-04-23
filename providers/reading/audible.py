@@ -188,14 +188,14 @@ class AudibleProvider:
         self, user_id: str, limit: int = 20
     ) -> List[AudiobookEntry]:
         """Return up to *limit* audiobooks for *user_id*, sorted by purchase date."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             self._executor, self._sync_get_library, user_id, limit
         )
 
     async def get_last_listened(self, user_id: str) -> Optional[AudiobookEntry]:
         """Return the most recently played audiobook for *user_id*, or None."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             self._executor, self._sync_get_last_listened, user_id
         )

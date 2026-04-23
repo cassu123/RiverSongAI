@@ -75,6 +75,9 @@ async def create_routine(body: RoutineIn, request: Request, user_id: str = Depen
 async def update_routine(routine_id: str, body: RoutinePatch, request: Request, user_id: str = Depends(_require_user)):
     store = request.app.state.memory_manager._store
     fields = {k: v for k, v in body.model_dump().items() if v is not None}
+    # Preserve explicit False for boolean fields
+    if body.enabled is not None:
+        fields["enabled"] = body.enabled
     result = await store.update_routine(routine_id, user_id, fields)
     if not result:
         raise HTTPException(status_code=404, detail="Routine not found.")

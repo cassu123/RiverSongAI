@@ -12,8 +12,12 @@ GET    /api/memory/summaries?user_id=default    -- recent summaries for a user
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+from typing import Optional
+
+from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
+
+from core.auth import decode_token
 
 router = APIRouter(prefix="/api/memory", tags=["memory"])
 
@@ -30,8 +34,19 @@ def _mm(request: Request):
     return mm
 
 
+def _require_user(authorization: Optional[str]) -> str:
+    """Validate Bearer token and return the user's sub claim."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    payload = decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    return payload["sub"]
+
+
 @router.get("/facts")
-async def get_facts(request: Request, user_id: str = "default"):
+async def get_facts(request: Request, authorization: Optional[str] = Header(default=None)):
+    user_id = _require_user(authorization)
     mm = _mm(request)
     facts = await mm.get_facts(user_id)
     return [
@@ -48,7 +63,8 @@ async def get_facts(request: Request, user_id: str = "default"):
 
 
 @router.post("/facts", status_code=201)
-async def create_fact(body: FactCreate, request: Request, user_id: str = "default"):
+async def create_fact(body: FactCreate, request: Request, authorization: Optional[str] = Header(default=None)):
+    user_id = _require_user(authorization)
     if not body.key.strip() or not body.value.strip():
         raise HTTPException(status_code=422, detail="key and value are required")
     mm = _mm(request)
@@ -68,13 +84,15 @@ async def create_fact(body: FactCreate, request: Request, user_id: str = "defaul
 
 
 @router.delete("/facts/{fact_id}", status_code=204)
-async def delete_fact(fact_id: str, request: Request):
+async def delete_fact(fact_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
+    _require_user(authorization)
     mm = _mm(request)
     await mm.delete_fact(fact_id)
 
 
 @router.get("/preferences")
-async def get_preferences(request: Request, user_id: str = "default"):
+async def get_preferences(request: Request, authorization: Optional[str] = Header(default=None)):
+    user_id = _require_user(authorization)
     mm = _mm(request)
     prefs = await mm.get_preferences(user_id)
     return [
@@ -90,7 +108,8 @@ async def get_preferences(request: Request, user_id: str = "default"):
 
 
 @router.get("/summaries")
-async def get_summaries(request: Request, user_id: str = "default", limit: int = 50):
+async def get_summaries(request: Request, limit: int = 50, authorization: Optional[str] = Header(default=None)):
+    user_id = _require_user(authorization)
     mm = _mm(request)
     summaries = await mm._store.get_recent_summaries(user_id, limit=limit)
     return [

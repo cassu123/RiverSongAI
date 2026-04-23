@@ -57,8 +57,14 @@ class YouTubeMusicProvider:
 
     def __init__(self, audio_output_device: Optional[int] = None) -> None:
         self._output_device = audio_output_device
-        self._stop_event = asyncio.Event()
-        self._ytm = None  # Lazy-initialized ytmusicapi.YTMusic instance
+        self._stop_event: Optional[asyncio.Event] = None
+        self._ytm = None
+
+    def _get_stop_event(self) -> asyncio.Event:
+        """Return the stop event, creating it lazily inside the running loop."""
+        if self._stop_event is None:
+            self._stop_event = asyncio.Event()
+        return self._stop_event
 
     def _get_ytm(self):
         """Return a YTMusic instance, initializing it on first use."""
@@ -121,7 +127,7 @@ class YouTubeMusicProvider:
             RuntimeError: If yt-dlp fails to extract a stream.
             soundfile.SoundFileError: If the downloaded audio cannot be decoded.
         """
-        self._stop_event.clear()
+        self._get_stop_event().clear()
         url = f"https://www.youtube.com/watch?v={video_id}"
 
         loop = asyncio.get_running_loop()
@@ -163,7 +169,8 @@ class YouTubeMusicProvider:
 
     def stop(self) -> None:
         """Signal the currently playing audio to stop at the next buffer boundary."""
-        self._stop_event.set()
+        if self._stop_event is not None:
+            self._stop_event.set()
         logger.info("Stop signal sent to YouTube Music playback.")
 
     # -------------------------------------------------------------------------
@@ -194,7 +201,7 @@ class YouTubeMusicProvider:
                 "--quiet",
                 url,
             ]
-            result = subprocess.run(cmd, capture_output=True, timeout=60)
+            result = subprocess.run(cmd, capture_output=True, timeout=60, shell=False)
             if result.returncode != 0:
                 stderr = result.stderr.decode("utf-8", errors="replace").strip()
                 raise RuntimeError(
@@ -209,7 +216,7 @@ class YouTubeMusicProvider:
                     channels=audio_file.channels,
                     device=device,
                 ) as stream:
-                    while not self._stop_event.is_set():
+                    while not (self._stop_event and self._stop_event.is_set()):
                         data = audio_file.read(blocksize, dtype="float32")
                         if len(data) == 0:
                             break

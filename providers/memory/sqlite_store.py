@@ -38,12 +38,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import sqlite3
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Generator, List, Optional
+from typing import List, Optional
 
 from providers.memory.models import (
     ConversationSummary,
@@ -207,7 +207,7 @@ class SQLiteStore:
         try:
             conn.execute("ALTER TABLE users ADD COLUMN is_approved INTEGER NOT NULL DEFAULT 0")
             conn.commit()
-        except Exception:
+        except sqlite3.OperationalError:
             pass  # column already exists
 
     def close(self) -> None:
@@ -232,7 +232,7 @@ class SQLiteStore:
         return self._conn
 
     async def _run(self, fn, *args):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(self._executor, fn, *args)
 
     # -------------------------------------------------------------------------
@@ -663,14 +663,23 @@ class SQLiteStore:
         now = _now_str()
         parts, vals = [], []
         if role is not None:
-            parts.append("role = ?"); vals.append(role)
+            allowed_roles = {"admin", "user", "child", "guest"}
+            if role not in allowed_roles:
+                raise ValueError(f"Invalid role '{role}'.")
+            parts.append("role = ?")
+            vals.append(role)
         if is_approved is not None:
-            parts.append("is_approved = ?"); vals.append(int(is_approved))
+            parts.append("is_approved = ?")
+            vals.append(int(is_approved))
         if not parts:
             return False
-        parts.append("updated_at = ?"); vals.append(now)
+        parts.append("updated_at = ?")
+        vals.append(now)
         vals.append(user_id)
-        conn.execute(f"UPDATE users SET {', '.join(parts)} WHERE id = ?", vals)
+        conn.execute(
+            "UPDATE users SET " + ", ".join(parts) + " WHERE id = ?",
+            vals,
+        )
         conn.commit()
         return True
 
@@ -691,7 +700,6 @@ class SQLiteStore:
     # =========================================================================
 
     def _row_to_routine(self, row) -> dict:
-        import json
         return {
             "id":         row[0],
             "user_id":    row[1],
@@ -721,7 +729,6 @@ class SQLiteStore:
         return await self._run(self._sync_create_routine, routine)
 
     def _sync_create_routine(self, routine: dict) -> dict:
-        import json
         conn = self._get_conn()
         now = _now_str()
         rid = routine.get("id") or str(uuid.uuid4())
@@ -742,23 +749,28 @@ class SQLiteStore:
         return await self._run(self._sync_update_routine, routine_id, user_id, fields)
 
     def _sync_update_routine(self, routine_id: str, user_id: str, fields: dict) -> Optional[dict]:
-        import json
         conn = self._get_conn()
         allowed = {"name", "trigger", "time", "days", "prompt", "enabled", "last_run"}
-        parts, vals = [], []
+        set_parts, vals = [], []
         for k, v in fields.items():
             if k not in allowed:
                 continue
             if k == "days":
                 v = json.dumps(v)
-            if k == "enabled":
+            elif k == "enabled":
                 v = int(v)
-            parts.append(f"{k} = ?"); vals.append(v)
-        if not parts:
+            set_parts.append(f"{k} = ?")
+            vals.append(v)
+        if not set_parts:
             return None
-        parts.append("updated_at = ?"); vals.append(_now_str())
+        set_parts.append("updated_at = ?")
+        vals.append(_now_str())
         vals += [routine_id, user_id]
-        conn.execute(f"UPDATE routines SET {', '.join(parts)} WHERE id=? AND user_id=?", vals)
+        # Column names are safe: validated against allowlist above, never from user input
+        conn.execute(
+            "UPDATE routines SET " + ", ".join(set_parts) + " WHERE id=? AND user_id=?",
+            vals,
+        )
         conn.commit()
         row = conn.execute(
             "SELECT id,user_id,name,trigger,time,days,prompt,enabled,last_run,created_at,updated_at FROM routines WHERE id=? AND user_id=?",

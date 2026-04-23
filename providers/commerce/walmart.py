@@ -38,8 +38,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional
 
 import httpx
 
@@ -246,7 +247,6 @@ class WalmartProvider:
 
         Common status values: Created, Acknowledged, Shipped, Delivered, Cancelled.
         """
-        from datetime import datetime, timedelta, timezone
         created_start = (
             datetime.now(tz=timezone.utc) - timedelta(days=days_back)
         ).strftime("%Y-%m-%dT%H:%M:%SZ")

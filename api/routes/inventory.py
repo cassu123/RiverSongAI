@@ -98,9 +98,8 @@ def get_current_inv_user(request: Request, db: Session = Depends(get_db)) -> Inv
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
-    try:
-        payload = decode_token(auth.removeprefix("Bearer ").strip())
-    except Exception:
+    payload = decode_token(auth.removeprefix("Bearer ").strip())
+    if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     user_id      = str(payload.get("sub", ""))

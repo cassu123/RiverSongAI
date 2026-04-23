@@ -329,13 +329,9 @@ async def _handle_maps(transcript: str, user_id: str) -> str:
         if "to " in lower and any(
             kw in lower for kw in ("directions", "navigate", "how do i get", "take me")
         ):
-            # Simple extraction: split on " to " and take the last segment as destination.
-            parts = lower.split(" to ", 1)
             destination = transcript[transcript.lower().index(" to ") + 4:]
 
-            # Try to find an "from" clause; otherwise use "current location".
             if " from " in lower:
-                origin_raw = lower.split(" from ", 1)[1].split(" to ")[0]
                 origin = transcript[transcript.lower().index(" from ") + 6:
                                     transcript.lower().index(" to ")]
             else:

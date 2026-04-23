@@ -486,8 +486,13 @@ def attach_receipt(
     log = get_service_log(db, user_id, log_id)
     vehicle_dir = os.path.join(VEHICLE_FILES_BASE_DIR, f"vehicle_{log.vehicle_id}", "receipts")
     os.makedirs(vehicle_dir, exist_ok=True)
-    safe_name = os.path.basename(filename)
-    filepath  = os.path.join(vehicle_dir, safe_name)
+    safe_name = os.path.basename(filename).replace("..", "")
+    if not safe_name:
+        safe_name = "receipt"
+    filepath = os.path.join(vehicle_dir, safe_name)
+    # Ensure the resolved path stays within vehicle_dir (path traversal guard)
+    if not os.path.abspath(filepath).startswith(os.path.abspath(vehicle_dir)):
+        raise ValueError("Invalid filename.")
     with open(filepath, "wb") as f:
         f.write(file_data)
     log.receipt_path = filepath

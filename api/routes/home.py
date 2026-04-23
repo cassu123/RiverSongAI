@@ -11,7 +11,9 @@ POST /api/home/action          -- call a HA service (toggle, turn_on, turn_off, 
 from __future__ import annotations
 
 import logging
-from fastapi import APIRouter
+from typing import Optional
+
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 from config.settings import get_settings
@@ -36,15 +38,15 @@ def _is_configured() -> bool:
 @router.get("/status")
 async def get_status():
     if not _is_configured():
-        return {"configured": False, "reachable": False, "url": get_settings().home_assistant_url}
+        return {"configured": False, "reachable": False}
     try:
         client = _get_client()
         reachable = await client.ping()
         await client.close()
-        return {"configured": True, "reachable": reachable, "url": get_settings().home_assistant_url}
+        return {"configured": True, "reachable": reachable}
     except Exception as e:
         logger.warning("HA ping failed: %s", e)
-        return {"configured": True, "reachable": False, "url": get_settings().home_assistant_url}
+        return {"configured": True, "reachable": False}
 
 
 @router.get("/devices")

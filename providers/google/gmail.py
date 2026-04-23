@@ -25,7 +25,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
-import mimetypes
 from concurrent.futures import ThreadPoolExecutor
 from email.mime.text import MIMEText
 from typing import Any, Dict, List, Optional
