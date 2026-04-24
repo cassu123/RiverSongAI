@@ -1,40 +1,4 @@
-/* Commerce Page — tab chrome */
-
-.commerce-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid var(--border, rgba(255,255,255,0.1));
-  padding-bottom: 0;
-}
-
-.commerce-tab-btn {
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-dim, #7a9cb8);
-  font-family: var(--font-display, 'Courier New', monospace);
-  font-size: 0.8rem;
-  font-weight: bold;
-  letter-spacing: 0.12em;
-  padding: 10px 20px;
-  cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
-  margin-bottom: -1px;
-}
-
-.commerce-tab-btn:hover {
-  color: var(--text, #e0f2fe);
-}
-
-.commerce-tab-btn.active {
-  color: var(--secondary, #00ffcc);
-  border-bottom-color: var(--secondary, #00ffcc);
-}
-
-.commerce-tab-content {
-  min-height: 400px;
-}
+/* Commerce Page */
 
 /* Workspace badge in subtitle */
 .cp-ws-badge {

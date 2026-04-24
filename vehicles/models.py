@@ -8,11 +8,11 @@ Schema
 Vehicle             — a user's vehicle (private per user)
 VehicleFluidSpec    — fluid specs tied to a vehicle
 VehicleTorqueSpec   — torque values tied to a vehicle
-VehicleCheckPoint   — standard inspection checklist items for a vehicle
+VehicleCheckPoint   — inspection/maintenance items with interval tracking
 MaintenancePerson   — a person (app user) added to a garage owner's roster
 VehicleAssignment   — many-to-many: MaintenancePerson ↔ Vehicle
 ServiceLog          — a maintenance event (DIY or professional service)
-ServiceCheckResult  — per-checklist result for a DIY service log
+ServiceCheckResult  — per-checklist result with actual measurement values
 """
 
 from __future__ import annotations
@@ -52,12 +52,17 @@ class VehicleType(PyEnum):
     OTHER     = "other"
 
 
+class CheckStatus(PyEnum):
+    PASS = "pass"
+    WARN = "warn"
+    FAIL = "fail"
+
+
 class Vehicle(Base):
-    """A vehicle owned by a River Song user (private — not shared)."""
     __tablename__ = "vehicles"
 
     id               = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    external_user_id = Column(String, nullable=False, index=True)  # JWT sub
+    external_user_id = Column(String, nullable=False, index=True)
     year             = Column(Integer, nullable=True)
     make             = Column(String,  nullable=False)
     model            = Column(String,  nullable=False)
@@ -103,23 +108,38 @@ class VehicleTorqueSpec(Base):
 
 
 class VehicleCheckPoint(Base):
+    """
+    An inspection or maintenance item for a vehicle.
+
+    interval_miles  — service interval in miles (e.g. 3750 for chain tension)
+    interval_days   — service interval in days (e.g. 14 for tire pressure check)
+    expected_spec   — human-readable spec string (e.g. "20-30mm slack")
+    min_value       — lower bound for auto pass/warn/fail calculation
+    max_value       — upper bound
+    unit            — unit of actual_value (e.g. "mm", "PSI", "°F")
+
+    If both interval_miles and interval_days are set, whichever comes first triggers due.
+    """
     __tablename__ = "vehicle_check_points"
 
-    id          = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    vehicle_id  = Column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
-    description = Column(String, nullable=False)
-    sort_order  = Column(Integer, default=0, nullable=False)
+    id             = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vehicle_id     = Column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
+    description    = Column(String, nullable=False)
+    sort_order     = Column(Integer, default=0, nullable=False)
+    # Interval tracking
+    interval_miles = Column(Integer, nullable=True)
+    interval_days  = Column(Integer, nullable=True)
+    # Spec / measurement guidance
+    expected_spec  = Column(String,  nullable=True)
+    min_value      = Column(Float,   nullable=True)
+    max_value      = Column(Float,   nullable=True)
+    unit           = Column(String,  nullable=True)
 
-    vehicle = relationship("Vehicle", back_populates="check_points")
+    vehicle      = relationship("Vehicle", back_populates="check_points")
+    check_results = relationship("ServiceCheckResult", back_populates="check_point")
 
 
 class MaintenancePerson(Base):
-    """
-    A River Song user added to a garage owner's maintenance roster.
-
-    owner_user_id    — JWT sub of the garage owner who manages this roster
-    external_user_id — JWT sub of the person themselves (must be an approved app user)
-    """
     __tablename__ = "maint_persons"
     __table_args__ = (
         UniqueConstraint("owner_user_id", "external_user_id", name="uq_person_per_owner"),
@@ -132,12 +152,11 @@ class MaintenancePerson(Base):
     display_name     = Column(String, nullable=True)
     created_at       = Column(DateTime, default=_now)
 
-    assignments   = relationship("VehicleAssignment", back_populates="person", cascade="all, delete-orphan")
-    service_logs  = relationship("ServiceLog",        back_populates="performed_by")
+    assignments  = relationship("VehicleAssignment", back_populates="person", cascade="all, delete-orphan")
+    service_logs = relationship("ServiceLog",        back_populates="performed_by")
 
 
 class VehicleAssignment(Base):
-    """Many-to-many link between MaintenancePerson and Vehicle."""
     __tablename__ = "vehicle_assignments"
     __table_args__ = (
         UniqueConstraint("vehicle_id", "person_id", name="uq_assignment"),
@@ -148,16 +167,16 @@ class VehicleAssignment(Base):
     person_id   = Column(Uuid(as_uuid=True), ForeignKey("maint_persons.id"), nullable=False)
     assigned_at = Column(DateTime, default=_now)
 
-    vehicle = relationship("Vehicle",            back_populates="assignments")
-    person  = relationship("MaintenancePerson",  back_populates="assignments")
+    vehicle = relationship("Vehicle",           back_populates="assignments")
+    person  = relationship("MaintenancePerson", back_populates="assignments")
 
 
 class ServiceLog(Base):
     """
     A single maintenance event.
 
-    performed_by_id — which MaintenancePerson did the work (nullable = owner did it / unknown)
-    service_type    — short label e.g. "Oil Change", "Tire Rotation"
+    performed_by_id — which MaintenancePerson did the work
+    service_type    — short label e.g. "Oil Change"
     is_pro_service  — True → professional shop; False → DIY
     """
     __tablename__ = "vehicle_service_logs"
@@ -181,12 +200,23 @@ class ServiceLog(Base):
 
 
 class ServiceCheckResult(Base):
-    """Result of a single inspection checklist item within a DIY service log."""
+    """
+    Result of a single inspection item within a service log.
+
+    check_point_id — links back to VehicleCheckPoint (nullable: supports ad-hoc descriptions)
+    actual_value   — measured value as string (e.g. "24", "31 PSI", "OK")
+    status         — pass / warn / fail (auto-calculated if min/max set, otherwise manual)
+    passed         — legacy boolean; ignored when status is set
+    """
     __tablename__ = "vehicle_service_check_results"
 
-    id          = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    log_id      = Column(Uuid(as_uuid=True), ForeignKey("vehicle_service_logs.id"), nullable=False)
-    description = Column(String,  nullable=False)
-    passed      = Column(Boolean, default=True, nullable=False)
+    id              = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    log_id          = Column(Uuid(as_uuid=True), ForeignKey("vehicle_service_logs.id"), nullable=False)
+    check_point_id  = Column(Uuid(as_uuid=True), ForeignKey("vehicle_check_points.id"), nullable=True)
+    description     = Column(String,  nullable=False)
+    actual_value    = Column(String,  nullable=True)
+    status          = Column(Enum(CheckStatus), nullable=True)
+    passed          = Column(Boolean, default=True, nullable=False)
 
-    log = relationship("ServiceLog", back_populates="check_results")
+    log         = relationship("ServiceLog",      back_populates="check_results")
+    check_point = relationship("VehicleCheckPoint", back_populates="check_results")

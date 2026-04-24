@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import './MaintenancePulse.css';
 
@@ -85,13 +85,120 @@ function VehicleForm({ initial, onSave, onCancel, saveLabel }) {
 }
 
 // ---------------------------------------------------------------------------
-// Specs editor
+// Specs editor — with interval fields on checkpoints
 // ---------------------------------------------------------------------------
+
+const BLANK_CP = { description: '', interval_miles: '', interval_days: '', expected_spec: '', min_value: '', max_value: '', unit: '' };
+
+function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm]       = useState({
+    interval_miles: cp.interval_miles ?? '',
+    interval_days:  cp.interval_days  ?? '',
+    expected_spec:  cp.expected_spec  ?? '',
+    min_value:      cp.min_value      ?? '',
+    max_value:      cp.max_value      ?? '',
+    unit:           cp.unit           ?? '',
+  });
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      await apiFetch(`/api/vehicles/${vehicleId}/specs/checkpoints/${cp.id}`, token, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          interval_miles: form.interval_miles !== '' ? Number(form.interval_miles) : null,
+          interval_days:  form.interval_days  !== '' ? Number(form.interval_days)  : null,
+          expected_spec:  form.expected_spec  || null,
+          min_value:      form.min_value      !== '' ? Number(form.min_value)      : null,
+          max_value:      form.max_value      !== '' ? Number(form.max_value)      : null,
+          unit:           form.unit           || null,
+        }),
+      });
+      setEditing(false);
+      onUpdated();
+    } finally { setBusy(false); }
+  };
+
+  const del = async () => {
+    await apiFetch(`/api/vehicles/${vehicleId}/specs/checkpoints/${cp.id}`, token, { method: 'DELETE' });
+    onUpdated();
+  };
+
+  const fmtDays = (d) => {
+    if (d % 365 === 0) return `Every ${d / 365} yr${d / 365 > 1 ? 's' : ''}`;
+    if (d % 30  === 0) return `Every ${d / 30} mo`;
+    if (d % 7   === 0) return `Every ${d / 7} wk${d / 7 > 1 ? 's' : ''}`;
+    return `Every ${d}d`;
+  };
+
+  const intervalLabel = () => {
+    const parts = [];
+    if (cp.interval_miles) parts.push(`Every ${cp.interval_miles.toLocaleString()} mi`);
+    if (cp.interval_days)  parts.push(fmtDays(cp.interval_days));
+    return parts.join(' / ') || null;
+  };
+
+  return (
+    <li className="cp-row">
+      <div className="cp-row-main">
+        <span className="spec-name">{cp.description}</span>
+        {cp.expected_spec && <span className="cp-spec-tag">{cp.expected_spec}{cp.unit ? ` (${cp.unit})` : ''}</span>}
+        {intervalLabel() && <span className="cp-interval-tag">{intervalLabel()}</span>}
+      </div>
+      <div className="cp-row-actions">
+        <button className="cyber-btn btn-xs" onClick={() => setEditing(e => !e)}>{editing ? 'CLOSE' : 'EDIT'}</button>
+        <button className="del-spec-btn" onClick={del}>✕</button>
+      </div>
+      {editing && (
+        <div className="cp-edit-panel">
+          <div className="cp-edit-grid">
+            <div className="pulse-field">
+              <label className="pulse-label">EXPECTED SPEC</label>
+              <input className="cyber-input" value={form.expected_spec} onChange={set('expected_spec')} placeholder="e.g. 20-30mm slack" />
+            </div>
+            <div className="pulse-field">
+              <label className="pulse-label">UNIT</label>
+              <input className="cyber-input" value={form.unit} onChange={set('unit')} placeholder="mm / PSI / °C" />
+            </div>
+            <div className="pulse-field">
+              <label className="pulse-label">MIN VALUE</label>
+              <input className="cyber-input num-input" type="number" value={form.min_value} onChange={set('min_value')} placeholder="20" />
+            </div>
+            <div className="pulse-field">
+              <label className="pulse-label">MAX VALUE</label>
+              <input className="cyber-input num-input" type="number" value={form.max_value} onChange={set('max_value')} placeholder="30" />
+            </div>
+            <div className="pulse-field">
+              <label className="pulse-label">INTERVAL (MILES)</label>
+              <input className="cyber-input num-input" type="number" value={form.interval_miles} onChange={set('interval_miles')} placeholder="3750" />
+            </div>
+            <div className="pulse-field">
+              <label className="pulse-label">INTERVAL (DAYS)</label>
+              <input className="cyber-input num-input" type="number" value={form.interval_days} onChange={set('interval_days')} placeholder="14" />
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
+            <button className="cyber-btn btn-xs" onClick={() => setEditing(false)}>CANCEL</button>
+            <button className="cyber-btn btn-xs btn-save" onClick={save} disabled={busy}>
+              {busy ? '...' : 'SAVE'}
+            </button>
+          </div>
+        </div>
+      )}
+    </li>
+  );
+}
 
 function SpecsEditor({ vehicle, token, onUpdated }) {
   const [newFluid,  setNewFluid]  = useState({ name: '', spec: '', volume: '' });
   const [newTorque, setNewTorque] = useState({ name: '', ft_lb: '', nm: '' });
-  const [newPoint,  setNewPoint]  = useState('');
+  const [newPoint,    setNewPoint]    = useState(BLANK_CP);
+  const [showAddCp,   setShowAddCp]   = useState(false);
+  const [showAddFluid,  setShowAddFluid]  = useState(false);
+  const [showAddTorque, setShowAddTorque] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const withBusy = async (fn) => { setBusy(true); try { await fn(); } finally { setBusy(false); } };
@@ -116,20 +223,34 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
   const delTorque = async (id) => { await apiFetch(`/api/vehicles/${vehicle.id}/specs/torques/${id}`, token, { method: 'DELETE' }); onUpdated(); };
 
   const addPoint = () => withBusy(async () => {
-    if (!newPoint.trim()) return;
+    if (!newPoint.description.trim()) return;
     await apiFetch(`/api/vehicles/${vehicle.id}/specs/checkpoints`, token, {
       method: 'POST',
-      body: JSON.stringify({ description: newPoint, sort_order: vehicle.check_points.length }),
+      body: JSON.stringify({
+        description:    newPoint.description,
+        sort_order:     vehicle.check_points.length,
+        interval_miles: newPoint.interval_miles !== '' ? Number(newPoint.interval_miles) : null,
+        interval_days:  newPoint.interval_days  !== '' ? Number(newPoint.interval_days)  : null,
+        expected_spec:  newPoint.expected_spec  || null,
+        min_value:      newPoint.min_value      !== '' ? Number(newPoint.min_value)      : null,
+        max_value:      newPoint.max_value      !== '' ? Number(newPoint.max_value)      : null,
+        unit:           newPoint.unit           || null,
+      }),
     });
-    setNewPoint('');
+    setNewPoint(BLANK_CP);
+    setShowAddCp(false);
     onUpdated();
   });
-  const delPoint = async (id) => { await apiFetch(`/api/vehicles/${vehicle.id}/specs/checkpoints/${id}`, token, { method: 'DELETE' }); onUpdated(); };
+
+  const setNp = (k) => (e) => setNewPoint(f => ({ ...f, [k]: e.target.value }));
 
   return (
     <div className="specs-editor">
       <div className="spec-section">
-        <h4>[ FLUID SPECS ]</h4>
+        {(vehicle.fluid_specs.length > 0 || showAddFluid) && <h4>[ FLUID SPECS ]</h4>}
+        {vehicle.fluid_specs.length === 0 && !showAddFluid && (
+          <div className="specs-empty-hint">No fluid specs yet.</div>
+        )}
         <ul className="spec-edit-list">
           {vehicle.fluid_specs.map((f) => (
             <li key={f.id}>
@@ -139,16 +260,24 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
             </li>
           ))}
         </ul>
-        <div className="spec-add-row">
-          <input className="cyber-input" placeholder="Name" value={newFluid.name} onChange={(e) => setNewFluid(f => ({ ...f, name: e.target.value }))} />
-          <input className="cyber-input" placeholder="Spec" value={newFluid.spec} onChange={(e) => setNewFluid(f => ({ ...f, spec: e.target.value }))} />
-          <input className="cyber-input" placeholder="Volume" value={newFluid.volume} onChange={(e) => setNewFluid(f => ({ ...f, volume: e.target.value }))} />
-          <button className="cyber-btn btn-xs" onClick={addFluid} disabled={busy}>+</button>
-        </div>
+        {!showAddFluid ? (
+          <button className="cyber-btn btn-xs" style={{ marginTop: 8 }} onClick={() => setShowAddFluid(true)}>+ ADD FLUID</button>
+        ) : (
+          <div className="spec-add-row" style={{ marginTop: 8 }}>
+            <input className="cyber-input" placeholder="Name" value={newFluid.name} onChange={(e) => setNewFluid(f => ({ ...f, name: e.target.value }))} />
+            <input className="cyber-input" placeholder="Spec" value={newFluid.spec} onChange={(e) => setNewFluid(f => ({ ...f, spec: e.target.value }))} />
+            <input className="cyber-input" placeholder="Volume" value={newFluid.volume} onChange={(e) => setNewFluid(f => ({ ...f, volume: e.target.value }))} />
+            <button className="cyber-btn btn-xs btn-save" onClick={() => { addFluid(); setShowAddFluid(false); }} disabled={busy || !newFluid.name.trim()}>+</button>
+            <button className="cyber-btn btn-xs" onClick={() => { setShowAddFluid(false); setNewFluid({ name: '', spec: '', volume: '' }); }}>✕</button>
+          </div>
+        )}
       </div>
 
       <div className="spec-section">
-        <h4>[ TORQUE VALUES ]</h4>
+        {(vehicle.torque_specs.length > 0 || showAddTorque) && <h4>[ TORQUE VALUES ]</h4>}
+        {vehicle.torque_specs.length === 0 && !showAddTorque && (
+          <div className="specs-empty-hint">No torque values yet.</div>
+        )}
         <ul className="spec-edit-list">
           {vehicle.torque_specs.map((t) => (
             <li key={t.id}>
@@ -158,30 +287,168 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
             </li>
           ))}
         </ul>
-        <div className="spec-add-row">
-          <input className="cyber-input" placeholder="Name" value={newTorque.name} onChange={(e) => setNewTorque(f => ({ ...f, name: e.target.value }))} />
-          <input className="cyber-input num-input" placeholder="Ft-Lb" value={newTorque.ft_lb} onChange={(e) => setNewTorque(f => ({ ...f, ft_lb: e.target.value }))} />
-          <input className="cyber-input num-input" placeholder="N·m" value={newTorque.nm} onChange={(e) => setNewTorque(f => ({ ...f, nm: e.target.value }))} />
-          <button className="cyber-btn btn-xs" onClick={addTorque} disabled={busy}>+</button>
-        </div>
+        {!showAddTorque ? (
+          <button className="cyber-btn btn-xs" style={{ marginTop: 8 }} onClick={() => setShowAddTorque(true)}>+ ADD TORQUE</button>
+        ) : (
+          <div className="spec-add-row" style={{ marginTop: 8 }}>
+            <input className="cyber-input" placeholder="Name" value={newTorque.name} onChange={(e) => setNewTorque(f => ({ ...f, name: e.target.value }))} />
+            <input className="cyber-input num-input" placeholder="Ft-Lb" value={newTorque.ft_lb} onChange={(e) => setNewTorque(f => ({ ...f, ft_lb: e.target.value }))} />
+            <input className="cyber-input num-input" placeholder="N·m" value={newTorque.nm} onChange={(e) => setNewTorque(f => ({ ...f, nm: e.target.value }))} />
+            <button className="cyber-btn btn-xs btn-save" onClick={() => { addTorque(); setShowAddTorque(false); }} disabled={busy || !newTorque.name.trim()}>+</button>
+            <button className="cyber-btn btn-xs" onClick={() => { setShowAddTorque(false); setNewTorque({ name: '', ft_lb: '', nm: '' }); }}>✕</button>
+          </div>
+        )}
       </div>
 
       <div className="spec-section">
-        <h4>[ INSPECTION POINTS ]</h4>
-        <ul className="spec-edit-list">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <h4 style={{ margin: 0 }}>[ INSPECTION / MAINTENANCE POINTS ]</h4>
+          {vehicle.check_points.length > 0 && (
+            <button
+              className="cyber-btn btn-xs btn-danger"
+              onClick={async () => {
+                if (!window.confirm(`Clear all ${vehicle.check_points.length} inspection items? This cannot be undone.`)) return;
+                await apiFetch(`/api/vehicles/${vehicle.id}/specs/checkpoints`, token, { method: 'DELETE' });
+                onUpdated();
+              }}
+            >CLEAR ALL</button>
+          )}
+        </div>
+        <ul className="spec-edit-list cp-list">
           {vehicle.check_points.map((cp) => (
-            <li key={cp.id}>
-              <span className="spec-name" style={{ flex: 1 }}>{cp.description}</span>
-              <button className="del-spec-btn" onClick={() => delPoint(cp.id)}>✕</button>
-            </li>
+            <CheckPointRow key={cp.id} cp={cp} token={token} vehicleId={vehicle.id} onUpdated={onUpdated} />
           ))}
         </ul>
-        <div className="spec-add-row">
-          <input className="cyber-input" style={{ flex: 1 }} placeholder="e.g. Tire Pressure (29F/29R PSI)"
-            value={newPoint} onChange={(e) => setNewPoint(e.target.value)} />
-          <button className="cyber-btn btn-xs" onClick={addPoint} disabled={busy}>+</button>
-        </div>
+        {!showAddCp ? (
+          <button className="cyber-btn btn-xs" style={{ marginTop: 8 }} onClick={() => setShowAddCp(true)}>+ ADD ITEM</button>
+        ) : (
+          <div className="cp-edit-panel" style={{ marginTop: 8 }}>
+            <div className="cp-edit-grid">
+              <div className="pulse-field" style={{ gridColumn: 'span 2' }}>
+                <label className="pulse-label">DESCRIPTION *</label>
+                <input className="cyber-input" value={newPoint.description} onChange={setNp('description')} placeholder="e.g. Chain tension" />
+              </div>
+              <div className="pulse-field">
+                <label className="pulse-label">EXPECTED SPEC</label>
+                <input className="cyber-input" value={newPoint.expected_spec} onChange={setNp('expected_spec')} placeholder="20-30mm slack" />
+              </div>
+              <div className="pulse-field">
+                <label className="pulse-label">UNIT</label>
+                <input className="cyber-input" value={newPoint.unit} onChange={setNp('unit')} placeholder="mm" />
+              </div>
+              <div className="pulse-field">
+                <label className="pulse-label">MIN VALUE</label>
+                <input className="cyber-input num-input" type="number" value={newPoint.min_value} onChange={setNp('min_value')} placeholder="20" />
+              </div>
+              <div className="pulse-field">
+                <label className="pulse-label">MAX VALUE</label>
+                <input className="cyber-input num-input" type="number" value={newPoint.max_value} onChange={setNp('max_value')} placeholder="30" />
+              </div>
+              <div className="pulse-field">
+                <label className="pulse-label">INTERVAL (MILES)</label>
+                <input className="cyber-input num-input" type="number" value={newPoint.interval_miles} onChange={setNp('interval_miles')} placeholder="3750" />
+              </div>
+              <div className="pulse-field">
+                <label className="pulse-label">INTERVAL (DAYS)</label>
+                <input className="cyber-input num-input" type="number" value={newPoint.interval_days} onChange={setNp('interval_days')} placeholder="14" />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
+              <button className="cyber-btn btn-xs" onClick={() => { setShowAddCp(false); setNewPoint(BLANK_CP); }}>CANCEL</button>
+              <button className="cyber-btn btn-xs btn-save" onClick={addPoint} disabled={busy || !newPoint.description.trim()}>
+                {busy ? '...' : '+ ADD'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Manual upload (PDF → Claude → intervals)
+// ---------------------------------------------------------------------------
+
+function ManualUpload({ token, vehicleId, onUpdated }) {
+  const [file, setFile]         = useState(null);
+  const [busy, setBusy]         = useState(false);
+  const [result, setResult]     = useState(null);
+  const [error, setError]       = useState('');
+  const fileRef                 = useRef();
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setBusy(true);
+    setResult(null);
+    setError('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`${API}/api/vehicles/${vehicleId}/manual`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Upload failed');
+      setResult(data);
+      setFile(null);
+      if (fileRef.current) fileRef.current.value = '';
+      onUpdated();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mp-settings-section">
+      <div className="mp-settings-label">IMPORT FROM OWNER'S MANUAL</div>
+      <p className="mp-settings-hint">
+        Upload a PDF owner's manual. Maintenance intervals are extracted locally — no internet connection or API key required.
+        Existing items are updated in place; new items are added. Nothing is deleted.
+      </p>
+
+      {result && (
+        <div className="mp-flash mp-flash--ok">
+          Manual processed — {result.checkpoints_updated + result.checkpoints_created} inspection items,{' '}
+          {result.fluid_specs_updated + result.fluid_specs_created} fluid specs,{' '}
+          {result.torque_specs_updated + result.torque_specs_created} torque values extracted.
+        </div>
+      )}
+      {error && <div className="mp-flash mp-flash--err">{error}</div>}
+
+      {busy ? (
+        <div className="mp-manual-busy">
+          <div className="mp-manual-spinner" />
+          <span>Reading manual and extracting intervals…</span>
+        </div>
+      ) : (
+        <div className="mp-manual-upload-row">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/pdf"
+            style={{ display: 'none' }}
+            onChange={(e) => setFile(e.target.files[0] || null)}
+          />
+          <button className="cyber-btn btn-xs" onClick={() => fileRef.current.click()}>
+            {file ? `[ ${file.name} ]` : 'SELECT PDF'}
+          </button>
+          {file && (
+            <button className="cyber-btn btn-xs btn-save" onClick={handleUpload} disabled={busy}>
+              EXTRACT &amp; APPLY
+            </button>
+          )}
+          {file && (
+            <button className="cyber-btn btn-xs" onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = ''; }}>
+              ✕
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -465,32 +732,31 @@ function AssignmentsSettings({ token, vehicles, people, onPeopleRefresh }) {
 // Settings tab — container
 // ---------------------------------------------------------------------------
 
-function SettingsPanel({ token, vehicles, people, onPeopleRefresh }) {
+function SettingsPanel({ token, vehicles, people, selectedVehicleId, onPeopleRefresh, onVehicleRefresh }) {
   const [section, setSection] = useState('people');
 
   return (
     <div className="mp-settings-panel">
       <div className="mp-settings-tabs">
-        <button
-          className={`mp-settings-tab ${section === 'people' ? 'active' : ''}`}
-          onClick={() => setSection('people')}
-        >PEOPLE</button>
-        <button
-          className={`mp-settings-tab ${section === 'assignments' ? 'active' : ''}`}
-          onClick={() => setSection('assignments')}
-        >VEHICLE ASSIGNMENTS</button>
+        <button className={`mp-settings-tab ${section === 'people' ? 'active' : ''}`} onClick={() => setSection('people')}>
+          PEOPLE
+        </button>
+        <button className={`mp-settings-tab ${section === 'assignments' ? 'active' : ''}`} onClick={() => setSection('assignments')}>
+          ASSIGNMENTS
+        </button>
+        <button className={`mp-settings-tab ${section === 'manual' ? 'active' : ''}`} onClick={() => setSection('manual')}>
+          MANUAL IMPORT
+        </button>
       </div>
 
       {section === 'people' && (
         <PeopleSettings token={token} people={people} onRefresh={onPeopleRefresh} />
       )}
       {section === 'assignments' && (
-        <AssignmentsSettings
-          token={token}
-          vehicles={vehicles}
-          people={people}
-          onPeopleRefresh={onPeopleRefresh}
-        />
+        <AssignmentsSettings token={token} vehicles={vehicles} people={people} onPeopleRefresh={onPeopleRefresh} />
+      )}
+      {section === 'manual' && (
+        <ManualUpload token={token} vehicleId={selectedVehicleId} onUpdated={onVehicleRefresh} />
       )}
     </div>
   );
@@ -519,8 +785,10 @@ export default function MaintenancePulse() {
   const [mileage, setMileage]               = useState('');
   const [serviceDate, setServiceDate]       = useState(new Date().toISOString().split('T')[0]);
   const [performedById, setPerformedById]   = useState('');
+  const [cost, setCost]                     = useState('');
   const [receiptFile, setReceiptFile]       = useState(null);
-  const [checkedPoints, setCheckedPoints]   = useState({});
+  const [checkedPoints, setCheckedPoints]   = useState({});   // idx → bool
+  const [actualValues, setActualValues]     = useState({});   // idx → string
   const [saveStatus, setSaveStatus]         = useState('');
 
   // assignments for currently selected vehicle (used in log dropdown)
@@ -617,11 +885,17 @@ export default function MaintenancePulse() {
   const handlePointToggle = (idx) =>
     setCheckedPoints((prev) => ({ ...prev, [idx]: !prev[idx] }));
 
+  const handleActualValue = (idx, val) =>
+    setActualValues((prev) => ({ ...prev, [idx]: val }));
+
   const handleSave = async () => {
     if (!currentVehicle) return;
     const checkResults = currentVehicle.check_points.map((cp, idx) => ({
-      description: cp.description,
-      passed: isProService ? true : !!checkedPoints[idx],
+      description:    cp.description,
+      check_point_id: cp.id,
+      actual_value:   actualValues[idx] || null,
+      passed:         isProService ? true : !!checkedPoints[idx],
+      // status auto-calculated server-side from actual_value + cp min/max
     }));
     const payload = {
       service_date:    new Date(serviceDate).toISOString(),
@@ -629,6 +903,7 @@ export default function MaintenancePulse() {
       is_pro_service:  isProService,
       service_center:  isProService ? serviceCenter : null,
       service_type:    serviceType || null,
+      cost:            cost !== '' ? Number(cost) : null,
       notes:           '',
       performed_by_id: performedById || null,
       check_results:   checkResults,
@@ -650,9 +925,11 @@ export default function MaintenancePulse() {
       setTimeout(() => {
         setSaveStatus('');
         setCheckedPoints({});
+        setActualValues({});
         setMileage('');
         setServiceCenter('');
         setServiceType('');
+        setCost('');
         setPerformedById('');
         setReceiptFile(null);
       }, 3000);
@@ -830,15 +1107,36 @@ export default function MaintenancePulse() {
             </div>
           )}
 
-          {/* Service type */}
-          <div className="pulse-field" style={{ marginBottom: 14 }}>
-            <label className="pulse-label">SERVICE TYPE</label>
-            <input
-              className="cyber-input"
-              placeholder="e.g. Oil Change, Tire Rotation, Brake Service"
-              value={serviceType}
-              onChange={(e) => setServiceType(e.target.value)}
-            />
+          {/* Always-visible log fields */}
+          <div className="log-header-fields">
+            <div className="pulse-field">
+              <label className="pulse-label">SERVICE TYPE</label>
+              <input
+                className="cyber-input"
+                placeholder="e.g. Oil Change, Tire Rotation, Brake Service"
+                value={serviceType}
+                onChange={(e) => setServiceType(e.target.value)}
+              />
+            </div>
+            <div className="pulse-field">
+              <label className="pulse-label">CURRENT ODOMETER</label>
+              <input
+                type="number"
+                className="cyber-input num-input"
+                placeholder="miles"
+                value={mileage}
+                onChange={(e) => setMileage(e.target.value)}
+              />
+            </div>
+            <div className="pulse-field">
+              <label className="pulse-label">SERVICE DATE</label>
+              <input
+                type="date"
+                className="cyber-input"
+                value={serviceDate}
+                onChange={(e) => setServiceDate(e.target.value)}
+              />
+            </div>
           </div>
 
           <label className="pulse-toggle" style={{ marginBottom: 16 }}>
@@ -881,21 +1179,87 @@ export default function MaintenancePulse() {
                 </div>
               )}
               {currentVehicle.check_points.length > 0 ? (
-                <div className="checklist-container">
-                  <h4>[ INSPECTION CHECKLIST ]</h4>
-                  <div className="checklist">
-                    {currentVehicle.check_points.map((cp, idx) => (
-                      <label key={cp.id} className="check-item">
-                        <input type="checkbox" checked={!!checkedPoints[idx]} onChange={() => handlePointToggle(idx)} />
-                        <span className="check-box-custom"></span>
-                        <span className="check-label">{cp.description}</span>
-                      </label>
-                    ))}
+                <div className="insp-sheet">
+                  <div className="insp-sheet-header">
+                    <span className="insp-col-item">ITEM</span>
+                    <span className="insp-col-spec">EXPECTED</span>
+                    <span className="insp-col-actual">ACTUAL</span>
+                    <span className="insp-col-status">STATUS</span>
+                  </div>
+                  {currentVehicle.check_points.map((cp, idx) => {
+                    const actual = actualValues[idx] || '';
+                    const done   = !!checkedPoints[idx];
+
+                    // Derive live status from typed actual value
+                    let liveStatus = null;
+                    if (actual !== '') {
+                      const num = parseFloat(actual);
+                      if (!isNaN(num) && cp.min_value != null) {
+                        if (cp.max_value != null) {
+                          liveStatus = num >= cp.min_value && num <= cp.max_value ? 'pass'
+                            : (num < cp.min_value * 0.9 || num > cp.max_value * 1.1) ? 'fail' : 'warn';
+                        } else {
+                          liveStatus = num >= cp.min_value ? 'pass' : 'fail';
+                        }
+                      } else if (actual) {
+                        liveStatus = done ? 'pass' : null;
+                      }
+                    } else if (done) {
+                      liveStatus = 'pass';
+                    }
+
+                    return (
+                      <div
+                        key={cp.id}
+                        className={`insp-row ${done ? 'insp-row--done' : ''} ${liveStatus ? `insp-row--${liveStatus}` : ''}`}
+                        onClick={() => handlePointToggle(idx)}
+                      >
+                        <div className="insp-col-item">
+                          <span className={`insp-check-dot ${done ? 'done' : ''}`} />
+                          <span className="insp-item-name">{cp.description}</span>
+                          {(cp.interval_miles || cp.interval_days) && (() => {
+                            const parts = [];
+                            if (cp.interval_miles) parts.push(`${cp.interval_miles.toLocaleString()} mi`);
+                            if (cp.interval_days) {
+                              const d = cp.interval_days;
+                              if (d % 365 === 0) parts.push(`${d/365}yr`);
+                              else if (d % 30 === 0) parts.push(`${d/30}mo`);
+                              else if (d % 7 === 0) parts.push(`${d/7}wk`);
+                              else parts.push(`${d}d`);
+                            }
+                            return <span className="insp-interval">{parts.join(' / ')}</span>;
+                          })()}
+                        </div>
+                        <div className="insp-col-spec">
+                          {cp.expected_spec
+                            ? <>{cp.expected_spec}{cp.unit && !cp.expected_spec.toLowerCase().includes(cp.unit.toLowerCase()) ? <span className="insp-unit"> {cp.unit}</span> : ''}</>
+                            : <span className="insp-no-spec">—</span>
+                          }
+                        </div>
+                        <div className="insp-col-actual" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            className="insp-actual-input"
+                            placeholder={cp.unit || 'value'}
+                            value={actual}
+                            onChange={(e) => handleActualValue(idx, e.target.value)}
+                          />
+                        </div>
+                        <div className="insp-col-status">
+                          {liveStatus === 'pass' && <span className="insp-badge insp-badge--pass">PASS</span>}
+                          {liveStatus === 'warn' && <span className="insp-badge insp-badge--warn">WARN</span>}
+                          {liveStatus === 'fail' && <span className="insp-badge insp-badge--fail">FAIL</span>}
+                          {!liveStatus && <span className="insp-badge insp-badge--pending">—</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="insp-sheet-footer">
+                    {Object.keys(checkedPoints).filter(k => checkedPoints[k]).length} / {currentVehicle.check_points.length} items checked
                   </div>
                 </div>
               ) : (
                 <div className="mp-empty-specs">
-                  No specs configured yet. Go to <strong>EDIT SPECS</strong> to add fluids, torques, and checklist items.
+                  No inspection items yet. Go to <strong>EDIT SPECS</strong> to add them, or upload an owner's manual in <strong>SETTINGS → MANUAL IMPORT</strong>.
                 </div>
               )}
             </div>
@@ -909,14 +1273,9 @@ export default function MaintenancePulse() {
                     value={serviceCenter} onChange={(e) => setServiceCenter(e.target.value)} />
                 </div>
                 <div className="pulse-field">
-                  <label className="pulse-label">CURRENT MILEAGE</label>
-                  <input type="number" className="cyber-input num-input" placeholder="0"
-                    value={mileage} onChange={(e) => setMileage(e.target.value)} />
-                </div>
-                <div className="pulse-field">
-                  <label className="pulse-label">SERVICE DATE</label>
-                  <input type="date" className="cyber-input" value={serviceDate}
-                    onChange={(e) => setServiceDate(e.target.value)} />
+                  <label className="pulse-label">COST ($)</label>
+                  <input type="number" className="cyber-input num-input" placeholder="0.00" step="0.01"
+                    value={cost} onChange={(e) => setCost(e.target.value)} />
                 </div>
                 <div className="pulse-field full-width">
                   <label className="pulse-label">RECEIPT UPLOAD (PDF/IMG)</label>
@@ -974,8 +1333,10 @@ export default function MaintenancePulse() {
                   {log.check_results.length > 0 && (
                     <div className="history-checks">
                       {log.check_results.map((cr) => (
-                        <span key={cr.id} className={`history-check ${cr.passed ? 'pass' : 'fail'}`}>
-                          {cr.passed ? '✓' : '✗'} {cr.description}
+                        <span key={cr.id} className={`history-check ${cr.status || (cr.passed ? 'pass' : 'fail')}`}>
+                          {cr.status === 'pass' || cr.passed ? '✓' : cr.status === 'warn' ? '⚠' : '✗'}
+                          {' '}{cr.description}
+                          {cr.actual_value && <em className="history-actual"> — {cr.actual_value}</em>}
                         </span>
                       ))}
                     </div>
@@ -994,7 +1355,9 @@ export default function MaintenancePulse() {
             token={token}
             vehicles={vehicles}
             people={people}
+            selectedVehicleId={selectedId}
             onPeopleRefresh={() => { fetchPeople(); fetchVehicleAssignments(); }}
+            onVehicleRefresh={fetchVehicles}
           />
         </div>
       )}

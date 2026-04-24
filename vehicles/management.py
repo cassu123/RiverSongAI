@@ -32,6 +32,7 @@ Service logs
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sqlite3
@@ -43,6 +44,7 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
 from .models import (
+    CheckStatus,
     MaintenancePerson,
     ServiceCheckResult,
     ServiceLog,
@@ -59,9 +61,102 @@ logger = logging.getLogger(__name__)
 VEHICLE_FILES_BASE_DIR = os.environ.get("VEHICLE_FILES_DIR", "./vehicle_files")
 _MAIN_DB_PATH = os.environ.get("MAIN_DB_PATH", "./river_song.db")
 
+# ---------------------------------------------------------------------------
+# Vehicle type templates
+# Each entry: (description, interval_miles, interval_days, expected_spec, min_value, max_value, unit)
+# ---------------------------------------------------------------------------
+
+_CP = lambda d, mi=None, dy=None, spec=None, mn=None, mx=None, unit=None: {
+    "description": d, "interval_miles": mi, "interval_days": dy,
+    "expected_spec": spec, "min_value": mn, "max_value": mx, "unit": unit,
+}
+
+VEHICLE_TEMPLATES: dict[str, dict] = {
+    VehicleType.MOTO.value: {
+        "check_points": [
+            _CP("Chain tension",     mi=3750,  spec="20-30mm slack",   mn=20.0, mx=30.0, unit="mm"),
+            _CP("Tire pressure",     dy=14,    spec="See sidewall",    unit="PSI"),
+            _CP("Brake fluid",       dy=730,   spec="Replace every 2 years"),
+            _CP("Cam chain",         mi=6000,  spec="Inspect / adjust"),
+            _CP("Brake pads front",  mi=6000,  spec=">2mm remaining",  mn=2.0,  unit="mm"),
+            _CP("Brake pads rear",   mi=6000,  spec=">2mm remaining",  mn=2.0,  unit="mm"),
+            _CP("Lights",            dy=30,    spec="All functional"),
+            _CP("Engine oil level",  mi=1000,  spec="Between min/max marks"),
+        ],
+        "fluid_specs": [
+            {"name": "Engine Oil",  "spec": "Check owner's manual", "volume": ""},
+            {"name": "Brake Fluid", "spec": "DOT 4",                "volume": ""},
+        ],
+    },
+    VehicleType.AUTO.value: {
+        "check_points": [
+            _CP("Engine oil change",        mi=7500,  dy=365,  spec="Full synthetic recommended"),
+            _CP("Tire pressure",            dy=30,             spec="See door jamb sticker",   unit="PSI"),
+            _CP("Brake fluid",              dy=1095,           spec="Replace every 3 years"),
+            _CP("Air filter",               mi=15000,          spec="Inspect / replace"),
+            _CP("Transmission fluid",       mi=30000,          spec="Inspect / replace"),
+            _CP("Coolant flush",            mi=50000, dy=1825, spec="Every 5 years or 50k mi"),
+            _CP("Brake pads front",         mi=25000,          spec=">3mm remaining",  mn=3.0, unit="mm"),
+            _CP("Brake pads rear",          mi=25000,          spec=">3mm remaining",  mn=3.0, unit="mm"),
+            _CP("Wiper blades",             dy=365,            spec="Replace annually or when streaking"),
+        ],
+        "fluid_specs": [
+            {"name": "Engine Oil",       "spec": "Full synthetic 0W-20 (check cap)", "volume": ""},
+            {"name": "Coolant",          "spec": "50/50 premix",                     "volume": ""},
+            {"name": "Brake Fluid",      "spec": "DOT 3 or DOT 4",                  "volume": ""},
+            {"name": "Trans Fluid",      "spec": "Check owner's manual",             "volume": ""},
+            {"name": "Windshield Wash",  "spec": "All-season",                       "volume": ""},
+        ],
+    },
+    VehicleType.TRUCK.value: {
+        "check_points": [
+            _CP("Engine oil change",        mi=5000,  dy=180,  spec="Full synthetic recommended"),
+            _CP("Tire pressure",            dy=30,             spec="See door jamb sticker",   unit="PSI"),
+            _CP("Brake fluid",              dy=1095,           spec="Replace every 3 years"),
+            _CP("Air filter",               mi=15000,          spec="Inspect / replace"),
+            _CP("Transmission fluid",       mi=30000,          spec="Inspect / replace"),
+            _CP("Transfer case fluid",      mi=30000,          spec="Inspect / replace"),
+            _CP("Differential fluid",       mi=30000,          spec="Inspect / replace"),
+            _CP("Coolant flush",            mi=50000, dy=1825, spec="Every 5 years or 50k mi"),
+            _CP("Brake pads front",         mi=25000,          spec=">3mm remaining",  mn=3.0, unit="mm"),
+            _CP("Brake pads rear",          mi=25000,          spec=">3mm remaining",  mn=3.0, unit="mm"),
+            _CP("Wiper blades",             dy=365,            spec="Replace annually"),
+        ],
+        "fluid_specs": [
+            {"name": "Engine Oil",       "spec": "Full synthetic 5W-30 (check cap)", "volume": ""},
+            {"name": "Coolant",          "spec": "50/50 premix",                     "volume": ""},
+            {"name": "Brake Fluid",      "spec": "DOT 3 or DOT 4",                  "volume": ""},
+            {"name": "Trans Fluid",      "spec": "Check owner's manual",             "volume": ""},
+            {"name": "Transfer Case",    "spec": "Check owner's manual",             "volume": ""},
+            {"name": "Differential",     "spec": "Check owner's manual",             "volume": ""},
+        ],
+    },
+    VehicleType.ATV.value: {
+        "check_points": [
+            _CP("Engine oil change",    mi=100,  dy=180, spec="Check owner's manual"),
+            _CP("Air filter",           mi=500,          spec="Clean / replace"),
+            _CP("Chain / belt",         mi=200,          spec="Inspect tension and wear"),
+            _CP("Tire pressure",        dy=14,           spec="See sidewall",    unit="PSI"),
+            _CP("Brake pads",           mi=2000,         spec=">2mm remaining",  mn=2.0, unit="mm"),
+            _CP("Brake fluid",          dy=730,          spec="Replace every 2 years"),
+            _CP("Coolant",              dy=730,          spec="Check level"),
+        ],
+        "fluid_specs": [
+            {"name": "Engine Oil",   "spec": "Check owner's manual", "volume": ""},
+            {"name": "Brake Fluid",  "spec": "DOT 4",                "volume": ""},
+        ],
+    },
+}
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _uid(s) -> "uuid.UUID":
+    """Convert a str/UUID to uuid.UUID for Uuid(as_uuid=True) column comparisons."""
+    import uuid as _u
+    return s if isinstance(s, _u.UUID) else _u.UUID(str(s))
 
 
 class VehicleNotFoundError(Exception):
@@ -88,7 +183,7 @@ class PersonStillAssignedError(Exception):
 # ---------------------------------------------------------------------------
 
 def _get_vehicle(db: Session, vehicle_id: str, user_id: str) -> Vehicle:
-    v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    v = db.query(Vehicle).filter(Vehicle.id == _uid(vehicle_id)).first()
     if not v:
         raise VehicleNotFoundError(f"Vehicle '{vehicle_id}' not found.")
     if v.external_user_id != user_id:
@@ -97,7 +192,7 @@ def _get_vehicle(db: Session, vehicle_id: str, user_id: str) -> Vehicle:
 
 
 def _get_person(db: Session, person_id: str, owner_user_id: str) -> MaintenancePerson:
-    p = db.query(MaintenancePerson).filter(MaintenancePerson.id == person_id).first()
+    p = db.query(MaintenancePerson).filter(MaintenancePerson.id == _uid(person_id)).first()
     if not p:
         raise PersonNotFoundError(f"Person '{person_id}' not found.")
     if p.owner_user_id != owner_user_id:
@@ -149,7 +244,37 @@ def create_vehicle(
     db.commit()
     db.refresh(v)
     logger.info("Vehicle created: %s for user=%s", v.id, user_id)
+    _seed_vehicle_defaults(db, v)
     return v
+
+
+def _seed_vehicle_defaults(db: Session, vehicle: Vehicle) -> None:
+    """Populate standard checkpoints and fluid specs based on vehicle type."""
+    template = VEHICLE_TEMPLATES.get(vehicle.vehicle_type.value if vehicle.vehicle_type else "")
+    if not template:
+        return
+    for i, cp in enumerate(template.get("check_points", [])):
+        db.add(VehicleCheckPoint(
+            vehicle_id=vehicle.id,
+            description=cp["description"],
+            sort_order=i,
+            interval_miles=cp.get("interval_miles"),
+            interval_days=cp.get("interval_days"),
+            expected_spec=cp.get("expected_spec"),
+            min_value=cp.get("min_value"),
+            max_value=cp.get("max_value"),
+            unit=cp.get("unit"),
+        ))
+    for fs in template.get("fluid_specs", []):
+        db.add(VehicleFluidSpec(
+            vehicle_id=vehicle.id,
+            name=fs["name"],
+            spec=fs.get("spec"),
+            volume=fs.get("volume") or None,
+        ))
+    db.commit()
+    db.refresh(vehicle)
+    logger.info("Seeded defaults for vehicle %s (type=%s)", vehicle.id, vehicle.vehicle_type)
 
 
 def update_vehicle(db: Session, user_id: str, vehicle_id: str, **fields) -> Vehicle:
@@ -185,7 +310,7 @@ def add_fluid_spec(
 
 
 def delete_fluid_spec(db: Session, user_id: str, spec_id: str) -> None:
-    f = db.query(VehicleFluidSpec).filter(VehicleFluidSpec.id == spec_id).first()
+    f = db.query(VehicleFluidSpec).filter(VehicleFluidSpec.id == _uid(spec_id)).first()
     if not f:
         raise NoResultFound(f"Fluid spec '{spec_id}' not found.")
     _get_vehicle(db, str(f.vehicle_id), user_id)
@@ -206,7 +331,7 @@ def add_torque_spec(
 
 
 def delete_torque_spec(db: Session, user_id: str, spec_id: str) -> None:
-    t = db.query(VehicleTorqueSpec).filter(VehicleTorqueSpec.id == spec_id).first()
+    t = db.query(VehicleTorqueSpec).filter(VehicleTorqueSpec.id == _uid(spec_id)).first()
     if not t:
         raise NoResultFound(f"Torque spec '{spec_id}' not found.")
     _get_vehicle(db, str(t.vehicle_id), user_id)
@@ -217,22 +342,598 @@ def delete_torque_spec(db: Session, user_id: str, spec_id: str) -> None:
 def add_check_point(
     db: Session, user_id: str, vehicle_id: str,
     description: str, sort_order: int = 0,
+    interval_miles: Optional[int] = None,
+    interval_days: Optional[int] = None,
+    expected_spec: Optional[str] = None,
+    min_value: Optional[float] = None,
+    max_value: Optional[float] = None,
+    unit: Optional[str] = None,
 ) -> VehicleCheckPoint:
     _get_vehicle(db, vehicle_id, user_id)
-    cp = VehicleCheckPoint(vehicle_id=vehicle_id, description=description, sort_order=sort_order)
+    cp = VehicleCheckPoint(
+        vehicle_id=vehicle_id, description=description, sort_order=sort_order,
+        interval_miles=interval_miles, interval_days=interval_days,
+        expected_spec=expected_spec, min_value=min_value, max_value=max_value, unit=unit,
+    )
     db.add(cp)
     db.commit()
     db.refresh(cp)
     return cp
 
 
+def update_check_point(
+    db: Session, user_id: str, point_id: str,
+    description: Optional[str] = None,
+    interval_miles: Optional[int] = None,
+    interval_days: Optional[int] = None,
+    expected_spec: Optional[str] = None,
+    min_value: Optional[float] = None,
+    max_value: Optional[float] = None,
+    unit: Optional[str] = None,
+) -> VehicleCheckPoint:
+    cp = db.query(VehicleCheckPoint).filter(VehicleCheckPoint.id == _uid(point_id)).first()
+    if not cp:
+        raise NoResultFound(f"Check point '{point_id}' not found.")
+    _get_vehicle(db, str(cp.vehicle_id), user_id)
+    if description   is not None: cp.description    = description
+    if interval_miles is not None: cp.interval_miles = interval_miles
+    if interval_days  is not None: cp.interval_days  = interval_days
+    if expected_spec  is not None: cp.expected_spec  = expected_spec
+    if min_value      is not None: cp.min_value      = min_value
+    if max_value      is not None: cp.max_value      = max_value
+    if unit           is not None: cp.unit           = unit
+    db.commit()
+    db.refresh(cp)
+    return cp
+
+
 def delete_check_point(db: Session, user_id: str, point_id: str) -> None:
-    cp = db.query(VehicleCheckPoint).filter(VehicleCheckPoint.id == point_id).first()
+    cp = db.query(VehicleCheckPoint).filter(VehicleCheckPoint.id == _uid(point_id)).first()
     if not cp:
         raise NoResultFound(f"Check point '{point_id}' not found.")
     _get_vehicle(db, str(cp.vehicle_id), user_id)
     db.delete(cp)
     db.commit()
+
+
+def clear_all_check_points(db: Session, user_id: str, vehicle_id: str) -> None:
+    """Delete every inspection point on a vehicle (ownership-checked)."""
+    v = _get_vehicle(db, vehicle_id, user_id)
+    db.query(VehicleCheckPoint).filter(VehicleCheckPoint.vehicle_id == v.id).delete()
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Manual PDF extraction → checkpoint intervals
+# ---------------------------------------------------------------------------
+
+def extract_text_from_pdf(file_data: bytes) -> str:
+    """Extract all text from a PDF using pypdf."""
+    import io
+    import pypdf
+    reader = pypdf.PdfReader(io.BytesIO(file_data))
+    pages = []
+    for page in reader.pages:
+        text = page.extract_text()
+        if text:
+            pages.append(text)
+    return "\n\n".join(pages)
+
+
+def parse_manual_local(pdf_text: str) -> list[dict]:
+    """
+    Extract maintenance intervals from a vehicle owner's manual.
+
+    Handles the three layouts found in real PDFs:
+
+    1. Prose  — "Replace engine oil every 5,000 miles or 6 months"
+    2. Table  — "Engine Oil and Filter   7,500   6" (numbers with no "every")
+    3. Split  — item name on one line, interval on the next 1-3 lines
+
+    Strategy:
+      - Build a list of (line_index, canonical_name) for every line that contains
+        a known service keyword.
+      - For each such line, search a window of ±3 lines for interval numbers.
+      - Bare numbers are interpreted as miles when they are in the plausible range
+        (500–100,000) and as months when they are 1–60.  Both heuristics are
+        applied only when a named unit is absent.
+    """
+    import re
+
+    # ── Converters ────────────────────────────────────────────────────────────
+    def to_miles(val: float, unit: str) -> int:
+        return int(val * 0.621371) if "km" in unit.lower() else int(val)
+
+    def to_days(val: float, unit: str) -> int:
+        u = unit.lower()
+        if "year"  in u: return int(val * 365)
+        if "month" in u: return int(val * 30)
+        if "week"  in u: return int(val * 7)
+        return int(val)
+
+    # ── Patterns ──────────────────────────────────────────────────────────────
+    MI_UNIT  = r"(?:miles?|mi\.?|kilometers?|km)"
+    DAY_UNIT = r"(?:years?|months?|weeks?|days?)"
+    NUM      = r"[\d,]+(?:\.\d+)?"
+
+    # Named mileage: "every 7,500 miles", "at 5000 km", "7,500-mile"
+    RE_MI_NAMED = re.compile(
+        rf"(?:(?:every|each|at|per)\s+)?({NUM})\s*[,\-]?\s*({MI_UNIT})",
+        re.IGNORECASE,
+    )
+    # Named time: "every 6 months", "replace after 2 years", "check monthly"
+    RE_DAY_NAMED = re.compile(
+        rf"(?:every|each|per|after|replace\s+(?:after|every))?\s*({NUM})\s+({DAY_UNIT})"
+        rf"|(?:^|\s)(monthly|annually|weekly|daily)(?:\s|$|\.)",
+        re.IGNORECASE,
+    )
+    ADV_DAYS = {"monthly": 30, "annually": 365, "weekly": 7, "daily": 1}
+    # Bare number (table column) — matched only when no unit found
+    RE_BARE_NUM = re.compile(r"\b([\d,]+)\b")
+
+    # Numeric range spec: "20-30 mm", "29–33 PSI"
+    # Requires a proper measurement unit — "in" alone is excluded (too ambiguous with "in the...")
+    RE_RANGE = re.compile(
+        r"([\d.]+)\s*(?:[-–]|to)\s*([\d.]+)\s*(mm|psi|kpa|bar|cm|°[cf]|n·?m|ft\.?\s*lb)",
+        re.IGNORECASE,
+    )
+    # Minimum spec: "> 2 mm", "minimum 3mm", "≥ 2mm"
+    RE_MIN = re.compile(
+        r"(?:≥|>=|>|minimum|min\.?|at\s+least)\s*([\d.]+)\s*(mm|psi|kpa|bar|cm)",
+        re.IGNORECASE,
+    )
+    # Standalone PSI/kPa value: "32 PSI", "220 kPa" (for tire pressure lines)
+    RE_PRESSURE = re.compile(r"\b(\d{2,3})\s*(psi|kpa)\b", re.IGNORECASE)
+
+    # ── Item keyword map ──────────────────────────────────────────────────────
+    ITEMS = [
+        (r"engine\s+oil|motor\s+oil|oil\s+(?:&\s*filter|and\s+filter|change)",  "Engine Oil Change"),
+        (r"oil\s+filter",                                                          "Oil Filter"),
+        (r"cabin\s+(?:air\s+)?filter",                                            "Cabin Air Filter"),
+        (r"air\s+filter|air\s+cleaner|air\s+element",                             "Air Filter"),
+        (r"fuel\s+filter",                                                         "Fuel Filter"),
+        (r"spark\s+plug",                                                          "Spark Plugs"),
+        (r"coolant|antifreeze|radiator\s+fluid",                                   "Coolant"),
+        (r"transmission\s+fluid|trans\.?\s+fluid|atf\b",                           "Transmission Fluid"),
+        (r"brake\s+fluid",                                                         "Brake Fluid"),
+        (r"brake\s+pad",                                                           "Brake Pads"),
+        (r"brake\s+(?:shoe|lining)",                                               "Brake Shoes"),
+        (r"power\s+steering\s+fluid",                                              "Power Steering Fluid"),
+        (r"differential\s+(?:fluid|oil|gear)",                                     "Differential Fluid"),
+        (r"transfer\s+case",                                                       "Transfer Case Fluid"),
+        (r"chain\s+(?:tension|slack|lube|lubrication|oil)",                        "Chain Tension / Lube"),
+        (r"drive\s+chain",                                                         "Drive Chain"),
+        (r"timing\s+belt|cam(?:shaft)?\s+belt",                                   "Timing Belt"),
+        (r"drive\s+belt|serpentine\s+belt|v-?belt",                               "Drive Belt"),
+        (r"cam\s+chain",                                                           "Cam Chain"),
+        (r"tire\s+(?:pressure|inflation)",                                         "Tire Pressure"),
+        (r"tire\s+rotation|rotate\s+tires?",                                       "Tire Rotation"),
+        (r"wheel\s+bearing",                                                       "Wheel Bearings"),
+        (r"clutch",                                                                 "Clutch"),
+        (r"throttle\s+(?:body|cable|play)",                                        "Throttle"),
+        (r"valve\s+(?:clearance|adjustment|lash)",                                 "Valve Clearance"),
+        (r"fuel\s+(?:system|injector|lines?)",                                     "Fuel System"),
+        (r"battery",                                                                "Battery"),
+        (r"wiper\s+(?:blade|insert|refill)",                                       "Wiper Blades"),
+        (r"suspension",                                                             "Suspension"),
+        (r"shock\s+absorber|strut",                                                "Shocks / Struts"),
+        (r"steering\s+(?:system|linkage|gear)",                                    "Steering"),
+        (r"axle\s+(?:boot|shaft)|cv\s+(?:boot|joint)",                            "CV / Axle Boots"),
+        (r"exhaust\s+(?:system|pipe)",                                             "Exhaust System"),
+        (r"fuel\s+cap\s+gasket|gas\s+cap",                                        "Fuel Cap Gasket"),
+        (r"headlight|tail\s*light|bulb",                                           "Lights"),
+    ]
+    ITEM_RE = [(re.compile(pat, re.IGNORECASE), name) for pat, name in ITEMS]
+
+    # ── Build line list ───────────────────────────────────────────────────────
+    lines = [l.strip() for l in pdf_text.splitlines()]
+
+    def identify_item(text: str) -> str | None:
+        for pat, name in ITEM_RE:
+            if pat.search(text):
+                return name
+        return None
+
+    def extract_intervals(text: str) -> tuple[int | None, int | None]:
+        """Return (miles, days) from a text snippet, or (None, None)."""
+        miles = days = None
+
+        for m in RE_MI_NAMED.finditer(text):
+            raw, unit = m.group(1).replace(",", ""), m.group(2)
+            v = to_miles(float(raw), unit)
+            if 100 <= v <= 200_000:
+                miles = v if miles is None else min(miles, v)
+
+        for m in RE_DAY_NAMED.finditer(text):
+            if m.group(1) and m.group(2):
+                raw, unit = m.group(1).replace(",", ""), m.group(2)
+                v = to_days(float(raw), unit)
+                if 1 <= v <= 3650:
+                    days = v if days is None else min(days, v)
+            elif m.group(3):
+                v = ADV_DAYS.get(m.group(3).lower(), 0)
+                if v:
+                    days = v if days is None else min(days, v)
+
+        return miles, days
+
+    def extract_spec(text: str, item_name: str = "") -> tuple[str | None, float | None, float | None, str | None]:
+        """Return (expected_spec, min_val, max_val, unit)."""
+        # Numeric range — validate lo < hi to avoid section-number false positives
+        m = RE_RANGE.search(text)
+        if m:
+            lo, hi, unit = float(m.group(1)), float(m.group(2)), m.group(3).upper()
+            if lo < hi:
+                return f"{m.group(1)}–{m.group(2)} {unit}", lo, hi, unit
+
+        # Minimum threshold
+        m = RE_MIN.search(text)
+        if m:
+            val, unit = float(m.group(1)), m.group(2).upper()
+            return f"≥ {m.group(1)} {unit}", val, None, unit
+
+        # Standalone pressure value (tire pressure, brake system)
+        if any(k in item_name.lower() for k in ("tire", "pressure", "brake")):
+            m = RE_PRESSURE.search(text)
+            if m:
+                val, unit = m.group(1), m.group(2).upper()
+                return f"{val} {unit}", float(val), None, unit
+
+        # Text-based specs — item-specific patterns
+        n = item_name.lower()
+        if "oil" in n and "filter" not in n:
+            # Oil viscosity grade: "0W-20", "SAE 5W-30", "dexos1"
+            m = re.search(r"\b((?:SAE\s+)?(?:0W-20|0W-30|5W-20|5W-30|5W-40|10W-30|10W-40))\b", text, re.I)
+            if m:
+                return m.group(1).upper(), None, None, None
+            m = re.search(r"\b(dexos\s*\d?)\b", text, re.I)
+            if m:
+                return m.group(1).capitalize(), None, None, None
+            m = re.search(r"\b(full[\s-]synthetic|synthetic[\s-]blend)\b", text, re.I)
+            if m:
+                return m.group(1).title(), None, None, None
+
+        if "brake fluid" in n:
+            m = re.search(r"\b(DOT[-\s]?[3-5](?:\+|\.1)?)\b", text, re.I)
+            if m:
+                return m.group(1).upper(), None, None, None
+
+        if "coolant" in n or "antifreeze" in n:
+            m = re.search(r"\b(DEX-?COOL|OAT|HOAT|G\d+)\b", text, re.I)
+            if m:
+                return m.group(1).upper(), None, None, None
+            m = re.search(r"\b(50[/\\]50|premix|pre-mix)\b", text, re.I)
+            if m:
+                return "50/50 Premix", None, None, None
+
+        if "transmission" in n:
+            m = re.search(r"\b(DEXRON[-\s]?(?:VI|V|IV|III|II|I|\d))\b", text, re.I)
+            if m:
+                return m.group(1).upper(), None, None, None
+            m = re.search(r"\b(ATF\+?\d*|CVT)\b", text, re.I)
+            if m:
+                return m.group(1).upper(), None, None, None
+
+        if "differential" in n or "transfer case" in n:
+            m = re.search(r"\b(75W-\d+|80W-\d+|SAE\s+\d+)\b", text, re.I)
+            if m:
+                return m.group(1).upper(), None, None, None
+
+        return None, None, None, None
+
+    # Numbers that are part of a range (e.g. 32 in "32-35 PSI") — exclude from bare heuristic
+    RE_IN_RANGE = re.compile(r"[\d.]+\s*[-–]\s*[\d.]+\s*(?:mm|psi|kpa|bar|in|cm)", re.IGNORECASE)
+
+    def bare_number_intervals(text: str) -> tuple[int | None, int | None]:
+        """
+        Heuristic for table rows with no unit labels.
+        Treats numbers 500-150,000 as miles, numbers 1-60 as months.
+        Skips numbers that are part of a spec range (e.g. 32-35 PSI).
+        Only used when named-unit extraction found nothing.
+        """
+        miles = days = None
+        # Mask out spec ranges so their numbers aren't misread as intervals
+        masked = RE_IN_RANGE.sub("XXXX", text)
+        for m in RE_BARE_NUM.finditer(masked):
+            v = int(m.group(1).replace(",", ""))
+            if 500 <= v <= 150_000 and miles is None:
+                miles = v
+            elif 1 <= v <= 60 and days is None:
+                days = v * 30  # months → days
+        return miles, days
+
+    # ── Scan with sliding window ──────────────────────────────────────────────
+    results: dict[str, dict] = {}
+
+    for i, line in enumerate(lines):
+        item_name = identify_item(line)
+        if not item_name:
+            continue
+
+        entry = results.setdefault(item_name, {
+            "description":    item_name,
+            "interval_miles": None,
+            "interval_days":  None,
+            "expected_spec":  None,
+            "min_value":      None,
+            "max_value":      None,
+            "unit":           None,
+        })
+
+        # Pass 1: current line only (handles prose + table format).
+        mi, dy = extract_intervals(line)
+        spec, mn, mx, unit = extract_spec(line, item_name)
+
+        # Pass 2: if this line has a keyword but no interval, peek at the next
+        # line — this handles split-format where the interval appears below the name.
+        if mi is None and dy is None and i + 1 < len(lines):
+            next_line = lines[i + 1]
+            mi2, dy2 = extract_intervals(next_line)
+            if mi2 or dy2:
+                mi, dy = mi2, dy2
+                if spec is None:
+                    spec, mn, mx, unit = extract_spec(next_line, item_name)
+
+        # Pass 3: bare-number heuristic for table rows (no unit labels).
+        # Applied only to the current line to avoid inter-item bleed.
+        if mi is None and dy is None:
+            mi, dy = bare_number_intervals(line)
+
+        # Commit to entry (don't overwrite already-found values)
+        if mi  and entry["interval_miles"] is None: entry["interval_miles"] = mi
+        if dy  and entry["interval_days"]  is None: entry["interval_days"]  = dy
+        if spec and entry["expected_spec"] is None:
+            entry["expected_spec"] = spec
+            entry["min_value"]     = mn
+            entry["max_value"]     = mx
+            entry["unit"]          = unit
+
+    check_points = [
+        v for v in results.values()
+        if v["interval_miles"] or v["interval_days"] or v["expected_spec"]
+    ]
+
+    # ── Fluid specs ───────────────────────────────────────────────────────────
+    # Extract fluid name, type/spec, and fill capacity.
+    CAP_UNIT = r"(?:quarts?|qt\.?|liters?|litres?|L(?:\b)|gallons?|gal\.?|fl\.?\s*oz)"
+    RE_CAP   = re.compile(rf"\b([\d.]+)\s*({CAP_UNIT})\b", re.IGNORECASE)
+
+    FLUID_KEYWORDS = [
+        (r"engine\s+oil|motor\s+oil",                 "Engine Oil"),
+        (r"engine\s+coolant|radiator\s+coolant|antifreeze", "Engine Coolant"),
+        (r"brake\s+fluid",                             "Brake Fluid"),
+        (r"transmission\s+fluid|auto(?:matic)?\s+trans(?:mission)?\s+fluid|atf\b", "Transmission Fluid"),
+        (r"transfer\s+case\s+fluid",                   "Transfer Case Fluid"),
+        (r"front\s+differential|front\s+axle\s+fluid", "Front Differential Fluid"),
+        (r"rear\s+differential|rear\s+axle\s+fluid",   "Rear Differential Fluid"),
+        (r"power\s+steering\s+fluid",                  "Power Steering Fluid"),
+        (r"windshield\s+wash|washer\s+fluid",           "Windshield Washer Fluid"),
+    ]
+    FLUID_RE = [(re.compile(p, re.IGNORECASE), n) for p, n in FLUID_KEYWORDS]
+
+    fluid_results: dict[str, dict] = {}
+    for i, line in enumerate(lines):
+        for pat, name in FLUID_RE:
+            if not pat.search(line):
+                continue
+            entry = fluid_results.setdefault(name, {"name": name, "spec": None, "volume": None})
+            window = line + (" " + lines[i + 1] if i + 1 < len(lines) else "")
+            # Spec
+            if entry["spec"] is None:
+                spec, *_ = extract_spec(window, name.lower())
+                if spec:
+                    entry["spec"] = spec
+            # Capacity
+            if entry["volume"] is None:
+                m = RE_CAP.search(window)
+                if m:
+                    entry["volume"] = f"{m.group(1)} {m.group(2).rstrip('.')}".strip()
+            break
+
+    # ── Torque specs ──────────────────────────────────────────────────────────
+    RE_FT_LB = re.compile(r"([\d.]+)\s*(?:ft[-·]?lbs?\.?|lb[-·]?ft\.?|ft\s*lbs?)", re.IGNORECASE)
+    RE_NM    = re.compile(r"([\d.]+)\s*(?:n[-·]?m\b|newton[-·]?m)", re.IGNORECASE)
+
+    TORQUE_KEYWORDS = [
+        (r"oil\s+drain\s+plug|drain\s+plug",              "Oil Drain Plug"),
+        (r"spark\s+plug",                                  "Spark Plugs"),
+        (r"lug\s+(?:nut|bolt)|wheel\s+(?:nut|bolt|stud)", "Wheel Lug Nuts"),
+        (r"oil\s+filter\s+(?:housing|adapter)",            "Oil Filter Housing"),
+        (r"axle\s+nut|hub\s+nut|spindle\s+nut",           "Axle Nut"),
+        (r"caliper\s+(?:bolt|pin|bracket)",                "Brake Caliper Bolt"),
+        (r"rotor\s+bolt|brake\s+disc\s+bolt",              "Brake Rotor Bolt"),
+        (r"cylinder\s+head\s+bolt",                        "Cylinder Head Bolt"),
+        (r"crankshaft\s+pulley|harmonic\s+balancer",       "Crankshaft Pulley Bolt"),
+        (r"camshaft\s+(?:cap|bearing|cover)",              "Camshaft Cap Bolt"),
+        (r"exhaust\s+manifold\s+(?:bolt|nut|stud)",        "Exhaust Manifold Bolt"),
+        (r"intake\s+manifold\s+bolt",                      "Intake Manifold Bolt"),
+        (r"flywheel\s+bolt|flex\s+plate",                  "Flywheel Bolt"),
+        (r"control\s+arm\s+bolt|lower\s+arm\s+bolt",      "Control Arm Bolt"),
+        (r"tie\s+rod\s+(?:end\s+)?nut",                   "Tie Rod End Nut"),
+        (r"sway\s+bar|stabilizer\s+(?:bar|link)",         "Sway Bar Link"),
+        (r"strut\s+(?:mount|nut|bolt)|shock\s+mount",     "Strut Mount Nut"),
+        (r"engine\s+mount\s+bolt|motor\s+mount",          "Engine Mount Bolt"),
+        (r"transmission\s+mount",                          "Transmission Mount Bolt"),
+        (r"battery\s+terminal|battery\s+clamp",           "Battery Terminal"),
+    ]
+    TORQUE_RE = [(re.compile(p, re.IGNORECASE), n) for p, n in TORQUE_KEYWORDS]
+
+    torque_results: dict[str, dict] = {}
+    for line in lines:
+        ft_m = RE_FT_LB.search(line)
+        nm_m = RE_NM.search(line)
+        if not (ft_m or nm_m):
+            continue
+        for pat, name in TORQUE_RE:
+            if pat.search(line):
+                entry = torque_results.setdefault(name, {"name": name, "ft_lb": None, "nm": None})
+                if ft_m and entry["ft_lb"] is None:
+                    entry["ft_lb"] = float(ft_m.group(1))
+                if nm_m and entry["nm"] is None:
+                    entry["nm"] = float(nm_m.group(1))
+                break
+
+    return {
+        "check_points": check_points,
+        "fluid_specs":  [v for v in fluid_results.values() if v["spec"] or v["volume"]],
+        "torque_specs": list(torque_results.values()),
+    }
+
+
+def parse_manual_with_ollama(pdf_text: str, ollama_url: str, model: str) -> list[dict]:
+    """
+    Optional: use a locally-running Ollama model for anything the regex missed.
+    Only called if Ollama is configured and regex returned fewer than 3 items.
+    """
+    import urllib.request
+    import urllib.error
+
+    prompt = (
+        "Extract vehicle maintenance intervals from the text below. "
+        "Return a JSON array only — no explanation, no markdown. "
+        "Each object: {description, interval_miles, interval_days, expected_spec, min_value, max_value, unit}. "
+        "Use null for unknown fields. Only include items with a clear interval.\n\n"
+        + pdf_text[:40000]
+    )
+
+    body = json.dumps({"model": model, "prompt": prompt, "stream": False}).encode()
+    req  = urllib.request.Request(
+        f"{ollama_url}/api/generate",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        data = json.loads(resp.read())
+    raw = data.get("response", "").strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1].lstrip("json").strip()
+    return json.loads(raw)
+
+
+def parse_manual(pdf_text: str, ollama_url: str | None = None, ollama_model: str = "mistral") -> dict:
+    """
+    Parse a vehicle owner's manual.
+    Returns {"check_points": [...], "fluid_specs": [...], "torque_specs": [...]}.
+    1. Local regex (fast, offline, zero cost) — always runs.
+    2. Ollama fallback for check_points only if < 3 found and Ollama configured.
+    """
+    data = parse_manual_local(pdf_text)
+    logger.info(
+        "Regex extractor: %d checkpoints, %d fluid specs, %d torque specs",
+        len(data["check_points"]), len(data["fluid_specs"]), len(data["torque_specs"]),
+    )
+
+    if len(data["check_points"]) < 3 and ollama_url:
+        try:
+            llm_items = parse_manual_with_ollama(pdf_text, ollama_url, ollama_model)
+            existing = {i["description"].lower() for i in data["check_points"]}
+            for item in llm_items:
+                if item.get("description", "").lower() not in existing:
+                    data["check_points"].append(item)
+            logger.info("After Ollama merge: %d checkpoints", len(data["check_points"]))
+        except Exception as e:
+            logger.warning("Ollama fallback failed (regex results kept): %s", e)
+
+    return data
+
+
+def apply_manual_intervals(
+    db: Session, user_id: str, vehicle_id: str, data: dict
+) -> dict:
+    """
+    Upsert all data extracted from an owner's manual:
+      - check_points  → VehicleCheckPoint (matched by description, case-insensitive)
+      - fluid_specs   → VehicleFluidSpec  (matched by name)
+      - torque_specs  → VehicleTorqueSpec (matched by name)
+    Nothing is deleted. Returns counts of what was updated vs created.
+    """
+    v = _get_vehicle(db, vehicle_id, user_id)
+
+    # ── Checkpoints ───────────────────────────────────────────────────────────
+    existing_cps = {cp.description.lower(): cp for cp in v.check_points}
+    cp_updated = cp_created = 0
+
+    for item in data.get("check_points", []):
+        desc = (item.get("description") or "").strip()
+        if not desc:
+            continue
+        cp = existing_cps.get(desc.lower())
+        if cp:
+            if item.get("interval_miles") is not None: cp.interval_miles = item["interval_miles"]
+            if item.get("interval_days")  is not None: cp.interval_days  = item["interval_days"]
+            if item.get("expected_spec")  is not None: cp.expected_spec  = item["expected_spec"]
+            if item.get("min_value")      is not None: cp.min_value      = item["min_value"]
+            if item.get("max_value")      is not None: cp.max_value      = item["max_value"]
+            if item.get("unit")           is not None: cp.unit           = item["unit"]
+            cp_updated += 1
+        else:
+            db.add(VehicleCheckPoint(
+                vehicle_id=v.id, description=desc,
+                sort_order=len(existing_cps) + cp_created,
+                interval_miles=item.get("interval_miles"),
+                interval_days=item.get("interval_days"),
+                expected_spec=item.get("expected_spec"),
+                min_value=item.get("min_value"),
+                max_value=item.get("max_value"),
+                unit=item.get("unit"),
+            ))
+            cp_created += 1
+
+    # ── Fluid specs ───────────────────────────────────────────────────────────
+    existing_fs = {fs.name.lower(): fs for fs in v.fluid_specs}
+    fs_updated = fs_created = 0
+
+    for item in data.get("fluid_specs", []):
+        name = (item.get("name") or "").strip()
+        if not name:
+            continue
+        fs = existing_fs.get(name.lower())
+        if fs:
+            if item.get("spec")   is not None: fs.spec   = item["spec"]
+            if item.get("volume") is not None: fs.volume = item["volume"]
+            fs_updated += 1
+        else:
+            db.add(VehicleFluidSpec(
+                vehicle_id=v.id,
+                name=name,
+                spec=item.get("spec"),
+                volume=item.get("volume"),
+            ))
+            fs_created += 1
+
+    # ── Torque specs ──────────────────────────────────────────────────────────
+    existing_ts = {ts.name.lower(): ts for ts in v.torque_specs}
+    ts_updated = ts_created = 0
+
+    for item in data.get("torque_specs", []):
+        name = (item.get("name") or "").strip()
+        if not name:
+            continue
+        ts = existing_ts.get(name.lower())
+        if ts:
+            if item.get("ft_lb") is not None: ts.ft_lb = item["ft_lb"]
+            if item.get("nm")    is not None: ts.nm    = item["nm"]
+            ts_updated += 1
+        else:
+            db.add(VehicleTorqueSpec(
+                vehicle_id=v.id,
+                name=name,
+                ft_lb=item.get("ft_lb"),
+                nm=item.get("nm"),
+            ))
+            ts_created += 1
+
+    db.commit()
+    db.refresh(v)
+    return {
+        "checkpoints_updated": cp_updated,
+        "checkpoints_created": cp_created,
+        "fluid_specs_updated": fs_updated,
+        "fluid_specs_created": fs_created,
+        "torque_specs_updated": ts_updated,
+        "torque_specs_created": ts_created,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -410,7 +1111,7 @@ def create_service_log(
 
     performed_by_uuid = None
     if performed_by_id:
-        p = db.query(MaintenancePerson).filter(MaintenancePerson.id == performed_by_id).first()
+        p = db.query(MaintenancePerson).filter(MaintenancePerson.id == _uid(performed_by_id)).first()
         if not p or p.owner_user_id != user_id:
             raise ValueError("Performer not found or not on your roster.")
         performed_by_uuid = p.id
@@ -430,10 +1131,39 @@ def create_service_log(
     db.flush()
 
     for cr in (check_results or []):
+        raw_status = cr.get("status")
+        status_enum = None
+        if raw_status in ("pass", "warn", "fail"):
+            status_enum = CheckStatus(raw_status)
+        elif raw_status is None:
+            # Auto-calculate from actual_value and checkpoint min/max if linked
+            cp_id = cr.get("check_point_id")
+            actual = cr.get("actual_value")
+            if cp_id and actual:
+                cp = db.query(VehicleCheckPoint).filter(VehicleCheckPoint.id == _uid(cp_id)).first()
+                if cp and cp.min_value is not None:
+                    try:
+                        num = float(actual)
+                        if cp.max_value is not None:
+                            if cp.min_value <= num <= cp.max_value:
+                                status_enum = CheckStatus.PASS
+                            elif num < cp.min_value * 0.9 or num > cp.max_value * 1.1:
+                                status_enum = CheckStatus.FAIL
+                            else:
+                                status_enum = CheckStatus.WARN
+                        else:
+                            # Only min_value — it's a "must be at least X" spec
+                            status_enum = CheckStatus.PASS if num >= cp.min_value else CheckStatus.FAIL
+                    except (TypeError, ValueError):
+                        pass
+
         db.add(ServiceCheckResult(
             log_id=log.id,
+            check_point_id=cr.get("check_point_id") or None,
             description=cr["description"],
-            passed=cr.get("passed", True),
+            actual_value=cr.get("actual_value"),
+            status=status_enum,
+            passed=cr.get("passed", True) if status_enum is None else (status_enum == CheckStatus.PASS),
         ))
 
     db.commit()
@@ -452,7 +1182,7 @@ def get_service_logs(db: Session, user_id: str, vehicle_id: str) -> list[Service
 
 
 def get_service_log(db: Session, user_id: str, log_id: str) -> ServiceLog:
-    log = db.query(ServiceLog).filter(ServiceLog.id == log_id).first()
+    log = db.query(ServiceLog).filter(ServiceLog.id == _uid(log_id)).first()
     if not log:
         raise NoResultFound(f"Service log '{log_id}' not found.")
     _get_vehicle(db, str(log.vehicle_id), user_id)

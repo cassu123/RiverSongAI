@@ -215,43 +215,15 @@
    ============================================================ */
 
 /* Halo Blue Effects */
-[data-theme="halo"] body::before {
-  content: "";
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  z-index: 9999;
-  /* Hexagonal/grid holographic overlay feel */
-  background: 
-    linear-gradient(rgba(0, 229, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 229, 255, 0.02) 1px, transparent 1px);
-  background-size: 30px 30px;
-}
-
 [data-theme="halo"] .card {
   box-shadow: 0 0 8px rgba(0, 229, 255, 0.15), inset 0 0 10px rgba(0, 229, 255, 0.05);
   border: 1px solid var(--border-bright);
 }
 
 /* Combat Effects */
-[data-theme="combat"] body::before {
-  content: "";
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  z-index: 9999;
-  /* CRT scanline effect */
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent,
-    transparent 3px,
-    rgba(61, 204, 121, 0.04) 3px,
-    rgba(61, 204, 121, 0.04) 6px
-  );
-}
-
 [data-theme="combat"] .card {
-  box-shadow: inset 0 0 12px rgba(61, 204, 121, 0.1);
+  box-shadow: 0 0 8px rgba(61, 204, 121, 0.15), inset 0 0 10px rgba(61, 204, 121, 0.05);
+  border: 1px solid var(--border-bright);
 }
 
 /* Cyberpunk Effects */
@@ -308,15 +280,15 @@
 
 /* Combat Typography */
 [data-theme="combat"] {
-  --font-display: 'Courier New', Courier, monospace;
-  --font-body: 'Courier New', Courier, monospace;
+  --font-display: 'Orbitron', 'Rajdhani', sans-serif;
+  --font-body: 'Rajdhani', 'Segoe UI', sans-serif;
 }
 
 [data-theme="combat"] .page-title,
 [data-theme="combat"] .card-title,
 [data-theme="combat"] .sidebar-label {
-  letter-spacing: 0.05em;
-  font-weight: 600;
+  letter-spacing: 0.1em;
+  font-weight: 700;
   text-transform: uppercase;
 }
 

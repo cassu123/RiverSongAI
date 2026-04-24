@@ -2,8 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import './InventoryVault.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
 const CATEGORIES = [
   'Apparel', 'Beauty', 'Electronics', 'Food & Beverage',
   'Fragrance', 'Health', 'Home Goods', 'Jewelry',
@@ -11,7 +9,7 @@ const CATEGORIES = [
 ];
 
 async function apiFetch(path, token, opts = {}) {
-  const res = await fetch(`${API}${path}`, {
+  const res = await fetch(path, {
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...opts.headers },
     ...opts,
   });
@@ -288,7 +286,7 @@ export default function InventoryVault({ workspaceId, token: tokenProp }) {
     if (!file) return;
     const fd = new FormData();
     fd.append('file', file);
-    await fetch(`${API}/api/commerce/products/${productId}/image`, {
+    await fetch(`/api/commerce/products/${productId}/image`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: fd,
