@@ -8,6 +8,7 @@ Per-user stats scoped by user_id query param (defaults to "default").
 
 from __future__ import annotations
 
+import logging
 import time
 from datetime import datetime, timezone
 from typing import Optional
@@ -16,6 +17,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 
 from core.auth import decode_token
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["dashboard"])
 
 _START_TIME = time.monotonic()
@@ -52,20 +54,20 @@ async def get_dashboard(request: Request, authorization: Optional[str] = Header(
         try:
             facts     = await mm.get_facts(user_id)
             fact_count = len(facts)
-        except Exception:
-            pass
+        except (AttributeError, TypeError, ValueError) as e:
+            logger.warning("Dashboard: failed to fetch facts for %s: %s", user_id, e)
 
         try:
             summaries     = await mm._store.get_recent_summaries(user_id, limit=9999)
             summary_count = len(summaries)
-        except Exception:
-            pass
+        except (AttributeError, TypeError, ValueError) as e:
+            logger.warning("Dashboard: failed to fetch summaries for %s: %s", user_id, e)
 
         try:
             prefs      = await mm.get_preferences(user_id)
             pref_count = len(prefs)
-        except Exception:
-            pass
+        except (AttributeError, TypeError, ValueError) as e:
+            logger.warning("Dashboard: failed to fetch preferences for %s: %s", user_id, e)
 
     latency_ms = round((time.monotonic() - t0) * 1000)
 

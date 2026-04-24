@@ -85,20 +85,42 @@ function VehicleForm({ initial, onSave, onCancel, saveLabel }) {
 }
 
 // ---------------------------------------------------------------------------
-// Specs editor — with interval fields on checkpoints
+// Specs editor — unified single list
 // ---------------------------------------------------------------------------
 
-const BLANK_CP = { description: '', interval_miles: '', interval_days: '', expected_spec: '', min_value: '', max_value: '', unit: '' };
+const BLANK_CP = {
+  description: '', service_level: 'inspect',
+  interval_miles: '', interval_days: '', due_at_miles: '',
+  expected_spec: '', volume: '', min_value: '', max_value: '', unit: '',
+  ft_lb: '', nm: '',
+};
+
+const SVC_LEVEL_LABELS = { inspect: 'INSPECT', service: 'SERVICE', replace: 'REPLACE' };
+const SVC_LEVEL_COLORS = { inspect: 'var(--primary)', service: 'var(--warn)', replace: 'var(--error)' };
+
+function fmtDays(d) {
+  if (!d) return null;
+  if (d % 365 === 0) return `${d / 365}yr`;
+  if (d % 30  === 0) return `${d / 30}mo`;
+  if (d % 7   === 0) return `${d / 7}wk`;
+  return `${d}d`;
+}
 
 function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
   const [editing, setEditing] = useState(false);
-  const [form, setForm]       = useState({
+  const [form, setForm] = useState({
+    description:    cp.description    ?? '',
+    service_level:  cp.service_level  ?? 'inspect',
     interval_miles: cp.interval_miles ?? '',
     interval_days:  cp.interval_days  ?? '',
+    due_at_miles:   cp.due_at_miles   ?? '',
     expected_spec:  cp.expected_spec  ?? '',
+    volume:         cp.volume         ?? '',
     min_value:      cp.min_value      ?? '',
     max_value:      cp.max_value      ?? '',
     unit:           cp.unit           ?? '',
+    ft_lb:          cp.ft_lb          ?? '',
+    nm:             cp.nm             ?? '',
   });
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
@@ -106,15 +128,22 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
   const save = async () => {
     setBusy(true);
     try {
+      const n = (v) => v !== '' ? Number(v) : null;
       await apiFetch(`/api/vehicles/${vehicleId}/specs/checkpoints/${cp.id}`, token, {
         method: 'PATCH',
         body: JSON.stringify({
-          interval_miles: form.interval_miles !== '' ? Number(form.interval_miles) : null,
-          interval_days:  form.interval_days  !== '' ? Number(form.interval_days)  : null,
-          expected_spec:  form.expected_spec  || null,
-          min_value:      form.min_value      !== '' ? Number(form.min_value)      : null,
-          max_value:      form.max_value      !== '' ? Number(form.max_value)      : null,
-          unit:           form.unit           || null,
+          description:    form.description   || null,
+          service_level:  form.service_level,
+          interval_miles: n(form.interval_miles),
+          interval_days:  n(form.interval_days),
+          due_at_miles:   n(form.due_at_miles),
+          expected_spec:  form.expected_spec || null,
+          volume:         form.volume        || null,
+          min_value:      n(form.min_value),
+          max_value:      n(form.max_value),
+          unit:           form.unit          || null,
+          ft_lb:          n(form.ft_lb),
+          nm:             n(form.nm),
         }),
       });
       setEditing(false);
@@ -127,26 +156,43 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
     onUpdated();
   };
 
-  const fmtDays = (d) => {
-    if (d % 365 === 0) return `Every ${d / 365} yr${d / 365 > 1 ? 's' : ''}`;
-    if (d % 30  === 0) return `Every ${d / 30} mo`;
-    if (d % 7   === 0) return `Every ${d / 7} wk${d / 7 > 1 ? 's' : ''}`;
-    return `Every ${d}d`;
-  };
-
   const intervalLabel = () => {
     const parts = [];
-    if (cp.interval_miles) parts.push(`Every ${cp.interval_miles.toLocaleString()} mi`);
-    if (cp.interval_days)  parts.push(fmtDays(cp.interval_days));
-    return parts.join(' / ') || null;
+    if (cp.due_at_miles && !cp.interval_miles) {
+      parts.push(`Due at ${cp.due_at_miles.toLocaleString()} mi`);
+    } else {
+      if (cp.due_at_miles) parts.push(`Next: ${cp.due_at_miles.toLocaleString()} mi`);
+      else if (cp.interval_miles) parts.push(`Every ${cp.interval_miles.toLocaleString()} mi`);
+    }
+    if (cp.interval_days) parts.push(`/ ${fmtDays(cp.interval_days)}`);
+    return parts.join(' ') || null;
   };
+
+  const svcColor = SVC_LEVEL_COLORS[cp.service_level] || 'var(--text-dim)';
 
   return (
     <li className="cp-row">
       <div className="cp-row-main">
+        <span className="cp-svc-badge" style={{ borderColor: svcColor, color: svcColor }}>
+          {SVC_LEVEL_LABELS[cp.service_level] || 'INSPECT'}
+        </span>
         <span className="spec-name">{cp.description}</span>
-        {cp.expected_spec && <span className="cp-spec-tag">{cp.expected_spec}{cp.unit ? ` (${cp.unit})` : ''}</span>}
+        {cp.expected_spec && (
+          <span className="cp-spec-tag">
+            {cp.expected_spec}
+            {cp.unit && !cp.expected_spec.toLowerCase().includes(cp.unit.toLowerCase()) ? ` ${cp.unit}` : ''}
+            {cp.volume ? ` · ${cp.volume}` : ''}
+          </span>
+        )}
+        {(cp.ft_lb || cp.nm) && (
+          <span className="cp-torque-tag">
+            {cp.ft_lb ? `${cp.ft_lb} ft-lb` : ''}{cp.ft_lb && cp.nm ? ' / ' : ''}{cp.nm ? `${cp.nm} N·m` : ''}
+          </span>
+        )}
         {intervalLabel() && <span className="cp-interval-tag">{intervalLabel()}</span>}
+        {cp.last_service_odometer && (
+          <span className="cp-last-svc">last: {cp.last_service_odometer.toLocaleString()} mi</span>
+        )}
       </div>
       <div className="cp-row-actions">
         <button className="cyber-btn btn-xs" onClick={() => setEditing(e => !e)}>{editing ? 'CLOSE' : 'EDIT'}</button>
@@ -155,13 +201,29 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
       {editing && (
         <div className="cp-edit-panel">
           <div className="cp-edit-grid">
+            <div className="pulse-field" style={{ gridColumn: 'span 2' }}>
+              <label className="pulse-label">DESCRIPTION</label>
+              <input className="cyber-input" value={form.description} onChange={set('description')} />
+            </div>
             <div className="pulse-field">
-              <label className="pulse-label">EXPECTED SPEC</label>
-              <input className="cyber-input" value={form.expected_spec} onChange={set('expected_spec')} placeholder="e.g. 20-30mm slack" />
+              <label className="pulse-label">SERVICE LEVEL</label>
+              <select className="cyber-input" value={form.service_level} onChange={set('service_level')}>
+                <option value="inspect">Inspect</option>
+                <option value="service">Service</option>
+                <option value="replace">Replace</option>
+              </select>
             </div>
             <div className="pulse-field">
               <label className="pulse-label">UNIT</label>
               <input className="cyber-input" value={form.unit} onChange={set('unit')} placeholder="mm / PSI / °C" />
+            </div>
+            <div className="pulse-field">
+              <label className="pulse-label">EXPECTED SPEC</label>
+              <input className="cyber-input" value={form.expected_spec} onChange={set('expected_spec')} placeholder="e.g. SAE 0W-20" />
+            </div>
+            <div className="pulse-field">
+              <label className="pulse-label">VOLUME / CAPACITY</label>
+              <input className="cyber-input" value={form.volume} onChange={set('volume')} placeholder="e.g. 4.2 qt" />
             </div>
             <div className="pulse-field">
               <label className="pulse-label">MIN VALUE</label>
@@ -172,19 +234,29 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
               <input className="cyber-input num-input" type="number" value={form.max_value} onChange={set('max_value')} placeholder="30" />
             </div>
             <div className="pulse-field">
+              <label className="pulse-label">TORQUE (FT-LB)</label>
+              <input className="cyber-input num-input" type="number" value={form.ft_lb} onChange={set('ft_lb')} placeholder="18" />
+            </div>
+            <div className="pulse-field">
+              <label className="pulse-label">TORQUE (N·m)</label>
+              <input className="cyber-input num-input" type="number" value={form.nm} onChange={set('nm')} placeholder="24" />
+            </div>
+            <div className="pulse-field">
               <label className="pulse-label">INTERVAL (MILES)</label>
-              <input className="cyber-input num-input" type="number" value={form.interval_miles} onChange={set('interval_miles')} placeholder="3750" />
+              <input className="cyber-input num-input" type="number" value={form.interval_miles} onChange={set('interval_miles')} placeholder="5000" />
             </div>
             <div className="pulse-field">
               <label className="pulse-label">INTERVAL (DAYS)</label>
-              <input className="cyber-input num-input" type="number" value={form.interval_days} onChange={set('interval_days')} placeholder="14" />
+              <input className="cyber-input num-input" type="number" value={form.interval_days} onChange={set('interval_days')} placeholder="365" />
+            </div>
+            <div className="pulse-field">
+              <label className="pulse-label">NEXT DUE (MILES)</label>
+              <input className="cyber-input num-input" type="number" value={form.due_at_miles} onChange={set('due_at_miles')} placeholder="600" />
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
             <button className="cyber-btn btn-xs" onClick={() => setEditing(false)}>CANCEL</button>
-            <button className="cyber-btn btn-xs btn-save" onClick={save} disabled={busy}>
-              {busy ? '...' : 'SAVE'}
-            </button>
+            <button className="cyber-btn btn-xs btn-save" onClick={save} disabled={busy}>{busy ? '...' : 'SAVE'}</button>
           </div>
         </div>
       )}
@@ -193,148 +265,97 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
 }
 
 function SpecsEditor({ vehicle, token, onUpdated }) {
-  const [newFluid,  setNewFluid]  = useState({ name: '', spec: '', volume: '' });
-  const [newTorque, setNewTorque] = useState({ name: '', ft_lb: '', nm: '' });
-  const [newPoint,    setNewPoint]    = useState(BLANK_CP);
-  const [showAddCp,   setShowAddCp]   = useState(false);
-  const [showAddFluid,  setShowAddFluid]  = useState(false);
-  const [showAddTorque, setShowAddTorque] = useState(false);
+  const [newPoint, setNewPoint] = useState(BLANK_CP);
+  const [showAdd,  setShowAdd]  = useState(false);
   const [busy, setBusy] = useState(false);
-
-  const withBusy = async (fn) => { setBusy(true); try { await fn(); } finally { setBusy(false); } };
-
-  const addFluid = () => withBusy(async () => {
-    if (!newFluid.name.trim()) return;
-    await apiFetch(`/api/vehicles/${vehicle.id}/specs/fluids`, token, { method: 'POST', body: JSON.stringify(newFluid) });
-    setNewFluid({ name: '', spec: '', volume: '' });
-    onUpdated();
-  });
-  const delFluid = async (id) => { await apiFetch(`/api/vehicles/${vehicle.id}/specs/fluids/${id}`, token, { method: 'DELETE' }); onUpdated(); };
-
-  const addTorque = () => withBusy(async () => {
-    if (!newTorque.name.trim()) return;
-    await apiFetch(`/api/vehicles/${vehicle.id}/specs/torques`, token, {
-      method: 'POST',
-      body: JSON.stringify({ name: newTorque.name, ft_lb: newTorque.ft_lb ? Number(newTorque.ft_lb) : null, nm: newTorque.nm ? Number(newTorque.nm) : null }),
-    });
-    setNewTorque({ name: '', ft_lb: '', nm: '' });
-    onUpdated();
-  });
-  const delTorque = async (id) => { await apiFetch(`/api/vehicles/${vehicle.id}/specs/torques/${id}`, token, { method: 'DELETE' }); onUpdated(); };
-
-  const addPoint = () => withBusy(async () => {
-    if (!newPoint.description.trim()) return;
-    await apiFetch(`/api/vehicles/${vehicle.id}/specs/checkpoints`, token, {
-      method: 'POST',
-      body: JSON.stringify({
-        description:    newPoint.description,
-        sort_order:     vehicle.check_points.length,
-        interval_miles: newPoint.interval_miles !== '' ? Number(newPoint.interval_miles) : null,
-        interval_days:  newPoint.interval_days  !== '' ? Number(newPoint.interval_days)  : null,
-        expected_spec:  newPoint.expected_spec  || null,
-        min_value:      newPoint.min_value      !== '' ? Number(newPoint.min_value)      : null,
-        max_value:      newPoint.max_value      !== '' ? Number(newPoint.max_value)      : null,
-        unit:           newPoint.unit           || null,
-      }),
-    });
-    setNewPoint(BLANK_CP);
-    setShowAddCp(false);
-    onUpdated();
-  });
-
   const setNp = (k) => (e) => setNewPoint(f => ({ ...f, [k]: e.target.value }));
+
+  const addPoint = async () => {
+    if (!newPoint.description.trim()) return;
+    setBusy(true);
+    try {
+      const n = (v) => v !== '' ? Number(v) : null;
+      await apiFetch(`/api/vehicles/${vehicle.id}/specs/checkpoints`, token, {
+        method: 'POST',
+        body: JSON.stringify({
+          description:    newPoint.description,
+          service_level:  newPoint.service_level,
+          sort_order:     vehicle.check_points.length,
+          interval_miles: n(newPoint.interval_miles),
+          interval_days:  n(newPoint.interval_days),
+          due_at_miles:   n(newPoint.due_at_miles),
+          expected_spec:  newPoint.expected_spec || null,
+          volume:         newPoint.volume        || null,
+          min_value:      n(newPoint.min_value),
+          max_value:      n(newPoint.max_value),
+          unit:           newPoint.unit          || null,
+          ft_lb:          n(newPoint.ft_lb),
+          nm:             n(newPoint.nm),
+        }),
+      });
+      setNewPoint(BLANK_CP);
+      setShowAdd(false);
+      onUpdated();
+    } finally { setBusy(false); }
+  };
 
   return (
     <div className="specs-editor">
       <div className="spec-section">
-        {(vehicle.fluid_specs.length > 0 || showAddFluid) && <h4>[ FLUID SPECS ]</h4>}
-        {vehicle.fluid_specs.length === 0 && !showAddFluid && (
-          <div className="specs-empty-hint">No fluid specs yet.</div>
-        )}
-        <ul className="spec-edit-list">
-          {vehicle.fluid_specs.map((f) => (
-            <li key={f.id}>
-              <span className="spec-name">{f.name}</span>
-              <span className="spec-val">{f.spec}{f.volume ? ` (${f.volume})` : ''}</span>
-              <button className="del-spec-btn" onClick={() => delFluid(f.id)}>✕</button>
-            </li>
-          ))}
-        </ul>
-        {!showAddFluid ? (
-          <button className="cyber-btn btn-xs" style={{ marginTop: 8 }} onClick={() => setShowAddFluid(true)}>+ ADD FLUID</button>
-        ) : (
-          <div className="spec-add-row" style={{ marginTop: 8 }}>
-            <input className="cyber-input" placeholder="Name" value={newFluid.name} onChange={(e) => setNewFluid(f => ({ ...f, name: e.target.value }))} />
-            <input className="cyber-input" placeholder="Spec" value={newFluid.spec} onChange={(e) => setNewFluid(f => ({ ...f, spec: e.target.value }))} />
-            <input className="cyber-input" placeholder="Volume" value={newFluid.volume} onChange={(e) => setNewFluid(f => ({ ...f, volume: e.target.value }))} />
-            <button className="cyber-btn btn-xs btn-save" onClick={() => { addFluid(); setShowAddFluid(false); }} disabled={busy || !newFluid.name.trim()}>+</button>
-            <button className="cyber-btn btn-xs" onClick={() => { setShowAddFluid(false); setNewFluid({ name: '', spec: '', volume: '' }); }}>✕</button>
-          </div>
-        )}
-      </div>
-
-      <div className="spec-section">
-        {(vehicle.torque_specs.length > 0 || showAddTorque) && <h4>[ TORQUE VALUES ]</h4>}
-        {vehicle.torque_specs.length === 0 && !showAddTorque && (
-          <div className="specs-empty-hint">No torque values yet.</div>
-        )}
-        <ul className="spec-edit-list">
-          {vehicle.torque_specs.map((t) => (
-            <li key={t.id}>
-              <span className="spec-name">{t.name}</span>
-              <span className="spec-val hl-warn">{t.ft_lb} Ft-Lb // {t.nm} N·m</span>
-              <button className="del-spec-btn" onClick={() => delTorque(t.id)}>✕</button>
-            </li>
-          ))}
-        </ul>
-        {!showAddTorque ? (
-          <button className="cyber-btn btn-xs" style={{ marginTop: 8 }} onClick={() => setShowAddTorque(true)}>+ ADD TORQUE</button>
-        ) : (
-          <div className="spec-add-row" style={{ marginTop: 8 }}>
-            <input className="cyber-input" placeholder="Name" value={newTorque.name} onChange={(e) => setNewTorque(f => ({ ...f, name: e.target.value }))} />
-            <input className="cyber-input num-input" placeholder="Ft-Lb" value={newTorque.ft_lb} onChange={(e) => setNewTorque(f => ({ ...f, ft_lb: e.target.value }))} />
-            <input className="cyber-input num-input" placeholder="N·m" value={newTorque.nm} onChange={(e) => setNewTorque(f => ({ ...f, nm: e.target.value }))} />
-            <button className="cyber-btn btn-xs btn-save" onClick={() => { addTorque(); setShowAddTorque(false); }} disabled={busy || !newTorque.name.trim()}>+</button>
-            <button className="cyber-btn btn-xs" onClick={() => { setShowAddTorque(false); setNewTorque({ name: '', ft_lb: '', nm: '' }); }}>✕</button>
-          </div>
-        )}
-      </div>
-
-      <div className="spec-section">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <h4 style={{ margin: 0 }}>[ INSPECTION / MAINTENANCE POINTS ]</h4>
+        <div className="cp-editor-header">
+          <h4 style={{ margin: 0 }}>[ SERVICE ITEMS ]</h4>
           {vehicle.check_points.length > 0 && (
             <button
               className="cyber-btn btn-xs btn-danger"
               onClick={async () => {
-                if (!window.confirm(`Clear all ${vehicle.check_points.length} inspection items? This cannot be undone.`)) return;
+                if (!window.confirm(`Clear all ${vehicle.check_points.length} items? This cannot be undone.`)) return;
                 await apiFetch(`/api/vehicles/${vehicle.id}/specs/checkpoints`, token, { method: 'DELETE' });
                 onUpdated();
               }}
             >CLEAR ALL</button>
           )}
         </div>
+
+        {vehicle.check_points.length === 0 && !showAdd && (
+          <div className="mp-empty-specs">
+            No service items yet. Upload an owner's manual in <strong>SETTINGS → MANUAL IMPORT</strong>, or add items manually.
+          </div>
+        )}
+
         <ul className="spec-edit-list cp-list">
           {vehicle.check_points.map((cp) => (
             <CheckPointRow key={cp.id} cp={cp} token={token} vehicleId={vehicle.id} onUpdated={onUpdated} />
           ))}
         </ul>
-        {!showAddCp ? (
-          <button className="cyber-btn btn-xs" style={{ marginTop: 8 }} onClick={() => setShowAddCp(true)}>+ ADD ITEM</button>
+
+        {!showAdd ? (
+          <button className="cyber-btn btn-xs" style={{ marginTop: 8 }} onClick={() => setShowAdd(true)}>+ ADD ITEM</button>
         ) : (
           <div className="cp-edit-panel" style={{ marginTop: 8 }}>
             <div className="cp-edit-grid">
               <div className="pulse-field" style={{ gridColumn: 'span 2' }}>
                 <label className="pulse-label">DESCRIPTION *</label>
-                <input className="cyber-input" value={newPoint.description} onChange={setNp('description')} placeholder="e.g. Chain tension" />
+                <input className="cyber-input" value={newPoint.description} onChange={setNp('description')} placeholder="e.g. Engine Oil Change" />
               </div>
               <div className="pulse-field">
-                <label className="pulse-label">EXPECTED SPEC</label>
-                <input className="cyber-input" value={newPoint.expected_spec} onChange={setNp('expected_spec')} placeholder="20-30mm slack" />
+                <label className="pulse-label">SERVICE LEVEL</label>
+                <select className="cyber-input" value={newPoint.service_level} onChange={setNp('service_level')}>
+                  <option value="inspect">Inspect</option>
+                  <option value="service">Service</option>
+                  <option value="replace">Replace</option>
+                </select>
               </div>
               <div className="pulse-field">
                 <label className="pulse-label">UNIT</label>
-                <input className="cyber-input" value={newPoint.unit} onChange={setNp('unit')} placeholder="mm" />
+                <input className="cyber-input" value={newPoint.unit} onChange={setNp('unit')} placeholder="mm / PSI" />
+              </div>
+              <div className="pulse-field">
+                <label className="pulse-label">EXPECTED SPEC</label>
+                <input className="cyber-input" value={newPoint.expected_spec} onChange={setNp('expected_spec')} placeholder="SAE 0W-20" />
+              </div>
+              <div className="pulse-field">
+                <label className="pulse-label">VOLUME</label>
+                <input className="cyber-input" value={newPoint.volume} onChange={setNp('volume')} placeholder="4.2 qt" />
               </div>
               <div className="pulse-field">
                 <label className="pulse-label">MIN VALUE</label>
@@ -345,16 +366,28 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
                 <input className="cyber-input num-input" type="number" value={newPoint.max_value} onChange={setNp('max_value')} placeholder="30" />
               </div>
               <div className="pulse-field">
+                <label className="pulse-label">TORQUE (FT-LB)</label>
+                <input className="cyber-input num-input" type="number" value={newPoint.ft_lb} onChange={setNp('ft_lb')} placeholder="18" />
+              </div>
+              <div className="pulse-field">
+                <label className="pulse-label">TORQUE (N·m)</label>
+                <input className="cyber-input num-input" type="number" value={newPoint.nm} onChange={setNp('nm')} placeholder="24" />
+              </div>
+              <div className="pulse-field">
                 <label className="pulse-label">INTERVAL (MILES)</label>
-                <input className="cyber-input num-input" type="number" value={newPoint.interval_miles} onChange={setNp('interval_miles')} placeholder="3750" />
+                <input className="cyber-input num-input" type="number" value={newPoint.interval_miles} onChange={setNp('interval_miles')} placeholder="5000" />
               </div>
               <div className="pulse-field">
                 <label className="pulse-label">INTERVAL (DAYS)</label>
-                <input className="cyber-input num-input" type="number" value={newPoint.interval_days} onChange={setNp('interval_days')} placeholder="14" />
+                <input className="cyber-input num-input" type="number" value={newPoint.interval_days} onChange={setNp('interval_days')} placeholder="365" />
+              </div>
+              <div className="pulse-field">
+                <label className="pulse-label">NEXT DUE (MILES)</label>
+                <input className="cyber-input num-input" type="number" value={newPoint.due_at_miles} onChange={setNp('due_at_miles')} placeholder="600" />
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
-              <button className="cyber-btn btn-xs" onClick={() => { setShowAddCp(false); setNewPoint(BLANK_CP); }}>CANCEL</button>
+              <button className="cyber-btn btn-xs" onClick={() => { setShowAdd(false); setNewPoint(BLANK_CP); }}>CANCEL</button>
               <button className="cyber-btn btn-xs btn-save" onClick={addPoint} disabled={busy || !newPoint.description.trim()}>
                 {busy ? '...' : '+ ADD'}
               </button>
@@ -413,9 +446,9 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
 
       {result && (
         <div className="mp-flash mp-flash--ok">
-          Manual processed — {result.checkpoints_updated + result.checkpoints_created} inspection items,{' '}
-          {result.fluid_specs_updated + result.fluid_specs_created} fluid specs,{' '}
-          {result.torque_specs_updated + result.torque_specs_created} torque values extracted.
+          Manual processed — {result.updated} item{result.updated !== 1 ? 's' : ''} updated,{' '}
+          {result.created} new item{result.created !== 1 ? 's' : ''} added
+          ({result.total} total entries found in manual).
         </div>
       )}
       {error && <div className="mp-flash mp-flash--err">{error}</div>}

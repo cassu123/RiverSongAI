@@ -32,12 +32,18 @@ from sqlalchemy.orm import Session, sessionmaker
 from core.auth import decode_token
 from inventory.auth import HomeNotFoundError, PermissionDeniedError, set_active_home
 from inventory.management import (
+    add_attachment,
+    complete_audit,
     create_home,
     create_item,
+    delete_attachment,
     delete_item,
     edit_home,
     fast_scan_item,
     generate_insurance_manifest,
+    get_attachments,
+    get_active_audit,
+    get_audit_history,
     get_homes_for_user,
     get_item,
     get_items_for_home,
@@ -45,14 +51,21 @@ from inventory.management import (
     issue_item,
     manage_collaborators,
     process_receipt,
+    record_scan,
     return_item,
+    start_audit,
     update_item,
+    _audit_state,
 )
 from inventory.models import (
     AssetStatus,
+    AuditScan,
+    AuditStatus,
     Base,
     CollaboratorRole,
+    InventoryAudit,
     InventoryItem,
+    ItemAttachment,
     InvHome,
     InvUser,
     ItemCategory,
@@ -190,6 +203,18 @@ class IssueItem(BaseModel):
     collaborator_email: str
 
 
+class AuditScanBody(BaseModel):
+    ein: str
+
+
+class AuditCompleteBody(BaseModel):
+    notes: str = ""
+
+
+class TimezoneUpdate(BaseModel):
+    timezone: str
+
+
 # ---------------------------------------------------------------------------
 # Serialisers
 # ---------------------------------------------------------------------------
@@ -241,6 +266,17 @@ def _ser_item(i: InventoryItem) -> dict:
         "warranty_image_path":  i.warranty_image_path,
         "created_at":           i.created_at.isoformat()        if i.created_at             else None,
         "updated_at":           i.updated_at.isoformat()        if i.updated_at             else None,
+    }
+
+
+def _ser_attachment(a: ItemAttachment) -> dict:
+    return {
+        "id":                str(a.id),
+        "item_id":           str(a.item_id),
+        "original_filename": a.original_filename,
+        "file_size":         a.file_size,
+        "mime_type":         a.mime_type,
+        "created_at":        a.created_at.isoformat() if a.created_at else None,
     }
 
 
@@ -339,6 +375,152 @@ def delete_item_route(item_id: str, db: Session = Depends(get_db), user: InvUser
 def scan_item(ein: str, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
     try:
         return _ser_item(fast_scan_item(db, str(user.id), ein))
+    except Exception as e:
+        raise _http(e)
+
+
+def _ser_audit(a: InventoryAudit, db: Session) -> dict:
+    scanned_ids = {s.item_id for s in db.query(AuditScan).filter(AuditScan.audit_id == a.id).all()}
+    all_items   = db.query(InventoryItem).filter(InventoryItem.home_id == a.home_id).all()
+    scanned = [{"id": str(i.id), "ein": i.ein, "name": i.name, "location": i.location} for i in all_items if i.id in scanned_ids]
+    missing = [{"id": str(i.id), "ein": i.ein, "name": i.name, "location": i.location} for i in all_items if i.id not in scanned_ids]
+    return {
+        "id":            str(a.id),
+        "home_id":       str(a.home_id),
+        "status":        a.status.value,
+        "total_items":   a.total_items,
+        "scanned_count": len(scanned),
+        "scanned":       scanned,
+        "missing":       missing,
+        "notes":         a.notes,
+        "user_timezone": a.user_timezone,
+        "started_at":    a.started_at.isoformat()   if a.started_at   else None,
+        "completed_at":  a.completed_at.isoformat() if a.completed_at else None,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Timezone
+# ---------------------------------------------------------------------------
+
+@router.patch("/users/timezone")
+def update_timezone(body: TimezoneUpdate, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
+    import zoneinfo
+    try:
+        zoneinfo.ZoneInfo(body.timezone)
+    except Exception:
+        raise HTTPException(status_code=422, detail=f"Unknown timezone '{body.timezone}'")
+    user.timezone = body.timezone
+    db.commit()
+    return {"timezone": user.timezone}
+
+
+@router.get("/users/me")
+def get_me(db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
+    return {"id": str(user.id), "email": user.email, "display_name": user.display_name, "timezone": user.timezone}
+
+
+# ---------------------------------------------------------------------------
+# Audits
+# ---------------------------------------------------------------------------
+
+@router.get("/homes/{home_id}/audit/active")
+def get_active_audit_route(home_id: str, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
+    try:
+        audit = get_active_audit(db, str(user.id), home_id)
+        if not audit:
+            return None
+        return _ser_audit(audit, db)
+    except Exception as e:
+        raise _http(e)
+
+
+@router.post("/homes/{home_id}/audit/start", status_code=201)
+def start_audit_route(home_id: str, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
+    try:
+        audit = start_audit(db, str(user.id), home_id)
+        return _ser_audit(audit, db)
+    except Exception as e:
+        raise _http(e)
+
+
+@router.post("/audits/{audit_id}/scan")
+def scan_item_audit(audit_id: str, body: AuditScanBody, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
+    try:
+        return record_scan(db, str(user.id), audit_id, body.ein.strip())
+    except Exception as e:
+        raise _http(e)
+
+
+@router.post("/audits/{audit_id}/complete")
+def complete_audit_route(audit_id: str, body: AuditCompleteBody, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
+    try:
+        audit = complete_audit(db, str(user.id), audit_id, body.notes)
+        return _ser_audit(audit, db)
+    except Exception as e:
+        raise _http(e)
+
+
+@router.get("/homes/{home_id}/audit/history")
+def audit_history(home_id: str, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
+    try:
+        return [_ser_audit(a, db) for a in get_audit_history(db, str(user.id), home_id)]
+    except Exception as e:
+        raise _http(e)
+
+
+# ---------------------------------------------------------------------------
+# Attachments
+# ---------------------------------------------------------------------------
+
+@router.get("/items/{item_id}/attachments")
+def list_attachments(item_id: str, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
+    try:
+        return [_ser_attachment(a) for a in get_attachments(db, str(user.id), item_id)]
+    except Exception as e:
+        raise _http(e)
+
+
+@router.post("/items/{item_id}/attachments", status_code=201)
+async def upload_attachment(
+    item_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: InvUser = Depends(get_current_inv_user),
+):
+    try:
+        data = await file.read()
+        attachment = add_attachment(
+            db, str(user.id), item_id,
+            data=data,
+            original_filename=file.filename or "file",
+            mime_type=file.content_type or "",
+        )
+        return _ser_attachment(attachment)
+    except Exception as e:
+        raise _http(e)
+
+
+@router.get("/attachments/{attachment_id}/download")
+def download_attachment(attachment_id: str, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
+    from inventory.file_utils import INVENTORY_FILES_BASE_DIR
+    attachment = db.query(ItemAttachment).filter(ItemAttachment.id == _uid(attachment_id)).first()
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    try:
+        get_attachments(db, str(user.id), str(attachment.item_id))  # permission check
+    except Exception as e:
+        raise _http(e)
+    full_path = os.path.join(INVENTORY_FILES_BASE_DIR, attachment.stored_path)
+    if not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail="File not found on disk")
+    return FileResponse(full_path, filename=attachment.original_filename, media_type=attachment.mime_type or "application/octet-stream")
+
+
+@router.delete("/attachments/{attachment_id}", status_code=204)
+def remove_attachment(attachment_id: str, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
+    try:
+        delete_attachment(db, str(user.id), attachment_id)
     except Exception as e:
         raise _http(e)
 

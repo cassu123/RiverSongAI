@@ -47,8 +47,12 @@ from .file_utils import (
 )
 from .models import (
     AssetStatus,
+    AuditScan,
+    AuditStatus,
     CollaboratorRole,
+    InventoryAudit,
     InventoryItem,
+    ItemAttachment,
     InvHome,
     InvUser,
     ItemCategory,
@@ -482,6 +486,177 @@ def generate_insurance_manifest(db: Session, user_id: str, home_id: str) -> str:
     SimpleDocTemplate(pdf_path, pagesize=letter).build(story)
     logger.info("Insurance manifest written: %s", pdf_path)
     return pdf_path
+
+
+# ---------------------------------------------------------------------------
+# Audits
+# ---------------------------------------------------------------------------
+
+def get_active_audit(db: Session, user_id: str, home_id: str) -> Optional[InventoryAudit]:
+    """Return the in-progress audit for a home, if one exists."""
+    set_active_home(db, user_id, home_id)
+    return (
+        db.query(InventoryAudit)
+        .filter(
+            InventoryAudit.home_id == _uid(home_id),
+            InventoryAudit.status  == AuditStatus.IN_PROGRESS,
+        )
+        .first()
+    )
+
+
+def start_audit(db: Session, user_id: str, home_id: str) -> InventoryAudit:
+    """Start a new audit session. Raises ValueError if one is already in progress."""
+    home = set_active_home(db, user_id, home_id)
+    existing = get_active_audit(db, user_id, home_id)
+    if existing:
+        raise ValueError("An audit is already in progress for this home.")
+
+    inv_user = db.query(InvUser).filter(InvUser.id == _uid(user_id)).first()
+    if not inv_user:
+        raise ValueError("User not found.")
+    total = db.query(InventoryItem).filter(InventoryItem.home_id == home.id).count()
+
+    audit = InventoryAudit(
+        home_id=home.id,
+        created_by_id=inv_user.id,
+        total_items=total,
+        user_timezone=inv_user.timezone or "UTC",
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(audit)
+    return audit
+
+
+def record_scan(db: Session, user_id: str, audit_id: str, ein: str) -> dict:
+    """Record a scanned EIN against an active audit. Returns updated audit state."""
+    audit = db.query(InventoryAudit).filter(InventoryAudit.id == _uid(audit_id)).first()
+    if not audit:
+        raise NoResultFound("Audit not found.")
+    if audit.status != AuditStatus.IN_PROGRESS:
+        raise ValueError("This audit is already completed.")
+    set_active_home(db, user_id, str(audit.home_id))
+
+    item = db.query(InventoryItem).filter(
+        InventoryItem.ein == ein,
+        InventoryItem.home_id == audit.home_id,
+    ).first()
+    if not item:
+        raise NoResultFound(f"No item with EIN '{ein}' found in this home.")
+
+    # Prevent duplicate scans in same session
+    already = db.query(AuditScan).filter(
+        AuditScan.audit_id == audit.id,
+        AuditScan.item_id  == item.id,
+    ).first()
+    if already:
+        return _audit_state(db, audit)
+
+    scan = AuditScan(audit_id=audit.id, item_id=item.id, ein=ein)
+    db.add(scan)
+    audit.scanned_count = db.query(AuditScan).filter(AuditScan.audit_id == audit.id).count() + 1
+    db.commit()
+    db.refresh(audit)
+    return _audit_state(db, audit)
+
+
+def complete_audit(db: Session, user_id: str, audit_id: str, notes: str = "") -> InventoryAudit:
+    """Mark an audit as completed and attach notes."""
+    audit = db.query(InventoryAudit).filter(InventoryAudit.id == _uid(audit_id)).first()
+    if not audit:
+        raise NoResultFound("Audit not found.")
+    set_active_home(db, user_id, str(audit.home_id))
+    audit.status       = AuditStatus.COMPLETED
+    audit.notes        = notes[:500] if notes else None
+    audit.completed_at = _now()
+    db.commit()
+    db.refresh(audit)
+    return audit
+
+
+def get_audit_history(db: Session, user_id: str, home_id: str) -> list[InventoryAudit]:
+    """Return all completed audits for a home, newest first."""
+    set_active_home(db, user_id, home_id)
+    return (
+        db.query(InventoryAudit)
+        .filter(
+            InventoryAudit.home_id == _uid(home_id),
+            InventoryAudit.status  == AuditStatus.COMPLETED,
+        )
+        .order_by(InventoryAudit.completed_at.desc())
+        .all()
+    )
+
+
+def _audit_state(db: Session, audit: InventoryAudit) -> dict:
+    """Build the live audit state dict including scanned and missing item lists."""
+    all_items   = db.query(InventoryItem).filter(InventoryItem.home_id == audit.home_id).all()
+    scanned_ids = {s.item_id for s in db.query(AuditScan).filter(AuditScan.audit_id == audit.id).all()}
+    scanned  = [i for i in all_items if i.id in scanned_ids]
+    missing  = [i for i in all_items if i.id not in scanned_ids]
+    return {
+        "audit_id":      str(audit.id),
+        "status":        audit.status.value,
+        "total_items":   audit.total_items,
+        "scanned_count": len(scanned),
+        "scanned":       [{"id": str(i.id), "ein": i.ein, "name": i.name, "location": i.location} for i in scanned],
+        "missing":       [{"id": str(i.id), "ein": i.ein, "name": i.name, "location": i.location} for i in missing],
+        "started_at":    audit.started_at.isoformat() if audit.started_at else None,
+        "user_timezone": audit.user_timezone,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Attachments
+# ---------------------------------------------------------------------------
+
+def add_attachment(
+    db: Session,
+    user_id: str,
+    item_id: str,
+    data: bytes,
+    original_filename: str,
+    mime_type: str = "",
+) -> ItemAttachment:
+    """Save a file to disk and register it as an attachment on an item."""
+    item = _get_item_or_raise(db, item_id)
+    set_active_home(db, user_id, str(item.home_id))
+
+    rel_path = save_file_for_home(str(item.home_id), "attachments", data, original_filename)
+    attachment = ItemAttachment(
+        item_id=item.id,
+        original_filename=original_filename,
+        stored_path=rel_path,
+        file_size=len(data),
+        mime_type=mime_type or None,
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+    return attachment
+
+
+def get_attachments(db: Session, user_id: str, item_id: str) -> list[ItemAttachment]:
+    """Return all attachments for an item."""
+    item = _get_item_or_raise(db, item_id)
+    set_active_home(db, user_id, str(item.home_id))
+    return db.query(ItemAttachment).filter(ItemAttachment.item_id == item.id).order_by(ItemAttachment.created_at).all()
+
+
+def delete_attachment(db: Session, user_id: str, attachment_id: str) -> None:
+    """Delete an attachment record and its file from disk."""
+    attachment = db.query(ItemAttachment).filter(ItemAttachment.id == _uid(attachment_id)).first()
+    if not attachment:
+        raise NoResultFound(f"Attachment '{attachment_id}' not found.")
+    set_active_home(db, user_id, str(attachment.item.home_id))
+
+    full_path = os.path.join(INVENTORY_FILES_BASE_DIR, attachment.stored_path)
+    if os.path.exists(full_path):
+        os.remove(full_path)
+
+    db.delete(attachment)
+    db.commit()
 
 
 # ---------------------------------------------------------------------------
