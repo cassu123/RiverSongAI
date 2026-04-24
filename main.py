@@ -183,7 +183,7 @@ if __name__ == "__main__":
         "main:app",
         host=settings.app_host,
         port=settings.app_port,
-        reload=False,       # Set to True during development if not using WebSockets
+        reload=False,
         log_level=settings.log_level.lower(),
         ws_ping_interval=30,
         ws_ping_timeout=20,

@@ -79,18 +79,37 @@ class PermissionDeniedError(Exception):
 def get_or_create_biz_user(
     db: Session, external_user_id: str, email: str, display_name: str = ""
 ) -> BizUser:
-    user = db.query(BizUser).filter(BizUser.external_user_id == external_user_id).first()
-    if user:
-        return user
-    user = BizUser(
-        external_user_id=external_user_id,
-        email=email,
-        display_name=display_name or email,
+    user = (
+        db.query(BizUser)
+        .filter(
+            (BizUser.external_user_id == external_user_id) |
+            (BizUser.email == email)
+        )
+        .first()
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+    if user:
+        # Keep external_user_id in sync if it changed (e.g. re-registered)
+        if user.external_user_id != external_user_id:
+            user.external_user_id = external_user_id
+            db.commit()
+        return user
+    try:
+        user = BizUser(
+            external_user_id=external_user_id,
+            email=email,
+            display_name=display_name or email,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+    except Exception:
+        db.rollback()
+        # Another request beat us to it — fetch the now-existing row
+        user = db.query(BizUser).filter(BizUser.email == email).first()
+        if user:
+            return user
+        raise
 
 
 # ---------------------------------------------------------------------------

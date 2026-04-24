@@ -48,8 +48,10 @@ from vehicles.management import (
     VehicleNotFoundError,
     add_check_point,
     add_fluid_spec,
+    clear_all_check_points,
     add_person,
     add_torque_spec,
+    apply_manual_intervals,
     assign_person,
     attach_receipt,
     create_service_log,
@@ -59,14 +61,17 @@ from vehicles.management import (
     delete_service_log,
     delete_torque_spec,
     delete_vehicle,
+    extract_text_from_pdf,
     force_remove_person,
     get_assignments_for_vehicle,
     get_service_log,
     get_service_logs,
     get_vehicles,
     list_people,
+    parse_manual,
     remove_person,
     unassign_person,
+    update_check_point,
     update_service_log,
     update_vehicle,
 )
@@ -86,6 +91,49 @@ _engine  = create_engine(
 )
 _Session = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
 Base.metadata.create_all(_engine)
+
+
+def _migrate(engine) -> None:
+    """Add columns introduced after initial schema without dropping existing data."""
+    import sqlalchemy
+    with engine.connect() as conn:
+        def _cols(table):
+            return {row[1] for row in conn.execute(sqlalchemy.text(f"PRAGMA table_info({table}"))}
+
+        # service_logs
+        logs = _cols("vehicle_service_logs)")
+        if "performed_by_id" not in logs:
+            conn.execute(sqlalchemy.text("ALTER TABLE vehicle_service_logs ADD COLUMN performed_by_id TEXT"))
+        if "service_type" not in logs:
+            conn.execute(sqlalchemy.text("ALTER TABLE vehicle_service_logs ADD COLUMN service_type TEXT"))
+
+        # check_points
+        cps = _cols("vehicle_check_points)")
+        for col, typedef in [
+            ("interval_miles", "INTEGER"),
+            ("interval_days",  "INTEGER"),
+            ("expected_spec",  "TEXT"),
+            ("min_value",      "REAL"),
+            ("max_value",      "REAL"),
+            ("unit",           "TEXT"),
+        ]:
+            if col not in cps:
+                conn.execute(sqlalchemy.text(f"ALTER TABLE vehicle_check_points ADD COLUMN {col} {typedef}"))
+
+        # check_results
+        crs = _cols("vehicle_service_check_results)")
+        for col, typedef in [
+            ("check_point_id", "TEXT"),
+            ("actual_value",   "TEXT"),
+            ("status",         "TEXT"),
+        ]:
+            if col not in crs:
+                conn.execute(sqlalchemy.text(f"ALTER TABLE vehicle_service_check_results ADD COLUMN {col} {typedef}"))
+
+        conn.commit()
+
+
+_migrate(_engine)
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -165,11 +213,35 @@ def _ser_vehicle(v) -> dict:
             for t in v.torque_specs
         ],
         "check_points": [
-            {"id": str(cp.id), "description": cp.description, "sort_order": cp.sort_order}
+            {
+                "id":             str(cp.id),
+                "description":    cp.description,
+                "sort_order":     cp.sort_order,
+                "interval_miles": cp.interval_miles,
+                "interval_days":  cp.interval_days,
+                "expected_spec":  cp.expected_spec,
+                "min_value":      cp.min_value,
+                "max_value":      cp.max_value,
+                "unit":           cp.unit,
+            }
             for cp in sorted(v.check_points, key=lambda x: x.sort_order)
         ],
         "created_at":  v.created_at.isoformat() if v.created_at else None,
         "updated_at":  v.updated_at.isoformat() if v.updated_at else None,
+    }
+
+
+def _ser_checkpoint(cp) -> dict:
+    return {
+        "id":             str(cp.id),
+        "description":    cp.description,
+        "sort_order":     cp.sort_order,
+        "interval_miles": cp.interval_miles,
+        "interval_days":  cp.interval_days,
+        "expected_spec":  cp.expected_spec,
+        "min_value":      cp.min_value,
+        "max_value":      cp.max_value,
+        "unit":           cp.unit,
     }
 
 
@@ -216,7 +288,14 @@ def _ser_log(log) -> dict:
         "receipt_path":   log.receipt_path,
         "performed_by":   performed_by,
         "check_results": [
-            {"id": str(cr.id), "description": cr.description, "passed": cr.passed}
+            {
+                "id":             str(cr.id),
+                "check_point_id": str(cr.check_point_id) if cr.check_point_id else None,
+                "description":    cr.description,
+                "actual_value":   cr.actual_value,
+                "status":         cr.status.value if cr.status else ("pass" if cr.passed else "fail"),
+                "passed":         cr.passed,
+            }
             for cr in log.check_results
         ],
         "created_at":     log.created_at.isoformat() if log.created_at else None,
@@ -262,8 +341,23 @@ class TorqueSpecCreate(BaseModel):
     nm:    Optional[float] = None
 
 class CheckPointCreate(BaseModel):
-    description: str
-    sort_order:  int = 0
+    description:    str
+    sort_order:     int            = 0
+    interval_miles: Optional[int]   = None
+    interval_days:  Optional[int]   = None
+    expected_spec:  Optional[str]   = None
+    min_value:      Optional[float] = None
+    max_value:      Optional[float] = None
+    unit:           Optional[str]   = None
+
+class CheckPointPatch(BaseModel):
+    description:    Optional[str]   = None
+    interval_miles: Optional[int]   = None
+    interval_days:  Optional[int]   = None
+    expected_spec:  Optional[str]   = None
+    min_value:      Optional[float] = None
+    max_value:      Optional[float] = None
+    unit:           Optional[str]   = None
 
 class PersonAdd(BaseModel):
     email: str
@@ -272,8 +366,11 @@ class AssignPersonBody(BaseModel):
     person_id: str
 
 class CheckResultIn(BaseModel):
-    description: str
-    passed:      bool = True
+    description:    str
+    check_point_id: Optional[str]   = None
+    actual_value:   Optional[str]   = None
+    status:         Optional[str]   = None  # "pass" | "warn" | "fail"
+    passed:         bool            = True
 
 class ServiceLogCreate(BaseModel):
     service_date:    datetime
@@ -473,8 +570,31 @@ def add_checkpoint(
     db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
 ):
     try:
-        cp = add_check_point(db, user_id, vehicle_id, body.description, body.sort_order)
-        return {"id": str(cp.id), "description": cp.description, "sort_order": cp.sort_order}
+        cp = add_check_point(
+            db, user_id, vehicle_id, body.description, body.sort_order,
+            interval_miles=body.interval_miles, interval_days=body.interval_days,
+            expected_spec=body.expected_spec, min_value=body.min_value,
+            max_value=body.max_value, unit=body.unit,
+        )
+        return _ser_checkpoint(cp)
+    except Exception as e:
+        raise _http(e)
+
+
+@router.patch("/{vehicle_id}/specs/checkpoints/{point_id}")
+def patch_checkpoint(
+    vehicle_id: str, point_id: str, body: CheckPointPatch,
+    db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
+):
+    try:
+        cp = update_check_point(
+            db, user_id, point_id,
+            description=body.description,
+            interval_miles=body.interval_miles, interval_days=body.interval_days,
+            expected_spec=body.expected_spec, min_value=body.min_value,
+            max_value=body.max_value, unit=body.unit,
+        )
+        return _ser_checkpoint(cp)
     except Exception as e:
         raise _http(e)
 
@@ -486,6 +606,68 @@ def delete_checkpoint(
 ):
     try:
         delete_check_point(db, user_id, point_id)
+    except Exception as e:
+        raise _http(e)
+
+
+@router.delete("/{vehicle_id}/specs/checkpoints", status_code=204)
+def clear_all_checkpoints(
+    vehicle_id: str,
+    db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
+):
+    try:
+        clear_all_check_points(db, user_id, vehicle_id)
+    except Exception as e:
+        raise _http(e)
+
+
+@router.post("/{vehicle_id}/manual")
+async def upload_manual(
+    vehicle_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Upload a vehicle owner's manual PDF.
+    Extracts text locally with pypdf, parses intervals with regex (offline, zero cost).
+    Falls back to a locally-running Ollama model if regex finds fewer than 3 items
+    and OLLAMA_BASE_URL is set in .env — no external API calls ever made.
+    """
+    from config.settings import get_settings
+    try:
+        data = await file.read()
+        if not data:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+        try:
+            pdf_text = extract_text_from_pdf(data)
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=f"Could not read PDF: {e}")
+
+        if len(pdf_text.strip()) < 200:
+            raise HTTPException(
+                status_code=422,
+                detail="PDF has no extractable text. Scanned/image-only PDFs are not supported."
+            )
+
+        settings = get_settings()
+        ollama_url   = getattr(settings, "ollama_base_url", None) or None
+        ollama_model = getattr(settings, "ollama_model",    None) or "mistral"
+
+        data = parse_manual(pdf_text, ollama_url=ollama_url, ollama_model=ollama_model)
+
+        total = len(data["check_points"]) + len(data["fluid_specs"]) + len(data["torque_specs"])
+        if total == 0:
+            raise HTTPException(
+                status_code=422,
+                detail="No maintenance data found. Check that the PDF contains a maintenance schedule or specifications section."
+            )
+
+        result = apply_manual_intervals(db, user_id, vehicle_id, data)
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise _http(e)
 
@@ -552,7 +734,16 @@ def create_log(
     db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
 ):
     try:
-        check_results = [{"description": cr.description, "passed": cr.passed} for cr in body.check_results]
+        check_results = [
+            {
+                "description":    cr.description,
+                "check_point_id": cr.check_point_id,
+                "actual_value":   cr.actual_value,
+                "status":         cr.status,
+                "passed":         cr.passed,
+            }
+            for cr in body.check_results
+        ]
         log = create_service_log(
             db, user_id, vehicle_id,
             service_date=body.service_date,

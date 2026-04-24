@@ -32,7 +32,6 @@ from sqlalchemy import (
     String,
     Table,
     Text,
-    Uuid,
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -82,8 +81,8 @@ class SaleStatus(PyEnum):
 workspace_members = Table(
     "biz_workspace_members",
     Base.metadata,
-    Column("user_id",      Uuid(as_uuid=True), ForeignKey("biz_users.id"),       primary_key=True),
-    Column("workspace_id", Uuid(as_uuid=True), ForeignKey("biz_workspaces.id"),  primary_key=True),
+    Column("user_id",      String, ForeignKey("biz_users.id"),       primary_key=True),
+    Column("workspace_id", String, ForeignKey("biz_workspaces.id"),  primary_key=True),
     Column("role",         Enum(WorkspaceRole), default=WorkspaceRole.VIEWER, nullable=False),
     Column("joined_at",    DateTime, default=_now),
 )
@@ -97,7 +96,7 @@ class BizUser(Base):
     """River Song user mirrored into the commercial system."""
     __tablename__ = "biz_users"
 
-    id               = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id               = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     external_user_id = Column(String, unique=True, nullable=False, index=True)
     email            = Column(String, unique=True, nullable=False, index=True)
     display_name     = Column(String, nullable=True)
@@ -113,10 +112,10 @@ class BizWorkspace(Base):
     """A business entity — a store, brand, or department."""
     __tablename__ = "biz_workspaces"
 
-    id          = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id          = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name        = Column(String, nullable=False)
     description = Column(Text,   nullable=True)
-    owner_id    = Column(Uuid(as_uuid=True), ForeignKey("biz_users.id"), nullable=False)
+    owner_id    = Column(String, ForeignKey("biz_users.id"), nullable=False)
     currency    = Column(String(3), default="USD", nullable=False)
     tax_rate    = Column(Numeric(5, 4), default=0, nullable=False)  # e.g. 0.0875 = 8.75 %
     created_at  = Column(DateTime, default=_now)
@@ -134,8 +133,8 @@ class Supplier(Base):
     """A vendor or supplier that provides products to a workspace."""
     __tablename__ = "biz_suppliers"
 
-    id           = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(Uuid(as_uuid=True), ForeignKey("biz_workspaces.id"), nullable=False)
+    id           = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    workspace_id = Column(String, ForeignKey("biz_workspaces.id"), nullable=False)
     name         = Column(String, nullable=False)
     contact_name = Column(String, nullable=True)
     email        = Column(String, nullable=True)
@@ -158,9 +157,9 @@ class Product(Base):
     """
     __tablename__ = "biz_products"
 
-    id               = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id     = Column(Uuid(as_uuid=True), ForeignKey("biz_workspaces.id"), nullable=False)
-    supplier_id      = Column(Uuid(as_uuid=True), ForeignKey("biz_suppliers.id"),  nullable=True)
+    id               = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    workspace_id     = Column(String, ForeignKey("biz_workspaces.id"), nullable=False)
+    supplier_id      = Column(String, ForeignKey("biz_suppliers.id"),  nullable=True)
     sku              = Column(String, nullable=False, index=True)
     name             = Column(String, nullable=False, index=True)
     description      = Column(Text,   nullable=True)
@@ -186,8 +185,8 @@ class Customer(Base):
     """A CRM contact associated with a workspace."""
     __tablename__ = "biz_customers"
 
-    id           = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(Uuid(as_uuid=True), ForeignKey("biz_workspaces.id"), nullable=False)
+    id           = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    workspace_id = Column(String, ForeignKey("biz_workspaces.id"), nullable=False)
     name         = Column(String, nullable=False, index=True)
     email        = Column(String, nullable=True,  index=True)
     phone        = Column(String, nullable=True)
@@ -212,10 +211,10 @@ class Sale(Base):
     """
     __tablename__ = "biz_sales"
 
-    id              = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id    = Column(Uuid(as_uuid=True), ForeignKey("biz_workspaces.id"), nullable=False)
-    customer_id     = Column(Uuid(as_uuid=True), ForeignKey("biz_customers.id"),  nullable=True)
-    created_by_id   = Column(Uuid(as_uuid=True), ForeignKey("biz_users.id"),      nullable=True)
+    id              = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    workspace_id    = Column(String, ForeignKey("biz_workspaces.id"), nullable=False)
+    customer_id     = Column(String, ForeignKey("biz_customers.id"),  nullable=True)
+    created_by_id   = Column(String, ForeignKey("biz_users.id"),      nullable=True)
     status          = Column(Enum(SaleStatus), default=SaleStatus.PENDING, nullable=False)
     total           = Column(Numeric(10, 2), nullable=True)
     notes           = Column(Text, nullable=True)
@@ -232,9 +231,9 @@ class SaleLineItem(Base):
     """One product entry within a sale."""
     __tablename__ = "biz_sale_line_items"
 
-    id          = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    sale_id     = Column(Uuid(as_uuid=True), ForeignKey("biz_sales.id"),    nullable=False)
-    product_id  = Column(Uuid(as_uuid=True), ForeignKey("biz_products.id"), nullable=False)
+    id          = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    sale_id     = Column(String, ForeignKey("biz_sales.id"),    nullable=False)
+    product_id  = Column(String, ForeignKey("biz_products.id"), nullable=False)
     qty         = Column(Integer,         nullable=False, default=1)
     unit_price  = Column(Numeric(10, 2),  nullable=False)
 
