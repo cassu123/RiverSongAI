@@ -60,9 +60,11 @@ class ItemCategory(PyEnum):
     OTHER          = "Other"
 
 
-# ---------------------------------------------------------------------------
-# Association table — collaborators (many Users ↔ many Homes)
-# ---------------------------------------------------------------------------
+class AuditStatus(PyEnum):
+    IN_PROGRESS = "in_progress"
+    COMPLETED   = "completed"
+
+
 
 collaborators_table = Table(
     "inv_collaborators",
@@ -96,6 +98,7 @@ class InvUser(Base):
     homes_collaborating = relationship(
         "InvHome", secondary=collaborators_table, back_populates="collaborators"
     )
+    timezone = Column(String, default="UTC", nullable=False)
 
 
 class InvHome(Base):
@@ -115,6 +118,21 @@ class InvHome(Base):
     collaborators    = relationship(
         "InvUser", secondary=collaborators_table, back_populates="homes_collaborating"
     )
+
+
+class ItemAttachment(Base):
+    """A file attached to an inventory item."""
+    __tablename__ = "inv_item_attachments"
+
+    id                = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    item_id           = Column(Uuid(as_uuid=True), ForeignKey("inventory_items.id"), nullable=False, index=True)
+    original_filename = Column(String, nullable=False)
+    stored_path       = Column(String, nullable=False)   # relative to INVENTORY_FILES_BASE_DIR
+    file_size         = Column(Integer, nullable=True)
+    mime_type         = Column(String, nullable=True)
+    created_at        = Column(DateTime, default=_now)
+
+    item = relationship("InventoryItem", back_populates="attachments")
 
 
 class InventoryItem(Base):
@@ -192,3 +210,38 @@ class InventoryItem(Base):
     # --- relationships ---
     home              = relationship("InvHome", back_populates="inventory_items")
     current_custodian = relationship("InvUser", foreign_keys=[current_custodian_id])
+    attachments       = relationship("ItemAttachment", back_populates="item", cascade="all, delete-orphan")
+
+
+class InventoryAudit(Base):
+    """A physical inventory audit session for a home."""
+    __tablename__ = "inv_audits"
+
+    id             = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    home_id        = Column(Uuid(as_uuid=True), ForeignKey("inv_homes.id"), nullable=False, index=True)
+    created_by_id  = Column(Uuid(as_uuid=True), ForeignKey("inv_users.id"), nullable=False)
+    status         = Column(Enum(AuditStatus), default=AuditStatus.IN_PROGRESS, nullable=False)
+    total_items    = Column(Integer, default=0, nullable=False)   # snapshot at start
+    scanned_count  = Column(Integer, default=0, nullable=False)
+    notes          = Column(String(500), nullable=True)
+    user_timezone  = Column(String, default="UTC", nullable=False)
+    started_at     = Column(DateTime, default=_now)
+    completed_at   = Column(DateTime, nullable=True)
+
+    home       = relationship("InvHome")
+    created_by = relationship("InvUser", foreign_keys=[created_by_id])
+    scans      = relationship("AuditScan", back_populates="audit", cascade="all, delete-orphan")
+
+
+class AuditScan(Base):
+    """A single EIN scan recorded during an audit session."""
+    __tablename__ = "inv_audit_scans"
+
+    id         = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    audit_id   = Column(Uuid(as_uuid=True), ForeignKey("inv_audits.id"), nullable=False, index=True)
+    item_id    = Column(Uuid(as_uuid=True), ForeignKey("inventory_items.id"), nullable=False)
+    ein        = Column(String, nullable=False)
+    scanned_at = Column(DateTime, default=_now)
+
+    audit = relationship("InventoryAudit", back_populates="scans")
+    item  = relationship("InventoryItem")

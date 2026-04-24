@@ -6,13 +6,15 @@ SQLAlchemy models for the Maintenance Pulse vehicle tracker.
 Schema
 ------
 Vehicle             — a user's vehicle (private per user)
-VehicleFluidSpec    — fluid specs tied to a vehicle
-VehicleTorqueSpec   — torque values tied to a vehicle
-VehicleCheckPoint   — inspection/maintenance items with interval tracking
-MaintenancePerson   — a person (app user) added to a garage owner's roster
+VehicleCheckPoint   — unified inspection/maintenance/torque item (the single source of truth)
+MaintenancePerson   — a person added to a garage owner's roster
 VehicleAssignment   — many-to-many: MaintenancePerson ↔ Vehicle
-ServiceLog          — a maintenance event (DIY or professional service)
-ServiceCheckResult  — per-checklist result with actual measurement values
+ServiceLog          — a maintenance event
+ServiceCheckResult  — per-item result with actual measurement
+
+VehicleFluidSpec and VehicleTorqueSpec are retained in the DB for migration
+compatibility but are no longer surfaced in the UI — their data lives in
+VehicleCheckPoint.expected_spec / volume / ft_lb / nm.
 """
 
 from __future__ import annotations
@@ -44,19 +46,34 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+# ---------------------------------------------------------------------------
+# Enums
+# ---------------------------------------------------------------------------
+
 class VehicleType(PyEnum):
-    AUTO      = "auto"
-    MOTO      = "moto"
-    TRUCK     = "truck"
-    ATV       = "atv"
-    OTHER     = "other"
+    AUTO  = "auto"
+    MOTO  = "moto"
+    TRUCK = "truck"
+    ATV   = "atv"
+    OTHER = "other"
+
+
+class ServiceLevel(PyEnum):
+    INSPECT = "inspect"   # visual / tactile check — no parts changed
+    SERVICE = "service"   # fluid top-off, adjustment, lubrication
+    REPLACE = "replace"   # component replacement or full flush
 
 
 class CheckStatus(PyEnum):
+    # amazonq-ignore-next-line
     PASS = "pass"
     WARN = "warn"
     FAIL = "fail"
 
+
+# ---------------------------------------------------------------------------
+# Vehicle
+# ---------------------------------------------------------------------------
 
 class Vehicle(Base):
     __tablename__ = "vehicles"
@@ -76,68 +93,108 @@ class Vehicle(Base):
     created_at       = Column(DateTime, default=_now)
     updated_at       = Column(DateTime, default=_now, onupdate=_now)
 
-    fluid_specs   = relationship("VehicleFluidSpec",   back_populates="vehicle", cascade="all, delete-orphan")
-    torque_specs  = relationship("VehicleTorqueSpec",  back_populates="vehicle", cascade="all, delete-orphan")
-    check_points  = relationship("VehicleCheckPoint",  back_populates="vehicle", cascade="all, delete-orphan")
-    service_logs  = relationship("ServiceLog",         back_populates="vehicle", cascade="all, delete-orphan")
-    assignments   = relationship("VehicleAssignment",  back_populates="vehicle", cascade="all, delete-orphan")
+    check_points = relationship("VehicleCheckPoint", back_populates="vehicle", cascade="all, delete-orphan")
+    service_logs = relationship("ServiceLog",        back_populates="vehicle", cascade="all, delete-orphan")
+    assignments  = relationship("VehicleAssignment", back_populates="vehicle", cascade="all, delete-orphan")
+    # Legacy — kept for DB compat, not surfaced in UI
+    fluid_specs  = relationship("VehicleFluidSpec",  back_populates="vehicle", cascade="all, delete-orphan")
+    torque_specs = relationship("VehicleTorqueSpec", back_populates="vehicle", cascade="all, delete-orphan")
 
+
+# ---------------------------------------------------------------------------
+# Unified checkpoint — one row per service/inspection task
+# ---------------------------------------------------------------------------
+
+class VehicleCheckPoint(Base):
+    """
+    A single maintenance or inspection line item.
+
+    Interval fields
+    ---------------
+    interval_miles  — repeating mileage interval (e.g. 5000 for oil change)
+    interval_days   — repeating time interval (e.g. 365 for annual)
+    due_at_miles    — explicit next due odometer reading.
+                      For milestones: set once (e.g. 600 mi break-in).
+                      For repeating items: recalculated after each service
+                      as last_service_odometer + interval_miles.
+
+    Specification fields
+    --------------------
+    expected_spec   — OEM spec string (e.g. "SAE 0W-20", "25-35 mm slack")
+    volume          — fluid capacity (e.g. "4.2 qt" / "4.0 L")
+    min_value       — lower bound for numeric auto-pass/warn/fail
+    max_value       — upper bound
+    unit            — measurement unit (e.g. "mm", "PSI")
+
+    Torque fields
+    -------------
+    ft_lb / nm      — torque spec for this task's fastener (e.g. drain plug)
+
+    Tracking fields
+    ---------------
+    last_service_odometer — odometer when this item was last completed
+    last_service_date     — date when last completed
+    service_level         — inspect / service / replace
+    """
+    __tablename__ = "vehicle_check_points"
+
+    id            = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vehicle_id    = Column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
+    description   = Column(String, nullable=False)
+    sort_order    = Column(Integer, default=0, nullable=False)
+    service_level = Column(Enum(ServiceLevel), default=ServiceLevel.INSPECT, nullable=False)
+
+    # When
+    interval_miles = Column(Integer, nullable=True)
+    interval_days  = Column(Integer, nullable=True)
+    due_at_miles   = Column(Integer, nullable=True)
+
+    # What spec
+    expected_spec  = Column(String, nullable=True)
+    volume         = Column(String, nullable=True)
+    min_value      = Column(Float,  nullable=True)
+    max_value      = Column(Float,  nullable=True)
+    unit           = Column(String, nullable=True)
+
+    # Torque (for this task's fastener)
+    ft_lb = Column(Float, nullable=True)
+    nm    = Column(Float, nullable=True)
+
+    # Last completed
+    last_service_odometer = Column(Integer,  nullable=True)
+    last_service_date     = Column(DateTime, nullable=True)
+
+    vehicle       = relationship("Vehicle", back_populates="check_points")
+    check_results = relationship("ServiceCheckResult", back_populates="check_point")
+
+
+# ---------------------------------------------------------------------------
+# Legacy spec tables — kept for DB compat, not used in UI
+# ---------------------------------------------------------------------------
 
 class VehicleFluidSpec(Base):
     __tablename__ = "vehicle_fluid_specs"
-
     id         = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     vehicle_id = Column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
     name       = Column(String, nullable=False)
     spec       = Column(String, nullable=True)
     volume     = Column(String, nullable=True)
-
-    vehicle = relationship("Vehicle", back_populates="fluid_specs")
+    vehicle    = relationship("Vehicle", back_populates="fluid_specs")
 
 
 class VehicleTorqueSpec(Base):
     __tablename__ = "vehicle_torque_specs"
-
     id         = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     vehicle_id = Column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
     name       = Column(String, nullable=False)
     ft_lb      = Column(Float,  nullable=True)
     nm         = Column(Float,  nullable=True)
+    vehicle    = relationship("Vehicle", back_populates="torque_specs")
 
-    vehicle = relationship("Vehicle", back_populates="torque_specs")
 
-
-class VehicleCheckPoint(Base):
-    """
-    An inspection or maintenance item for a vehicle.
-
-    interval_miles  — service interval in miles (e.g. 3750 for chain tension)
-    interval_days   — service interval in days (e.g. 14 for tire pressure check)
-    expected_spec   — human-readable spec string (e.g. "20-30mm slack")
-    min_value       — lower bound for auto pass/warn/fail calculation
-    max_value       — upper bound
-    unit            — unit of actual_value (e.g. "mm", "PSI", "°F")
-
-    If both interval_miles and interval_days are set, whichever comes first triggers due.
-    """
-    __tablename__ = "vehicle_check_points"
-
-    id             = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    vehicle_id     = Column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
-    description    = Column(String, nullable=False)
-    sort_order     = Column(Integer, default=0, nullable=False)
-    # Interval tracking
-    interval_miles = Column(Integer, nullable=True)
-    interval_days  = Column(Integer, nullable=True)
-    # Spec / measurement guidance
-    expected_spec  = Column(String,  nullable=True)
-    min_value      = Column(Float,   nullable=True)
-    max_value      = Column(Float,   nullable=True)
-    unit           = Column(String,  nullable=True)
-
-    vehicle      = relationship("Vehicle", back_populates="check_points")
-    check_results = relationship("ServiceCheckResult", back_populates="check_point")
-
+# ---------------------------------------------------------------------------
+# People roster
+# ---------------------------------------------------------------------------
 
 class MaintenancePerson(Base):
     __tablename__ = "maint_persons"
@@ -171,14 +228,11 @@ class VehicleAssignment(Base):
     person  = relationship("MaintenancePerson", back_populates="assignments")
 
 
-class ServiceLog(Base):
-    """
-    A single maintenance event.
+# ---------------------------------------------------------------------------
+# Service logs
+# ---------------------------------------------------------------------------
 
-    performed_by_id — which MaintenancePerson did the work
-    service_type    — short label e.g. "Oil Change"
-    is_pro_service  — True → professional shop; False → DIY
-    """
+class ServiceLog(Base):
     __tablename__ = "vehicle_service_logs"
 
     id              = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -203,20 +257,19 @@ class ServiceCheckResult(Base):
     """
     Result of a single inspection item within a service log.
 
-    check_point_id — links back to VehicleCheckPoint (nullable: supports ad-hoc descriptions)
-    actual_value   — measured value as string (e.g. "24", "31 PSI", "OK")
-    status         — pass / warn / fail (auto-calculated if min/max set, otherwise manual)
-    passed         — legacy boolean; ignored when status is set
+    actual_value  — what was measured/observed (string)
+    status        — pass / warn / fail (auto-calculated or manual)
+    passed        — legacy boolean; status takes precedence when set
     """
     __tablename__ = "vehicle_service_check_results"
 
-    id              = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    log_id          = Column(Uuid(as_uuid=True), ForeignKey("vehicle_service_logs.id"), nullable=False)
-    check_point_id  = Column(Uuid(as_uuid=True), ForeignKey("vehicle_check_points.id"), nullable=True)
-    description     = Column(String,  nullable=False)
-    actual_value    = Column(String,  nullable=True)
-    status          = Column(Enum(CheckStatus), nullable=True)
-    passed          = Column(Boolean, default=True, nullable=False)
+    id             = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    log_id         = Column(Uuid(as_uuid=True), ForeignKey("vehicle_service_logs.id"), nullable=False)
+    check_point_id = Column(Uuid(as_uuid=True), ForeignKey("vehicle_check_points.id"), nullable=True)
+    description    = Column(String,  nullable=False)
+    actual_value   = Column(String,  nullable=True)
+    status         = Column(Enum(CheckStatus), nullable=True)
+    passed         = Column(Boolean, default=True, nullable=False)
 
-    log         = relationship("ServiceLog",      back_populates="check_results")
+    log         = relationship("ServiceLog",       back_populates="check_results")
     check_point = relationship("VehicleCheckPoint", back_populates="check_results")

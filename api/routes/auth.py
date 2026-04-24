@@ -84,7 +84,7 @@ async def setup(request: Request, body: SetupBody):
     )
 
     token = create_access_token(user_id=user_id, email=body.email.lower(), role="admin")
-    logger.info("Master admin account created: %s", body.email)
+    logger.info("Master admin account created: %s", body.email.replace('\n', '').replace('\r', ''))
     return {"token": token, "user": {"id": user_id, "email": body.email.lower(), "display_name": body.display_name, "role": "admin", "is_approved": True}}
 
 
@@ -113,7 +113,7 @@ async def signup(request: Request, body: SignupBody):
         is_approved=False,
     )
 
-    logger.info("New user registered (pending approval): %s", body.email)
+    logger.info("New user registered (pending approval): %s", body.email.replace('\n', '').replace('\r', ''))
     return {"pending": True, "message": "Account created. An admin must approve your account before you can log in."}
 
 
@@ -132,7 +132,7 @@ async def login(request: Request, body: LoginBody):
         raise HTTPException(status_code=403, detail="Your account is pending admin approval.")
 
     token = create_access_token(user_id=user["id"], email=user["email"], role=user["role"])
-    logger.info("User logged in: %s", body.email)
+    logger.info("User logged in: %s", body.email.replace('\n', '').replace('\r', ''))
     return {
         "token": token,
         "user": {"id": user["id"], "email": user["email"], "display_name": user["display_name"], "role": user["role"], "is_approved": user["is_approved"]},

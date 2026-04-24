@@ -342,18 +342,31 @@ def delete_torque_spec(db: Session, user_id: str, spec_id: str) -> None:
 def add_check_point(
     db: Session, user_id: str, vehicle_id: str,
     description: str, sort_order: int = 0,
+    service_level: str = "inspect",
     interval_miles: Optional[int] = None,
     interval_days: Optional[int] = None,
+    due_at_miles: Optional[int] = None,
     expected_spec: Optional[str] = None,
+    volume: Optional[str] = None,
     min_value: Optional[float] = None,
     max_value: Optional[float] = None,
     unit: Optional[str] = None,
+    ft_lb: Optional[float] = None,
+    nm: Optional[float] = None,
 ) -> VehicleCheckPoint:
     _get_vehicle(db, vehicle_id, user_id)
+    svc = ServiceLevel.INSPECT
+    try:
+        svc = ServiceLevel(service_level)
+    except ValueError:
+        pass
     cp = VehicleCheckPoint(
         vehicle_id=vehicle_id, description=description, sort_order=sort_order,
-        interval_miles=interval_miles, interval_days=interval_days,
-        expected_spec=expected_spec, min_value=min_value, max_value=max_value, unit=unit,
+        service_level=svc,
+        interval_miles=interval_miles, interval_days=interval_days, due_at_miles=due_at_miles,
+        expected_spec=expected_spec, volume=volume,
+        min_value=min_value, max_value=max_value, unit=unit,
+        ft_lb=ft_lb, nm=nm,
     )
     db.add(cp)
     db.commit()
@@ -364,24 +377,38 @@ def add_check_point(
 def update_check_point(
     db: Session, user_id: str, point_id: str,
     description: Optional[str] = None,
+    service_level: Optional[str] = None,
     interval_miles: Optional[int] = None,
     interval_days: Optional[int] = None,
+    due_at_miles: Optional[int] = None,
     expected_spec: Optional[str] = None,
+    volume: Optional[str] = None,
     min_value: Optional[float] = None,
     max_value: Optional[float] = None,
     unit: Optional[str] = None,
+    ft_lb: Optional[float] = None,
+    nm: Optional[float] = None,
 ) -> VehicleCheckPoint:
     cp = db.query(VehicleCheckPoint).filter(VehicleCheckPoint.id == _uid(point_id)).first()
     if not cp:
         raise NoResultFound(f"Check point '{point_id}' not found.")
     _get_vehicle(db, str(cp.vehicle_id), user_id)
-    if description   is not None: cp.description    = description
+    if description    is not None: cp.description    = description
     if interval_miles is not None: cp.interval_miles = interval_miles
     if interval_days  is not None: cp.interval_days  = interval_days
+    if due_at_miles   is not None: cp.due_at_miles   = due_at_miles
     if expected_spec  is not None: cp.expected_spec  = expected_spec
+    if volume         is not None: cp.volume         = volume
     if min_value      is not None: cp.min_value      = min_value
     if max_value      is not None: cp.max_value      = max_value
     if unit           is not None: cp.unit           = unit
+    if ft_lb          is not None: cp.ft_lb          = ft_lb
+    if nm             is not None: cp.nm             = nm
+    if service_level:
+        try:
+            cp.service_level = ServiceLevel(service_level)
+        except ValueError:
+            pass
     db.commit()
     db.refresh(cp)
     return cp
@@ -418,6 +445,15 @@ def extract_text_from_pdf(file_data: bytes) -> str:
         if text:
             pages.append(text)
     return "\n\n".join(pages)
+
+
+def _infer_service_level(description: str) -> str:
+    d = description.lower()
+    if any(k in d for k in ("replace", "renewal", "change", "flush", "overhaul", "rebuild", "swap")):
+        return "replace"
+    if any(k in d for k in ("adjust", "top", "lube", "lubricate", "fill", "service", "clean", "tighten")):
+        return "service"
+    return "inspect"
 
 
 def parse_manual_local(pdf_text: str) -> list[dict]:
@@ -652,12 +688,17 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
 
         entry = results.setdefault(item_name, {
             "description":    item_name,
+            "service_level":  _infer_service_level(item_name),
             "interval_miles": None,
             "interval_days":  None,
+            "due_at_miles":   None,
             "expected_spec":  None,
+            "volume":         None,
             "min_value":      None,
             "max_value":      None,
             "unit":           None,
+            "ft_lb":          None,
+            "nm":             None,
         })
 
         # Pass 1: current line only (handles prose + table format).
@@ -773,11 +814,80 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
                     entry["nm"] = float(nm_m.group(1))
                 break
 
-    return {
-        "check_points": check_points,
-        "fluid_specs":  [v for v in fluid_results.values() if v["spec"] or v["volume"]],
-        "torque_specs": list(torque_results.values()),
-    }
+    # ── Merge torque specs INTO matching checkpoints ──────────────────────
+    # (fluid_results and torque_results were built above in the extraction loops)
+        # If a torque item name matches or is closely related to a checkpoint,
+        # embed ft_lb/nm there. Otherwise create a standalone checkpoint.
+        TORQUE_TO_CP = {
+            "oil drain plug":     "engine oil change",
+            "drain plug":         "engine oil change",
+            "spark plug":         "spark plugs",
+            "spark plugs":        "spark plugs",
+            "wheel lug nut":      "tire rotation",
+            "lug nut":            "tire rotation",
+            "wheel lug nuts":     "tire rotation",
+            "oil filter housing": "engine oil change",
+        }
+
+        cp_by_lower = {v["description"].lower(): v for v in check_points}
+
+        for t in list(torque_results.values()):
+            name_l = t["name"].lower()
+            # Direct match
+            target_key = TORQUE_TO_CP.get(name_l) or name_l
+            if target_key in cp_by_lower:
+                cp_by_lower[target_key]["ft_lb"] = t.get("ft_lb")
+                cp_by_lower[target_key]["nm"]    = t.get("nm")
+            else:
+                # Standalone torque checkpoint (e.g. wheel lug nuts, axle nut)
+                check_points.append({
+                    "description":   t["name"],
+                    "service_level": "service",
+                    "interval_miles": None,
+                    "interval_days":  None,
+                    "due_at_miles":   None,
+                    "expected_spec":  None,
+                    "volume":         None,
+                    "min_value":      None,
+                    "max_value":      None,
+                    "unit":           None,
+                    "ft_lb":          t.get("ft_lb"),
+                    "nm":             t.get("nm"),
+                })
+
+        # ── Merge fluid specs INTO matching checkpoints ───────────────────────
+        FLUID_TO_CP = {
+            "engine oil":           "engine oil change",
+            "motor oil":            "engine oil change",
+            "engine coolant":       "coolant",
+            "coolant":              "coolant",
+            "antifreeze":           "coolant",
+            "brake fluid":          "brake fluid",
+            "transmission fluid":   "transmission fluid",
+            "automatic transmission fluid": "transmission fluid",
+            "transfer case fluid":  "transfer case fluid",
+            "front differential fluid": "differential fluid",
+            "rear differential fluid":  "differential fluid",
+            "power steering fluid": "power steering fluid",
+            "windshield washer fluid": "wiper blades",
+        }
+
+        for f in list(fluid_results.values()):
+            name_l = f["name"].lower()
+            target_key = FLUID_TO_CP.get(name_l) or name_l
+            if target_key in cp_by_lower:
+                cp = cp_by_lower[target_key]
+                if f.get("spec") and not cp.get("expected_spec"):
+                    # Build combined spec string: "SAE 0W-20 (4.2 qt)"
+                    spec = f["spec"]
+                    if f.get("volume"):
+                        spec = f"{spec} ({f['volume']})"
+                    cp["expected_spec"] = spec
+                if f.get("volume") and not cp.get("volume"):
+                    cp["volume"] = f["volume"]
+
+        return [v for v in check_points if v.get("interval_miles") or v.get("interval_days")
+                or v.get("due_at_miles") or v.get("expected_spec") or v.get("ft_lb")]
 
 
 def parse_manual_with_ollama(pdf_text: str, ollama_url: str, model: str) -> list[dict]:
@@ -811,129 +921,93 @@ def parse_manual_with_ollama(pdf_text: str, ollama_url: str, model: str) -> list
     return json.loads(raw)
 
 
-def parse_manual(pdf_text: str, ollama_url: str | None = None, ollama_model: str = "mistral") -> dict:
+def parse_manual(pdf_text: str, ollama_url: str | None = None, ollama_model: str = "mistral") -> list[dict]:
     """
-    Parse a vehicle owner's manual.
-    Returns {"check_points": [...], "fluid_specs": [...], "torque_specs": [...]}.
+    Parse a vehicle owner's manual into a flat list of unified checkpoint dicts.
+    Each dict has: description, service_level, interval_miles, interval_days,
+    due_at_miles, expected_spec, volume, min_value, max_value, unit, ft_lb, nm.
     1. Local regex (fast, offline, zero cost) — always runs.
-    2. Ollama fallback for check_points only if < 3 found and Ollama configured.
+    2. Ollama fallback if < 3 items found and Ollama configured.
     """
-    data = parse_manual_local(pdf_text)
-    logger.info(
-        "Regex extractor: %d checkpoints, %d fluid specs, %d torque specs",
-        len(data["check_points"]), len(data["fluid_specs"]), len(data["torque_specs"]),
-    )
+    items = parse_manual_local(pdf_text)
+    logger.info("Regex extractor: %d unified checkpoint items", len(items))
 
-    if len(data["check_points"]) < 3 and ollama_url:
+    if len(items) < 3 and ollama_url:
         try:
             llm_items = parse_manual_with_ollama(pdf_text, ollama_url, ollama_model)
-            existing = {i["description"].lower() for i in data["check_points"]}
+            existing = {i["description"].lower() for i in items}
             for item in llm_items:
                 if item.get("description", "").lower() not in existing:
-                    data["check_points"].append(item)
-            logger.info("After Ollama merge: %d checkpoints", len(data["check_points"]))
+                    item.setdefault("service_level", _infer_service_level(item.get("description", "")))
+                    items.append(item)
+            logger.info("After Ollama merge: %d items", len(items))
         except Exception as e:
             logger.warning("Ollama fallback failed (regex results kept): %s", e)
 
-    return data
+    return items
 
 
 def apply_manual_intervals(
-    db: Session, user_id: str, vehicle_id: str, data: dict
+    db: Session, user_id: str, vehicle_id: str, items: list[dict]
 ) -> dict:
     """
-    Upsert all data extracted from an owner's manual:
-      - check_points  → VehicleCheckPoint (matched by description, case-insensitive)
-      - fluid_specs   → VehicleFluidSpec  (matched by name)
-      - torque_specs  → VehicleTorqueSpec (matched by name)
-    Nothing is deleted. Returns counts of what was updated vs created.
+    Upsert unified checkpoint rows extracted from an owner's manual.
+    Matches by description (case-insensitive). Updates existing rows in place;
+    creates new rows for unmatched items. Nothing is deleted.
     """
     v = _get_vehicle(db, vehicle_id, user_id)
+    existing = {cp.description.lower(): cp for cp in v.check_points}
+    updated = created = 0
 
-    # ── Checkpoints ───────────────────────────────────────────────────────────
-    existing_cps = {cp.description.lower(): cp for cp in v.check_points}
-    cp_updated = cp_created = 0
-
-    for item in data.get("check_points", []):
+    for item in items:
         desc = (item.get("description") or "").strip()
         if not desc:
             continue
-        cp = existing_cps.get(desc.lower())
+        cp = existing.get(desc.lower())
         if cp:
             if item.get("interval_miles") is not None: cp.interval_miles = item["interval_miles"]
             if item.get("interval_days")  is not None: cp.interval_days  = item["interval_days"]
+            if item.get("due_at_miles")   is not None: cp.due_at_miles   = item["due_at_miles"]
             if item.get("expected_spec")  is not None: cp.expected_spec  = item["expected_spec"]
+            if item.get("volume")         is not None: cp.volume         = item["volume"]
             if item.get("min_value")      is not None: cp.min_value      = item["min_value"]
             if item.get("max_value")      is not None: cp.max_value      = item["max_value"]
             if item.get("unit")           is not None: cp.unit           = item["unit"]
-            cp_updated += 1
+            if item.get("ft_lb")          is not None: cp.ft_lb          = item["ft_lb"]
+            if item.get("nm")             is not None: cp.nm             = item["nm"]
+            if item.get("service_level"):
+                try:
+                    cp.service_level = ServiceLevel(item["service_level"])
+                except ValueError:
+                    pass
+            updated += 1
         else:
+            svc_level = ServiceLevel.INSPECT
+            try:
+                svc_level = ServiceLevel(item.get("service_level", "inspect"))
+            except ValueError:
+                pass
             db.add(VehicleCheckPoint(
-                vehicle_id=v.id, description=desc,
-                sort_order=len(existing_cps) + cp_created,
+                vehicle_id=v.id,
+                description=desc,
+                sort_order=len(existing) + created,
+                service_level=svc_level,
                 interval_miles=item.get("interval_miles"),
                 interval_days=item.get("interval_days"),
+                due_at_miles=item.get("due_at_miles"),
                 expected_spec=item.get("expected_spec"),
+                volume=item.get("volume"),
                 min_value=item.get("min_value"),
                 max_value=item.get("max_value"),
                 unit=item.get("unit"),
-            ))
-            cp_created += 1
-
-    # ── Fluid specs ───────────────────────────────────────────────────────────
-    existing_fs = {fs.name.lower(): fs for fs in v.fluid_specs}
-    fs_updated = fs_created = 0
-
-    for item in data.get("fluid_specs", []):
-        name = (item.get("name") or "").strip()
-        if not name:
-            continue
-        fs = existing_fs.get(name.lower())
-        if fs:
-            if item.get("spec")   is not None: fs.spec   = item["spec"]
-            if item.get("volume") is not None: fs.volume = item["volume"]
-            fs_updated += 1
-        else:
-            db.add(VehicleFluidSpec(
-                vehicle_id=v.id,
-                name=name,
-                spec=item.get("spec"),
-                volume=item.get("volume"),
-            ))
-            fs_created += 1
-
-    # ── Torque specs ──────────────────────────────────────────────────────────
-    existing_ts = {ts.name.lower(): ts for ts in v.torque_specs}
-    ts_updated = ts_created = 0
-
-    for item in data.get("torque_specs", []):
-        name = (item.get("name") or "").strip()
-        if not name:
-            continue
-        ts = existing_ts.get(name.lower())
-        if ts:
-            if item.get("ft_lb") is not None: ts.ft_lb = item["ft_lb"]
-            if item.get("nm")    is not None: ts.nm    = item["nm"]
-            ts_updated += 1
-        else:
-            db.add(VehicleTorqueSpec(
-                vehicle_id=v.id,
-                name=name,
                 ft_lb=item.get("ft_lb"),
                 nm=item.get("nm"),
             ))
-            ts_created += 1
+            created += 1
 
     db.commit()
     db.refresh(v)
-    return {
-        "checkpoints_updated": cp_updated,
-        "checkpoints_created": cp_created,
-        "fluid_specs_updated": fs_updated,
-        "fluid_specs_created": fs_created,
-        "torque_specs_updated": ts_updated,
-        "torque_specs_created": ts_created,
-    }
+    return {"updated": updated, "created": created, "total": len(items)}
 
 
 # ---------------------------------------------------------------------------
@@ -1165,6 +1239,34 @@ def create_service_log(
             status=status_enum,
             passed=cr.get("passed", True) if status_enum is None else (status_enum == CheckStatus.PASS),
         ))
+
+    db.flush()
+
+    # ── Update checkpoint tracking fields after service ───────────────────────
+    # For every completed check result linked to a checkpoint, update
+    # last_service_odometer / last_service_date / due_at_miles.
+    if odometer or service_date:
+        for cr in log.check_results:
+            if not cr.check_point_id:
+                continue
+            # Only update if the item was checked (not failed/skipped)
+            if cr.status == CheckStatus.FAIL:
+                continue
+            cp = db.query(VehicleCheckPoint).filter(
+                VehicleCheckPoint.id == cr.check_point_id
+            ).first()
+            if not cp:
+                continue
+            if odometer:
+                cp.last_service_odometer = odometer
+                # Recalculate next due mileage for repeating items
+                if cp.interval_miles:
+                    cp.due_at_miles = odometer + cp.interval_miles
+                elif cp.due_at_miles and cp.due_at_miles <= odometer:
+                    # One-time milestone completed — clear it
+                    cp.due_at_miles = None
+            if service_date:
+                cp.last_service_date = service_date
 
     db.commit()
     db.refresh(log)

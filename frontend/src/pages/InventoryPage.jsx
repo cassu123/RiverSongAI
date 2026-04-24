@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import './InventoryPage.css'
 
@@ -256,9 +256,50 @@ function ItemModal({ existing, homeQrStandard, onSave, onClose }) {
 
 // ─── Item detail panel ───────────────────────────────────────────────────────
 
-function ItemDetail({ item, onEdit, onDelete, onClose }) {
+function ItemDetail({ item, onEdit, onDelete, onClose, token }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [attachments,   setAttachments]   = useState([])
+  const [uploading,     setUploading]     = useState(false)
+  const fileInputRef = React.useRef()
   const qrSrc = item.qr_code_data ? `data:image/png;base64,${item.qr_code_data}` : null
+
+  const authH = () => ({ Authorization: `Bearer ${token}` })
+
+  const fetchAttachments = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/inventory/items/${item.id}/attachments`, { headers: authH() })
+      if (res.ok) setAttachments(await res.json())
+    } catch {}
+  }, [item.id, token])
+
+  useEffect(() => { fetchAttachments() }, [fetchAttachments])
+
+  const handleUpload = async (e) => {
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+    setUploading(true)
+    for (const file of files) {
+      const fd = new FormData(); fd.append('file', file)
+      await fetch(`/api/inventory/items/${item.id}/attachments`, {
+        method: 'POST', headers: authH(), body: fd,
+      })
+    }
+    setUploading(false)
+    fetchAttachments()
+    e.target.value = ''
+  }
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    await fetch(`/api/inventory/attachments/${attachmentId}`, { method: 'DELETE', headers: authH() })
+    setAttachments(prev => prev.filter(a => a.id !== attachmentId))
+  }
+
+  const fmtSize = (bytes) => {
+    if (!bytes) return ''
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
 
   return (
     <div className="inv-detail">
@@ -331,6 +372,33 @@ function ItemDetail({ item, onEdit, onDelete, onClose }) {
           )}
         </div>
       </div>
+
+      {/* Attachments */}
+      <div className="inv-attachments">
+        <div className="inv-detail-section" style={{marginTop:14}}>ATTACHMENTS</div>
+        <div className="inv-attachments-list">
+          {attachments.length === 0 && <span className="inv-attachments-empty">No files attached.</span>}
+          {attachments.map(a => (
+            <div key={a.id} className="inv-attachment-row">
+              <span className="inv-attachment-name" title={a.original_filename}>{a.original_filename}</span>
+              <span className="inv-attachment-size">{fmtSize(a.file_size)}</span>
+              <a
+                className="inv-btn inv-btn--ghost inv-btn--sm"
+                href={`/api/inventory/attachments/${a.id}/download`}
+                target="_blank" rel="noreferrer"
+              >⬇</a>
+              <button
+                className="inv-btn inv-btn--danger inv-btn--sm"
+                onClick={() => handleDeleteAttachment(a.id)}
+              >✕</button>
+            </div>
+          ))}
+        </div>
+        <label className="inv-btn inv-btn--ghost inv-btn--sm" style={{cursor:'pointer', marginTop:8}}>
+          {uploading ? 'UPLOADING…' : '+ ADD FILES'}
+          <input ref={fileInputRef} type="file" multiple style={{display:'none'}} onChange={handleUpload} disabled={uploading} />
+        </label>
+      </div>
     </div>
   )
 }
@@ -375,6 +443,409 @@ function ScanBar({ onResult }) {
       </button>
       {error && <span className="inv-scan-error">{error}</span>}
     </form>
+  )
+}
+
+// ─── Manual walk-through mode ────────────────────────────────────────────────
+
+function ManualWalkthrough({ audit, token, onUpdate }) {
+  const authH = useCallback(() => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }), [token])
+  const outstanding = audit.missing || []
+  const [idx, setIdx] = useState(0)
+  const [msg, setMsg] = useState(null)
+
+  if (outstanding.length === 0) return (
+    <div className="audit-walk-done">All items accounted for!</div>
+  )
+
+  const current = outstanding[idx]
+
+  const confirm = async () => {
+    const res = await fetch(`/api/inventory/audits/${audit.id}/scan`, {
+      method: 'POST', headers: authH(), body: JSON.stringify({ ein: current.ein }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setMsg({ text: data.detail || 'Error', ok: false }); return }
+    setMsg({ text: `✓ ${current.name} confirmed`, ok: true })
+    onUpdate(data)
+    setTimeout(() => { setMsg(null); setIdx(i => Math.min(i, (data.missing?.length || 1) - 1)) }, 800)
+  }
+
+  const skip = () => {
+    setIdx(i => (i + 1) % outstanding.length)
+    setMsg(null)
+  }
+
+  return (
+    <div className="audit-walk-wrap">
+      <div className="audit-walk-counter">{idx + 1} of {outstanding.length} outstanding</div>
+      <div className="audit-walk-card">
+        <div className="audit-walk-ein">{current.ein}</div>
+        <div className="audit-walk-name">{current.name}</div>
+        {current.location && <div className="audit-walk-loc">📍 {current.location}</div>}
+      </div>
+      {msg && <div className={`audit-scan-msg ${msg.ok ? 'audit-scan-msg--ok' : 'audit-scan-msg--err'}`}>{msg.text}</div>}
+      <div className="audit-walk-actions">
+        <button className="inv-btn" onClick={confirm}>✓ FOUND IT</button>
+        <button className="inv-btn inv-btn--ghost" onClick={skip}>SKIP →</button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Audit tab ───────────────────────────────────────────────────────────────
+
+function AuditTab({ home, token, items }) {
+  const [audit,      setAudit]      = useState(null)   // active audit state
+  const [loading,    setLoading]    = useState(true)
+  const [scanInput,  setScanInput]  = useState('')
+  const [scanMsg,    setScanMsg]    = useState(null)   // { text, ok }
+  const [showResume, setShowResume] = useState(false)  // resume popup
+  const [showComplete, setShowComplete] = useState(false)
+  const [notes,      setNotes]      = useState('')
+  const [saving,     setSaving]     = useState(false)
+  const [walkMode,   setWalkMode]   = useState(false)  // manual walk-through
+  const scanRef = useRef()
+
+  const authH = useCallback(() => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }), [token])
+
+  // Load active audit on mount / home change
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    fetch(`/api/inventory/homes/${home.id}/audit/active`, { headers: authH() })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (cancelled) return
+        if (data) { setAudit(data); setShowResume(true) }
+        setLoading(false)
+      })
+      .catch(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [home.id])
+
+  const startAudit = async (walk = false) => {
+    const res = await fetch(`/api/inventory/homes/${home.id}/audit/start`, { method: 'POST', headers: authH() })
+    const data = await res.json()
+    if (!res.ok) { alert(data.detail || 'Failed to start audit'); return }
+    setAudit(data)
+    setShowResume(false)
+    if (walk) {
+      setWalkMode(true)
+    } else {
+      setTimeout(() => scanRef.current?.focus(), 100)
+    }
+  }
+
+  const handleScan = async (e) => {
+    e.preventDefault()
+    const ein = scanInput.trim()
+    if (!ein || !audit) return
+    setScanInput('')
+    const res  = await fetch(`/api/inventory/audits/${audit.id}/scan`, {
+      method: 'POST', headers: authH(), body: JSON.stringify({ ein }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      setScanMsg({ text: data.detail || 'EIN not found in this home', ok: false })
+    } else {
+      const justScanned = data.scanned?.find(s => s.ein === ein)
+      setScanMsg({ text: justScanned ? `✓ ${justScanned.name}` : '✓ Scanned', ok: true })
+      setAudit(data)
+    }
+    setTimeout(() => setScanMsg(null), 2500)
+    scanRef.current?.focus()
+  }
+
+  const handleComplete = async () => {
+    setSaving(true)
+    const res  = await fetch(`/api/inventory/audits/${audit.id}/complete`, {
+      method: 'POST', headers: authH(), body: JSON.stringify({ notes }),
+    })
+    const data = await res.json()
+    setSaving(false)
+    if (!res.ok) { alert(data.detail || 'Failed to complete audit'); return }
+    setAudit(null)
+    setShowComplete(false)
+    setNotes('')
+  }
+
+  const pct = audit ? Math.round((audit.scanned_count / Math.max(audit.total_items, 1)) * 100) : 0
+
+  if (loading) return <div className="inv-loading">LOADING AUDIT STATUS…</div>
+
+  // ── Resume popup ──
+  if (showResume && audit) return (
+    <div className="audit-resume-overlay">
+      <div className="audit-resume-card">
+        <div className="audit-resume-title">INSPECTION IN PROGRESS</div>
+        <div className="audit-resume-sub">
+          {audit.scanned_count} of {audit.total_items} items scanned ({pct}%)
+        </div>
+        <div className="audit-resume-actions">
+          <button className="inv-btn" onClick={() => { setShowResume(false); setTimeout(() => scanRef.current?.focus(), 100) }}>
+            CONTINUE INSPECTION
+          </button>
+          <button className="inv-btn inv-btn--ghost" onClick={() => { setShowResume(false); setAudit(null) }}>
+            DISMISS
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+
+  // ── No active audit ──
+  if (!audit) return (
+    <div className="audit-start-wrap">
+      <div className="audit-start-card">
+        <div className="audit-start-icon"><IconScan /></div>
+        <div className="audit-start-title">PHYSICAL INSPECTION</div>
+        <div className="audit-start-sub">
+          Scan every item in <strong>{home.name}</strong> to verify what's present.
+          The system tracks what's been scanned and what's still outstanding.
+        </div>
+        <div className="audit-start-actions">
+          <button className="inv-btn" onClick={() => startAudit(false)}>SCAN BY EIN</button>
+          <button className="inv-btn inv-btn--ghost" onClick={() => startAudit(true)}>MANUAL WALK-THROUGH</button>
+        </div>
+      </div>
+    </div>
+  )
+
+  // ── Active audit ──
+  return (
+    <div className="audit-wrap">
+
+      {/* Progress bar */}
+      <div className="audit-progress-row">
+        <div className="audit-progress-bar-wrap">
+          <div className="audit-progress-bar" style={{ width: `${pct}%` }} />
+        </div>
+        <span className="audit-progress-label">{audit.scanned_count} / {audit.total_items} — {pct}%</span>
+        <button className="inv-btn inv-btn--ghost inv-btn--sm" onClick={() => setWalkMode(w => !w)}>
+          {walkMode ? 'SCAN MODE' : 'WALK-THROUGH'}
+        </button>
+        <button className="inv-btn inv-btn--ghost inv-btn--sm" onClick={() => setShowComplete(true)}>SAVE &amp; COMPLETE</button>
+      </div>
+
+      {/* Walk-through or scan mode */}
+      {walkMode ? (
+        <ManualWalkthrough audit={audit} token={token} onUpdate={setAudit} />
+      ) : (
+        <>
+          <form className="audit-scan-form" onSubmit={handleScan}>
+            <div className="audit-scan-box">
+              <IconScan />
+              <input
+                ref={scanRef}
+                className="inv-input audit-scan-input"
+                placeholder="Scan EIN or type and press Enter…"
+                value={scanInput}
+                onChange={e => setScanInput(e.target.value)}
+                autoFocus
+              />
+            </div>
+            {scanMsg && (
+              <div className={`audit-scan-msg ${scanMsg.ok ? 'audit-scan-msg--ok' : 'audit-scan-msg--err'}`}>
+                {scanMsg.text}
+              </div>
+            )}
+          </form>
+
+          <div className="audit-lists">
+            <div className="audit-list-col">
+              <div className="audit-list-header audit-list-header--scanned">
+                SCANNED <span className="audit-list-count">{audit.scanned_count}</span>
+              </div>
+              <div className="audit-list-body">
+                {audit.scanned?.length === 0 && <div className="audit-list-empty">Nothing scanned yet.</div>}
+                {[...(audit.scanned || [])].reverse().map(i => (
+                  <div key={i.id} className="audit-list-row audit-list-row--scanned">
+                    <span className="audit-list-ein">{i.ein}</span>
+                    <span className="audit-list-name">{i.name}</span>
+                    {i.location && <span className="audit-list-loc">{i.location}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="audit-list-col">
+              <div className="audit-list-header audit-list-header--missing">
+                OUTSTANDING <span className="audit-list-count">{audit.missing?.length ?? 0}</span>
+              </div>
+              <div className="audit-list-body">
+                {audit.missing?.length === 0 && <div className="audit-list-empty">All items accounted for!</div>}
+                {(audit.missing || []).map(i => (
+                  <div key={i.id} className="audit-list-row audit-list-row--missing">
+                    <span className="audit-list-ein">{i.ein}</span>
+                    <span className="audit-list-name">{i.name}</span>
+                    {i.location && <span className="audit-list-loc">{i.location}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Complete modal */}
+      {showComplete && (
+        <div className="inv-modal-overlay" onClick={() => setShowComplete(false)}>
+          <div className="inv-modal" onClick={e => e.stopPropagation()}>
+            <div className="inv-modal-header">
+              <h2 className="inv-modal-title">COMPLETE INSPECTION</h2>
+              <button className="inv-modal-close" onClick={() => setShowComplete(false)}>✕</button>
+            </div>
+            <div className="audit-complete-summary">
+              <div className="audit-complete-stat">
+                <span className="audit-complete-num">{pct}%</span>
+                <span className="audit-complete-lbl">SCANNED</span>
+              </div>
+              <div className="audit-complete-stat">
+                <span className="audit-complete-num" style={{color:'var(--secondary)'}}>{audit.scanned_count}</span>
+                <span className="audit-complete-lbl">FOUND</span>
+              </div>
+              <div className="audit-complete-stat">
+                <span className="audit-complete-num" style={{color: audit.missing?.length ? 'var(--warn)' : 'var(--secondary)'}}>
+                  {audit.missing?.length ?? 0}
+                </span>
+                <span className="audit-complete-lbl">MISSING</span>
+              </div>
+            </div>
+            {audit.missing?.length > 0 && (
+              <div className="audit-complete-missing-list">
+                <div className="inv-form-section-title">MISSING ITEMS</div>
+                {audit.missing.map(i => (
+                  <div key={i.id} className="audit-list-row audit-list-row--missing">
+                    <span className="audit-list-ein">{i.ein}</span>
+                    <span className="audit-list-name">{i.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <label className="inv-form-label">Notes (optional, 500 chars max)
+              <textarea
+                className="inv-input inv-textarea"
+                rows={3}
+                maxLength={500}
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="e.g. Pre-move scan — master bedroom complete"
+              />
+              <span style={{fontSize:'0.65rem',color:'var(--text-dim)',textAlign:'right'}}>{notes.length}/500</span>
+            </label>
+            <div className="inv-modal-actions">
+              <button className="inv-btn inv-btn--ghost" onClick={() => setShowComplete(false)}>CANCEL</button>
+              <button className="inv-btn" onClick={handleComplete} disabled={saving}>
+                {saving ? 'SAVING…' : 'SAVE & COMPLETE'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── History tab ──────────────────────────────────────────────────────────────
+
+function HistoryTab({ home, token, userTimezone }) {
+  const [history, setHistory] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [expanded, setExpanded] = useState(null)
+
+  const authH = useCallback(() => ({ Authorization: `Bearer ${token}` }), [token])
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    fetch(`/api/inventory/homes/${home.id}/audit/history`, { headers: authH() })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (!cancelled) { setHistory(data); setLoading(false) } })
+      .catch(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [home.id])
+
+  const fmtTs = (iso, tz) => {
+    if (!iso) return '—'
+    try {
+      return new Date(iso).toLocaleString('en-US', {
+        timeZone: tz || userTimezone || 'UTC',
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: 'numeric', minute: '2-digit', hour12: true,
+      })
+    } catch { return iso }
+  }
+
+  if (loading) return <div className="inv-loading">LOADING HISTORY…</div>
+
+  if (history.length === 0) return (
+    <div className="inv-empty-state inv-empty-state--sm">
+      No completed inspections yet for {home.name}.
+    </div>
+  )
+
+  return (
+    <div className="audit-history">
+      {history.map(a => {
+        const pct  = Math.round((a.scanned_count / Math.max(a.total_items, 1)) * 100)
+        const open = expanded === a.id
+        return (
+          <div key={a.id} className={`audit-hist-card ${open ? 'audit-hist-card--open' : ''}`}>
+            <button className="audit-hist-header" onClick={() => setExpanded(open ? null : a.id)}>
+              <div className="audit-hist-header-left">
+                <span className="audit-hist-date">{fmtTs(a.completed_at, a.user_timezone)}</span>
+                <span className="audit-hist-tz">{a.user_timezone}</span>
+              </div>
+              <div className="audit-hist-header-right">
+                <span className="audit-hist-pct" style={{color: pct === 100 ? 'var(--secondary)' : 'var(--warn)'}}>
+                  {pct}%
+                </span>
+                <span className="audit-hist-counts">
+                  {a.scanned_count}/{a.total_items} found · {a.missing?.length ?? 0} missing
+                </span>
+                <span className="audit-hist-chevron">{open ? '▲' : '▼'}</span>
+              </div>
+            </button>
+
+            {open && (
+              <div className="audit-hist-body">
+                {a.notes && (
+                  <div className="audit-hist-notes">
+                    <span className="audit-hist-notes-label">NOTES</span>
+                    <span className="audit-hist-notes-text">{a.notes}</span>
+                  </div>
+                )}
+                <div className="audit-lists audit-lists--compact">
+                  <div className="audit-list-col">
+                    <div className="audit-list-header audit-list-header--scanned">FOUND <span className="audit-list-count">{a.scanned_count}</span></div>
+                    <div className="audit-list-body">
+                      {a.scanned?.map(i => (
+                        <div key={i.id} className="audit-list-row audit-list-row--scanned">
+                          <span className="audit-list-ein">{i.ein}</span>
+                          <span className="audit-list-name">{i.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="audit-list-col">
+                    <div className="audit-list-header audit-list-header--missing">MISSING <span className="audit-list-count">{a.missing?.length ?? 0}</span></div>
+                    <div className="audit-list-body">
+                      {a.missing?.length === 0 && <div className="audit-list-empty">All accounted for.</div>}
+                      {a.missing?.map(i => (
+                        <div key={i.id} className="audit-list-row audit-list-row--missing">
+                          <span className="audit-list-ein">{i.ein}</span>
+                          <span className="audit-list-name">{i.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -438,7 +909,7 @@ function CollaboratorsPanel({ home }) {
 
 // ─── Main page ───────────────────────────────────────────────────────────────
 
-const PAGE_TABS = ['ITEMS', 'SETTINGS']
+const PAGE_TABS = ['ITEMS', 'AUDIT', 'HISTORY', 'SETTINGS']
 
 export default function InventoryPage() {
   const { token } = useAuth()
@@ -448,6 +919,7 @@ export default function InventoryPage() {
   const [items,      setItems]      = useState([])
   const [loading,    setLoading]    = useState(false)
   const [search,     setSearch]     = useState('')
+  const [userTimezone, setUserTimezone] = useState('UTC')
 
   const [showHomeModal, setShowHomeModal] = useState(false)
   const [editingHome,   setEditingHome]   = useState(null)
@@ -463,6 +935,15 @@ export default function InventoryPage() {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
   }), [token])
+
+  // ── Load user timezone ──────────────────────────────────────────────────────
+
+  useEffect(() => {
+    fetch('/api/inventory/users/me', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.timezone) setUserTimezone(d.timezone) })
+      .catch(() => {})
+  }, [token])
 
   // ── Homes ──────────────────────────────────────────────────────────────────
 
@@ -726,6 +1207,7 @@ export default function InventoryPage() {
           {detailItem && (
             <ItemDetail
               item={detailItem}
+              token={token}
               onEdit={() => { setEditingItem(detailItem); setShowItemModal(true) }}
               onDelete={() => deleteItem(detailItem.id)}
               onClose={() => setDetailItem(null)}
@@ -737,6 +1219,16 @@ export default function InventoryPage() {
       {/* Settings / Collaborators tab */}
       {activeHome && activeTab === 'SETTINGS' && (
         <CollaboratorsPanel home={activeHome} />
+      )}
+
+      {/* Audit tab */}
+      {activeHome && activeTab === 'AUDIT' && (
+        <AuditTab home={activeHome} token={token} items={items} />
+      )}
+
+      {/* History tab */}
+      {activeHome && activeTab === 'HISTORY' && (
+        <HistoryTab home={activeHome} token={token} userTimezone={userTimezone} />
       )}
 
       {/* Modals */}

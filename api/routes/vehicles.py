@@ -48,12 +48,12 @@ from vehicles.management import (
     VehicleNotFoundError,
     add_check_point,
     add_fluid_spec,
-    clear_all_check_points,
     add_person,
     add_torque_spec,
     apply_manual_intervals,
     assign_person,
     attach_receipt,
+    clear_all_check_points,
     create_service_log,
     create_vehicle,
     delete_check_point,
@@ -110,12 +110,19 @@ def _migrate(engine) -> None:
         # check_points
         cps = _cols("vehicle_check_points)")
         for col, typedef in [
-            ("interval_miles", "INTEGER"),
-            ("interval_days",  "INTEGER"),
-            ("expected_spec",  "TEXT"),
-            ("min_value",      "REAL"),
-            ("max_value",      "REAL"),
-            ("unit",           "TEXT"),
+            ("interval_miles",        "INTEGER"),
+            ("interval_days",         "INTEGER"),
+            ("expected_spec",         "TEXT"),
+            ("min_value",             "REAL"),
+            ("max_value",             "REAL"),
+            ("unit",                  "TEXT"),
+            ("ft_lb",                 "REAL"),
+            ("nm",                    "REAL"),
+            ("volume",                "TEXT"),
+            ("service_level",         "TEXT"),
+            ("due_at_miles",          "INTEGER"),
+            ("last_service_odometer", "INTEGER"),
+            ("last_service_date",     "TEXT"),
         ]:
             if col not in cps:
                 conn.execute(sqlalchemy.text(f"ALTER TABLE vehicle_check_points ADD COLUMN {col} {typedef}"))
@@ -213,17 +220,7 @@ def _ser_vehicle(v) -> dict:
             for t in v.torque_specs
         ],
         "check_points": [
-            {
-                "id":             str(cp.id),
-                "description":    cp.description,
-                "sort_order":     cp.sort_order,
-                "interval_miles": cp.interval_miles,
-                "interval_days":  cp.interval_days,
-                "expected_spec":  cp.expected_spec,
-                "min_value":      cp.min_value,
-                "max_value":      cp.max_value,
-                "unit":           cp.unit,
-            }
+            _ser_checkpoint(cp)
             for cp in sorted(v.check_points, key=lambda x: x.sort_order)
         ],
         "created_at":  v.created_at.isoformat() if v.created_at else None,
@@ -233,15 +230,22 @@ def _ser_vehicle(v) -> dict:
 
 def _ser_checkpoint(cp) -> dict:
     return {
-        "id":             str(cp.id),
-        "description":    cp.description,
-        "sort_order":     cp.sort_order,
-        "interval_miles": cp.interval_miles,
-        "interval_days":  cp.interval_days,
-        "expected_spec":  cp.expected_spec,
-        "min_value":      cp.min_value,
-        "max_value":      cp.max_value,
-        "unit":           cp.unit,
+        "id":                     str(cp.id),
+        "description":            cp.description,
+        "sort_order":             cp.sort_order,
+        "service_level":          cp.service_level.value if cp.service_level else "inspect",
+        "interval_miles":         cp.interval_miles,
+        "interval_days":          cp.interval_days,
+        "due_at_miles":           cp.due_at_miles,
+        "expected_spec":          cp.expected_spec,
+        "volume":                 cp.volume,
+        "min_value":              cp.min_value,
+        "max_value":              cp.max_value,
+        "unit":                   cp.unit,
+        "ft_lb":                  cp.ft_lb,
+        "nm":                     cp.nm,
+        "last_service_odometer":  cp.last_service_odometer,
+        "last_service_date":      cp.last_service_date.isoformat() if cp.last_service_date else None,
     }
 
 
@@ -342,22 +346,32 @@ class TorqueSpecCreate(BaseModel):
 
 class CheckPointCreate(BaseModel):
     description:    str
-    sort_order:     int            = 0
+    sort_order:     int             = 0
+    service_level:  str             = "inspect"
     interval_miles: Optional[int]   = None
     interval_days:  Optional[int]   = None
+    due_at_miles:   Optional[int]   = None
     expected_spec:  Optional[str]   = None
+    volume:         Optional[str]   = None
     min_value:      Optional[float] = None
     max_value:      Optional[float] = None
     unit:           Optional[str]   = None
+    ft_lb:          Optional[float] = None
+    nm:             Optional[float] = None
 
 class CheckPointPatch(BaseModel):
     description:    Optional[str]   = None
+    service_level:  Optional[str]   = None
     interval_miles: Optional[int]   = None
     interval_days:  Optional[int]   = None
+    due_at_miles:   Optional[int]   = None
     expected_spec:  Optional[str]   = None
+    volume:         Optional[str]   = None
     min_value:      Optional[float] = None
     max_value:      Optional[float] = None
     unit:           Optional[str]   = None
+    ft_lb:          Optional[float] = None
+    nm:             Optional[float] = None
 
 class PersonAdd(BaseModel):
     email: str
@@ -572,9 +586,12 @@ def add_checkpoint(
     try:
         cp = add_check_point(
             db, user_id, vehicle_id, body.description, body.sort_order,
+            service_level=body.service_level,
             interval_miles=body.interval_miles, interval_days=body.interval_days,
-            expected_spec=body.expected_spec, min_value=body.min_value,
-            max_value=body.max_value, unit=body.unit,
+            due_at_miles=body.due_at_miles,
+            expected_spec=body.expected_spec, volume=body.volume,
+            min_value=body.min_value, max_value=body.max_value, unit=body.unit,
+            ft_lb=body.ft_lb, nm=body.nm,
         )
         return _ser_checkpoint(cp)
     except Exception as e:
@@ -589,10 +606,12 @@ def patch_checkpoint(
     try:
         cp = update_check_point(
             db, user_id, point_id,
-            description=body.description,
+            description=body.description, service_level=body.service_level,
             interval_miles=body.interval_miles, interval_days=body.interval_days,
-            expected_spec=body.expected_spec, min_value=body.min_value,
-            max_value=body.max_value, unit=body.unit,
+            due_at_miles=body.due_at_miles,
+            expected_spec=body.expected_spec, volume=body.volume,
+            min_value=body.min_value, max_value=body.max_value, unit=body.unit,
+            ft_lb=body.ft_lb, nm=body.nm,
         )
         return _ser_checkpoint(cp)
     except Exception as e:
@@ -655,16 +674,15 @@ async def upload_manual(
         ollama_url   = getattr(settings, "ollama_base_url", None) or None
         ollama_model = getattr(settings, "ollama_model",    None) or "mistral"
 
-        data = parse_manual(pdf_text, ollama_url=ollama_url, ollama_model=ollama_model)
+        items = parse_manual(pdf_text, ollama_url=ollama_url, ollama_model=ollama_model)
 
-        total = len(data["check_points"]) + len(data["fluid_specs"]) + len(data["torque_specs"])
-        if total == 0:
+        if not items:
             raise HTTPException(
                 status_code=422,
                 detail="No maintenance data found. Check that the PDF contains a maintenance schedule or specifications section."
             )
 
-        result = apply_manual_intervals(db, user_id, vehicle_id, data)
+        result = apply_manual_intervals(db, user_id, vehicle_id, items)
         return result
     except HTTPException:
         raise
