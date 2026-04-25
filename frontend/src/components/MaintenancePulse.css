@@ -889,7 +889,7 @@
 
   .insp-sheet-header {
     display: grid;
-    grid-template-columns: 1fr 160px 110px 72px;
+    grid-template-columns: 1fr 160px 90px 110px 68px;
     gap: 0;
     padding: 6px 12px;
     background: var(--bg-panel);
@@ -903,7 +903,7 @@
 
   .insp-row {
     display: grid;
-    grid-template-columns: 1fr 160px 110px 72px;
+    grid-template-columns: 1fr 160px 90px 110px 68px;
     gap: 0;
     align-items: center;
     padding: 10px 12px;
@@ -967,10 +967,53 @@
     flex-shrink: 0;
   }
 
+  .insp-item-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .insp-item-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .insp-svc-pip {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    opacity: 0.85;
+  }
+
+  .insp-due-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    padding-left: 12px;
+  }
+
+  .insp-due-label.insp-due-soon { color: var(--warn); }
+  .insp-due-label.insp-due-over { color: var(--error); font-weight: 600; }
+
   .insp-col-spec {
     font-size: 0.78rem;
     color: var(--text-dim);
     padding: 0 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .insp-expected-val {
+    color: var(--text-dim);
+  }
+
+  .insp-volume {
+    font-size: 0.68rem;
+    color: var(--text-muted);
   }
 
   .insp-no-spec {
@@ -984,6 +1027,17 @@
 
   .insp-col-actual {
     padding: 0 8px 0 0;
+  }
+
+  .insp-col-torque {
+    padding: 0 8px;
+    font-size: 0.72rem;
+    color: var(--warn);
+    line-height: 1.4;
+  }
+
+  .insp-torque-val {
+    font-family: var(--font-display, 'Courier New', monospace);
   }
 
   .insp-actual-input {
@@ -1044,6 +1098,42 @@
     color: var(--text-muted);
     font-style: italic;
     margin-bottom: 4px;
+  }
+
+  /* ── Service level badge on cp rows ─────────────────── */
+
+  .cp-svc-badge {
+    font-size: 0.58rem;
+    font-family: var(--font-display, 'Courier New', monospace);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 1px 5px;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    flex-shrink: 0;
+    opacity: 0.9;
+  }
+
+  .cp-torque-tag {
+    font-size: 0.68rem;
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent);
+    padding: 1px 6px;
+    border-radius: 2px;
+  }
+
+  .cp-last-svc {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .cp-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
   }
 
   /* ── Checkpoint rows (specs editor) ─────────────────── */
@@ -1211,9 +1301,10 @@
     }
     .insp-sheet-header,
     .insp-row {
-      grid-template-columns: 1fr 80px 72px;
+      grid-template-columns: 1fr 80px 68px;
     }
-    .insp-col-spec {
+    .insp-col-spec,
+    .insp-col-torque {
       display: none;
     }
   }

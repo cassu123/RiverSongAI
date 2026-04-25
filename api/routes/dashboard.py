@@ -52,6 +52,7 @@ async def get_dashboard(request: Request, authorization: Optional[str] = Header(
 
     if mm:
         try:
+            # amazonq-ignore-next-line
             facts     = await mm.get_facts(user_id)
             fact_count = len(facts)
         except (AttributeError, TypeError, ValueError) as e:

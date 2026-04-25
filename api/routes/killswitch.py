@@ -57,7 +57,8 @@ async def get_status(authorization: Optional[str] = Header(default=None)):
 async def activate(body: ActivateBody, authorization: Optional[str] = Header(default=None)):
     _require_admin(authorization)
     activate_global_kill_switch(origin=body.origin)
-    logger.critical("Kill switch activated via API (origin=%s).", body.origin)
+    safe_origin = body.origin.replace("\r", "").replace("\n", "").replace("\t", "")
+    logger.critical("Kill switch activated via API (origin=%s).", safe_origin)
     return {"active": True, "message": "Kill switch activated."}
 
 
