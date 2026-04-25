@@ -9,6 +9,9 @@ const CATEGORIES = [
 ];
 
 async function apiFetch(path, token, opts = {}) {
+  if (/^https?:\/\//i.test(path)) {
+    throw new Error(`Blocked absolute URL in apiFetch: ${path}`);
+  }
   const res = await fetch(path, {
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...opts.headers },
     ...opts,
@@ -286,7 +289,7 @@ export default function InventoryVault({ workspaceId, token: tokenProp }) {
     if (!file) return;
     const fd = new FormData();
     fd.append('file', file);
-    await fetch(`/api/commerce/products/${productId}/image`, {
+    await apiFetch(`/api/commerce/products/${productId}/image`, token, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: fd,

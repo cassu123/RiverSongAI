@@ -852,6 +852,10 @@ def delete_log(
         raise _http(e)
 
 
+_RECEIPT_ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp", "application/pdf"}
+_RECEIPT_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
 @router.post("/logs/{log_id}/receipt")
 async def upload_receipt(
     log_id: str,
@@ -859,9 +863,16 @@ async def upload_receipt(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    mime = (file.content_type or "").lower().split(";")[0].strip()
+    if mime not in _RECEIPT_ALLOWED_MIME:
+        raise HTTPException(status_code=415, detail="File type not allowed. Permitted: JPEG, PNG, WebP, PDF.")
     try:
         data = await file.read()
+        if len(data) > _RECEIPT_MAX_BYTES:
+            raise HTTPException(status_code=413, detail="File exceeds 10 MB limit.")
         log  = attach_receipt(db, user_id, log_id, data, file.filename or "receipt")
         return _ser_log(log)
+    except HTTPException:
+        raise
     except Exception as e:
         raise _http(e)

@@ -2,14 +2,15 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import './MaintenancePulse.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
 function authHeaders(token) {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
 async function apiFetch(path, token, opts = {}) {
-  const res = await fetch(`${API}${path}`, { headers: authHeaders(token), ...opts });
+  if (/^https?:\/\//i.test(path)) {
+    throw new Error(`Blocked absolute URL in apiFetch: ${path}`);
+  }
+  const res = await fetch(path, { headers: authHeaders(token), ...opts });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || 'API error');
@@ -418,7 +419,7 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch(`${API}/api/vehicles/${vehicleId}/manual`, {
+      const res = await fetch(`/api/vehicles/${vehicleId}/manual`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
@@ -948,7 +949,7 @@ export default function MaintenancePulse() {
       if (receiptFile && isProService) {
         const fd = new FormData();
         fd.append('file', receiptFile);
-        await fetch(`${API}/api/vehicles/logs/${log.id}/receipt`, {
+        await fetch(`/api/vehicles/logs/${log.id}/receipt`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: fd,
