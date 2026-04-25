@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
-import RiverSong        from '../components/RiverSong.jsx'
-import ConversationPanel from '../components/ConversationPanel.jsx'
-import { useWebSocket }  from '../hooks/useWebSocket.js'
+import RiverSong          from '../components/RiverSong.jsx'
+import ConversationPanel  from '../components/ConversationPanel.jsx'
+import { useWebSocket }   from '../hooks/useWebSocket.js'
 import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
-import { useAuth }       from '../context/AuthContext.jsx'
+import { useAuth }        from '../context/AuthContext.jsx'
 import './ConversationPage.css'
 
 const API_BASE    = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -57,8 +57,6 @@ export default function ConversationPage() {
   const [messages,          setMessages]          = useState([])
   const [streamingResponse, setStreamingResponse] = useState('')
   const [error,             setError]             = useState(null)
-  const [inputText,         setInputText]         = useState('')
-
   // Avatar visibility — persisted per user
   const [showAvatar, setShowAvatar] = useState(() => {
     if (!user) return true
@@ -68,8 +66,8 @@ export default function ConversationPage() {
   // Model selector
   const [models,          setModels]          = useState({ cloud: [], local: [] })
   const [selectedModel,   setSelectedModel]   = useState(null)
-  const [enabledProviders,setEnabledProviders] = useState({})
   const [savingModel,     setSavingModel]     = useState(false)
+  const [showModelPicker, setShowModelPicker] = useState(false)
 
   // History panel
   const [history,        setHistory]        = useState([])
@@ -77,7 +75,6 @@ export default function ConversationPage() {
   const [viewingSession, setViewingSession] = useState(null)
 
   const isPlayingRef = useRef(false)
-  const inputRef     = useRef(null)
 
   useEffect(() => {
     fetch(`${API_BASE}/api/models`)
@@ -87,7 +84,6 @@ export default function ConversationPage() {
           cloud: (data.cloud || []).filter(m => m.available),
           local: (data.local || []).filter(m => m.available),
         })
-        setEnabledProviders(data.enabled_providers || {})
       })
       .catch(() => {})
 
@@ -191,22 +187,11 @@ export default function ConversationPage() {
     setViewingSession(null)
   }, [connectionStatus, messages, sendMessage, user, selectedModel])
 
-  const handleSendText = useCallback(() => {
-    const t = inputText.trim()
-    if (!t || connectionStatus !== 'connected') return
-    setMessages(p => [...p, { role: 'user', text: t }])
-    sendMessage({ type: 'text_input', text: t })
-    setInputText('')
-    setConvState('thinking')
-  }, [inputText, connectionStatus, sendMessage])
-
-  const handleKeyDown = useCallback(e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendText() }
-  }, [handleSendText])
-
   const modelValue = selectedModel ? `${selectedModel.provider}::${selectedModel.model_id}` : ''
+  const modelLabel = selectedModel ? `${selectedModel.provider} / ${selectedModel.model_id}` : 'DEFAULT'
   const displayMessages = viewingSession ? viewingSession.messages : messages
   const displayStreaming = viewingSession ? '' : streamingResponse
+  const allModels = [...models.cloud, ...models.local]
 
   return (
     <div className="conv-page">
@@ -222,6 +207,46 @@ export default function ConversationPage() {
                 {s.toUpperCase()}
               </div>
             ))}
+          </div>
+          {/* Inline model picker */}
+          <div className="conv-model-inline">
+            <button
+              className="conv-model-inline-btn"
+              onClick={() => setShowModelPicker(p => !p)}
+              title="Switch model"
+            >
+              <span className="conv-model-inline-label">MODEL</span>
+              <span className="conv-model-inline-val">{modelLabel}</span>
+              <ChevronIcon open={showModelPicker} />
+            </button>
+            {showModelPicker && allModels.length > 0 && (
+              <div className="conv-model-dropdown">
+                {models.cloud.length > 0 && (
+                  <div className="conv-model-group">
+                    <span className="conv-model-group-label">☁ CLOUD</span>
+                    {models.cloud.map(m => (
+                      <button
+                        key={`${m.provider}::${m.model_id}`}
+                        className={`conv-model-option ${modelValue === `${m.provider}::${m.model_id}` ? 'conv-model-option--active' : ''}`}
+                        onClick={() => { handleModelChange({ target: { value: `${m.provider}::${m.model_id}` } }); setShowModelPicker(false) }}
+                      >{m.display_name}</button>
+                    ))}
+                  </div>
+                )}
+                {models.local.length > 0 && (
+                  <div className="conv-model-group">
+                    <span className="conv-model-group-label">⬡ LOCAL</span>
+                    {models.local.map(m => (
+                      <button
+                        key={`${m.provider}::${m.model_id}`}
+                        className={`conv-model-option ${modelValue === `${m.provider}::${m.model_id}` ? 'conv-model-option--active' : ''}`}
+                        onClick={() => { handleModelChange({ target: { value: `${m.provider}::${m.model_id}` } }); setShowModelPicker(false) }}
+                      >{m.display_name}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           {error && <div className="conv-error" role="alert">{error}</div>}
         </div>
@@ -241,36 +266,7 @@ export default function ConversationPage() {
             >
               <AvatarIcon />
             </button>
-
-            <div className="conv-model-selector">
-              <label className="conv-model-label">MODEL</label>
-              <select
-                className="conv-model-select"
-                value={modelValue}
-                onChange={handleModelChange}
-                disabled={savingModel}
-              >
-                {models.cloud.length > 0 && (
-                  <optgroup label="☁ CLOUD">
-                    {models.cloud.map(m => (
-                      <option key={`${m.provider}::${m.model_id}`} value={`${m.provider}::${m.model_id}`}>
-                        {m.display_name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {models.local.length > 0 && (
-                  <optgroup label="⬡ LOCAL">
-                    {models.local.map(m => (
-                      <option key={`${m.provider}::${m.model_id}`} value={`${m.provider}::${m.model_id}`}>
-                        {m.display_name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-              {savingModel && <span className="conv-model-saving">saving...</span>}
-            </div>
+            {savingModel && <span className="conv-model-saving">saving...</span>}
           </div>
 
           <div className="conv-top-right">
@@ -323,38 +319,16 @@ export default function ConversationPage() {
           <ConversationPanel messages={displayMessages} streamingResponse={displayStreaming} />
         )}
 
-        {/* Input bar */}
-        <div className="conv-input-bar">
+        {/* Input bar — voice only */}
+        <div className="conv-input-bar conv-input-bar--speak">
           <button
-            className={`conv-mic-btn ${isActive ? 'conv-mic-btn--active' : ''} ${!canSpeak ? 'conv-mic-btn--disabled' : ''}`}
+            className={`conv-mic-btn conv-mic-btn--large ${isActive ? 'conv-mic-btn--active' : ''} ${!canSpeak ? 'conv-mic-btn--disabled' : ''}`}
             onClick={handleStartListening}
             aria-label="Speak to River"
             disabled={!canSpeak}
           >
             <MicIcon active={isActive} />
           </button>
-
-          <div className="conv-input-wrap">
-            <input
-              ref={inputRef}
-              className="conv-text-input"
-              type="text"
-              placeholder="Message River Song..."
-              value={inputText}
-              onChange={e => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={connectionStatus !== 'connected' || !!viewingSession}
-            />
-            <button
-              className="conv-send-btn"
-              onClick={handleSendText}
-              disabled={!inputText.trim() || connectionStatus !== 'connected' || !!viewingSession}
-              aria-label="Send"
-            >
-              <SendIcon />
-            </button>
-          </div>
-
           <button className="conv-reset-btn" onClick={handleReset} title="Save &amp; reset">
             <ResetIcon />
           </button>
@@ -366,7 +340,7 @@ export default function ConversationPage() {
 
 function MicIcon({ active }) {
   return (
-    <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
+    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
       <rect x="6" y="1" width="6" height="10" rx="3" stroke="currentColor" strokeWidth="1.4"/>
       <path d="M3 9a6 6 0 0 0 12 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
       <line x1="9" y1="15" x2="9" y2="17" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
@@ -388,6 +362,14 @@ function ResetIcon() {
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
       <path d="M2 8a6 6 0 1 0 1.5-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
       <polyline points="2,4 2,8 6,8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function ChevronIcon({ open }) {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+      <polyline points="2,3 5,7 8,3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }

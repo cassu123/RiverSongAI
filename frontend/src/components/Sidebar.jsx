@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 
 const USER_ITEMS = [
   { key: 'speak',       label: 'SPEAK',       icon: IconSpeak },
+  { key: 'chat',        label: 'CHAT',        icon: IconChat },
   { key: 'memory',      label: 'MEMORY',      icon: IconMemory },
   { key: 'inventory',   label: 'INVENTORY',   icon: IconInventory },
   { key: 'maintenance', label: 'MAINTENANCE', icon: IconWrench },
@@ -14,6 +15,7 @@ const USER_ITEMS = [
 const ADMIN_ITEMS = [
   { key: 'dashboard',   label: 'DASHBOARD',   icon: IconDashboard },
   { key: 'speak',       label: 'SPEAK',       icon: IconSpeak },
+  { key: 'chat',        label: 'CHAT',        icon: IconChat },
   { key: 'memory',      label: 'MEMORY',      icon: IconMemory },
   { key: 'inventory',   label: 'INVENTORY',   icon: IconInventory },
   { key: 'maintenance', label: 'MAINTENANCE', icon: IconWrench },
@@ -148,7 +150,19 @@ function IconDashboard() {
 function IconSpeak() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M3 13c0-2.2 2.2-4 5-4s5 1.8 5 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <path d="M11.5 2.5c.8.6 1.5 1.5 1.5 2.5s-.7 1.9-1.5 2.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function IconChat() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M2 3h12v8H9l-3 2v-2H2V3z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+      <line x1="5" y1="6.5" x2="11" y2="6.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+      <line x1="5" y1="8.5" x2="9" y2="8.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
     </svg>
   )
 }

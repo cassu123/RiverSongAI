@@ -405,51 +405,72 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
 // ---------------------------------------------------------------------------
 
 function ManualUpload({ token, vehicleId, onUpdated }) {
-  const [file, setFile]         = useState(null);
-  const [busy, setBusy]         = useState(false);
-  const [result, setResult]     = useState(null);
-  const [error, setError]       = useState('');
-  const fileRef                 = useRef();
+  const [file, setFile]           = useState(null);
+  const [busy, setBusy]           = useState(false);
+  const [busyLabel, setBusyLabel] = useState('');
+  const [result, setResult]       = useState(null);   // applied result
+  const [preview, setPreview]     = useState(null);   // preview items array
+  const [error, setError]         = useState('');
+  const fileRef = useRef();
 
-  const handleUpload = async () => {
+  const postFile = async (endpoint) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Upload failed');
+    return data;
+  };
+
+  const handlePreview = async () => {
     if (!file) return;
-    setBusy(true);
-    setResult(null);
-    setError('');
+    setBusy(true); setBusyLabel('Reading and parsing manual…'); setError(''); setPreview(null); setResult(null);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await fetch(`/api/vehicles/${vehicleId}/manual`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Upload failed');
+      const data = await postFile(`/api/vehicles/${vehicleId}/manual/preview`);
+      setPreview(data.items || []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false); setBusyLabel('');
+    }
+  };
+
+  const handleApply = async () => {
+    if (!file) return;
+    setBusy(true); setBusyLabel('Applying to vehicle…'); setError(''); setResult(null);
+    try {
+      const data = await postFile(`/api/vehicles/${vehicleId}/manual`);
       setResult(data);
+      setPreview(null);
       setFile(null);
       if (fileRef.current) fileRef.current.value = '';
       onUpdated();
     } catch (e) {
       setError(e.message);
     } finally {
-      setBusy(false);
+      setBusy(false); setBusyLabel('');
     }
   };
+
+  const clearFile = () => { setFile(null); setPreview(null); setResult(null); setError(''); if (fileRef.current) fileRef.current.value = ''; };
 
   return (
     <div className="mp-settings-section">
       <div className="mp-settings-label">IMPORT FROM OWNER'S MANUAL</div>
       <p className="mp-settings-hint">
-        Upload a PDF owner's manual. Maintenance intervals are extracted locally — no internet connection or API key required.
-        Existing items are updated in place; new items are added. Nothing is deleted.
+        Upload a PDF owner's manual. Intervals, specs, fluid capacities, and torque values are
+        extracted locally — no internet required. Use <strong>PREVIEW</strong> first to verify what
+        was found, then <strong>APPLY</strong> to write it to this vehicle.
       </p>
 
       {result && (
         <div className="mp-flash mp-flash--ok">
-          Manual processed — {result.updated} item{result.updated !== 1 ? 's' : ''} updated,{' '}
-          {result.created} new item{result.created !== 1 ? 's' : ''} added
-          ({result.total} total entries found in manual).
+          Applied — {result.updated} item{result.updated !== 1 ? 's' : ''} updated,{' '}
+          {result.created} new item{result.created !== 1 ? 's' : ''} added ({result.total} total found).
         </div>
       )}
       {error && <div className="mp-flash mp-flash--err">{error}</div>}
@@ -457,29 +478,67 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
       {busy ? (
         <div className="mp-manual-busy">
           <div className="mp-manual-spinner" />
-          <span>Reading manual and extracting intervals…</span>
+          <span>{busyLabel}</span>
         </div>
       ) : (
         <div className="mp-manual-upload-row">
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/pdf"
-            style={{ display: 'none' }}
-            onChange={(e) => setFile(e.target.files[0] || null)}
-          />
+          <input ref={fileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
+            onChange={(e) => { setFile(e.target.files[0] || null); setPreview(null); setResult(null); }} />
           <button className="cyber-btn btn-xs" onClick={() => fileRef.current.click()}>
             {file ? `[ ${file.name} ]` : 'SELECT PDF'}
           </button>
-          {file && (
-            <button className="cyber-btn btn-xs btn-save" onClick={handleUpload} disabled={busy}>
-              EXTRACT &amp; APPLY
-            </button>
-          )}
-          {file && (
-            <button className="cyber-btn btn-xs" onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = ''; }}>
-              ✕
-            </button>
+          {file && <>
+            <button className="cyber-btn btn-xs" onClick={handlePreview}>PREVIEW</button>
+            <button className="cyber-btn btn-xs btn-save" onClick={handleApply}>EXTRACT &amp; APPLY</button>
+            <button className="cyber-btn btn-xs" onClick={clearFile}>✕</button>
+          </>}
+        </div>
+      )}
+
+      {/* Preview table */}
+      {preview && (
+        <div className="mp-preview-wrap">
+          <div className="mp-preview-header">
+            PREVIEW — {preview.length} items found
+            <span className="mp-preview-hint"> (nothing written yet — click EXTRACT &amp; APPLY to confirm)</span>
+          </div>
+          {preview.length === 0 ? (
+            <div className="mp-empty-specs">No maintenance items detected in this PDF.</div>
+          ) : (
+            <table className="mp-preview-table">
+              <thead>
+                <tr>
+                  <th>ITEM</th>
+                  <th>LEVEL</th>
+                  <th>EXPECTED</th>
+                  <th>INTERVAL</th>
+                  <th>TORQUE</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.map((item, i) => {
+                  const interval = [
+                    item.interval_miles ? `${item.interval_miles.toLocaleString()} mi` : '',
+                    item.interval_days  ? fmtDays(item.interval_days) : '',
+                    item.due_at_miles   ? `due @ ${item.due_at_miles.toLocaleString()} mi` : '',
+                  ].filter(Boolean).join(' / ');
+                  const torque = [
+                    item.ft_lb ? `${item.ft_lb} ft-lb` : '',
+                    item.nm    ? `${item.nm} N·m`     : '',
+                  ].filter(Boolean).join(' / ');
+                  const spec = [item.expected_spec, item.volume].filter(Boolean).join(' · ');
+                  return (
+                    <tr key={i}>
+                      <td className="mp-prev-name">{item.description}</td>
+                      <td><span className="mp-prev-level" data-level={item.service_level}>{item.service_level}</span></td>
+                      <td className="mp-prev-spec">{spec || '—'}</td>
+                      <td className="mp-prev-interval">{interval || '—'}</td>
+                      <td className="mp-prev-torque">{torque || '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           )}
         </div>
       )}

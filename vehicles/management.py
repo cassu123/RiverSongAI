@@ -60,7 +60,7 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 VEHICLE_FILES_BASE_DIR = os.environ.get("VEHICLE_FILES_DIR", "./vehicle_files")
-_MAIN_DB_PATH = os.environ.get("MAIN_DB_PATH", "./river_song.db")
+_MAIN_DB_PATH = os.environ.get("MAIN_DB_PATH", "./data/river_song.db")
 
 # ---------------------------------------------------------------------------
 # Vehicle type templates
@@ -501,12 +501,16 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
     # Named time: "every 6 months", "replace after 2 years", "check monthly"
     RE_DAY_NAMED = re.compile(
         rf"(?:every|each|per|after|replace\s+(?:after|every))?\s*({NUM})\s+({DAY_UNIT})"
-        rf"|(?:^|\s)(monthly|annually|weekly|daily)(?:\s|$|\.)",
+        rf"|(?:^|\s)(monthly|annually|weekly)(?:\s|$|\.)",
         re.IGNORECASE,
     )
-    ADV_DAYS = {"monthly": 30, "annually": 365, "weekly": 7, "daily": 1}
+    ADV_DAYS = {"monthly": 30, "annually": 365, "weekly": 7}
+    # "6M", "12M", "24M" — calendar column shorthand used in many Asian OEM manuals
+    RE_MONTH_CODE = re.compile(r"(?<!\w)(\d{1,2})M(?!\w)", re.IGNORECASE)
     # Bare number (table column) — matched only when no unit found
     RE_BARE_NUM = re.compile(r"\b([\d,]+)\b")
+    # Common service-interval month values — filter out arbitrary numbers
+    VALID_MONTHS = {1, 2, 3, 4, 6, 9, 12, 18, 24, 36, 48, 60}
 
     # Numeric range spec: "20-30 mm", "29–33 PSI"
     # Requires a proper measurement unit — "in" alone is excluded (too ambiguous with "in the...")
@@ -521,51 +525,85 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
     )
     # Standalone PSI/kPa value: "32 PSI", "220 kPa" (for tire pressure lines)
     RE_PRESSURE = re.compile(r"\b(\d{2,3})\s*(psi|kpa)\b", re.IGNORECASE)
+    # N•m with Unicode bullet (U+2022) as well as middle-dot and hyphen
+    RE_NM_FIXED = re.compile(r"([\d.]+)\s*(?:n[\-·•]?m\b|newton[\-·•]?m)", re.IGNORECASE)
 
-    # ── Item keyword map ──────────────────────────────────────────────────────
+    # ── Item keyword map — ordered most-specific first ────────────────────────
     ITEMS = [
-        (r"engine\s+oil|motor\s+oil|oil\s+(?:&\s*filter|and\s+filter|change)",  "Engine Oil Change"),
-        (r"oil\s+filter",                                                          "Oil Filter"),
-        (r"cabin\s+(?:air\s+)?filter",                                            "Cabin Air Filter"),
-        (r"air\s+filter|air\s+cleaner|air\s+element",                             "Air Filter"),
-        (r"fuel\s+filter",                                                         "Fuel Filter"),
-        (r"spark\s+plug",                                                          "Spark Plugs"),
+        # Engine
+        (r"engine\s+oil\s+and\s+oil\s+filter|engine\s+oil\s+(?:&|and)\s+filter", "Engine Oil Change"),
+        (r"engine\s+oil|motor\s+oil|oil\s+change",                                "Engine Oil Change"),
+        (r"oil\s+strainer|oil\s+screen",                                           "Oil Strainer"),
+        (r"oil\s+filter",                                                           "Oil Filter"),
+        (r"cabin\s+(?:air\s+)?filter",                                             "Cabin Air Filter"),
+        (r"air\s+filter\s+element|air\s+cleaner\s+element",                        "Air Filter"),
+        (r"air\s+filter|air\s+cleaner",                                            "Air Filter"),
+        (r"fuel\s+filter",                                                          "Fuel Filter"),
+        (r"spark\s+plug",                                                           "Spark Plugs"),
+        (r"valve\s+(?:clearance|adjustment|lash)",                                 "Valve Clearance"),
+        (r"cam\s+chain",                                                            "Cam Chain"),
+        (r"throttle\s+(?:body|cable|play|system)",                                 "Throttle System"),
+        # Fluids
         (r"coolant|antifreeze|radiator\s+fluid",                                   "Coolant"),
         (r"transmission\s+fluid|trans\.?\s+fluid|atf\b",                           "Transmission Fluid"),
-        (r"brake\s+fluid",                                                         "Brake Fluid"),
-        (r"brake\s+pad",                                                           "Brake Pads"),
-        (r"brake\s+(?:shoe|lining)",                                               "Brake Shoes"),
+        (r"brake\s+fluid\s+level",                                                 "Brake Fluid Level"),
+        (r"brake\s+fluid",                                                          "Brake Fluid"),
         (r"power\s+steering\s+fluid",                                              "Power Steering Fluid"),
         (r"differential\s+(?:fluid|oil|gear)",                                     "Differential Fluid"),
-        (r"transfer\s+case",                                                       "Transfer Case Fluid"),
+        (r"transfer\s+case",                                                        "Transfer Case Fluid"),
+        # Brakes
+        (r"brake\s+(?:disc|disk|rotor)",                                           "Brake Discs"),
+        (r"brake\s+pad",                                                            "Brake Pads"),
+        (r"brake\s+hose",                                                           "Brake Hoses"),
+        (r"brake\s+lever",                                                          "Brake Lever"),
+        (r"brake\s+(?:shoe|lining)",                                               "Brake Shoes"),
+        (r"front\s+and\s+rear\s+brake\s+system|brake\s+system",                   "Brake System"),
+        # Drive
+        (r"chain[,\s]+(?:rear\s+)?sprocket|drive\s+chain\s+and\s+sprocket",       "Drive Chain & Sprockets"),
         (r"chain\s+(?:tension|slack|lube|lubrication|oil)",                        "Chain Tension / Lube"),
-        (r"drive\s+chain",                                                         "Drive Chain"),
-        (r"timing\s+belt|cam(?:shaft)?\s+belt",                                   "Timing Belt"),
+        (r"drive\s+chain",                                                          "Drive Chain"),
+        (r"timing\s+belt|cam(?:shaft)?\s+belt",                                    "Timing Belt"),
         (r"drive\s+belt|serpentine\s+belt|v-?belt",                               "Drive Belt"),
-        (r"cam\s+chain",                                                           "Cam Chain"),
-        (r"tire\s+(?:pressure|inflation)",                                         "Tire Pressure"),
-        (r"tire\s+rotation|rotate\s+tires?",                                       "Tire Rotation"),
-        (r"wheel\s+bearing",                                                       "Wheel Bearings"),
-        (r"clutch",                                                                 "Clutch"),
-        (r"throttle\s+(?:body|cable|play)",                                        "Throttle"),
-        (r"valve\s+(?:clearance|adjustment|lash)",                                 "Valve Clearance"),
-        (r"fuel\s+(?:system|injector|lines?)",                                     "Fuel System"),
-        (r"battery",                                                                "Battery"),
-        (r"wiper\s+(?:blade|insert|refill)",                                       "Wiper Blades"),
-        (r"suspension",                                                             "Suspension"),
-        (r"shock\s+absorber|strut",                                                "Shocks / Struts"),
+        # Wheels & Tires
+        (r"tire\s+(?:pressure|inflation)",                                          "Tire Pressure"),
+        (r"tire\s+(?:condition|wear|check)",                                        "Tire Condition"),
+        (r"tire\s+rotation|rotate\s+tires?",                                        "Tire Rotation"),
+        (r"wheel\s+bearing|hub\s+bearing",                                          "Wheel Bearings"),
+        # Suspension & Steering
+        (r"rear\s+shock\s+absorber\s+and\s+front\s+forks?|front\s+fork",          "Front Forks / Rear Shock"),
+        (r"suspension\s+system|suspension",                                         "Suspension"),
+        (r"shock\s+absorber|strut",                                                 "Shocks / Struts"),
+        (r"steering\s+bearing",                                                     "Steering Bearings"),
         (r"steering\s+(?:system|linkage|gear)",                                    "Steering"),
+        # Electrical
+        (r"fuse|circuit\s+breaker",                                                 "Fuses / Circuit Breakers"),
+        (r"battery",                                                                 "Battery"),
+        # Clutch & Transmission
+        (r"clutch",                                                                  "Clutch"),
+        # Other mechanical
+        (r"frame\b",                                                                 "Frame"),
         (r"axle\s+(?:boot|shaft)|cv\s+(?:boot|joint)",                            "CV / Axle Boots"),
-        (r"exhaust\s+(?:system|pipe)",                                             "Exhaust System"),
-        (r"fuel\s+cap\s+gasket|gas\s+cap",                                        "Fuel Cap Gasket"),
-        (r"headlight|tail\s*light|bulb",                                           "Lights"),
+        (r"exhaust\s+(?:system|pipe)",                                              "Exhaust System"),
+        (r"wiper\s+(?:blade|insert|refill)",                                        "Wiper Blades"),
+        (r"fuel\s+(?:system|injector|lines?)",                                      "Fuel System"),
+        (r"headlight|tail\s*light|bulb",                                            "Lights"),
     ]
     ITEM_RE = [(re.compile(pat, re.IGNORECASE), name) for pat, name in ITEMS]
+
+    # Lines that contain only section/header text — skip for interval extraction
+    SKIP_RE = re.compile(
+        r"^\s*(?:daily\s+safety|pre.?ride|before\s+(?:each|every)\s+ride"
+        r"|break.?in\s+period|operating\s+your|introduction|table\s+of|chapter"
+        r"|warning|caution|note\s*:|danger|severe\s+use)",
+        re.IGNORECASE,
+    )
 
     # ── Build line list ───────────────────────────────────────────────────────
     lines = [l.strip() for l in pdf_text.splitlines()]
 
     def identify_item(text: str) -> str | None:
+        if SKIP_RE.match(text):
+            return None
         for pat, name in ITEM_RE:
             if pat.search(text):
                 return name
@@ -575,17 +613,25 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
         """Return (miles, days) from a text snippet, or (None, None)."""
         miles = days = None
 
+        # Named mileage units
         for m in RE_MI_NAMED.finditer(text):
             raw, unit = m.group(1).replace(",", ""), m.group(2)
             v = to_miles(float(raw), unit)
             if 100 <= v <= 200_000:
                 miles = v if miles is None else min(miles, v)
 
+        # "6M" / "12M" / "24M" — OEM calendar shorthand
+        for m in RE_MONTH_CODE.finditer(text):
+            v = int(m.group(1)) * 30
+            if v > 0:
+                days = v if days is None else min(days, v)
+
+        # Named time words ("every 6 months", "annually")
         for m in RE_DAY_NAMED.finditer(text):
             if m.group(1) and m.group(2):
                 raw, unit = m.group(1).replace(",", ""), m.group(2)
                 v = to_days(float(raw), unit)
-                if 1 <= v <= 3650:
+                if 7 <= v <= 3650:
                     days = v if days is None else min(days, v)
             elif m.group(3):
                 v = ADV_DAYS.get(m.group(3).lower(), 0)
@@ -661,21 +707,28 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
     # Numbers that are part of a range (e.g. 32 in "32-35 PSI") — exclude from bare heuristic
     RE_IN_RANGE = re.compile(r"[\d.]+\s*[-–]\s*[\d.]+\s*(?:mm|psi|kpa|bar|in|cm)", re.IGNORECASE)
 
+    # Viscosity grade masking ("10W-40", "5W-30") — prevent numerals being
+    # mis-read as months by the bare-number heuristic
+    RE_VISCOSITY = re.compile(r"\d+W-\d+", re.IGNORECASE)
+
     def bare_number_intervals(text: str) -> tuple[int | None, int | None]:
         """
-        Heuristic for table rows with no unit labels.
-        Treats numbers 500-150,000 as miles, numbers 1-60 as months.
-        Skips numbers that are part of a spec range (e.g. 32-35 PSI).
-        Only used when named-unit extraction found nothing.
+        Heuristic for table rows with no unit labels (e.g. Item | - | 3000 | 5000 | Replace).
+        Treats the first number 500-150,000 as miles.
+        Treats a bare number only if it is a recognised service-month value (VALID_MONTHS).
+        Masks spec ranges and viscosity grades to avoid false positives.
         """
         miles = days = None
-        # Mask out spec ranges so their numbers aren't misread as intervals
         masked = RE_IN_RANGE.sub("XXXX", text)
+        masked = RE_VISCOSITY.sub("XXXX", masked)
         for m in RE_BARE_NUM.finditer(masked):
-            v = int(m.group(1).replace(",", ""))
+            raw = m.group(1).replace(",", "")
+            if not raw.isdigit():
+                continue
+            v = int(raw)
             if 500 <= v <= 150_000 and miles is None:
                 miles = v
-            elif 1 <= v <= 60 and days is None:
+            elif v in VALID_MONTHS and days is None:
                 days = v * 30  # months → days
         return miles, days
 
@@ -730,6 +783,15 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
             entry["max_value"]     = mx
             entry["unit"]          = unit
 
+        # Infer service level from Remarks column keywords on the same line
+        # (e.g. "Replace" → replace; "Lubricate" → service)
+        current_level = entry["service_level"]
+        if current_level == "inspect":
+            if re.search(r"\breplace\b", line, re.IGNORECASE):
+                entry["service_level"] = "replace"
+            elif re.search(r"\b(?:lubricate|lube|adjust|clean|service|top.?off|fill)\b", line, re.IGNORECASE):
+                entry["service_level"] = "service"
+
     check_points = [
         v for v in results.values()
         if v["interval_miles"] or v["interval_days"] or v["expected_spec"]
@@ -773,8 +835,8 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
             break
 
     # ── Torque specs ──────────────────────────────────────────────────────────
-    RE_FT_LB = re.compile(r"([\d.]+)\s*(?:ft[-·]?lbs?\.?|lb[-·]?ft\.?|ft\s*lbs?)", re.IGNORECASE)
-    RE_NM    = re.compile(r"([\d.]+)\s*(?:n[-·]?m\b|newton[-·]?m)", re.IGNORECASE)
+    RE_FT_LB = re.compile(r"([\d.]+)\s*(?:ft[-·•]?lbs?\.?|lb[-·•]?ft\.?|ft\s*lbs?)", re.IGNORECASE)
+    RE_NM    = re.compile(r"([\d.]+)\s*(?:n[-·•]?m\b|newton[-·•]?m)", re.IGNORECASE)
 
     TORQUE_KEYWORDS = [
         (r"oil\s+drain\s+plug|drain\s+plug",              "Oil Drain Plug"),

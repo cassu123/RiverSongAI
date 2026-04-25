@@ -41,6 +41,7 @@ anthropic==0.96.0               # Claude API cloud LLM
 google-genai==1.16.0            # Google Gemini cloud LLM
 openai==1.82.0                  # OpenAI cloud LLM
 mistralai==1.7.0                # Mistral AI cloud LLM
+boto3==1.38.0                   # Amazon Bedrock (and AWS SDK)
 
 
 # -----------------------------------------------------------------------------

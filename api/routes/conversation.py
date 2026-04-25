@@ -44,11 +44,14 @@ import json
 import logging
 
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from starlette.websockets import WebSocketState
 
 from core.auth import decode_token
-from core.conversation_loop import ConversationLoop
+from core.conversation_loop import ConversationLoop, _build_llm_provider, _build_stt_provider
 from core.memory_manager import MemoryManager
+from config.settings import get_settings
 
 
 logger = logging.getLogger(__name__)
@@ -224,3 +227,104 @@ async def _send(websocket: WebSocket, payload: dict) -> None:
             await websocket.send_json(payload)
     except Exception as exc:
         logger.debug("Failed to send WebSocket message (%s): %s", payload.get("type"), exc)
+
+
+# ---------------------------------------------------------------------------
+# HTTP: Chat (SSE streaming) — used by ChatPage
+# ---------------------------------------------------------------------------
+
+class _ChatRequest(BaseModel):
+    message: str
+    history: list[dict] = []
+    provider: str | None = None
+    model_id: str | None = None
+
+
+@router.post("/api/conversation/chat")
+async def chat_http(
+    body: _ChatRequest,
+    request: Request,
+) -> StreamingResponse:
+    """
+    Stateless HTTP chat endpoint for ChatPage.
+    Streams the LLM response as SSE (data: <chunk>\n\n).
+    History is passed in by the client; no server-side session state.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.removeprefix("Bearer ").strip()
+    payload = decode_token(token) if token else None
+    if not payload:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Authentication required.")
+
+    user_id: str = payload["sub"]
+    memory_manager: MemoryManager | None = getattr(request.app.state, "memory_manager", None)
+
+    # Build system prompt with memory context
+    settings = get_settings()
+    system_prompt = settings.river_song_system_prompt
+    if memory_manager:
+        try:
+            system_prompt += await memory_manager.build_context_block(user_id)
+        except Exception:
+            pass
+
+    messages = [{"role": "system", "content": system_prompt}]
+    for m in body.history[-20:]:
+        role = m.get("role", "user")
+        content = m.get("content", "")
+        if role in ("user", "assistant") and content:
+            messages.append({"role": role, "content": content})
+
+    llm = _build_llm_provider(
+        provider_override=body.provider,
+        model_override=body.model_id,
+    )
+
+    async def _stream():
+        try:
+            async for chunk in llm.stream_response(messages):
+                yield f"data: {chunk}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as exc:
+            logger.error("Chat HTTP stream error: %s", exc)
+            yield f"data: [ERROR] {exc}\n\n"
+
+    return StreamingResponse(_stream(), media_type="text/event-stream")
+
+
+# ---------------------------------------------------------------------------
+# HTTP: Transcribe — mic-to-text for ChatPage
+# ---------------------------------------------------------------------------
+
+class _TranscribeRequest(BaseModel):
+    audio: str  # base64 WAV
+
+
+@router.post("/api/conversation/transcribe")
+async def transcribe_http(
+    body: _TranscribeRequest,
+    request: Request,
+) -> dict:
+    """Transcribe a base64 WAV blob and return the text."""
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.removeprefix("Bearer ").strip()
+    payload = decode_token(token) if token else None
+    if not payload:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Authentication required.")
+
+    try:
+        audio_bytes = base64.b64decode(body.audio)
+    except Exception:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Invalid base64 audio.")
+
+    stt = _build_stt_provider()
+    try:
+        text = await stt.transcribe(audio_bytes)
+    except Exception as exc:
+        logger.error("Transcription error: %s", exc)
+        return {"text": ""}
+
+    return {"text": text.strip()}

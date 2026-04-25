@@ -84,7 +84,7 @@ router = APIRouter(prefix="/api/vehicles", tags=["vehicles"])
 # Database
 # ---------------------------------------------------------------------------
 
-_DB_URL  = os.environ.get("VEHICLES_DB_URL", "sqlite:///./vehicles.db")
+_DB_URL  = os.environ.get("VEHICLES_DB_URL", "sqlite:///./data/vehicles.db")
 _engine  = create_engine(
     _DB_URL,
     connect_args={"check_same_thread": False} if "sqlite" in _DB_URL else {},

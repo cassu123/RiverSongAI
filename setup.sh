@@ -377,29 +377,76 @@ fi
 
 step "Step 7/8 -- Ollama models"
 
+# ---- GPU (fits fully on GTX 1050 Ti 4GB) ----
+# deepseek-r1:1.5b  ~1.1GB
+# llama3.2:1b       ~0.8GB
+# llama3.2:3b       ~2.0GB
+# phi3.5            ~2.2GB
+# phi4-mini         ~2.5GB
+# gemma3:1b         ~0.8GB
+# gemma3:4b         ~3.3GB
+# qwen2.5:3b        ~2.0GB
+#
+# ---- RAM inference (32GB handles these well) ----
+# deepseek-r1:7b    ~4.7GB
+# deepseek-r1:8b    ~5.2GB
+# deepseek-r1:14b   ~9.0GB
+# llama3.1:8b       ~5.0GB
+# llama3.3:70b      ~43GB  (slow on FX-8350 but fits)
+# phi4              ~8.9GB
+# gemma3:12b        ~8.1GB
+# gemma3:27b        ~17GB
+# qwen2.5:7b        ~4.7GB
+# qwen2.5:14b       ~9.0GB
+# mistral:7b        ~4.1GB
+# mistral-nemo      ~7.1GB
+# codellama:7b      ~4.7GB
+# codellama:13b     ~8.0GB
+# qwen2.5-coder:7b  ~4.7GB
+# qwen2.5-coder:14b ~9.0GB
+#
+# ---- Skipped (too slow or marginal on this CPU) ----
+# deepseek-r1:32b   ~20GB  -- uncomment if you want it
+# qwq               ~20GB  -- uncomment if you want it
+# mixtral:8x7b      ~26GB  -- uncomment if you want it
+# llama3.1:70b      ~43GB  -- duplicate of llama3.3:70b
+
 OLLAMA_MODELS=(
+  # GPU models -- pull first, fastest to download and run
   "deepseek-r1:1.5b"
-  "deepseek-r1:7b"
-  "deepseek-r1:8b"
   "llama3.2:1b"
   "llama3.2:3b"
-  "llama3.1:8b"
   "phi3.5"
   "phi4-mini"
   "gemma3:1b"
   "gemma3:4b"
   "qwen2.5:3b"
+
+  # RAM inference -- solid 7B-14B range
+  "deepseek-r1:7b"
+  "deepseek-r1:8b"
+  "deepseek-r1:14b"
+  "llama3.1:8b"
+  "phi4"
+  "gemma3:12b"
+  "gemma3:27b"
   "qwen2.5:7b"
+  "qwen2.5:14b"
   "mistral:7b"
   "mistral-nemo"
-)
 
-# Heavy models (optional -- require 16GB+ RAM):
-# "phi4"         ~9GB
-# "gemma3:12b"   ~8GB
-# "gemma2:9b"    ~6GB
-# "llama3.1:70b" ~43GB
-# "qwq"          ~20GB
+  # Code models
+  "codellama:7b"
+  "codellama:13b"
+  "qwen2.5-coder:7b"
+  "qwen2.5-coder:14b"
+
+  # Heavy -- uncomment when ready (slow but works on 32GB)
+  # "llama3.3:70b"
+  # "deepseek-r1:32b"
+  # "qwq"
+  # "mixtral:8x7b"
+)
 
 if command -v ollama &>/dev/null; then
   info "Ollama found. Pulling all configured models (~49 GB total)."

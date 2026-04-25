@@ -2,6 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import './InventoryPage.css'
 
+function safeFetch(path, opts = {}) {
+  if (/^https?:\/\//i.test(path)) {
+    throw new Error(`Blocked absolute URL: ${path}`)
+  }
+  return fetch(path, opts)
+}
+
 // ─── constants ──────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
@@ -267,7 +274,7 @@ function ItemDetail({ item, onEdit, onDelete, onClose, token }) {
 
   const fetchAttachments = useCallback(async () => {
     try {
-      const res = await fetch(`/api/inventory/items/${item.id}/attachments`, { headers: authH() })
+      const res = await safeFetch(`/api/inventory/items/${item.id}/attachments`, { headers: authH() })
       if (res.ok) setAttachments(await res.json())
     } catch {}
   }, [item.id, token])
@@ -280,7 +287,7 @@ function ItemDetail({ item, onEdit, onDelete, onClose, token }) {
     setUploading(true)
     for (const file of files) {
       const fd = new FormData(); fd.append('file', file)
-      await fetch(`/api/inventory/items/${item.id}/attachments`, {
+      await safeFetch(`/api/inventory/items/${item.id}/attachments`, {
         method: 'POST', headers: authH(), body: fd,
       })
     }
@@ -290,7 +297,7 @@ function ItemDetail({ item, onEdit, onDelete, onClose, token }) {
   }
 
   const handleDeleteAttachment = async (attachmentId) => {
-    await fetch(`/api/inventory/attachments/${attachmentId}`, { method: 'DELETE', headers: authH() })
+    await safeFetch(`/api/inventory/attachments/${attachmentId}`, { method: 'DELETE', headers: authH() })
     setAttachments(prev => prev.filter(a => a.id !== attachmentId))
   }
 
@@ -416,7 +423,7 @@ function ScanBar({ onResult }) {
     if (!ein.trim()) return
     setScanning(true); setError('')
     try {
-      const res = await fetch(`/api/inventory/scan/${encodeURIComponent(ein.trim())}`, {
+      const res = await safeFetch(`/api/inventory/scan/${encodeURIComponent(ein.trim())}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Not found') }
@@ -461,7 +468,7 @@ function ManualWalkthrough({ audit, token, onUpdate }) {
   const current = outstanding[idx]
 
   const confirm = async () => {
-    const res = await fetch(`/api/inventory/audits/${audit.id}/scan`, {
+    const res = await safeFetch(`/api/inventory/audits/${audit.id}/scan`, {
       method: 'POST', headers: authH(), body: JSON.stringify({ ein: current.ein }),
     })
     const data = await res.json()
@@ -525,7 +532,7 @@ function AuditTab({ home, token, items }) {
   }, [home.id])
 
   const startAudit = async (walk = false) => {
-    const res = await fetch(`/api/inventory/homes/${home.id}/audit/start`, { method: 'POST', headers: authH() })
+    const res = await safeFetch(`/api/inventory/homes/${home.id}/audit/start`, { method: 'POST', headers: authH() })
     const data = await res.json()
     if (!res.ok) { alert(data.detail || 'Failed to start audit'); return }
     setAudit(data)
@@ -542,7 +549,7 @@ function AuditTab({ home, token, items }) {
     const ein = scanInput.trim()
     if (!ein || !audit) return
     setScanInput('')
-    const res  = await fetch(`/api/inventory/audits/${audit.id}/scan`, {
+    const res  = await safeFetch(`/api/inventory/audits/${audit.id}/scan`, {
       method: 'POST', headers: authH(), body: JSON.stringify({ ein }),
     })
     const data = await res.json()
@@ -559,7 +566,7 @@ function AuditTab({ home, token, items }) {
 
   const handleComplete = async () => {
     setSaving(true)
-    const res  = await fetch(`/api/inventory/audits/${audit.id}/complete`, {
+    const res  = await safeFetch(`/api/inventory/audits/${audit.id}/complete`, {
       method: 'POST', headers: authH(), body: JSON.stringify({ notes }),
     })
     const data = await res.json()
@@ -949,7 +956,7 @@ export default function InventoryPage() {
 
   const fetchHomes = useCallback(async () => {
     try {
-      const res = await fetch('/api/inventory/homes', { headers: authHeaders() })
+      const res = await safeFetch('/api/inventory/homes', { headers: authHeaders() })
       if (res.ok) {
         const data = await res.json()
         setHomes(data)
@@ -965,7 +972,7 @@ export default function InventoryPage() {
     const url    = editingHome
       ? `/api/inventory/homes/${editingHome.id}`
       : '/api/inventory/homes'
-    const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(body) })
+    const res = await safeFetch(url, { method, headers: authHeaders(), body: JSON.stringify(body) })
     if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Failed') }
     const home = await res.json()
     setHomes(prev => editingHome
@@ -978,7 +985,7 @@ export default function InventoryPage() {
   }
 
   const deleteHome = async (homeId) => {
-    await fetch(`/api/inventory/homes/${homeId}`, { method: 'DELETE', headers: authHeaders() })
+    await safeFetch(`/api/inventory/homes/${homeId}`, { method: 'DELETE', headers: authHeaders() })
     setHomes(prev => prev.filter(h => h.id !== homeId))
     if (activeHome?.id === homeId) { setActiveHome(null); setItems([]) }
   }
@@ -988,7 +995,7 @@ export default function InventoryPage() {
   const fetchItems = useCallback(async (homeId) => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/inventory/homes/${homeId}/items`, { headers: authHeaders() })
+      const res = await safeFetch(`/api/inventory/homes/${homeId}/items`, { headers: authHeaders() })
       if (res.ok) setItems(await res.json())
     } catch {}
     finally { setLoading(false) }
@@ -1004,7 +1011,7 @@ export default function InventoryPage() {
     const url    = editingItem
       ? `/api/inventory/items/${editingItem.id}`
       : `/api/inventory/homes/${activeHome.id}/items`
-    const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(body) })
+    const res = await safeFetch(url, { method, headers: authHeaders(), body: JSON.stringify(body) })
     if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Failed') }
     const item = await res.json()
     setItems(prev => editingItem
@@ -1017,7 +1024,7 @@ export default function InventoryPage() {
   }
 
   const deleteItem = async (itemId) => {
-    await fetch(`/api/inventory/items/${itemId}`, { method: 'DELETE', headers: authHeaders() })
+    await safeFetch(`/api/inventory/items/${itemId}`, { method: 'DELETE', headers: authHeaders() })
     setItems(prev => prev.filter(i => i.id !== itemId))
     setDetailItem(null)
     fetchHomes()
@@ -1026,7 +1033,7 @@ export default function InventoryPage() {
   // ── Manifest download ──────────────────────────────────────────────────────
 
   const downloadManifest = async () => {
-    const res = await fetch(`/api/inventory/homes/${activeHome.id}/manifest`, { headers: authHeaders() })
+    const res = await safeFetch(`/api/inventory/homes/${activeHome.id}/manifest`, { headers: authHeaders() })
     if (!res.ok) { alert('PDF generation failed. Make sure reportlab is installed.'); return }
     const blob = await res.blob()
     const url  = URL.createObjectURL(blob)
