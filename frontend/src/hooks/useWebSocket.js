@@ -32,6 +32,12 @@ export function useWebSocket(url, onMessage) {
     if (!isMountedRef.current) return
 
     try {
+      const parsed = new URL(url, window.location.href)
+      if (parsed.hostname !== window.location.hostname) {
+        console.error('[useWebSocket] Blocked connection to non-same-origin host:', parsed.hostname)
+        setConnectionStatus('error')
+        return
+      }
       const ws = new WebSocket(url)
       wsRef.current = ws
 

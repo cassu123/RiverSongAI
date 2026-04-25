@@ -199,7 +199,8 @@ async def save_llm_settings(
         cloud_fallback_model=body.cloud_fallback_model,
     )
     await memory.save_llm_settings(settings)
-    logger.info("LLM settings saved (user=%s, provider=%s, model=%s).", user_id, body.provider, body.model_id)
+    _strip = lambda s: str(s).replace("\r", "").replace("\n", "").replace("\t", "")
+    logger.info("LLM settings saved (user=%s, provider=%s, model=%s).", _strip(user_id), _strip(body.provider), _strip(body.model_id))
     return {"status": "ok", "provider": body.provider, "model": body.model_id}
 
 
@@ -247,5 +248,5 @@ async def save_memory_settings(
         auto_extend=body.auto_extend,
     )
     await memory.save_memory_settings(settings)
-    logger.info("Memory settings saved (user=%s).", user_id)
+    logger.info("Memory settings saved (user=%s).", str(user_id).replace("\r", "").replace("\n", "").replace("\t", ""))
     return {"status": "ok"}

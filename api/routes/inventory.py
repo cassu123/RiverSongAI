@@ -697,14 +697,19 @@ def remove_collaborator(home_id: str, collab_user_id: str, db: Session = Depends
 
 @router.get("/homes/{home_id}/manifest")
 def insurance_manifest(home_id: str, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
+    from inventory.file_utils import INVENTORY_FILES_BASE_DIR
     try:
         pdf_path = generate_insurance_manifest(db, str(user.id), home_id)
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         raise _http(e)
+    base = os.path.realpath(INVENTORY_FILES_BASE_DIR)
+    full_path = os.path.realpath(pdf_path)
+    if not full_path.startswith(base + os.sep):
+        raise HTTPException(status_code=400, detail="Invalid file path.")
     return FileResponse(
-        pdf_path,
+        full_path,
         media_type="application/pdf",
-        filename=os.path.basename(pdf_path),
+        filename=os.path.basename(full_path),
     )
