@@ -93,7 +93,7 @@ _CATALOG: List[ModelEntry] = [
         display_name="DeepSeek R1 7B",
         context_window=131072,
         vram_gb=4.7,
-        notes="Runs on CPU (>4GB VRAM), 16GB RAM required",
+        notes="Offloads to RAM on 1050 Ti, fast on 32GB",
         priority=11,
     ),
     ModelEntry(
@@ -102,8 +102,26 @@ _CATALOG: List[ModelEntry] = [
         display_name="DeepSeek R1 8B",
         context_window=131072,
         vram_gb=5.2,
-        notes="CPU-only on GTX 1050 Ti, 16GB RAM",
+        notes="RAM inference, comfortable on 32GB",
         priority=12,
+    ),
+    ModelEntry(
+        provider="ollama",
+        model_id="deepseek-r1:14b",
+        display_name="DeepSeek R1 14B",
+        context_window=131072,
+        vram_gb=9.0,
+        notes="RAM inference on 1050 Ti, good reasoning, 32GB comfortable",
+        priority=13,
+    ),
+    ModelEntry(
+        provider="ollama",
+        model_id="deepseek-r1:32b",
+        display_name="DeepSeek R1 32B",
+        context_window=131072,
+        vram_gb=20.0,
+        notes="Slow on FX-8350 but fits in 32GB RAM",
+        priority=14,
     ),
 
     # -------------------------------------------------------------------------
@@ -115,7 +133,7 @@ _CATALOG: List[ModelEntry] = [
         display_name="Llama 3.2 1B",
         context_window=131072,
         vram_gb=0.8,
-        notes="Fastest local option, minimal quality",
+        notes="Fastest local option, fits fully on 1050 Ti GPU",
         priority=20,
     ),
     ModelEntry(
@@ -124,8 +142,26 @@ _CATALOG: List[ModelEntry] = [
         display_name="Llama 3.2 3B",
         context_window=131072,
         vram_gb=2.0,
-        notes="Default — balanced speed and quality on GTX 1050 Ti",
+        notes="Default — fits on GPU, best speed/quality balance",
         priority=21,
+    ),
+    ModelEntry(
+        provider="ollama",
+        model_id="llama3.1:8b",
+        display_name="Llama 3.1 8B",
+        context_window=131072,
+        vram_gb=5.0,
+        notes="RAM inference, strong general model, fast on 32GB",
+        priority=22,
+    ),
+    ModelEntry(
+        provider="ollama",
+        model_id="llama3.3:70b",
+        display_name="Llama 3.3 70B",
+        context_window=131072,
+        vram_gb=43.0,
+        notes="Slow on FX-8350, fits in 32GB RAM, best local quality",
+        priority=23,
     ),
 
     # -------------------------------------------------------------------------
@@ -137,7 +173,7 @@ _CATALOG: List[ModelEntry] = [
         display_name="Phi 3.5 Mini",
         context_window=131072,
         vram_gb=2.2,
-        notes="Microsoft small model, strong reasoning per GB",
+        notes="Fits on GPU, strong reasoning per GB",
         priority=30,
     ),
     ModelEntry(
@@ -146,16 +182,16 @@ _CATALOG: List[ModelEntry] = [
         display_name="Phi 4 Mini",
         context_window=131072,
         vram_gb=2.5,
-        notes="Phi 4 series, improved over Phi 3.5",
+        notes="Fits on GPU, improved over Phi 3.5",
         priority=31,
     ),
     ModelEntry(
         provider="ollama",
         model_id="phi4",
-        display_name="Phi 4",
+        display_name="Phi 4 14B",
         context_window=16384,
         vram_gb=8.9,
-        notes="CPU-only on GTX 1050 Ti, 16GB RAM",
+        notes="RAM inference, excellent reasoning, fast on 32GB",
         priority=32,
     ),
 
@@ -168,7 +204,7 @@ _CATALOG: List[ModelEntry] = [
         display_name="Gemma 3 1B",
         context_window=32768,
         vram_gb=0.8,
-        notes="Google ultra-small model",
+        notes="Fits on GPU, Google ultra-small",
         priority=40,
     ),
     ModelEntry(
@@ -177,7 +213,7 @@ _CATALOG: List[ModelEntry] = [
         display_name="Gemma 3 4B",
         context_window=131072,
         vram_gb=3.3,
-        notes="Fits in GTX 1050 Ti VRAM",
+        notes="Fits on GPU, solid all-rounder",
         priority=41,
     ),
     ModelEntry(
@@ -186,16 +222,16 @@ _CATALOG: List[ModelEntry] = [
         display_name="Gemma 3 12B",
         context_window=131072,
         vram_gb=8.1,
-        notes="CPU-only on GTX 1050 Ti",
+        notes="RAM inference, very capable, fast on 32GB",
         priority=42,
     ),
     ModelEntry(
         provider="ollama",
-        model_id="gemma2:9b",
-        display_name="Gemma 2 9B",
-        context_window=8192,
-        vram_gb=6.0,
-        notes="CPU-only on GTX 1050 Ti",
+        model_id="gemma3:27b",
+        display_name="Gemma 3 27B",
+        context_window=131072,
+        vram_gb=17.0,
+        notes="RAM inference, best Gemma, fits in 32GB",
         priority=43,
     ),
 
@@ -208,7 +244,7 @@ _CATALOG: List[ModelEntry] = [
         display_name="Qwen 2.5 3B",
         context_window=131072,
         vram_gb=2.0,
-        notes="Alibaba model, strong multilingual support",
+        notes="Fits on GPU, strong multilingual",
         priority=50,
     ),
     ModelEntry(
@@ -217,17 +253,26 @@ _CATALOG: List[ModelEntry] = [
         display_name="Qwen 2.5 7B",
         context_window=131072,
         vram_gb=4.7,
-        notes="CPU-only on GTX 1050 Ti",
+        notes="RAM inference, excellent quality, fast on 32GB",
         priority=51,
     ),
     ModelEntry(
         provider="ollama",
+        model_id="qwen2.5:14b",
+        display_name="Qwen 2.5 14B",
+        context_window=131072,
+        vram_gb=9.0,
+        notes="RAM inference, top Qwen quality, fits in 32GB",
+        priority=52,
+    ),
+    ModelEntry(
+        provider="ollama",
         model_id="qwq",
-        display_name="QwQ 32B (CPU)",
+        display_name="QwQ 32B",
         context_window=131072,
         vram_gb=20.0,
-        notes="Heavy reasoning model, CPU-only, very slow",
-        priority=52,
+        notes="Heavy reasoning model, fits in 32GB, slow on FX-8350",
+        priority=53,
     ),
 
     # -------------------------------------------------------------------------
@@ -239,7 +284,7 @@ _CATALOG: List[ModelEntry] = [
         display_name="Mistral 7B",
         context_window=32768,
         vram_gb=4.1,
-        notes="Borderline GPU fit on GTX 1050 Ti (may spill to CPU)",
+        notes="Borderline GPU fit, fast on 32GB RAM",
         priority=60,
     ),
     ModelEntry(
@@ -248,8 +293,17 @@ _CATALOG: List[ModelEntry] = [
         display_name="Mistral Nemo 12B",
         context_window=131072,
         vram_gb=7.1,
-        notes="CPU-only on GTX 1050 Ti",
+        notes="RAM inference, great context, fast on 32GB",
         priority=61,
+    ),
+    ModelEntry(
+        provider="ollama",
+        model_id="mixtral:8x7b",
+        display_name="Mixtral 8x7B MoE",
+        context_window=32768,
+        vram_gb=26.0,
+        notes="MoE architecture, fits in 32GB, good quality",
+        priority=62,
     ),
 
     # -------------------------------------------------------------------------
@@ -257,26 +311,176 @@ _CATALOG: List[ModelEntry] = [
     # -------------------------------------------------------------------------
     ModelEntry(
         provider="ollama",
-        model_id="llama3.1:8b",
-        display_name="Llama 3.1 8B",
+        model_id="llama3.1:70b",
+        display_name="Llama 3.1 70B",
         context_window=131072,
-        vram_gb=5.0,
-        notes="CPU-only on GTX 1050 Ti",
+        vram_gb=43.0,
+        notes="Slow on FX-8350, fits in 32GB RAM",
         priority=70,
+    ),
+
+    # -------------------------------------------------------------------------
+    # Code models (priority 80-89)
+    # -------------------------------------------------------------------------
+    ModelEntry(
+        provider="ollama",
+        model_id="codellama:7b",
+        display_name="Code Llama 7B",
+        context_window=16384,
+        vram_gb=4.7,
+        notes="RAM inference, best local code model",
+        priority=80,
     ),
     ModelEntry(
         provider="ollama",
-        model_id="llama3.1:70b",
-        display_name="Llama 3.1 70B (CPU)",
+        model_id="codellama:13b",
+        display_name="Code Llama 13B",
+        context_window=16384,
+        vram_gb=8.0,
+        notes="RAM inference, strong code generation, fits in 32GB",
+        priority=81,
+    ),
+    ModelEntry(
+        provider="ollama",
+        model_id="qwen2.5-coder:7b",
+        display_name="Qwen 2.5 Coder 7B",
         context_window=131072,
-        vram_gb=43.0,
-        notes="CPU-only, very slow, needs 64GB+ RAM ideally",
-        priority=71,
+        vram_gb=4.7,
+        notes="RAM inference, excellent code model, 128K context",
+        priority=82,
+    ),
+    ModelEntry(
+        provider="ollama",
+        model_id="qwen2.5-coder:14b",
+        display_name="Qwen 2.5 Coder 14B",
+        context_window=131072,
+        vram_gb=9.0,
+        notes="RAM inference, top local code model, fits in 32GB",
+        priority=83,
     ),
 
     # =========================================================================
     # Cloud providers
     # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # Amazon Bedrock — Amazon Nova (priority 100-109)
+    # -------------------------------------------------------------------------
+    ModelEntry(
+        provider="bedrock",
+        model_id="amazon.nova-micro-v1:0",
+        display_name="Nova Micro",
+        context_window=128000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.000035,
+        cost_per_1k_output_usd=0.000140,
+        notes="Fastest Nova, text-only, ultra-low cost",
+        priority=100,
+    ),
+    ModelEntry(
+        provider="bedrock",
+        model_id="amazon.nova-lite-v1:0",
+        display_name="Nova Lite",
+        context_window=300000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.000060,
+        cost_per_1k_output_usd=0.000240,
+        notes="Fast multimodal, 300K context, very low cost",
+        priority=101,
+    ),
+    ModelEntry(
+        provider="bedrock",
+        model_id="amazon.nova-pro-v1:0",
+        display_name="Nova Pro",
+        context_window=300000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.000800,
+        cost_per_1k_output_usd=0.003200,
+        notes="Most capable Nova, balanced speed and intelligence",
+        priority=102,
+    ),
+
+    # -------------------------------------------------------------------------
+    # Amazon Bedrock — Claude via Bedrock (priority 103-106)
+    # -------------------------------------------------------------------------
+    ModelEntry(
+        provider="bedrock",
+        model_id="anthropic.claude-3-haiku-20240307-v1:0",
+        display_name="Claude 3 Haiku (Bedrock)",
+        context_window=200000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.000250,
+        cost_per_1k_output_usd=0.001250,
+        notes="Fastest Claude on Bedrock",
+        priority=103,
+    ),
+    ModelEntry(
+        provider="bedrock",
+        model_id="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        display_name="Claude 3.5 Sonnet (Bedrock)",
+        context_window=200000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.003000,
+        cost_per_1k_output_usd=0.015000,
+        notes="Best Claude available on Bedrock",
+        priority=104,
+    ),
+
+    # -------------------------------------------------------------------------
+    # Amazon Bedrock — Meta Llama (priority 105-107)
+    # -------------------------------------------------------------------------
+    ModelEntry(
+        provider="bedrock",
+        model_id="meta.llama3-3-70b-instruct-v1:0",
+        display_name="Llama 3.3 70B (Bedrock)",
+        context_window=128000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.000720,
+        cost_per_1k_output_usd=0.000720,
+        notes="Latest Llama 3.3, strong general performance",
+        priority=105,
+    ),
+    ModelEntry(
+        provider="bedrock",
+        model_id="meta.llama3-1-8b-instruct-v1:0",
+        display_name="Llama 3.1 8B (Bedrock)",
+        context_window=128000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.000220,
+        cost_per_1k_output_usd=0.000220,
+        notes="Fast and cheap Llama on Bedrock",
+        priority=106,
+    ),
+
+    # -------------------------------------------------------------------------
+    # Amazon Bedrock — DeepSeek (priority 107)
+    # -------------------------------------------------------------------------
+    ModelEntry(
+        provider="bedrock",
+        model_id="deepseek.r1-v1:0",
+        display_name="DeepSeek R1 (Bedrock)",
+        context_window=64000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.001350,
+        cost_per_1k_output_usd=0.005400,
+        notes="DeepSeek R1 reasoning model via Bedrock",
+        priority=107,
+    ),
+
+    # -------------------------------------------------------------------------
+    # Amazon Bedrock — Mistral (priority 108)
+    # -------------------------------------------------------------------------
+    ModelEntry(
+        provider="bedrock",
+        model_id="mistral.mistral-large-2402-v1:0",
+        display_name="Mistral Large (Bedrock)",
+        context_window=32000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.004000,
+        cost_per_1k_output_usd=0.012000,
+        notes="Mistral Large via Bedrock",
+        priority=108,
+    ),
 
     # -------------------------------------------------------------------------
     # Anthropic Claude (priority 110-119)

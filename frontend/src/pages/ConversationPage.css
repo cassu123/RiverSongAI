@@ -364,8 +364,105 @@
   animation: mic-pulse 1.2s ease-in-out infinite;
 }
 
-.conv-mic-btn--disabled,
-.conv-mic-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.conv-mic-btn--large {
+  width: 56px;
+  height: 56px;
+}
+
+.conv-input-bar--speak {
+  justify-content: center;
+  gap: 20px;
+  padding: 16px 16px 20px;
+}
+
+/* Inline model picker (SPEAK page, below avatar) */
+.conv-model-inline {
+  position: relative;
+  margin-bottom: 6px;
+}
+
+.conv-model-inline-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border: 1px solid var(--border-bright);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.conv-model-inline-btn:hover { border-color: var(--primary); }
+
+.conv-model-inline-label {
+  font-family: var(--font-display);
+  font-size: 0.44rem;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+}
+
+.conv-model-inline-val {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conv-model-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-bright);
+  border-radius: 6px;
+  padding: 6px;
+  z-index: 20;
+  min-width: 200px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.conv-model-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.conv-model-group:last-child { margin-bottom: 0; }
+
+.conv-model-group-label {
+  font-family: var(--font-display);
+  font-size: 0.42rem;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  padding: 4px 8px 2px;
+}
+
+.conv-model-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 0.52rem;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.conv-model-option:hover { background: rgba(0,170,255,0.08); color: var(--text); }
+.conv-model-option--active { color: var(--secondary); }
+
 
 @keyframes mic-pulse {
   0%, 100% { box-shadow: 0 0 6px  rgba(0,255,204,0.25); }

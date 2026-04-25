@@ -2,7 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import './UsersPage.css'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+function safeFetch(path, opts = {}) {
+  if (/^https?:\/\//i.test(path)) {
+    throw new Error(`Blocked absolute URL: ${path}`)
+  }
+  return fetch(path, opts)
+}
+
 const ROLES = ['admin', 'user', 'child', 'guest']
 const ROLE_LABEL = { admin: 'ADMIN', user: 'USER', child: 'CHILD', guest: 'GUEST' }
 
@@ -19,7 +25,7 @@ export default function UsersPage() {
   const fetchUsers = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      const res = await fetch(`${API_BASE}/api/admin/users`, {
+      const res = await safeFetch(`/api/admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error('Failed to load users.')
@@ -34,7 +40,7 @@ export default function UsersPage() {
   useEffect(() => { fetchUsers() }, [fetchUsers])
 
   const patch = async (userId, body) => {
-    const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+    const res = await safeFetch(`/api/admin/users/${userId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(body),

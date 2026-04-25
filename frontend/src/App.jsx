@@ -7,6 +7,7 @@ import SignupPage         from './pages/SignupPage.jsx'
 import SetupPage          from './pages/SetupPage.jsx'
 import DashboardPage      from './pages/DashboardPage.jsx'
 import ConversationPage   from './pages/ConversationPage.jsx'
+import ChatPage           from './pages/ChatPage.jsx'
 import MemoryPage         from './pages/MemoryPage.jsx'
 import RoutinesPage       from './pages/RoutinesPage.jsx'
 import HomeNodePage       from './pages/HomeNodePage.jsx'
@@ -120,6 +121,7 @@ export default function App() {
           <div className="page-enter">
             {currentPage === 'dashboard'  && <DashboardPage  onNavigate={handleNavigate} isAdmin={adminMode} />}
             {currentPage === 'speak'      && <ConversationPage />}
+            {currentPage === 'chat'       && <ChatPage />}
             {currentPage === 'memory'     && <MemoryPage />}
             {currentPage === 'routines'   && <RoutinesPage />}
             {currentPage === 'home'       && <HomeNodePage />}

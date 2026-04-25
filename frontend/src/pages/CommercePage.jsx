@@ -4,6 +4,9 @@ import InventoryVault from '../components/InventoryVault.jsx'
 import './CommercePage.css'
 
 async function apiFetch(path, token, opts = {}) {
+  if (/^https?:\/\//i.test(path)) {
+    throw new Error(`Blocked absolute URL in apiFetch: ${path}`)
+  }
   const res = await fetch(path, {
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...opts.headers },
     ...opts,

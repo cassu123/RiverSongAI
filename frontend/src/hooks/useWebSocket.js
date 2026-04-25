@@ -51,6 +51,14 @@ export function useWebSocket(url, onMessage) {
         if (!isMountedRef.current) return
         try {
           const data = JSON.parse(event.data)
+          if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+            console.error('[useWebSocket] Rejected non-object message')
+            return
+          }
+          if ('__proto__' in data || 'constructor' in data || 'prototype' in data) {
+            console.error('[useWebSocket] Rejected message with dangerous keys')
+            return
+          }
           onMessage(data)
         } catch (err) {
           console.error('[useWebSocket] Failed to parse incoming message:', event.data, err)

@@ -102,7 +102,8 @@ def _get_enabled_providers() -> dict:
         "gemini":     s.gemini_enabled     and bool(s.gemini_api_key),
         "openai":     s.openai_enabled     and bool(s.openai_api_key),
         "mistral_ai": s.mistral_ai_enabled and bool(s.mistral_api_key),
-        "ollama":     True,  # always available locally
+        "bedrock":    s.bedrock_enabled    and bool(s.aws_access_key_id) and bool(s.aws_secret_access_key),
+        "ollama":     True,
     }
 
 

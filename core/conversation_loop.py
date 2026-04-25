@@ -111,6 +111,11 @@ def _build_llm_provider(
             raise ValueError("Mistral AI LLM is disabled. Set MISTRAL_AI_ENABLED=true in .env.")
         from providers.llm.mistral_api import MistralAILLM
         return MistralAILLM(model=model) if model else MistralAILLM()
+    if key == "bedrock":
+        if not settings.bedrock_enabled:
+            raise ValueError("Amazon Bedrock is disabled. Set BEDROCK_ENABLED=true in .env.")
+        from providers.llm.bedrock import BedrockLLM
+        return BedrockLLM(model=model) if model else BedrockLLM()
     raise ValueError(
         f"Unsupported LLM_PROVIDER '{key}'. "
         f"Supported values: ollama | anthropic | gemini | openai | mistral_ai"

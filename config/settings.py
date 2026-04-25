@@ -73,7 +73,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     llm_provider: str = Field(
         default="ollama",
-        description="LLM provider key. Supported: ollama | anthropic | gemini | openai | mistral_ai",
+        description="LLM provider key. Supported: ollama | anthropic | gemini | openai | mistral_ai | bedrock",
     )
     ollama_base_url: str = Field(
         default="http://localhost:11434",
@@ -118,6 +118,28 @@ class Settings(BaseSettings):
     mistral_ai_enabled: bool = Field(
         default=False,
         description="Allow Mistral AI as a selectable LLM provider.",
+    )
+
+    # Amazon Bedrock
+    aws_access_key_id: str = Field(
+        default="",
+        description="AWS IAM access key ID for Bedrock API calls.",
+    )
+    aws_secret_access_key: str = Field(
+        default="",
+        description="AWS IAM secret access key for Bedrock API calls.",
+    )
+    aws_region: str = Field(
+        default="us-east-1",
+        description="AWS region for Bedrock. Must have model access enabled in that region.",
+    )
+    bedrock_enabled: bool = Field(
+        default=False,
+        description="Allow Amazon Bedrock as a selectable LLM provider.",
+    )
+    bedrock_default_model: str = Field(
+        default="amazon.nova-lite-v1:0",
+        description="Default Bedrock model ID when none is specified.",
     )
     river_song_system_prompt: str = Field(
         default=(

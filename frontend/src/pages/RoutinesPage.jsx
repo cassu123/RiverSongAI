@@ -2,7 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import './RoutinesPage.css'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+function safeFetch(path, opts = {}) {
+  if (/^https?:\/\//i.test(path)) {
+    throw new Error(`Blocked absolute URL: ${path}`)
+  }
+  return fetch(path, opts)
+}
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 const TRIGGER_TYPES = [
@@ -37,7 +42,7 @@ export default function RoutinesPage() {
   const fetchRoutines = useCallback(async () => {
     if (!token) return
     try {
-      const res = await fetch(`${API_BASE}/api/routines`, { headers: authHeaders })
+      const res = await safeFetch(`/api/routines`, { headers: authHeaders })
       if (res.ok) setRoutines(await res.json())
     } catch {}
     setLoading(false)
@@ -62,7 +67,7 @@ export default function RoutinesPage() {
     e.preventDefault()
     if (!form.name.trim()) return
     if (editing) {
-      const res = await fetch(`${API_BASE}/api/routines/${editing}`, {
+      const res = await safeFetch(`/api/routines/${editing}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ ...form, name: form.name.trim() }),
@@ -72,7 +77,7 @@ export default function RoutinesPage() {
         setRoutines(prev => prev.map(r => r.id === editing ? updated : r))
       }
     } else {
-      const res = await fetch(`${API_BASE}/api/routines`, {
+      const res = await safeFetch(`/api/routines`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ ...form, name: form.name.trim() }),
@@ -87,7 +92,7 @@ export default function RoutinesPage() {
   }
 
   const toggleEnabled = async (r) => {
-    const res = await fetch(`${API_BASE}/api/routines/${r.id}`, {
+    const res = await safeFetch(`/api/routines/${r.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ enabled: !r.enabled }),
@@ -99,7 +104,7 @@ export default function RoutinesPage() {
   }
 
   const handleDelete = async (id) => {
-    const res = await fetch(`${API_BASE}/api/routines/${id}`, { method: 'DELETE', headers: authHeaders })
+    const res = await safeFetch(`/api/routines/${id}`, { method: 'DELETE', headers: authHeaders })
     if (res.ok) setRoutines(prev => prev.filter(r => r.id !== id))
     setConfirm(null)
   }
@@ -107,7 +112,7 @@ export default function RoutinesPage() {
   const handleRun = async (r) => {
     setRunning(r.id)
     try {
-      const res = await fetch(`${API_BASE}/api/routines/${r.id}/run`, { method: 'POST', headers: authHeaders })
+      const res = await safeFetch(`/api/routines/${r.id}/run`, { method: 'POST', headers: authHeaders })
       const data = await res.json()
       setOutput({ name: r.name, text: data.output || '(No response)' })
       // refresh to pick up last_run

@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import './MemoryPage.css'
 
+function safeFetch(path, opts = {}) {
+  if (/^https?:\/\//i.test(path)) {
+    throw new Error(`Blocked absolute URL: ${path}`)
+  }
+  return fetch(path, opts)
+}
+
 const TABS = ['FACTS', 'PREFERENCES', 'SUMMARIES']
 
 const CONFIDENCE_COLOR = {
@@ -91,7 +98,7 @@ export default function MemoryPage() {
     try {
       await Promise.all(
         [...selected].map(id =>
-          fetch(`/api/memory/facts/${id}`, { method: 'DELETE' })
+          safeFetch(`/api/memory/facts/${id}`, { method: 'DELETE' })
         )
       )
       setFacts(prev => prev.filter(f => !selected.has(f.id)))
@@ -107,7 +114,7 @@ export default function MemoryPage() {
     setAddingFact(true)
     setAddError('')
     try {
-      const res = await fetch('/api/memory/facts', {
+      const res = await safeFetch('/api/memory/facts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key: newKey.trim(), value: newValue.trim() }),
