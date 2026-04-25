@@ -905,79 +905,76 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
                 break
 
     # ── Merge torque specs INTO matching checkpoints ──────────────────────
-    # (fluid_results and torque_results were built above in the extraction loops)
-        # If a torque item name matches or is closely related to a checkpoint,
-        # embed ft_lb/nm there. Otherwise create a standalone checkpoint.
-        TORQUE_TO_CP = {
-            "oil drain plug":     "engine oil change",
-            "drain plug":         "engine oil change",
-            "spark plug":         "spark plugs",
-            "spark plugs":        "spark plugs",
-            "wheel lug nut":      "tire rotation",
-            "lug nut":            "tire rotation",
-            "wheel lug nuts":     "tire rotation",
-            "oil filter housing": "engine oil change",
-        }
+    TORQUE_TO_CP = {
+        "oil drain plug":     "engine oil change",
+        "oil drain bolt":     "engine oil change",
+        "drain plug":         "engine oil change",
+        "drain bolt":         "engine oil change",
+        "oil filter cover":   "engine oil change",
+        "spark plug":         "spark plugs",
+        "spark plugs":        "spark plugs",
+        "wheel lug nut":      "tire rotation",
+        "lug nut":            "tire rotation",
+        "wheel lug nuts":     "tire rotation",
+        "oil filter housing": "engine oil change",
+    }
 
-        cp_by_lower = {v["description"].lower(): v for v in check_points}
+    cp_by_lower = {v["description"].lower(): v for v in check_points}
 
-        for t in list(torque_results.values()):
-            name_l = t["name"].lower()
-            # Direct match
-            target_key = TORQUE_TO_CP.get(name_l) or name_l
-            if target_key in cp_by_lower:
-                cp_by_lower[target_key]["ft_lb"] = t.get("ft_lb")
-                cp_by_lower[target_key]["nm"]    = t.get("nm")
-            else:
-                # Standalone torque checkpoint (e.g. wheel lug nuts, axle nut)
-                check_points.append({
-                    "description":   t["name"],
-                    "service_level": "service",
-                    "interval_miles": None,
-                    "interval_days":  None,
-                    "due_at_miles":   None,
-                    "expected_spec":  None,
-                    "volume":         None,
-                    "min_value":      None,
-                    "max_value":      None,
-                    "unit":           None,
-                    "ft_lb":          t.get("ft_lb"),
-                    "nm":             t.get("nm"),
-                })
+    for t in list(torque_results.values()):
+        name_l = t["name"].lower()
+        target_key = TORQUE_TO_CP.get(name_l) or name_l
+        if target_key in cp_by_lower:
+            cp_by_lower[target_key]["ft_lb"] = t.get("ft_lb")
+            cp_by_lower[target_key]["nm"]    = t.get("nm")
+        else:
+            check_points.append({
+                "description":    t["name"],
+                "service_level":  "service",
+                "interval_miles": None,
+                "interval_days":  None,
+                "due_at_miles":   None,
+                "expected_spec":  None,
+                "volume":         None,
+                "min_value":      None,
+                "max_value":      None,
+                "unit":           None,
+                "ft_lb":          t.get("ft_lb"),
+                "nm":             t.get("nm"),
+            })
 
-        # ── Merge fluid specs INTO matching checkpoints ───────────────────────
-        FLUID_TO_CP = {
-            "engine oil":           "engine oil change",
-            "motor oil":            "engine oil change",
-            "engine coolant":       "coolant",
-            "coolant":              "coolant",
-            "antifreeze":           "coolant",
-            "brake fluid":          "brake fluid",
-            "transmission fluid":   "transmission fluid",
-            "automatic transmission fluid": "transmission fluid",
-            "transfer case fluid":  "transfer case fluid",
-            "front differential fluid": "differential fluid",
-            "rear differential fluid":  "differential fluid",
-            "power steering fluid": "power steering fluid",
-            "windshield washer fluid": "wiper blades",
-        }
+    # ── Merge fluid specs INTO matching checkpoints ────────────────────────
+    FLUID_TO_CP = {
+        "engine oil":                   "engine oil change",
+        "motor oil":                    "engine oil change",
+        "engine coolant":               "coolant",
+        "coolant":                      "coolant",
+        "antifreeze":                   "coolant",
+        "brake fluid":                  "brake fluid",
+        "transmission fluid":           "transmission fluid",
+        "automatic transmission fluid": "transmission fluid",
+        "transfer case fluid":          "transfer case fluid",
+        "front differential fluid":     "differential fluid",
+        "rear differential fluid":      "differential fluid",
+        "power steering fluid":         "power steering fluid",
+        "windshield washer fluid":      "wiper blades",
+    }
 
-        for f in list(fluid_results.values()):
-            name_l = f["name"].lower()
-            target_key = FLUID_TO_CP.get(name_l) or name_l
-            if target_key in cp_by_lower:
-                cp = cp_by_lower[target_key]
-                if f.get("spec") and not cp.get("expected_spec"):
-                    # Build combined spec string: "SAE 0W-20 (4.2 qt)"
-                    spec = f["spec"]
-                    if f.get("volume"):
-                        spec = f"{spec} ({f['volume']})"
-                    cp["expected_spec"] = spec
-                if f.get("volume") and not cp.get("volume"):
-                    cp["volume"] = f["volume"]
+    for f in list(fluid_results.values()):
+        name_l = f["name"].lower()
+        target_key = FLUID_TO_CP.get(name_l) or name_l
+        if target_key in cp_by_lower:
+            cp = cp_by_lower[target_key]
+            if f.get("spec") and not cp.get("expected_spec"):
+                spec = f["spec"]
+                if f.get("volume"):
+                    spec = f"{spec} ({f['volume']})"
+                cp["expected_spec"] = spec
+            if f.get("volume") and not cp.get("volume"):
+                cp["volume"] = f["volume"]
 
-        return [v for v in check_points if v.get("interval_miles") or v.get("interval_days")
-                or v.get("due_at_miles") or v.get("expected_spec") or v.get("ft_lb")]
+    return [v for v in check_points if v.get("interval_miles") or v.get("interval_days")
+            or v.get("due_at_miles") or v.get("expected_spec") or v.get("ft_lb")]
 
 
 def parse_manual_with_ollama(pdf_text: str, ollama_url: str, model: str) -> list[dict]:

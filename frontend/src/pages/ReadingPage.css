@@ -1,0 +1,601 @@
+/* =============================================================================
+   ReadingPage.css
+   ============================================================================= */
+
+/* Service tabs */
+.reading-service-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.reading-service-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 2px;
+  border: 1px solid var(--border-bright);
+  background: var(--bg-card);
+  color: var(--text-dim);
+  font-family: var(--font-display);
+  font-size: 0.56rem;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.reading-service-tab:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+
+.reading-service-tab--active {
+  color: var(--tab-color, var(--primary));
+  border-color: var(--tab-color, var(--primary));
+  background: rgba(0, 170, 255, 0.07);
+}
+
+.reading-service-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.reading-service-count {
+  font-size: 0.5rem;
+  background: rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 1px 6px;
+  color: var(--text-dim);
+}
+
+/* Status filter */
+.reading-status-filter {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.reading-status-btn {
+  padding: 5px 12px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font-display);
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.reading-status-btn:hover { color: var(--text); border-color: var(--text-dim); }
+
+.reading-status-btn--active {
+  color: var(--secondary);
+  border-color: var(--secondary);
+  background: rgba(0,255,204,0.06);
+}
+
+/* Shelf grid */
+.reading-shelf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+/* Book card */
+.reading-book-card {
+  display: flex;
+  gap: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-bright);
+  border-radius: 3px;
+  padding: 14px;
+  transition: border-color 0.15s;
+}
+
+.reading-book-card:hover { border-color: var(--primary); }
+
+.reading-book-cover {
+  position: relative;
+  flex-shrink: 0;
+  width: 72px;
+}
+
+.reading-book-cover-img {
+  width: 72px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 2px;
+  display: block;
+}
+
+.reading-book-cover-placeholder {
+  width: 72px;
+  height: 100px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.reading-book-service-badge {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 0.38rem;
+  letter-spacing: 0.1em;
+  color: #000;
+  padding: 2px 4px;
+  border-radius: 0 0 2px 2px;
+  opacity: 0.9;
+  font-weight: 700;
+}
+
+.reading-book-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.reading-book-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.reading-book-author {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.reading-book-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.reading-book-status {
+  font-family: var(--font-display);
+  font-size: 0.46rem;
+  letter-spacing: 0.12em;
+  padding: 2px 7px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+
+.reading-book-status--reading      { color: var(--primary);   border-color: var(--primary); }
+.reading-book-status--finished     { color: var(--secondary); border-color: var(--secondary); }
+.reading-book-status--want_to_read { color: var(--warn);      border-color: var(--warn); }
+.reading-book-status--dnf          { color: var(--text-dim);  border-color: var(--border); }
+
+.reading-book-rating {
+  font-size: 0.7rem;
+  color: #ffaa00;
+  letter-spacing: 1px;
+}
+
+/* Progress bar */
+.reading-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reading-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.reading-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.reading-progress-fill--libby { background: #00aaff; }
+
+.reading-progress-label {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  width: 30px;
+  text-align: right;
+}
+
+.reading-book-notes {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  border-left: 2px solid var(--border);
+  padding-left: 8px;
+  margin-top: 2px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.reading-book-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 6px;
+  flex-wrap: wrap;
+}
+
+.reading-launch-btn {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 2px;
+  padding: 4px 10px;
+  text-decoration: none;
+  transition: background 0.15s;
+  display: inline-block;
+}
+
+.reading-launch-btn:hover { background: rgba(0,170,255,0.1); }
+
+.reading-edit-btn {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 4px 10px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.reading-edit-btn:hover { color: var(--text); border-color: var(--text-dim); }
+
+.reading-delete-btn {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.reading-delete-btn:hover { color: var(--error); border-color: rgba(255,68,51,0.4); }
+
+/* Libby live section */
+.reading-libby-live {
+  background: rgba(0,170,255,0.04);
+  border: 1px solid rgba(0,170,255,0.2);
+  border-radius: 3px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+
+.reading-libby-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.reading-libby-title {
+  font-family: var(--font-display);
+  font-size: 0.52rem;
+  letter-spacing: 0.2em;
+  color: var(--primary);
+  text-shadow: var(--glow-sm);
+}
+
+.reading-libby-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.reading-libby-tab {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  padding: 4px 12px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.reading-libby-tab:hover { color: var(--text); border-color: var(--text-dim); }
+
+.reading-libby-tab--active {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: rgba(0,170,255,0.08);
+}
+
+.reading-libby-refresh {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 4px 10px;
+  transition: color 0.15s;
+}
+
+.reading-libby-refresh:hover { color: var(--primary); border-color: var(--primary); }
+
+.reading-libby-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.reading-libby-card {
+  display: flex;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 12px;
+}
+
+.reading-libby-cover {
+  width: 56px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.reading-libby-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reading-libby-card-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.reading-libby-card-author {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.reading-libby-card-meta {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.reading-libby-urgent { color: var(--error); }
+
+.reading-libby-error {
+  font-size: 0.82rem;
+  color: var(--warn);
+  background: rgba(255,170,0,0.06);
+  border: 1px solid rgba(255,170,0,0.2);
+  border-radius: 2px;
+  padding: 10px 14px;
+  line-height: 1.6;
+}
+
+.reading-libby-error code {
+  font-family: monospace;
+  font-size: 0.78rem;
+  color: var(--secondary);
+}
+
+/* States */
+.reading-loading {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  color: var(--text-dim);
+  padding: 24px 0;
+  text-align: center;
+}
+
+.reading-empty {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  padding: 32px 0;
+  text-align: center;
+}
+
+.reading-error {
+  font-size: 0.82rem;
+  color: var(--error);
+  background: rgba(255,68,51,0.07);
+  border: 1px solid rgba(255,68,51,0.25);
+  border-radius: 2px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+/* Modal */
+.reading-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.reading-modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-bright);
+  border-radius: 3px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.reading-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.reading-modal-title {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--primary);
+  text-shadow: var(--glow-sm);
+}
+
+.reading-modal-close {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  padding: 4px 8px;
+  border-radius: 2px;
+  transition: color 0.15s;
+}
+
+.reading-modal-close:hover { color: var(--error); }
+
+.reading-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+
+.reading-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reading-form-label {
+  font-family: var(--font-display);
+  font-size: 0.52rem;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+}
+
+.reading-form-input,
+.reading-form-select,
+.reading-form-textarea {
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border-bright);
+  border-radius: 2px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+.reading-form-input:focus,
+.reading-form-select:focus,
+.reading-form-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: var(--glow-sm);
+}
+
+.reading-form-textarea { resize: vertical; }
+
+.reading-form-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reading-form-range {
+  flex: 1;
+  accent-color: var(--primary);
+}
+
+.reading-form-progress-val {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  color: var(--primary);
+  width: 36px;
+  text-align: right;
+}
+
+.reading-form-stars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reading-star-btn {
+  font-size: 1.2rem;
+  color: var(--border-bright);
+  transition: color 0.1s;
+  padding: 0 2px;
+}
+
+.reading-star-btn:hover,
+.reading-star-btn--on { color: #ffaa00; }
+
+.reading-clear-rating {
+  font-family: var(--font-display);
+  font-size: 0.48rem;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  margin-left: 6px;
+  transition: color 0.15s;
+}
+
+.reading-clear-rating:hover { color: var(--text-dim); }
+
+.reading-form-error {
+  font-size: 0.78rem;
+  color: var(--error);
+}
+
+.reading-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+}

@@ -7,7 +7,7 @@ const USER_ITEMS = [
   { key: 'inventory',   label: 'INVENTORY',   icon: IconInventory },
   { key: 'maintenance', label: 'MAINTENANCE', icon: IconWrench },
   { key: 'commerce',    label: 'STORE',       icon: IconCommerce },
-  { key: 'feeds',       label: 'FEEDS',       icon: IconFeeds,    soon: true },
+  { key: 'feeds',       label: 'FEEDS',       icon: IconFeeds },
   { key: 'google',      label: 'GOOGLE',      icon: IconGoogle,   soon: true },
   { key: 'reading',     label: 'READING',     icon: IconReading,  soon: true },
 ]
@@ -23,7 +23,7 @@ const ADMIN_ITEMS = [
   { key: 'routines',    label: 'ROUTINES',    icon: IconRoutines },
   { key: 'home',        label: 'HOME',        icon: IconHome },
   { key: 'analytics',   label: 'ANALYTICS',   icon: IconAnalytics, soon: true },
-  { key: 'feeds',       label: 'FEEDS',       icon: IconFeeds,     soon: true },
+  { key: 'feeds',       label: 'FEEDS',       icon: IconFeeds },
   { key: 'google',      label: 'GOOGLE',      icon: IconGoogle,    soon: true },
   { key: 'reading',     label: 'READING',     icon: IconReading,   soon: true },
   { key: 'users',       label: 'USERS',       icon: IconUsers },
