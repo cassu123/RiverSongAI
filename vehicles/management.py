@@ -711,16 +711,19 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
     # mis-read as months by the bare-number heuristic
     RE_VISCOSITY = re.compile(r"\d+W-\d+", re.IGNORECASE)
 
+    RE_DECIMAL = re.compile(r'\b\d+\.\d+\b')
+
     def bare_number_intervals(text: str) -> tuple[int | None, int | None]:
         """
         Heuristic for table rows with no unit labels (e.g. Item | - | 3000 | 5000 | Replace).
         Treats the first number 500-150,000 as miles.
         Treats a bare number only if it is a recognised service-month value (VALID_MONTHS).
-        Masks spec ranges and viscosity grades to avoid false positives.
+        Masks spec ranges, viscosity grades, and decimals to avoid false positives.
         """
         miles = days = None
         masked = RE_IN_RANGE.sub("XXXX", text)
         masked = RE_VISCOSITY.sub("XXXX", masked)
+        masked = RE_DECIMAL.sub("XXXX", masked)   # prevent "7.3" → "7" and "3" being matched
         for m in RE_BARE_NUM.finditer(masked):
             raw = m.group(1).replace(",", "")
             if not raw.isdigit():
@@ -770,9 +773,12 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
                     spec, mn, mx, unit = extract_spec(next_line, item_name)
 
         # Pass 3: bare-number heuristic for table rows (no unit labels).
-        # Applied only to the current line to avoid inter-item bleed.
-        if mi is None and dy is None:
-            mi, dy = bare_number_intervals(line)
+        # Run for miles regardless of whether days was already found (e.g. "6M 3000 5000").
+        # Run for days only when both are still missing.
+        if mi is None or dy is None:
+            mi_b, dy_b = bare_number_intervals(line)
+            if mi_b and mi is None: mi = mi_b
+            if dy_b and dy is None: dy = dy_b
 
         # Commit to entry (don't overwrite already-found values)
         if mi  and entry["interval_miles"] is None: entry["interval_miles"] = mi
@@ -839,10 +845,11 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
     RE_NM    = re.compile(r"([\d.]+)\s*(?:n[-·•]?m\b|newton[-·•]?m)", re.IGNORECASE)
 
     TORQUE_KEYWORDS = [
-        (r"oil\s+drain\s+plug|drain\s+plug",              "Oil Drain Plug"),
+        (r"oil\s+drain\s+(?:plug|bolt)|drain\s+plug|drain\s+bolt", "Oil Drain Plug"),
+        (r"oil\s+filter\s+cover|filter\s+cover\s+nut",    "Oil Filter Cover"),
+        (r"oil\s+filter\s+(?:housing|adapter)",            "Oil Filter Housing"),
         (r"spark\s+plug",                                  "Spark Plugs"),
         (r"lug\s+(?:nut|bolt)|wheel\s+(?:nut|bolt|stud)", "Wheel Lug Nuts"),
-        (r"oil\s+filter\s+(?:housing|adapter)",            "Oil Filter Housing"),
         (r"axle\s+nut|hub\s+nut|spindle\s+nut",           "Axle Nut"),
         (r"caliper\s+(?:bolt|pin|bracket)",                "Brake Caliper Bolt"),
         (r"rotor\s+bolt|brake\s+disc\s+bolt",              "Brake Rotor Bolt"),
@@ -862,10 +869,30 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
     ]
     TORQUE_RE = [(re.compile(p, re.IGNORECASE), n) for p, n in TORQUE_KEYWORDS]
 
+    RE_TIGHTENING = re.compile(r"tightening\s+torque\s*:", re.IGNORECASE)
+
     torque_results: dict[str, dict] = {}
-    for line in lines:
+    for idx_t, line in enumerate(lines):
         ft_m = RE_FT_LB.search(line)
         nm_m = RE_NM.search(line)
+
+        # "Tightening Torque: X ft-lb (Y N•m)" — look back up to 6 lines
+        # for the component name this torque belongs to
+        if (ft_m or nm_m) and RE_TIGHTENING.search(line):
+            for back in range(1, 7):
+                prev = lines[idx_t - back] if idx_t - back >= 0 else ""
+                for pat, name in TORQUE_RE:
+                    if pat.search(prev):
+                        entry = torque_results.setdefault(name, {"name": name, "ft_lb": None, "nm": None})
+                        if ft_m and entry["ft_lb"] is None:
+                            entry["ft_lb"] = float(ft_m.group(1))
+                        if nm_m and entry["nm"] is None:
+                            entry["nm"] = float(nm_m.group(1))
+                        break
+                else:
+                    continue
+                break
+
         if not (ft_m or nm_m):
             continue
         for pat, name in TORQUE_RE:
