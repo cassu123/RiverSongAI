@@ -138,6 +138,7 @@ if [[ ! -d "venv" ]]; then
 fi
 
 info "Activating virtual environment..."
+# shellcheck source=/dev/null
 source venv/bin/activate
 
 info "This installs Whisper, FastAPI, Ollama client, and all providers."

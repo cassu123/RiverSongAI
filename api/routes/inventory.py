@@ -488,15 +488,32 @@ async def upload_attachment(
     db: Session = Depends(get_db),
     user: InvUser = Depends(get_current_inv_user),
 ):
+    ALLOWED_MIME_TYPES = {
+        "image/jpeg", "image/png", "image/webp", "image/gif",
+        "application/pdf",
+        "text/plain",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+    MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+
+    mime = (file.content_type or "").lower().split(";")[0].strip()
+    if mime not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=415, detail="File type not allowed. Permitted: images, PDF, plain text, Word documents.")
+
     try:
         data = await file.read()
+        if len(data) > MAX_BYTES:
+            raise HTTPException(status_code=413, detail="File exceeds 10 MB limit.")
         attachment = add_attachment(
             db, str(user.id), item_id,
             data=data,
             original_filename=file.filename or "file",
-            mime_type=file.content_type or "",
+            mime_type=mime,
         )
         return _ser_attachment(attachment)
+    except HTTPException:
+        raise
     except Exception as e:
         raise _http(e)
 
@@ -511,10 +528,16 @@ def download_attachment(attachment_id: str, db: Session = Depends(get_db), user:
         get_attachments(db, str(user.id), str(attachment.item_id))  # permission check
     except Exception as e:
         raise _http(e)
-    full_path = os.path.join(INVENTORY_FILES_BASE_DIR, attachment.stored_path)
+
+    base = os.path.realpath(INVENTORY_FILES_BASE_DIR)
+    full_path = os.path.realpath(os.path.join(base, attachment.stored_path))
+    if not full_path.startswith(base + os.sep):
+        raise HTTPException(status_code=400, detail="Invalid file path.")
+
     if not os.path.exists(full_path):
         raise HTTPException(status_code=404, detail="File not found on disk")
-    return FileResponse(full_path, filename=attachment.original_filename, media_type=attachment.mime_type or "application/octet-stream")
+    safe_filename = os.path.basename(attachment.original_filename or "file")
+    return FileResponse(full_path, filename=safe_filename, media_type=attachment.mime_type or "application/octet-stream")
 
 
 @router.delete("/attachments/{attachment_id}", status_code=204)
@@ -529,6 +552,10 @@ def remove_attachment(attachment_id: str, db: Session = Depends(get_db), user: I
 # Receipt / warranty uploads
 # ---------------------------------------------------------------------------
 
+_RECEIPT_ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp", "application/pdf"}
+_RECEIPT_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
 @router.post("/items/{item_id}/receipt")
 async def upload_receipt(
     item_id: str,
@@ -538,12 +565,23 @@ async def upload_receipt(
     db: Session = Depends(get_db),
     user: InvUser = Depends(get_current_inv_user),
 ):
+    mime = (file.content_type or "").lower().split(";")[0].strip()
+    if mime not in _RECEIPT_ALLOWED_MIME:
+        raise HTTPException(status_code=415, detail="File type not allowed. Permitted: JPEG, PNG, WebP, PDF.")
     try:
         data = await file.read()
+        if len(data) > _RECEIPT_MAX_BYTES:
+            raise HTTPException(status_code=413, detail="File exceeds 10 MB limit.")
         item = process_receipt(db, str(user.id), item_id, data, file.filename or "receipt", manual_price, manual_date)
         return _ser_item(item)
+    except HTTPException:
+        raise
     except Exception as e:
         raise _http(e)
+
+
+_WARRANTY_ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp", "application/pdf"}
+_WARRANTY_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
 @router.post("/items/{item_id}/warranty-image")
@@ -555,15 +593,22 @@ async def upload_warranty_image(
 ):
     from inventory.file_utils import save_file_for_home, INVENTORY_FILES_BASE_DIR
     from inventory.management import _get_item_or_raise
+    mime = (file.content_type or "").lower().split(";")[0].strip()
+    if mime not in _WARRANTY_ALLOWED_MIME:
+        raise HTTPException(status_code=415, detail="File type not allowed. Permitted: JPEG, PNG, WebP, PDF.")
     try:
         item     = _get_item_or_raise(db, item_id)
         set_active_home(db, str(user.id), str(item.home_id))
         data     = await file.read()
+        if len(data) > _WARRANTY_MAX_BYTES:
+            raise HTTPException(status_code=413, detail="File exceeds 10 MB limit.")
         rel_path = save_file_for_home(str(item.home_id), "warranties", data, file.filename or "warranty")
         item.warranty_image_path = rel_path
         db.commit()
         db.refresh(item)
         return _ser_item(item)
+    except HTTPException:
+        raise
     except Exception as e:
         raise _http(e)
 

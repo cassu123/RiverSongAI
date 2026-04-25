@@ -44,11 +44,21 @@ router = APIRouter(prefix="/api", tags=["settings"])
 # Helpers
 # =============================================================================
 
+_OLLAMA_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+
+
 def _get_ollama_installed_models() -> Set[str]:
     """Query the local Ollama daemon for pulled model names. Returns empty set on failure."""
     try:
         settings = get_settings()
         base = getattr(settings, "ollama_base_url", "http://localhost:11434").rstrip("/")
+        from urllib.parse import urlparse
+        parsed = urlparse(base)
+        if parsed.scheme == "http" and parsed.hostname not in _OLLAMA_LOCAL_HOSTS:
+            raise ValueError(
+                f"Insecure HTTP connection to remote Ollama host '{parsed.hostname}' is not allowed. "
+                "Use HTTPS or restrict OLLAMA_BASE_URL to localhost."
+            )
         req = urllib.request.Request(f"{base}/api/tags", headers={"Accept": "application/json"})
         with urllib.request.urlopen(req, timeout=3) as resp:
             data = json.loads(resp.read())

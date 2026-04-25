@@ -640,6 +640,45 @@ def clear_all_checkpoints(
         raise _http(e)
 
 
+@router.post("/{vehicle_id}/manual/preview")
+async def preview_manual(
+    vehicle_id: str,
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Dry-run: extract and parse a PDF manual without writing anything to the DB.
+    Returns the raw parsed items so you can verify extraction quality.
+    """
+    from config.settings import get_settings
+    try:
+        data = await file.read()
+        if not data:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+        try:
+            pdf_text = extract_text_from_pdf(data)
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=f"Could not read PDF: {e}")
+
+        if len(pdf_text.strip()) < 200:
+            raise HTTPException(status_code=422, detail="PDF has no extractable text.")
+
+        settings = get_settings()
+        ollama_url   = getattr(settings, "ollama_base_url", None) or None
+        ollama_model = getattr(settings, "ollama_model",    None) or "mistral"
+
+        items = parse_manual(pdf_text, ollama_url=ollama_url, ollama_model=ollama_model)
+        return {
+            "item_count": len(items),
+            "pdf_chars":  len(pdf_text),
+            "items": items,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise _http(e)
+
+
 @router.post("/{vehicle_id}/manual")
 async def upload_manual(
     vehicle_id: str,

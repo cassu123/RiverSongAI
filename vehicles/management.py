@@ -47,6 +47,7 @@ from .models import (
     CheckStatus,
     MaintenancePerson,
     ServiceCheckResult,
+    ServiceLevel,
     ServiceLog,
     Vehicle,
     VehicleAssignment,

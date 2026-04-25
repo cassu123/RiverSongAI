@@ -56,7 +56,7 @@ mistralai==1.7.0                # Mistral AI cloud LLM
 # Kill switch
 # -----------------------------------------------------------------------------
 bcrypt==5.0.0                   # Password hashing for kill switch reset
-PyJWT==2.9.0                    # JWT token generation and verification for auth
+PyJWT==2.12.1                   # JWT token generation and verification for auth
 
 
 # -----------------------------------------------------------------------------

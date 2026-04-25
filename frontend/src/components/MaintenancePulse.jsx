@@ -1217,13 +1217,15 @@ export default function MaintenancePulse() {
                     <span className="insp-col-item">ITEM</span>
                     <span className="insp-col-spec">EXPECTED</span>
                     <span className="insp-col-actual">ACTUAL</span>
+                    <span className="insp-col-torque">TORQUE</span>
                     <span className="insp-col-status">STATUS</span>
                   </div>
+
                   {currentVehicle.check_points.map((cp, idx) => {
                     const actual = actualValues[idx] || '';
                     const done   = !!checkedPoints[idx];
 
-                    // Derive live status from typed actual value
+                    // Live status from actual value vs OEM min/max
                     let liveStatus = null;
                     if (actual !== '') {
                       const num = parseFloat(actual);
@@ -1234,12 +1236,33 @@ export default function MaintenancePulse() {
                         } else {
                           liveStatus = num >= cp.min_value ? 'pass' : 'fail';
                         }
-                      } else if (actual) {
+                      } else {
                         liveStatus = done ? 'pass' : null;
                       }
                     } else if (done) {
                       liveStatus = 'pass';
                     }
+
+                    // Due status for interval colour
+                    const dueAt = cp.due_at_miles;
+                    const lastOdo = cp.last_service_odometer;
+                    const currentOdo = mileage ? Number(mileage) : null;
+                    let dueLabel = null;
+                    let dueUrgency = null;
+                    if (dueAt && currentOdo) {
+                      const remaining = dueAt - currentOdo;
+                      dueLabel = remaining <= 0 ? 'OVERDUE' : `${remaining.toLocaleString()} mi left`;
+                      dueUrgency = remaining <= 0 ? 'over' : remaining <= (cp.interval_miles || dueAt) * 0.1 ? 'soon' : null;
+                    } else if (dueAt) {
+                      dueLabel = `due at ${dueAt.toLocaleString()} mi`;
+                    } else if (cp.interval_miles) {
+                      dueLabel = `every ${cp.interval_miles.toLocaleString()} mi`;
+                    }
+                    if (cp.interval_days) {
+                      dueLabel = dueLabel ? `${dueLabel} / ${fmtDays(cp.interval_days)}` : fmtDays(cp.interval_days);
+                    }
+
+                    const svcColor = SVC_LEVEL_COLORS[cp.service_level] || 'var(--text-dim)';
 
                     return (
                       <div
@@ -1247,36 +1270,55 @@ export default function MaintenancePulse() {
                         className={`insp-row ${done ? 'insp-row--done' : ''} ${liveStatus ? `insp-row--${liveStatus}` : ''}`}
                         onClick={() => handlePointToggle(idx)}
                       >
+                        {/* TASK */}
                         <div className="insp-col-item">
                           <span className={`insp-check-dot ${done ? 'done' : ''}`} />
-                          <span className="insp-item-name">{cp.description}</span>
-                          {(cp.interval_miles || cp.interval_days) && (() => {
-                            const parts = [];
-                            if (cp.interval_miles) parts.push(`${cp.interval_miles.toLocaleString()} mi`);
-                            if (cp.interval_days) {
-                              const d = cp.interval_days;
-                              if (d % 365 === 0) parts.push(`${d/365}yr`);
-                              else if (d % 30 === 0) parts.push(`${d/30}mo`);
-                              else if (d % 7 === 0) parts.push(`${d/7}wk`);
-                              else parts.push(`${d}d`);
-                            }
-                            return <span className="insp-interval">{parts.join(' / ')}</span>;
-                          })()}
+                          <div className="insp-item-body">
+                            <div className="insp-item-top">
+                              <span className="insp-svc-pip" style={{ background: svcColor }} title={cp.service_level} />
+                              <span className="insp-item-name">{cp.description}</span>
+                            </div>
+                            {dueLabel && (
+                              <span className={`insp-due-label ${dueUrgency ? `insp-due-${dueUrgency}` : ''}`}>
+                                {dueLabel}
+                              </span>
+                            )}
+                          </div>
                         </div>
+
+                        {/* EXPECTED */}
                         <div className="insp-col-spec">
-                          {cp.expected_spec
-                            ? <>{cp.expected_spec}{cp.unit && !cp.expected_spec.toLowerCase().includes(cp.unit.toLowerCase()) ? <span className="insp-unit"> {cp.unit}</span> : ''}</>
-                            : <span className="insp-no-spec">—</span>
-                          }
+                          {cp.expected_spec ? (
+                            <span className="insp-expected-val">
+                              {cp.expected_spec}
+                              {cp.unit && !cp.expected_spec.toLowerCase().includes(cp.unit.toLowerCase())
+                                ? <span className="insp-unit"> {cp.unit}</span> : ''}
+                            </span>
+                          ) : <span className="insp-no-spec">—</span>}
+                          {cp.volume && <span className="insp-volume">{cp.volume}</span>}
                         </div>
+
+                        {/* ACTUAL */}
                         <div className="insp-col-actual" onClick={(e) => e.stopPropagation()}>
                           <input
                             className="insp-actual-input"
-                            placeholder={cp.unit || 'value'}
+                            placeholder={cp.unit || '—'}
                             value={actual}
                             onChange={(e) => handleActualValue(idx, e.target.value)}
                           />
                         </div>
+
+                        {/* TORQUE */}
+                        <div className="insp-col-torque">
+                          {(cp.ft_lb || cp.nm) ? (
+                            <span className="insp-torque-val">
+                              {cp.ft_lb ? `${cp.ft_lb}` : '—'} ft-lb
+                              {cp.nm ? <><br />{cp.nm} N·m</> : ''}
+                            </span>
+                          ) : <span className="insp-no-spec">—</span>}
+                        </div>
+
+                        {/* STATUS */}
                         <div className="insp-col-status">
                           {liveStatus === 'pass' && <span className="insp-badge insp-badge--pass">PASS</span>}
                           {liveStatus === 'warn' && <span className="insp-badge insp-badge--warn">WARN</span>}
@@ -1286,8 +1328,9 @@ export default function MaintenancePulse() {
                       </div>
                     );
                   })}
+
                   <div className="insp-sheet-footer">
-                    {Object.keys(checkedPoints).filter(k => checkedPoints[k]).length} / {currentVehicle.check_points.length} items checked
+                    {Object.keys(checkedPoints).filter(k => checkedPoints[k]).length} / {currentVehicle.check_points.length} items completed
                   </div>
                 </div>
               ) : (
@@ -1365,13 +1408,16 @@ export default function MaintenancePulse() {
                   {log.service_center && <div className="history-center">{log.service_center}</div>}
                   {log.check_results.length > 0 && (
                     <div className="history-checks">
-                      {log.check_results.map((cr) => (
-                        <span key={cr.id} className={`history-check ${cr.status || (cr.passed ? 'pass' : 'fail')}`}>
-                          {cr.status === 'pass' || cr.passed ? '✓' : cr.status === 'warn' ? '⚠' : '✗'}
-                          {' '}{cr.description}
-                          {cr.actual_value && <em className="history-actual"> — {cr.actual_value}</em>}
-                        </span>
-                      ))}
+                      {log.check_results.map((cr) => {
+                        const st = cr.status || (cr.passed ? 'pass' : 'fail');
+                        const icon = st === 'pass' ? '✓' : st === 'warn' ? '⚠' : '✗';
+                        return (
+                          <span key={cr.id} className={`history-check ${st}`}>
+                            {icon} {cr.description}
+                            {cr.actual_value && <em className="history-actual"> — {cr.actual_value}</em>}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
