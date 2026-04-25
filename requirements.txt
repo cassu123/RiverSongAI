@@ -104,6 +104,7 @@ reportlab==4.4.1                     # PDF label/report generation
 # Utilities
 # -----------------------------------------------------------------------------
 httpx==0.28.1                        # Async HTTP client (health checks, Libby, Walmart)
+feedparser==6.0.11                   # RSS/Atom feed parsing (news provider)
 
 
 # =============================================================================

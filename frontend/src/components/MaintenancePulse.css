@@ -866,14 +866,72 @@
 
   .log-header-fields {
     display: grid;
-    grid-template-columns: 1fr 160px 160px;
-    gap: 12px;
+    grid-template-columns: 1fr 110px 162px;
+    gap: 0;
     margin-bottom: 16px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-bright);
+    border-radius: 4px;
+    align-items: stretch;
+  }
+
+  .log-header-fields .pulse-field {
+    padding: 9px 14px 10px;
+    /* label always at top, input always at same vertical position */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 56px;
+    gap: 0;
+  }
+
+  .log-header-fields .pulse-field + .pulse-field {
+    border-left: 1px solid var(--border);
+  }
+
+  .log-header-fields .pulse-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+    margin-bottom: 4px;
+  }
+
+  .log-header-fields .cyber-input {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text);
+    width: 100%;
+    min-width: 0;
+    /* Ensure the input sits at the same baseline as the others */
+    align-self: flex-end;
+  }
+
+  .log-header-fields .cyber-input:focus {
+    box-shadow: none;
+    outline: none;
+  }
+
+  .log-header-fields .cyber-input::placeholder {
+    font-weight: 400;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  /* date input: colour-scheme keeps the native picker readable in dark themes */
+  .log-header-fields input[type="date"] {
+    color-scheme: dark;
   }
 
   @media (max-width: 600px) {
     .log-header-fields {
       grid-template-columns: 1fr;
+    }
+    .log-header-fields .pulse-field + .pulse-field {
+      border-left: none;
+      border-top: 1px solid var(--border);
     }
   }
 
@@ -930,6 +988,17 @@
   .insp-row--warn { border-left-color: var(--warn); }
   .insp-row--fail { border-left-color: var(--error); }
 
+  .insp-row--skip {
+    opacity: 0.4;
+    pointer-events: auto;  /* keep clickable to un-skip */
+    text-decoration-line: none;
+  }
+
+  .insp-row--skip .insp-item-name {
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+
   .insp-col-item {
     display: flex;
     align-items: center;
@@ -950,6 +1019,12 @@
     background: var(--secondary);
     border-color: var(--secondary);
     box-shadow: var(--glow-teal);
+  }
+
+  .insp-check-dot.skip {
+    background: var(--text-muted);
+    border-color: var(--text-muted);
+    opacity: 0.6;
   }
 
   .insp-item-name {
@@ -1080,7 +1155,34 @@
   .insp-badge--pass    { color: var(--secondary); background: color-mix(in srgb, var(--secondary) 12%, transparent); border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent); }
   .insp-badge--warn    { color: var(--warn);      background: color-mix(in srgb, var(--warn)      12%, transparent); border: 1px solid color-mix(in srgb, var(--warn)      35%, transparent); }
   .insp-badge--fail    { color: var(--error);     background: color-mix(in srgb, var(--error)     12%, transparent); border: 1px solid color-mix(in srgb, var(--error)     35%, transparent); }
+  .insp-badge--skip    { color: var(--text-muted); border: 1px solid var(--border); }
   .insp-badge--pending { color: var(--text-muted); }
+
+  .insp-bulk-row {
+    display: flex;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .insp-bulk-btn {
+    font-size: 0.65rem;
+    font-family: var(--font-display, 'Courier New', monospace);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 3px 10px;
+    background: transparent;
+    border: 1px solid var(--border-bright);
+    color: var(--text-dim);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: color 0.12s, border-color 0.12s;
+  }
+
+  .insp-bulk-btn:hover         { color: var(--secondary); border-color: var(--secondary); }
+  .insp-bulk-btn--skip:hover   { color: var(--text-muted); border-color: var(--text-muted); }
+  .insp-bulk-btn--reset:hover  { color: var(--warn); border-color: var(--warn); }
 
   .insp-sheet-footer {
     padding: 7px 12px;
@@ -1089,6 +1191,23 @@
     background: var(--bg-panel);
     border-top: 1px solid var(--border);
     letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .insp-footer-hint {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-style: italic;
+    letter-spacing: 0;
+  }
+
+  .insp-actual-input:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
   }
 
   /* ── Specs editor empty hint ─────────────────────────── */

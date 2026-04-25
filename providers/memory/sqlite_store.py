@@ -147,6 +147,39 @@ CREATE TABLE IF NOT EXISTS routines (
 );
 
 CREATE INDEX IF NOT EXISTS idx_routines_user ON routines(user_id);
+
+CREATE TABLE IF NOT EXISTS feed_preferences (
+    user_id             TEXT PRIMARY KEY,
+    news_sources        TEXT NOT NULL DEFAULT '[]',
+    weather_lat         REAL,
+    weather_lon         REAL,
+    weather_unit        TEXT NOT NULL DEFAULT 'celsius',
+    sport_teams         TEXT NOT NULL DEFAULT '[]',
+    stock_tickers       TEXT NOT NULL DEFAULT '[]',
+    refresh_news_min    INTEGER NOT NULL DEFAULT 30,
+    refresh_weather_min INTEGER NOT NULL DEFAULT 30,
+    refresh_sports_min  INTEGER NOT NULL DEFAULT 60,
+    refresh_stocks_min  INTEGER NOT NULL DEFAULT 60,
+    updated_at          TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS reading_shelf (
+    id               TEXT PRIMARY KEY,
+    user_id          TEXT NOT NULL,
+    service          TEXT NOT NULL,
+    title            TEXT NOT NULL,
+    author           TEXT NOT NULL DEFAULT '',
+    cover_url        TEXT NOT NULL DEFAULT '',
+    progress_pct     REAL NOT NULL DEFAULT 0.0,
+    status           TEXT NOT NULL DEFAULT 'reading',
+    rating           INTEGER,
+    notes            TEXT NOT NULL DEFAULT '',
+    launch_url       TEXT NOT NULL DEFAULT '',
+    created_at       TEXT NOT NULL,
+    updated_at       TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_reading_shelf_user ON reading_shelf(user_id);
 """
 
 
@@ -203,12 +236,14 @@ class SQLiteStore:
     def _sync_initialize(self) -> None:
         conn = self._get_conn()
         conn.executescript(_DDL)
-        # Migration: add is_approved if missing (existing databases)
-        try:
-            conn.execute("ALTER TABLE users ADD COLUMN is_approved INTEGER NOT NULL DEFAULT 0")
-            conn.commit()
-        except sqlite3.OperationalError:
-            pass  # column already exists
+        for migration in [
+            "ALTER TABLE users ADD COLUMN is_approved INTEGER NOT NULL DEFAULT 0",
+        ]:
+            try:
+                conn.execute(migration)
+                conn.commit()
+            except sqlite3.OperationalError:
+                pass
 
     def close(self) -> None:
         """Close the connection and shut down the thread pool."""
@@ -796,3 +831,180 @@ class SQLiteStore:
             "SELECT id,user_id,name,trigger,time,days,prompt,enabled,last_run,created_at,updated_at FROM routines WHERE enabled=1",
         ).fetchall()
         return [self._row_to_routine(r) for r in rows]
+
+    # =========================================================================
+    # Feed preferences
+    # =========================================================================
+
+    async def get_feed_preferences(self, user_id: str) -> dict:
+        return await self._run(self._sync_get_feed_preferences, user_id)
+
+    def _sync_get_feed_preferences(self, user_id: str) -> dict:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT * FROM feed_preferences WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        if row is None:
+            return {
+                "user_id": user_id,
+                "news_sources": [],
+                "weather_lat": None,
+                "weather_lon": None,
+                "weather_unit": "celsius",
+                "sport_teams": [],
+                "stock_tickers": [],
+                "refresh_news_min": 30,
+                "refresh_weather_min": 30,
+                "refresh_sports_min": 60,
+                "refresh_stocks_min": 60,
+            }
+        return {
+            "user_id": row["user_id"],
+            "news_sources": json.loads(row["news_sources"] or "[]"),
+            "weather_lat": row["weather_lat"],
+            "weather_lon": row["weather_lon"],
+            "weather_unit": row["weather_unit"],
+            "sport_teams": json.loads(row["sport_teams"] or "[]"),
+            "stock_tickers": json.loads(row["stock_tickers"] or "[]"),
+            "refresh_news_min": row["refresh_news_min"],
+            "refresh_weather_min": row["refresh_weather_min"],
+            "refresh_sports_min": row["refresh_sports_min"],
+            "refresh_stocks_min": row["refresh_stocks_min"],
+        }
+
+    async def save_feed_preferences(self, user_id: str, prefs: dict) -> None:
+        await self._run(self._sync_save_feed_preferences, user_id, prefs)
+
+    # =========================================================================
+    # Reading shelf
+    # =========================================================================
+
+    def _row_to_book(self, row) -> dict:
+        return {
+            "id":           row[0],
+            "user_id":      row[1],
+            "service":      row[2],
+            "title":        row[3],
+            "author":       row[4],
+            "cover_url":    row[5],
+            "progress_pct": row[6],
+            "status":       row[7],
+            "rating":       row[8],
+            "notes":        row[9],
+            "launch_url":   row[10],
+            "created_at":   row[11],
+            "updated_at":   row[12],
+        }
+
+    async def list_shelf(self, user_id: str) -> list:
+        return await self._run(self._sync_list_shelf, user_id)
+
+    def _sync_list_shelf(self, user_id: str) -> list:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT id,user_id,service,title,author,cover_url,progress_pct,status,rating,notes,launch_url,created_at,updated_at "
+            "FROM reading_shelf WHERE user_id=? ORDER BY updated_at DESC",
+            (user_id,),
+        ).fetchall()
+        return [self._row_to_book(r) for r in rows]
+
+    async def create_book(self, book: dict) -> dict:
+        return await self._run(self._sync_create_book, book)
+
+    def _sync_create_book(self, book: dict) -> dict:
+        conn = self._get_conn()
+        now = _now_str()
+        bid = book.get("id") or str(uuid.uuid4())
+        conn.execute(
+            "INSERT INTO reading_shelf (id,user_id,service,title,author,cover_url,progress_pct,status,rating,notes,launch_url,created_at,updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (bid, book["user_id"], book["service"], book["title"],
+             book.get("author", ""), book.get("cover_url", ""),
+             float(book.get("progress_pct", 0.0)), book.get("status", "reading"),
+             book.get("rating"), book.get("notes", ""), book.get("launch_url", ""),
+             now, now),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT id,user_id,service,title,author,cover_url,progress_pct,status,rating,notes,launch_url,created_at,updated_at "
+            "FROM reading_shelf WHERE id=?", (bid,)
+        ).fetchone()
+        return self._row_to_book(row)
+
+    async def update_book(self, book_id: str, user_id: str, fields: dict) -> Optional[dict]:
+        return await self._run(self._sync_update_book, book_id, user_id, fields)
+
+    def _sync_update_book(self, book_id: str, user_id: str, fields: dict) -> Optional[dict]:
+        conn = self._get_conn()
+        allowed = {"service", "title", "author", "cover_url", "progress_pct", "status", "rating", "notes", "launch_url"}
+        parts, vals = [], []
+        for k, v in fields.items():
+            if k in allowed:
+                parts.append(f"{k} = ?")
+                vals.append(v)
+        if not parts:
+            return None
+        parts.append("updated_at = ?")
+        vals.append(_now_str())
+        vals += [book_id, user_id]
+        conn.execute(
+            "UPDATE reading_shelf SET " + ", ".join(parts) + " WHERE id=? AND user_id=?",
+            vals,
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT id,user_id,service,title,author,cover_url,progress_pct,status,rating,notes,launch_url,created_at,updated_at "
+            "FROM reading_shelf WHERE id=? AND user_id=?", (book_id, user_id)
+        ).fetchone()
+        return self._row_to_book(row) if row else None
+
+    async def delete_book(self, book_id: str, user_id: str) -> bool:
+        return await self._run(self._sync_delete_book, book_id, user_id)
+
+    def _sync_delete_book(self, book_id: str, user_id: str) -> bool:
+        conn = self._get_conn()
+        cur = conn.execute("DELETE FROM reading_shelf WHERE id=? AND user_id=?", (book_id, user_id))
+        conn.commit()
+        return cur.rowcount > 0
+
+    def _sync_save_feed_preferences(self, user_id: str, prefs: dict) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            """
+            INSERT INTO feed_preferences
+                (user_id, news_sources, weather_lat, weather_lon, weather_unit,
+                 sport_teams, stock_tickers, refresh_news_min, refresh_weather_min,
+                 refresh_sports_min, refresh_stocks_min, updated_at)
+            VALUES
+                (:user_id, :news_sources, :weather_lat, :weather_lon, :weather_unit,
+                 :sport_teams, :stock_tickers, :refresh_news_min, :refresh_weather_min,
+                 :refresh_sports_min, :refresh_stocks_min, :updated_at)
+            ON CONFLICT(user_id) DO UPDATE SET
+                news_sources        = excluded.news_sources,
+                weather_lat         = excluded.weather_lat,
+                weather_lon         = excluded.weather_lon,
+                weather_unit        = excluded.weather_unit,
+                sport_teams         = excluded.sport_teams,
+                stock_tickers       = excluded.stock_tickers,
+                refresh_news_min    = excluded.refresh_news_min,
+                refresh_weather_min = excluded.refresh_weather_min,
+                refresh_sports_min  = excluded.refresh_sports_min,
+                refresh_stocks_min  = excluded.refresh_stocks_min,
+                updated_at          = excluded.updated_at
+            """,
+            {
+                "user_id":             user_id,
+                "news_sources":        json.dumps(prefs.get("news_sources", [])),
+                "weather_lat":         prefs.get("weather_lat"),
+                "weather_lon":         prefs.get("weather_lon"),
+                "weather_unit":        prefs.get("weather_unit", "celsius"),
+                "sport_teams":         json.dumps(prefs.get("sport_teams", [])),
+                "stock_tickers":       json.dumps(prefs.get("stock_tickers", [])),
+                "refresh_news_min":    prefs.get("refresh_news_min", 30),
+                "refresh_weather_min": prefs.get("refresh_weather_min", 30),
+                "refresh_sports_min":  prefs.get("refresh_sports_min", 60),
+                "refresh_stocks_min":  prefs.get("refresh_stocks_min", 60),
+                "updated_at":          _now_str(),
+            },
+        )
+        conn.commit()

@@ -975,21 +975,36 @@ export default function MaintenancePulse() {
 
   const currentVehicle = vehicles.find((v) => v.id === selectedId);
 
+  // Cycle: pending → done → skip → pending
   const handlePointToggle = (idx) =>
-    setCheckedPoints((prev) => ({ ...prev, [idx]: !prev[idx] }));
+    setCheckedPoints((prev) => {
+      const cur = prev[idx];
+      if (!cur)          return { ...prev, [idx]: 'done' };
+      if (cur === 'done') return { ...prev, [idx]: 'skip' };
+      return { ...prev, [idx]: undefined };
+    });
+
+  const handleMarkAll = (state) =>
+    setCheckedPoints(
+      Object.fromEntries(currentVehicle.check_points.map((_, i) => [i, state]))
+    );
 
   const handleActualValue = (idx, val) =>
     setActualValues((prev) => ({ ...prev, [idx]: val }));
 
   const handleSave = async () => {
     if (!currentVehicle) return;
-    const checkResults = currentVehicle.check_points.map((cp, idx) => ({
-      description:    cp.description,
-      check_point_id: cp.id,
-      actual_value:   actualValues[idx] || null,
-      passed:         isProService ? true : !!checkedPoints[idx],
-      // status auto-calculated server-side from actual_value + cp min/max
-    }));
+    // Only include items that were actually serviced (done), not skipped or pending
+    const checkResults = currentVehicle.check_points
+      .map((cp, idx) => ({ cp, idx }))
+      .filter(({ idx }) => isProService || checkedPoints[idx] === 'done')
+      .map(({ cp, idx }) => ({
+        description:    cp.description,
+        check_point_id: cp.id,
+        actual_value:   actualValues[idx] || null,
+        passed:         true,
+        // status auto-calculated server-side from actual_value + cp min/max
+      }));
     const payload = {
       service_date:    new Date(serviceDate).toISOString(),
       odometer:        mileage ? Number(mileage) : null,
@@ -1206,13 +1221,13 @@ export default function MaintenancePulse() {
               <label className="pulse-label">SERVICE TYPE</label>
               <input
                 className="cyber-input"
-                placeholder="e.g. Oil Change, Tire Rotation, Brake Service"
+                placeholder="Oil Change, Brake Service…"
                 value={serviceType}
                 onChange={(e) => setServiceType(e.target.value)}
               />
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">CURRENT ODOMETER</label>
+              <label className="pulse-label">ODOMETER</label>
               <input
                 type="number"
                 className="cyber-input num-input"
@@ -1281,26 +1296,37 @@ export default function MaintenancePulse() {
                     <span className="insp-col-status">STATUS</span>
                   </div>
 
+                  {/* Bulk actions */}
+                  <div className="insp-bulk-row">
+                    <button className="insp-bulk-btn" onClick={() => handleMarkAll('done')}>✓ MARK ALL DONE</button>
+                    <button className="insp-bulk-btn insp-bulk-btn--skip" onClick={() => handleMarkAll('skip')}>— SKIP ALL</button>
+                    <button className="insp-bulk-btn insp-bulk-btn--reset" onClick={() => { setCheckedPoints({}); setActualValues({}); }}>↺ RESET</button>
+                  </div>
+
                   {currentVehicle.check_points.map((cp, idx) => {
-                    const actual = actualValues[idx] || '';
-                    const done   = !!checkedPoints[idx];
+                    const actual    = actualValues[idx] || '';
+                    const rowState  = checkedPoints[idx]; // 'done' | 'skip' | undefined
+                    const done      = rowState === 'done';
+                    const skipped   = rowState === 'skip';
 
                     // Live status from actual value vs OEM min/max
-                    let liveStatus = null;
-                    if (actual !== '') {
-                      const num = parseFloat(actual);
-                      if (!isNaN(num) && cp.min_value != null) {
-                        if (cp.max_value != null) {
-                          liveStatus = num >= cp.min_value && num <= cp.max_value ? 'pass'
-                            : (num < cp.min_value * 0.9 || num > cp.max_value * 1.1) ? 'fail' : 'warn';
+                    let liveStatus = skipped ? 'skip' : null;
+                    if (!skipped) {
+                      if (actual !== '') {
+                        const num = parseFloat(actual);
+                        if (!isNaN(num) && cp.min_value != null) {
+                          if (cp.max_value != null) {
+                            liveStatus = num >= cp.min_value && num <= cp.max_value ? 'pass'
+                              : (num < cp.min_value * 0.9 || num > cp.max_value * 1.1) ? 'fail' : 'warn';
+                          } else {
+                            liveStatus = num >= cp.min_value ? 'pass' : 'fail';
+                          }
                         } else {
-                          liveStatus = num >= cp.min_value ? 'pass' : 'fail';
+                          liveStatus = done ? 'pass' : null;
                         }
-                      } else {
-                        liveStatus = done ? 'pass' : null;
+                      } else if (done) {
+                        liveStatus = 'pass';
                       }
-                    } else if (done) {
-                      liveStatus = 'pass';
                     }
 
                     // Due status for interval colour
@@ -1327,12 +1353,13 @@ export default function MaintenancePulse() {
                     return (
                       <div
                         key={cp.id}
-                        className={`insp-row ${done ? 'insp-row--done' : ''} ${liveStatus ? `insp-row--${liveStatus}` : ''}`}
+                        className={`insp-row ${done ? 'insp-row--done' : ''} ${skipped ? 'insp-row--skip' : ''} ${liveStatus && liveStatus !== 'skip' ? `insp-row--${liveStatus}` : ''}`}
                         onClick={() => handlePointToggle(idx)}
+                        title={skipped ? 'Click to clear skip' : done ? 'Click to skip' : 'Click to mark done'}
                       >
                         {/* TASK */}
                         <div className="insp-col-item">
-                          <span className={`insp-check-dot ${done ? 'done' : ''}`} />
+                          <span className={`insp-check-dot ${done ? 'done' : ''} ${skipped ? 'skip' : ''}`} />
                           <div className="insp-item-body">
                             <div className="insp-item-top">
                               <span className="insp-svc-pip" style={{ background: svcColor }} title={cp.service_level} />
@@ -1362,9 +1389,11 @@ export default function MaintenancePulse() {
                         <div className="insp-col-actual" onClick={(e) => e.stopPropagation()}>
                           <input
                             className="insp-actual-input"
-                            placeholder={cp.unit || '—'}
+                            placeholder={skipped ? 'skipped' : (cp.unit || '—')}
                             value={actual}
+                            disabled={skipped}
                             onChange={(e) => handleActualValue(idx, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
                           />
                         </div>
 
@@ -1383,6 +1412,7 @@ export default function MaintenancePulse() {
                           {liveStatus === 'pass' && <span className="insp-badge insp-badge--pass">PASS</span>}
                           {liveStatus === 'warn' && <span className="insp-badge insp-badge--warn">WARN</span>}
                           {liveStatus === 'fail' && <span className="insp-badge insp-badge--fail">FAIL</span>}
+                          {liveStatus === 'skip' && <span className="insp-badge insp-badge--skip">SKIP</span>}
                           {!liveStatus && <span className="insp-badge insp-badge--pending">—</span>}
                         </div>
                       </div>
@@ -1390,7 +1420,14 @@ export default function MaintenancePulse() {
                   })}
 
                   <div className="insp-sheet-footer">
-                    {Object.keys(checkedPoints).filter(k => checkedPoints[k]).length} / {currentVehicle.check_points.length} items completed
+                    {(() => {
+                      const vals = Object.values(checkedPoints);
+                      const done = vals.filter(v => v === 'done').length;
+                      const skip = vals.filter(v => v === 'skip').length;
+                      const total = currentVehicle.check_points.length;
+                      return `${done} done · ${skip} skipped · ${total - done - skip} pending`;
+                    })()}
+                    <span className="insp-footer-hint"> — click to cycle: pending → done → skip</span>
                   </div>
                 </div>
               ) : (
