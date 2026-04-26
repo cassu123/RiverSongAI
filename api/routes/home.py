@@ -13,15 +13,25 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from config.settings import get_settings
+from core.auth import decode_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/home", tags=["home"])
 
 VISIBLE_DOMAINS = {"light", "switch", "fan", "cover", "lock", "climate", "scene", "script", "input_boolean"}
+
+
+def _require_user(authorization: Optional[str]) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    payload = decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    return payload["sub"]
 
 
 def _get_client():
@@ -36,7 +46,8 @@ def _is_configured() -> bool:
 
 
 @router.get("/status")
-async def get_status():
+async def get_status(authorization: Optional[str] = Header(default=None)):
+    _require_user(authorization)
     if not _is_configured():
         return {"configured": False, "reachable": False}
     try:
@@ -50,7 +61,8 @@ async def get_status():
 
 
 @router.get("/devices")
-async def get_devices():
+async def get_devices(authorization: Optional[str] = Header(default=None)):
+    _require_user(authorization)
     if not _is_configured():
         return []
     try:
@@ -86,7 +98,8 @@ class ActionBody(BaseModel):
 
 
 @router.post("/action")
-async def call_action(body: ActionBody):
+async def call_action(body: ActionBody, authorization: Optional[str] = Header(default=None)):
+    _require_user(authorization)
     if not _is_configured():
         return {"ok": False, "detail": "Home Assistant not configured."}
     try:

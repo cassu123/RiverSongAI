@@ -11,15 +11,19 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 import logging
+from pathlib import Path
 
 import bcrypt
 from fastapi import APIRouter, HTTPException, Request, Header
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+import httpx
 
 from core.auth import create_access_token, decode_token
+from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -176,5 +180,114 @@ async def change_password(body: ChangePasswordBody, request: Request, authorizat
 
     new_hash = bcrypt.hashpw(body.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
     await store.update_user_password(user["id"], new_hash)
-    
+
     return {"status": "ok"}
+
+
+# =============================================================================
+# Google OAuth
+# =============================================================================
+
+def _load_google_client() -> dict:
+    """Return the 'web' block from the client secrets JSON."""
+    settings = get_settings()
+    path = Path(settings.google_client_secrets_path)
+    if not path.exists():
+        raise HTTPException(status_code=500, detail="Google client secrets not configured.")
+    data = json.loads(path.read_text())
+    return data.get("web") or data.get("installed") or {}
+
+
+class GoogleCallbackBody(BaseModel):
+    code: str
+    redirect_uri: str
+
+
+@router.get("/google/authorize")
+async def google_authorize():
+    """Return the Google OAuth consent-screen URL for the frontend to redirect to."""
+    client = _load_google_client()
+    client_id = client.get("client_id", "")
+    auth_uri = client.get("auth_uri", "https://accounts.google.com/o/oauth2/auth")
+    scope = "openid email profile"
+    params = (
+        f"client_id={client_id}"
+        f"&response_type=code"
+        f"&scope={scope.replace(' ', '%20')}"
+        f"&access_type=offline"
+        f"&prompt=consent"
+    )
+    return {"auth_uri": auth_uri, "client_id": client_id, "scope": scope,
+            "auth_url": f"{auth_uri}?{params}"}
+
+
+@router.post("/google/callback")
+async def google_callback(request: Request, body: GoogleCallbackBody):
+    """Exchange auth code for tokens, resolve the user, return a JWT."""
+    client = _load_google_client()
+    store = _get_store(request)
+
+    # Exchange code for tokens
+    token_uri = client.get("token_uri", "https://oauth2.googleapis.com/token")
+    async with httpx.AsyncClient() as http:
+        token_resp = await http.post(token_uri, data={
+            "code": body.code,
+            "client_id": client["client_id"],
+            "client_secret": client["client_secret"],
+            "redirect_uri": body.redirect_uri,
+            "grant_type": "authorization_code",
+        })
+    if token_resp.status_code != 200:
+        raise HTTPException(status_code=400, detail="Failed to exchange Google auth code.")
+    tokens = token_resp.json()
+    access_token = tokens.get("access_token")
+
+    # Fetch Google profile
+    async with httpx.AsyncClient() as http:
+        profile_resp = await http.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+    if profile_resp.status_code != 200:
+        raise HTTPException(status_code=400, detail="Failed to fetch Google profile.")
+    profile = profile_resp.json()
+
+    google_id = profile["id"]
+    google_email = profile["email"]
+    display_name = profile.get("name") or google_email.split("@")[0]
+
+    # 1) existing user linked by google_id
+    user = await store.get_user_by_google_id(google_id)
+
+    # 2) existing user with same email → auto-link
+    if not user:
+        user = await store.get_user_by_email(google_email.lower())
+        if user:
+            await store.link_google_account(user["id"], google_id, google_email)
+            user = await store.get_user_by_id(user["id"])
+
+    # 3) new user — create and auto-approve
+    if not user:
+        new_id = str(uuid.uuid4())
+        # First Google user gets admin if no admin exists yet
+        role = "admin" if not await store.has_admin() else "user"
+        await store.create_google_user(
+            id=new_id,
+            email=google_email.lower(),
+            display_name=display_name,
+            google_id=google_id,
+            google_email=google_email,
+            role=role,
+            is_approved=True,
+        )
+        user = await store.get_user_by_id(new_id)
+
+    if not user["is_approved"]:
+        raise HTTPException(status_code=403, detail="Your account is pending admin approval.")
+
+    token = create_access_token(user_id=user["id"], email=user["email"], role=user["role"])
+    logger.info("Google sign-in: %s", google_email)
+    return {
+        "token": token,
+        "user": {"id": user["id"], "email": user["email"], "display_name": user["display_name"], "role": user["role"], "is_approved": user["is_approved"]},
+    }

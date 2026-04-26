@@ -651,7 +651,10 @@ def delete_attachment(db: Session, user_id: str, attachment_id: str) -> None:
         raise NoResultFound(f"Attachment '{attachment_id}' not found.")
     set_active_home(db, user_id, str(attachment.item.home_id))
 
-    full_path = os.path.join(INVENTORY_FILES_BASE_DIR, attachment.stored_path)
+    full_path = os.path.realpath(os.path.join(INVENTORY_FILES_BASE_DIR, attachment.stored_path))
+    base = os.path.realpath(INVENTORY_FILES_BASE_DIR)
+    if not full_path.startswith(base + os.sep):
+        raise ValueError("Invalid attachment path.")
     if os.path.exists(full_path):
         os.remove(full_path)
 

@@ -90,6 +90,21 @@ export function AuthProvider({ children }) {
     return data
   }, [])
 
+  const loginWithGoogle = useCallback(async (code, redirectUri) => {
+    const res = await fetch(`${API_BASE}/api/auth/google/callback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirect_uri: redirectUri }),
+    })
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Google sign-in failed.') }
+    const data = await res.json()
+    setToken(data.token)
+    setUser(data.user)
+    localStorage.setItem(TOKEN_KEY, data.token)
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user))
+    return data.user
+  }, [])
+
   const logout = useCallback(() => {
     setToken(null)
     setUser(null)
@@ -98,7 +113,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ token, user, loading, setupRequired, setupAdmin, login, signup, logout }}>
+    <AuthContext.Provider value={{ token, user, loading, setupRequired, setupAdmin, login, signup, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   )

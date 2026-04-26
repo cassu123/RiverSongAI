@@ -238,6 +238,8 @@ class SQLiteStore:
         conn.executescript(_DDL)
         for migration in [
             "ALTER TABLE users ADD COLUMN is_approved INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN google_id TEXT",
+            "ALTER TABLE users ADD COLUMN google_email TEXT",
         ]:
             try:
                 conn.execute(migration)
@@ -730,6 +732,42 @@ class SQLiteStore:
         )
         conn.commit()
 
+    async def get_user_by_google_id(self, google_id: str) -> Optional[dict]:
+        return await self._run(self._sync_get_user_by_google_id, google_id)
+
+    def _sync_get_user_by_google_id(self, google_id: str) -> Optional[dict]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT id, email, password_hash, display_name, role, is_approved, created_at, google_id, google_email FROM users WHERE google_id=?",
+            (google_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {"id": row[0], "email": row[1], "password_hash": row[2], "display_name": row[3], "role": row[4], "is_approved": bool(row[5]), "created_at": row[6], "google_id": row[7], "google_email": row[8]}
+
+    async def link_google_account(self, user_id: str, google_id: str, google_email: str) -> None:
+        await self._run(self._sync_link_google_account, user_id, google_id, google_email)
+
+    def _sync_link_google_account(self, user_id: str, google_id: str, google_email: str) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            "UPDATE users SET google_id=?, google_email=?, updated_at=? WHERE id=?",
+            (google_id, google_email, _now_str(), user_id),
+        )
+        conn.commit()
+
+    async def create_google_user(self, id: str, email: str, display_name: str, google_id: str, google_email: str, role: str = "user", is_approved: bool = True) -> None:
+        await self._run(self._sync_create_google_user, id, email, display_name, google_id, google_email, role, is_approved)
+
+    def _sync_create_google_user(self, id: str, email: str, display_name: str, google_id: str, google_email: str, role: str, is_approved: bool) -> None:
+        conn = self._get_conn()
+        now = _now_str()
+        conn.execute(
+            "INSERT INTO users (id, email, password_hash, display_name, role, is_approved, google_id, google_email, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (id, email, "", display_name, role, int(is_approved), google_id, google_email, now, now),
+        )
+        conn.commit()
+
     # =========================================================================
     # Routines
     # =========================================================================
@@ -896,16 +934,24 @@ class SQLiteStore:
             "updated_at":   row[12],
         }
 
-    async def list_shelf(self, user_id: str) -> list:
-        return await self._run(self._sync_list_shelf, user_id)
+    async def list_shelf(self, user_id: str, service: str = None, status: str = None) -> list:
+        return await self._run(self._sync_list_shelf, user_id, service, status)
 
-    def _sync_list_shelf(self, user_id: str) -> list:
+    def _sync_list_shelf(self, user_id: str, service: str, status: str) -> list:
         conn = self._get_conn()
-        rows = conn.execute(
+        query = (
             "SELECT id,user_id,service,title,author,cover_url,progress_pct,status,rating,notes,launch_url,created_at,updated_at "
-            "FROM reading_shelf WHERE user_id=? ORDER BY updated_at DESC",
-            (user_id,),
-        ).fetchall()
+            "FROM reading_shelf WHERE user_id=?"
+        )
+        params = [user_id]
+        if service:
+            query += " AND service=?"
+            params.append(service)
+        if status:
+            query += " AND status=?"
+            params.append(status)
+        query += " ORDER BY updated_at DESC"
+        rows = conn.execute(query, params).fetchall()
         return [self._row_to_book(r) for r in rows]
 
     async def create_book(self, book: dict) -> dict:

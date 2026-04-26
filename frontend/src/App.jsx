@@ -22,6 +22,7 @@ import ReadingPage        from './pages/ReadingPage.jsx'
 import AnalyticsPage      from './pages/AnalyticsPage.jsx'
 import InventoryPage           from './pages/InventoryPage.jsx'
 import MaintenancePulsePage    from './pages/MaintenancePulsePage.jsx'
+import GoogleCallbackPage      from './pages/GoogleCallbackPage.jsx'
 
 const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'analytics'])
 
@@ -75,6 +76,10 @@ export default function App() {
   useEffect(() => {
     setAdminMode(userIsAdmin)
   }, [userIsAdmin])
+
+  if (window.location.pathname === '/callback') {
+    return <GoogleCallbackPage onSuccess={() => window.history.replaceState({}, '', '/')} />
+  }
 
   if (loading) {
     return (

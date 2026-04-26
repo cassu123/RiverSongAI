@@ -75,8 +75,6 @@ async def fetch_rss_feed(url: str, source_name: str, limit: int = 10) -> List[Di
         logger.warning("RSS parse error for %s: %s", url, exc)
         return []
 
-    ns = {"atom": "http://www.w3.org/2005/Atom"}
-
     # RSS 2.0
     items = root.findall(".//item")
     for item in items[:limit]:
@@ -85,11 +83,13 @@ async def fetch_rss_feed(url: str, source_name: str, limit: int = 10) -> List[Di
         desc = (item.findtext("description") or "").strip()
         pub = item.findtext("pubDate") or ""
         articles.append({
+            "id": _article_id(link),
             "title": title,
             "summary": _strip_html(desc)[:300],
             "url": link,
             "source": source_name,
             "published_at": _parse_date(pub),
+            "image_url": _extract_image(item, desc),
         })
 
     # Atom
@@ -99,14 +99,18 @@ async def fetch_rss_feed(url: str, source_name: str, limit: int = 10) -> List[Di
             title = (entry.findtext("{http://www.w3.org/2005/Atom}title") or "").strip()
             link_el = entry.find("{http://www.w3.org/2005/Atom}link")
             link = (link_el.get("href") if link_el is not None else "") or ""
-            summary = (entry.findtext("{http://www.w3.org/2005/Atom}summary") or "").strip()
+            summary_raw = (entry.findtext("{http://www.w3.org/2005/Atom}summary") or "").strip()
+            content_raw = (entry.findtext("{http://www.w3.org/2005/Atom}content") or "").strip()
             pub = entry.findtext("{http://www.w3.org/2005/Atom}updated") or ""
+            img = _extract_image(entry, summary_raw or content_raw)
             articles.append({
+                "id": _article_id(link),
                 "title": title,
-                "summary": _strip_html(summary)[:300],
+                "summary": _strip_html(summary_raw or content_raw)[:300],
                 "url": link,
                 "source": source_name,
                 "published_at": _parse_date(pub),
+                "image_url": img,
             })
 
     return articles
@@ -133,12 +137,16 @@ async def fetch_newsapi(api_key: str, category: str = "general", country: str = 
 
     articles = []
     for a in data.get("articles", []):
+        url = a.get("url") or ""
         articles.append({
+            "id": _article_id(url),
             "title": a.get("title") or "",
             "summary": (a.get("description") or "")[:300],
-            "url": a.get("url") or "",
+            "url": url,
             "source": (a.get("source") or {}).get("name") or "NewsAPI",
             "published_at": _parse_date(a.get("publishedAt") or ""),
+            "image_url": a.get("urlToImage") or "",
+            "category": category,
         })
     return articles
 
@@ -151,21 +159,25 @@ async def fetch_articles(
     """
     Fetch articles from a list of source dicts.
     Each source dict: {"name": str, "url": str, "category": str}
-    Sources with url="" are skipped (may be NewsAPI category sources).
     """
     import asyncio
     tasks = []
+    meta = []  # track category per task
     for src in sources:
         if src.get("url"):
             tasks.append(fetch_rss_feed(src["url"], src["name"], limit_per_source))
+            meta.append(src.get("category", "general"))
         elif newsapi_key and src.get("category"):
             tasks.append(fetch_newsapi(newsapi_key, src["category"], limit=limit_per_source))
+            meta.append(src.get("category", "general"))
     if not tasks:
         return []
     results = await asyncio.gather(*tasks, return_exceptions=True)
     articles: List[Dict[str, Any]] = []
-    for r in results:
+    for r, category in zip(results, meta):
         if isinstance(r, list):
+            for a in r:
+                a.setdefault("category", category)
             articles.extend(r)
     articles.sort(key=lambda a: a.get("published_at") or "", reverse=True)
     return articles
@@ -174,6 +186,51 @@ async def fetch_articles(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _article_id(url: str) -> str:
+    import hashlib
+    return hashlib.md5(url.encode()).hexdigest()[:12]
+
+
+def _extract_image(element, html_text: str = "") -> str:
+    """
+    Try multiple strategies to find an image URL for an RSS item/entry element.
+    Returns the first found URL, or "" if none.
+    """
+    import xml.etree.ElementTree as ET
+    import re
+
+    # 1. media:thumbnail (BBC, many news sites)
+    ns_media = "http://search.yahoo.com/mrss/"
+    thumb = element.find(f"{{{ns_media}}}thumbnail")
+    if thumb is not None:
+        url = thumb.get("url") or ""
+        if url:
+            return url
+
+    # 2. media:content (common alt tag)
+    content_el = element.find(f"{{{ns_media}}}content")
+    if content_el is not None:
+        url = content_el.get("url") or ""
+        if url and any(ext in url.lower() for ext in (".jpg", ".jpeg", ".png", ".webp", ".gif")):
+            return url
+
+    # 3. enclosure (podcasts / TechCrunch style)
+    enc = element.find("enclosure")
+    if enc is not None:
+        mime = enc.get("type") or ""
+        url = enc.get("url") or ""
+        if "image" in mime and url:
+            return url
+
+    # 4. img tag inside description/content HTML
+    if html_text:
+        m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', html_text)
+        if m:
+            return m.group(1)
+
+    return ""
+
 
 def _strip_html(text: str) -> str:
     import re

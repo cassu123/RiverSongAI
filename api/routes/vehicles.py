@@ -98,17 +98,17 @@ def _migrate(engine) -> None:
     import sqlalchemy
     with engine.connect() as conn:
         def _cols(table):
-            return {row[1] for row in conn.execute(sqlalchemy.text(f"PRAGMA table_info({table}"))}
+            return {row[1] for row in conn.execute(sqlalchemy.text(f"PRAGMA table_info({table})"))}
 
         # service_logs
-        logs = _cols("vehicle_service_logs)")
+        logs = _cols("vehicle_service_logs")
         if "performed_by_id" not in logs:
             conn.execute(sqlalchemy.text("ALTER TABLE vehicle_service_logs ADD COLUMN performed_by_id TEXT"))
         if "service_type" not in logs:
             conn.execute(sqlalchemy.text("ALTER TABLE vehicle_service_logs ADD COLUMN service_type TEXT"))
 
         # check_points
-        cps = _cols("vehicle_check_points)")
+        cps = _cols("vehicle_check_points")
         for col, typedef in [
             ("interval_miles",        "INTEGER"),
             ("interval_days",         "INTEGER"),
@@ -128,7 +128,7 @@ def _migrate(engine) -> None:
                 conn.execute(sqlalchemy.text(f"ALTER TABLE vehicle_check_points ADD COLUMN {col} {typedef}"))
 
         # check_results
-        crs = _cols("vehicle_service_check_results)")
+        crs = _cols("vehicle_service_check_results")
         for col, typedef in [
             ("check_point_id", "TEXT"),
             ("actual_value",   "TEXT"),

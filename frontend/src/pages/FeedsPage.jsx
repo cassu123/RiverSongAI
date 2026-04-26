@@ -100,12 +100,26 @@ export default function FeedsPage() {
 // NEWS TAB
 // =============================================================================
 
+const SOURCE_CAT_COLORS = {
+  world: '#00aaff', technology: '#00ffcc', business: '#ffaa00',
+  sport: '#ff6644', entertainment: '#cc66ff', health: '#44dd88', science: '#44aaff',
+}
+
 function NewsTab({ prefs, savePrefs }) {
   const [showSettings, setShowSettings] = useState(false)
   const [allSources, setAllSources] = useState([])
   const [articles, setArticles] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
+  const [activeCat, setActiveCat] = useState('all')
+  const [view, setView] = useState('card') // 'card' | 'list'
+  const [readIds, setReadIds] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('rs-news-read') || '[]')) }
+    catch { return new Set() }
+  })
+  const [secondsLeft, setSecondsLeft] = useState(0)
+  const timerRef = useRef(null)
 
   useEffect(() => {
     apiFetch('/news/sources').then(setAllSources).catch(() => {})
@@ -116,14 +130,40 @@ function NewsTab({ prefs, savePrefs }) {
     setLoading(true)
     setError('')
     apiFetch('/news')
-      .then(setArticles)
+      .then(data => { setArticles(data); startTimer() })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
-  }, [prefs?.news_sources])
+  }, [prefs?.news_sources]) // eslint-disable-line
 
   useEffect(() => { load() }, [load])
 
-  const categories = [...new Set(allSources.map(s => s.category))]
+  const startTimer = useCallback(() => {
+    const mins = prefs?.refresh_news_min || 30
+    setSecondsLeft(mins * 60)
+  }, [prefs?.refresh_news_min])
+
+  // Countdown timer
+  useEffect(() => {
+    if (secondsLeft <= 0) return
+    timerRef.current = setInterval(() => {
+      setSecondsLeft(s => {
+        if (s <= 1) { load(); return 0 }
+        return s - 1
+      })
+    }, 1000)
+    return () => clearInterval(timerRef.current)
+  }, [secondsLeft, load])
+
+  const markRead = (id) => {
+    setReadIds(prev => {
+      const next = new Set(prev)
+      next.add(id)
+      localStorage.setItem('rs-news-read', JSON.stringify([...next]))
+      return next
+    })
+  }
+
+  const categories = ['all', ...new Set(allSources.map(s => s.category))]
 
   const toggleSource = (src) => {
     const current = prefs.news_sources || []
@@ -131,13 +171,35 @@ function NewsTab({ prefs, savePrefs }) {
     const updated = exists ? current.filter(s => s.url !== src.url) : [...current, src]
     savePrefs({ news_sources: updated })
   }
-
   const isSelected = (src) => (prefs?.news_sources || []).some(s => s.url === src.url)
+
+  const isNew = (pub) => {
+    if (!pub) return false
+    return (Date.now() - new Date(pub).getTime()) < 2 * 60 * 60 * 1000
+  }
+
+  const filtered = articles.filter(a => {
+    if (activeCat !== 'all' && a.category !== activeCat) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return (a.title + a.summary + a.source).toLowerCase().includes(q)
+    }
+    return true
+  })
+
+  const refreshMins = prefs?.refresh_news_min || 30
+  const totalSecs = refreshMins * 60
+  const progressPct = totalSecs > 0 ? ((totalSecs - secondsLeft) / totalSecs) * 100 : 0
+  const minsLeft = Math.floor(secondsLeft / 60)
+  const secsLeft = secondsLeft % 60
 
   return (
     <>
       <div className="feeds-section-header">
-        <span className="feeds-section-title">Latest Headlines</span>
+        <span className="feeds-section-title">
+          Latest Headlines
+          {articles.length > 0 && <span style={{ marginLeft: 8, color: 'var(--text-dim)', fontFamily: 'var(--font-body)', fontSize: '0.8rem', letterSpacing: 0 }}>{filtered.length} articles</span>}
+        </span>
         <button className="feeds-gear-btn" onClick={() => setShowSettings(s => !s)}>
           <IconGear /> {showSettings ? 'Close' : 'Settings'}
         </button>
@@ -146,10 +208,10 @@ function NewsTab({ prefs, savePrefs }) {
       {showSettings && (
         <div className="feeds-settings-panel">
           <div className="feeds-settings-row">
-            <span className="feeds-settings-label">Select news sources</span>
-            {categories.map(cat => (
+            <span className="feeds-settings-label">News sources</span>
+            {[...new Set(allSources.map(s => s.category))].map(cat => (
               <div key={cat}>
-                <div className="feeds-sports-section-title" style={{ marginTop: 12 }}>{cat}</div>
+                <div className="feeds-sports-section-title" style={{ marginTop: 12, color: SOURCE_CAT_COLORS[cat] || 'var(--text-dim)' }}>{cat}</div>
                 <div className="feeds-source-category-grid">
                   {allSources.filter(s => s.category === cat).map(src => (
                     <button
@@ -157,56 +219,133 @@ function NewsTab({ prefs, savePrefs }) {
                       className={`feeds-source-cat-btn${isSelected(src) ? ' feeds-source-cat-btn--active' : ''}`}
                       onClick={() => toggleSource(src)}
                     >
-                      {src.name}
-                      {isSelected(src) && <span>✓</span>}
+                      {src.name} {isSelected(src) && '✓'}
                     </button>
                   ))}
                 </div>
               </div>
             ))}
           </div>
-
           <div className="feeds-settings-row">
             <span className="feeds-settings-label">Refresh interval</span>
-            <select
-              className="feeds-refresh-select"
-              value={prefs.refresh_news_min}
-              onChange={e => savePrefs({ refresh_news_min: Number(e.target.value) })}
-            >
+            <select className="feeds-refresh-select" value={prefs.refresh_news_min}
+              onChange={e => savePrefs({ refresh_news_min: Number(e.target.value) })}>
               {REFRESH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
-
           <div className="feeds-settings-actions">
-            <button className="btn--primary" onClick={() => { load(); setShowSettings(false) }}>
-              Apply & Refresh
-            </button>
+            <button className="btn--primary" onClick={() => { load(); setShowSettings(false) }}>Apply & Refresh</button>
           </div>
         </div>
       )}
 
       {!prefs?.news_sources?.length && (
-        <div className="feeds-empty">
-          No sources selected. Open Settings to pick your news sources.
+        <div className="feeds-empty">No sources selected. Open Settings to pick your news sources.</div>
+      )}
+
+      {prefs?.news_sources?.length > 0 && (
+        <div className="feeds-news-toolbar">
+          <div className="feeds-news-toolbar-row">
+            <input
+              className="feeds-news-search"
+              placeholder="Search headlines…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <div className="feeds-view-toggle">
+              <button className={`feeds-view-btn${view === 'card' ? ' feeds-view-btn--active' : ''}`} onClick={() => setView('card')} title="Card view">▦</button>
+              <button className={`feeds-view-btn${view === 'list' ? ' feeds-view-btn--active' : ''}`} onClick={() => setView('list')} title="List view">☰</button>
+            </div>
+          </div>
+
+          {categories.length > 1 && (
+            <div className="feeds-cat-pills">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  className={`feeds-cat-pill${activeCat === cat ? ' feeds-cat-pill--active' : ''}`}
+                  onClick={() => setActiveCat(cat)}
+                  style={activeCat === cat && cat !== 'all' ? { borderColor: SOURCE_CAT_COLORS[cat], color: SOURCE_CAT_COLORS[cat] } : {}}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {secondsLeft > 0 && (
+            <div className="feeds-refresh-bar">
+              <div className="feeds-refresh-progress">
+                <div className="feeds-refresh-fill" style={{ width: `${progressPct}%` }} />
+              </div>
+              <span>Refresh in {minsLeft}:{String(secsLeft).padStart(2, '0')}</span>
+              <button className="feeds-refresh-now-btn" onClick={load}>Refresh now</button>
+            </div>
+          )}
         </div>
       )}
 
       {loading && <div className="feeds-loading">Fetching headlines…</div>}
       {error && <div className="feeds-error">{error}</div>}
 
-      {!loading && articles.length > 0 && (
+      {!loading && filtered.length > 0 && view === 'card' && (
         <div className="feeds-news-grid">
-          {articles.map((a, i) => (
-            <a key={i} className="feeds-news-card" href={a.url} target="_blank" rel="noopener noreferrer">
-              <span className="feeds-news-source">{a.source}</span>
-              <span className="feeds-news-title">{a.title}</span>
-              {a.summary && <span className="feeds-news-summary">{a.summary}</span>}
-              {a.published_at && (
+          {filtered.map(a => (
+            <a
+              key={a.id || a.url}
+              className={`feeds-news-card${readIds.has(a.id) ? ' feeds-news-card--read' : ''}`}
+              href={a.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => markRead(a.id)}
+            >
+              {a.image_url
+                ? <img className="feeds-news-card-img" src={a.image_url} alt="" loading="lazy" onError={e => { e.target.style.display = 'none' }} />
+                : <div className="feeds-news-card-img-placeholder" style={{ background: `${SOURCE_CAT_COLORS[a.category] || '#0a2236'}22` }}>
+                    📰
+                  </div>
+              }
+              <div className="feeds-news-card-body">
+                <div className="feeds-news-meta-row">
+                  <span className="feeds-news-source" style={{ color: SOURCE_CAT_COLORS[a.category] || 'var(--primary)' }}>{a.source}</span>
+                  {isNew(a.published_at) && <span className="feeds-news-new-badge">NEW</span>}
+                </div>
+                <span className="feeds-news-title">{a.title}</span>
+                {a.summary && <span className="feeds-news-summary">{a.summary}</span>}
                 <span className="feeds-news-date">{formatDate(a.published_at)}</span>
-              )}
+              </div>
             </a>
           ))}
         </div>
+      )}
+
+      {!loading && filtered.length > 0 && view === 'list' && (
+        <div className="feeds-news-list">
+          {filtered.map(a => (
+            <a
+              key={a.id || a.url}
+              className={`feeds-news-list-item${readIds.has(a.id) ? ' feeds-news-list-item--read' : ''}`}
+              href={a.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => markRead(a.id)}
+            >
+              {a.image_url && <img className="feeds-news-list-thumb" src={a.image_url} alt="" loading="lazy" onError={e => { e.target.style.display = 'none' }} />}
+              <div className="feeds-news-list-text">
+                <div className="feeds-news-list-title">{a.title}</div>
+                <div className="feeds-news-list-meta">
+                  <span style={{ color: SOURCE_CAT_COLORS[a.category] || 'var(--primary)' }}>{a.source}</span>
+                  <span>{formatDate(a.published_at)}</span>
+                  {isNew(a.published_at) && <span style={{ color: 'var(--primary)' }}>● NEW</span>}
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+
+      {!loading && !error && prefs?.news_sources?.length > 0 && filtered.length === 0 && articles.length > 0 && (
+        <div className="feeds-empty">No articles match your filter.</div>
       )}
     </>
   )
@@ -222,7 +361,7 @@ function WeatherTab({ prefs, savePrefs }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [locating, setLocating] = useState(false)
-  const [radarTs, setRadarTs] = useState(null)
+  const [radarFrames, setRadarFrames] = useState([])
 
   const load = useCallback(() => {
     if (prefs?.weather_lat == null) return
@@ -236,16 +375,16 @@ function WeatherTab({ prefs, savePrefs }) {
 
   useEffect(() => { load() }, [load])
 
-  // Fetch latest RainViewer radar timestamp
+  // Fetch all RainViewer radar frames for animation
   useEffect(() => {
     if (prefs?.weather_lat == null) return
     fetch('https://api.rainviewer.com/public/weather-maps.json')
       .then(r => r.json())
       .then(d => {
         const frames = d?.radar?.past || []
-        if (frames.length) setRadarTs(frames[frames.length - 1].path)
+        if (frames.length) setRadarFrames(frames)
       })
-      .catch(() => {})
+      .catch(e => console.warn('RainViewer fetch failed:', e))
   }, [prefs?.weather_lat])
 
   const getLocation = () => {
@@ -361,12 +500,12 @@ function WeatherTab({ prefs, savePrefs }) {
               <div className="feeds-hourly-strip">
                 {weather.hourly.map((h, i) => {
                   const t = new Date(h.time)
-                  const label = i === 0 ? 'Now' : t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                  const label = i === 0 ? 'Now' : t.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })
                   return (
                     <div key={h.time} className={`feeds-hourly-item${i === 0 ? ' feeds-hourly-item--now' : ''}`}>
                       <div className="feeds-hourly-time">{label}</div>
+                      <div className="feeds-wx-icon">{wmoIcon(h.weathercode)}</div>
                       <div className="feeds-hourly-temp">{Math.round(h.temperature)}{weather.unit}</div>
-                      <div className="feeds-hourly-cond">{h.condition}</div>
                       {h.precip_prob != null && h.precip_prob > 0 && (
                         <div className="feeds-hourly-precip">💧{h.precip_prob}%</div>
                       )}
@@ -386,6 +525,7 @@ function WeatherTab({ prefs, savePrefs }) {
               return (
                 <div key={day.date} className="feeds-weather-day">
                   <div className="feeds-weather-day-name">{name}</div>
+                  <div className="feeds-wx-icon">{wmoIcon(day.weathercode)}</div>
                   <div className="feeds-weather-day-high">{Math.round(day.temp_max)}{weather.unit}</div>
                   <div className="feeds-weather-day-low">{Math.round(day.temp_min)}{weather.unit}</div>
                   <div className="feeds-weather-day-cond">{day.condition}</div>
@@ -394,73 +534,219 @@ function WeatherTab({ prefs, savePrefs }) {
             })}
           </div>
 
+          {/* Air quality */}
+          {weather.air_quality?.aqi != null && (
+            <>
+              <div className="feeds-subsection-label">Air Quality</div>
+              <AirQualityPanel aq={weather.air_quality} />
+            </>
+          )}
+
           {/* Radar */}
           <div className="feeds-subsection-label">Live Radar</div>
-          <RadarMap lat={prefs.weather_lat} lon={prefs.weather_lon} radarTs={radarTs} />
+          <RadarMap lat={prefs.weather_lat} lon={prefs.weather_lon} frames={radarFrames} />
         </>
       )}
     </>
   )
 }
 
-function RadarMap({ lat, lon, radarTs }) {
+function AirQualityPanel({ aq }) {
+  const pollutants = [
+    { name: 'PM2.5', value: aq.pm2_5, unit: 'μg/m³' },
+    { name: 'PM10',  value: aq.pm10,  unit: 'μg/m³' },
+    { name: 'Ozone', value: aq.ozone, unit: 'μg/m³' },
+    { name: 'NO₂',   value: aq.nitrogen_dioxide, unit: 'μg/m³' },
+    { name: 'CO',    value: aq.carbon_monoxide,  unit: 'μg/m³' },
+  ].filter(p => p.value != null)
+
+  return (
+    <div className="feeds-aqi-panel">
+      <div className="feeds-aqi-score">
+        <div className="feeds-aqi-number" style={{ color: aq.color }}>{aq.aqi}</div>
+        <div className="feeds-aqi-label" style={{ color: aq.color }}>{aq.label}</div>
+        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>US AQI</div>
+      </div>
+      <div className="feeds-aqi-pollutants">
+        {pollutants.map(p => (
+          <div key={p.name} className="feeds-aqi-pollutant">
+            <div className="feeds-aqi-poll-name">{p.name}</div>
+            <div className="feeds-aqi-poll-value">{p.value.toFixed(1)} <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{p.unit}</span></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function RadarMap({ lat, lon, frames }) {
   const mapRef = useRef(null)
   const instanceRef = useRef(null)
-  const radarLayerRef = useRef(null)
+  const layersRef = useRef([])
+  const [frameIdx, setFrameIdx] = useState(frames.length ? frames.length - 1 : 0)
+  const [playing, setPlaying] = useState(false)
+  const playRef = useRef(false)
+  const LRef = useRef(null)
 
+  // Init map once
   useEffect(() => {
     if (!mapRef.current) return
-    // Dynamically import leaflet to avoid SSR/init issues
+    let cancelled = false
     import('leaflet').then(L => {
-      if (instanceRef.current) return // already initialised
-
-      const map = L.map(mapRef.current, {
-        center: [lat, lon],
-        zoom: 7,
-        zoomControl: true,
-      })
+      if (cancelled || instanceRef.current) return
+      LRef.current = L
+      const map = L.map(mapRef.current, { center: [lat, lon], zoom: 7, zoomControl: true })
       instanceRef.current = map
-
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; CARTO',
-        subdomains: 'abcd',
-        maxZoom: 19,
+        attribution: '&copy; CARTO', subdomains: 'abcd', maxZoom: 19,
       }).addTo(map)
     })
-
     return () => {
-      if (instanceRef.current) {
-        instanceRef.current.remove()
-        instanceRef.current = null
-        radarLayerRef.current = null
-      }
+      cancelled = true
+      if (instanceRef.current) { instanceRef.current.remove(); instanceRef.current = null }
+      layersRef.current = []
+      LRef.current = null
     }
-  }, []) // only on mount
+  }, []) // eslint-disable-line
 
-  // Update radar layer when timestamp arrives
+  // Pre-load all radar layers when frames arrive
   useEffect(() => {
-    if (!instanceRef.current || !radarTs) return
-    import('leaflet').then(L => {
-      if (radarLayerRef.current) {
-        instanceRef.current.removeLayer(radarLayerRef.current)
-      }
-      radarLayerRef.current = L.tileLayer(
-        `https://tilecache.rainviewer.com${radarTs}/256/{z}/{x}/{y}/2/1_1.png`,
-        { opacity: 0.7, attribution: '&copy; RainViewer' }
-      ).addTo(instanceRef.current)
+    if (!frames.length || !instanceRef.current || !LRef.current) return
+    const L = LRef.current
+    const map = instanceRef.current
+    // Remove old layers
+    layersRef.current.forEach(l => map.removeLayer(l))
+    layersRef.current = frames.map((f, i) => {
+      const layer = L.tileLayer(
+        `https://tilecache.rainviewer.com${f.path}/256/{z}/{x}/{y}/4/1_1.png`,
+        { opacity: i === frames.length - 1 ? 0.65 : 0, zIndex: 200 }
+      )
+      layer.addTo(map)
+      return layer
     })
-  }, [radarTs])
+    setFrameIdx(frames.length - 1)
+  }, [frames])
 
-  return <div className="feeds-radar-wrap" ref={mapRef} />
+  // Show only active frame
+  useEffect(() => {
+    layersRef.current.forEach((l, i) => {
+      l.setOpacity(i === frameIdx ? 0.65 : 0)
+    })
+  }, [frameIdx])
+
+  // Animation loop
+  useEffect(() => {
+    playRef.current = playing
+    if (!playing) return
+    const id = setInterval(() => {
+      if (!playRef.current) return
+      setFrameIdx(prev => {
+        const next = prev + 1
+        if (next >= frames.length) { setPlaying(false); return frames.length - 1 }
+        return next
+      })
+    }, 500)
+    return () => clearInterval(id)
+  }, [playing, frames.length])
+
+  const frameTime = frames[frameIdx]
+    ? new Date(frames[frameIdx].time * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    : ''
+  const progress = frames.length > 1 ? (frameIdx / (frames.length - 1)) * 100 : 100
+
+  return (
+    <>
+      <div className="feeds-radar-wrap" ref={mapRef} />
+      {frames.length > 0 && (
+        <div className="feeds-radar-controls">
+          <button
+            className="feeds-radar-play-btn"
+            onClick={() => {
+              if (frameIdx >= frames.length - 1) setFrameIdx(0)
+              setPlaying(p => !p)
+            }}
+            title={playing ? 'Pause' : 'Play'}
+          >
+            {playing ? '⏸' : '▶'}
+          </button>
+          <div className="feeds-radar-timeline">
+            <div
+              className="feeds-radar-track"
+              onClick={e => {
+                const pct = e.nativeEvent.offsetX / e.currentTarget.offsetWidth
+                setFrameIdx(Math.round(pct * (frames.length - 1)))
+                setPlaying(false)
+              }}
+            >
+              <div className="feeds-radar-progress" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+          <div className="feeds-radar-time">{frameTime}</div>
+        </div>
+      )}
+    </>
+  )
 }
 
 // =============================================================================
 // SPORTS TAB
 // =============================================================================
 
+const ZONE_COLORS = {
+  'Champions League': '#00aaff',
+  'Europa League': '#ff8800',
+  'Conference League': '#00cc88',
+  'Relegation': '#ff3322',
+  'Promotion': '#00cc44',
+  'Playoff': '#ffcc00',
+}
+
+function zoneColor(desc) {
+  for (const [key, color] of Object.entries(ZONE_COLORS)) {
+    if ((desc || '').includes(key)) return color
+  }
+  return null
+}
+
+function FormGuide({ form }) {
+  if (!form) return null
+  return (
+    <div className="feeds-form-guide">
+      {form.split('').slice(-5).map((r, i) => (
+        <div key={i} className={`feeds-form-dot feeds-form-dot--${r}`}>{r}</div>
+      ))}
+    </div>
+  )
+}
+
+function Countdown({ dateStr, timeStr }) {
+  const [label, setLabel] = useState('')
+  useEffect(() => {
+    const update = () => {
+      if (!dateStr) return
+      const dt = new Date(`${dateStr}T${timeStr || '00:00:00'}`)
+      const diff = dt - Date.now()
+      if (diff <= 0) { setLabel(''); return }
+      const d = Math.floor(diff / 86400000)
+      const h = Math.floor((diff % 86400000) / 3600000)
+      const m = Math.floor((diff % 3600000) / 60000)
+      if (d > 0) setLabel(`In ${d}d ${h}h`)
+      else if (h > 0) setLabel(`In ${h}h ${m}m`)
+      else setLabel(`In ${m}m`)
+    }
+    update()
+    const id = setInterval(update, 60000)
+    return () => clearInterval(id)
+  }, [dateStr, timeStr])
+  return label ? <div className="feeds-match-countdown">{label}</div> : null
+}
+
 function SportsTab({ prefs, savePrefs }) {
   const [showSettings, setShowSettings] = useState(false)
+  const [sportsTab, setSportsTab] = useState('results')
+  const [filterTeam, setFilterTeam] = useState('all')
   const [data, setData] = useState(null)
+  const [standings, setStandings] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [searchQ, setSearchQ] = useState('')
@@ -480,15 +766,25 @@ function SportsTab({ prefs, savePrefs }) {
 
   useEffect(() => { load() }, [load])
 
-  const searchTeams = (q) => {
+  // Load standings for all unique leagues of followed teams
+  useEffect(() => {
+    if (!prefs?.sport_teams?.length) return
+    const leagueIds = [...new Set(prefs.sport_teams.map(t => t.league_id).filter(Boolean))]
+    leagueIds.forEach(id => {
+      apiFetch(`/sports/standings?league_id=${id}`)
+        .then(rows => setStandings(prev => ({ ...prev, [id]: rows })))
+        .catch(() => {})
+    })
+  }, [prefs?.sport_teams])
+
+  const doSearch = (q) => {
     clearTimeout(searchTimer.current)
+    setSearchQ(q)
     if (q.length < 2) { setSearchResults([]); return }
     searchTimer.current = setTimeout(async () => {
       setSearching(true)
-      try {
-        const res = await apiFetch(`/sports/search?q=${encodeURIComponent(q)}`)
-        setSearchResults(res)
-      } catch { setSearchResults([]) }
+      try { setSearchResults(await apiFetch(`/sports/search?q=${encodeURIComponent(q)}`)) }
+      catch { setSearchResults([]) }
       setSearching(false)
     }, 400)
   }
@@ -498,12 +794,27 @@ function SportsTab({ prefs, savePrefs }) {
     if (current.find(t => t.id === team.id)) return
     savePrefs({ sport_teams: [...current, team] })
   }
+  const removeTeam = (id) => savePrefs({ sport_teams: (prefs.sport_teams || []).filter(t => t.id !== id) })
+  const isAdded = (id) => (prefs?.sport_teams || []).some(t => t.id === id)
 
-  const removeTeam = (id) => {
-    savePrefs({ sport_teams: (prefs.sport_teams || []).filter(t => t.id !== id) })
+  const teams = prefs?.sport_teams || []
+
+  const filterEvents = (events) => {
+    if (filterTeam === 'all') return events
+    const team = teams.find(t => t.id === filterTeam)
+    if (!team) return events
+    return events.filter(e => e.home_team === team.name || e.away_team === team.name)
   }
 
-  const isAdded = (id) => (prefs?.sport_teams || []).some(t => t.id === id)
+  // Standings to show: leagues of filtered team, or all
+  const standingLeagues = filterTeam === 'all'
+    ? Object.entries(standings)
+    : Object.entries(standings).filter(([id]) => {
+        const team = teams.find(t => t.id === filterTeam)
+        return team?.league_id === id
+      })
+
+  const followedTeamIds = new Set(teams.map(t => t.id))
 
   return (
     <>
@@ -517,28 +828,23 @@ function SportsTab({ prefs, savePrefs }) {
       {showSettings && (
         <div className="feeds-settings-panel">
           <div className="feeds-settings-row">
-            <span className="feeds-settings-label">Add teams</span>
-            <input
-              className="feeds-settings-input"
-              placeholder="Search for a team…"
-              value={searchQ}
-              onChange={e => { setSearchQ(e.target.value); searchTeams(e.target.value) }}
-            />
+            <span className="feeds-settings-label">Search & add teams</span>
+            <input className="feeds-settings-input" placeholder="Search for a team…"
+              value={searchQ} onChange={e => doSearch(e.target.value)} />
             {searching && <div className="feeds-loading">Searching…</div>}
             {searchResults.length > 0 && (
               <div className="feeds-search-results">
                 {searchResults.map(team => (
                   <div key={team.id} className="feeds-search-result-item">
-                    <div>
-                      <div className="feeds-search-result-name">{team.name}</div>
-                      <div className="feeds-search-result-meta">{team.sport} · {team.league}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {team.badge_url && <img src={team.badge_url} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />}
+                      <div>
+                        <div className="feeds-search-result-name">{team.name}</div>
+                        <div className="feeds-search-result-meta">{team.sport} · {team.league} · {team.country}</div>
+                      </div>
                     </div>
-                    <button
-                      className="feeds-add-btn"
-                      onClick={() => addTeam(team)}
-                      disabled={isAdded(team.id)}
-                    >
-                      {isAdded(team.id) ? 'Added' : '+ Add'}
+                    <button className="feeds-add-btn" onClick={() => addTeam(team)} disabled={isAdded(team.id)}>
+                      {isAdded(team.id) ? '✓ Added' : '+ Add'}
                     </button>
                   </div>
                 ))}
@@ -546,11 +852,11 @@ function SportsTab({ prefs, savePrefs }) {
             )}
           </div>
 
-          {(prefs?.sport_teams || []).length > 0 && (
+          {teams.length > 0 && (
             <div className="feeds-settings-row">
-              <span className="feeds-settings-label">Following</span>
+              <span className="feeds-settings-label">Following ({teams.length})</span>
               <div className="feeds-source-chips">
-                {prefs.sport_teams.map(t => (
+                {teams.map(t => (
                   <div key={t.id} className="feeds-chip">
                     {t.badge_url && <img src={t.badge_url} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />}
                     {t.name}
@@ -563,52 +869,87 @@ function SportsTab({ prefs, savePrefs }) {
 
           <div className="feeds-settings-row">
             <span className="feeds-settings-label">Refresh interval</span>
-            <select
-              className="feeds-refresh-select"
-              value={prefs.refresh_sports_min}
-              onChange={e => savePrefs({ refresh_sports_min: Number(e.target.value) })}
-            >
+            <select className="feeds-refresh-select" value={prefs.refresh_sports_min}
+              onChange={e => savePrefs({ refresh_sports_min: Number(e.target.value) })}>
               {REFRESH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
-
           <div className="feeds-settings-actions">
-            <button className="btn--primary" onClick={() => { load(); setShowSettings(false) }}>
-              Apply & Refresh
-            </button>
+            <button className="btn--primary" onClick={() => { load(); setShowSettings(false) }}>Apply & Refresh</button>
           </div>
         </div>
       )}
 
-      {!prefs?.sport_teams?.length && (
-        <div className="feeds-empty">
-          No teams followed. Open Settings and search for your teams.
-        </div>
+      {!teams.length && (
+        <div className="feeds-empty">No teams followed. Open Settings and search for your teams.</div>
       )}
 
-      {loading && <div className="feeds-loading">Fetching results…</div>}
-      {error && <div className="feeds-error">{error}</div>}
-
-      {data && !loading && (
+      {teams.length > 0 && (
         <>
-          {data.results.length > 0 && (
-            <div>
-              <div className="feeds-sports-section-title">Recent Results</div>
-              <div className="feeds-sports-grid">
-                {data.results.map(e => <SportEventCard key={e.id} event={e} />)}
-              </div>
-            </div>
+          {/* Team filter chips */}
+          <div className="feeds-team-filter">
+            <button className={`feeds-team-chip${filterTeam === 'all' ? ' feeds-team-chip--active' : ''}`}
+              onClick={() => setFilterTeam('all')}>All teams</button>
+            {teams.map(t => (
+              <button key={t.id}
+                className={`feeds-team-chip${filterTeam === t.id ? ' feeds-team-chip--active' : ''}`}
+                onClick={() => setFilterTeam(t.id)}>
+                {t.badge_url && <img className="feeds-team-chip-badge" src={t.badge_url} alt="" />}
+                {t.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Sub-tabs */}
+          <div className="feeds-sports-tab-bar">
+            {['results', 'fixtures', 'standings'].map(tab => (
+              <button key={tab}
+                className={`feeds-sports-tab${sportsTab === tab ? ' feeds-sports-tab--active' : ''}`}
+                onClick={() => setSportsTab(tab)}>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {loading && <div className="feeds-loading">Fetching data…</div>}
+          {error && <div className="feeds-error">{error}</div>}
+
+          {data && !loading && sportsTab === 'results' && (
+            <>
+              {filterEvents(data.results).length > 0
+                ? <div className="feeds-sports-grid">
+                    {filterEvents(data.results).map(e => <MatchCard key={e.id} event={e} />)}
+                  </div>
+                : <div className="feeds-empty">No recent results found.</div>
+              }
+            </>
           )}
-          {data.fixtures.length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <div className="feeds-sports-section-title">Upcoming Fixtures</div>
-              <div className="feeds-sports-grid">
-                {data.fixtures.map(e => <SportEventCard key={e.id} event={e} />)}
-              </div>
-            </div>
+
+          {data && !loading && sportsTab === 'fixtures' && (
+            <>
+              {filterEvents(data.fixtures).length > 0
+                ? <div className="feeds-sports-grid">
+                    {filterEvents(data.fixtures).map(e => <MatchCard key={e.id} event={e} />)}
+                  </div>
+                : <div className="feeds-empty">No upcoming fixtures found.</div>
+              }
+            </>
           )}
-          {data.results.length === 0 && data.fixtures.length === 0 && (
-            <div className="feeds-empty">No recent results or upcoming fixtures found.</div>
+
+          {sportsTab === 'standings' && (
+            <>
+              {standingLeagues.length === 0 && (
+                <div className="feeds-empty">No standings available. Make sure your followed teams have a league assigned.</div>
+              )}
+              {standingLeagues.map(([leagueId, rows]) => rows.length > 0 && (
+                <div key={leagueId} style={{ marginBottom: 24 }}>
+                  <div className="feeds-subsection-label" style={{ marginBottom: 10 }}>
+                    {rows[0]?.league} — {rows[0]?.season}
+                  </div>
+                  <StandingsTable rows={rows} followedIds={followedTeamIds} />
+                </div>
+              ))}
+            </>
           )}
         </>
       )}
@@ -616,32 +957,103 @@ function SportsTab({ prefs, savePrefs }) {
   )
 }
 
-function SportEventCard({ event }) {
+function MatchCard({ event }) {
   return (
-    <div className="feeds-sports-card">
-      <div className="feeds-sports-teams">
-        <div className="feeds-sports-team">
-          {event.home_badge && <img className="feeds-sports-badge" src={event.home_badge} alt="" />}
-          <span className="feeds-sports-team-name">{event.home_team}</span>
-        </div>
-
-        <div className={`feeds-sports-score${!event.finished ? ' feeds-sports-score--upcoming' : ''}`}>
-          {event.finished
-            ? `${event.home_score} – ${event.away_score}`
-            : event.time || 'vs'
+    <div className="feeds-match-card">
+      <div className="feeds-match-header">
+        <span className="feeds-match-league">{event.league}</span>
+        <span className="feeds-match-date">{event.date}</span>
+      </div>
+      <div className="feeds-match-body">
+        <div className="feeds-match-team">
+          {event.home_badge
+            ? <img className="feeds-match-badge" src={event.home_badge} alt="" />
+            : <div style={{ width: 40, height: 40, background: 'var(--bg-panel)', borderRadius: 4 }} />
           }
+          <span className="feeds-match-team-name">{event.home_team}</span>
         </div>
 
-        <div className="feeds-sports-team feeds-sports-team--away">
-          {event.away_badge && <img className="feeds-sports-badge" src={event.away_badge} alt="" />}
-          <span className="feeds-sports-team-name">{event.away_team}</span>
+        <div className="feeds-match-centre">
+          {event.finished ? (
+            <div className="feeds-match-score">{event.home_score} – {event.away_score}</div>
+          ) : (
+            <>
+              <div className="feeds-match-vs">VS</div>
+              {event.time && <div className="feeds-match-time">{event.time}</div>}
+              <Countdown dateStr={event.date} timeStr={event.time} />
+            </>
+          )}
+        </div>
+
+        <div className="feeds-match-team">
+          {event.away_badge
+            ? <img className="feeds-match-badge" src={event.away_badge} alt="" />
+            : <div style={{ width: 40, height: 40, background: 'var(--bg-panel)', borderRadius: 4 }} />
+          }
+          <span className="feeds-match-team-name">{event.away_team}</span>
         </div>
       </div>
+    </div>
+  )
+}
 
-      <div className="feeds-sports-meta">
-        <div>{event.date}</div>
-        <div>{event.league}</div>
-      </div>
+function StandingsTable({ rows, followedIds }) {
+  return (
+    <div className="feeds-standings-wrap">
+      <table className="feeds-standings-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Team</th>
+            <th>P</th>
+            <th>W</th>
+            <th>D</th>
+            <th>L</th>
+            <th>GF</th>
+            <th>GA</th>
+            <th>GD</th>
+            <th>Pts</th>
+            <th>Form</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(row => {
+            const isFollowed = followedIds.has(row.team_id)
+            const zone = zoneColor(row.description)
+            const gdPos = row.goal_diff > 0
+            return (
+              <tr key={row.rank}
+                className={`feeds-standings-row${isFollowed ? ' feeds-standings-row--highlight' : ''}`}>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {zone && <div className="feeds-standings-zone" style={{ background: zone, minHeight: 20 }} />}
+                    <span className="feeds-standings-pos">{row.rank}</span>
+                  </div>
+                </td>
+                <td>
+                  <div className="feeds-standings-team-cell">
+                    {row.badge_url && <img className="feeds-standings-badge" src={row.badge_url} alt="" />}
+                    <span style={{ fontWeight: isFollowed ? 600 : 400, color: isFollowed ? 'var(--text)' : 'var(--text-dim)' }}>
+                      {row.team}
+                    </span>
+                  </div>
+                </td>
+                <td>{row.played}</td>
+                <td style={{ color: '#00cc44' }}>{row.win}</td>
+                <td>{row.draw}</td>
+                <td style={{ color: '#ff3322' }}>{row.loss}</td>
+                <td>{row.goals_for}</td>
+                <td>{row.goals_against}</td>
+                <td className={`feeds-standings-gd--${gdPos ? 'pos' : 'neg'}`}>
+                  {gdPos ? '+' : ''}{row.goal_diff}
+                </td>
+                <td className="feeds-standings-pts">{row.points}</td>
+                <td><FormGuide form={row.form} /></td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -650,12 +1062,124 @@ function SportEventCard({ event }) {
 // STOCKS TAB
 // =============================================================================
 
+function isMarketOpen() {
+  const now = new Date()
+  const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }))
+  const day = et.getDay()
+  if (day === 0 || day === 6) return false
+  const h = et.getHours(), m = et.getMinutes()
+  const mins = h * 60 + m
+  return mins >= 570 && mins < 960 // 9:30–16:00
+}
+
+function Sparkline({ data, up }) {
+  if (!data || data.length < 2) return null
+  const prices = data.map(d => d.close)
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  const range = max - min || 1
+  const w = 200, h = 50
+  const pts = prices.map((p, i) => {
+    const x = (i / (prices.length - 1)) * w
+    const y = h - ((p - min) / range) * h
+    return `${x},${y}`
+  }).join(' ')
+  const color = up ? '#00cc44' : '#ff3322'
+  return (
+    <svg className="feeds-stock-sparkline" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+      <linearGradient id={`sg-${up}`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+        <stop offset="100%" stopColor={color} stopOpacity="0" />
+      </linearGradient>
+      <polygon
+        points={`0,${h} ${pts} ${w},${h}`}
+        fill={`url(#sg-${up})`}
+      />
+    </svg>
+  )
+}
+
+function StockCard({ q }) {
+  const [expanded, setExpanded] = useState(false)
+  const [chart, setChart] = useState(null)
+  const [chartLoading, setChartLoading] = useState(false)
+
+  const loadChart = () => {
+    if (chart || chartLoading) return
+    setChartLoading(true)
+    apiFetch(`/stocks/chart?ticker=${q.ticker}`)
+      .then(setChart)
+      .catch(() => setChart([]))
+      .finally(() => setChartLoading(false))
+  }
+
+  const toggle = () => {
+    setExpanded(e => !e)
+    if (!expanded) loadChart()
+  }
+
+  return (
+    <div className={`feeds-stock-card feeds-stock-card--${q.up ? 'up' : 'down'}`} onClick={toggle}>
+      <div className="feeds-stock-card-main">
+        <div className="feeds-stock-header">
+          <span className="feeds-stock-ticker">{q.ticker}</span>
+          <span className="feeds-stock-name">{q.name || ''}</span>
+        </div>
+        <div className="feeds-stock-price">${parseFloat(q.price).toFixed(2)}</div>
+        <div className={`feeds-stock-change feeds-stock-change--${q.up ? 'up' : 'down'}`}>
+          {q.up ? '▲' : '▼'} {q.change > 0 ? '+' : ''}{parseFloat(q.change).toFixed(2)}
+          <span style={{ opacity: 0.8 }}>({q.change_pct > 0 ? '+' : ''}{parseFloat(q.change_pct).toFixed(2)}%)</span>
+        </div>
+        <div className="feeds-stock-meta">
+          <div className="feeds-stock-meta-item">Open <span className="feeds-stock-meta-val">${q.open}</span></div>
+          <div className="feeds-stock-meta-item">High <span className="feeds-stock-meta-val">${q.high}</span></div>
+          <div className="feeds-stock-meta-item">Low <span className="feeds-stock-meta-val">${q.low}</span></div>
+          <div className="feeds-stock-meta-item">Prev <span className="feeds-stock-meta-val">${q.prev_close}</span></div>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="feeds-stock-detail" onClick={e => e.stopPropagation()}>
+          <div className="feeds-stock-chart-label">30-Day Price</div>
+          {chartLoading && <div className="feeds-stock-chart-loading">Loading chart…</div>}
+          {chart && chart.length > 0 && <Sparkline data={chart} up={q.up} />}
+          {chart && chart.length === 0 && <div className="feeds-stock-chart-loading">Chart data unavailable (API limit)</div>}
+          {chart && chart.length > 0 && (
+            <div className="feeds-stock-meta" style={{ borderTop: 'none', paddingTop: 0 }}>
+              <div className="feeds-stock-meta-item">
+                30d High <span className="feeds-stock-meta-val" style={{ color: '#00cc44' }}>
+                  ${Math.max(...chart.map(d => d.high)).toFixed(2)}
+                </span>
+              </div>
+              <div className="feeds-stock-meta-item">
+                30d Low <span className="feeds-stock-meta-val" style={{ color: '#ff3322' }}>
+                  ${Math.min(...chart.map(d => d.low)).toFixed(2)}
+                </span>
+              </div>
+              <div className="feeds-stock-meta-item">
+                Volume <span className="feeds-stock-meta-val">
+                  {Number(q.volume).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StocksTab({ prefs, savePrefs }) {
   const [showSettings, setShowSettings] = useState(false)
   const [quotes, setQuotes] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [tickerInput, setTickerInput] = useState('')
+  const [searchQ, setSearchQ] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [sort, setSort] = useState('change')  // 'change' | 'alpha' | 'price'
+  const searchTimer = useRef(null)
 
   const load = useCallback(() => {
     if (!prefs?.stock_tickers?.length) return
@@ -669,18 +1193,41 @@ function StocksTab({ prefs, savePrefs }) {
 
   useEffect(() => { load() }, [load])
 
-  const addTicker = () => {
-    const t = tickerInput.trim().toUpperCase()
+  const doSearch = (q) => {
+    clearTimeout(searchTimer.current)
+    setSearchQ(q)
+    if (q.length < 1) { setSearchResults([]); return }
+    searchTimer.current = setTimeout(async () => {
+      setSearching(true)
+      try { setSearchResults(await apiFetch(`/stocks/search?q=${encodeURIComponent(q)}`)) }
+      catch { setSearchResults([]) }
+      setSearching(false)
+    }, 500)
+  }
+
+  const addTicker = (ticker) => {
+    const t = ticker.trim().toUpperCase()
     if (!t) return
     const current = prefs.stock_tickers || []
     if (current.includes(t)) return
     savePrefs({ stock_tickers: [...current, t] })
-    setTickerInput('')
+    setSearchQ('')
+    setSearchResults([])
   }
 
-  const removeTicker = (t) => {
-    savePrefs({ stock_tickers: (prefs.stock_tickers || []).filter(x => x !== t) })
-  }
+  const removeTicker = (t) => savePrefs({ stock_tickers: (prefs.stock_tickers || []).filter(x => x !== t) })
+
+  const marketOpen = isMarketOpen()
+
+  const sorted = [...quotes].sort((a, b) => {
+    if (sort === 'change') return Math.abs(b.change_pct) - Math.abs(a.change_pct)
+    if (sort === 'alpha')  return a.ticker.localeCompare(b.ticker)
+    if (sort === 'price')  return b.price - a.price
+    return 0
+  })
+
+  const topGainer = quotes.length ? quotes.reduce((a, b) => a.change_pct > b.change_pct ? a : b) : null
+  const topLoser  = quotes.length ? quotes.reduce((a, b) => a.change_pct < b.change_pct ? a : b) : null
 
   return (
     <>
@@ -694,18 +1241,27 @@ function StocksTab({ prefs, savePrefs }) {
       {showSettings && (
         <div className="feeds-settings-panel">
           <div className="feeds-settings-row">
-            <span className="feeds-settings-label">Add ticker symbol</span>
-            <div className="feeds-location-row">
-              <input
-                className="feeds-settings-input"
-                placeholder="e.g. AAPL, TSLA, NVDA"
-                value={tickerInput}
-                onChange={e => setTickerInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && addTicker()}
-                style={{ flex: 1 }}
-              />
-              <button className="btn--primary" onClick={addTicker}>Add</button>
-            </div>
+            <span className="feeds-settings-label">Search for a stock</span>
+            <input className="feeds-settings-input" placeholder="e.g. Apple, Tesla, NVDA…"
+              value={searchQ} onChange={e => doSearch(e.target.value)} />
+            {searching && <div className="feeds-loading">Searching…</div>}
+            {searchResults.length > 0 && (
+              <div className="feeds-search-results">
+                {searchResults.map(r => (
+                  <div key={r.ticker} className="feeds-search-result-item">
+                    <div>
+                      <div className="feeds-search-result-name">{r.ticker} — {r.name}</div>
+                      <div className="feeds-search-result-meta">{r.type} · {r.region} · {r.currency}</div>
+                    </div>
+                    <button className="feeds-add-btn"
+                      onClick={() => addTicker(r.ticker)}
+                      disabled={(prefs.stock_tickers || []).includes(r.ticker)}>
+                      {(prefs.stock_tickers || []).includes(r.ticker) ? '✓' : '+ Add'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {(prefs?.stock_tickers || []).length > 0 && (
@@ -724,52 +1280,94 @@ function StocksTab({ prefs, savePrefs }) {
 
           <div className="feeds-settings-row">
             <span className="feeds-settings-label">Refresh interval</span>
-            <select
-              className="feeds-refresh-select"
-              value={prefs.refresh_stocks_min}
-              onChange={e => savePrefs({ refresh_stocks_min: Number(e.target.value) })}
-            >
+            <select className="feeds-refresh-select" value={prefs.refresh_stocks_min}
+              onChange={e => savePrefs({ refresh_stocks_min: Number(e.target.value) })}>
               {REFRESH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
-
           <div className="feeds-settings-actions">
-            <button className="btn--primary" onClick={() => { load(); setShowSettings(false) }}>
-              Apply & Refresh
-            </button>
+            <button className="btn--primary" onClick={() => { load(); setShowSettings(false) }}>Apply & Refresh</button>
           </div>
         </div>
       )}
 
       {!prefs?.stock_tickers?.length && (
-        <div className="feeds-empty">
-          No tickers in watchlist. Open Settings to add stock symbols.
-        </div>
+        <div className="feeds-empty">No stocks in watchlist. Open Settings to add stocks.</div>
       )}
 
       {loading && <div className="feeds-loading">Fetching quotes…</div>}
       {error && <div className="feeds-error">{error}</div>}
 
       {!loading && quotes.length > 0 && (
-        <div className="feeds-stocks-grid">
-          {quotes.map(q => (
-            <div key={q.ticker} className="feeds-stock-card">
-              <div className="feeds-stock-ticker">{q.ticker}</div>
-              <div className="feeds-stock-price">${q.price.toFixed(2)}</div>
-              <div className={`feeds-stock-change feeds-stock-change--${q.up ? 'up' : 'down'}`}>
-                {q.up ? '▲' : '▼'} {q.change > 0 ? '+' : ''}{q.change.toFixed(2)} ({q.change_pct > 0 ? '+' : ''}{q.change_pct.toFixed(2)}%)
+        <>
+          {/* Summary bar */}
+          <div className="feeds-stocks-summary">
+            {topGainer && (
+              <div className="feeds-stocks-summary-item">
+                <span className="feeds-stocks-summary-label">Top Gainer</span>
+                <span className="feeds-stocks-summary-val" style={{ color: '#00cc44' }}>
+                  {topGainer.ticker} +{parseFloat(topGainer.change_pct).toFixed(2)}%
+                </span>
               </div>
-              <div className="feeds-stock-meta">
-                <div className="feeds-stock-meta-item">Open: ${q.open}</div>
-                <div className="feeds-stock-meta-item">High: ${q.high} · Low: ${q.low}</div>
-                <div className="feeds-stock-meta-item">Prev close: ${q.prev_close}</div>
+            )}
+            {topLoser && topLoser.ticker !== topGainer?.ticker && (
+              <div className="feeds-stocks-summary-item">
+                <span className="feeds-stocks-summary-label">Top Loser</span>
+                <span className="feeds-stocks-summary-val" style={{ color: '#ff3322' }}>
+                  {topLoser.ticker} {parseFloat(topLoser.change_pct).toFixed(2)}%
+                </span>
               </div>
+            )}
+            <div className="feeds-stocks-summary-item">
+              <span className="feeds-stocks-summary-label">Watching</span>
+              <span className="feeds-stocks-summary-val" style={{ color: 'var(--text)' }}>{quotes.length} stocks</span>
             </div>
-          ))}
-        </div>
+            <div className="feeds-market-status">
+              <div className={`feeds-market-dot feeds-market-dot--${marketOpen ? 'open' : 'closed'}`} />
+              <span className="feeds-market-label">US Market {marketOpen ? 'Open' : 'Closed'}</span>
+            </div>
+          </div>
+
+          {/* Sort controls */}
+          <div className="feeds-stocks-controls">
+            <span className="feeds-sort-label">Sort:</span>
+            {[['change', 'By Move'], ['alpha', 'A–Z'], ['price', 'By Price']].map(([val, label]) => (
+              <button key={val}
+                className={`feeds-sort-btn${sort === val ? ' feeds-sort-btn--active' : ''}`}
+                onClick={() => setSort(val)}>{label}</button>
+            ))}
+          </div>
+
+          <div className="feeds-stocks-grid">
+            {sorted.map(q => <StockCard key={q.ticker} q={q} />)}
+          </div>
+          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textAlign: 'right', marginTop: 4 }}>
+            Click any card to expand · 30-day chart loads on demand
+          </div>
+        </>
       )}
     </>
   )
+}
+
+// =============================================================================
+// WMO weather code → emoji icon
+// =============================================================================
+
+function wmoIcon(code) {
+  if (code === 0)                       return '☀️'
+  if (code === 1)                       return '🌤️'
+  if (code === 2)                       return '⛅'
+  if (code === 3)                       return '☁️'
+  if (code === 45 || code === 48)       return '🌫️'
+  if (code >= 51 && code <= 55)         return '🌦️'
+  if (code >= 61 && code <= 65)         return '🌧️'
+  if (code >= 71 && code <= 77)         return '🌨️'
+  if (code >= 80 && code <= 82)         return '🌧️'
+  if (code === 85 || code === 86)       return '🌨️'
+  if (code === 95)                      return '⛈️'
+  if (code === 96 || code === 99)       return '⛈️'
+  return '🌡️'
 }
 
 // =============================================================================
