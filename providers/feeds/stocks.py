@@ -68,6 +68,65 @@ async def fetch_quotes(tickers: List[str], api_key: str) -> List[Dict[str, Any]]
         quote = await fetch_quote(ticker, api_key)
         if quote:
             results.append(quote)
-        # Avoid hitting Alpha Vantage's 5/min rate limit
         await asyncio.sleep(0.5)
+    return results
+
+
+async def fetch_chart(ticker: str, api_key: str, days: int = 30) -> List[Dict[str, Any]]:
+    """Fetch daily OHLCV data for the last `days` trading days."""
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(_BASE, params={
+                "function": "TIME_SERIES_DAILY",
+                "symbol": ticker.upper(),
+                "outputsize": "compact",
+                "apikey": api_key,
+            })
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as exc:
+        logger.warning("Alpha Vantage chart fetch failed for %s: %s", ticker, exc)
+        return []
+
+    series = data.get("Time Series (Daily)") or {}
+    if not series:
+        return []
+
+    rows = []
+    for date_str, ohlcv in sorted(series.items())[-days:]:
+        rows.append({
+            "date": date_str,
+            "open":  float(ohlcv.get("1. open", 0)),
+            "high":  float(ohlcv.get("2. high", 0)),
+            "low":   float(ohlcv.get("3. low", 0)),
+            "close": float(ohlcv.get("4. close", 0)),
+            "volume": int(ohlcv.get("5. volume", 0)),
+        })
+    return rows
+
+
+async def search_symbols(query: str, api_key: str) -> List[Dict[str, Any]]:
+    """Search for ticker symbols by company name or partial ticker."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(_BASE, params={
+                "function": "SYMBOL_SEARCH",
+                "keywords": query,
+                "apikey": api_key,
+            })
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as exc:
+        logger.warning("Alpha Vantage symbol search failed: %s", exc)
+        return []
+
+    results = []
+    for m in (data.get("bestMatches") or [])[:8]:
+        results.append({
+            "ticker": m.get("1. symbol") or "",
+            "name":   m.get("2. name") or "",
+            "type":   m.get("3. type") or "",
+            "region": m.get("4. region") or "",
+            "currency": m.get("8. currency") or "USD",
+        })
     return results

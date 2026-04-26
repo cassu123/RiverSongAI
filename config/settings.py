@@ -47,9 +47,17 @@ class Settings(BaseSettings):
     app_host: str = Field(default="0.0.0.0", description="FastAPI bind host")
     app_port: int = Field(default=8000, description="FastAPI bind port")
     log_level: str = Field(default="INFO", description="Logging level")
+    environment: str = Field(
+        default="production",
+        description="Runtime environment: development | production. Controls API docs visibility.",
+    )
     cors_origins: List[str] = Field(
         default=["http://localhost:5173"],
         description="Allowed CORS origins",
+    )
+    allowed_hosts: List[str] = Field(
+        default=["*"],
+        description="Trusted hostnames for TrustedHostMiddleware. Set to your domain in production.",
     )
 
     # -------------------------------------------------------------------------

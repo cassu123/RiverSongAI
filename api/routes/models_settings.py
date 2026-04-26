@@ -28,10 +28,11 @@ import urllib.error
 import json
 from typing import Optional, Set
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from config.settings import get_settings
+from core.auth import decode_token
 from providers.llm.registry import LLMRegistry, ModelEntry
 from providers.memory.models import LLMSettings, MemorySettings, TTLOption
 
@@ -147,9 +148,19 @@ class LLMSettingsBody(BaseModel):
     cloud_fallback_model: Optional[str] = None
 
 
+def _require_user(authorization: Optional[str]) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    payload = decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    return payload["sub"]
+
+
 @router.get("/settings/llm")
-async def get_llm_settings(request: Request, user_id: str = "default"):
+async def get_llm_settings(request: Request, authorization: Optional[str] = Header(default=None)):
     """Return the current LLM provider + model selection for a user."""
+    user_id = _require_user(authorization)
     memory = request.app.state.memory_manager
     s = await memory.get_llm_settings(user_id)
     return {
@@ -165,14 +176,9 @@ async def get_llm_settings(request: Request, user_id: str = "default"):
 async def save_llm_settings(
     request: Request,
     body: LLMSettingsBody,
-    user_id: str = "default",
+    authorization: Optional[str] = Header(default=None),
 ):
-    """
-    Save LLM model selection for a user.
-
-    Validates that the provider+model exist in the registry, and that cloud
-    providers are enabled before allowing selection.
-    """
+    user_id = _require_user(authorization)
     entry = LLMRegistry.get(body.provider, body.model_id)
     if not entry:
         raise HTTPException(
@@ -216,8 +222,9 @@ class MemorySettingsBody(BaseModel):
 
 
 @router.get("/settings/memory")
-async def get_memory_settings(request: Request, user_id: str = "default"):
+async def get_memory_settings(request: Request, authorization: Optional[str] = Header(default=None)):
     """Return the current memory settings for a user."""
+    user_id = _require_user(authorization)
     memory = request.app.state.memory_manager
     s = await memory.get_memory_settings(user_id)
     return {
@@ -232,9 +239,9 @@ async def get_memory_settings(request: Request, user_id: str = "default"):
 async def save_memory_settings(
     request: Request,
     body: MemorySettingsBody,
-    user_id: str = "default",
+    authorization: Optional[str] = Header(default=None),
 ):
-    """Save memory settings for a user."""
+    user_id = _require_user(authorization)
     if not TTLOption.is_valid(body.default_ttl):
         raise HTTPException(
             status_code=400,

@@ -109,15 +109,58 @@ async def fetch_teams_feed(team_ids: List[str]) -> Dict[str, Any]:
     return {"results": results[:20], "fixtures": fixtures[:20]}
 
 
+async def fetch_standings(league_id: str, season: str = "") -> List[Dict[str, Any]]:
+    """Fetch league standings table. Season format: '2024-2025'. Empty = current."""
+    params: Dict[str, str] = {"l": league_id}
+    if season:
+        params["s"] = season
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{_BASE}/lookuptable.php", params=params)
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as exc:
+        logger.warning("TheSportsDB standings failed for league %s: %s", league_id, exc)
+        return []
+
+    rows = data.get("table") or []
+    return [_format_standing(r) for r in rows]
+
+
 def _format_team(t: Dict) -> Dict[str, Any]:
     return {
         "id": t.get("idTeam") or "",
         "name": t.get("strTeam") or "",
         "sport": t.get("strSport") or "",
         "league": t.get("strLeague") or "",
+        "league_id": t.get("idLeague") or "",
         "country": t.get("strCountry") or "",
-        "badge_url": t.get("strTeamBadge") or "",
+        "badge_url": t.get("strBadge") or t.get("strTeamBadge") or "",
         "stadium": t.get("strStadium") or "",
+        "colour1": t.get("strColour1") or "",
+        "colour2": t.get("strColour2") or "",
+    }
+
+
+def _format_standing(r: Dict) -> Dict[str, Any]:
+    return {
+        "rank": int(r.get("intRank") or 0),
+        "team_id": r.get("idTeam") or "",
+        "team": r.get("strTeam") or "",
+        "badge_url": r.get("strBadge") or "",
+        "league_id": r.get("idLeague") or "",
+        "league": r.get("strLeague") or "",
+        "season": r.get("strSeason") or "",
+        "form": r.get("strForm") or "",
+        "description": r.get("strDescription") or "",
+        "played": int(r.get("intPlayed") or 0),
+        "win": int(r.get("intWin") or 0),
+        "draw": int(r.get("intDraw") or 0),
+        "loss": int(r.get("intLoss") or 0),
+        "goals_for": int(r.get("intGoalsFor") or 0),
+        "goals_against": int(r.get("intGoalsAgainst") or 0),
+        "goal_diff": int(r.get("intGoalDifference") or 0),
+        "points": int(r.get("intPoints") or 0),
     }
 
 

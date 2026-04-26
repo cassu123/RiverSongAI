@@ -25,8 +25,8 @@ from core.auth import decode_token
 from config.settings import get_settings
 from providers.feeds.news import fetch_articles, CURATED_SOURCES
 from providers.feeds.weather import fetch_weather
-from providers.feeds.sports import search_teams, fetch_teams_feed
-from providers.feeds.stocks import fetch_quotes
+from providers.feeds.sports import search_teams, fetch_teams_feed, fetch_standings
+from providers.feeds.stocks import fetch_quotes, fetch_chart, search_symbols
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/feeds", tags=["feeds"])
@@ -154,6 +154,13 @@ async def get_weather(
 # Sports
 # ---------------------------------------------------------------------------
 
+@router.get("/sports/standings")
+async def get_standings(league_id: str = Query(...), season: str = Query(default="")):
+    """Fetch league standings table from TheSportsDB."""
+    rows = await fetch_standings(league_id, season)
+    return rows
+
+
 @router.get("/sports/search")
 async def sports_search(q: str = Query(..., min_length=2)):
     """Search teams by name via TheSportsDB."""
@@ -182,6 +189,25 @@ async def get_sports(
 # ---------------------------------------------------------------------------
 # Stocks
 # ---------------------------------------------------------------------------
+
+@router.get("/stocks/search")
+async def stocks_search(q: str = Query(..., min_length=1)):
+    settings = get_settings()
+    if not settings.alpha_vantage_api_key:
+        raise HTTPException(status_code=503, detail="ALPHA_VANTAGE_KEY not configured.")
+    return await search_symbols(q, settings.alpha_vantage_api_key)
+
+
+@router.get("/stocks/chart")
+async def get_stock_chart(ticker: str = Query(...)):
+    settings = get_settings()
+    if not settings.alpha_vantage_api_key:
+        raise HTTPException(status_code=503, detail="ALPHA_VANTAGE_KEY not configured.")
+    data = await fetch_chart(ticker.upper(), settings.alpha_vantage_api_key)
+    if not data:
+        raise HTTPException(status_code=502, detail=f"No chart data for {ticker}. API limit may be reached.")
+    return data
+
 
 @router.get("/stocks")
 async def get_stocks(

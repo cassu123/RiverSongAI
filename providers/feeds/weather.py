@@ -15,6 +15,16 @@ import httpx
 logger = logging.getLogger(__name__)
 
 _BASE = "https://api.open-meteo.com/v1/forecast"
+_AQI_BASE = "https://air-quality-api.open-meteo.com/v1/air-quality"
+
+_AQI_LEVELS = [
+    (50,  "Good",                    "#00cc44"),
+    (100, "Moderate",                "#ffcc00"),
+    (150, "Unhealthy for Sensitive", "#ff8800"),
+    (200, "Unhealthy",               "#ff3300"),
+    (300, "Very Unhealthy",          "#9933cc"),
+    (999, "Hazardous",               "#7a0000"),
+]
 
 # WMO weather interpretation codes → human-readable description
 _WMO_CODES: Dict[int, str] = {
@@ -150,12 +160,52 @@ async def fetch_weather(
             "wind_max": (daily_raw.get("windspeed_10m_max") or [])[i] if daily_raw.get("windspeed_10m_max") else None,
         })
 
+    air_quality = await fetch_air_quality(lat, lon)
+
     return {
         "current": current,
         "hourly": hourly,
         "daily": daily,
+        "air_quality": air_quality,
         "unit": unit_sym,
         "timezone": data.get("timezone"),
         "lat": lat,
         "lon": lon,
+    }
+
+
+async def fetch_air_quality(lat: float, lon: float) -> Dict[str, Any]:
+    """Fetch current air quality from Open-Meteo air quality API (no key needed)."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(_AQI_BASE, params={
+                "latitude": lat,
+                "longitude": lon,
+                "current": "us_aqi,pm10,pm2_5,ozone,nitrogen_dioxide,carbon_monoxide",
+                "timezone": "auto",
+            })
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as exc:
+        logger.warning("Air quality fetch failed: %s", exc)
+        return {}
+
+    c = data.get("current", {})
+    aqi = c.get("us_aqi")
+    label, color = "Unknown", "#888"
+    if aqi is not None:
+        for threshold, lbl, col in _AQI_LEVELS:
+            if aqi <= threshold:
+                label, color = lbl, col
+                break
+
+    return {
+        "aqi": aqi,
+        "label": label,
+        "color": color,
+        "pm2_5": c.get("pm2_5"),
+        "pm10": c.get("pm10"),
+        "ozone": c.get("ozone"),
+        "nitrogen_dioxide": c.get("nitrogen_dioxide"),
+        "carbon_monoxide": c.get("carbon_monoxide"),
     }

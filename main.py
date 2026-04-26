@@ -25,6 +25,9 @@ from typing import AsyncGenerator
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as StarletteRequest
 
 from config.settings import get_settings
 from core.kill_switch import is_kill_switch_active
@@ -109,14 +112,29 @@ def create_app() -> FastAPI:
     settings = get_settings()
     _configure_logging(settings.log_level)
 
+    is_dev = settings.environment.lower() == "development"
+
     app = FastAPI(
         title="River Song AI",
         description="Personal AI hub -- Phase 1: Core conversation loop (Mic -> Whisper -> Ollama -> Piper -> Speaker)",
         version="0.1.0",
         lifespan=lifespan,
-        docs_url="/docs",
-        redoc_url="/redoc",
+        docs_url="/docs" if is_dev else None,
+        redoc_url="/redoc" if is_dev else None,
+        openapi_url="/openapi.json" if is_dev else None,
     )
+
+    # Reject requests from unexpected hostnames (protects against Host header attacks)
+    if settings.allowed_hosts != ["*"]:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+
+    # Forward real client IP from Cloudflare's CF-Connecting-IP header
+    class _CloudflareIPMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: StarletteRequest, call_next):
+            cf_ip = request.headers.get("CF-Connecting-IP")
+            if cf_ip:
+                request.scope["client"] = (cf_ip, 0)
+            return await call_next(request)
 
     # Allow the Vite dev server (and any other configured origins) to connect
     app.add_middleware(
@@ -126,6 +144,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.add_middleware(_CloudflareIPMiddleware)
 
     # Register API routers
     from api.routes.health import router as health_router

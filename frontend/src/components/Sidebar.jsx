@@ -9,7 +9,7 @@ const USER_ITEMS = [
   { key: 'commerce',    label: 'STORE',       icon: IconCommerce },
   { key: 'feeds',       label: 'FEEDS',       icon: IconFeeds },
   { key: 'google',      label: 'GOOGLE',      icon: IconGoogle,   soon: true },
-  { key: 'reading',     label: 'READING',     icon: IconReading,  soon: true },
+  { key: 'reading',     label: 'READING',     icon: IconReading },
 ]
 
 const ADMIN_ITEMS = [
@@ -25,7 +25,7 @@ const ADMIN_ITEMS = [
   { key: 'analytics',   label: 'ANALYTICS',   icon: IconAnalytics, soon: true },
   { key: 'feeds',       label: 'FEEDS',       icon: IconFeeds },
   { key: 'google',      label: 'GOOGLE',      icon: IconGoogle,    soon: true },
-  { key: 'reading',     label: 'READING',     icon: IconReading,   soon: true },
+  { key: 'reading',     label: 'READING',     icon: IconReading },
   { key: 'users',       label: 'USERS',       icon: IconUsers },
   { key: 'killswitch',  label: 'KILL SW.',    icon: IconKill },
 ]
