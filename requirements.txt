@@ -28,8 +28,8 @@ python-dotenv==1.2.2            # .env file support
 # Audio capture happens in the browser; server receives WAV bytes over WebSocket
 # -----------------------------------------------------------------------------
 openai-whisper==20250625
-numpy==1.26.4                   # Pinned: whisper/numba not confirmed on numpy 2.x
-scipy==1.17.1                   # Resampling browser audio to 16 kHz for Whisper
+numpy>=2.1.0                    # 2.x required for Python 3.13+
+scipy>=1.14.0                   # Resampling browser audio to 16 kHz for Whisper
 soundfile==0.13.1               # WAV decode (bytes -> numpy array)
 
 
