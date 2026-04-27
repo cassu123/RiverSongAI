@@ -86,7 +86,7 @@ python-amazon-sp-api==2.1.8          # Amazon Selling Partner API (auth + endpoi
 # -----------------------------------------------------------------------------
 # Reading Providers (Phase 6)
 # -----------------------------------------------------------------------------
-audible==0.10.0                      # Audible library access and device auth
+# audible==0.10.0                    # Audible library access and device auth (unsupported on Python 3.14+)
 
 
 # -----------------------------------------------------------------------------
