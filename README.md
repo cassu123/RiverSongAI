@@ -1,248 +1,180 @@
 # RIVER SONG AI
-### Responsive Intelligent Virtual Environment for Recognition, Scheduling, Organization, and Networked Governance
+### Personal AI Operating System — Local-First, Voice-First
 
-> One interface. Your rules. Your data. Everything else is background noise.
+> One interface. Your rules. Your data.
 
 ---
 
 ## What This Is
 
-River Song is a personal AI operating system -- not a smart home hub, not a voice assistant, not another app. She is the single interface that sits in front of everything you own, everything you use, and every decision you make daily.
+River Song is a personal AI operating system built for home use. She runs entirely on your own hardware — no subscriptions, no cloud required. Talk to her, type to her, or let her run routines automatically.
 
-Inspired by Cortana from Halo -- the visual, the voice, the presence -- River Song is built to understand intent, not just commands. You do not configure routines from a menu. You describe your life in plain language and she figures out the rest.
-
-She replaces 47 apps with one conversation.
+She handles conversation, memory, home automation, routines, inventory, feeds, and more — all through a single web interface accessible from any device on your network or via `riversongai.com`.
 
 ---
 
-## Phase 1 -- The Core Loop (Current)
+## Current Status
 
-```
-You speak
-    Whisper (local STT) hears it
-        Ollama (local LLM) thinks
-            Piper (local TTS) responds
-                Cortana visual reacts
-```
+**Phase 1 is complete and live in production.**
 
-Everything runs on your hardware. No cloud calls required. When you are ready to scale, swap one line in `.env` and she upgrades herself.
+| Component | Status |
+|---|---|
+| Voice conversation (STT → LLM → TTS) | ✅ Live |
+| Web dashboard | ✅ Live |
+| Multi-user auth (admin approval flow) | ✅ Live |
+| Memory system (facts, preferences, summaries) | ✅ Live |
+| Routines | ✅ Live |
+| Home Assistant integration | ✅ Live |
+| Cloudflare Tunnel (no port forwarding) | ✅ Live |
+| Auto-deploy from GitHub (nightly 3am) | ✅ Live |
+| Google services | 🔜 Phase 2 |
+| Analytics | 🔜 Phase 2 |
+| Android app | 🔜 Phase 4 |
+
+---
+
+## Production Setup
+
+**Server:** Ubuntu 25.10 Desktop
+- CPU: AMD FX-8350 8-core 4GHz
+- RAM: 32GB
+- GPU: NVIDIA GTX 1050 Ti 4GB (Whisper GPU acceleration)
+- SSD: 465GB (OS + app + models)
+- HDD: 1.8TB mounted at `/mnt/data` (database, logs, user data)
+
+**Access:** `https://riversongai.com` (Cloudflare Tunnel — no port forwarding)
+
+**Local access:** `http://192.168.1.221:8000`
 
 ---
 
 ## Architecture
 
 ```
-river-song-v2/
-├── .env.example              # Provider contract -- fill before first run
-├── requirements.txt
-├── main.py                   # Application entry point
-├── config/
-│   └── settings.py           # Single source of truth for all config
-├── providers/
-│   ├── base.py               # Abstract interfaces -- swap anything
-│   ├── stt/
-│   │   └── whisper_local.py  # Speech to text
-│   ├── llm/
-│   │   └── ollama.py         # Language model
-│   └── tts/
-│       └── piper.py          # Text to speech
-├── core/
-│   ├── conversation_loop.py  # The main loop
-│   └── kill_switch.py        # Global and module kill switches
-├── api/
-│   └── routes/
-│       ├── health.py
-│       └── conversation.py
-├── frontend/                 # React/Vite -- Cortana visual interface
-└── routines/                 # Agentic routine programs (Phase 2)
+Browser (mic) → base64 WAV over WebSocket
+  → api/routes/conversation.py
+  → core/conversation_loop.py
+      ├─ providers/stt/whisper_local.py  → transcript
+      ├─ core/intent_router.py           → route or fall through
+      ├─ providers/llm/{provider}.py     → stream response
+      ├─ core/memory_manager.py          → context + summary
+      └─ providers/tts/piper.py          → WAV → browser
 ```
 
 ---
 
-## Provider Abstraction
-
-River Song does not care what is running the brain. Change one line.
-
-```env
-# Local (default)
-LLM_PROVIDER=ollama
-LLM_MODEL=llama3.1:8b
-TTS_PROVIDER=piper
-STT_PROVIDER=whisper_local
-
-# Cloud (when ready)
-LLM_PROVIDER=anthropic
-LLM_MODEL=claude-sonnet-4-6
-TTS_PROVIDER=elevenlabs
-STT_PROVIDER=deepgram
-```
-
-No code changes. No rebuilds. One line.
-
----
-
-## Running Phase 1
-
-### Backend
+## Quick Start (New Machine)
 
 ```bash
-cd river-song-v2
+# 1. Clone
+git clone git@github.com:cassu123/RiverSongAI.git
+cd RiverSongAI
+
+# 2. Copy and fill in .env
 cp .env.example .env
-# Set PIPER_EXECUTABLE_PATH, PIPER_MODEL_PATH, KILL_SWITCH_PASSWORD_HASH
-pip install -r requirements.txt
-python main.py
+nano .env
+
+# 3. Run setup (handles venv, Piper, voices, Ollama models, systemd, cron)
+chmod +x setup.sh
+./setup.sh
+
+# 4. Start
+sudo systemctl start river-song
 ```
 
-### Frontend
+---
+
+## Local Development (Chromebook)
 
 ```bash
-cd river-song-v2/frontend
-npm install
-npm run dev
-# Opens at http://localhost:5173
-```
+# Backend
+source venv/bin/activate
+python main.py
 
-### Prerequisites
-
-| Dependency | Notes |
-|---|---|
-| Ollama | Run `ollama serve` in a separate terminal. Pull `llama3.1:8b` before first use. |
-| Whisper model | Downloads automatically on first launch (~145MB for base). Instant on subsequent starts. |
-| Piper binary | Not pip-installable. Download from [Piper releases](https://github.com/rhasspy/piper/releases). Set path in `.env`. |
-| Kill switch hash | Generate with `python -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt()))"` and set in `.env`. |
-| Mic access | Backend uses `sounddevice` (system default mic). Frontend requests mic via Web Audio API for the visualizer only. |
-
----
-
-## Integration Roadmap
-
-### Phase 1 -- Core Loop (Complete)
-- [x] Local STT via Whisper
-- [x] Local LLM via Ollama
-- [x] Local TTS via Piper
-- [x] Cortana visual interface (React)
-- [x] Provider abstraction layer
-- [x] Kill switch (global and module)
-- [x] FastAPI backend with health and conversation routes
-
-### Phase 2 -- Integrations
-- [ ] Google OAuth stack (Calendar, YouTube Music, Maps, Gmail)
-- [ ] Home Assistant middleware
-  - Replaces: LIFX, Govee, Hue, Kasa, Lutron, Nest, SmartThings,
-    geeni, iDevices, RYOBI, Bestway, ConnectLife, Twinkly, Alexa,
-    Google Home -- all of them
-- [ ] Agentic Routine Builder
-- [ ] Reading interfaces (Audible, Libby -- interface only)
-
-### Phase 3 -- Agentic Routine Builder
-River Song builds her own advisory programs from plain English.
-
-You say: "I ride a motorcycle. Tell me if it's safe and what to wear."
-
-She reasons about what data she needs, builds a scoring model,
-stores it as a routine, and pushes an advisory to your phone every
-morning without being asked again.
-
-```
-You describe a need
-    LLM reasons about required factors
-        LLM generates advisory program (JSON)
-            Stored in routines/
-                Scheduler runs on cadence
-                    River Song delivers to your phone
-```
-
-No preset routines. No menus. Judgment built from your life.
-
-### Phase 4 -- Android App
-- [ ] React Native app
-- [ ] Push notifications for advisories
-- [ ] Full Cortana visual on mobile
-- [ ] Voice in/out on device
-
-### Phase 5 -- Security Integrations
-- [ ] ADT+ (flagged for careful implementation -- built last)
-- [ ] myQ garage (same caution level)
-
----
-
-## Users and Roles
-
-```
-ADMIN    -- Full system access
-PARENT   -- Device control, child oversight, routines
-CHILD    -- Restricted access, geo-fencing, monitored
-GUEST    -- Limited, session-based, no personal data access
+# Frontend (hot reload)
+cd frontend
+npm run dev  # http://localhost:5173
 ```
 
 ---
 
-## Kill Switch
+## Deployment
 
-Two levels of shutdown:
+```bash
+# Manual deploy (pull + build + restart)
+./deploy.sh
 
-**Module kill switch** -- disables a single integration without
-stopping the system.
-
-**Global kill switch** -- signals the entire system to gracefully
-shut down. State is persisted to disk. System stays down on restart
-until explicitly reset with a bcrypt-verified password.
-
-```python
-# Check from any module
-from core.kill_switch import is_kill_switch_active
-if is_kill_switch_active():
-    return
+# Auto-deploy runs nightly at 3am via cron
+# Logs: tail -f /mnt/data/river-song/logs/deploy.log
 ```
 
 ---
 
-## Security Philosophy
+## Local LLM Models
 
-River Song handles sensitive parts of your life. The rules are:
+All models run via Ollama. Installed on the production server:
 
-- No credentials ever in code. Everything in `.env`.
-- All security integrations (ADT+, locks, garage) are built last
-  with explicit safeguards reviewed before implementation.
-- Local-first processing means your conversations stay on your
-  hardware by default.
-- All external API calls are logged and auditable.
-
----
-
-## Project Standards
-
-- Python 3.11+
-- Type hints on everything
-- Docstrings on every class and function
-- Defensive programming -- every error handled explicitly
-- No hardcoded values anywhere
-- Production-ready from file one
-
----
-
-## Status
-
-| Component | Status |
-|---|---|
-| Phase 1 backend | Complete -- 31 files, zero gaps |
-| Phase 1 frontend | Complete |
-| Repo cleanup (legacy) | In progress |
-| Phase 2 planning | Complete |
-| Phase 2 build | Not started |
+| Display Name | Model ID | Best For |
+|---|---|---|
+| DeepSeek Thinker Lite | deepseek-r1:1.5b | Fast reasoning |
+| DeepSeek Thinker Standard | deepseek-r1:7b | Reasoning |
+| DeepSeek Thinker Standard+ | deepseek-r1:8b | Reasoning |
+| DeepSeek Thinker Plus | deepseek-r1:14b | Complex reasoning |
+| Meta Llama Lite | llama3.2:1b | Fast general |
+| Meta Llama Standard | llama3.2:3b | General (default) |
+| Meta Llama Plus | llama3.1:8b | General |
+| Microsoft Phi Standard | phi3.5 | Efficient reasoning |
+| Microsoft Phi Standard+ | phi4-mini | Efficient reasoning |
+| Microsoft Phi Plus | phi4 | Strong reasoning |
+| Google Gemma Lite | gemma3:1b | Fast Google model |
+| Google Gemma Standard | gemma3:4b | Balanced |
+| Google Gemma Plus | gemma3:12b | Capable |
+| Google Gemma Max | gemma3:27b | Best Gemma |
+| Alibaba Qwen Standard | qwen2.5:3b | Multilingual |
+| Alibaba Qwen Plus | qwen2.5:7b | Quality |
+| Alibaba Qwen Max | qwen2.5:14b | Top quality |
+| Mistral Standard | mistral:7b | Fast, efficient |
+| Mistral Plus | mistral-nemo | Larger context |
+| Mistral Max | mixtral:8x7b | Best Mistral |
+| Meta Code Llama Standard | codellama:7b | Coding |
+| Meta Code Llama Plus | codellama:13b | Coding |
+| Alibaba Coder Standard | qwen2.5-coder:7b | Coding |
+| Alibaba Coder Plus | qwen2.5-coder:14b | Coding |
 
 ---
 
-## Origin
+## Voice Models (Piper TTS)
 
-Built because every smart home product on the market is a receiver,
-not a thinker. Google Home hears you and pattern matches to a command.
-If your words do not fit the pattern, it dumps you to a web search.
+Installed at `~/.local/share/piper/`:
+- `en_US-lessac-medium` — default
+- `en_US-amy-medium`
+- `en_US-ryan-medium`
+- `en_GB-alan-medium`
 
-River Song understands what you mean. Not just what you said.
+To switch: update `PIPER_MODEL_PATH` in `.env` and restart.
 
 ---
 
-*River Song AI -- Personal project. Not affiliated with Microsoft,
-343 Industries, or any Halo IP holder. Cortana aesthetic used as
-personal inspiration only.*
+## Users
+
+River Song supports multiple users with an admin approval flow:
+- First signup becomes admin
+- Additional users sign up → admin approves via `/users` page
+- Roles: Admin, standard user
+
+Current family members: Cheryl (admin), husband, sister's family.
+
+---
+
+## Security
+
+- Private GitHub repo
+- Cloudflare Tunnel — home IP never exposed
+- JWT auth on all endpoints
+- Kill switch (global shutdown with bcrypt password reset)
+- Production docs (`/docs`, `/redoc`) disabled
+- `.env` never committed — secrets stay on the server
+
+---
+
+*Private project — not affiliated with any IP holder.*
