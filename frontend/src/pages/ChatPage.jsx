@@ -47,38 +47,21 @@ export default function ChatPage() {
   useEffect(() => { tokenRef.current       = token },       [token])
   useEffect(() => { userRef.current        = user },        [user])
 
-  // Auto-save session and extract facts when navigating away
+  // Auto-save + extract facts when tab is hidden or component unmounts
+  const extractRef = useRef(extractFacts)
+  useEffect(() => { extractRef.current = extractFacts }, [extractFacts])
+
   useEffect(() => {
+    const handleHide = () => {
+      if (document.visibilityState === 'hidden') {
+        extractRef.current(messagesRef.current)
+      }
+    }
+    document.addEventListener('visibilitychange', handleHide)
     return () => {
-      const msgs  = messagesRef.current
-      const tok   = tokenRef.current
-      const usr   = userRef.current
-      if (!msgs || msgs.length < 2 || !usr) return
-
-      // Save session to history
-      const session = {
-        id: Date.now(),
-        date: new Date().toISOString(),
-        messages: [...msgs],
-      }
-      try {
-        const key  = `rs-history:${usr.id}`
-        const prev = JSON.parse(localStorage.getItem(key) || '[]')
-        const updated = [...prev, session].slice(-30)
-        localStorage.setItem(key, JSON.stringify(updated))
-      } catch {}
-
-      // Fire-and-forget fact extraction
-      if (tok) {
-        fetch(`${API_BASE}/api/conversation/extract-facts`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
-          body: JSON.stringify({
-            messages: msgs.map(m => ({ role: m.role, content: m.text }))
-          }),
-          keepalive: true,
-        }).catch(() => {})
-      }
+      document.removeEventListener('visibilitychange', handleHide)
+      // Also try on unmount (SPA navigation)
+      extractRef.current(messagesRef.current)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -177,6 +160,15 @@ export default function ChatPage() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
   }, [handleSend])
 
+  const extractFacts = useCallback((msgs) => {
+    if (!token || !msgs || msgs.length < 2) return
+    fetch(`${API_BASE}/api/conversation/extract-facts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ messages: msgs.map(m => ({ role: m.role, content: m.text })) }),
+    }).catch(() => {})
+  }, [token])
+
   const handleReset = useCallback(() => {
     if (messages.length > 0 && user) {
       const session = {
@@ -188,12 +180,13 @@ export default function ChatPage() {
       const updated = [...loadHistory(user.id), session]
       saveHistory(user.id, updated)
       setHistory(updated)
+      extractFacts(messages)
     }
     setMessages([])
     setStreamingResponse('')
     setError(null)
     setViewingSession(null)
-  }, [messages, user, selectedModel])
+  }, [messages, user, selectedModel, extractFacts])
 
   // Mic → transcribe → fill input
   const handleAudioComplete = useCallback(async (wavB64) => {
