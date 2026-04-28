@@ -294,6 +294,86 @@ async def chat_http(
 
 
 # ---------------------------------------------------------------------------
+# HTTP: Extract facts from a completed chat session
+# ---------------------------------------------------------------------------
+
+class _ExtractFactsRequest(BaseModel):
+    messages: list[dict]  # [{"role": "user"|"assistant", "content": "..."}]
+
+
+@router.post("/api/conversation/extract-facts", status_code=202)
+async def extract_facts_http(
+    body: _ExtractFactsRequest,
+    request: Request,
+) -> dict:
+    """
+    Called fire-and-forget when a chat session ends.
+    Uses the LLM to pull facts the user stated about themselves,
+    then saves them to the memory store.
+    """
+    import asyncio, json as _json
+
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.removeprefix("Bearer ").strip()
+    payload = decode_token(token) if token else None
+    if not payload:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Authentication required.")
+
+    user_id: str = payload["sub"]
+    memory_manager: MemoryManager | None = getattr(request.app.state, "memory_manager", None)
+    if not memory_manager:
+        return {"status": "no memory manager"}
+
+    if len(body.messages) < 2:
+        return {"status": "too short"}
+
+    conversation_text = "\n".join(
+        f"{m['role'].upper()}: {m.get('content', '')}"
+        for m in body.messages
+        if m.get("role") in ("user", "assistant")
+    )
+
+    extraction_prompt = (
+        "Review this conversation and extract facts the user stated about themselves "
+        "(name, age, job, location, family, hobbies, preferences, health, etc.).\n"
+        "Return ONLY a valid JSON array of objects with 'key' and 'value' string fields.\n"
+        "Use short snake_case keys (e.g. 'name', 'job_title', 'lives_in').\n"
+        "If no personal facts were stated, return an empty array [].\n\n"
+        f"CONVERSATION:\n{conversation_text}\n\nJSON:"
+    )
+
+    async def _run():
+        try:
+            llm = _build_llm_provider()
+            full = ""
+            async for chunk in llm.stream_response([
+                {"role": "system", "content": "You are a precise fact extractor. Output only valid JSON."},
+                {"role": "user",   "content": extraction_prompt},
+            ]):
+                full += chunk
+
+            # Parse JSON — find the array even if there's surrounding text
+            start = full.find("[")
+            end   = full.rfind("]") + 1
+            if start == -1 or end == 0:
+                return
+
+            facts = _json.loads(full[start:end])
+            for f in facts:
+                key   = str(f.get("key",   "")).strip()
+                value = str(f.get("value", "")).strip()
+                if key and value:
+                    await memory_manager.upsert_fact(user_id, key, value, source="inferred")
+                    logger.info("Auto-extracted fact (user=%s): %s = %s", user_id, key, value)
+        except Exception as exc:
+            logger.warning("Fact extraction failed (user=%s): %s", user_id, exc)
+
+    asyncio.create_task(_run())
+    return {"status": "processing"}
+
+
+# ---------------------------------------------------------------------------
 # HTTP: Transcribe — mic-to-text for ChatPage
 # ---------------------------------------------------------------------------
 
