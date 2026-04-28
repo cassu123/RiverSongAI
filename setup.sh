@@ -6,14 +6,15 @@
 # Safe to re-run -- every step checks whether work is already done.
 #
 # What this does:
-#   1. System packages  -- libportaudio (required by sounddevice)
-#   2. Python packages  -- pip install -r requirements.txt
-#   3. Piper binary     -- downloads latest release for your arch
-#   4. Piper voice      -- en_US-lessac-medium (good quality, fast)
-#   5. .env setup       -- creates from .env.example, writes Piper paths
-#   6. Kill switch      -- prompts for a password, writes bcrypt hash to .env
-#   7. Frontend         -- npm install inside frontend/
-#   8. Verification     -- confirms every critical import and path resolves
+#   1. Python packages  -- pip install -r requirements.txt
+#   2. Piper binary     -- downloads latest release for your arch
+#   3. Piper voices     -- en_US-lessac-medium + en_US-amy-medium
+#   4. .env setup       -- creates from .env.example, writes Piper paths
+#   5. Kill switch      -- prompts for a password, writes bcrypt hash to .env
+#   6. Ollama models    -- pulls all configured local models
+#   7. Frontend         -- npm install + npm run build
+#   8. Systemd service  -- installs and enables river-song.service
+#   9. Verification     -- confirms every critical import and path resolves
 #
 # Usage:
 #   chmod +x setup.sh
@@ -56,10 +57,10 @@ step "Checking prerequisites"
 [[ -f "main.py" ]] || die "Run this script from the River Song project root (where main.py lives)."
 
 command -v python3 &>/dev/null || die "python3 not found. Install Python 3.11 or later."
-command -v pip3   &>/dev/null || die "pip3 not found."
-command -v node   &>/dev/null || die "node not found. Install Node.js 18+."
-command -v npm    &>/dev/null || die "npm not found."
-command -v curl   &>/dev/null || die "curl not found."
+command -v pip3    &>/dev/null || die "pip3 not found."
+command -v node    &>/dev/null || die "node not found. Install Node.js 18+."
+command -v npm     &>/dev/null || die "npm not found."
+command -v curl    &>/dev/null || die "curl not found."
 
 PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
 info "Python $PYTHON_VERSION"
@@ -80,21 +81,18 @@ case "$OS" in
 esac
 
 case "$ARCH" in
-  x86_64)  PIPER_ARCH="x86_64" ;;
+  x86_64)        PIPER_ARCH="x86_64" ;;
   aarch64|arm64) PIPER_ARCH="aarch64" ;;
-  *)        die "Unsupported architecture: $ARCH." ;;
+  *)             die "Unsupported architecture: $ARCH." ;;
 esac
 
-# macOS uses x64 in Piper's naming convention
-[[ "$PIPER_OS" == "macos" && "$PIPER_ARCH" == "x86_64" ]] && PIPER_ARCH="x64"
+[[ "$PIPER_OS" == "macos" && "$PIPER_ARCH" == "x86_64" ]]  && PIPER_ARCH="x64"
 [[ "$PIPER_OS" == "macos" && "$PIPER_ARCH" == "aarch64" ]] && PIPER_ARCH="aarch64"
 
 info "Detected: $OS / $ARCH"
 
 # ---------------------------------------------------------------------------
 # Helper: safely update a variable in .env
-# Sets the value only if the current value is empty or the key doesn't exist.
-# Never overwrites a value the user has already set.
 # ---------------------------------------------------------------------------
 
 env_set() {
@@ -105,81 +103,48 @@ env_set() {
   if grep -q "^${key}=" "$file" 2>/dev/null; then
     current=$(grep "^${key}=" "$file" | head -1 | cut -d= -f2-)
     if [[ -z "$current" ]]; then
-      # Key present but empty -- fill it in
       sed -i.bak "s|^${key}=.*|${key}=${value}|" "$file" && rm -f "${file}.bak"
       info "Set ${key}"
     else
       info "${key} already set -- skipping"
     fi
   else
-    # Key missing entirely -- append it
     echo "${key}=${value}" >> "$file"
     info "Added ${key}"
   fi
 }
 
 # ---------------------------------------------------------------------------
-# STEP 1: System packages
+# STEP 1: Python packages
 # ---------------------------------------------------------------------------
 
-step "Step 1/7 -- System packages (PortAudio)"
-
-ok "Skipping -- audio now runs in the browser, PortAudio no longer needed."
-
-# ---------------------------------------------------------------------------
-# STEP 2: Python packages
-# ---------------------------------------------------------------------------
-
-step "Step 2/7 -- Python packages (pip install -r requirements.txt)"
+step "Step 1/9 -- Python packages"
 
 if [[ ! -d "venv" ]]; then
-  info "Creating Python virtual environment (venv)..."
-  python3 -m venv venv || die "Failed to create venv. You may need to install it first: sudo apt-get install python3-venv"
+  info "Creating Python virtual environment..."
+  python3 -m venv venv || die "Failed to create venv."
 fi
 
-info "Activating virtual environment..."
-# shellcheck source=/dev/null
 source venv/bin/activate
 
-info "This installs Whisper, FastAPI, Ollama client, and all providers."
-info "Whisper pulls PyTorch -- this can take several minutes on first run."
-
-# Ensure setuptools<71 is present -- openai-whisper's setup.py requires
-# pkg_resources which was removed in setuptools>=71. Must be pinned before
-# any other install so pip's build isolation inherits a compatible version.
 python3 -c "import pkg_resources" 2>/dev/null || {
-  info "Pinning setuptools<71 to restore pkg_resources..."
+  info "Pinning setuptools<71..."
   pip3 install "setuptools<71" --quiet 2>&1 | grep -v "already satisfied" | sed 's/^/  /' || true
 }
 
-info "Installing wheel to support package building..."
 pip3 install wheel --quiet 2>&1 | grep -v "already satisfied" | sed 's/^/  /' || true
 
-# --no-build-isolation lets the build environment use the pinned setuptools
-# instead of pulling the latest (which lacks pkg_resources).
 pip3 install -r requirements.txt --no-build-isolation --quiet 2>&1 | \
   grep -v "^$\|Requirement already\|already satisfied\|yanked" | \
   head -30 | sed 's/^/  /' || true
 
-# Spot-check the critical imports
-IMPORT_ERRORS=()
-for pkg in fastapi uvicorn whisper soundfile ollama bcrypt httpx pydantic; do
-  python3 -c "import ${pkg}" 2>/dev/null || IMPORT_ERRORS+=("$pkg")
-done
-
-if [[ ${#IMPORT_ERRORS[@]} -eq 0 ]]; then
-  ok "All Python packages importable"
-else
-  for e in "${IMPORT_ERRORS[@]}"; do
-    soft_error "Could not import: $e"
-  done
-fi
+ok "Python packages installed"
 
 # ---------------------------------------------------------------------------
-# STEP 3: Piper binary
+# STEP 2: Piper binary
 # ---------------------------------------------------------------------------
 
-step "Step 3/7 -- Piper TTS binary"
+step "Step 2/9 -- Piper TTS binary"
 
 PIPER_BIN="/usr/local/bin/piper"
 
@@ -192,20 +157,13 @@ else
     | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tag_name',''))" 2>/dev/null)
 
   if [[ -z "$PIPER_TAG" ]]; then
-    soft_error "Could not fetch Piper release info. Check your internet connection."
+    soft_error "Could not fetch Piper release info."
     PIPER_TAG="2023.11.14-2"
     warn "Falling back to known version $PIPER_TAG"
   fi
 
   info "Piper version: $PIPER_TAG"
-
-  # Build the asset name. Piper uses different naming for macOS vs Linux.
-  if [[ "$PIPER_OS" == "macos" ]]; then
-    PIPER_ASSET="piper_${PIPER_OS}_${PIPER_ARCH}.tar.gz"
-  else
-    PIPER_ASSET="piper_${PIPER_OS}_${PIPER_ARCH}.tar.gz"
-  fi
-
+  PIPER_ASSET="piper_${PIPER_OS}_${PIPER_ARCH}.tar.gz"
   PIPER_URL="https://github.com/rhasspy/piper/releases/download/${PIPER_TAG}/${PIPER_ASSET}"
   PIPER_TMP=$(mktemp -d)
 
@@ -214,27 +172,20 @@ else
     info "Extracting..."
     tar -xzf "${PIPER_TMP}/${PIPER_ASSET}" -C "$PIPER_TMP"
 
-    # The binary may be at piper/piper or just piper depending on release
     EXTRACTED_BIN=$(find "$PIPER_TMP" -type f -name "piper" ! -name "*.py" | head -1)
 
     if [[ -z "$EXTRACTED_BIN" ]]; then
-      soft_error "Could not find piper binary in the archive. Inspect $PIPER_TMP manually."
+      soft_error "Could not find piper binary in the archive."
     else
       sudo install -m 755 "$EXTRACTED_BIN" "$PIPER_BIN"
 
-      # Some Piper releases bundle shared libraries alongside the binary.
-      # Copy any .so files to a location the dynamic linker can find.
       PIPER_LIB_DIR="/usr/local/lib/piper"
       sudo mkdir -p "$PIPER_LIB_DIR"
       find "$PIPER_TMP" -name "*.so*" -exec sudo cp {} "$PIPER_LIB_DIR/" \; 2>/dev/null || true
-
       if [[ -d "${PIPER_TMP}/piper" ]]; then
-        # Full piper directory -- copy onnxruntime libs too
         find "${PIPER_TMP}/piper" -name "*.so*" \
           -exec sudo cp {} "$PIPER_LIB_DIR/" \; 2>/dev/null || true
       fi
-
-      # Add library path if needed
       if [[ -n "$(ls -A $PIPER_LIB_DIR 2>/dev/null)" ]]; then
         echo "$PIPER_LIB_DIR" | sudo tee /etc/ld.so.conf.d/piper.conf &>/dev/null
         sudo ldconfig 2>/dev/null || true
@@ -244,69 +195,54 @@ else
     fi
   else
     soft_error "Failed to download Piper from: $PIPER_URL"
-    warn "Install Piper manually: https://github.com/rhasspy/piper/releases"
   fi
 
   rm -rf "$PIPER_TMP"
 fi
 
 # ---------------------------------------------------------------------------
-# STEP 4: Piper voice model
+# STEP 3: Piper voice models
 # ---------------------------------------------------------------------------
 
-step "Step 4/7 -- Piper voice model (en_US-lessac-medium)"
+step "Step 3/9 -- Piper voice models"
 
 VOICE_DIR="${HOME}/.local/share/piper"
-ONNX_FILE="${VOICE_DIR}/en_US-lessac-medium.onnx"
-JSON_FILE="${VOICE_DIR}/en_US-lessac-medium.onnx.json"
+mkdir -p "$VOICE_DIR"
 
 HF_BASE="https://huggingface.co/rhasspy/piper-voices/resolve/main"
-VOICE_PATH="en/en_US/lessac/medium"
-VOICE_NAME="en_US-lessac-medium"
 
-if [[ -f "$ONNX_FILE" && -f "$JSON_FILE" ]]; then
-  ok "Voice model already present at $VOICE_DIR"
-else
-  info "Creating voice model directory: $VOICE_DIR"
-  mkdir -p "$VOICE_DIR"
+download_voice() {
+  local name="$1"
+  local path="$2"
+  local onnx="${VOICE_DIR}/${name}.onnx"
+  local json="${VOICE_DIR}/${name}.onnx.json"
 
-  VOICE_OK=true
-
-  if [[ ! -f "$ONNX_FILE" ]]; then
-    info "Downloading ${VOICE_NAME}.onnx (~65 MB)..."
-    if ! curl -fL --progress-bar \
-        "${HF_BASE}/${VOICE_PATH}/${VOICE_NAME}.onnx" \
-        -o "$ONNX_FILE"; then
-      soft_error "Failed to download .onnx model"
-      VOICE_OK=false
-    fi
+  if [[ -f "$onnx" && -f "$json" ]]; then
+    ok "Already downloaded: $name"
+    return
   fi
 
-  if [[ ! -f "$JSON_FILE" ]]; then
-    info "Downloading ${VOICE_NAME}.onnx.json..."
-    if ! curl -fL --progress-bar \
-        "${HF_BASE}/${VOICE_PATH}/${VOICE_NAME}.onnx.json" \
-        -o "$JSON_FILE"; then
-      soft_error "Failed to download .onnx.json config"
-      VOICE_OK=false
-    fi
-  fi
+  info "Downloading $name..."
+  curl -fL --progress-bar "${HF_BASE}/${path}/${name}.onnx" -o "$onnx" \
+    && curl -fL --progress-bar "${HF_BASE}/${path}/${name}.onnx.json" -o "$json" \
+    && ok "Downloaded: $name" \
+    || soft_error "Failed to download voice: $name"
+}
 
-  if $VOICE_OK; then
-    ok "Voice model downloaded to $VOICE_DIR"
-  else
-    warn "Voice model download failed. Download manually:"
-    warn "  ${HF_BASE}/${VOICE_PATH}/${VOICE_NAME}.onnx"
-    warn "  ${HF_BASE}/${VOICE_PATH}/${VOICE_NAME}.onnx.json"
-    warn "  Save both to: $VOICE_DIR"
-  fi
-fi
+# Primary voice (used by default)
+download_voice "en_US-lessac-medium"   "en/en_US/lessac/medium"
+# Alternative voices
+download_voice "en_US-amy-medium"      "en/en_US/amy/medium"
+download_voice "en_US-ryan-medium"     "en/en_US/ryan/medium"
+download_voice "en_GB-alan-medium"     "en/en_GB/alan/medium"
+
+PRIMARY_ONNX="${VOICE_DIR}/en_US-lessac-medium.onnx"
 
 # ---------------------------------------------------------------------------
-# STEP 5: .env setup
+# STEP 4: .env setup
 # ---------------------------------------------------------------------------
 
-step "Step 5/7 -- .env configuration"
+step "Step 4/9 -- .env configuration"
 
 if [[ ! -f ".env" ]]; then
   if [[ -f ".env.example" ]]; then
@@ -320,19 +256,17 @@ else
   info ".env already exists -- adding missing values only"
 fi
 
-# Write Piper paths (only if not already set)
 env_set "PIPER_EXECUTABLE_PATH" "$PIPER_BIN"
-env_set "PIPER_MODEL_PATH"      "$ONNX_FILE"
+env_set "PIPER_MODEL_PATH"      "$PRIMARY_ONNX"
 
 ok ".env updated"
 
 # ---------------------------------------------------------------------------
-# STEP 6: Kill switch password hash
+# STEP 5: Kill switch password
 # ---------------------------------------------------------------------------
 
-step "Step 6/7 -- Kill switch password"
+step "Step 5/9 -- Kill switch password"
 
-# Check if already set
 CURRENT_HASH=$(grep "^KILL_SWITCH_PASSWORD_HASH=" .env 2>/dev/null | cut -d= -f2- | tr -d '"' | tr -d "'")
 
 if [[ -n "$CURRENT_HASH" ]]; then
@@ -340,22 +274,19 @@ if [[ -n "$CURRENT_HASH" ]]; then
 else
   echo ""
   echo -e "  ${BOLD}Set a kill switch password.${RESET}"
-  echo -e "  ${DIM}This password lets you reset the kill switch if it trips."
-  echo -e "  The hash is stored in .env -- the password itself is never saved.${RESET}"
+  echo -e "  ${DIM}This lets you reset the kill switch if it trips. Never saved -- only the hash is stored.${RESET}"
   echo ""
 
   while true; do
     read -rsp "  Password: " KS_PASS
     echo ""
     if [[ -z "$KS_PASS" ]]; then
-      warn "Skipping kill switch setup. The server will log a warning on every start."
-      warn "Run this script again or set KILL_SWITCH_PASSWORD_HASH in .env manually."
+      warn "Skipping kill switch setup. Set KILL_SWITCH_PASSWORD_HASH in .env manually."
       break
     fi
     read -rsp "  Confirm:  " KS_CONFIRM
     echo ""
     if [[ "$KS_PASS" == "$KS_CONFIRM" ]]; then
-      # Generate bcrypt hash without passing the password as a shell argument
       KS_HASH=$(python3 - <<PYEOF
 import bcrypt, sys
 password = """${KS_PASS}""".encode()
@@ -372,47 +303,13 @@ PYEOF
 fi
 
 # ---------------------------------------------------------------------------
-# STEP 7: Frontend npm install
+# STEP 6: Ollama models
 # ---------------------------------------------------------------------------
 
-step "Step 7/8 -- Ollama models"
-
-# ---- GPU (fits fully on GTX 1050 Ti 4GB) ----
-# deepseek-r1:1.5b  ~1.1GB
-# llama3.2:1b       ~0.8GB
-# llama3.2:3b       ~2.0GB
-# phi3.5            ~2.2GB
-# phi4-mini         ~2.5GB
-# gemma3:1b         ~0.8GB
-# gemma3:4b         ~3.3GB
-# qwen2.5:3b        ~2.0GB
-#
-# ---- RAM inference (32GB handles these well) ----
-# deepseek-r1:7b    ~4.7GB
-# deepseek-r1:8b    ~5.2GB
-# deepseek-r1:14b   ~9.0GB
-# llama3.1:8b       ~5.0GB
-# llama3.3:70b      ~43GB  (slow on FX-8350 but fits)
-# phi4              ~8.9GB
-# gemma3:12b        ~8.1GB
-# gemma3:27b        ~17GB
-# qwen2.5:7b        ~4.7GB
-# qwen2.5:14b       ~9.0GB
-# mistral:7b        ~4.1GB
-# mistral-nemo      ~7.1GB
-# codellama:7b      ~4.7GB
-# codellama:13b     ~8.0GB
-# qwen2.5-coder:7b  ~4.7GB
-# qwen2.5-coder:14b ~9.0GB
-#
-# ---- Skipped (too slow or marginal on this CPU) ----
-# deepseek-r1:32b   ~20GB  -- uncomment if you want it
-# qwq               ~20GB  -- uncomment if you want it
-# mixtral:8x7b      ~26GB  -- uncomment if you want it
-# llama3.1:70b      ~43GB  -- duplicate of llama3.3:70b
+step "Step 6/9 -- Ollama models"
 
 OLLAMA_MODELS=(
-  # GPU models -- pull first, fastest to download and run
+  # GPU models (fit on GTX 1050 Ti 4GB)
   "deepseek-r1:1.5b"
   "llama3.2:1b"
   "llama3.2:3b"
@@ -421,8 +318,7 @@ OLLAMA_MODELS=(
   "gemma3:1b"
   "gemma3:4b"
   "qwen2.5:3b"
-
-  # RAM inference -- solid 7B-14B range
+  # RAM inference (32GB)
   "deepseek-r1:7b"
   "deepseek-r1:8b"
   "deepseek-r1:14b"
@@ -434,14 +330,12 @@ OLLAMA_MODELS=(
   "qwen2.5:14b"
   "mistral:7b"
   "mistral-nemo"
-
   # Code models
   "codellama:7b"
   "codellama:13b"
   "qwen2.5-coder:7b"
   "qwen2.5-coder:14b"
-
-  # Heavy -- uncomment when ready (slow but works on 32GB)
+  # Heavy models (slow but fit in 32GB -- uncomment to enable)
   # "llama3.3:70b"
   # "deepseek-r1:32b"
   # "qwq"
@@ -449,54 +343,111 @@ OLLAMA_MODELS=(
 )
 
 if command -v ollama &>/dev/null; then
-  info "Ollama found. Pulling all configured models (~49 GB total)."
-  info "This will take a long time. Models already downloaded will be skipped."
-  echo ""
+  info "Pulling all configured models (already downloaded will be skipped)."
   for model in "${OLLAMA_MODELS[@]}"; do
     if ollama list 2>/dev/null | grep -q "^${model}"; then
       ok "Already pulled: $model"
     else
-      info "Pulling $model ..."
+      info "Pulling $model..."
       ollama pull "$model" || soft_error "Failed to pull $model"
     fi
   done
   ok "Ollama models done"
 else
-  warn "Ollama not installed -- skipping model downloads."
-  warn "Install from https://ollama.com then re-run ./setup.sh to pull models."
+  warn "Ollama not installed -- skipping. Install from https://ollama.com"
 fi
 
 # ---------------------------------------------------------------------------
-# STEP 8: Frontend npm install
+# STEP 7: Frontend build
 # ---------------------------------------------------------------------------
 
-step "Step 8/8 -- Frontend (npm install)"
+step "Step 7/9 -- Frontend (npm install + build)"
 
 if [[ ! -d "frontend" ]]; then
-  soft_error "frontend/ directory not found. Is this the correct project root?"
+  soft_error "frontend/ directory not found."
 else
-  if [[ -d "frontend/node_modules" ]]; then
-    ok "node_modules already present"
+  info "Installing frontend dependencies..."
+  (cd frontend && npm install --silent 2>&1 | tail -5 | sed 's/^/  /') \
+    || soft_error "npm install failed."
+
+  info "Building production frontend..."
+  (cd frontend && npm run build 2>&1 | tail -10 | sed 's/^/  /') \
+    || soft_error "npm run build failed."
+
+  if [[ -d "frontend/dist" ]]; then
+    ok "Frontend built (frontend/dist/)"
   else
-    info "Running npm install in frontend/..."
-    (cd frontend && npm install --silent 2>&1 | tail -5 | sed 's/^/  /') || \
-      soft_error "npm install failed. Check frontend/package.json."
-    ok "Frontend dependencies installed"
+    soft_error "frontend/dist/ not found after build."
   fi
 fi
 
 # ---------------------------------------------------------------------------
-# STEP 8: Verification
+# STEP 8: Systemd service
+# ---------------------------------------------------------------------------
+
+step "Step 8/9 -- Systemd service"
+
+SERVICE_FILE="/etc/systemd/system/river-song.service"
+PROJECT_DIR="$(pwd)"
+VENV_PYTHON="${PROJECT_DIR}/venv/bin/python"
+CURRENT_USER="$(whoami)"
+
+if [[ -f "$SERVICE_FILE" ]]; then
+  ok "Service file already exists -- skipping"
+else
+  info "Creating $SERVICE_FILE..."
+  sudo tee "$SERVICE_FILE" > /dev/null <<EOF
+[Unit]
+Description=River Song AI
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+User=${CURRENT_USER}
+WorkingDirectory=${PROJECT_DIR}
+ExecStart=${VENV_PYTHON} main.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=river-song
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  sudo systemctl daemon-reload
+  sudo systemctl enable river-song
+  ok "river-song.service installed and enabled (auto-starts on boot)"
+fi
+
+# ---------------------------------------------------------------------------
+# STEP 9: Auto-deploy cron job
+# ---------------------------------------------------------------------------
+
+step "Step 9/9 -- Auto-deploy cron job"
+
+CRON_CMD="cd ${PROJECT_DIR} && git pull origin main --quiet && source venv/bin/activate && pip install -r requirements.txt --no-build-isolation --quiet && cd frontend && npm install --silent && npm run build --silent && cd .. && sudo systemctl restart river-song"
+CRON_JOB="0 3 * * * ${CRON_CMD} >> ${PROJECT_DIR}/logs/deploy.log 2>&1"
+
+if crontab -l 2>/dev/null | grep -q "river-song\|deploy.log"; then
+  ok "Auto-deploy cron job already set"
+else
+  mkdir -p "${PROJECT_DIR}/logs"
+  (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
+  ok "Auto-deploy cron job set (runs nightly at 3am)"
+fi
+
+# ---------------------------------------------------------------------------
+# Verification
 # ---------------------------------------------------------------------------
 
 step "Verification"
 
-echo ""
 VERIFY_PASS=true
 
-# Python imports
-VERIFY_IMPORTS=(fastapi uvicorn whisper soundfile ollama bcrypt httpx)
-for pkg in "${VERIFY_IMPORTS[@]}"; do
+for pkg in fastapi uvicorn whisper soundfile ollama bcrypt httpx; do
   if python3 -c "import ${pkg}" 2>/dev/null; then
     ok "import $pkg"
   else
@@ -505,8 +456,7 @@ for pkg in "${VERIFY_IMPORTS[@]}"; do
   fi
 done
 
-# Core River Song imports
-for mod in "config.settings:get_settings" "core.intent_router:get_intent_router" "core.conversation_loop:ConversationLoop"; do
+for mod in "config.settings:get_settings" "core.conversation_loop:ConversationLoop"; do
   module="${mod%%:*}"
   symbol="${mod##*:}"
   if python3 -c "from ${module} import ${symbol}" 2>/dev/null; then
@@ -517,40 +467,15 @@ for mod in "config.settings:get_settings" "core.intent_router:get_intent_router"
   fi
 done
 
-# Piper binary
-if [[ -x "$PIPER_BIN" ]]; then
-  ok "Piper binary: $PIPER_BIN"
-else
-  soft_error "Piper binary not found or not executable: $PIPER_BIN"
-  VERIFY_PASS=false
-fi
+[[ -x "$PIPER_BIN" ]]              && ok "Piper binary: $PIPER_BIN"       || { soft_error "Piper binary missing"; VERIFY_PASS=false; }
+[[ -f "$PRIMARY_ONNX" ]]           && ok "Piper voice: en_US-lessac-medium" || { soft_error "Primary voice model missing"; VERIFY_PASS=false; }
+[[ -d "frontend/dist" ]]           && ok "Frontend dist built"             || { soft_error "frontend/dist missing"; VERIFY_PASS=false; }
+systemctl is-enabled river-song &>/dev/null && ok "river-song service enabled" || { soft_error "river-song service not enabled"; VERIFY_PASS=false; }
 
-# Piper voice model
-if [[ -f "$ONNX_FILE" && -f "$JSON_FILE" ]]; then
-  ok "Piper voice model: $ONNX_FILE"
-else
-  soft_error "Piper voice model missing: $ONNX_FILE"
-  VERIFY_PASS=false
-fi
-
-# .env required values
-for key in PIPER_EXECUTABLE_PATH PIPER_MODEL_PATH KILL_SWITCH_PASSWORD_HASH; do
+for key in PIPER_EXECUTABLE_PATH PIPER_MODEL_PATH KILL_SWITCH_PASSWORD_HASH JWT_SECRET_KEY; do
   val=$(grep "^${key}=" .env 2>/dev/null | cut -d= -f2-)
-  if [[ -n "$val" ]]; then
-    ok ".env: $key is set"
-  else
-    soft_error ".env: $key is empty"
-    VERIFY_PASS=false
-  fi
+  [[ -n "$val" ]] && ok ".env: $key is set" || { soft_error ".env: $key is empty"; VERIFY_PASS=false; }
 done
-
-# Frontend
-if [[ -d "frontend/node_modules" ]]; then
-  ok "frontend/node_modules present"
-else
-  soft_error "frontend/node_modules missing"
-  VERIFY_PASS=false
-fi
 
 # ---------------------------------------------------------------------------
 # Final summary
@@ -562,22 +487,21 @@ echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━�
 if [[ ${#ERRORS[@]} -eq 0 ]] && $VERIFY_PASS; then
   echo -e "${GREEN}${BOLD}  River Song is ready.${RESET}"
   echo ""
-  echo -e "  Start the backend:"
-  echo -e "    ${BOLD}source venv/bin/activate${RESET}"
-  echo -e "    ${BOLD}python main.py${RESET}"
+  echo -e "  Start now:       ${BOLD}sudo systemctl start river-song${RESET}"
+  echo -e "  Check status:    ${BOLD}sudo systemctl status river-song${RESET}"
+  echo -e "  Live logs:       ${BOLD}journalctl -u river-song -f${RESET}"
   echo ""
-  echo -e "  Start the frontend (in a separate terminal):"
-  echo -e "    ${BOLD}cd frontend && npm run dev${RESET}"
+  echo -e "  Available voices in ${BOLD}~/.local/share/piper/${RESET}:"
+  echo -e "    en_US-lessac-medium (default), en_US-amy-medium,"
+  echo -e "    en_US-ryan-medium, en_GB-alan-medium"
+  echo -e "  To switch voice: update PIPER_MODEL_PATH in .env and restart."
   echo ""
-  echo -e "  Then open ${BOLD}http://localhost:5173${RESET} in your browser."
-  echo ""
-  echo -e "  ${DIM}Make sure Ollama is running: ollama serve${RESET}"
-  echo -e "  ${DIM}Make sure your model is pulled: ollama pull llama3.1:8b${RESET}"
+  echo -e "  Auto-deploy runs nightly at 3am. Logs: ${BOLD}logs/deploy.log${RESET}"
 else
   echo -e "${YELLOW}${BOLD}  Setup completed with warnings.${RESET}"
   echo ""
   if [[ ${#ERRORS[@]} -gt 0 ]]; then
-    echo -e "  ${RED}Issues encountered:${RESET}"
+    echo -e "  ${RED}Issues:${RESET}"
     for e in "${ERRORS[@]}"; do
       echo -e "  ${RED}  • $e${RESET}"
     done
