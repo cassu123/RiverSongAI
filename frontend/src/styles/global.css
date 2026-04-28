@@ -1987,12 +1987,29 @@ select { font-family: inherit; }
     font-size: 1.2rem;
   }
 
-  /* Model grid full width */
+  /* Model grid — 2 columns on mobile */
   .model-card {
-    width: 100%;
+    width: auto;
   }
 
   .model-grid {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .model-card-name {
+    font-size: 0.55rem;
+  }
+
+  /* Cloud provider groups full width */
+  .cloud-provider-group {
+    padding: 10px 12px;
+  }
+
+  /* Voice option full width */
+  .voice-option {
+    width: 100%;
+    min-width: unset;
   }
 }
