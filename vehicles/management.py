@@ -1200,7 +1200,7 @@ def get_assignments_for_vehicle(
     _get_vehicle(db, vehicle_id, owner_user_id)
     return (
         db.query(VehicleAssignment)
-        .filter(VehicleAssignment.vehicle_id == vehicle_id)
+        .filter(VehicleAssignment.vehicle_id == _uid(vehicle_id))
         .all()
     )
 
