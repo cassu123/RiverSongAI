@@ -39,7 +39,48 @@ export default function ChatPage() {
 
   // Mic-to-text: transcribe then inject into input
   const [isTranscribing, setIsTranscribing] = useState(false)
-  const inputRef = useRef(null)
+  const inputRef       = useRef(null)
+  const messagesRef    = useRef(messages)
+  const tokenRef       = useRef(token)
+  const userRef        = useRef(user)
+  useEffect(() => { messagesRef.current    = messages },    [messages])
+  useEffect(() => { tokenRef.current       = token },       [token])
+  useEffect(() => { userRef.current        = user },        [user])
+
+  // Auto-save session and extract facts when navigating away
+  useEffect(() => {
+    return () => {
+      const msgs  = messagesRef.current
+      const tok   = tokenRef.current
+      const usr   = userRef.current
+      if (!msgs || msgs.length < 2 || !usr) return
+
+      // Save session to history
+      const session = {
+        id: Date.now(),
+        date: new Date().toISOString(),
+        messages: [...msgs],
+      }
+      try {
+        const key  = `rs-history:${usr.id}`
+        const prev = JSON.parse(localStorage.getItem(key) || '[]')
+        const updated = [...prev, session].slice(-30)
+        localStorage.setItem(key, JSON.stringify(updated))
+      } catch {}
+
+      // Fire-and-forget fact extraction
+      if (tok) {
+        fetch(`${API_BASE}/api/conversation/extract-facts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+          body: JSON.stringify({
+            messages: msgs.map(m => ({ role: m.role, content: m.text }))
+          }),
+          keepalive: true,
+        }).catch(() => {})
+      }
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetch(`${API_BASE}/api/models`)
