@@ -78,242 +78,245 @@ _CATALOG: List[ModelEntry] = [
     # -------------------------------------------------------------------------
     # DeepSeek (priority 10-19)
     # -------------------------------------------------------------------------
+    # DeepSeek R1 — Chinese AI reasoning/thinking models, great for complex questions
     ModelEntry(
         provider="ollama",
         model_id="deepseek-r1:1.5b",
-        display_name="DeepSeek R1 1.5B",
+        display_name="DeepSeek Thinker Lite",
         context_window=131072,
         vram_gb=1.1,
-        notes="Reasoning model, very fast on GPU",
+        notes="Fastest reasoning model, runs fully on GPU",
         priority=10,
     ),
     ModelEntry(
         provider="ollama",
         model_id="deepseek-r1:7b",
-        display_name="DeepSeek R1 7B",
+        display_name="DeepSeek Thinker Standard",
         context_window=131072,
         vram_gb=4.7,
-        notes="Offloads to RAM on 1050 Ti, fast on 32GB",
+        notes="Good reasoning, runs on RAM",
         priority=11,
     ),
     ModelEntry(
         provider="ollama",
         model_id="deepseek-r1:8b",
-        display_name="DeepSeek R1 8B",
+        display_name="DeepSeek Thinker Standard+",
         context_window=131072,
         vram_gb=5.2,
-        notes="RAM inference, comfortable on 32GB",
+        notes="Strong reasoning, runs on RAM",
         priority=12,
     ),
     ModelEntry(
         provider="ollama",
         model_id="deepseek-r1:14b",
-        display_name="DeepSeek R1 14B",
+        display_name="DeepSeek Thinker Plus",
         context_window=131072,
         vram_gb=9.0,
-        notes="RAM inference on 1050 Ti, good reasoning, 32GB comfortable",
+        notes="Excellent reasoning, runs on RAM",
         priority=13,
     ),
+
     # -------------------------------------------------------------------------
-    # Llama 3.2 (priority 20-29) — default recommended
+    # Llama — Meta's general purpose models
     # -------------------------------------------------------------------------
     ModelEntry(
         provider="ollama",
         model_id="llama3.2:1b",
-        display_name="Llama 3.2 1B",
+        display_name="Meta Llama Lite",
         context_window=131072,
         vram_gb=0.8,
-        notes="Fastest local option, fits fully on 1050 Ti GPU",
+        notes="Fastest general model, runs fully on GPU",
         priority=20,
     ),
     ModelEntry(
         provider="ollama",
         model_id="llama3.2:3b",
-        display_name="Llama 3.2 3B",
+        display_name="Meta Llama Standard",
         context_window=131072,
         vram_gb=2.0,
-        notes="Default — fits on GPU, best speed/quality balance",
+        notes="Best speed/quality balance, runs on GPU",
         priority=21,
     ),
     ModelEntry(
         provider="ollama",
         model_id="llama3.1:8b",
-        display_name="Llama 3.1 8B",
+        display_name="Meta Llama Plus",
         context_window=131072,
         vram_gb=5.0,
-        notes="RAM inference, strong general model, fast on 32GB",
+        notes="Strong general model, runs on RAM",
         priority=22,
     ),
 
     # -------------------------------------------------------------------------
-    # Phi (priority 30-39)
+    # Phi — Microsoft's efficient models, smart for their size
     # -------------------------------------------------------------------------
     ModelEntry(
         provider="ollama",
         model_id="phi3.5",
-        display_name="Phi 3.5 Mini",
+        display_name="Microsoft Phi Standard",
         context_window=131072,
         vram_gb=2.2,
-        notes="Fits on GPU, strong reasoning per GB",
+        notes="Punches above its size, runs on GPU",
         priority=30,
     ),
     ModelEntry(
         provider="ollama",
         model_id="phi4-mini",
-        display_name="Phi 4 Mini",
+        display_name="Microsoft Phi Standard+",
         context_window=131072,
         vram_gb=2.5,
-        notes="Fits on GPU, improved over Phi 3.5",
+        notes="Improved reasoning, runs on GPU",
         priority=31,
     ),
     ModelEntry(
         provider="ollama",
         model_id="phi4",
-        display_name="Phi 4 14B",
+        display_name="Microsoft Phi Plus",
         context_window=16384,
         vram_gb=8.9,
-        notes="RAM inference, excellent reasoning, fast on 32GB",
+        notes="Excellent reasoning, runs on RAM",
         priority=32,
     ),
 
     # -------------------------------------------------------------------------
-    # Gemma (priority 40-49)
+    # Gemma — Google's models
     # -------------------------------------------------------------------------
     ModelEntry(
         provider="ollama",
         model_id="gemma3:1b",
-        display_name="Gemma 3 1B",
+        display_name="Google Gemma Lite",
         context_window=32768,
         vram_gb=0.8,
-        notes="Fits on GPU, Google ultra-small",
+        notes="Fastest Google model, runs on GPU",
         priority=40,
     ),
     ModelEntry(
         provider="ollama",
         model_id="gemma3:4b",
-        display_name="Gemma 3 4B",
+        display_name="Google Gemma Standard",
         context_window=131072,
         vram_gb=3.3,
-        notes="Fits on GPU, solid all-rounder",
+        notes="Solid all-rounder, runs on GPU",
         priority=41,
     ),
     ModelEntry(
         provider="ollama",
         model_id="gemma3:12b",
-        display_name="Gemma 3 12B",
+        display_name="Google Gemma Plus",
         context_window=131072,
         vram_gb=8.1,
-        notes="RAM inference, very capable, fast on 32GB",
+        notes="Very capable, runs on RAM",
         priority=42,
     ),
     ModelEntry(
         provider="ollama",
         model_id="gemma3:27b",
-        display_name="Gemma 3 27B",
+        display_name="Google Gemma Max",
         context_window=131072,
         vram_gb=17.0,
-        notes="RAM inference, best Gemma, fits in 32GB",
+        notes="Best Google model, runs on RAM",
         priority=43,
     ),
 
     # -------------------------------------------------------------------------
-    # Qwen (priority 50-59)
+    # Qwen — Alibaba's models, strong at math and multilingual
     # -------------------------------------------------------------------------
     ModelEntry(
         provider="ollama",
         model_id="qwen2.5:3b",
-        display_name="Qwen 2.5 3B",
+        display_name="Alibaba Qwen Standard",
         context_window=131072,
         vram_gb=2.0,
-        notes="Fits on GPU, strong multilingual",
+        notes="Fast, great multilingual, runs on GPU",
         priority=50,
     ),
     ModelEntry(
         provider="ollama",
         model_id="qwen2.5:7b",
-        display_name="Qwen 2.5 7B",
+        display_name="Alibaba Qwen Plus",
         context_window=131072,
         vram_gb=4.7,
-        notes="RAM inference, excellent quality, fast on 32GB",
+        notes="Excellent quality, runs on RAM",
         priority=51,
     ),
     ModelEntry(
         provider="ollama",
         model_id="qwen2.5:14b",
-        display_name="Qwen 2.5 14B",
+        display_name="Alibaba Qwen Max",
         context_window=131072,
         vram_gb=9.0,
-        notes="RAM inference, top Qwen quality, fits in 32GB",
+        notes="Top Qwen quality, runs on RAM",
         priority=52,
     ),
+
     # -------------------------------------------------------------------------
-    # Mistral (priority 60-69)
+    # Mistral — French AI, fast and efficient, great English
     # -------------------------------------------------------------------------
     ModelEntry(
         provider="ollama",
         model_id="mistral:7b",
-        display_name="Mistral 7B",
+        display_name="Mistral Standard",
         context_window=32768,
         vram_gb=4.1,
-        notes="Borderline GPU fit, fast on 32GB RAM",
+        notes="Fast and efficient, runs on RAM",
         priority=60,
     ),
     ModelEntry(
         provider="ollama",
         model_id="mistral-nemo",
-        display_name="Mistral Nemo 12B",
+        display_name="Mistral Plus",
         context_window=131072,
         vram_gb=7.1,
-        notes="RAM inference, great context, fast on 32GB",
+        notes="Larger context, runs on RAM",
         priority=61,
     ),
     ModelEntry(
         provider="ollama",
         model_id="mixtral:8x7b",
-        display_name="Mixtral 8x7B MoE",
+        display_name="Mistral Max",
         context_window=32768,
         vram_gb=26.0,
-        notes="MoE architecture, fits in 32GB, good quality",
+        notes="Mixture of experts, highest quality Mistral, runs on RAM",
         priority=62,
     ),
 
     # -------------------------------------------------------------------------
-    # Code models (priority 80-89)
+    # Code models — specialized for programming
     # -------------------------------------------------------------------------
     ModelEntry(
         provider="ollama",
         model_id="codellama:7b",
-        display_name="Code Llama 7B",
+        display_name="Meta Code Llama Standard",
         context_window=16384,
         vram_gb=4.7,
-        notes="RAM inference, best local code model",
+        notes="Meta's coding model, runs on RAM",
         priority=80,
     ),
     ModelEntry(
         provider="ollama",
         model_id="codellama:13b",
-        display_name="Code Llama 13B",
+        display_name="Meta Code Llama Plus",
         context_window=16384,
         vram_gb=8.0,
-        notes="RAM inference, strong code generation, fits in 32GB",
+        notes="Stronger code generation, runs on RAM",
         priority=81,
     ),
     ModelEntry(
         provider="ollama",
         model_id="qwen2.5-coder:7b",
-        display_name="Qwen 2.5 Coder 7B",
+        display_name="Alibaba Coder Standard",
         context_window=131072,
         vram_gb=4.7,
-        notes="RAM inference, excellent code model, 128K context",
+        notes="Excellent coding model, 128K context, runs on RAM",
         priority=82,
     ),
     ModelEntry(
         provider="ollama",
         model_id="qwen2.5-coder:14b",
-        display_name="Qwen 2.5 Coder 14B",
+        display_name="Alibaba Coder Plus",
         context_window=131072,
         vram_gb=9.0,
-        notes="RAM inference, top local code model, fits in 32GB",
+        notes="Top local coding model, runs on RAM",
         priority=83,
     ),
 
