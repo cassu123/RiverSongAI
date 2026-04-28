@@ -1801,3 +1801,198 @@ select { font-family: inherit; }
   margin-bottom: 24px;
   line-height: 1.5;
 }
+
+/* ============================================================
+   Mobile — top bar & sidebar drawer
+   ============================================================ */
+
+.mobile-topbar {
+  display: none;
+}
+
+.mobile-overlay {
+  display: none;
+}
+
+.sidebar-mobile-close {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Show mobile top bar */
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 52px;
+    flex-shrink: 0;
+    background: rgba(4, 10, 20, 0.98);
+    border-bottom: 1px solid var(--border-bright);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .mobile-topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mobile-hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+    cursor: pointer;
+    border: 1px solid var(--border-bright);
+    border-radius: 2px;
+    background: transparent;
+  }
+
+  .mobile-hamburger span {
+    display: block;
+    height: 1.5px;
+    background: var(--primary);
+    border-radius: 1px;
+  }
+
+  /* html/body can scroll on mobile */
+  html, body, #root {
+    overflow: auto;
+    height: auto;
+    min-height: 100%;
+  }
+
+  /* App shell stacks vertically on mobile */
+  .app-shell {
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .app-main {
+    flex: 1;
+    overflow: visible;
+  }
+
+  /* Sidebar becomes a fixed drawer */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 260px;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    overflow-y: auto;
+  }
+
+  .sidebar--mobile-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.7);
+  }
+
+  /* Sidebar collapse button hidden on mobile — not needed */
+  .sidebar-collapse {
+    display: none;
+  }
+
+  /* Close button inside sidebar header — hide on desktop handled below */
+  .sidebar-mobile-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    width: 28px;
+    height: 28px;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    flex-shrink: 0;
+    transition: color 0.15s;
+  }
+
+  .sidebar-mobile-close:hover {
+    color: var(--primary);
+  }
+
+  /* Backdrop overlay */
+  .mobile-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 40;
+  }
+
+  /* Page content padding adjustments */
+  .page-wrap {
+    padding: 16px 16px 24px;
+  }
+
+  .conversation-page {
+    flex-direction: column;
+    padding: 12px 16px;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .visual-section {
+    flex: none;
+    width: 100%;
+    align-items: center;
+  }
+
+  .river-song-wrapper,
+  .river-song-canvas,
+  .figure-wrapper {
+    width: 100%;
+    max-width: 300px;
+    height: 320px;
+  }
+
+  /* Dashboard single column */
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    overflow-y: auto;
+    padding: 12px;
+    height: auto;
+  }
+
+  .dashboard-right {
+    display: contents;
+  }
+
+  /* Status grid 2 columns on mobile */
+  .status-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Settings page */
+  .settings-page {
+    padding: 16px 16px 32px;
+  }
+
+  /* Page title sizes */
+  .page-title {
+    font-size: 1.2rem;
+  }
+
+  /* Model grid full width */
+  .model-card {
+    width: 100%;
+  }
+
+  .model-grid {
+    flex-direction: column;
+  }
+}

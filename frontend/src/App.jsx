@@ -37,9 +37,10 @@ function save(key, value) {
 
 export default function App() {
   const { user, loading, logout, setupRequired } = useAuth()
-  const [authView,    setAuthView]    = useState('login') // 'login' | 'signup'
-  const [currentPage, setCurrentPage] = useState(() => load('rs-page',    'speak'))
-  const [adminMode,   setAdminMode]   = useState(false)
+  const [authView,      setAuthView]      = useState('login') // 'login' | 'signup'
+  const [currentPage,   setCurrentPage]   = useState(() => load('rs-page', 'speak'))
+  const [adminMode,     setAdminMode]     = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const themeKey = user ? `rs-theme:${user.id}` : 'rs-theme'
   const [theme,       setTheme]       = useState(() => load(user ? `rs-theme:${user.id}` : 'rs-theme', 'halo'))
   const [profile,     setProfile]     = useState(() => {
@@ -111,14 +112,36 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {/* Mobile top bar */}
+      <div className="mobile-topbar">
+        <div className="mobile-topbar-brand">
+          <div className="sidebar-logo">RS</div>
+          <span className="sidebar-title">RIVER SONG</span>
+        </div>
+        <button
+          className="mobile-hamburger"
+          onClick={() => setMobileNavOpen(true)}
+          aria-label="Open navigation"
+        >
+          <span /><span /><span />
+        </button>
+      </div>
+
+      {/* Mobile nav overlay backdrop */}
+      {mobileNavOpen && (
+        <div className="mobile-overlay" onClick={() => setMobileNavOpen(false)} />
+      )}
+
       <Sidebar
         currentPage={currentPage}
-        onNavigate={handleNavigate}
+        onNavigate={(page) => { handleNavigate(page); setMobileNavOpen(false) }}
         isAdmin={adminMode}
         showAdminToggle={userIsAdmin}
         onAdminToggle={handleAdminToggle}
         displayName={profile.displayName}
         onLogout={logout}
+        mobileOpen={mobileNavOpen}
+        onMobileClose={() => setMobileNavOpen(false)}
       />
 
       <main className="app-main">

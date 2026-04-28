@@ -30,7 +30,7 @@ const ADMIN_ITEMS = [
   { key: 'killswitch',  label: 'KILL SW.',    icon: IconKill },
 ]
 
-export default function Sidebar({ currentPage, onNavigate, isAdmin, showAdminToggle, onAdminToggle, displayName, onLogout }) {
+export default function Sidebar({ currentPage, onNavigate, isAdmin, showAdminToggle, onAdminToggle, displayName, onLogout, mobileOpen, onMobileClose }) {
   const [collapsed, setCollapsed] = useState(false)
   const items = isAdmin ? ADMIN_ITEMS : USER_ITEMS
 
@@ -39,10 +39,13 @@ export default function Sidebar({ currentPage, onNavigate, isAdmin, showAdminTog
     : 'CW'
 
   return (
-    <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
+    <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''} ${mobileOpen ? 'sidebar--mobile-open' : ''}`}>
       <div className="sidebar-brand">
         <div className="sidebar-logo">RS</div>
         {!collapsed && <span className="sidebar-title">RIVER SONG</span>}
+        {onMobileClose && (
+          <button className="sidebar-mobile-close" onClick={onMobileClose} aria-label="Close navigation">✕</button>
+        )}
       </div>
 
       <nav className="sidebar-nav" aria-label="Main navigation">
