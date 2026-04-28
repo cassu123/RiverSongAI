@@ -245,3 +245,17 @@
   background: var(--tc-primary, var(--primary));
   box-shadow: 0 0 5px var(--tc-primary, var(--primary));
 }
+
+@media (max-width: 768px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .theme-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .theme-card-preview {
+    width: 100%;
+  }
+}
