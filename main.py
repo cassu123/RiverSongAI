@@ -191,6 +191,10 @@ def create_app() -> FastAPI:
 
         @app.get("/{full_path:path}", include_in_schema=False)
         async def spa_fallback(full_path: str):
+            # Serve static files from dist root (e.g. avatar.glb, favicon.ico)
+            static_file = os.path.join(_dist, full_path)
+            if full_path and os.path.isfile(static_file):
+                return FileResponse(static_file)
             index = os.path.join(_dist, "index.html")
             return FileResponse(index)
 
