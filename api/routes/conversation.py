@@ -335,12 +335,14 @@ async def extract_facts_http(
     )
 
     extraction_prompt = (
-        "Review this conversation and extract facts the user stated about themselves "
-        "(name, age, job, location, family, hobbies, preferences, health, etc.).\n"
-        "Return ONLY a valid JSON array of objects with 'key' and 'value' string fields.\n"
-        "Use short snake_case keys (e.g. 'name', 'job_title', 'lives_in').\n"
-        "If no personal facts were stated, return an empty array [].\n\n"
-        f"CONVERSATION:\n{conversation_text}\n\nJSON:"
+        "Extract personal facts the USER stated about themselves in this conversation.\n"
+        "Include job, location, name, age, family, hobbies, health, or any personal detail.\n"
+        "Output ONLY a raw JSON array — no markdown, no explanation, no code fences.\n"
+        "Each item: {\"key\": \"snake_case_key\", \"value\": \"the fact\"}\n"
+        "Example: [{\"key\": \"job_title\", \"value\": \"aircraft mechanic\"}, {\"key\": \"employer\", \"value\": \"US Air Force\"}]\n"
+        "If truly nothing personal was stated, output: []\n\n"
+        f"CONVERSATION:\n{conversation_text}\n\n"
+        "JSON array:"
     )
 
     async def _run():
@@ -355,9 +357,11 @@ async def extract_facts_http(
 
             logger.info("Fact extraction raw output (user=%s): %s", user_id, full[:500])
 
-            # Strip <think>...</think> blocks that reasoning models emit
             import re as _re
+            # Strip <think>...</think> blocks from reasoning models
             full = _re.sub(r"<think>.*?</think>", "", full, flags=_re.DOTALL).strip()
+            # Strip markdown code fences (```json ... ``` or ``` ... ```)
+            full = _re.sub(r"```(?:json)?\s*", "", full).strip()
 
             # Parse JSON — find the array even if there's surrounding text
             start = full.find("[")
