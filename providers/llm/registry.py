@@ -114,16 +114,6 @@ _CATALOG: List[ModelEntry] = [
         notes="RAM inference on 1050 Ti, good reasoning, 32GB comfortable",
         priority=13,
     ),
-    ModelEntry(
-        provider="ollama",
-        model_id="deepseek-r1:32b",
-        display_name="DeepSeek R1 32B",
-        context_window=131072,
-        vram_gb=20.0,
-        notes="Slow on FX-8350 but fits in 32GB RAM",
-        priority=14,
-    ),
-
     # -------------------------------------------------------------------------
     # Llama 3.2 (priority 20-29) — default recommended
     # -------------------------------------------------------------------------
@@ -153,15 +143,6 @@ _CATALOG: List[ModelEntry] = [
         vram_gb=5.0,
         notes="RAM inference, strong general model, fast on 32GB",
         priority=22,
-    ),
-    ModelEntry(
-        provider="ollama",
-        model_id="llama3.3:70b",
-        display_name="Llama 3.3 70B",
-        context_window=131072,
-        vram_gb=43.0,
-        notes="Slow on FX-8350, fits in 32GB RAM, best local quality",
-        priority=23,
     ),
 
     # -------------------------------------------------------------------------
@@ -265,16 +246,6 @@ _CATALOG: List[ModelEntry] = [
         notes="RAM inference, top Qwen quality, fits in 32GB",
         priority=52,
     ),
-    ModelEntry(
-        provider="ollama",
-        model_id="qwq",
-        display_name="QwQ 32B",
-        context_window=131072,
-        vram_gb=20.0,
-        notes="Heavy reasoning model, fits in 32GB, slow on FX-8350",
-        priority=53,
-    ),
-
     # -------------------------------------------------------------------------
     # Mistral (priority 60-69)
     # -------------------------------------------------------------------------
@@ -304,19 +275,6 @@ _CATALOG: List[ModelEntry] = [
         vram_gb=26.0,
         notes="MoE architecture, fits in 32GB, good quality",
         priority=62,
-    ),
-
-    # -------------------------------------------------------------------------
-    # Llama 3.1 / larger Llama variants (priority 70-79)
-    # -------------------------------------------------------------------------
-    ModelEntry(
-        provider="ollama",
-        model_id="llama3.1:70b",
-        display_name="Llama 3.1 70B",
-        context_window=131072,
-        vram_gb=43.0,
-        notes="Slow on FX-8350, fits in 32GB RAM",
-        priority=70,
     ),
 
     # -------------------------------------------------------------------------
