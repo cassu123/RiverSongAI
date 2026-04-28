@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL || ''
 const TOKEN_KEY = 'rs-auth-token'
 const USER_KEY  = 'rs-auth-user'
 

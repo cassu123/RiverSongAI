@@ -4,7 +4,7 @@ import { useAuth }         from '../context/AuthContext.jsx'
 import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
 import './ChatPage.css'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL || ''
 const MAX_HISTORY_SESSIONS = 30
 
 function historyKey(userId) { return `rs-history:${userId}` }
