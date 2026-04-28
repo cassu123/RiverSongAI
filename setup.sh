@@ -367,7 +367,7 @@ if [[ ! -d "frontend" ]]; then
   soft_error "frontend/ directory not found."
 else
   info "Installing frontend dependencies..."
-  (cd frontend && npm install --silent 2>&1 | tail -5 | sed 's/^/  /') \
+  (cd frontend && npm install --legacy-peer-deps --silent 2>&1 | tail -5 | sed 's/^/  /') \
     || soft_error "npm install failed."
 
   info "Building production frontend..."
