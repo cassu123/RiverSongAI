@@ -47,23 +47,8 @@ export default function ChatPage() {
   useEffect(() => { tokenRef.current       = token },       [token])
   useEffect(() => { userRef.current        = user },        [user])
 
-  // Auto-save + extract facts when tab is hidden or component unmounts
-  const extractRef = useRef(extractFacts)
-  useEffect(() => { extractRef.current = extractFacts }, [extractFacts])
-
-  useEffect(() => {
-    const handleHide = () => {
-      if (document.visibilityState === 'hidden') {
-        extractRef.current(messagesRef.current)
-      }
-    }
-    document.addEventListener('visibilitychange', handleHide)
-    return () => {
-      document.removeEventListener('visibilitychange', handleHide)
-      // Also try on unmount (SPA navigation)
-      extractRef.current(messagesRef.current)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // defined below — ref populated after extractFacts is declared
+  const extractRef = useRef(null)
 
   useEffect(() => {
     fetch(`${API_BASE}/api/models`)
@@ -168,6 +153,19 @@ export default function ChatPage() {
       body: JSON.stringify({ messages: msgs.map(m => ({ role: m.role, content: m.text })) }),
     }).catch(() => {})
   }, [token])
+
+  // Keep ref current, register visibility + unmount triggers
+  useEffect(() => { extractRef.current = extractFacts }, [extractFacts])
+  useEffect(() => {
+    const handleHide = () => {
+      if (document.visibilityState === 'hidden') extractRef.current?.(messagesRef.current)
+    }
+    document.addEventListener('visibilitychange', handleHide)
+    return () => {
+      document.removeEventListener('visibilitychange', handleHide)
+      extractRef.current?.(messagesRef.current)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleReset = useCallback(() => {
     if (messages.length > 0 && user) {
