@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '../context/AuthContext.jsx'
 import './MemoryPage.css'
-
-function safeFetch(path, opts = {}) {
-  if (/^https?:\/\//i.test(path)) {
-    throw new Error(`Blocked absolute URL: ${path}`)
-  }
-  return fetch(path, opts)
-}
 
 const TABS = ['FACTS', 'PREFERENCES', 'SUMMARIES']
 
@@ -39,6 +33,11 @@ function fmtExpiry(iso) {
 }
 
 export default function MemoryPage() {
+  const { token } = useAuth()
+  const authHeaders = useCallback(() => ({
+    Authorization: `Bearer ${token}`,
+  }), [token])
+
   const [tab,      setTab]      = useState('FACTS')
   const [facts,    setFacts]    = useState([])
   const [prefs,    setPrefs]    = useState([])
@@ -56,10 +55,11 @@ export default function MemoryPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true)
     try {
+      const headers = authHeaders()
       const [f, p, s] = await Promise.all([
-        fetch('/api/memory/facts').then(r => r.json()),
-        fetch('/api/memory/preferences').then(r => r.json()),
-        fetch('/api/memory/summaries').then(r => r.json()),
+        fetch('/api/memory/facts',       { headers }).then(r => r.json()),
+        fetch('/api/memory/preferences', { headers }).then(r => r.json()),
+        fetch('/api/memory/summaries',   { headers }).then(r => r.json()),
       ])
       setFacts(Array.isArray(f) ? f : [])
       setPrefs(Array.isArray(p) ? p : [])
@@ -69,7 +69,7 @@ export default function MemoryPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [authHeaders])
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
@@ -98,7 +98,7 @@ export default function MemoryPage() {
     try {
       await Promise.all(
         [...selected].map(id =>
-          safeFetch(`/api/memory/facts/${id}`, { method: 'DELETE' })
+          fetch(`/api/memory/facts/${id}`, { method: 'DELETE', headers: authHeaders() })
         )
       )
       setFacts(prev => prev.filter(f => !selected.has(f.id)))
@@ -114,9 +114,9 @@ export default function MemoryPage() {
     setAddingFact(true)
     setAddError('')
     try {
-      const res = await safeFetch('/api/memory/facts', {
+      const res = await fetch('/api/memory/facts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ key: newKey.trim(), value: newValue.trim() }),
       })
       if (!res.ok) throw new Error('Failed')
