@@ -107,15 +107,15 @@ export default function ChatPage() {
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let full = ''
-      while (true) {
+      let streamDone = false
+      while (!streamDone) {
         const { done, value } = await reader.read()
         if (done) break
         const chunk = decoder.decode(value, { stream: true })
-        // SSE lines: "data: <text>\n\n"
         for (const line of chunk.split('\n')) {
           if (line.startsWith('data: ')) {
             const piece = line.slice(6)
-            if (piece === '[DONE]') break
+            if (piece === '[DONE]') { streamDone = true; break }
             full += piece
             setStreamingResponse(full)
           }
