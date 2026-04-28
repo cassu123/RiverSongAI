@@ -15,7 +15,7 @@ pip install -r requirements.txt --no-build-isolation --quiet
 
 echo "==> Building frontend..."
 cd frontend
-npm install --silent
+npm install --legacy-peer-deps --silent
 npm run build
 cd ..
 
