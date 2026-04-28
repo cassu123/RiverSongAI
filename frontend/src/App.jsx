@@ -103,6 +103,7 @@ export default function App() {
   const handleNavigate = (page) => {
     if (ADMIN_PAGES.has(page) && !adminMode) return
     setCurrentPage(page)
+    window.scrollTo(0, 0)
   }
 
   const handleAdminToggle = (next) => {

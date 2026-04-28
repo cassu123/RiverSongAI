@@ -365,18 +365,12 @@ select { font-family: inherit; }
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  animation: page-fade-in 0.18s ease-out both;
+  animation: page-fade-in 0.15s ease-out both;
 }
 
 @keyframes page-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* ============================================================
