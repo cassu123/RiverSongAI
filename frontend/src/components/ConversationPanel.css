@@ -144,32 +144,96 @@
   50%       { opacity: 0; }
 }
 
-/* Thinking dots */
-.chat-bubble--thinking {
+/* Chain of Thought thinking block */
+.chat-avatar--thinking {
+  animation: avatar-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes avatar-pulse {
+  0%, 100% { box-shadow: 0 0 0px rgba(0,170,255,0.4); }
+  50%       { box-shadow: 0 0 14px rgba(0,170,255,0.9); }
+}
+
+.chat-bubble--thinking-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  min-width: 220px;
+  border-color: var(--primary);
+  background: rgba(0,170,255,0.04);
+}
+
+.thinking-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 14px 18px;
-  min-width: 60px;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.chat-thinking-dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
+.thinking-label {
+  font-family: var(--font-display);
+  font-size: 0.48rem;
+  letter-spacing: 0.2em;
+  color: var(--primary);
+  text-shadow: var(--glow-sm);
+}
+
+.thinking-timer {
+  font-family: var(--font-display);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  color: var(--secondary);
+  text-shadow: var(--glow-teal);
+  min-width: 36px;
+  text-align: right;
+}
+
+.thinking-scan-track {
+  position: relative;
+  height: 2px;
+  background: var(--border-bright);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.thinking-scan-bar {
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, var(--primary), transparent);
+  animation: scan-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes scan-sweep {
+  0%   { left: -40%; }
+  100% { left: 140%; }
+}
+
+.thinking-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-display);
+  font-size: 0.46rem;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+}
+
+.thinking-dot-pulse {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--primary);
-  opacity: 0.4;
-  animation: thinking-bounce 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+  animation: dot-pulse 1.2s ease-in-out infinite;
 }
 
-.chat-thinking-dot:nth-child(1) { animation-delay: 0s; }
-.chat-thinking-dot:nth-child(2) { animation-delay: 0.2s; }
-.chat-thinking-dot:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes thinking-bounce {
-  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
-  30%            { opacity: 1;    transform: translateY(-5px); }
+@keyframes dot-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.4); }
 }
 
 /* Scrollbar */

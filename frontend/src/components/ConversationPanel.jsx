@@ -1,12 +1,42 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import './ConversationPanel.css'
 
-export default function ConversationPanel({ messages, streamingResponse, isThinking }) {
+function ThinkingBubble({ startTime }) {
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setElapsed(((Date.now() - startTime) / 1000).toFixed(1))
+    }, 100)
+    return () => clearInterval(id)
+  }, [startTime])
+
+  return (
+    <div className="chat-row chat-row--assistant">
+      <div className="chat-avatar chat-avatar--rs chat-avatar--thinking" aria-hidden="true">RS</div>
+      <div className="chat-bubble chat-bubble--assistant chat-bubble--thinking-block">
+        <div className="thinking-header">
+          <span className="thinking-label">CHAIN OF THOUGHT</span>
+          <span className="thinking-timer">{elapsed}s</span>
+        </div>
+        <div className="thinking-scan-track">
+          <div className="thinking-scan-bar" />
+        </div>
+        <div className="thinking-status">
+          <span className="thinking-dot-pulse" />
+          PROCESSING QUERY
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function ConversationPanel({ messages, streamingResponse, isThinking, thinkingStart }) {
   const bottomRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamingResponse])
+  }, [messages, streamingResponse, isThinking])
 
   if (messages.length === 0 && !streamingResponse && !isThinking) {
     return (
@@ -46,16 +76,9 @@ export default function ConversationPanel({ messages, streamingResponse, isThink
           </div>
         ))}
 
-        {/* Thinking dots — shown while waiting for first token */}
-        {isThinking && !streamingResponse && (
-          <div className="chat-row chat-row--assistant">
-            <div className="chat-avatar chat-avatar--rs" aria-hidden="true">RS</div>
-            <div className="chat-bubble chat-bubble--assistant chat-bubble--thinking">
-              <span className="chat-thinking-dot" />
-              <span className="chat-thinking-dot" />
-              <span className="chat-thinking-dot" />
-            </div>
-          </div>
+        {/* Chain of thought thinking display */}
+        {isThinking && !streamingResponse && thinkingStart && (
+          <ThinkingBubble startTime={thinkingStart} />
         )}
 
         {/* Streaming assistant response */}

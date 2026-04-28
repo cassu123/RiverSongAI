@@ -26,6 +26,7 @@ export default function ChatPage() {
   const [streamingResponse, setStreamingResponse] = useState('')
   const [inputText,         setInputText]         = useState('')
   const [isThinking,        setIsThinking]        = useState(false)
+  const [thinkingStart,     setThinkingStart]     = useState(null)
   const [error,             setError]             = useState(null)
 
   const [models,          setModels]          = useState({ cloud: [], local: [] })
@@ -85,6 +86,7 @@ export default function ChatPage() {
     const next = [...messages, { role: 'user', text: t }]
     setMessages(next)
     setIsThinking(true)
+    setThinkingStart(Date.now())
     setStreamingResponse('')
 
     try {
@@ -126,6 +128,7 @@ export default function ChatPage() {
       setStreamingResponse('')
     } finally {
       setIsThinking(false)
+      setThinkingStart(null)
     }
   }, [inputText, isThinking, messages, selectedModel, token])
 
@@ -256,7 +259,7 @@ export default function ChatPage() {
           )}
         </div>
       ) : (
-        <ConversationPanel messages={displayMessages} streamingResponse={displayStreaming} isThinking={isThinking && !viewingSession} />
+        <ConversationPanel messages={displayMessages} streamingResponse={displayStreaming} isThinking={isThinking && !viewingSession} thinkingStart={thinkingStart} />
       )}
 
       {/* Input bar */}
