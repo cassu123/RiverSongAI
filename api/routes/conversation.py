@@ -353,21 +353,31 @@ async def extract_facts_http(
             ]):
                 full += chunk
 
+            logger.info("Fact extraction raw output (user=%s): %s", user_id, full[:500])
+
+            # Strip <think>...</think> blocks that reasoning models emit
+            import re as _re
+            full = _re.sub(r"<think>.*?</think>", "", full, flags=_re.DOTALL).strip()
+
             # Parse JSON — find the array even if there's surrounding text
             start = full.find("[")
             end   = full.rfind("]") + 1
             if start == -1 or end == 0:
+                logger.warning("Fact extraction: no JSON array found (user=%s). Output: %s", user_id, full[:200])
                 return
 
             facts = _json.loads(full[start:end])
+            saved = 0
             for f in facts:
                 key   = str(f.get("key",   "")).strip()
                 value = str(f.get("value", "")).strip()
                 if key and value:
                     await memory_manager.upsert_fact(user_id, key, value, source="inferred")
                     logger.info("Auto-extracted fact (user=%s): %s = %s", user_id, key, value)
+                    saved += 1
+            logger.info("Fact extraction complete (user=%s): %d facts saved", user_id, saved)
         except Exception as exc:
-            logger.warning("Fact extraction failed (user=%s): %s", user_id, exc)
+            logger.warning("Fact extraction failed (user=%s): %s", user_id, exc, exc_info=True)
 
     asyncio.create_task(_run())
     return {"status": "processing"}
