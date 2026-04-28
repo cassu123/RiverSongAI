@@ -356,7 +356,21 @@ async def extract_facts_http(
         "JSON array:"
     )
 
-    async def _run():
+    import re as _re
+
+    def _clean(text: str) -> str:
+        text = _re.sub(r"<think>.*?</think>", "", text, flags=_re.DOTALL).strip()
+        text = _re.sub(r"```(?:json)?\s*", "", text).strip()
+        return text
+
+    def _parse_json_array(text: str):
+        start = text.find("[")
+        end   = text.rfind("]") + 1
+        if start == -1 or end == 0:
+            return None
+        return _json.loads(text[start:end])
+
+    async def _extract_facts():
         try:
             llm = _build_llm_provider()
             full = ""
@@ -365,34 +379,85 @@ async def extract_facts_http(
                 {"role": "user",   "content": extraction_prompt},
             ]):
                 full += chunk
-
-            logger.info("Fact extraction raw output (user=%s): %s", user_id, full[:500])
-
-            import re as _re
-            # Strip <think>...</think> blocks from reasoning models
-            full = _re.sub(r"<think>.*?</think>", "", full, flags=_re.DOTALL).strip()
-            # Strip markdown code fences (```json ... ``` or ``` ... ```)
-            full = _re.sub(r"```(?:json)?\s*", "", full).strip()
-
-            # Parse JSON — find the array even if there's surrounding text
-            start = full.find("[")
-            end   = full.rfind("]") + 1
-            if start == -1 or end == 0:
-                logger.warning("Fact extraction: no JSON array found (user=%s). Output: %s", user_id, full[:200])
+            full = _clean(full)
+            logger.info("Fact extraction output (user=%s): %s", user_id, full[:300])
+            items = _parse_json_array(full)
+            if not items:
                 return
-
-            facts = _json.loads(full[start:end])
             saved = 0
-            for f in facts:
+            for f in items:
                 key   = str(f.get("key",   "")).strip()
                 value = str(f.get("value", "")).strip()
                 if key and value:
                     await memory_manager.upsert_fact(user_id, key, value, source="inferred")
-                    logger.info("Auto-extracted fact (user=%s): %s = %s", user_id, key, value)
                     saved += 1
-            logger.info("Fact extraction complete (user=%s): %d facts saved", user_id, saved)
+            logger.info("Facts saved (user=%s): %d", user_id, saved)
         except Exception as exc:
-            logger.warning("Fact extraction failed (user=%s): %s", user_id, exc, exc_info=True)
+            logger.warning("Fact extraction failed (user=%s): %s", user_id, exc)
+
+    async def _extract_preferences():
+        pref_prompt = (
+            "Identify communication and interaction preferences from the USER's messages.\n"
+            "Look for: preferred response length, tone (formal/casual), topics they enjoy or avoid, "
+            "how they like to be addressed, patience level, expertise areas they have.\n"
+            "Output ONLY a raw JSON array — no markdown, no code fences.\n"
+            "Each item: {\"category\": \"snake_case_category\", \"value\": \"description\", \"confidence\": \"low|medium|high\"}\n"
+            "Example: [{\"category\": \"tone\", \"value\": \"casual and friendly\", \"confidence\": \"medium\"}]\n"
+            "If no preferences are evident, output: []\n\n"
+            f"CONVERSATION:\n{conversation_text}\n\nJSON array:"
+        )
+        try:
+            llm = _build_llm_provider()
+            full = ""
+            async for chunk in llm.stream_response([
+                {"role": "system", "content": "You are a preference extractor. Output only valid JSON."},
+                {"role": "user",   "content": pref_prompt},
+            ]):
+                full += chunk
+            full = _clean(full)
+            items = _parse_json_array(full)
+            if not items:
+                return
+            saved = 0
+            for p in items:
+                cat   = str(p.get("category", "")).strip()
+                value = str(p.get("value",    "")).strip()
+                conf  = str(p.get("confidence", "low")).strip()
+                if cat and value:
+                    await memory_manager.upsert_preference(user_id, cat, value, confidence=conf)
+                    saved += 1
+            logger.info("Preferences saved (user=%s): %d", user_id, saved)
+        except Exception as exc:
+            logger.warning("Preference extraction failed (user=%s): %s", user_id, exc)
+
+    async def _generate_summary():
+        summary_prompt = (
+            "Write a 2-3 sentence summary of this conversation for future reference.\n"
+            "Focus on what was discussed, any decisions made, and key information shared.\n"
+            "Be concise and factual. Plain text only — no lists, no markdown.\n\n"
+            f"CONVERSATION:\n{conversation_text}\n\nSummary:"
+        )
+        try:
+            llm = _build_llm_provider()
+            full = ""
+            async for chunk in llm.stream_response([
+                {"role": "system", "content": "You are a concise summarizer."},
+                {"role": "user",   "content": summary_prompt},
+            ]):
+                full += chunk
+            full = _clean(full).strip()
+            if full:
+                await memory_manager.record_summary(user_id, full)
+                logger.info("Summary saved (user=%s): %s", user_id, full[:100])
+        except Exception as exc:
+            logger.warning("Summary generation failed (user=%s): %s", user_id, exc)
+
+    async def _run():
+        await asyncio.gather(
+            _extract_facts(),
+            _extract_preferences(),
+            _generate_summary(),
+        )
 
     asyncio.create_task(_run())
     return {"status": "processing"}
