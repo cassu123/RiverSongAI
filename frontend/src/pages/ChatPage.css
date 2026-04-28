@@ -368,3 +368,12 @@
   color: var(--warn);
   border-color: var(--warn);
 }
+
+.chat-disclaimer {
+  text-align: center;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  padding: 4px 16px 8px;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+}

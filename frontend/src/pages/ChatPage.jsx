@@ -331,6 +331,11 @@ export default function ChatPage() {
           <ResetIcon />
         </button>
       </div>
+
+      <div className="chat-disclaimer">
+        AI can make mistakes — please verify important information.
+        Running on local hardware; responses may be slower than cloud AI.
+      </div>
     </div>
   )
 }
