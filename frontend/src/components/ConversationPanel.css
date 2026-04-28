@@ -144,6 +144,34 @@
   50%       { opacity: 0; }
 }
 
+/* Thinking dots */
+.chat-bubble--thinking {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 18px;
+  min-width: 60px;
+}
+
+.chat-thinking-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  opacity: 0.4;
+  animation: thinking-bounce 1.2s ease-in-out infinite;
+}
+
+.chat-thinking-dot:nth-child(1) { animation-delay: 0s; }
+.chat-thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.chat-thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes thinking-bounce {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30%            { opacity: 1;    transform: translateY(-5px); }
+}
+
 /* Scrollbar */
 .chat-panel::-webkit-scrollbar       { width: 4px; }
 .chat-panel::-webkit-scrollbar-track { background: transparent; }

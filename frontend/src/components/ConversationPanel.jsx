@@ -1,14 +1,14 @@
 import React, { useEffect, useRef } from 'react'
 import './ConversationPanel.css'
 
-export default function ConversationPanel({ messages, streamingResponse }) {
+export default function ConversationPanel({ messages, streamingResponse, isThinking }) {
   const bottomRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingResponse])
 
-  if (messages.length === 0 && !streamingResponse) {
+  if (messages.length === 0 && !streamingResponse && !isThinking) {
     return (
       <div className="chat-panel chat-panel--empty">
         <div className="chat-empty-icon">
@@ -45,6 +45,18 @@ export default function ConversationPanel({ messages, streamingResponse }) {
             )}
           </div>
         ))}
+
+        {/* Thinking dots — shown while waiting for first token */}
+        {isThinking && !streamingResponse && (
+          <div className="chat-row chat-row--assistant">
+            <div className="chat-avatar chat-avatar--rs" aria-hidden="true">RS</div>
+            <div className="chat-bubble chat-bubble--assistant chat-bubble--thinking">
+              <span className="chat-thinking-dot" />
+              <span className="chat-thinking-dot" />
+              <span className="chat-thinking-dot" />
+            </div>
+          </div>
+        )}
 
         {/* Streaming assistant response */}
         {streamingResponse && (

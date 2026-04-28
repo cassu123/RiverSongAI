@@ -256,7 +256,7 @@ export default function ChatPage() {
           )}
         </div>
       ) : (
-        <ConversationPanel messages={displayMessages} streamingResponse={displayStreaming} />
+        <ConversationPanel messages={displayMessages} streamingResponse={displayStreaming} isThinking={isThinking && !viewingSession} />
       )}
 
       {/* Input bar */}
