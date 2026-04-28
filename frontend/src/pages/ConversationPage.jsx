@@ -6,7 +6,7 @@ import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
 import { useAuth }        from '../context/AuthContext.jsx'
 import './ConversationPage.css'
 
-const API_BASE    = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE    = import.meta.env.VITE_API_URL || ''
 const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const MAX_HISTORY_SESSIONS = 30
 
