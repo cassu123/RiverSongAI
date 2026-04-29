@@ -1200,9 +1200,10 @@
   border-radius: var(--md-shape-full);
 }
 
-.badge--gpu  { background: color-mix(in srgb, var(--md-primary) 14%, transparent);   color: var(--md-primary); }
-.badge--cpu  { background: color-mix(in srgb, #FFB86C 12%, transparent);             color: #FFB86C; }
-.badge--cost { background: rgba(170,136,255,0.12);                                   color: #C4AAFF; }
+.badge--gpu   { background: color-mix(in srgb, var(--md-primary) 14%, transparent);  color: var(--md-primary); }
+.badge--cpu   { background: color-mix(in srgb, #FFB86C 12%, transparent);            color: #FFB86C; }
+.badge--cost  { background: rgba(170,136,255,0.12);                                  color: #C4AAFF; }
+.badge--speak { background: color-mix(in srgb, var(--md-tertiary) 14%, transparent); color: var(--md-tertiary); }
 
 .model-card-locked {
   font-size: 0.625rem;

@@ -375,13 +375,54 @@
   padding: 16px 16px 20px;
 }
 
-/* ── Inline model picker (SPEAK page, below avatar) ── */
+/* ── Config strip — model + voice display (read-only, below state tabs) ── */
 
+.conv-config-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.conv-config-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--md-on-surface-variant);
+  background: var(--md-surface-container-high);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-full);
+  padding: 3px 10px;
+}
+
+.conv-config-chip--dim {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+.conv-config-chip-tag {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: var(--md-primary);
+  background: color-mix(in srgb, var(--md-primary) 12%, transparent);
+  border-radius: var(--md-shape-full);
+  padding: 1px 6px;
+}
+
+.conv-config-sep {
+  font-size: 0.75rem;
+  color: var(--md-outline);
+}
+
+/* ── Legacy picker styles removed — model+voice now in Settings ── */
+
+/* The following classes are kept only because other components might ref them */
 .conv-model-inline {
-  position: relative;
-  margin-bottom: 6px;
-  width: 100%;
-  max-width: 320px;
+  display: none;
 }
 
 .conv-model-inline-btn {

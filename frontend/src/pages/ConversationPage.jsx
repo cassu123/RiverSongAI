@@ -10,9 +10,6 @@ const API_BASE    = import.meta.env.VITE_API_URL || ''
 const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const MAX_HISTORY_SESSIONS = 30
 
-// GPU threshold: GTX 1050 Ti has 4 GB VRAM
-const GPU_VRAM_LIMIT = 4
-
 async function playWavBase64(b64) {
   try {
     const binary = atob(b64)
@@ -66,89 +63,49 @@ export default function ConversationPage() {
     try { const v = localStorage.getItem(avatarKey(user.id)); return v === null ? true : v === 'true' } catch { return true }
   })
 
-  // GPU-only model list (vram_gb <= 4, fits on GTX 1050 Ti)
-  const [gpuModels,       setGpuModels]       = useState([])
-  const [selectedModel,   setSelectedModel]   = useState(null)  // { provider, model_id, display_name, vram_gb }
-  const [savingModel,     setSavingModel]     = useState(false)
-  const [showModelPicker, setShowModelPicker] = useState(false)
+  // Read-only: active model + voice from settings (display only — change in Settings)
+  const [activeModel, setActiveModel] = useState(null)   // { display_name, vram_gb }
+  const [activeVoice, setActiveVoice] = useState(null)   // { active_voice, provider_label }
 
   const [history,        setHistory]        = useState([])
   const [showHistory,    setShowHistory]    = useState(false)
   const [viewingSession, setViewingSession] = useState(null)
 
-  const isPlayingRef   = useRef(false)
-  const pickerRef      = useRef(null)
+  const isPlayingRef = useRef(false)
 
-  // Load models and current selection
   useEffect(() => {
+    if (!user) return
+
+    const headers = { Authorization: `Bearer ${token}` }
+
+    // Load active model
     fetch(`${API_BASE}/api/models`)
       .then(r => r.json())
       .then(data => {
-        const gpu = (data.local || []).filter(
-          m => m.vram_gb != null && m.vram_gb <= GPU_VRAM_LIMIT
-        )
-        setGpuModels(gpu)
+        // also fetch the user's selected model
+        return fetch(`${API_BASE}/api/settings/llm?user_id=${user.id}`, { headers })
+          .then(r => r.json())
+          .then(llm => {
+            const all = [...(data.local || []), ...(data.cloud || [])]
+            const entry = all.find(m => m.provider === llm.provider && m.model_id === llm.model)
+            setActiveModel(entry || null)
+          })
       })
       .catch(() => {})
 
-    if (user) {
-      fetch(`${API_BASE}/api/settings/llm?user_id=${user.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(r => r.json())
-        .then(s => {
-          if (s.provider && s.model) {
-            setSelectedModel({ provider: s.provider, model_id: s.model })
-          }
-        })
-        .catch(() => {})
+    // Load active voice
+    fetch(`${API_BASE}/api/settings/voice`, { headers })
+      .then(r => r.json())
+      .then(setActiveVoice)
+      .catch(() => {})
 
-      setHistory(loadHistory(user.id))
-    }
+    setHistory(loadHistory(user.id))
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Close picker on outside click
-  useEffect(() => {
-    if (!showModelPicker) return
-    const handler = (e) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
-        setShowModelPicker(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [showModelPicker])
-
-  // Resolve display name from the gpu models list
-  const resolvedEntry = selectedModel
-    ? gpuModels.find(m => m.provider === selectedModel.provider && m.model_id === selectedModel.model_id)
-    : null
-
-  const modelDisplayName = resolvedEntry?.display_name
-    || selectedModel?.display_name
-    || selectedModel?.model_id
-    || null
-
-  const modelVram = resolvedEntry?.vram_gb ?? null
 
   const toggleAvatar = () => {
     const next = !showAvatar
     setShowAvatar(next)
     if (user) { try { localStorage.setItem(avatarKey(user.id), String(next)) } catch {} }
-  }
-
-  const selectModel = async (model) => {
-    setSelectedModel({ provider: model.provider, model_id: model.model_id, display_name: model.display_name, vram_gb: model.vram_gb })
-    setShowModelPicker(false)
-    setSavingModel(true)
-    try {
-      await fetch(`${API_BASE}/api/settings/llm?user_id=${user.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ provider: model.provider, model_id: model.model_id, cloud_fallback_enabled: false }),
-      })
-    } catch {}
-    setSavingModel(false)
   }
 
   const handleMessage = useCallback((event) => {
@@ -205,7 +162,7 @@ export default function ConversationPage() {
       const session = {
         id:       Date.now(),
         date:     new Date().toISOString(),
-        model:    modelDisplayName || 'Default',
+        model:    activeModel?.display_name || 'Default',
         messages: [...messages],
       }
       const updated = [...loadHistory(user.id), session]
@@ -217,7 +174,7 @@ export default function ConversationPage() {
     setStreamingResponse('')
     setError(null)
     setViewingSession(null)
-  }, [connectionStatus, messages, sendMessage, user, modelDisplayName])
+  }, [connectionStatus, messages, sendMessage, user, activeModel])
 
   const displayMessages = viewingSession ? viewingSession.messages : messages
   const displayStreaming = viewingSession ? '' : streamingResponse
@@ -240,75 +197,28 @@ export default function ConversationPage() {
             ))}
           </div>
 
-          {/* Model picker */}
-          <div className="conv-model-inline" ref={pickerRef}>
-            <button
-              className="conv-model-inline-btn"
-              onClick={() => setShowModelPicker(p => !p)}
-              title="Switch GPU model"
-            >
-              <span className="conv-model-gpu-icon">
+          {/* Active config strip — read-only, change in Settings */}
+          <div className="conv-config-strip">
+            {activeModel ? (
+              <span className="conv-config-chip">
                 <GpuIcon />
+                {activeModel.display_name}
+                {activeModel.vram_gb != null && (
+                  <span className="conv-config-chip-tag">{activeModel.vram_gb} GB</span>
+                )}
               </span>
-              <div className="conv-model-inline-text">
-                <span className="conv-model-inline-label">GPU MODEL</span>
-                <span className="conv-model-inline-val">
-                  {modelDisplayName
-                    ? modelDisplayName
-                    : <span style={{ color: 'var(--md-outline)' }}>Select a model</span>
-                  }
-                </span>
-                {modelVram != null && (
-                  <span className="conv-model-vram-badge">{modelVram} GB</span>
-                )}
-              </div>
-              <ChevronIcon open={showModelPicker} />
-            </button>
-
-            {showModelPicker && (
-              <div className="conv-model-dropdown">
-                <div className="conv-model-dropdown-header">
-                  <GpuIcon />
-                  GPU MODELS — fits in 4 GB VRAM
-                </div>
-
-                {gpuModels.length === 0 && (
-                  <div className="conv-model-empty">
-                    No GPU models found. Pull a model in Ollama first.
-                  </div>
-                )}
-
-                {gpuModels.map(m => {
-                  const isActive = selectedModel?.provider === m.provider && selectedModel?.model_id === m.model_id
-                  return (
-                    <button
-                      key={`${m.provider}::${m.model_id}`}
-                      className={`conv-model-card ${isActive ? 'conv-model-card--active' : ''} ${!m.available ? 'conv-model-card--unavailable' : ''}`}
-                      onClick={() => m.available && selectModel(m)}
-                      disabled={!m.available}
-                      title={!m.available ? 'Not installed — run: ollama pull ' + m.model_id : m.notes}
-                    >
-                      <div className="conv-model-card-top">
-                        <span className="conv-model-card-name">{m.display_name}</span>
-                        <span className="conv-model-card-vram">{m.vram_gb} GB</span>
-                        {isActive && <span className="conv-model-card-active-dot" />}
-                      </div>
-                      {m.notes && (
-                        <div className="conv-model-card-notes">{m.notes}</div>
-                      )}
-                      {!m.available && (
-                        <div className="conv-model-card-install">
-                          ollama pull {m.model_id}
-                        </div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
+            ) : (
+              <span className="conv-config-chip conv-config-chip--dim">No model selected</span>
             )}
+
+            <span className="conv-config-sep">·</span>
+
+            <span className="conv-config-chip">
+              <VoiceIcon />
+              {activeVoice?.active_voice || 'No voice'}
+            </span>
           </div>
 
-          {savingModel && <div className="conv-model-saving">saving…</div>}
           {error && <div className="conv-error" role="alert">{error}</div>}
         </div>
       )}
@@ -327,19 +237,26 @@ export default function ConversationPage() {
               <AvatarIcon />
             </button>
 
-            {/* Selected model chip — visible when avatar is hidden */}
-            {!showAvatar && modelDisplayName && (
+            {/* Compact model+voice when avatar hidden */}
+            {!showAvatar && (activeModel || activeVoice) && (
               <div className="conv-model-chip">
-                <GpuIcon />
-                <span>{modelDisplayName}</span>
-                {modelVram != null && (
-                  <span className="conv-model-chip-vram">{modelVram} GB</span>
+                {activeModel && (
+                  <>
+                    <GpuIcon />
+                    <span>{activeModel.display_name}</span>
+                    {activeModel.vram_gb != null && (
+                      <span className="conv-model-chip-vram">{activeModel.vram_gb} GB</span>
+                    )}
+                  </>
+                )}
+                {activeModel && activeVoice && <span style={{ opacity: 0.4 }}>·</span>}
+                {activeVoice && (
+                  <>
+                    <VoiceIcon />
+                    <span>{activeVoice.active_voice}</span>
+                  </>
                 )}
               </div>
-            )}
-
-            {savingModel && !showAvatar && (
-              <span className="conv-model-saving">saving…</span>
             )}
           </div>
 
@@ -416,7 +333,7 @@ export default function ConversationPage() {
 
 function GpuIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
       <rect x="1" y="3" width="14" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
       <line x1="4"  y1="3"  x2="4"  y2="1"  stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
       <line x1="7"  y1="3"  x2="7"  y2="1"  stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
@@ -431,7 +348,15 @@ function GpuIcon() {
   )
 }
 
-function MicIcon({ active }) {
+function VoiceIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M8 1v14M4 3v10M12 3v10M1 6v4M15 6v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function MicIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
       <rect x="6" y="1" width="6" height="10" rx="3" stroke="currentColor" strokeWidth="1.4"/>
@@ -447,15 +372,6 @@ function ResetIcon() {
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
       <path d="M2 8a6 6 0 1 0 1.5-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
       <polyline points="2,4 2,8 6,8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  )
-}
-
-function ChevronIcon({ open }) {
-  return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
-      style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>
-      <polyline points="2,3 5,7 8,3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
