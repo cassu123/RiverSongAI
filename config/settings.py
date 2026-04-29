@@ -262,7 +262,23 @@ class Settings(BaseSettings):
     )
     alpha_vantage_api_key: str = Field(
         default="",
-        description="Alpha Vantage key for stock quotes. Register free at alphavantage.co.",
+        description="Alpha Vantage key for stock quotes (25 req/day free). alphavantage.co.",
+    )
+    finnhub_api_key: str = Field(
+        default="",
+        description="Finnhub key for real-time stocks (60 req/min free). finnhub.io.",
+    )
+    world_news_api_key: str = Field(
+        default="",
+        description="World News API key for global news search. worldnewsapi.com.",
+    )
+    apitube_api_key: str = Field(
+        default="",
+        description="APITube key for news aggregation (200 free req/day). apitube.io.",
+    )
+    mediastack_api_key: str = Field(
+        default="",
+        description="Mediastack key for news (100 free req/month). mediastack.com.",
     )
     sports_api_key: str = Field(
         default="1",
