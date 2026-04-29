@@ -68,7 +68,7 @@ export default function Sidebar({
         background: 'var(--md-surface-container-low)',
         borderRight: '1px solid var(--md-outline-variant)',
         transition: 'width 250ms cubic-bezier(0.2, 0, 0, 1)',
-        zIndex: 10,
+        zIndex: 50,
         overflow: 'hidden',
       }}
       className={`sidebar ${mobileOpen ? 'sidebar--mobile-open' : ''}`}
