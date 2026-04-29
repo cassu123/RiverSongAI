@@ -23,6 +23,7 @@ import AnalyticsPage      from './pages/AnalyticsPage.jsx'
 import InventoryPage           from './pages/InventoryPage.jsx'
 import MaintenancePulsePage    from './pages/MaintenancePulsePage.jsx'
 import GoogleCallbackPage      from './pages/GoogleCallbackPage.jsx'
+import ReadingOAuthCallbackPage from './pages/ReadingOAuthCallbackPage.jsx'
 
 const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'analytics'])
 
@@ -80,6 +81,10 @@ export default function App() {
 
   if (window.location.pathname === '/callback') {
     return <GoogleCallbackPage onSuccess={() => window.history.replaceState({}, '', '/')} />
+  }
+
+  if (window.location.pathname === '/reading-oauth-callback') {
+    return <ReadingOAuthCallbackPage />
   }
 
   if (loading) {

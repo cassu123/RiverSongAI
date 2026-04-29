@@ -3,21 +3,25 @@ api/routes/reading.py
 
 Reading hub endpoints.
 
-GET    /api/reading/shelf                    -- list shelf (optional ?service= &status=)
-POST   /api/reading/shelf                    -- add a book
-PATCH  /api/reading/shelf/{book_id}          -- update a book
-DELETE /api/reading/shelf/{book_id}          -- remove a book
-GET    /api/reading/stats                    -- shelf summary counts
-GET    /api/reading/connections              -- which services are connected for this user
-GET    /api/reading/libby/loans              -- live Libby loans
-GET    /api/reading/libby/holds              -- live Libby holds
-POST   /api/reading/connect/libby/start     -- create chip, return pairing instructions
-POST   /api/reading/connect/libby/complete  -- clone chip with 8-digit Libby code
-DELETE /api/reading/connect/libby           -- disconnect Libby (delete chip file)
-POST   /api/reading/connect/audible         -- register Audible device (email + password)
-DELETE /api/reading/connect/audible         -- disconnect Audible (delete auth file)
-POST   /api/reading/sync/kindle             -- fetch Kindle library → add to shelf
-POST   /api/reading/import/csv              -- import CSV (Goodreads / Kobo / Play Books)
+GET    /api/reading/shelf                        -- list shelf (optional ?service= &status=)
+POST   /api/reading/shelf                        -- add a book
+PATCH  /api/reading/shelf/{book_id}              -- update a book
+DELETE /api/reading/shelf/{book_id}              -- remove a book
+GET    /api/reading/stats                        -- shelf summary counts
+GET    /api/reading/connections                  -- which services are connected for this user
+GET    /api/reading/libby/loans                  -- live Libby loans
+GET    /api/reading/libby/holds                  -- live Libby holds
+POST   /api/reading/connect/libby/start          -- create chip, return pairing instructions
+POST   /api/reading/connect/libby/complete       -- clone chip with 8-digit Libby code
+DELETE /api/reading/connect/libby                -- disconnect Libby (delete chip file)
+POST   /api/reading/connect/audible              -- register Audible device (email + password)
+DELETE /api/reading/connect/audible              -- disconnect Audible (delete auth file)
+GET    /api/reading/connect/google_play/authorize -- return Google OAuth URL (books scope)
+POST   /api/reading/connect/google_play/callback  -- exchange code, save token
+DELETE /api/reading/connect/google_play           -- disconnect Google Play Books
+POST   /api/reading/sync/kindle                  -- fetch Kindle library → add to shelf
+POST   /api/reading/sync/google_play             -- fetch Google Play library → add to shelf
+POST   /api/reading/import/csv                   -- import CSV (Goodreads / Kobo / Play Books)
 """
 
 from __future__ import annotations
@@ -328,11 +332,19 @@ async def get_connections(
     """Return which services are linked for this user."""
     user_id = _require_user(authorization)
     audible_connected = os.path.exists(_audible_auth_path(user_id))
+
+    google_play_connected = False
+    try:
+        from providers.google.books import get_books_provider
+        google_play_connected = get_books_provider().is_connected(user_id)
+    except Exception:
+        pass
+
     return {
-        "libby":   os.path.exists(_libby_chip_path(user_id)),
-        "audible": audible_connected,
-        # Kindle shares the Audible auth file (same Amazon account)
-        "kindle":  audible_connected,
+        "libby":        os.path.exists(_libby_chip_path(user_id)),
+        "audible":      audible_connected,
+        "kindle":       audible_connected,
+        "google_play":  google_play_connected,
     }
 
 
@@ -532,6 +544,105 @@ async def audible_disconnect(
 
 
 # ---------------------------------------------------------------------------
+# Google Play Books — OAuth connect / disconnect
+# ---------------------------------------------------------------------------
+
+_BOOKS_SCOPE = "https://www.googleapis.com/auth/books"
+
+
+def _load_google_client() -> dict:
+    settings = get_settings()
+    import json as _json
+    from pathlib import Path
+    path = Path(settings.google_client_secrets_path)
+    if not path.exists():
+        raise HTTPException(status_code=500, detail="Google client secrets not configured on this server.")
+    data = _json.loads(path.read_text())
+    return data.get("web") or data.get("installed") or {}
+
+
+@router.get("/connect/google_play/authorize")
+async def google_play_authorize(
+    redirect_uri: str = Query(...),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Return the Google OAuth URL that requests the Books scope."""
+    _require_user(authorization)
+    try:
+        client = _load_google_client()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    auth_uri = client.get("auth_uri", "https://accounts.google.com/o/oauth2/auth")
+    from urllib.parse import urlencode
+    params = urlencode({
+        "client_id":     client["client_id"],
+        "response_type": "code",
+        "scope":         _BOOKS_SCOPE,
+        "access_type":   "offline",
+        "prompt":        "consent",
+        "redirect_uri":  redirect_uri,
+    })
+    return {"auth_url": f"{auth_uri}?{params}"}
+
+
+class GooglePlayCallbackBody(BaseModel):
+    code: str
+    redirect_uri: str
+
+
+@router.post("/connect/google_play/callback")
+async def google_play_callback(
+    body: GooglePlayCallbackBody,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Exchange the OAuth code for tokens and save them for this user."""
+    user_id = _require_user(authorization)
+    try:
+        client = _load_google_client()
+    except HTTPException:
+        raise
+
+    token_uri = client.get("token_uri", "https://oauth2.googleapis.com/token")
+    async with httpx.AsyncClient(timeout=15) as http:
+        resp = await http.post(token_uri, data={
+            "code":          body.code,
+            "client_id":     client["client_id"],
+            "client_secret": client["client_secret"],
+            "redirect_uri":  body.redirect_uri,
+            "grant_type":    "authorization_code",
+        })
+    if resp.status_code != 200:
+        logger.error("Google Books token exchange failed: %s", resp.text)
+        raise HTTPException(status_code=400, detail="Failed to exchange Google auth code.")
+
+    try:
+        from providers.google.books import get_books_provider
+        provider = get_books_provider()
+        provider.save_token_from_callback(user_id, resp.json())
+    except Exception as exc:
+        logger.error("Google Books token save failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Could not save Google Books token.")
+
+    return {"connected": True}
+
+
+@router.delete("/connect/google_play", status_code=204)
+async def google_play_disconnect(
+    authorization: Optional[str] = Header(default=None),
+):
+    """Remove the stored Google Play Books token for this user."""
+    user_id = _require_user(authorization)
+    try:
+        from providers.google.books import get_books_provider
+        get_books_provider().disconnect(user_id)
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------------------
 # Kindle sync  (reuses Audible auth — same Amazon account)
 # ---------------------------------------------------------------------------
 
@@ -600,7 +711,90 @@ async def sync_kindle(
 
 
 # ---------------------------------------------------------------------------
-# CSV import  (Goodreads / Kobo / Google Play Takeout)
+# Google Play Books sync  (OAuth — Books API)
+# ---------------------------------------------------------------------------
+
+@router.post("/sync/google_play")
+async def sync_google_play(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Fetch the user's Google Play Books library and upsert into the shelf.
+    Merges by volume_id (stored in launch_url) to avoid duplicates across syncs.
+    """
+    user_id = _require_user(authorization)
+
+    try:
+        from providers.google.books import get_books_provider
+        provider = get_books_provider()
+        books = await provider.get_library(user_id)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="Google Play Books not connected. Authorize via the Reading page first."
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except Exception as exc:
+        logger.error("Google Play sync failed for '%s': %s", user_id, exc)
+        raise HTTPException(status_code=502, detail=f"Google Play sync failed: {exc}")
+
+    store = _store(request)
+    existing = await store.list_shelf(user_id, service="google_play")
+
+    # Index existing books by volume_id (stored as the path component of launch_url)
+    # and by lowercase title as a fallback
+    existing_by_vid: dict[str, dict] = {}
+    existing_by_title: set[str] = set()
+    for b in existing:
+        lu = b.get("launch_url", "")
+        if lu:
+            existing_by_vid[lu] = b
+        existing_by_title.add(b["title"].lower())
+
+    added = skipped = 0
+    for book in books:
+        info_link = book.info_link or f"https://play.google.com/books/reader?id={book.volume_id}"
+
+        if info_link in existing_by_vid:
+            # Update progress and status in place
+            existing_book = existing_by_vid[info_link]
+            await store.update_book(existing_book["id"], user_id, {
+                "status":       book.status,
+                "progress_pct": book.progress_pct,
+                "rating":       book.rating,
+                "cover_url":    book.cover_url,
+            })
+            skipped += 1
+            continue
+
+        if book.title.lower() in existing_by_title:
+            skipped += 1
+            continue
+
+        author = book.authors[0] if book.authors else ""
+        await store.create_book({
+            "user_id":      user_id,
+            "service":      "google_play",
+            "title":        book.title,
+            "author":       author,
+            "cover_url":    book.cover_url,
+            "progress_pct": book.progress_pct,
+            "status":       book.status,
+            "rating":       book.rating,
+            "notes":        "",
+            "launch_url":   info_link,
+        })
+        added += 1
+
+    return {"added": added, "skipped": skipped, "total": len(books)}
+
+
+# ---------------------------------------------------------------------------
+# CSV import  (Goodreads / Kobo / Apple Books)
 # ---------------------------------------------------------------------------
 
 # Goodreads CSV columns that matter:

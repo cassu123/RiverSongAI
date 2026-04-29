@@ -3,18 +3,94 @@ import './ReadingPage.css'
 
 const API = '/api/reading'
 
-const SERVICES = [
-  { key: 'all',         label: 'All Books',   color: '#00aaff',  bg: 'rgba(0,170,255,0.10)' },
-  { key: 'kindle',      label: 'Kindle',      color: '#ff9900',  bg: 'rgba(255,153,0,0.10)' },
-  { key: 'google_play', label: 'Google Play', color: '#4285f4',  bg: 'rgba(66,133,244,0.10)' },
-  { key: 'audible',     label: 'Audible',     color: '#f58220',  bg: 'rgba(245,130,32,0.10)' },
-  { key: 'libby',       label: 'Libby',       color: '#00aaff',  bg: 'rgba(0,170,255,0.10)' },
-  { key: 'kobo',        label: 'Kobo',        color: '#e8a020',  bg: 'rgba(232,160,32,0.10)' },
-  { key: 'apple_books', label: 'Apple Books', color: '#fc3c44',  bg: 'rgba(252,60,68,0.10)' },
-  { key: 'other',       label: 'Other',       color: '#8888aa',  bg: 'rgba(136,136,170,0.10)' },
+// All possible services with metadata
+const ALL_SERVICES = [
+  {
+    key: 'kindle',
+    label: 'Kindle',
+    color: '#ff9900',
+    bg: 'rgba(255,153,0,0.10)',
+    connect: 'audible',       // shares Audible auth
+    type: 'sync',
+    description: 'Amazon e-books. Syncs via your Audible/Amazon account.',
+    syncs: 'Full library · Reading progress',
+    requires: 'audible',
+    requiresLabel: 'Connect Audible first — Kindle uses the same Amazon account.',
+  },
+  {
+    key: 'audible',
+    label: 'Audible',
+    color: '#f58220',
+    bg: 'rgba(245,130,32,0.10)',
+    type: 'live',
+    description: 'Amazon audiobooks. Registers this device to your account.',
+    syncs: 'Full library · Listening progress',
+    caveat: 'Accounts with 2-step verification may need it temporarily disabled during setup.',
+  },
+  {
+    key: 'libby',
+    label: 'Libby',
+    color: '#00aaff',
+    bg: 'rgba(0,170,255,0.10)',
+    type: 'live',
+    description: 'Public library loans & holds — no password needed.',
+    syncs: 'Current loans · Holds queue · Reading progress',
+  },
+  {
+    key: 'google_play',
+    label: 'Google Play',
+    color: '#4285f4',
+    bg: 'rgba(66,133,244,0.10)',
+    type: 'live',
+    hasSync: true,
+    description: 'Google Play Books via OAuth — sign in once, sync anytime.',
+    syncs: 'Full library · Reading status · Progress · Ratings · Covers',
+  },
+  {
+    key: 'kobo',
+    label: 'Kobo',
+    color: '#e8a020',
+    bg: 'rgba(232,160,32,0.10)',
+    type: 'import',
+    description: 'Import via Goodreads export. Kobo syncs to Goodreads natively.',
+    syncs: 'Library · Reading status · Ratings',
+    importInstructions: [
+      'Open Kobo app or kobobooks.com',
+      'Go to Settings → Goodreads and link your account',
+      'Go to goodreads.com → My Books → Import/Export → Export Library',
+      'Upload the goodreads_library_export.csv file here',
+    ],
+  },
+  {
+    key: 'apple_books',
+    label: 'Apple Books',
+    color: '#fc3c44',
+    bg: 'rgba(252,60,68,0.10)',
+    type: 'import',
+    description: 'Import via Goodreads — Apple Books supports Goodreads reading history.',
+    syncs: 'Library · Reading status · Ratings',
+    importInstructions: [
+      'Open the Books app on your iPhone or iPad',
+      'Tap your profile → Goodreads → Connect',
+      'Go to goodreads.com → My Books → Import/Export → Export Library',
+      'Upload the goodreads_library_export.csv file here',
+    ],
+  },
+  {
+    key: 'other',
+    label: 'Other',
+    color: '#8888aa',
+    bg: 'rgba(136,136,170,0.10)',
+    type: 'manual',
+    description: 'Books added manually.',
+    syncs: 'Manual entry only',
+  },
 ]
 
-const SERVICE_MAP = Object.fromEntries(SERVICES.map(s => [s.key, s]))
+const ALL_SERVICES_MAP = Object.fromEntries(ALL_SERVICES.map(s => [s.key, s]))
+
+// "All Books" pseudo-tab (always shown)
+const ALL_TAB = { key: 'all', label: 'All Books', color: '#00aaff', bg: 'rgba(0,170,255,0.10)' }
 
 const SERVICE_LAUNCH = {
   kindle:      'https://read.amazon.com',
@@ -32,6 +108,31 @@ const STATUSES = [
   { key: 'want_to_read', label: 'Want to Read', color: 'var(--warn)' },
   { key: 'dnf',          label: 'DNF',          color: 'var(--text-muted)' },
 ]
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function getUserId() {
+  try {
+    const token = localStorage.getItem('rs-auth-token')
+    if (!token) return 'default'
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.sub || 'default'
+  } catch { return 'default' }
+}
+
+function loadSelectedServices(userId) {
+  try {
+    const raw = localStorage.getItem(`rs-reading-services:${userId}`)
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return null  // null = not yet configured
+}
+
+function saveSelectedServices(userId, keys) {
+  try { localStorage.setItem(`rs-reading-services:${userId}`, JSON.stringify(keys)) } catch {}
+}
 
 function authHeaders() {
   const token = localStorage.getItem('rs-auth-token')
@@ -51,7 +152,16 @@ async function apiFetch(path, opts = {}) {
   return res.json()
 }
 
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
+
 export default function ReadingPage() {
+  const userId = getUserId()
+
+  const [selectedServiceKeys, setSelectedServiceKeys] = useState(() => loadSelectedServices(userId))
+  const [showServicePicker, setShowServicePicker]     = useState(false)
+
   const [shelf, setShelf]               = useState([])
   const [loading, setLoading]           = useState(true)
   const [error, setError]               = useState('')
@@ -67,8 +177,14 @@ export default function ReadingPage() {
   const [libbyLoading, setLibbyLoading] = useState(false)
   const [libbyError, setLibbyError]     = useState('')
   const [connections, setConnections]   = useState({ libby: false, audible: false, kindle: false })
-  const [connectModal, setConnectModal] = useState(null)   // 'libby' | 'audible' | null
-  const [importTarget, setImportTarget] = useState(null)   // svc object for CSV import modal
+  const [connectModal, setConnectModal] = useState(null)
+  const [importTarget, setImportTarget] = useState(null)
+  const [syncingService, setSyncingService] = useState(null)
+
+  // Services the user has selected, resolved to objects
+  const activeServices = selectedServiceKeys
+    ? selectedServiceKeys.map(k => ALL_SERVICES_MAP[k]).filter(Boolean)
+    : []
 
   const loadShelf = useCallback(() => {
     setLoading(true)
@@ -100,6 +216,16 @@ export default function ReadingPage() {
   useEffect(() => {
     if (activeService === 'libby') loadLibby(libbyTab)
   }, [activeService, libbyTab, loadLibby])
+
+  const handleSaveServices = (keys) => {
+    saveSelectedServices(userId, keys)
+    setSelectedServiceKeys(keys)
+    setShowServicePicker(false)
+    // Reset to 'all' if current tab was removed
+    if (activeService !== 'all' && !keys.includes(activeService)) {
+      setActiveService('all')
+    }
+  }
 
   const handleSave = async (data) => {
     if (editBook) {
@@ -136,7 +262,6 @@ export default function ReadingPage() {
     return true
   })
 
-  // Stats from full shelf
   const stats = {
     reading:      shelf.filter(b => b.status === 'reading').length,
     finished:     shelf.filter(b => b.status === 'finished').length,
@@ -145,10 +270,33 @@ export default function ReadingPage() {
   }
 
   const counts = Object.fromEntries(
-    SERVICES.map(s => [s.key, s.key === 'all' ? shelf.length : shelf.filter(b => b.service === s.key).length])
+    ALL_SERVICES.map(s => [s.key, shelf.filter(b => b.service === s.key).length])
   )
 
-  const activeSvc = SERVICE_MAP[activeService] || SERVICES[0]
+  // Tabs = All + selected services that have books OR are selected
+  const tabs = [
+    ALL_TAB,
+    ...activeServices,
+  ]
+
+  // Show first-run picker if no services chosen yet
+  if (selectedServiceKeys === null || showServicePicker) {
+    return (
+      <div className="page-wrap">
+        <div className="page-breadcrumb">
+          <span>◢</span><span>INTEGRATIONS</span>
+          <span className="page-breadcrumb-sep">/</span>
+          <span>READING</span>
+        </div>
+        <ServicePickerPage
+          current={selectedServiceKeys || []}
+          onSave={handleSaveServices}
+          isFirstRun={selectedServiceKeys === null}
+          onCancel={selectedServiceKeys === null ? null : () => setShowServicePicker(false)}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="page-wrap">
@@ -163,18 +311,43 @@ export default function ReadingPage() {
           <h1 className="page-title">Reading</h1>
           <p className="page-subtitle">All your books in one place. Track progress, launch apps, browse Libby.</p>
         </div>
-        <button className="btn btn--primary" onClick={openAdd}>+ Add Book</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn reading-manage-btn" onClick={() => setShowServicePicker(true)}>
+            <IconServices /> Manage Services
+          </button>
+          <button className="btn btn--primary" onClick={openAdd}>+ Add Book</button>
+        </div>
       </div>
 
       {error && <div className="reading-error">{error}<button className="reading-error-close" onClick={() => setError('')}>✕</button></div>}
 
+      {/* My services panel */}
+      {activeServices.length > 0 && (
+        <MyServicesPanel
+          services={activeServices}
+          connections={connections}
+          shelf={shelf}
+          onConnect={svc => setConnectModal(svc)}
+          onDisconnect={async (svc) => {
+            await apiFetch(`/connect/${svc}`, { method: 'DELETE' })
+            loadConnections()
+          }}
+          onSync={async (svc) => {
+            const result = await apiFetch(`/sync/${svc}`, { method: 'POST' })
+            loadShelf()
+            return result
+          }}
+          onImport={svc => setImportTarget(svc)}
+        />
+      )}
+
       {/* Stats bar */}
       {!loading && shelf.length > 0 && (
         <div className="reading-stats-bar">
-          <StatPill label="Reading"      count={stats.reading}      color="var(--primary)"   onClick={() => setActiveStatus('reading')}      active={activeStatus === 'reading'} />
-          <StatPill label="Finished"     count={stats.finished}     color="var(--secondary)" onClick={() => setActiveStatus('finished')}     active={activeStatus === 'finished'} />
-          <StatPill label="Want to Read" count={stats.want_to_read} color="var(--warn)"      onClick={() => setActiveStatus('want_to_read')} active={activeStatus === 'want_to_read'} />
-          <StatPill label="DNF"          count={stats.dnf}          color="var(--text-muted)" onClick={() => setActiveStatus('dnf')}         active={activeStatus === 'dnf'} />
+          <StatPill label="Reading"      count={stats.reading}      color="var(--primary)"    onClick={() => setActiveStatus('reading')}      active={activeStatus === 'reading'} />
+          <StatPill label="Finished"     count={stats.finished}     color="var(--secondary)"  onClick={() => setActiveStatus('finished')}     active={activeStatus === 'finished'} />
+          <StatPill label="Want to Read" count={stats.want_to_read} color="var(--warn)"       onClick={() => setActiveStatus('want_to_read')} active={activeStatus === 'want_to_read'} />
+          <StatPill label="DNF"          count={stats.dnf}          color="var(--text-muted)" onClick={() => setActiveStatus('dnf')}          active={activeStatus === 'dnf'} />
           <button
             className="reading-stat-clear"
             style={{ visibility: activeStatus !== 'all' ? 'visible' : 'hidden' }}
@@ -185,25 +358,9 @@ export default function ReadingPage() {
         </div>
       )}
 
-      {/* Connected services panel */}
-      <ConnectedServices
-        connections={connections}
-        onConnect={svc => setConnectModal(svc)}
-        onDisconnect={async (svc) => {
-          await apiFetch(`/connect/${svc}`, { method: 'DELETE' })
-          loadConnections()
-        }}
-        onSync={async (svc) => {
-          const result = await apiFetch(`/sync/${svc}`, { method: 'POST' })
-          loadShelf()
-          return result
-        }}
-        onImport={svc => setImportTarget(svc)}
-      />
-
       {/* Service tabs */}
       <div className="reading-service-tabs">
-        {SERVICES.map(s => (
+        {tabs.map(s => (
           <button
             key={s.key}
             className={`reading-service-tab${activeService === s.key ? ' reading-service-tab--active' : ''}`}
@@ -212,9 +369,14 @@ export default function ReadingPage() {
           >
             <span className="reading-service-dot" style={{ background: s.color }} />
             {s.label}
-            {counts[s.key] > 0 && (
+            {s.key !== 'all' && counts[s.key] > 0 && (
               <span className="reading-service-count" style={activeService === s.key ? { background: s.color, color: '#000' } : {}}>
                 {counts[s.key]}
+              </span>
+            )}
+            {s.key === 'all' && shelf.length > 0 && (
+              <span className="reading-service-count" style={activeService === s.key ? { background: s.color, color: '#000' } : {}}>
+                {shelf.length}
               </span>
             )}
           </button>
@@ -244,7 +406,7 @@ export default function ReadingPage() {
           {libbyError && (
             <div className="reading-libby-error">
               {libbyError.includes('not set up')
-                ? <>Libby not connected. Run <code>python -m providers.reading.libby --setup</code> to link your library card.</>
+                ? <>Libby not connected. Click <strong>Connect Libby</strong> in the services panel above.</>
                 : libbyError}
             </div>
           )}
@@ -315,7 +477,8 @@ export default function ReadingPage() {
       {showModal && (
         <BookModal
           book={editBook}
-          defaultService={activeService !== 'all' && activeService !== 'libby' ? activeService : 'kindle'}
+          defaultService={activeService !== 'all' && activeService !== 'libby' ? activeService : (activeServices[0]?.key || 'kindle')}
+          availableServices={activeServices.length > 0 ? activeServices : ALL_SERVICES}
           onSave={handleSave}
           onClose={() => { setShowModal(false); setEditBook(null) }}
         />
@@ -343,12 +506,283 @@ export default function ReadingPage() {
         />
       )}
 
+      {connectModal === 'google_play' && (
+        <GooglePlayConnectModal
+          onDone={() => { setConnectModal(null); loadConnections() }}
+          onClose={() => setConnectModal(null)}
+        />
+      )}
+
       {importTarget && (
         <CsvImportModal
           svc={importTarget}
           onDone={() => { setImportTarget(null); loadShelf() }}
           onClose={() => setImportTarget(null)}
         />
+      )}
+    </div>
+  )
+}
+
+// =============================================================================
+// Service Picker (first-run + manage)
+// =============================================================================
+
+function ServicePickerPage({ current, onSave, isFirstRun, onCancel }) {
+  const [selected, setSelected] = useState(new Set(current))
+
+  const toggle = (key) => {
+    setSelected(s => {
+      const next = new Set(s)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      // If Kindle selected, auto-select Audible (they share auth)
+      if (key === 'kindle' && !next.has('audible')) next.add('audible')
+      return next
+    })
+  }
+
+  const orderedKeys = ALL_SERVICES.map(s => s.key).filter(k => selected.has(k))
+
+  return (
+    <div className="reading-picker-wrap">
+      <div className="reading-picker-header">
+        <h2 className="reading-picker-title">
+          {isFirstRun ? 'Which reading services do you use?' : 'Manage Your Services'}
+        </h2>
+        <p className="reading-picker-sub">
+          {isFirstRun
+            ? 'Select every platform where you have books. You can change this anytime.'
+            : 'Add or remove services from your reading hub.'}
+        </p>
+      </div>
+
+      <div className="reading-picker-grid">
+        {ALL_SERVICES.map(svc => {
+          const on = selected.has(svc.key)
+          return (
+            <button
+              key={svc.key}
+              className={`reading-picker-card${on ? ' reading-picker-card--on' : ''}`}
+              style={{ '--svc-color': svc.color }}
+              onClick={() => toggle(svc.key)}
+            >
+              <div className="reading-picker-card-top">
+                <span className="reading-picker-dot" style={{ background: svc.color }} />
+                <span className="reading-picker-name">{svc.label}</span>
+                <span className={`reading-picker-type reading-svc-type-pill--${svc.type}`}>
+                  {svc.type === 'live' ? 'LIVE' : svc.type === 'sync' ? 'SYNC' : svc.type === 'import' ? 'IMPORT' : 'MANUAL'}
+                </span>
+                <span className={`reading-picker-check${on ? ' reading-picker-check--on' : ''}`}>
+                  {on ? '✓' : '+'}
+                </span>
+              </div>
+              <p className="reading-picker-desc">{svc.description}</p>
+              <p className="reading-picker-syncs">{svc.syncs}</p>
+              {svc.requires && !selected.has(svc.requires) && (
+                <p className="reading-picker-caveat">⚠ {svc.requiresLabel}</p>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="reading-picker-footer">
+        {onCancel && (
+          <button className="btn" onClick={onCancel}>Cancel</button>
+        )}
+        <button
+          className="btn btn--primary"
+          onClick={() => onSave(orderedKeys)}
+          disabled={selected.size === 0}
+        >
+          {isFirstRun ? `Set Up ${selected.size} Service${selected.size !== 1 ? 's' : ''} →` : 'Save Changes'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// =============================================================================
+// My Services Panel (compact, one card per selected service)
+// =============================================================================
+
+function MyServicesPanel({ services, connections, shelf, onConnect, onDisconnect, onSync, onImport }) {
+  const [open, setOpen]           = useState(true)
+  const [syncing, setSyncing]     = useState(null)
+  const [syncResult, setSyncResult] = useState({})
+  const [disconnecting, setDisconnecting] = useState(null)
+
+  const handleSync = async (key) => {
+    setSyncing(key)
+    setSyncResult(r => ({ ...r, [key]: null }))
+    try {
+      const result = await onSync(key)
+      setSyncResult(r => ({ ...r, [key]: result }))
+    } catch (e) {
+      setSyncResult(r => ({ ...r, [key]: { error: e.message } }))
+    } finally {
+      setSyncing(null)
+    }
+  }
+
+  const handleDisconnect = async (key) => {
+    setDisconnecting(key)
+    try { await onDisconnect(key) } finally { setDisconnecting(null) }
+  }
+
+  const bookCounts = Object.fromEntries(
+    services.map(s => [s.key, shelf.filter(b => b.service === s.key).length])
+  )
+
+  return (
+    <div className="reading-mysvc">
+      <button className="reading-mysvc-toggle" onClick={() => setOpen(o => !o)}>
+        <span className="reading-mysvc-toggle-label">
+          <IconServices size={12} /> MY SERVICES
+        </span>
+        <span className="reading-mysvc-toggle-pills">
+          {services.map(s => {
+            const connected = s.type === 'manual' || s.type === 'import' || connections[s.key]
+            return (
+              <span
+                key={s.key}
+                className={`reading-mysvc-pill${connected ? ' reading-mysvc-pill--on' : ''}`}
+                style={{ '--svc-color': s.color }}
+              >
+                <span style={{ background: connected ? s.color : 'var(--text-muted)', width: 6, height: 6, borderRadius: '50%', display: 'inline-block', marginRight: 5 }} />
+                {s.label}
+              </span>
+            )
+          })}
+        </span>
+        <span className="reading-integrations-caret">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="reading-mysvc-body">
+          {services.map(svc => {
+            const connected = connections[svc.key]
+            const blockedBy = svc.requires && !connections[svc.requires]
+            const res = syncResult[svc.key]
+            const bookCount = bookCounts[svc.key] || 0
+
+            const isImport  = svc.type === 'import'
+            const isManual  = svc.type === 'manual'
+            const isLive    = svc.type === 'live'
+            const isSync    = svc.type === 'sync'
+
+            // Effective connected state for display
+            const effectiveConnected = isImport || isManual ? bookCount > 0 : connected
+
+            return (
+              <div
+                key={svc.key}
+                className={`reading-mysvc-card${effectiveConnected ? ' reading-mysvc-card--on' : ' reading-mysvc-card--off'}`}
+                style={{ '--svc-color': svc.color }}
+              >
+                {/* Header row */}
+                <div className="reading-mysvc-card-head">
+                  <span className="reading-mysvc-dot" style={{ background: svc.color }} />
+                  <span className="reading-mysvc-name">{svc.label}</span>
+                  <span className={`reading-svc-type-pill reading-svc-type-pill--${svc.type}`}>
+                    {svc.type === 'live' ? 'LIVE' : svc.type === 'sync' ? 'SYNC' : svc.type === 'import' ? 'IMPORT' : 'MANUAL'}
+                  </span>
+                  {bookCount > 0 && (
+                    <span className="reading-mysvc-count">{bookCount} {bookCount === 1 ? 'book' : 'books'}</span>
+                  )}
+                  {(isLive || isSync) && connected && (
+                    <span className="reading-mysvc-badge reading-mysvc-badge--on">LINKED</span>
+                  )}
+                  {(isLive || isSync) && !connected && !blockedBy && (
+                    <span className="reading-mysvc-badge reading-mysvc-badge--off">NOT LINKED</span>
+                  )}
+                </div>
+
+                {/* Body */}
+                <div className="reading-mysvc-card-body">
+                  <p className="reading-svc-syncs">{svc.syncs}</p>
+
+                  {blockedBy && (
+                    <p className="reading-svc-caveat">⚠ {svc.requiresLabel}</p>
+                  )}
+
+                  {res && !res.error && (
+                    <p className="reading-svc-result">✓ {res.added} added · {res.skipped} already on shelf</p>
+                  )}
+                  {res?.error && <p className="reading-svc-caveat">✗ {res.error}</p>}
+                </div>
+
+                {/* Actions */}
+                <div className="reading-mysvc-actions">
+                  {isLive && !connected && (
+                    <button
+                      className="reading-svc-btn reading-svc-btn--connect"
+                      style={{ '--svc-color': svc.color }}
+                      onClick={() => onConnect(svc.key)}
+                    >
+                      Connect {svc.label}
+                    </button>
+                  )}
+
+                  {isLive && connected && (
+                    <div className="reading-svc-action-row">
+                      {/* Services that have a /sync endpoint show a sync button */}
+                      {svc.hasSync && (
+                        <button
+                          className="reading-svc-btn reading-svc-btn--connect"
+                          style={{ '--svc-color': svc.color }}
+                          onClick={() => handleSync(svc.key)}
+                          disabled={syncing === svc.key}
+                        >
+                          {syncing === svc.key ? 'Syncing…' : '↻ Sync Library'}
+                        </button>
+                      )}
+                      <button
+                        className="reading-svc-btn reading-svc-btn--disconnect"
+                        onClick={() => handleDisconnect(svc.key)}
+                        disabled={disconnecting === svc.key}
+                      >
+                        {disconnecting === svc.key ? 'Disconnecting…' : 'Disconnect'}
+                      </button>
+                    </div>
+                  )}
+
+                  {isSync && !blockedBy && (
+                    <button
+                      className="reading-svc-btn reading-svc-btn--connect"
+                      style={{ '--svc-color': svc.color }}
+                      onClick={() => handleSync(svc.key)}
+                      disabled={syncing === svc.key}
+                    >
+                      {syncing === svc.key ? 'Syncing…' : '↻ Sync Library'}
+                    </button>
+                  )}
+
+                  {isSync && blockedBy && (
+                    <button
+                      className="reading-svc-btn reading-svc-btn--connect"
+                      style={{ '--svc-color': '#f58220' }}
+                      onClick={() => onConnect('audible')}
+                    >
+                      Connect Audible First
+                    </button>
+                  )}
+
+                  {isImport && (
+                    <button
+                      className="reading-svc-btn reading-svc-btn--connect"
+                      style={{ '--svc-color': svc.color }}
+                      onClick={() => onImport(svc)}
+                    >
+                      {bookCount > 0 ? '↻ Re-import' : `Import from ${svc.label}`}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       )}
     </div>
   )
@@ -376,13 +810,12 @@ function StatPill({ label, count, color, onClick, active }) {
 // =============================================================================
 
 function BookCard({ book, onEdit, onDelete }) {
-  const svc      = SERVICE_MAP[book.service] || SERVICE_MAP['other']
+  const svc      = ALL_SERVICES_MAP[book.service] || ALL_SERVICES_MAP['other']
   const launchUrl = book.launch_url || SERVICE_LAUNCH[book.service] || null
   const statusObj = STATUSES.find(s => s.key === book.status)
 
   return (
     <div className="reading-book-card">
-      {/* Cover */}
       <div className="reading-book-cover">
         {book.cover_url
           ? <img src={book.cover_url} alt={book.title} className="reading-book-cover-img" />
@@ -391,25 +824,17 @@ function BookCard({ book, onEdit, onDelete }) {
               <span className="reading-book-cover-placeholder-title">{book.title}</span>
             </div>
         }
-
-        {/* Status badge */}
         <div className={`reading-cover-status reading-cover-status--${book.status}`}>
           {statusObj?.label || book.status}
         </div>
-
-        {/* Service badge */}
-        <div className="reading-cover-service" style={{ background: svc.color }}>
-          {svc.label}
+        <div className="reading-cover-service" style={{ background: svc?.color || '#8888aa' }}>
+          {svc?.label || book.service}
         </div>
-
-        {/* Progress overlay on cover */}
         {book.status === 'reading' && (
           <div className="reading-cover-progress">
-            <div className="reading-cover-progress-fill" style={{ width: `${book.progress_pct}%`, background: svc.color }} />
+            <div className="reading-cover-progress-fill" style={{ width: `${book.progress_pct}%`, background: svc?.color || '#8888aa' }} />
           </div>
         )}
-
-        {/* Hover actions overlay */}
         <div className="reading-book-overlay">
           <div className="reading-overlay-actions">
             {launchUrl && (
@@ -423,21 +848,17 @@ function BookCard({ book, onEdit, onDelete }) {
         </div>
       </div>
 
-      {/* Info below cover */}
       <div className="reading-book-meta">
         <div className="reading-book-title">{book.title}</div>
         {book.author && <div className="reading-book-author">{book.author}</div>}
-
         {book.rating && (
           <div className="reading-book-rating">
             {'★'.repeat(book.rating)}<span className="reading-book-rating-empty">{'★'.repeat(5 - book.rating)}</span>
           </div>
         )}
-
         {book.status === 'reading' && (
           <div className="reading-book-pct">{Math.round(book.progress_pct)}%</div>
         )}
-
         {book.notes && (
           <div className="reading-book-notes">{book.notes}</div>
         )}
@@ -447,7 +868,7 @@ function BookCard({ book, onEdit, onDelete }) {
 }
 
 // =============================================================================
-// Libby cards (cover-forward)
+// Libby cards
 // =============================================================================
 
 function LibbyLoanCard({ loan }) {
@@ -512,223 +933,11 @@ function LibbyHoldCard({ hold }) {
 }
 
 // =============================================================================
-// Connected services panel
-// =============================================================================
-
-const CONNECTABLE = [
-  {
-    key: 'libby',
-    label: 'Libby',
-    color: '#00aaff',
-    type: 'live',
-    description: 'Public library loans & holds — no password needed.',
-    syncs: 'Current loans · Holds queue · Reading progress',
-  },
-  {
-    key: 'audible',
-    label: 'Audible',
-    color: '#f58220',
-    type: 'live',
-    description: 'Audiobook library via Amazon account.',
-    syncs: 'Full library · Listening progress',
-    caveat: 'Accounts with 2-step verification may need it temporarily disabled during setup.',
-  },
-  {
-    key: 'kindle',
-    label: 'Kindle',
-    color: '#ff9900',
-    type: 'sync',
-    description: 'Kindle e-book library — shared with your Audible/Amazon account.',
-    syncs: 'Full library · Reading progress',
-    requires: 'audible',
-    requiresLabel: 'Requires Audible to be connected first',
-  },
-  {
-    key: 'kobo',
-    label: 'Kobo',
-    color: '#e8a020',
-    type: 'import',
-    description: 'Import via Goodreads export. Kobo syncs to Goodreads natively.',
-    syncs: 'Library · Reading status · Ratings',
-    importService: 'kobo',
-    importInstructions: [
-      'Open Kobo app or kobobooks.com',
-      'Go to Settings → Goodreads and link your account',
-      'Go to goodreads.com → My Books → Import/Export → Export Library',
-      'Upload the goodreads_library_export.csv file here',
-    ],
-  },
-  {
-    key: 'google_play',
-    label: 'Google Play',
-    color: '#4285f4',
-    type: 'import',
-    description: 'Import via Google Takeout — Google\'s official data export.',
-    syncs: 'Library · Reading status · Progress · Ratings',
-    importService: 'google_play',
-    importInstructions: [
-      'Go to takeout.google.com',
-      'Deselect all, then select "Play Books"',
-      'Create export and download the zip',
-      'Find the CSV file inside and upload it here',
-    ],
-  },
-  {
-    key: 'apple_books',
-    label: 'Apple Books',
-    color: '#fc3c44',
-    type: 'import',
-    description: 'Import via Goodreads — Apple Books supports Goodreads reading history.',
-    syncs: 'Library · Reading status · Ratings',
-    importService: 'apple_books',
-    importInstructions: [
-      'Open the Books app on your iPhone or iPad',
-      'Tap your profile → Goodreads → Connect',
-      'Go to goodreads.com → My Books → Import/Export → Export Library',
-      'Upload the goodreads_library_export.csv file here',
-    ],
-  },
-]
-
-function ConnectedServices({ connections, onConnect, onDisconnect, onSync, onImport }) {
-  const [open, setOpen]               = useState(false)
-  const [disconnecting, setDisconnecting] = useState(null)
-  const [syncing, setSyncing]         = useState(null)
-  const [syncResult, setSyncResult]   = useState({})   // { kindle: {added,skipped} }
-
-  const handleDisconnect = async (key) => {
-    setDisconnecting(key)
-    try { await onDisconnect(key) } finally { setDisconnecting(null) }
-  }
-
-  const handleSync = async (key) => {
-    setSyncing(key)
-    setSyncResult(r => ({ ...r, [key]: null }))
-    try {
-      const result = await onSync(key)
-      setSyncResult(r => ({ ...r, [key]: result }))
-    } catch (e) {
-      setSyncResult(r => ({ ...r, [key]: { error: e.message } }))
-    } finally {
-      setSyncing(null)
-    }
-  }
-
-  const liveCount = CONNECTABLE.filter(s => s.type === 'live' && connections[s.key]).length
-  const syncCount = CONNECTABLE.filter(s => s.type === 'sync' && connections[s.key]).length
-  const linkedCount = liveCount + syncCount
-
-  return (
-    <div className="reading-integrations">
-      <button className="reading-integrations-toggle" onClick={() => setOpen(o => !o)}>
-        <span className="reading-integrations-title">
-          <IconPlug />
-          CONNECTED SERVICES
-        </span>
-        <span className="reading-integrations-summary">
-          {linkedCount} live · {CONNECTABLE.filter(s => s.type === 'import').length} via import
-        </span>
-        <span className="reading-integrations-caret">{open ? '▲' : '▼'}</span>
-      </button>
-
-      {open && (
-        <div className="reading-integrations-body">
-          <div className="reading-integrations-grid">
-            {CONNECTABLE.map(svc => {
-              const connected = !!connections[svc.key]
-              const blockedBy = svc.requires && !connections[svc.requires]
-              const res = syncResult[svc.key]
-
-              return (
-                <div
-                  key={svc.key}
-                  className={`reading-svc-card${connected ? ' reading-svc-card--connected' : ''}`}
-                  style={{ '--svc-color': svc.color }}
-                >
-                  <div className="reading-svc-card-top">
-                    <span className="reading-svc-dot" style={{ background: svc.color }} />
-                    <span className="reading-svc-name">{svc.label}</span>
-                    <span className={`reading-svc-type-pill reading-svc-type-pill--${svc.type}`}>
-                      {svc.type === 'live' ? 'LIVE' : svc.type === 'sync' ? 'SYNC' : 'IMPORT'}
-                    </span>
-                    {connected && svc.type !== 'import' &&
-                      <span className="reading-svc-badge reading-svc-badge--on">LINKED</span>
-                    }
-                  </div>
-
-                  <p className="reading-svc-desc">{svc.description}</p>
-                  <p className="reading-svc-syncs">{svc.syncs}</p>
-                  {svc.caveat && !connected && <p className="reading-svc-caveat">{svc.caveat}</p>}
-                  {blockedBy && <p className="reading-svc-caveat">{svc.requiresLabel}</p>}
-
-                  {/* Sync result feedback */}
-                  {res && !res.error && (
-                    <p className="reading-svc-result">
-                      ✓ {res.added} added · {res.skipped} already on shelf
-                    </p>
-                  )}
-                  {res?.error && <p className="reading-svc-caveat">✗ {res.error}</p>}
-
-                  <div className="reading-svc-actions">
-                    {/* LIVE: connect / disconnect */}
-                    {svc.type === 'live' && (
-                      connected ? (
-                        <button className="reading-svc-btn reading-svc-btn--disconnect"
-                          onClick={() => handleDisconnect(svc.key)} disabled={disconnecting === svc.key}>
-                          {disconnecting === svc.key ? 'Disconnecting…' : 'Disconnect'}
-                        </button>
-                      ) : (
-                        <button className="reading-svc-btn reading-svc-btn--connect"
-                          style={{ '--svc-color': svc.color }} onClick={() => onConnect(svc.key)}>
-                          Connect {svc.label}
-                        </button>
-                      )
-                    )}
-
-                    {/* SYNC (Kindle): sync library / disconnect */}
-                    {svc.type === 'sync' && (
-                      <div className="reading-svc-action-row">
-                        {!blockedBy && (
-                          <button className="reading-svc-btn reading-svc-btn--connect"
-                            style={{ '--svc-color': svc.color }}
-                            onClick={() => handleSync(svc.key)} disabled={syncing === svc.key}>
-                            {syncing === svc.key ? 'Syncing…' : '↻ Sync Library'}
-                          </button>
-                        )}
-                        {blockedBy && (
-                          <button className="reading-svc-btn reading-svc-btn--connect"
-                            style={{ '--svc-color': '#f58220' }} onClick={() => onConnect('audible')}>
-                            Connect Audible First
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    {/* IMPORT: CSV upload */}
-                    {svc.type === 'import' && (
-                      <button className="reading-svc-btn reading-svc-btn--connect"
-                        style={{ '--svc-color': svc.color }}
-                        onClick={() => onImport(svc)}>
-                        Import from {svc.label}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// =============================================================================
 // Libby connect modal (2-step chip pairing)
 // =============================================================================
 
 function LibbyConnectModal({ onDone, onClose }) {
-  const [step, setStep]       = useState(1)   // 1 = start, 2 = enter code
+  const [step, setStep]       = useState(1)
   const [code, setCode]       = useState('')
   const [busy, setBusy]       = useState(false)
   const [err, setErr]         = useState('')
@@ -772,9 +981,7 @@ function LibbyConnectModal({ onDone, onClose }) {
         <div className="reading-connect-body">
           {step === 1 && (
             <>
-              <div className="reading-connect-icon" style={{ color: '#00aaff' }}>
-                <IconLibby />
-              </div>
+              <div className="reading-connect-icon" style={{ color: '#00aaff' }}><IconLibby /></div>
               <p className="reading-connect-intro">
                 Link your public library account. River Song will create a device identity
                 and pair it with your Libby account — no password required.
@@ -797,9 +1004,7 @@ function LibbyConnectModal({ onDone, onClose }) {
 
           {step === 2 && (
             <>
-              <div className="reading-connect-icon" style={{ color: '#00aaff' }}>
-                <IconLibby />
-              </div>
+              <div className="reading-connect-icon" style={{ color: '#00aaff' }}><IconLibby /></div>
               <p className="reading-connect-intro">{instructions}</p>
               <div className="reading-form-row" style={{ margin: '8px 0 4px' }}>
                 <label className="reading-form-label">8-DIGIT CODE FROM LIBBY</label>
@@ -903,15 +1108,141 @@ function AudibleConnectModal({ onDone, onClose }) {
 }
 
 // =============================================================================
-// CSV Import modal (Kobo via Goodreads, Google Play Takeout, Apple Books)
+// Google Play Books OAuth modal
+// =============================================================================
+
+function GooglePlayConnectModal({ onDone, onClose }) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr]   = useState('')
+  const [waiting, setWaiting] = useState(false)  // true after redirect, polling for completion
+
+  // The callback page posts the code back via localStorage
+  useEffect(() => {
+    if (!waiting) return
+    const interval = setInterval(async () => {
+      const code = localStorage.getItem('rs-books-oauth-code')
+      if (!code) return
+      localStorage.removeItem('rs-books-oauth-code')
+      clearInterval(interval)
+      setBusy(true)
+      try {
+        await apiFetch('/connect/google_play/callback', {
+          method: 'POST',
+          body: JSON.stringify({
+            code,
+            redirect_uri: `${window.location.origin}/reading-oauth-callback`,
+          }),
+        })
+        onDone()
+      } catch (e) {
+        setErr(e.message)
+        setBusy(false)
+        setWaiting(false)
+      }
+    }, 800)
+    return () => clearInterval(interval)
+  }, [waiting, onDone])
+
+  const startOAuth = async () => {
+    setBusy(true); setErr('')
+    try {
+      const redirectUri = `${window.location.origin}/reading-oauth-callback`
+      const data = await apiFetch(
+        `/connect/google_play/authorize?redirect_uri=${encodeURIComponent(redirectUri)}`
+      )
+      setBusy(false)
+      setWaiting(true)
+      // Open OAuth in a popup so we can stay on the page
+      const popup = window.open(data.auth_url, 'google-books-auth', 'width=520,height=640,left=200,top=100')
+      // Watch for popup close without completing
+      const check = setInterval(() => {
+        if (popup && popup.closed) {
+          clearInterval(check)
+          const code = localStorage.getItem('rs-books-oauth-code')
+          if (!code) {
+            setWaiting(false)
+            setErr('Authorization cancelled or popup was closed.')
+          }
+        }
+      }, 600)
+    } catch (e) {
+      setErr(e.message)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="reading-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="reading-modal reading-modal--sm" style={{ '--modal-accent': '#4285f4' }}>
+        <div className="reading-modal-header">
+          <span className="reading-modal-title">CONNECT GOOGLE PLAY BOOKS</span>
+          <button className="reading-modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="reading-connect-body">
+          <div className="reading-connect-icon" style={{ color: '#4285f4' }}>
+            <IconGooglePlay />
+          </div>
+
+          {!waiting ? (
+            <>
+              <p className="reading-connect-intro">
+                Sign in with Google to link your Play Books library. River Song will request
+                read-only access to your books — no other Google data is accessed.
+              </p>
+              <div className="reading-connect-steps">
+                <div className="reading-connect-step">
+                  <span style={{ background: 'rgba(66,133,244,0.15)', color: '#4285f4' }}>1</span>
+                  Click below — a Google sign-in popup will open
+                </div>
+                <div className="reading-connect-step">
+                  <span style={{ background: 'rgba(66,133,244,0.15)', color: '#4285f4' }}>2</span>
+                  Sign in and grant Books access
+                </div>
+                <div className="reading-connect-step">
+                  <span style={{ background: 'rgba(66,133,244,0.15)', color: '#4285f4' }}>3</span>
+                  Return here — then use "Sync Library" to pull your books
+                </div>
+              </div>
+              {err && <div className="reading-form-error">{err}</div>}
+              <div className="reading-modal-actions">
+                <button className="btn" onClick={onClose}>Cancel</button>
+                <button className="btn btn--primary" onClick={startOAuth} disabled={busy}>
+                  {busy ? 'Opening…' : 'Sign in with Google'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="reading-connect-intro">
+                Waiting for Google authorization…
+                <br />
+                Complete the sign-in in the popup window.
+              </p>
+              <div className="reading-books-waiting">
+                <span className="reading-books-spinner" />
+              </div>
+              {err && <div className="reading-form-error">{err}</div>}
+              <div className="reading-modal-actions">
+                <button className="btn" onClick={() => { setWaiting(false); onClose() }}>Cancel</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// =============================================================================
+// CSV Import modal
 // =============================================================================
 
 function CsvImportModal({ svc, onDone, onClose }) {
-  const [file, setFile]       = useState(null)
-  const [busy, setBusy]       = useState(false)
-  const [result, setResult]   = useState(null)
-  const [err, setErr]         = useState('')
-  const inputRef              = useRef(null)
+  const [file, setFile]     = useState(null)
+  const [busy, setBusy]     = useState(false)
+  const [result, setResult] = useState(null)
+  const [err, setErr]       = useState('')
+  const inputRef            = useRef(null)
 
   const submit = async () => {
     if (!file) { setErr('Choose a CSV file first.'); return }
@@ -919,7 +1250,7 @@ function CsvImportModal({ svc, onDone, onClose }) {
     try {
       const fd = new FormData()
       fd.append('file', file)
-      fd.append('service', svc.importService || svc.key)
+      fd.append('service', svc.key)
       const token = localStorage.getItem('rs-auth-token')
       const res = await fetch('/api/reading/import/csv', {
         method: 'POST',
@@ -949,17 +1280,17 @@ function CsvImportModal({ svc, onDone, onClose }) {
         <div className="reading-connect-body">
           <p className="reading-connect-intro">{svc.description}</p>
 
-          {/* Step-by-step instructions */}
-          <div className="reading-connect-steps">
-            {svc.importInstructions.map((step, i) => (
-              <div key={i} className="reading-connect-step">
-                <span style={{ background: `color-mix(in srgb, ${svc.color} 18%, transparent)`, color: svc.color }}>{i + 1}</span>
-                {step}
-              </div>
-            ))}
-          </div>
+          {svc.importInstructions && (
+            <div className="reading-connect-steps">
+              {svc.importInstructions.map((step, i) => (
+                <div key={i} className="reading-connect-step">
+                  <span style={{ background: `color-mix(in srgb, ${svc.color} 18%, transparent)`, color: svc.color }}>{i + 1}</span>
+                  {step}
+                </div>
+              ))}
+            </div>
+          )}
 
-          {/* File picker */}
           {!result && (
             <div className="reading-import-file-row">
               <input
@@ -977,15 +1308,13 @@ function CsvImportModal({ svc, onDone, onClose }) {
                 {file ? `✓ ${file.name}` : 'Choose CSV file'}
               </button>
               {file && (
-                <button className="reading-svc-btn reading-svc-btn--disconnect"
-                  onClick={() => setFile(null)}>Clear</button>
+                <button className="reading-svc-btn reading-svc-btn--disconnect" onClick={() => setFile(null)}>Clear</button>
               )}
             </div>
           )}
 
           {err && <div className="reading-form-error">{err}</div>}
 
-          {/* Success result */}
           {result && (
             <div className="reading-import-result">
               <div className="reading-import-result-num" style={{ color: svc.color }}>{result.added}</div>
@@ -996,9 +1325,7 @@ function CsvImportModal({ svc, onDone, onClose }) {
               {result.errors > 0 && (
                 <div className="reading-import-result-sub reading-import-result-sub--warn">{result.errors} rows had errors</div>
               )}
-              <div className="reading-import-result-format">
-                Format detected: {result.format_detected}
-              </div>
+              <div className="reading-import-result-format">Format detected: {result.format_detected}</div>
             </div>
           )}
 
@@ -1007,11 +1334,7 @@ function CsvImportModal({ svc, onDone, onClose }) {
               ? <button className="btn btn--primary" onClick={onDone}>Done</button>
               : <>
                   <button className="btn" onClick={onClose}>Cancel</button>
-                  <button
-                    className="btn btn--primary"
-                    onClick={submit}
-                    disabled={busy || !file}
-                  >
+                  <button className="btn btn--primary" onClick={submit} disabled={busy || !file}>
                     {busy ? 'Importing…' : 'Import Books'}
                   </button>
                 </>
@@ -1024,7 +1347,7 @@ function CsvImportModal({ svc, onDone, onClose }) {
 }
 
 // =============================================================================
-// Delete confirm modal
+// Delete confirm
 // =============================================================================
 
 function DeleteConfirm({ book, onConfirm, onCancel }) {
@@ -1054,7 +1377,7 @@ function DeleteConfirm({ book, onConfirm, onCancel }) {
 // Add / Edit modal
 // =============================================================================
 
-function BookModal({ book, defaultService, onSave, onClose }) {
+function BookModal({ book, defaultService, availableServices, onSave, onClose }) {
   const [form, setForm] = useState({
     service:      book?.service      ?? defaultService,
     title:        book?.title        ?? '',
@@ -1088,7 +1411,7 @@ function BookModal({ book, defaultService, onSave, onClose }) {
     }
   }
 
-  const svc = SERVICE_MAP[form.service] || SERVICE_MAP['other']
+  const svc = ALL_SERVICES_MAP[form.service] || ALL_SERVICES_MAP['other']
 
   return (
     <div className="reading-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -1102,7 +1425,7 @@ function BookModal({ book, defaultService, onSave, onClose }) {
           <div className="reading-form-row">
             <label className="reading-form-label">Service</label>
             <select className="reading-form-select" value={form.service} onChange={e => set('service', e.target.value)}>
-              {SERVICES.filter(s => s.key !== 'all').map(s => (
+              {availableServices.map(s => (
                 <option key={s.key} value={s.key}>{s.label}</option>
               ))}
             </select>
@@ -1131,7 +1454,6 @@ function BookModal({ book, defaultService, onSave, onClose }) {
                 {STATUSES.filter(s => s.key !== 'all').map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
               </select>
             </div>
-
             <div className="reading-form-row">
               <label className="reading-form-label">Rating</label>
               <div className="reading-form-stars">
@@ -1206,11 +1528,24 @@ function IconSearch() {
   )
 }
 
-function IconPlug() {
+function IconServices({ size = 13 }) {
   return (
-    <svg width="13" height="13" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
-      <path d="M7 2v4M13 2v4M5 6h10l-1 8H6L5 6z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
-      <line x1="10" y1="14" x2="10" y2="18" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+      <circle cx="5"  cy="5"  r="3" stroke="currentColor" strokeWidth="1.4"/>
+      <circle cx="15" cy="5"  r="3" stroke="currentColor" strokeWidth="1.4"/>
+      <circle cx="5"  cy="15" r="3" stroke="currentColor" strokeWidth="1.4"/>
+      <circle cx="15" cy="15" r="3" stroke="currentColor" strokeWidth="1.4"/>
+    </svg>
+  )
+}
+
+function IconGooglePlay() {
+  return (
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+      <path d="M3 3.5L13.5 12 3 20.5V3.5Z" fill="currentColor" opacity="0.7"/>
+      <path d="M3 3.5l10.5 8.5L21 7.5 3 3.5Z" fill="currentColor" opacity="0.9"/>
+      <path d="M3 20.5l10.5-8.5L21 16.5 3 20.5Z" fill="currentColor" opacity="0.9"/>
+      <path d="M21 7.5L13.5 12 21 16.5V7.5Z" fill="currentColor"/>
     </svg>
   )
 }
