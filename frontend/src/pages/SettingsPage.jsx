@@ -64,9 +64,12 @@ function ModelCard({ model, isSelected, isDisabled, onSelect }) {
       {model.vram_gb != null && (
         <div className="model-card-meta">
           {model.vram_gb <= 4
-            ? <span className="badge badge--gpu">GPU {model.vram_gb}GB</span>
-            : <span className="badge badge--cpu">CPU {model.vram_gb}GB</span>
+            ? <span className="badge badge--gpu">⚡ GPU {model.vram_gb}GB</span>
+            : <span className="badge badge--cpu">RAM {model.vram_gb}GB</span>
           }
+          {model.vram_gb <= 4 && (
+            <span className="badge badge--speak" title="Fits in GPU VRAM — works for Speak">SPEAK</span>
+          )}
         </div>
       )}
 
@@ -127,8 +130,9 @@ export default function SettingsPage() {
   const [enabledProviders, setEnabledProviders] = useState({})
   const [llmSettings,      setLlmSettings]      = useState(null)
   const [memSettings,      setMemSettings]      = useState(null)
+  const [voiceSettings,    setVoiceSettings]    = useState(null)
   const [loading,          setLoading]          = useState(true)
-  const [saveStatus,       setSaveStatus]       = useState('')  // '', 'saving', 'saved', 'error'
+  const [saveStatus,       setSaveStatus]       = useState('')
 
   // ---- Initial data load ----
   useEffect(() => {
@@ -139,12 +143,14 @@ export default function SettingsPage() {
       fetch(`${API_BASE}/api/models`).then(r => r.json()),
       fetch(`${API_BASE}/api/settings/llm${query}`, { headers }).then(r => r.json()),
       fetch(`${API_BASE}/api/settings/memory${query}`, { headers }).then(r => r.json()),
+      fetch(`${API_BASE}/api/settings/voice`, { headers }).then(r => r.json()).catch(() => null),
     ])
-      .then(([modData, llmData, memData]) => {
+      .then(([modData, llmData, memData, voiceData]) => {
         setModels({ local: modData.local || [], cloud: modData.cloud || [] })
         setEnabledProviders(modData.enabled_providers || {})
         setLlmSettings(llmData)
         setMemSettings(memData)
+        setVoiceSettings(voiceData)
         setLoading(false)
       })
       .catch(err => {
@@ -276,6 +282,11 @@ export default function SettingsPage() {
       {/* AI MODEL                                                         */}
       {/* ================================================================ */}
       <Section title="AI MODEL">
+        <p className="settings-hint" style={{ marginBottom: 16 }}>
+          The selected model is used for both Chat and Speak. For Speak, choose a model
+          tagged <strong>⚡ GPU / SPEAK</strong> — these fit in your GPU's VRAM and respond
+          faster for real-time voice conversation.
+        </p>
 
         {/* Local models */}
         <div className="model-group">
@@ -405,15 +416,65 @@ export default function SettingsPage() {
       {/* VOICE                                                            */}
       {/* ================================================================ */}
       <Section title="VOICE">
-        <div className="voice-option voice-option--active">
-          <div className="voice-option-name">Piper — Local TTS</div>
-          <div className="voice-option-meta">en_US · Lessac Medium · zero latency</div>
-          <div className="voice-option-dot" aria-label="Active" />
-        </div>
-        <p className="settings-hint">
-          Additional voice models and cloud TTS providers (ElevenLabs, OpenAI TTS)
-          coming in a future phase.
-        </p>
+        {voiceSettings ? (
+          <>
+            {/* Active voice card */}
+            <div className="voice-option voice-option--active">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="voice-option-name">
+                  {voiceSettings.provider_label}
+                </div>
+                <div className="voice-option-meta">
+                  {voiceSettings.active_voice || 'No voice configured'}
+                </div>
+              </div>
+              {voiceSettings.provider !== 'none' && (
+                <div className="voice-option-dot" aria-label="Active" />
+              )}
+            </div>
+
+            {/* All installed voices */}
+            {voiceSettings.available?.length > 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                <p className="settings-hint" style={{ marginBottom: 0 }}>
+                  Installed voice models — change <code>PIPER_MODEL_PATH</code> in <code>.env</code> to switch.
+                </p>
+                {voiceSettings.available.map(v => (
+                  <div
+                    key={v.path}
+                    className={`voice-option${v.active ? ' voice-option--active' : ''}`}
+                    style={{ opacity: v.active ? 1 : 0.6 }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="voice-option-name">{v.name}</div>
+                      <div className="voice-option-meta" style={{ fontSize: '0.7rem', wordBreak: 'break-all' }}>
+                        {v.path}
+                      </div>
+                    </div>
+                    {v.active && <div className="voice-option-dot" aria-label="Active" />}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {voiceSettings.provider === 'none' && (
+              <p className="settings-hint" style={{ color: 'var(--error)' }}>
+                TTS is disabled. Set <code>TTS_PROVIDER=piper</code> in <code>.env</code> to enable speech output.
+              </p>
+            )}
+
+            <p className="settings-hint" style={{ marginTop: 8 }}>
+              Additional voices: download <code>.onnx</code> models from{' '}
+              <strong>huggingface.co/rhasspy/piper-voices</strong> and update <code>PIPER_MODEL_PATH</code>.
+              Cloud TTS (ElevenLabs, OpenAI TTS) coming in a future phase.
+            </p>
+          </>
+        ) : (
+          <div className="voice-option voice-option--active">
+            <div className="voice-option-name">Piper — Local TTS</div>
+            <div className="voice-option-meta">Loading voice info…</div>
+          </div>
+        )}
       </Section>
 
       {/* ================================================================ */}

@@ -258,3 +258,67 @@ async def save_memory_settings(
     await memory.save_memory_settings(settings)
     logger.info("Memory settings saved (user=%s).", str(user_id).replace("\r", "").replace("\n", "").replace("\t", ""))
     return {"status": "ok"}
+
+
+# =============================================================================
+# Voice / TTS settings
+# =============================================================================
+
+@router.get("/settings/voice")
+async def get_voice_settings(authorization: Optional[str] = Header(default=None)):
+    """
+    Return the active TTS provider info and list of available Piper voice models
+    found in the configured model directory.
+    """
+    _require_user(authorization)
+    settings = get_settings()
+
+    provider   = settings.tts_provider          # "piper" | "none"
+    model_path = settings.piper_model_path       # full path to active .onnx
+
+    # Scan the model directory for installed Piper voices
+    import os
+    model_dir = os.path.dirname(model_path) if model_path else ""
+    available_voices: list[dict] = []
+
+    if model_dir and os.path.isdir(model_dir):
+        for fname in sorted(os.listdir(model_dir)):
+            if not fname.endswith(".onnx"):
+                continue
+            full = os.path.join(model_dir, fname)
+            # Parse a human-readable name from the filename
+            # e.g. "en_US-lessac-medium.onnx" → "Lessac Medium (en-US)"
+            stem = fname.removesuffix(".onnx")
+            parts = stem.split("-")          # ["en_US", "lessac", "medium"]
+            lang   = parts[0].replace("_", "-") if parts else stem
+            name   = " ".join(p.capitalize() for p in parts[1:]) if len(parts) > 1 else stem
+            available_voices.append({
+                "path":   full,
+                "name":   f"{name} ({lang})",
+                "lang":   lang,
+                "active": full == model_path,
+            })
+
+    # Derive a display name for the active voice
+    active_name = "Unknown"
+    for v in available_voices:
+        if v["active"]:
+            active_name = v["name"]
+            break
+    if not available_voices and model_path:
+        stem = os.path.basename(model_path).removesuffix(".onnx")
+        parts = stem.split("-")
+        lang  = parts[0].replace("_", "-") if parts else stem
+        name  = " ".join(p.capitalize() for p in parts[1:]) if len(parts) > 1 else stem
+        active_name = f"{name} ({lang})"
+
+    return {
+        "provider":       provider,
+        "active_voice":   active_name,
+        "active_path":    model_path,
+        "available":      available_voices,
+        "provider_label": {
+            "piper": "Piper (local, zero-latency)",
+            "none":  "Disabled",
+        }.get(provider, provider),
+    }
