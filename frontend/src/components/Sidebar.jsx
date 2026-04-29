@@ -1,311 +1,475 @@
 import React, { useState } from 'react'
 
+// ── Navigation item definitions ─────────────────────────────────────────────
+// icon: Material Symbols Rounded codepoint name
+// https://fonts.google.com/icons?icon.style=Rounded
+
 const USER_ITEMS = [
-  { key: 'speak',       label: 'SPEAK',       icon: IconSpeak },
-  { key: 'chat',        label: 'CHAT',        icon: IconChat },
-  { key: 'memory',      label: 'MEMORY',      icon: IconMemory },
-  { key: 'inventory',   label: 'INVENTORY',   icon: IconInventory },
-  { key: 'maintenance', label: 'MAINTENANCE', icon: IconWrench },
-  { key: 'commerce',    label: 'STORE',       icon: IconCommerce },
-  { key: 'feeds',       label: 'FEEDS',       icon: IconFeeds },
-  { key: 'google',      label: 'GOOGLE',      icon: IconGoogle,   soon: true },
-  { key: 'reading',     label: 'READING',     icon: IconReading },
+  { key: 'speak',       label: 'Speak',       icon: 'mic' },
+  { key: 'chat',        label: 'Chat',        icon: 'chat_bubble' },
+  { key: 'memory',      label: 'Memory',      icon: 'psychology' },
+  { key: 'inventory',   label: 'Inventory',   icon: 'inventory_2' },
+  { key: 'maintenance', label: 'Maintenance', icon: 'build' },
+  { key: 'commerce',    label: 'Store',       icon: 'shopping_bag' },
+  { key: 'feeds',       label: 'Feeds',       icon: 'feed' },
+  { key: 'google',      label: 'Google',      icon: 'hub',      soon: true },
+  { key: 'reading',     label: 'Reading',     icon: 'auto_stories' },
 ]
 
 const ADMIN_ITEMS = [
-  { key: 'dashboard',   label: 'DASHBOARD',   icon: IconDashboard },
-  { key: 'speak',       label: 'SPEAK',       icon: IconSpeak },
-  { key: 'chat',        label: 'CHAT',        icon: IconChat },
-  { key: 'memory',      label: 'MEMORY',      icon: IconMemory },
-  { key: 'inventory',   label: 'INVENTORY',   icon: IconInventory },
-  { key: 'maintenance', label: 'MAINTENANCE', icon: IconWrench },
-  { key: 'commerce',    label: 'STORE',       icon: IconCommerce },
-  { key: 'routines',    label: 'ROUTINES',    icon: IconRoutines },
-  { key: 'home',        label: 'HOME',        icon: IconHome },
-  { key: 'analytics',   label: 'ANALYTICS',   icon: IconAnalytics, soon: true },
-  { key: 'feeds',       label: 'FEEDS',       icon: IconFeeds },
-  { key: 'google',      label: 'GOOGLE',      icon: IconGoogle,    soon: true },
-  { key: 'reading',     label: 'READING',     icon: IconReading },
-  { key: 'users',       label: 'USERS',       icon: IconUsers },
-  { key: 'killswitch',  label: 'KILL SW.',    icon: IconKill },
+  { key: 'dashboard',   label: 'Dashboard',   icon: 'dashboard' },
+  { key: 'speak',       label: 'Speak',       icon: 'mic' },
+  { key: 'chat',        label: 'Chat',        icon: 'chat_bubble' },
+  { key: 'memory',      label: 'Memory',      icon: 'psychology' },
+  { key: 'inventory',   label: 'Inventory',   icon: 'inventory_2' },
+  { key: 'maintenance', label: 'Maintenance', icon: 'build' },
+  { key: 'commerce',    label: 'Store',       icon: 'shopping_bag' },
+  { key: 'routines',    label: 'Routines',    icon: 'routine' },
+  { key: 'home',        label: 'Home Node',   icon: 'home_iot_device' },
+  { key: 'analytics',   label: 'Analytics',   icon: 'bar_chart',  soon: true },
+  { key: 'feeds',       label: 'Feeds',       icon: 'feed' },
+  { key: 'google',      label: 'Google',      icon: 'hub',        soon: true },
+  { key: 'reading',     label: 'Reading',     icon: 'auto_stories' },
+  { key: 'users',       label: 'Users',       icon: 'group' },
+  { key: 'killswitch',  label: 'Kill Switch', icon: 'power_settings_new' },
 ]
 
-export default function Sidebar({ currentPage, onNavigate, isAdmin, showAdminToggle, onAdminToggle, displayName, onLogout, mobileOpen, onMobileClose }) {
+// ── Material Symbol component ────────────────────────────────────────────────
+function MdIcon({ name, size = 20, style }) {
+  return (
+    <span
+      className="material-symbols-rounded"
+      style={{ fontSize: size, width: size, height: size, ...style }}
+    >
+      {name}
+    </span>
+  )
+}
+
+// ── Main Sidebar / Navigation Drawer ────────────────────────────────────────
+export default function Sidebar({
+  currentPage, onNavigate, isAdmin, showAdminToggle, onAdminToggle,
+  displayName, onLogout, mobileOpen, onMobileClose,
+}) {
   const [collapsed, setCollapsed] = useState(false)
   const items = isAdmin ? ADMIN_ITEMS : USER_ITEMS
 
   const initials = displayName
     ? displayName.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
-    : 'CW'
+    : 'RS'
 
   return (
-    <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''} ${mobileOpen ? 'sidebar--mobile-open' : ''}`}>
-      <div className="sidebar-brand">
-        <div className="sidebar-logo">RS</div>
-        {!collapsed && <span className="sidebar-title">RIVER SONG</span>}
+    <aside
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        width: collapsed ? 72 : 260,
+        flexShrink: 0,
+        background: 'var(--md-surface-container-low)',
+        borderRight: '1px solid var(--md-outline-variant)',
+        transition: 'width 250ms cubic-bezier(0.2, 0, 0, 1)',
+        position: 'relative',
+        zIndex: 10,
+        overflow: 'hidden',
+      }}
+      className={`sidebar ${mobileOpen ? 'sidebar--mobile-open' : ''}`}
+    >
+      {/* ── Brand header ── */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: collapsed ? '16px 0' : '16px 20px',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        minHeight: 64,
+        flexShrink: 0,
+        borderBottom: '1px solid var(--md-outline-variant)',
+      }}>
+        {/* Logo mark */}
+        <div style={{
+          width: 36,
+          height: 36,
+          borderRadius: 'var(--md-shape-sm)',
+          background: 'var(--md-primary-container)',
+          color: 'var(--md-on-primary-container)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '0.8125rem',
+          fontWeight: 700,
+          flexShrink: 0,
+          letterSpacing: '0.05em',
+        }}>
+          RS
+        </div>
+
+        {!collapsed && (
+          <span style={{
+            fontSize: '1.375rem',
+            fontWeight: 400,
+            color: 'var(--md-on-surface)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+          }}>
+            River Song
+          </span>
+        )}
+
         {onMobileClose && (
-          <button className="sidebar-mobile-close" onClick={onMobileClose} aria-label="Close navigation">✕</button>
+          <button
+            className="sidebar-mobile-close"
+            onClick={onMobileClose}
+            aria-label="Close navigation"
+          >
+            ✕
+          </button>
         )}
       </div>
 
-      <nav className="sidebar-nav" aria-label="Main navigation">
-        {items.map(({ key, label, icon: Icon, soon }) => (
-          <button
-            key={key}
-            className={`sidebar-item ${currentPage === key ? 'sidebar-item--active' : ''} ${key === 'killswitch' ? 'sidebar-item--kill' : ''} ${soon ? 'sidebar-item--soon' : ''}`}
-            onClick={() => onNavigate(key)}
-            aria-current={currentPage === key ? 'page' : undefined}
-            title={collapsed ? label : undefined}
-          >
-            <Icon />
-            {!collapsed && <span className="sidebar-label">{label}</span>}
-            {!collapsed && soon && <span className="sidebar-soon-pill">SOON</span>}
-          </button>
-        ))}
+      {/* ── Navigation items ── */}
+      <nav
+        aria-label="Main navigation"
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          padding: '12px 0',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+        }}
+      >
+        {items.map(({ key, label, icon, soon }) => {
+          const active = currentPage === key
+          const isKill = key === 'killswitch'
+
+          return (
+            <NavItem
+              key={key}
+              icon={icon}
+              label={label}
+              active={active}
+              soon={soon}
+              danger={isKill}
+              collapsed={collapsed}
+              onClick={() => onNavigate(key)}
+            />
+          )
+        })}
       </nav>
 
-      {/* Bottom utility buttons */}
-      <div className={`sidebar-utils ${collapsed ? 'sidebar-utils--collapsed' : ''}`}>
-        {/* Profile */}
-        <button
-          className={`sidebar-profile ${currentPage === 'profile' ? 'sidebar-profile--active' : ''}`}
-          onClick={() => onNavigate('profile')}
-          title={collapsed ? 'Profile' : undefined}
-          aria-current={currentPage === 'profile' ? 'page' : undefined}
-          style={{ flex: 1, borderRight: collapsed ? 'none' : '1px solid var(--border)' }}
-        >
-          <div className="sidebar-avatar">{initials}</div>
-          {!collapsed && (
-            <div className="sidebar-profile-info">
-              <span className="sidebar-profile-name">{displayName || 'Charlie W.'}</span>
-              <span className="sidebar-profile-sub">Profile</span>
-            </div>
-          )}
-        </button>
-
-        {/* Settings gear */}
-        <button
-          className={`sidebar-util-btn ${currentPage === 'settings' ? 'sidebar-util-btn--active' : ''}`}
-          onClick={() => onNavigate('settings')}
-          title="Settings"
-          aria-current={currentPage === 'settings' ? 'page' : undefined}
-        >
-          <IconGear />
-        </button>
-
-        {/* Logout */}
-        {onLogout && (
-          <button
-            className="sidebar-util-btn"
-            onClick={onLogout}
-            title="Sign out"
-            style={{ color: 'var(--text-dim)' }}
-          >
-            <IconLogout />
-          </button>
-        )}
-      </div>
-
-      {/* Admin mode toggle — only visible to admin role users */}
+      {/* ── Admin toggle ── */}
       {showAdminToggle && (
-        <div
-          className={`sidebar-admin-toggle ${collapsed ? 'sidebar-admin-toggle--collapsed' : ''}`}
-          title={collapsed ? (isAdmin ? 'Admin mode on' : 'Admin mode off') : undefined}
-        >
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'space-between',
+          gap: 10,
+          padding: collapsed ? '10px 0' : '10px 20px',
+          borderTop: '1px solid var(--md-outline-variant)',
+          flexShrink: 0,
+        }}>
           {!collapsed && (
-            <span className={`sidebar-admin-label ${isAdmin ? 'sidebar-admin-label--on' : ''}`}>
-              ADMIN
+            <span style={{
+              fontSize: '0.6875rem',
+              fontWeight: 500,
+              letterSpacing: '0.08em',
+              color: isAdmin ? '#FFB86C' : 'var(--md-on-surface-variant)',
+              textTransform: 'uppercase',
+              transition: 'color 200ms',
+            }}>
+              Admin
             </span>
           )}
+
+          {/* M3 Switch */}
           <button
-            className={`sidebar-toggle-switch ${isAdmin ? 'sidebar-toggle-switch--on' : ''}`}
             onClick={() => onAdminToggle(!isAdmin)}
             aria-pressed={isAdmin}
             aria-label="Toggle admin mode"
+            style={{
+              width: 52,
+              height: 32,
+              borderRadius: 'var(--md-shape-full)',
+              background: isAdmin ? '#FFB86C' : 'var(--md-surface-variant)',
+              border: `2px solid ${isAdmin ? '#FFB86C' : 'var(--md-outline)'}`,
+              display: 'flex',
+              alignItems: 'center',
+              padding: 4,
+              cursor: 'pointer',
+              transition: 'background 200ms, border-color 200ms',
+              flexShrink: 0,
+            }}
           >
-            <span className="sidebar-toggle-knob" />
+            <span style={{
+              width: isAdmin ? 24 : 16,
+              height: 16,
+              borderRadius: '50%',
+              background: isAdmin ? 'var(--md-on-primary)' : 'var(--md-outline)',
+              transform: isAdmin ? 'translateX(20px)' : 'translateX(0)',
+              transition: 'transform 200ms cubic-bezier(0.2,0,0,1), width 200ms, background 200ms',
+              pointerEvents: 'none',
+            }} />
           </button>
         </div>
       )}
 
+      {/* ── Profile + Settings + Logout ── */}
+      <div style={{
+        borderTop: '1px solid var(--md-outline-variant)',
+        flexShrink: 0,
+      }}>
+        {/* Profile row */}
+        <button
+          onClick={() => onNavigate('profile')}
+          aria-current={currentPage === 'profile' ? 'page' : undefined}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: collapsed ? '12px 0' : '12px 20px',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            width: '100%',
+            background: currentPage === 'profile'
+              ? 'var(--md-secondary-container)'
+              : 'transparent',
+            transition: 'background 200ms',
+            borderRadius: 0,
+          }}
+        >
+          {/* Avatar */}
+          <div style={{
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
+            background: 'var(--md-primary-container)',
+            color: 'var(--md-on-primary-container)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '0.8125rem',
+            fontWeight: 700,
+            flexShrink: 0,
+          }}>
+            {initials}
+          </div>
+
+          {!collapsed && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+              overflow: 'hidden',
+              minWidth: 0,
+              textAlign: 'left',
+            }}>
+              <span style={{
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                color: currentPage === 'profile'
+                  ? 'var(--md-on-secondary-container)'
+                  : 'var(--md-on-surface)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}>
+                {displayName || 'User'}
+              </span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--md-on-surface-variant)' }}>
+                Profile
+              </span>
+            </div>
+          )}
+        </button>
+
+        {/* Settings + Logout row */}
+        <div style={{
+          display: 'flex',
+          borderTop: '1px solid var(--md-outline-variant)',
+        }}>
+          <button
+            onClick={() => onNavigate('settings')}
+            aria-current={currentPage === 'settings' ? 'page' : undefined}
+            title="Settings"
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: 44,
+              color: currentPage === 'settings'
+                ? 'var(--md-primary)'
+                : 'var(--md-on-surface-variant)',
+              background: currentPage === 'settings'
+                ? 'color-mix(in srgb, var(--md-primary) 10%, transparent)'
+                : 'transparent',
+              borderRadius: 0,
+              transition: 'background 200ms, color 200ms',
+            }}
+          >
+            <MdIcon name="settings" size={20} />
+          </button>
+
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              title="Sign out"
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: 44,
+                color: 'var(--md-on-surface-variant)',
+                background: 'transparent',
+                borderLeft: '1px solid var(--md-outline-variant)',
+                borderRadius: 0,
+                transition: 'background 200ms, color 200ms',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = 'var(--md-error)'
+                e.currentTarget.style.background = 'color-mix(in srgb, var(--md-error) 8%, transparent)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = 'var(--md-on-surface-variant)'
+                e.currentTarget.style.background = 'transparent'
+              }}
+            >
+              <MdIcon name="logout" size={20} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Collapse toggle ── */}
       <button
         className="sidebar-collapse"
         onClick={() => setCollapsed(c => !c)}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: 36,
+          width: '100%',
+          borderTop: '1px solid var(--md-outline-variant)',
+          color: 'var(--md-on-surface-variant)',
+          fontSize: '0.875rem',
+          flexShrink: 0,
+          transition: 'background 200ms',
+        }}
       >
-        {collapsed ? '›' : '‹'}
+        <MdIcon name={collapsed ? 'chevron_right' : 'chevron_left'} size={20} />
       </button>
     </aside>
   )
 }
 
-function IconDashboard() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-      <rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-      <rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-      <rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-    </svg>
-  )
-}
+// ── Single navigation item ───────────────────────────────────────────────────
+function NavItem({ icon, label, active, soon, danger, collapsed, onClick }) {
+  const [hovered, setHovered] = useState(false)
 
-function IconSpeak() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.2"/>
-      <path d="M3 13c0-2.2 2.2-4 5-4s5 1.8 5 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-      <path d="M11.5 2.5c.8.6 1.5 1.5 1.5 2.5s-.7 1.9-1.5 2.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-    </svg>
-  )
-}
+  const activeColor  = danger ? 'var(--md-error)' : 'var(--md-on-secondary-container)'
+  const activeBg     = danger
+    ? 'color-mix(in srgb, var(--md-error) 12%, transparent)'
+    : 'var(--md-secondary-container)'
+  const inactiveColor = danger
+    ? 'var(--md-on-surface-variant)'
+    : 'var(--md-on-surface-variant)'
+  const hoverBg = danger
+    ? 'color-mix(in srgb, var(--md-error) 8%, transparent)'
+    : 'rgba(255,255,255,0.06)'
 
-function IconChat() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M2 3h12v8H9l-3 2v-2H2V3z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-      <line x1="5" y1="6.5" x2="11" y2="6.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-      <line x1="5" y1="8.5" x2="9" y2="8.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-    </svg>
-  )
-}
+    <button
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      title={collapsed ? label : undefined}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: collapsed ? '0 18px' : '0 20px',
+        height: 56,
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        width: '100%',
+        position: 'relative',
+        borderRadius: 0,
+        transition: 'background 200ms',
+        background: 'transparent',
+        overflow: 'visible',
+      }}
+    >
+      {/* M3 active indicator — pill behind icon (+ label when not collapsed) */}
+      <div style={{
+        position: 'absolute',
+        left: collapsed ? 8 : 12,
+        right: collapsed ? 8 : 12,
+        top: '50%',
+        transform: 'translateY(-50%)',
+        height: 32,
+        borderRadius: 'var(--md-shape-full)',
+        background: active ? activeBg : hovered ? hoverBg : 'transparent',
+        transition: 'background 200ms, opacity 200ms',
+        pointerEvents: 'none',
+      }} />
 
-function IconMemory() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <line x1="8" y1="1" x2="8" y2="15" stroke="currentColor" strokeWidth="1.2"/>
-      <line x1="1" y1="8" x2="15" y2="8" stroke="currentColor" strokeWidth="1.2"/>
-      <rect x="3" y="3" width="10" height="10" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-    </svg>
-  )
-}
+      {/* Icon */}
+      <span
+        className="material-symbols-rounded"
+        style={{
+          fontSize: 22,
+          width: 22,
+          height: 22,
+          color: active ? activeColor : danger && hovered ? 'var(--md-error)' : inactiveColor,
+          transition: 'color 200ms',
+          position: 'relative',
+          zIndex: 1,
+          lineHeight: 1,
+          fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0",
+        }}
+      >
+        {icon}
+      </span>
 
-function IconRoutines() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <polyline points="9,1 5,9 8,9 7,15 11,7 8,7" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-    </svg>
-  )
-}
+      {/* Label */}
+      {!collapsed && (
+        <span style={{
+          fontSize: '0.875rem',
+          fontWeight: active ? 500 : 400,
+          color: active ? activeColor : danger && hovered ? 'var(--md-error)' : 'var(--md-on-surface-variant)',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          flex: 1,
+          textAlign: 'left',
+          position: 'relative',
+          zIndex: 1,
+          transition: 'color 200ms',
+        }}>
+          {label}
+        </span>
+      )}
 
-function IconHome() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <polyline points="1,8 8,2 15,8" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-      <polyline points="3,7 3,14 6,14 6,10 10,10 10,14 13,14 13,7" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-    </svg>
-  )
-}
-
-function IconUsers() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.2"/>
-      <path d="M2 14c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
-function IconKill() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M5 3.5A6 6 0 1 0 11 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-      <line x1="8" y1="1" x2="8" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
-function IconLogout() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-      <polyline points="11,5 14,8 11,11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-      <line x1="14" y1="8" x2="6" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
-function IconGear() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.2"/>
-      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"
-        stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
-function IconWrench() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M10.5 2a3.5 3.5 0 0 0-3.36 4.46L2 11.59 2.41 14 4 14.41 9.54 8.86A3.5 3.5 0 1 0 10.5 2z"
-        stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-      <circle cx="10.5" cy="5.5" r="1" fill="currentColor"/>
-    </svg>
-  )
-}
-
-function IconInventory() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <rect x="1" y="3" width="14" height="10" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-      <line x1="1" y1="7" x2="15" y2="7" stroke="currentColor" strokeWidth="1.2"/>
-      <line x1="5" y1="3" x2="5" y2="13" stroke="currentColor" strokeWidth="1.2"/>
-      <line x1="7" y1="10" x2="12" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-      <line x1="7" y1="9" x2="9" y2="9" stroke="currentColor" strokeWidth="0" />
-    </svg>
-  )
-}
-
-function IconFeeds() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <rect x="1" y="2" width="14" height="3" rx="0.8" stroke="currentColor" strokeWidth="1.2"/>
-      <rect x="1" y="7" width="14" height="3" rx="0.8" stroke="currentColor" strokeWidth="1.2"/>
-      <rect x="1" y="12" width="9" height="3" rx="0.8" stroke="currentColor" strokeWidth="1.2"/>
-    </svg>
-  )
-}
-
-function IconGoogle() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
-      <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" strokeWidth="1.2"/>
-      <path d="M2.5 5.5 C4 6.5 12 6.5 13.5 5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-      <path d="M2.5 10.5 C4 9.5 12 9.5 13.5 10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
-function IconCommerce() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M1 1h2l2 8h7l2-5H4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="7" cy="13.5" r="1.2" fill="currentColor"/>
-      <circle cx="12" cy="13.5" r="1.2" fill="currentColor"/>
-    </svg>
-  )
-}
-
-function IconReading() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M3 2a1.5 1.5 0 0 1 1.5-1.5H13v13H4.5A1.5 1.5 0 0 1 3 12V2z" stroke="currentColor" strokeWidth="1.2"/>
-      <path d="M3 12a1.5 1.5 0 0 0 1.5 1.5H13" stroke="currentColor" strokeWidth="1.2"/>
-      <line x1="6" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-      <line x1="6" y1="7" x2="10.5" y2="7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
-function IconAnalytics() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <rect x="2" y="9" width="2.5" height="5" rx="0.4" stroke="currentColor" strokeWidth="1.2"/>
-      <rect x="6.75" y="6" width="2.5" height="8" rx="0.4" stroke="currentColor" strokeWidth="1.2"/>
-      <rect x="11.5" y="3" width="2.5" height="11" rx="0.4" stroke="currentColor" strokeWidth="1.2"/>
-      <line x1="1" y1="15" x2="15" y2="15" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-    </svg>
+      {/* Soon badge */}
+      {!collapsed && soon && (
+        <span style={{
+          fontSize: '0.5625rem',
+          fontWeight: 500,
+          letterSpacing: '0.06em',
+          color: 'var(--md-on-surface-variant)',
+          border: '1px solid var(--md-outline-variant)',
+          borderRadius: 'var(--md-shape-full)',
+          padding: '1px 6px',
+          lineHeight: 1.4,
+          flexShrink: 0,
+          position: 'relative',
+          zIndex: 1,
+        }}>
+          SOON
+        </span>
+      )}
+    </button>
   )
 }

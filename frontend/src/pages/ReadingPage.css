@@ -2,7 +2,308 @@
    ReadingPage.css
    ============================================================================= */
 
-/* ── Connected services panel ─────────────────────────────────────────────── */
+/* ── Manage services button ────────────────────────────────────────────────── */
+
+.reading-manage-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+}
+
+/* ── Service picker (first-run + manage) ───────────────────────────────────── */
+
+.reading-picker-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 8px 0 40px;
+  max-width: 900px;
+}
+
+.reading-picker-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reading-picker-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.reading-picker-sub {
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.reading-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.reading-picker-card {
+  border: 1px solid var(--border-bright);
+  border-radius: 4px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+  background: var(--bg-card);
+  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+}
+
+.reading-picker-card:hover {
+  border-color: color-mix(in srgb, var(--svc-color) 50%, transparent);
+  background: color-mix(in srgb, var(--svc-color) 5%, var(--bg-card));
+  transform: translateY(-1px);
+}
+
+.reading-picker-card--on {
+  border-color: color-mix(in srgb, var(--svc-color) 60%, transparent);
+  background: color-mix(in srgb, var(--svc-color) 7%, var(--bg-card));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--svc-color) 30%, transparent);
+}
+
+.reading-picker-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reading-picker-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.reading-picker-name {
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.reading-picker-type {
+  font-family: var(--font-display);
+  font-size: 0.36rem;
+  letter-spacing: 0.12em;
+  padding: 2px 6px;
+  border-radius: 2px;
+  margin-left: 4px;
+}
+
+.reading-picker-check {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-bright);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.reading-picker-check--on {
+  background: var(--svc-color);
+  border-color: var(--svc-color);
+  color: #000;
+  font-weight: 700;
+}
+
+.reading-picker-desc {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.reading-picker-syncs {
+  font-family: var(--font-display);
+  font-size: 0.42rem;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.reading-picker-caveat {
+  font-size: 0.72rem;
+  color: var(--warn);
+  line-height: 1.4;
+}
+
+.reading-picker-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── My Services Panel ─────────────────────────────────────────────────────── */
+
+.reading-mysvc {
+  margin-bottom: 22px;
+  border: 1px solid var(--border-bright);
+  border-radius: 4px;
+  background: var(--bg-card);
+  overflow: hidden;
+}
+
+.reading-mysvc-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.reading-mysvc-toggle:hover { background: rgba(255,255,255,0.03); }
+
+.reading-mysvc-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 0.52rem;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.reading-mysvc-toggle-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: 4px;
+}
+
+.reading-mysvc-pill {
+  display: flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 0.44rem;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  gap: 4px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.reading-mysvc-pill--on {
+  color: var(--svc-color);
+  border-color: color-mix(in srgb, var(--svc-color) 40%, transparent);
+  background: color-mix(in srgb, var(--svc-color) 8%, transparent);
+}
+
+.reading-mysvc-body {
+  border-top: 1px solid var(--border);
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.reading-mysvc-card {
+  border: 1px solid var(--border-bright);
+  border-radius: 3px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s;
+}
+
+.reading-mysvc-card--on {
+  border-color: color-mix(in srgb, var(--svc-color) 35%, transparent);
+  background: color-mix(in srgb, var(--svc-color) 4%, transparent);
+}
+
+.reading-mysvc-card--off {
+  background: transparent;
+}
+
+.reading-mysvc-card-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.reading-mysvc-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.reading-mysvc-name {
+  font-family: var(--font-display);
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.reading-mysvc-count {
+  font-family: var(--font-display);
+  font-size: 0.42rem;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.reading-mysvc-badge {
+  font-family: var(--font-display);
+  font-size: 0.36rem;
+  letter-spacing: 0.12em;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.reading-mysvc-badge--on {
+  background: color-mix(in srgb, var(--svc-color) 20%, transparent);
+  color: var(--svc-color);
+  border: 1px solid color-mix(in srgb, var(--svc-color) 40%, transparent);
+}
+
+.reading-mysvc-badge--off {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.reading-mysvc-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reading-mysvc-actions {
+  margin-top: 4px;
+}
+
+/* ── Connected services panel (legacy, kept for compat) ────────────────────── */
 
 .reading-integrations {
   margin-bottom: 20px;
@@ -1147,6 +1448,28 @@
 .btn--danger:hover {
   background: rgba(255,68,51,0.25);
   border-color: var(--error);
+}
+
+/* ── Google Play OAuth waiting state ──────────────────────────────────────── */
+
+.reading-books-waiting {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.reading-books-spinner {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(66,133,244,0.2);
+  border-top-color: #4285f4;
+  border-radius: 50%;
+  animation: reading-spin 0.8s linear infinite;
+}
+
+@keyframes reading-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ── Responsive ────────────────────────────────────────────────────────────── */

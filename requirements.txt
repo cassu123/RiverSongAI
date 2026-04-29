@@ -19,6 +19,7 @@ python-multipart==0.0.26        # Form data parsing for FastAPI
 # Configuration
 # -----------------------------------------------------------------------------
 pydantic==2.13.2
+pydantic[email]==2.13.2         # Email validation for auth routes
 pydantic-settings==2.13.1       # BaseSettings for .env loading
 python-dotenv==1.2.2            # .env file support
 
