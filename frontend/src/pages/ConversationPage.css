@@ -375,93 +375,226 @@
   padding: 16px 16px 20px;
 }
 
-/* Inline model picker (SPEAK page, below avatar) */
+/* ── Inline model picker (SPEAK page, below avatar) ── */
+
 .conv-model-inline {
   position: relative;
   margin-bottom: 6px;
+  width: 100%;
+  max-width: 320px;
 }
 
 .conv-model-inline-btn {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 5px 12px;
-  border: 1px solid var(--border-bright);
-  border-radius: 4px;
-  background: transparent;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-sm);
+  background: var(--md-surface-container);
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 200ms, background 200ms;
+  width: 100%;
 }
 
-.conv-model-inline-btn:hover { border-color: var(--primary); }
+.conv-model-inline-btn:hover {
+  border-color: var(--md-primary);
+  background: var(--md-surface-container-high);
+}
+
+.conv-model-gpu-icon {
+  color: var(--md-primary);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.conv-model-inline-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  text-align: left;
+}
 
 .conv-model-inline-label {
-  font-family: var(--font-display);
-  font-size: 0.44rem;
-  letter-spacing: 0.14em;
-  color: var(--text-dim);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--md-primary);
+  text-transform: uppercase;
 }
 
 .conv-model-inline-val {
-  font-family: var(--font-display);
-  font-size: 0.5rem;
-  letter-spacing: 0.06em;
-  color: var(--text);
-  max-width: 200px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--md-on-surface);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.conv-model-vram-badge {
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--md-primary);
+  background: color-mix(in srgb, var(--md-primary) 12%, transparent);
+  border-radius: var(--md-shape-full);
+  padding: 1px 6px;
+  width: fit-content;
+}
+
+/* Dropdown panel */
 .conv-model-dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
-  background: var(--bg-panel);
-  border: 1px solid var(--border-bright);
-  border-radius: 6px;
-  padding: 6px;
-  z-index: 20;
-  min-width: 200px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-}
-
-.conv-model-group {
+  background: var(--md-surface-container-high);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-md);
+  padding: 8px;
+  z-index: 100;
+  width: 300px;
+  max-width: 94vw;
+  box-shadow: var(--md-elevation-3);
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-bottom: 4px;
+  gap: 4px;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
-.conv-model-group:last-child { margin-bottom: 0; }
-
-.conv-model-group-label {
-  font-family: var(--font-display);
-  font-size: 0.42rem;
-  letter-spacing: 0.14em;
-  color: var(--text-muted);
-  padding: 4px 8px 2px;
+.conv-model-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--md-primary);
+  padding: 4px 8px 8px;
+  border-bottom: 1px solid var(--md-outline-variant);
+  margin-bottom: 2px;
+  text-transform: uppercase;
 }
 
-.conv-model-option {
-  display: block;
+.conv-model-empty {
+  font-size: 0.8rem;
+  color: var(--md-on-surface-variant);
+  padding: 16px 8px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Model card in dropdown */
+.conv-model-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   width: 100%;
   text-align: left;
-  padding: 6px 10px;
-  border-radius: 4px;
-  border: none;
+  padding: 10px 12px;
+  border-radius: var(--md-shape-sm);
+  border: 1px solid transparent;
   background: transparent;
-  font-family: var(--font-display);
-  font-size: 0.52rem;
-  letter-spacing: 0.04em;
-  color: var(--text-dim);
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  transition: background 150ms, border-color 150ms;
 }
 
-.conv-model-option:hover { background: rgba(0,170,255,0.08); color: var(--text); }
-.conv-model-option--active { color: var(--secondary); }
+.conv-model-card:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--md-primary) 8%, transparent);
+  border-color: color-mix(in srgb, var(--md-primary) 30%, transparent);
+}
+
+.conv-model-card--active {
+  background: color-mix(in srgb, var(--md-primary) 12%, transparent);
+  border-color: var(--md-primary);
+}
+
+.conv-model-card--unavailable {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.conv-model-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.conv-model-card-name {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--md-on-surface);
+}
+
+.conv-model-card--active .conv-model-card-name {
+  color: var(--md-primary);
+}
+
+.conv-model-card-vram {
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--md-primary);
+  background: color-mix(in srgb, var(--md-primary) 12%, transparent);
+  border-radius: var(--md-shape-full);
+  padding: 2px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.conv-model-card-active-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--md-primary);
+  flex-shrink: 0;
+}
+
+.conv-model-card-notes {
+  font-size: 0.75rem;
+  color: var(--md-on-surface-variant);
+  line-height: 1.4;
+}
+
+.conv-model-card-install {
+  font-size: 0.6875rem;
+  font-family: 'Roboto Mono', monospace;
+  color: var(--md-outline);
+  background: var(--md-surface-container-highest);
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+/* Model chip in top bar (when avatar hidden) */
+.conv-model-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-full);
+  background: var(--md-surface-container);
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.conv-model-chip-vram {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: var(--md-primary);
+  background: color-mix(in srgb, var(--md-primary) 12%, transparent);
+  border-radius: var(--md-shape-full);
+  padding: 1px 6px;
+}
 
 
 @keyframes mic-pulse {

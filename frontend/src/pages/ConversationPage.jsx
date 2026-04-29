@@ -10,6 +10,9 @@ const API_BASE    = import.meta.env.VITE_API_URL || ''
 const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const MAX_HISTORY_SESSIONS = 30
 
+// GPU threshold: GTX 1050 Ti has 4 GB VRAM
+const GPU_VRAM_LIMIT = 4
+
 async function playWavBase64(b64) {
   try {
     const binary = atob(b64)
@@ -57,33 +60,34 @@ export default function ConversationPage() {
   const [messages,          setMessages]          = useState([])
   const [streamingResponse, setStreamingResponse] = useState('')
   const [error,             setError]             = useState(null)
-  // Avatar visibility — persisted per user
+
   const [showAvatar, setShowAvatar] = useState(() => {
     if (!user) return true
     try { const v = localStorage.getItem(avatarKey(user.id)); return v === null ? true : v === 'true' } catch { return true }
   })
 
-  // Model selector
-  const [models,          setModels]          = useState({ cloud: [], local: [] })
-  const [selectedModel,   setSelectedModel]   = useState(null)
+  // GPU-only model list (vram_gb <= 4, fits on GTX 1050 Ti)
+  const [gpuModels,       setGpuModels]       = useState([])
+  const [selectedModel,   setSelectedModel]   = useState(null)  // { provider, model_id, display_name, vram_gb }
   const [savingModel,     setSavingModel]     = useState(false)
   const [showModelPicker, setShowModelPicker] = useState(false)
 
-  // History panel
   const [history,        setHistory]        = useState([])
   const [showHistory,    setShowHistory]    = useState(false)
   const [viewingSession, setViewingSession] = useState(null)
 
-  const isPlayingRef = useRef(false)
+  const isPlayingRef   = useRef(false)
+  const pickerRef      = useRef(null)
 
+  // Load models and current selection
   useEffect(() => {
     fetch(`${API_BASE}/api/models`)
       .then(r => r.json())
       .then(data => {
-        setModels({
-          cloud: (data.cloud || []).filter(m => m.available),
-          local: (data.local || []).filter(m => m.available),
-        })
+        const gpu = (data.local || []).filter(
+          m => m.vram_gb != null && m.vram_gb <= GPU_VRAM_LIMIT
+        )
+        setGpuModels(gpu)
       })
       .catch(() => {})
 
@@ -92,12 +96,40 @@ export default function ConversationPage() {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(r => r.json())
-        .then(s => setSelectedModel({ provider: s.provider, model_id: s.model }))
+        .then(s => {
+          if (s.provider && s.model) {
+            setSelectedModel({ provider: s.provider, model_id: s.model })
+          }
+        })
         .catch(() => {})
 
       setHistory(loadHistory(user.id))
     }
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Close picker on outside click
+  useEffect(() => {
+    if (!showModelPicker) return
+    const handler = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        setShowModelPicker(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showModelPicker])
+
+  // Resolve display name from the gpu models list
+  const resolvedEntry = selectedModel
+    ? gpuModels.find(m => m.provider === selectedModel.provider && m.model_id === selectedModel.model_id)
+    : null
+
+  const modelDisplayName = resolvedEntry?.display_name
+    || selectedModel?.display_name
+    || selectedModel?.model_id
+    || null
+
+  const modelVram = resolvedEntry?.vram_gb ?? null
 
   const toggleAvatar = () => {
     const next = !showAvatar
@@ -105,15 +137,15 @@ export default function ConversationPage() {
     if (user) { try { localStorage.setItem(avatarKey(user.id), String(next)) } catch {} }
   }
 
-  const handleModelChange = async (e) => {
-    const [provider, model_id] = e.target.value.split('::')
-    setSelectedModel({ provider, model_id })
+  const selectModel = async (model) => {
+    setSelectedModel({ provider: model.provider, model_id: model.model_id, display_name: model.display_name, vram_gb: model.vram_gb })
+    setShowModelPicker(false)
     setSavingModel(true)
     try {
       await fetch(`${API_BASE}/api/settings/llm?user_id=${user.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ provider, model_id, cloud_fallback_enabled: false }),
+        body: JSON.stringify({ provider: model.provider, model_id: model.model_id, cloud_fallback_enabled: false }),
       })
     } catch {}
     setSavingModel(false)
@@ -171,9 +203,9 @@ export default function ConversationPage() {
     if (connectionStatus !== 'connected') return
     if (messages.length > 0 && user) {
       const session = {
-        id: Date.now(),
-        date: new Date().toISOString(),
-        model: selectedModel ? `${selectedModel.provider} / ${selectedModel.model_id}` : 'default',
+        id:       Date.now(),
+        date:     new Date().toISOString(),
+        model:    modelDisplayName || 'Default',
         messages: [...messages],
       }
       const updated = [...loadHistory(user.id), session]
@@ -185,21 +217,20 @@ export default function ConversationPage() {
     setStreamingResponse('')
     setError(null)
     setViewingSession(null)
-  }, [connectionStatus, messages, sendMessage, user, selectedModel])
+  }, [connectionStatus, messages, sendMessage, user, modelDisplayName])
 
-  const modelValue = selectedModel ? `${selectedModel.provider}::${selectedModel.model_id}` : ''
-  const modelLabel = selectedModel ? `${selectedModel.provider} / ${selectedModel.model_id}` : 'DEFAULT'
   const displayMessages = viewingSession ? viewingSession.messages : messages
   const displayStreaming = viewingSession ? '' : streamingResponse
-  const allModels = [...models.cloud, ...models.local]
 
   return (
     <div className="conv-page">
 
-      {/* Avatar zone — collapsible */}
+      {/* Avatar zone */}
       {showAvatar && (
         <div className="conv-portrait-zone">
           <RiverSong state={convState} audioLevel={visualLvl} />
+
+          {/* State tabs */}
           <div className="conv-state-bar">
             {STATE_TABS.map(s => (
               <div key={s} className={`conv-state-tab ${convState === s ? 'conv-state-tab--active' : ''}`}>
@@ -208,46 +239,76 @@ export default function ConversationPage() {
               </div>
             ))}
           </div>
-          {/* Inline model picker */}
-          <div className="conv-model-inline">
+
+          {/* Model picker */}
+          <div className="conv-model-inline" ref={pickerRef}>
             <button
               className="conv-model-inline-btn"
               onClick={() => setShowModelPicker(p => !p)}
-              title="Switch model"
+              title="Switch GPU model"
             >
-              <span className="conv-model-inline-label">MODEL</span>
-              <span className="conv-model-inline-val">{modelLabel}</span>
+              <span className="conv-model-gpu-icon">
+                <GpuIcon />
+              </span>
+              <div className="conv-model-inline-text">
+                <span className="conv-model-inline-label">GPU MODEL</span>
+                <span className="conv-model-inline-val">
+                  {modelDisplayName
+                    ? modelDisplayName
+                    : <span style={{ color: 'var(--md-outline)' }}>Select a model</span>
+                  }
+                </span>
+                {modelVram != null && (
+                  <span className="conv-model-vram-badge">{modelVram} GB</span>
+                )}
+              </div>
               <ChevronIcon open={showModelPicker} />
             </button>
-            {showModelPicker && allModels.length > 0 && (
+
+            {showModelPicker && (
               <div className="conv-model-dropdown">
-                {models.cloud.length > 0 && (
-                  <div className="conv-model-group">
-                    <span className="conv-model-group-label">☁ CLOUD</span>
-                    {models.cloud.map(m => (
-                      <button
-                        key={`${m.provider}::${m.model_id}`}
-                        className={`conv-model-option ${modelValue === `${m.provider}::${m.model_id}` ? 'conv-model-option--active' : ''}`}
-                        onClick={() => { handleModelChange({ target: { value: `${m.provider}::${m.model_id}` } }); setShowModelPicker(false) }}
-                      >{m.display_name}</button>
-                    ))}
+                <div className="conv-model-dropdown-header">
+                  <GpuIcon />
+                  GPU MODELS — fits in 4 GB VRAM
+                </div>
+
+                {gpuModels.length === 0 && (
+                  <div className="conv-model-empty">
+                    No GPU models found. Pull a model in Ollama first.
                   </div>
                 )}
-                {models.local.length > 0 && (
-                  <div className="conv-model-group">
-                    <span className="conv-model-group-label">⬡ LOCAL</span>
-                    {models.local.map(m => (
-                      <button
-                        key={`${m.provider}::${m.model_id}`}
-                        className={`conv-model-option ${modelValue === `${m.provider}::${m.model_id}` ? 'conv-model-option--active' : ''}`}
-                        onClick={() => { handleModelChange({ target: { value: `${m.provider}::${m.model_id}` } }); setShowModelPicker(false) }}
-                      >{m.display_name}</button>
-                    ))}
-                  </div>
-                )}
+
+                {gpuModels.map(m => {
+                  const isActive = selectedModel?.provider === m.provider && selectedModel?.model_id === m.model_id
+                  return (
+                    <button
+                      key={`${m.provider}::${m.model_id}`}
+                      className={`conv-model-card ${isActive ? 'conv-model-card--active' : ''} ${!m.available ? 'conv-model-card--unavailable' : ''}`}
+                      onClick={() => m.available && selectModel(m)}
+                      disabled={!m.available}
+                      title={!m.available ? 'Not installed — run: ollama pull ' + m.model_id : m.notes}
+                    >
+                      <div className="conv-model-card-top">
+                        <span className="conv-model-card-name">{m.display_name}</span>
+                        <span className="conv-model-card-vram">{m.vram_gb} GB</span>
+                        {isActive && <span className="conv-model-card-active-dot" />}
+                      </div>
+                      {m.notes && (
+                        <div className="conv-model-card-notes">{m.notes}</div>
+                      )}
+                      {!m.available && (
+                        <div className="conv-model-card-install">
+                          ollama pull {m.model_id}
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
+
+          {savingModel && <div className="conv-model-saving">saving…</div>}
           {error && <div className="conv-error" role="alert">{error}</div>}
         </div>
       )}
@@ -258,7 +319,6 @@ export default function ConversationPage() {
         {/* Top bar */}
         <div className="conv-top-bar">
           <div className="conv-top-left">
-            {/* Avatar toggle */}
             <button
               className={`conv-icon-btn ${showAvatar ? 'conv-icon-btn--on' : ''}`}
               onClick={toggleAvatar}
@@ -266,7 +326,21 @@ export default function ConversationPage() {
             >
               <AvatarIcon />
             </button>
-            {savingModel && <span className="conv-model-saving">saving...</span>}
+
+            {/* Selected model chip — visible when avatar is hidden */}
+            {!showAvatar && modelDisplayName && (
+              <div className="conv-model-chip">
+                <GpuIcon />
+                <span>{modelDisplayName}</span>
+                {modelVram != null && (
+                  <span className="conv-model-chip-vram">{modelVram} GB</span>
+                )}
+              </div>
+            )}
+
+            {savingModel && !showAvatar && (
+              <span className="conv-model-saving">saving…</span>
+            )}
           </div>
 
           <div className="conv-top-right">
@@ -296,13 +370,13 @@ export default function ConversationPage() {
             {viewingSession ? (
               <>
                 <div className="conv-history-session-header">
-                  <button className="conv-history-back" onClick={() => setViewingSession(null)}>← BACK</button>
+                  <button className="conv-history-back" onClick={() => setViewingSession(null)}>← Back</button>
                   <span className="conv-history-session-meta">{fmtDate(viewingSession.date)} · {viewingSession.model}</span>
                 </div>
                 <ConversationPanel messages={viewingSession.messages} />
               </>
             ) : history.length === 0 ? (
-              <div className="conv-history-empty">No saved sessions yet. Conversations save when you hit RESET.</div>
+              <div className="conv-history-empty">No saved sessions yet. Conversations save when you hit Reset.</div>
             ) : (
               <div className="conv-history-list">
                 {[...history].reverse().map(s => (
@@ -329,12 +403,31 @@ export default function ConversationPage() {
           >
             <MicIcon active={isActive} />
           </button>
-          <button className="conv-reset-btn" onClick={handleReset} title="Save &amp; reset">
+          <button className="conv-reset-btn" onClick={handleReset} title="Save & reset">
             <ResetIcon />
           </button>
         </div>
       </div>
     </div>
+  )
+}
+
+// ── Icons ────────────────────────────────────────────────────────────────────
+
+function GpuIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+      <rect x="1" y="3" width="14" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+      <line x1="4"  y1="3"  x2="4"  y2="1"  stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+      <line x1="7"  y1="3"  x2="7"  y2="1"  stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+      <line x1="10" y1="3"  x2="10" y2="1"  stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+      <line x1="13" y1="3"  x2="13" y2="1"  stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+      <line x1="4"  y1="13" x2="4"  y2="15" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+      <line x1="7"  y1="13" x2="7"  y2="15" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+      <line x1="10" y1="13" x2="10" y2="15" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+      <line x1="13" y1="13" x2="13" y2="15" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+      <rect x="4" y="5.5" width="5" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.1"/>
+    </svg>
   )
 }
 
@@ -345,14 +438,6 @@ function MicIcon({ active }) {
       <path d="M3 9a6 6 0 0 0 12 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
       <line x1="9" y1="15" x2="9" y2="17" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
       <line x1="6" y1="17" x2="12" y2="17" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
-function SendIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M14 8 2 2l3 6-3 6 12-6z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -368,7 +453,8 @@ function ResetIcon() {
 
 function ChevronIcon({ open }) {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+      style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>
       <polyline points="2,3 5,7 8,3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
