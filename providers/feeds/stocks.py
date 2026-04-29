@@ -1,9 +1,12 @@
 """
 providers/feeds/stocks.py
 
-Stock quote provider using Alpha Vantage GLOBAL_QUOTE endpoint.
-Free tier: 25 requests/day, up to 5/minute.
-Returns a simple price snapshot per ticker symbol.
+Stock quote providers:
+  Alpha Vantage  — 25 req/day, 5/min (free tier)  — ALPHA_VANTAGE_KEY
+  Finnhub        — 60 req/min, real-time quotes    — FINNHUB_KEY
+
+Finnhub is the preferred source when a key is available.
+Alpha Vantage is used as fallback or for chart history.
 """
 
 from __future__ import annotations
@@ -16,7 +19,8 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-_BASE = "https://www.alphavantage.co/query"
+_BASE           = "https://www.alphavantage.co/query"
+_FINNHUB_BASE   = "https://finnhub.io/api/v1"
 
 
 async def fetch_quote(ticker: str, api_key: str) -> Optional[Dict[str, Any]]:
@@ -103,6 +107,100 @@ async def fetch_chart(ticker: str, api_key: str, days: int = 30) -> List[Dict[st
             "volume": int(ohlcv.get("5. volume", 0)),
         })
     return rows
+
+
+# =============================================================================
+# Finnhub provider
+# =============================================================================
+
+async def fetch_finnhub_quote(ticker: str, api_key: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetch a real-time stock quote from Finnhub.
+    Free tier: 60 requests/minute — much better than Alpha Vantage.
+    Returns same schema as fetch_quote() for drop-in compatibility.
+    """
+    if not api_key:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{_FINNHUB_BASE}/quote", params={
+                "symbol": ticker.upper(),
+                "token":  api_key,
+            })
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as exc:
+        logger.warning("Finnhub quote failed for %s: %s", ticker, exc)
+        return None
+
+    # Finnhub returns: c=current, d=change, dp=change%, h=high, l=low, o=open, pc=prev close
+    price = data.get("c")
+    if not price:
+        return None
+
+    change     = data.get("d", 0)
+    change_pct = data.get("dp", 0)
+
+    return {
+        "ticker":     ticker.upper(),
+        "price":      round(float(price), 2),
+        "change":     round(float(change), 2),
+        "change_pct": round(float(change_pct), 2),
+        "high":       str(data.get("h", "")),
+        "low":        str(data.get("l", "")),
+        "open":       str(data.get("o", "")),
+        "prev_close": str(data.get("pc", "")),
+        "volume":     "",
+        "up":         float(change) >= 0,
+        "source":     "finnhub",
+    }
+
+
+async def fetch_finnhub_quotes(tickers: List[str], api_key: str) -> List[Dict[str, Any]]:
+    """Fetch multiple quotes from Finnhub concurrently."""
+    tasks   = [fetch_finnhub_quote(t, api_key) for t in tickers]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    return [r for r in results if isinstance(r, dict)]
+
+
+async def fetch_finnhub_news(ticker: str, api_key: str, limit: int = 5) -> List[Dict[str, Any]]:
+    """Fetch latest company news from Finnhub for a ticker."""
+    if not api_key:
+        return []
+    from datetime import date, timedelta
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{_FINNHUB_BASE}/company-news", params={
+                "symbol": ticker.upper(),
+                "from":   week_ago.isoformat(),
+                "to":     today.isoformat(),
+                "token":  api_key,
+            })
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as exc:
+        logger.warning("Finnhub news failed for %s: %s", ticker, exc)
+        return []
+
+    from datetime import datetime
+    articles = []
+    for item in (data or [])[:limit]:
+        ts = item.get("datetime")
+        try:
+            pub = datetime.utcfromtimestamp(int(ts)).isoformat() + "Z" if ts else ""
+        except Exception:
+            pub = ""
+        articles.append({
+            "headline": item.get("headline") or "",
+            "summary":  (item.get("summary") or "")[:300],
+            "url":      item.get("url") or "",
+            "source":   item.get("source") or "Finnhub",
+            "image":    item.get("image") or "",
+            "published_at": pub,
+        })
+    return articles
 
 
 async def search_symbols(query: str, api_key: str) -> List[Dict[str, Any]]:

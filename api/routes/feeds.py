@@ -23,10 +23,13 @@ from pydantic import BaseModel
 
 from core.auth import decode_token
 from config.settings import get_settings
-from providers.feeds.news import fetch_articles, CURATED_SOURCES
-from providers.feeds.weather import fetch_weather
+from providers.feeds.news import fetch_articles, CURATED_SOURCES, SOURCE_CATEGORIES
+from providers.feeds.weather import fetch_weather, fetch_nws_alerts
 from providers.feeds.sports import search_teams, fetch_teams_feed, fetch_standings
-from providers.feeds.stocks import fetch_quotes, fetch_chart, search_symbols
+from providers.feeds.stocks import (
+    fetch_quotes, fetch_chart, search_symbols,
+    fetch_finnhub_quotes, fetch_finnhub_news,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/feeds", tags=["feeds"])
@@ -98,8 +101,8 @@ async def save_preferences(
 
 @router.get("/news/sources")
 async def get_news_sources():
-    """Return the full curated RSS source catalogue."""
-    return CURATED_SOURCES
+    """Return the full curated RSS source catalogue with category metadata."""
+    return {"sources": CURATED_SOURCES, "categories": SOURCE_CATEGORIES}
 
 
 @router.get("/news")
@@ -119,6 +122,9 @@ async def get_news(
     articles = await fetch_articles(
         sources=sources,
         newsapi_key=settings.news_api_key,
+        world_news_key=settings.world_news_api_key,
+        apitube_key=settings.apitube_api_key,
+        mediastack_key=settings.mediastack_api_key,
         limit_per_source=8,
     )
     return articles
@@ -148,6 +154,29 @@ async def get_weather(
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Weather fetch failed: {exc}")
     return data
+
+
+@router.get("/weather/alerts")
+async def get_weather_alerts(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Fetch active NWS weather alerts for the user's saved location.
+    Free — no API key required. Returns [] if no active alerts.
+    Only available for US locations (NWS covers USA + territories).
+    """
+    user_id = _require_user(authorization)
+    store   = _store(request)
+    prefs   = await store.get_feed_preferences(user_id)
+
+    lat = prefs.get("weather_lat")
+    lon = prefs.get("weather_lon")
+    if lat is None or lon is None:
+        raise HTTPException(status_code=404, detail="No location saved.")
+
+    alerts = await fetch_nws_alerts(lat, lon)
+    return {"alerts": alerts, "count": len(alerts)}
 
 
 # ---------------------------------------------------------------------------
@@ -190,6 +219,16 @@ async def get_sports(
 # Stocks
 # ---------------------------------------------------------------------------
 
+@router.get("/stocks/news/{ticker}")
+async def get_stock_news(ticker: str):
+    """Fetch recent company news for a ticker via Finnhub."""
+    settings = get_settings()
+    if not settings.finnhub_api_key:
+        raise HTTPException(status_code=503, detail="FINNHUB_KEY not configured.")
+    news = await fetch_finnhub_news(ticker.upper(), settings.finnhub_api_key)
+    return news
+
+
 @router.get("/stocks/search")
 async def stocks_search(q: str = Query(..., min_length=1)):
     settings = get_settings()
@@ -214,17 +253,32 @@ async def get_stocks(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
+    """
+    Fetch stock quotes for the user's watchlist tickers.
+    Prefers Finnhub (60 req/min) when configured; falls back to Alpha Vantage.
+    """
     user_id = _require_user(authorization)
-    store = _store(request)
-    prefs = await store.get_feed_preferences(user_id)
+    store   = _store(request)
+    prefs   = await store.get_feed_preferences(user_id)
 
     tickers = prefs.get("stock_tickers") or []
     if not tickers:
         return []
 
     settings = get_settings()
-    if not settings.alpha_vantage_api_key:
-        raise HTTPException(status_code=503, detail="ALPHA_VANTAGE_KEY not configured.")
 
-    quotes = await fetch_quotes(tickers, settings.alpha_vantage_api_key)
-    return quotes
+    # Prefer Finnhub (higher rate limit, real-time)
+    if settings.finnhub_api_key:
+        quotes = await fetch_finnhub_quotes(tickers, settings.finnhub_api_key)
+        if quotes:
+            return quotes
+
+    # Fallback: Alpha Vantage
+    if settings.alpha_vantage_api_key:
+        quotes = await fetch_quotes(tickers, settings.alpha_vantage_api_key)
+        return quotes
+
+    raise HTTPException(
+        status_code=503,
+        detail="No stock data provider configured. Add FINNHUB_API_KEY or ALPHA_VANTAGE_API_KEY to .env."
+    )

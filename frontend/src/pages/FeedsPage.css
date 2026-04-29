@@ -1359,3 +1359,75 @@
   border-color: rgba(0,170,255,0.4);
   color: var(--primary);
 }
+
+/* ── NWS Active Alerts ─────────────────────────────────────────────────── */
+
+.feeds-nws-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.feeds-nws-alert {
+  border: 1px solid;
+  border-radius: var(--md-shape-sm);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feeds-nws-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.feeds-nws-alert-event {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.feeds-nws-alert-sev {
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: var(--md-shape-full);
+  text-transform: uppercase;
+}
+
+.feeds-nws-alert-headline {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--md-on-surface);
+  line-height: 1.4;
+}
+
+.feeds-nws-alert-desc {
+  font-size: 0.8rem;
+  color: var(--md-on-surface-variant);
+  line-height: 1.6;
+  max-height: 100px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, black 60%, transparent);
+}
+
+.feeds-nws-alert-instruction {
+  font-size: 0.8rem;
+  color: var(--md-on-surface);
+  line-height: 1.5;
+  border-top: 1px solid var(--md-outline-variant);
+  padding-top: 8px;
+}
+
+.feeds-nws-alert-meta {
+  display: flex;
+  align-items: center;
+  font-size: 0.6875rem;
+  color: var(--md-outline);
+  margin-top: 2px;
+}

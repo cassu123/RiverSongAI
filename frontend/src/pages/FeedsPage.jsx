@@ -101,19 +101,33 @@ export default function FeedsPage() {
 // =============================================================================
 
 const SOURCE_CAT_COLORS = {
-  world: '#00aaff', technology: '#00ffcc', business: '#ffaa00',
-  sport: '#ff6644', entertainment: '#cc66ff', health: '#44dd88', science: '#44aaff',
+  world:         '#96CBFF',
+  us:            '#B6C9D9',
+  local:         '#FFB86C',
+  technology:    '#D9BBFF',
+  business:      '#FFD080',
+  sports:        '#80E8A0',
+  nfl:           '#80D0E0',
+  nba:           '#F0A080',
+  mlb:           '#A0D8A0',
+  nhl:           '#A0C8F0',
+  nascar:        '#F0E080',
+  entertainment: '#E0A8F0',
+  health:        '#88EEB8',
+  science:       '#88D0FF',
+  sport:         '#80E8A0',  // legacy compat
 }
 
 function NewsTab({ prefs, savePrefs }) {
   const [showSettings, setShowSettings] = useState(false)
-  const [allSources, setAllSources] = useState([])
-  const [articles, setArticles] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [search, setSearch] = useState('')
-  const [activeCat, setActiveCat] = useState('all')
-  const [view, setView] = useState('card') // 'card' | 'list'
+  const [allSources, setAllSources]     = useState([])
+  const [catMeta, setCatMeta]           = useState({})  // { key: {label, icon} }
+  const [articles, setArticles]         = useState([])
+  const [loading, setLoading]           = useState(false)
+  const [error, setError]               = useState('')
+  const [search, setSearch]             = useState('')
+  const [activeCat, setActiveCat]       = useState('all')
+  const [view, setView]                 = useState('card') // 'card' | 'list'
   const [readIds, setReadIds] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('rs-news-read') || '[]')) }
     catch { return new Set() }
@@ -122,7 +136,18 @@ function NewsTab({ prefs, savePrefs }) {
   const timerRef = useRef(null)
 
   useEffect(() => {
-    apiFetch('/news/sources').then(setAllSources).catch(() => {})
+    apiFetch('/news/sources')
+      .then(data => {
+        // API now returns { sources: [...], categories: {...} }
+        // Keep backward compat with old array shape
+        if (Array.isArray(data)) {
+          setAllSources(data)
+        } else {
+          setAllSources(data.sources || [])
+          setCatMeta(data.categories || {})
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const load = useCallback(() => {
@@ -209,22 +234,40 @@ function NewsTab({ prefs, savePrefs }) {
         <div className="feeds-settings-panel">
           <div className="feeds-settings-row">
             <span className="feeds-settings-label">News sources</span>
-            {[...new Set(allSources.map(s => s.category))].map(cat => (
-              <div key={cat}>
-                <div className="feeds-sports-section-title" style={{ marginTop: 12, color: SOURCE_CAT_COLORS[cat] || 'var(--text-dim)' }}>{cat}</div>
-                <div className="feeds-source-category-grid">
-                  {allSources.filter(s => s.category === cat).map(src => (
-                    <button
-                      key={src.url}
-                      className={`feeds-source-cat-btn${isSelected(src) ? ' feeds-source-cat-btn--active' : ''}`}
-                      onClick={() => toggleSource(src)}
-                    >
-                      {src.name} {isSelected(src) && '✓'}
-                    </button>
-                  ))}
+            {[...new Set(allSources.map(s => s.category))].map(cat => {
+              const meta  = catMeta[cat] || {}
+              const label = meta.label || cat
+              const color = SOURCE_CAT_COLORS[cat] || 'var(--md-on-surface-variant)'
+              const sourcesInCat = allSources.filter(s => s.category === cat)
+              const selectedCount = sourcesInCat.filter(s => isSelected(s)).length
+              return (
+                <div key={cat}>
+                  <div className="feeds-sports-section-title" style={{ marginTop: 14, color }}>
+                    {label}
+                    {selectedCount > 0 && (
+                      <span style={{
+                        marginLeft: 8, fontSize: '0.625rem', fontWeight: 500,
+                        background: color + '22', color, borderRadius: 10, padding: '1px 7px',
+                      }}>
+                        {selectedCount} selected
+                      </span>
+                    )}
+                  </div>
+                  <div className="feeds-source-category-grid">
+                    {sourcesInCat.map(src => (
+                      <button
+                        key={src.url}
+                        className={`feeds-source-cat-btn${isSelected(src) ? ' feeds-source-cat-btn--active' : ''}`}
+                        style={isSelected(src) ? { '--cat-color': color, borderColor: color, color } : {}}
+                        onClick={() => toggleSource(src)}
+                      >
+                        {src.name} {isSelected(src) && '✓'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
           <div className="feeds-settings-row">
             <span className="feeds-settings-label">Refresh interval</span>
@@ -357,18 +400,22 @@ function NewsTab({ prefs, savePrefs }) {
 
 function WeatherTab({ prefs, savePrefs }) {
   const [showSettings, setShowSettings] = useState(false)
-  const [weather, setWeather] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [locating, setLocating] = useState(false)
-  const [radarFrames, setRadarFrames] = useState([])
+  const [weather, setWeather]           = useState(null)
+  const [alerts, setAlerts]             = useState([])
+  const [loading, setLoading]           = useState(false)
+  const [error, setError]               = useState('')
+  const [locating, setLocating]         = useState(false)
+  const [radarFrames, setRadarFrames]   = useState([])
 
   const load = useCallback(() => {
     if (prefs?.weather_lat == null) return
     setLoading(true)
     setError('')
-    apiFetch('/weather')
-      .then(setWeather)
+    Promise.all([
+      apiFetch('/weather'),
+      apiFetch('/weather/alerts').catch(() => ({ alerts: [], count: 0 })),
+    ])
+      .then(([wx, al]) => { setWeather(wx); setAlerts(al.alerts || []) })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }, [prefs?.weather_lat, prefs?.weather_lon, prefs?.weather_unit])
@@ -539,6 +586,49 @@ function WeatherTab({ prefs, savePrefs }) {
             <>
               <div className="feeds-subsection-label">Air Quality</div>
               <AirQualityPanel aq={weather.air_quality} />
+            </>
+          )}
+
+          {/* NWS Active Alerts */}
+          {alerts.length > 0 && (
+            <>
+              <div className="feeds-subsection-label" style={{ color: alerts[0]?.color }}>
+                ⚠ Active Alerts ({alerts.length})
+              </div>
+              <div className="feeds-nws-alerts">
+                {alerts.map(alert => (
+                  <div
+                    key={alert.id}
+                    className="feeds-nws-alert"
+                    style={{ borderColor: alert.color, background: alert.color + '14' }}
+                  >
+                    <div className="feeds-nws-alert-header">
+                      <span className="feeds-nws-alert-event" style={{ color: alert.color }}>
+                        {alert.event}
+                      </span>
+                      <span className="feeds-nws-alert-sev"
+                        style={{ background: alert.color + '28', color: alert.color }}>
+                        {alert.severity}
+                      </span>
+                    </div>
+                    <div className="feeds-nws-alert-headline">{alert.headline}</div>
+                    {alert.description && (
+                      <div className="feeds-nws-alert-desc">{alert.description}</div>
+                    )}
+                    {alert.instruction && (
+                      <div className="feeds-nws-alert-instruction">
+                        <strong>What to do:</strong> {alert.instruction}
+                      </div>
+                    )}
+                    <div className="feeds-nws-alert-meta">
+                      {alert.expires && (
+                        <span>Expires: {new Date(alert.expires).toLocaleString()}</span>
+                      )}
+                      <span style={{ marginLeft: 'auto' }}>{alert.sender}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </>
           )}
 
