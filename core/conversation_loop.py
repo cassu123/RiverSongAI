@@ -122,22 +122,19 @@ def _build_llm_provider(
     )
 
 
-def _build_tts_provider() -> TTSProvider:
+def _build_tts_provider(voice_id_override: Optional[str] = None) -> TTSProvider:
     """
-    Instantiate the TTS provider based on the active voice in the registry.
+    Instantiate the TTS provider for the active voice.
 
     Resolution order:
-      1. Look up ACTIVE_VOICE_ID in the voice registry → use that entry's engine
-      2. Fall back to TTS_PROVIDER setting → piper | none
-      3. If TTS_PROVIDER is unset or "none" → NullTTS
-
-    This means switching voices via the Settings UI automatically switches the
-    underlying engine (piper ↔ kokoro) without touching TTS_PROVIDER in .env.
+      1. voice_id_override — per-user preference from SQLite (no restart needed)
+      2. ACTIVE_VOICE_ID in .env — system-wide fallback
+      3. TTS_PROVIDER setting → piper | none
     """
     settings = get_settings()
 
-    # Try the voice registry first
-    active_id = getattr(settings, "active_voice_id", "") or ""
+    # Per-user override (from SQLite) takes priority over system .env default
+    active_id = voice_id_override or getattr(settings, "active_voice_id", "") or ""
     if active_id:
         try:
             from providers.tts.voice_registry import VoiceRegistry
@@ -200,6 +197,7 @@ class ConversationLoop:
         memory_manager: Optional[MemoryManager] = None,
         llm_provider_override: Optional[str] = None,
         llm_model_override: Optional[str] = None,
+        voice_id_override: Optional[str] = None,
     ) -> None:
         settings = get_settings()
         self._system_prompt: str = settings.river_song_system_prompt
@@ -207,6 +205,7 @@ class ConversationLoop:
         self._memory: Optional[MemoryManager] = memory_manager
         self._llm_provider_override: Optional[str] = llm_provider_override
         self._llm_model_override: Optional[str] = llm_model_override
+        self._voice_id_override: Optional[str] = voice_id_override
         self._stt: Optional[STTProvider] = None
         self._llm: Optional[LLMProvider] = None
         self._tts: Optional[TTSProvider] = None
@@ -236,7 +235,7 @@ class ConversationLoop:
                 provider_override=self._llm_provider_override,
                 model_override=self._llm_model_override,
             )
-            self._tts = _build_tts_provider()
+            self._tts = _build_tts_provider(voice_id_override=self._voice_id_override)
         except Exception as exc:
             raise RuntimeError(
                 f"ConversationLoop failed to initialize: {exc}"

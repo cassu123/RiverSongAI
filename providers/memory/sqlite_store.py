@@ -118,7 +118,8 @@ CREATE TABLE IF NOT EXISTS llm_settings (
     model                   TEXT NOT NULL DEFAULT 'llama3.2:3b',
     cloud_fallback_enabled  INTEGER NOT NULL DEFAULT 0,
     cloud_fallback_provider TEXT,
-    cloud_fallback_model    TEXT
+    cloud_fallback_model    TEXT,
+    voice_id                TEXT NOT NULL DEFAULT 'river'
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -240,6 +241,7 @@ class SQLiteStore:
             "ALTER TABLE users ADD COLUMN is_approved INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE users ADD COLUMN google_id TEXT",
             "ALTER TABLE users ADD COLUMN google_email TEXT",
+            "ALTER TABLE llm_settings ADD COLUMN voice_id TEXT NOT NULL DEFAULT 'river'",
         ]:
             try:
                 conn.execute(migration)
@@ -591,6 +593,7 @@ class SQLiteStore:
             cloud_fallback_enabled=bool(row["cloud_fallback_enabled"]),
             cloud_fallback_provider=row["cloud_fallback_provider"],
             cloud_fallback_model=row["cloud_fallback_model"],
+            voice_id=row["voice_id"] if "voice_id" in row.keys() else "river",
         )
 
     async def save_llm_settings(self, settings: LLMSettings) -> None:
@@ -602,16 +605,17 @@ class SQLiteStore:
             """
             INSERT INTO llm_settings
                 (user_id, provider, model, cloud_fallback_enabled,
-                 cloud_fallback_provider, cloud_fallback_model)
+                 cloud_fallback_provider, cloud_fallback_model, voice_id)
             VALUES
                 (:user_id, :provider, :model, :cloud_fallback_enabled,
-                 :cloud_fallback_provider, :cloud_fallback_model)
+                 :cloud_fallback_provider, :cloud_fallback_model, :voice_id)
             ON CONFLICT(user_id) DO UPDATE SET
                 provider                = excluded.provider,
                 model                   = excluded.model,
                 cloud_fallback_enabled  = excluded.cloud_fallback_enabled,
                 cloud_fallback_provider = excluded.cloud_fallback_provider,
-                cloud_fallback_model    = excluded.cloud_fallback_model
+                cloud_fallback_model    = excluded.cloud_fallback_model,
+                voice_id                = excluded.voice_id
             """,
             {
                 "user_id":                 settings.user_id,
@@ -620,6 +624,7 @@ class SQLiteStore:
                 "cloud_fallback_enabled":  int(settings.cloud_fallback_enabled),
                 "cloud_fallback_provider": settings.cloud_fallback_provider,
                 "cloud_fallback_model":    settings.cloud_fallback_model,
+                "voice_id":                settings.voice_id,
             },
         )
         conn.commit()

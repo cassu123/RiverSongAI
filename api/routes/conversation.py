@@ -87,24 +87,30 @@ async def conversation_websocket(websocket: WebSocket) -> None:
 
     memory_manager: MemoryManager | None = getattr(websocket.app.state, "memory_manager", None)
 
-    # Load per-user LLM settings from DB
+    # Load per-user LLM + voice settings from DB
     llm_provider = None
-    llm_model = None
+    llm_model    = None
+    voice_id     = None
     if memory_manager and user_id != "default":
         try:
             store = memory_manager._store
             user_settings = await store.get_llm_settings(user_id)
             llm_provider = user_settings.provider
-            llm_model = user_settings.model
-            logger.info("Using user LLM settings: provider=%s model=%s", llm_provider, llm_model)
+            llm_model    = user_settings.model
+            voice_id     = user_settings.voice_id or None
+            logger.info(
+                "Using user settings: provider=%s model=%s voice=%s",
+                llm_provider, llm_model, voice_id,
+            )
         except Exception as exc:
-            logger.warning("Could not load user LLM settings: %s", exc)
+            logger.warning("Could not load user settings: %s", exc)
 
     loop = ConversationLoop(
         user_id=user_id,
         memory_manager=memory_manager,
         llm_provider_override=llm_provider,
         llm_model_override=llm_model,
+        voice_id_override=voice_id,
     )
 
     await _send(websocket, {"type": "connected"})
