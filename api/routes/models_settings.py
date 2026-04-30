@@ -267,58 +267,119 @@ async def save_memory_settings(
 @router.get("/settings/voice")
 async def get_voice_settings(authorization: Optional[str] = Header(default=None)):
     """
-    Return the active TTS provider info and list of available Piper voice models
-    found in the configured model directory.
+    Return the active TTS provider, the full voice registry, and which voices
+    are installed on disk. Uses the curated VoiceRegistry display names.
+    """
+    _require_user(authorization)
+    settings   = get_settings()
+    provider   = settings.tts_provider
+    model_path = settings.piper_model_path
+
+    from providers.tts.voice_registry import VoiceRegistry
+    import os
+
+    model_dir = os.path.dirname(model_path) if model_path else ""
+    active_filename = os.path.basename(model_path) if model_path else ""
+
+    # Build the voice list from the registry, annotating installed/active status
+    voices = []
+    for entry in VoiceRegistry.list_all():
+        installed_path = os.path.join(model_dir, entry.filename) if model_dir else ""
+        installed = bool(installed_path and os.path.exists(installed_path))
+        active    = entry.filename == active_filename and installed
+        voices.append({
+            "voice_id":    entry.voice_id,
+            "display_name":entry.display_name,
+            "filename":    entry.filename,
+            "lang":        entry.lang,
+            "accent":      entry.accent,
+            "gender":      entry.gender,
+            "quality":     entry.quality,
+            "size_mb":     entry.size_mb,
+            "description": entry.description,
+            "default":     entry.default,
+            "installed":   installed,
+            "active":      active,
+            "path":        installed_path if installed else None,
+        })
+
+    # Active voice display name
+    active_entry = next((v for v in voices if v["active"]), None)
+    active_name  = active_entry["display_name"] if active_entry else (
+        active_filename.removesuffix(".onnx") if active_filename else "None"
+    )
+
+    return {
+        "provider":       provider,
+        "provider_label": {"piper": "Piper (local)", "none": "Disabled"}.get(provider, provider),
+        "active_voice":   active_name,
+        "active_path":    model_path,
+        "active_voice_id": active_entry["voice_id"] if active_entry else None,
+        "voices":         voices,
+    }
+
+
+class VoiceSwitchBody(BaseModel):
+    voice_id: str
+
+
+@router.post("/settings/voice")
+async def set_active_voice(
+    body: VoiceSwitchBody,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Switch the active Piper voice by updating PIPER_MODEL_PATH in .env.
+    The voice must be installed on disk (download it first via the download script).
     """
     _require_user(authorization)
     settings = get_settings()
 
-    provider   = settings.tts_provider          # "piper" | "none"
-    model_path = settings.piper_model_path       # full path to active .onnx
-
-    # Scan the model directory for installed Piper voices
+    from providers.tts.voice_registry import VoiceRegistry
     import os
-    model_dir = os.path.dirname(model_path) if model_path else ""
-    available_voices: list[dict] = []
+    import re
 
-    if model_dir and os.path.isdir(model_dir):
-        for fname in sorted(os.listdir(model_dir)):
-            if not fname.endswith(".onnx"):
-                continue
-            full = os.path.join(model_dir, fname)
-            # Parse a human-readable name from the filename
-            # e.g. "en_US-lessac-medium.onnx" → "Lessac Medium (en-US)"
-            stem = fname.removesuffix(".onnx")
-            parts = stem.split("-")          # ["en_US", "lessac", "medium"]
-            lang   = parts[0].replace("_", "-") if parts else stem
-            name   = " ".join(p.capitalize() for p in parts[1:]) if len(parts) > 1 else stem
-            available_voices.append({
-                "path":   full,
-                "name":   f"{name} ({lang})",
-                "lang":   lang,
-                "active": full == model_path,
-            })
+    entry = VoiceRegistry.get(body.voice_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail=f"Unknown voice ID: {body.voice_id}")
 
-    # Derive a display name for the active voice
-    active_name = "Unknown"
-    for v in available_voices:
-        if v["active"]:
-            active_name = v["name"]
-            break
-    if not available_voices and model_path:
-        stem = os.path.basename(model_path).removesuffix(".onnx")
-        parts = stem.split("-")
-        lang  = parts[0].replace("_", "-") if parts else stem
-        name  = " ".join(p.capitalize() for p in parts[1:]) if len(parts) > 1 else stem
-        active_name = f"{name} ({lang})"
+    model_dir = os.path.dirname(settings.piper_model_path) if settings.piper_model_path else ""
+    if not model_dir:
+        raise HTTPException(status_code=500, detail="PIPER_MODEL_PATH not configured.")
 
+    new_path = os.path.join(model_dir, entry.filename)
+    if not os.path.exists(new_path):
+        raise HTTPException(
+            status_code=404,
+            detail=f"{entry.display_name} is not installed. Download it first: "
+                   f"python scripts/download_voices.py {entry.voice_id}"
+        )
+
+    # Rewrite PIPER_MODEL_PATH in .env
+    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+    if not os.path.exists(env_path):
+        raise HTTPException(status_code=500, detail=".env file not found.")
+
+    with open(env_path, "r") as f:
+        content = f.read()
+
+    pattern = r"^PIPER_MODEL_PATH=.*$"
+    replacement = f"PIPER_MODEL_PATH={new_path}"
+    new_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+
+    if new_content == content and replacement not in content:
+        new_content = content.rstrip() + f"\nPIPER_MODEL_PATH={new_path}\n"
+
+    tmp = env_path + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(new_content)
+    os.replace(tmp, env_path)
+
+    logger.info("Voice switched to %s (%s)", entry.display_name, entry.voice_id)
     return {
-        "provider":       provider,
-        "active_voice":   active_name,
-        "active_path":    model_path,
-        "available":      available_voices,
-        "provider_label": {
-            "piper": "Piper (local, zero-latency)",
-            "none":  "Disabled",
-        }.get(provider, provider),
+        "ok":          True,
+        "voice_id":    entry.voice_id,
+        "display_name":entry.display_name,
+        "path":        new_path,
+        "note":        "Restart the service for the new voice to take effect.",
     }

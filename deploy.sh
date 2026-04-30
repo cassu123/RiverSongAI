@@ -13,6 +13,9 @@ source venv/bin/activate
 pip install "setuptools<71" --quiet
 pip install -r requirements.txt --no-build-isolation --quiet
 
+echo "==> Downloading voice models (new voices only)..."
+python scripts/download_voices.py
+
 echo "==> Building frontend..."
 cd frontend
 npm install --legacy-peer-deps --silent

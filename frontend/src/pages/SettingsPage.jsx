@@ -417,62 +417,18 @@ export default function SettingsPage() {
       {/* ================================================================ */}
       <Section title="VOICE">
         {voiceSettings ? (
-          <>
-            {/* Active voice card */}
-            <div className="voice-option voice-option--active">
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="voice-option-name">
-                  {voiceSettings.provider_label}
-                </div>
-                <div className="voice-option-meta">
-                  {voiceSettings.active_voice || 'No voice configured'}
-                </div>
-              </div>
-              {voiceSettings.provider !== 'none' && (
-                <div className="voice-option-dot" aria-label="Active" />
-              )}
-            </div>
-
-            {/* All installed voices */}
-            {voiceSettings.available?.length > 1 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-                <p className="settings-hint" style={{ marginBottom: 0 }}>
-                  Installed voice models — change <code>PIPER_MODEL_PATH</code> in <code>.env</code> to switch.
-                </p>
-                {voiceSettings.available.map(v => (
-                  <div
-                    key={v.path}
-                    className={`voice-option${v.active ? ' voice-option--active' : ''}`}
-                    style={{ opacity: v.active ? 1 : 0.6 }}
-                  >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="voice-option-name">{v.name}</div>
-                      <div className="voice-option-meta" style={{ fontSize: '0.7rem', wordBreak: 'break-all' }}>
-                        {v.path}
-                      </div>
-                    </div>
-                    {v.active && <div className="voice-option-dot" aria-label="Active" />}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {voiceSettings.provider === 'none' && (
-              <p className="settings-hint" style={{ color: 'var(--error)' }}>
-                TTS is disabled. Set <code>TTS_PROVIDER=piper</code> in <code>.env</code> to enable speech output.
-              </p>
-            )}
-
-            <p className="settings-hint" style={{ marginTop: 8 }}>
-              Additional voices: download <code>.onnx</code> models from{' '}
-              <strong>huggingface.co/rhasspy/piper-voices</strong> and update <code>PIPER_MODEL_PATH</code>.
-              Cloud TTS (ElevenLabs, OpenAI TTS) coming in a future phase.
-            </p>
-          </>
+          <VoiceSection
+            voiceSettings={voiceSettings}
+            token={token}
+            onSwitched={() => {
+              const headers = token ? { Authorization: `Bearer ${token}` } : {}
+              fetch(`${API_BASE}/api/settings/voice`, { headers })
+                .then(r => r.json()).then(setVoiceSettings).catch(() => {})
+            }}
+          />
         ) : (
-          <div className="voice-option voice-option--active">
-            <div className="voice-option-name">Piper — Local TTS</div>
-            <div className="voice-option-meta">Loading voice info…</div>
+          <div className="voice-option">
+            <div className="voice-option-name">Loading voices…</div>
           </div>
         )}
       </Section>
@@ -519,5 +475,139 @@ export default function SettingsPage() {
       )}
 
     </div>
+  )
+}
+
+// =============================================================================
+// Voice Section — curated voice registry with install status + live switching
+// =============================================================================
+
+const QUALITY_LABELS = { low: 'Fast', medium: 'Balanced', high: 'High Quality' }
+const ACCENT_ORDER   = ['American', 'British', 'British (Northern)']
+
+function VoiceSection({ voiceSettings, token, onSwitched }) {
+  const [switching, setSwitching] = useState(null)
+  const [switchMsg, setSwitchMsg] = useState('')
+
+  if (voiceSettings.provider === 'none') {
+    return (
+      <p className="settings-hint" style={{ color: 'var(--md-error)' }}>
+        TTS is disabled. Set <code>TTS_PROVIDER=piper</code> in <code>.env</code> to enable speech.
+      </p>
+    )
+  }
+
+  const voices  = voiceSettings.voices || []
+  const accents = [...new Set(voices.map(v => v.accent))]
+    .sort((a, b) => (ACCENT_ORDER.indexOf(a) + 99) - (ACCENT_ORDER.indexOf(b) + 99))
+
+  const handleSelect = async (voice_id) => {
+    setSwitching(voice_id)
+    setSwitchMsg('')
+    try {
+      const res = await fetch('/api/settings/voice', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body:    JSON.stringify({ voice_id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.detail || 'Switch failed')
+      setSwitchMsg(`✓ Switched to ${data.display_name}. Restart the service to apply.`)
+      onSwitched()
+    } catch (e) {
+      setSwitchMsg(`✗ ${e.message}`)
+    } finally {
+      setSwitching(null)
+    }
+  }
+
+  return (
+    <>
+      <p className="settings-hint" style={{ marginBottom: 16 }}>
+        <strong>{voiceSettings.provider_label}</strong> · Active:{' '}
+        <strong>{voiceSettings.active_voice}</strong>
+        {voiceSettings.active_voice_id && (
+          <span style={{ color: 'var(--md-outline)', fontSize: '0.8rem', marginLeft: 8 }}>
+            ({voiceSettings.active_voice_id})
+          </span>
+        )}
+      </p>
+
+      {switchMsg && (
+        <p className="settings-hint" style={{
+          marginBottom: 16,
+          color: switchMsg.startsWith('✓') ? 'var(--md-tertiary)' : 'var(--md-error)',
+        }}>
+          {switchMsg}
+        </p>
+      )}
+
+      {accents.map(accent => {
+        const av      = voices.filter(v => v.accent === accent)
+        const females = av.filter(v => v.gender === 'female')
+        const males   = av.filter(v => v.gender === 'male')
+
+        return (
+          <div key={accent} className="model-group" style={{ marginBottom: 20 }}>
+            <h3 className="model-group-title">{accent}</h3>
+
+            {[{ label: 'Female', list: females, color: 'var(--md-tertiary)' },
+              { label: 'Male',   list: males,   color: 'var(--md-primary)'  }]
+              .filter(g => g.list.length > 0)
+              .map(({ label, list, color }) => (
+                <div key={label} style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: '0.6875rem', fontWeight: 500, letterSpacing: '0.06em',
+                    color, textTransform: 'uppercase', marginBottom: 6 }}>
+                    {label}
+                  </div>
+                  <div className="model-grid">
+                    {list.map(v => (
+                      <button
+                        key={v.voice_id}
+                        className={`model-card${v.active ? ' model-card--selected' : ''}${!v.installed ? ' model-card--disabled' : ''}`}
+                        onClick={() => v.installed && !v.active && handleSelect(v.voice_id)}
+                        disabled={!v.installed || switching === v.voice_id}
+                        title={!v.installed
+                          ? `Not installed. Run: python scripts/download_voices.py ${v.voice_id}`
+                          : v.description}
+                      >
+                        <div className="model-card-name" style={{ color: v.active ? 'var(--md-primary)' : undefined }}>
+                          {v.display_name}
+                          {v.default && !v.active && (
+                            <span style={{ fontSize: '0.6rem', color: 'var(--md-outline)', marginLeft: 6 }}>default</span>
+                          )}
+                        </div>
+
+                        <div className="model-card-meta">
+                          <span className={`badge badge--${v.quality === 'high' ? 'cost' : v.quality === 'low' ? 'cpu' : 'gpu'}`}>
+                            {QUALITY_LABELS[v.quality]}
+                          </span>
+                          <span className="badge" style={{ background: 'var(--md-surface-container-highest)', color: 'var(--md-on-surface-variant)' }}>
+                            {v.size_mb.toFixed(0)} MB
+                          </span>
+                        </div>
+
+                        <div style={{ fontSize: '0.72rem', color: 'var(--md-on-surface-variant)', lineHeight: 1.4 }}>
+                          {v.description}
+                        </div>
+
+                        {!v.installed && <div className="model-card-locked">NOT INSTALLED</div>}
+                        {switching === v.voice_id && <div className="model-card-locked" style={{ color: 'var(--md-primary)' }}>SWITCHING…</div>}
+                        {v.active && <div className="model-card-active-dot" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+          </div>
+        )
+      })}
+
+      <p className="settings-hint" style={{ marginTop: 4 }}>
+        To install a voice: <code>python scripts/download_voices.py atlas aria</code> on the server,
+        or edit <code>deploy.sh</code> to auto-download on every update. After switching,
+        restart the service: <code>sudo systemctl restart river-song</code>
+      </p>
+    </>
   )
 }
