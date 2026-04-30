@@ -285,10 +285,14 @@ async def get_voice_settings(authorization: Optional[str] = Header(default=None)
     voices = []
     for entry in VoiceRegistry.list_all():
         if entry.engine == "kokoro":
-            # Kokoro voices: always available once the package is installed;
-            # model auto-downloads from HuggingFace on first synthesize()
-            installed = True
-            path      = None
+            # Kokoro voices: available only if the kokoro package is importable.
+            # kokoro requires Python <3.13; mark unavailable on Python 3.13+.
+            try:
+                import kokoro  # noqa: F401
+                installed = True
+            except ImportError:
+                installed = False
+            path = None
         else:
             # Piper voices: check for the .onnx file on disk
             installed_path = os.path.join(model_dir, entry.filename) if model_dir and entry.filename else ""

@@ -70,8 +70,16 @@ class KokoroTTS(TTSProvider):
         try:
             from kokoro import KPipeline
         except ImportError as exc:
+            import sys
+            py = sys.version_info
+            if py >= (3, 13):
+                raise RuntimeError(
+                    f"Kokoro requires Python <3.13 — this server runs Python "
+                    f"{py.major}.{py.minor}.{py.micro}. "
+                    "Switch to a Piper voice in Settings, or downgrade Python."
+                ) from exc
             raise RuntimeError(
-                "Kokoro is not installed. Run: pip install kokoro"
+                "Kokoro is not installed. Run: pip install kokoro==0.9.4"
             ) from exc
 
         logger.info("Loading Kokoro pipeline (lang=%s) — first run downloads ~325 MB …", self._lang_code)
