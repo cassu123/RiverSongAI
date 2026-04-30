@@ -151,9 +151,13 @@ export default function ConversationPage() {
   const handleStartListening = useCallback(async () => {
     if (!canSpeak) return
     setError(null)
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('Microphone not available. Use https://riversongai.com — mic requires HTTPS.')
+      return
+    }
     const granted = await startRecording()
     if (granted) sendMessage({ type: 'start' })
-    else setError('Microphone access denied.')
+    else setError('Microphone access denied. Click the lock icon in your browser address bar and allow the microphone.')
   }, [canSpeak, startRecording, sendMessage])
 
   const handleReset = useCallback(() => {
@@ -219,7 +223,6 @@ export default function ConversationPage() {
             </span>
           </div>
 
-          {error && <div className="conv-error" role="alert">{error}</div>}
         </div>
       )}
 
@@ -308,6 +311,18 @@ export default function ConversationPage() {
           </div>
         ) : (
           <ConversationPanel messages={displayMessages} streamingResponse={displayStreaming} />
+        )}
+
+        {/* Status + error — always visible regardless of avatar */}
+        {(error || !canSpeak) && (
+          <div className="conv-status-strip">
+            {error
+              ? <span className="conv-status-error">{error}</span>
+              : <span className="conv-status-waiting">
+                  {connectionStatus === 'connected' ? 'Initializing…' : 'Connecting…'}
+                </span>
+            }
+          </div>
         )}
 
         {/* Input bar — voice only */}

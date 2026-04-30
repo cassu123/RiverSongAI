@@ -123,10 +123,14 @@ const PROVIDER_NAMES = {
   ollama:     'Ollama (local)',
 }
 
-export default function SettingsPage() {
+export default function SettingsPage({ onFeaturesChanged }) {
   const { user, token } = useAuth()
 
   const [models,           setModels]           = useState({ local: [], cloud: [] })
+  const [visibility,       setVisibility]       = useState(null)
+  const [featureVis,       setFeatureVis]       = useState(null)  // admin: global feature flags
+  const [familyData,       setFamilyData]       = useState(null)  // admin: parent-child links
+  const [childrenData,     setChildrenData]     = useState(null)  // parent: my children
   const [enabledProviders, setEnabledProviders] = useState({})
   const [llmSettings,      setLlmSettings]      = useState(null)
   const [memSettings,      setMemSettings]      = useState(null)
@@ -139,18 +143,37 @@ export default function SettingsPage() {
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
     const query = user?.id ? `?user_id=${user.id}` : ''
 
-    Promise.all([
+    const fetches = [
       fetch(`${API_BASE}/api/models`).then(r => r.json()),
       fetch(`${API_BASE}/api/settings/llm${query}`, { headers }).then(r => r.json()),
       fetch(`${API_BASE}/api/settings/memory${query}`, { headers }).then(r => r.json()),
       fetch(`${API_BASE}/api/settings/voice`, { headers }).then(r => r.json()).catch(() => null),
-    ])
-      .then(([modData, llmData, memData, voiceData]) => {
+    ]
+    if (user?.role === 'admin') {
+      fetches.push(
+        fetch(`${API_BASE}/api/admin/model-visibility`, { headers }).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/api/admin/feature-visibility`, { headers }).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/api/admin/family`, { headers }).then(r => r.json()).catch(() => null),
+      )
+    }
+    if (user?.role === 'parent') {
+      fetches.push(
+        null, null, null, // pad to keep indices consistent
+        fetch(`${API_BASE}/api/parent/children`, { headers }).then(r => r.json()).catch(() => null),
+      )
+    }
+
+    Promise.all(fetches)
+      .then(([modData, llmData, memData, voiceData, visData, featVisData, familyRaw, childrenRaw]) => {
         setModels({ local: modData.local || [], cloud: modData.cloud || [] })
         setEnabledProviders(modData.enabled_providers || {})
         setLlmSettings(llmData)
         setMemSettings(memData)
         setVoiceSettings(voiceData)
+        if (visData)      setVisibility(visData)
+        if (featVisData)  setFeatureVis(featVisData)
+        if (familyRaw)    setFamilyData(familyRaw)
+        if (childrenRaw)  setChildrenData(childrenRaw)
         setLoading(false)
       })
       .catch(err => {
@@ -438,6 +461,7 @@ export default function SettingsPage() {
       {/* ================================================================ */}
       {memSettings && (
         <Section title="MEMORY">
+
           <Toggle
             id="summaries-toggle"
             label="Conversation summaries"
@@ -472,6 +496,56 @@ export default function SettingsPage() {
             keeping frequently-relevant memories alive naturally.
           </p>
         </Section>
+      )}
+
+      {/* ================================================================ */}
+      {/* PARENT — my children (parent only)                              */}
+      {/* ================================================================ */}
+      {user?.role === 'parent' && childrenData && (
+        <ParentChildrenSection
+          data={childrenData}
+          token={token}
+          onChanged={updated => {
+            setChildrenData(updated)
+            if (onFeaturesChanged) onFeaturesChanged()
+          }}
+        />
+      )}
+
+      {/* ================================================================ */}
+      {/* ADMIN — feature visibility (admin only)                         */}
+      {/* ================================================================ */}
+      {user?.role === 'admin' && featureVis && (
+        <AdminFeatureSection
+          featureVis={featureVis}
+          token={token}
+          onChanged={updated => {
+            setFeatureVis(updated)
+            if (onFeaturesChanged) onFeaturesChanged()
+          }}
+        />
+      )}
+
+      {/* ================================================================ */}
+      {/* ADMIN — family management (admin only)                          */}
+      {/* ================================================================ */}
+      {user?.role === 'admin' && familyData && (
+        <AdminFamilySection
+          data={familyData}
+          token={token}
+          onChanged={setFamilyData}
+        />
+      )}
+
+      {/* ================================================================ */}
+      {/* ADMIN — model visibility (admin only)                            */}
+      {/* ================================================================ */}
+      {user?.role === 'admin' && visibility && (
+        <AdminVisibilitySection
+          visibility={visibility}
+          token={token}
+          onChanged={updated => setVisibility(updated)}
+        />
       )}
 
     </div>
@@ -686,5 +760,397 @@ function VoiceSection({ voiceSettings, token, onSwitched }) {
         or add them to <code>deploy.sh</code> to auto-download on every update.
       </p>
     </>
+  )
+}
+
+// =============================================================================
+// ParentChildrenSection — parent manages their children's feature access
+// =============================================================================
+
+function ParentChildrenSection({ data, token, onChanged }) {
+  const [saving, setSaving] = useState(null) // child_id being saved
+
+  const toggle = async (child, featureKey) => {
+    const current  = child.enabled_features || []
+    const updated  = current.includes(featureKey)
+      ? current.filter(k => k !== featureKey)
+      : [...current, featureKey]
+
+    const newChildren = data.children.map(c =>
+      c.id === child.id ? { ...c, enabled_features: updated } : c
+    )
+    onChanged({ ...data, children: newChildren })
+    setSaving(child.id)
+
+    try {
+      await fetch(`/api/parent/children/${child.id}/features`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ enabled_features: updated }),
+      })
+    } catch (e) {
+      console.error('[Parent] feature save failed:', e)
+      onChanged(data)
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const globallyOn = new Set(data.globally_on || [])
+
+  return (
+    <Section title="MY CHILDREN">
+      <p className="settings-hint" style={{ marginBottom: 16 }}>
+        Enable features for each child. Features greyed out have been disabled globally by the admin.
+      </p>
+      {(data.children || []).length === 0 && (
+        <p className="settings-hint">No children linked to your account yet.</p>
+      )}
+      {(data.children || []).map(child => (
+        <div key={child.id} style={{ marginBottom: 20 }}>
+          <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: 8, color: 'var(--md-on-surface)' }}>
+            {child.display_name}
+            <span style={{ fontWeight: 400, fontSize: '0.72rem', color: 'var(--md-outline)', marginLeft: 8 }}>{child.email}</span>
+            {saving === child.id && <span style={{ marginLeft: 8, fontSize: '0.7rem', color: 'var(--md-primary)' }}>Saving…</span>}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '4px 12px' }}>
+            {(data.globally_on || []).map(key => {
+              const enabled  = (child.enabled_features || []).includes(key)
+              const locked   = !globallyOn.has(key)
+              return (
+                <label key={key} className="toggle-row" style={{ opacity: locked ? 0.4 : 1 }}>
+                  <span className="toggle-label" style={{ fontSize: '0.8rem', textTransform: 'capitalize' }}>
+                    {key.replace('_', ' ')}
+                  </span>
+                  <button
+                    role="switch"
+                    aria-checked={enabled}
+                    disabled={locked}
+                    className={`toggle-switch ${enabled ? 'toggle-switch--on' : ''}`}
+                    onClick={() => !locked && toggle(child, key)}
+                  >
+                    <span className="toggle-knob" />
+                  </button>
+                  <span className="toggle-value">{enabled ? 'ON' : 'OFF'}</span>
+                </label>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </Section>
+  )
+}
+
+// =============================================================================
+// AdminFeatureSection — admin global feature on/off (hides from all non-admins)
+// =============================================================================
+
+function AdminFeatureSection({ featureVis, token, onChanged }) {
+  const [saving, setSaving] = useState(false)
+
+  const toggle = async (key) => {
+    const current = featureVis.hidden_features || []
+    const updated = current.includes(key)
+      ? current.filter(k => k !== key)
+      : [...current, key]
+
+    const next = {
+      ...featureVis,
+      hidden_features: updated,
+      all_features: featureVis.all_features.map(f =>
+        f.key === key ? { ...f, hidden: !f.hidden } : f
+      ),
+    }
+    onChanged(next)
+    setSaving(true)
+    try {
+      await fetch('/api/admin/feature-visibility', {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ hidden_features: updated }),
+      })
+    } catch (e) {
+      console.error('[Admin] feature visibility save failed:', e)
+      onChanged(featureVis)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Section title="ADMIN — FEATURE VISIBILITY">
+      <p className="settings-hint" style={{ marginBottom: 16 }}>
+        Hide features globally — hidden features disappear for all non-admin users.
+        Useful while building or fixing a feature. Admin always sees everything.
+        {saving && <span style={{ marginLeft: 8, color: 'var(--md-primary)' }}>Saving…</span>}
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '4px 12px' }}>
+        {(featureVis.all_features || []).map(f => (
+          <label key={f.key} className="toggle-row" style={{ opacity: f.hidden ? 0.55 : 1 }}>
+            <span className="toggle-label" style={{ fontSize: '0.8rem' }}>{f.label}</span>
+            <button
+              role="switch"
+              aria-checked={!f.hidden}
+              className={`toggle-switch ${!f.hidden ? 'toggle-switch--on' : ''}`}
+              onClick={() => toggle(f.key)}
+            >
+              <span className="toggle-knob" />
+            </button>
+            <span className="toggle-value">{f.hidden ? 'HIDDEN' : 'VISIBLE'}</span>
+          </label>
+        ))}
+      </div>
+    </Section>
+  )
+}
+
+// =============================================================================
+// AdminFamilySection — admin assigns parent-child relationships
+// =============================================================================
+
+function AdminFamilySection({ data, token, onChanged }) {
+  const [parentSel, setParentSel] = useState('')
+  const [childSel,  setChildSel]  = useState('')
+  const [working,   setWorking]   = useState(false)
+  const [err,       setErr]       = useState('')
+
+  const users    = data.users    || []
+  const links    = data.links    || []
+  const parents  = users.filter(u => ['parent', 'user', 'admin'].includes(u.role))
+  const children = users.filter(u => u.role === 'child')
+
+  const linked = (parentId, childId) =>
+    links.some(l => l.parent_id === parentId && l.child_id === childId)
+
+  const addLink = async () => {
+    if (!parentSel || !childSel) return
+    setWorking(true); setErr('')
+    try {
+      const res = await fetch('/api/admin/family', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ parent_id: parentSel, child_id: childSel }),
+      })
+      if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Failed') }
+      const r = await fetch('/api/admin/family', { headers: { Authorization: `Bearer ${token}` } })
+      onChanged(await r.json())
+      setParentSel(''); setChildSel('')
+    } catch (e) { setErr(e.message) }
+    finally { setWorking(false) }
+  }
+
+  const removeLink = async (parentId, childId) => {
+    setWorking(true); setErr('')
+    try {
+      await fetch(`/api/admin/family/${parentId}/${childId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const r = await fetch('/api/admin/family', { headers: { Authorization: `Bearer ${token}` } })
+      onChanged(await r.json())
+    } catch (e) { setErr(e.message) }
+    finally { setWorking(false) }
+  }
+
+  return (
+    <Section title="ADMIN — FAMILY MANAGEMENT">
+      <p className="settings-hint" style={{ marginBottom: 16 }}>
+        Link parent accounts to child accounts. A child can have multiple parents.
+        Assigning a child automatically promotes a user to the parent role.
+      </p>
+
+      {/* Add link */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
+        <select className="settings-select" value={parentSel} onChange={e => setParentSel(e.target.value)}>
+          <option value="">— select parent —</option>
+          {parents.map(u => (
+            <option key={u.id} value={u.id}>{u.display_name} ({u.role})</option>
+          ))}
+        </select>
+        <span style={{ color: 'var(--md-outline)', fontSize: '0.85rem' }}>→</span>
+        <select className="settings-select" value={childSel} onChange={e => setChildSel(e.target.value)}>
+          <option value="">— select child —</option>
+          {children.map(u => (
+            <option key={u.id} value={u.id}>{u.display_name}</option>
+          ))}
+        </select>
+        <button
+          className="btn btn--primary"
+          onClick={addLink}
+          disabled={!parentSel || !childSel || working}
+          style={{ padding: '6px 16px', fontSize: '0.8rem' }}
+        >
+          {working ? 'Saving…' : 'Link'}
+        </button>
+      </div>
+      {err && <p style={{ color: 'var(--md-error)', fontSize: '0.8rem', marginBottom: 8 }}>{err}</p>}
+
+      {/* Existing links */}
+      {links.length === 0 && (
+        <p className="settings-hint">No parent-child links yet.</p>
+      )}
+      {links.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {links.map(l => {
+            const parent = users.find(u => u.id === l.parent_id)
+            const child  = users.find(u => u.id === l.child_id)
+            return (
+              <div key={`${l.parent_id}-${l.child_id}`} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '6px 10px',
+                background: 'var(--md-surface-container)',
+                borderRadius: 8, fontSize: '0.82rem',
+              }}>
+                <span style={{ flex: 1 }}>
+                  <strong>{parent?.display_name || l.parent_id}</strong>
+                  <span style={{ color: 'var(--md-outline)', margin: '0 6px' }}>→</span>
+                  <strong>{child?.display_name || l.child_id}</strong>
+                </span>
+                <button
+                  onClick={() => removeLink(l.parent_id, l.child_id)}
+                  disabled={working}
+                  style={{ fontSize: '0.72rem', color: 'var(--md-error)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                >
+                  Remove
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </Section>
+  )
+}
+
+// =============================================================================
+// AdminVisibilitySection — admin-only global show/hide for voices + LLM models
+// =============================================================================
+
+const PROVIDER_DISPLAY = {
+  anthropic:  'Anthropic',
+  gemini:     'Google Gemini',
+  openai:     'OpenAI',
+  mistral_ai: 'Mistral AI',
+  ollama:     'Ollama (local)',
+}
+
+function AdminVisibilitySection({ visibility, token, onChanged }) {
+  const [saving, setSaving] = useState(false)
+
+  const toggle = async (type, id) => {
+    const field = type === 'voice' ? 'hidden_voices' : 'hidden_llms'
+    const current = visibility[field] || []
+    const updated = current.includes(id)
+      ? current.filter(x => x !== id)
+      : [...current, id]
+
+    const next = { ...visibility, [field]: updated }
+    onChanged(next)
+    setSaving(true)
+
+    try {
+      await fetch('/api/admin/model-visibility', {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ hidden_voices: next.hidden_voices, hidden_llms: next.hidden_llms }),
+      })
+    } catch (e) {
+      console.error('[Admin] visibility save failed:', e)
+      onChanged(visibility)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const allVoices = visibility.all_voices || []
+  const allLlms   = visibility.all_llms   || []
+
+  const voiceAccents = [...new Set(allVoices.map(v => v.accent))]
+  const llmProviders = [...new Set(allLlms.map(m => m.provider))]
+
+  return (
+    <Section title="ADMIN — MODEL VISIBILITY">
+      <p className="settings-hint" style={{ marginBottom: 16 }}>
+        Toggle models off to hide them globally for all users. Hidden models cannot
+        be selected but their settings are preserved.
+        {saving && <span style={{ marginLeft: 8, color: 'var(--md-primary)' }}>Saving…</span>}
+      </p>
+
+      {/* ── Voices ── */}
+      <h3 className="model-group-title" style={{ marginBottom: 8 }}>
+        <span className="model-group-badge model-group-badge--local">VOICE</span>
+        Voice Models
+      </h3>
+      {voiceAccents.map(accent => {
+        const group = allVoices.filter(v => v.accent === accent)
+        return (
+          <div key={accent} style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
+              {accent.toUpperCase()}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '4px 12px' }}>
+              {group.map(v => {
+                const hidden = (visibility.hidden_voices || []).includes(v.voice_id)
+                return (
+                  <label key={v.voice_id} className="toggle-row" style={{ opacity: hidden ? 0.5 : 1 }}>
+                    <span className="toggle-label" style={{ fontSize: '0.8rem' }}>
+                      {v.display_name}
+                      {!v.installed && (
+                        <span style={{ fontSize: '0.65rem', color: 'var(--md-outline)', marginLeft: 5 }}>not installed</span>
+                      )}
+                    </span>
+                    <button
+                      role="switch"
+                      aria-checked={!hidden}
+                      className={`toggle-switch ${!hidden ? 'toggle-switch--on' : ''}`}
+                      onClick={() => toggle('voice', v.voice_id)}
+                    >
+                      <span className="toggle-knob" />
+                    </button>
+                    <span className="toggle-value">{hidden ? 'HIDDEN' : 'VISIBLE'}</span>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+
+      {/* ── LLM Models ── */}
+      <h3 className="model-group-title" style={{ marginTop: 20, marginBottom: 8 }}>
+        <span className="model-group-badge model-group-badge--cloud">AI</span>
+        AI Models
+      </h3>
+      {llmProviders.map(provider => {
+        const group = allLlms.filter(m => m.provider === provider)
+        return (
+          <div key={provider} style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
+              {(PROVIDER_DISPLAY[provider] || provider).toUpperCase()}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '4px 12px' }}>
+              {group.map(m => {
+                const hidden = (visibility.hidden_llms || []).includes(m.model_id)
+                return (
+                  <label key={m.model_id} className="toggle-row" style={{ opacity: hidden ? 0.5 : 1 }}>
+                    <span className="toggle-label" style={{ fontSize: '0.8rem' }}>{m.display_name}</span>
+                    <button
+                      role="switch"
+                      aria-checked={!hidden}
+                      className={`toggle-switch ${!hidden ? 'toggle-switch--on' : ''}`}
+                      onClick={() => toggle('llm', m.model_id)}
+                    >
+                      <span className="toggle-knob" />
+                    </button>
+                    <span className="toggle-value">{hidden ? 'HIDDEN' : 'VISIBLE'}</span>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </Section>
   )
 }

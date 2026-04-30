@@ -181,6 +181,23 @@ CREATE TABLE IF NOT EXISTS reading_shelf (
 );
 
 CREATE INDEX IF NOT EXISTS idx_reading_shelf_user ON reading_shelf(user_id);
+
+CREATE TABLE IF NOT EXISTS admin_config (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE TABLE IF NOT EXISTS parent_child (
+    parent_id  TEXT NOT NULL,
+    child_id   TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (parent_id, child_id)
+);
+
+CREATE TABLE IF NOT EXISTS child_features (
+    child_id         TEXT PRIMARY KEY,
+    enabled_features TEXT NOT NULL DEFAULT '[]'
+);
 """
 
 
@@ -242,6 +259,7 @@ class SQLiteStore:
             "ALTER TABLE users ADD COLUMN google_id TEXT",
             "ALTER TABLE users ADD COLUMN google_email TEXT",
             "ALTER TABLE llm_settings ADD COLUMN voice_id TEXT NOT NULL DEFAULT 'river'",
+            "INSERT OR IGNORE INTO admin_config (key, value) VALUES ('__global__', '{}')",
         ]:
             try:
                 conn.execute(migration)
@@ -1057,5 +1075,121 @@ class SQLiteStore:
                 "refresh_stocks_min":  prefs.get("refresh_stocks_min", 60),
                 "updated_at":          _now_str(),
             },
+        )
+        conn.commit()
+
+    # =========================================================================
+    # Admin config (global, single-row JSON store)
+    # =========================================================================
+
+    async def get_admin_config(self) -> dict:
+        return await self._run(self._sync_get_admin_config)
+
+    def _sync_get_admin_config(self) -> dict:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT value FROM admin_config WHERE key = '__global__'"
+        ).fetchone()
+        if not row:
+            return {}
+        try:
+            return json.loads(row[0])
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    async def set_admin_config(self, config: dict) -> None:
+        await self._run(self._sync_set_admin_config, config)
+
+    def _sync_set_admin_config(self, config: dict) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            "INSERT OR REPLACE INTO admin_config (key, value) VALUES ('__global__', ?)",
+            (json.dumps(config),),
+        )
+        conn.commit()
+
+    # =========================================================================
+    # Parent-child relationships
+    # =========================================================================
+
+    async def add_parent_child(self, parent_id: str, child_id: str) -> None:
+        await self._run(self._sync_add_parent_child, parent_id, child_id)
+
+    def _sync_add_parent_child(self, parent_id: str, child_id: str) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            "INSERT OR IGNORE INTO parent_child (parent_id, child_id, created_at) VALUES (?,?,?)",
+            (parent_id, child_id, _now_str()),
+        )
+        conn.commit()
+
+    async def remove_parent_child(self, parent_id: str, child_id: str) -> None:
+        await self._run(self._sync_remove_parent_child, parent_id, child_id)
+
+    def _sync_remove_parent_child(self, parent_id: str, child_id: str) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            "DELETE FROM parent_child WHERE parent_id=? AND child_id=?",
+            (parent_id, child_id),
+        )
+        conn.commit()
+
+    async def get_children_of_parent(self, parent_id: str) -> list[str]:
+        return await self._run(self._sync_get_children_of_parent, parent_id)
+
+    def _sync_get_children_of_parent(self, parent_id: str) -> list[str]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT child_id FROM parent_child WHERE parent_id=?", (parent_id,)
+        ).fetchall()
+        return [r[0] for r in rows]
+
+    async def get_parents_of_child(self, child_id: str) -> list[str]:
+        return await self._run(self._sync_get_parents_of_child, child_id)
+
+    def _sync_get_parents_of_child(self, child_id: str) -> list[str]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT parent_id FROM parent_child WHERE child_id=?", (child_id,)
+        ).fetchall()
+        return [r[0] for r in rows]
+
+    async def list_all_parent_child(self) -> list[dict]:
+        return await self._run(self._sync_list_all_parent_child)
+
+    def _sync_list_all_parent_child(self) -> list[dict]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT parent_id, child_id, created_at FROM parent_child ORDER BY created_at"
+        ).fetchall()
+        return [{"parent_id": r[0], "child_id": r[1], "created_at": r[2]} for r in rows]
+
+    # =========================================================================
+    # Child feature settings (parent-controlled per-child feature access)
+    # =========================================================================
+
+    async def get_child_features(self, child_id: str) -> list[str]:
+        return await self._run(self._sync_get_child_features, child_id)
+
+    def _sync_get_child_features(self, child_id: str) -> list[str]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT enabled_features FROM child_features WHERE child_id=?", (child_id,)
+        ).fetchone()
+        if not row:
+            return []
+        try:
+            return json.loads(row[0])
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    async def set_child_features(self, child_id: str, features: list[str]) -> None:
+        await self._run(self._sync_set_child_features, child_id, features)
+
+    def _sync_set_child_features(self, child_id: str, features: list[str]) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            "INSERT OR REPLACE INTO child_features (child_id, enabled_features) VALUES (?,?)",
+            (child_id, json.dumps(features)),
         )
         conn.commit()
