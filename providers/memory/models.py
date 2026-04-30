@@ -202,6 +202,7 @@ class LLMSettings:
     provider: str = "ollama"
     model: str = "llama3.2:3b"
     cloud_fallback_enabled: bool = False
-    timezone: str = "UTC" # Per-user timezone setting
+    timezone: str = "UTC"
     cloud_fallback_provider: Optional[str] = None
     cloud_fallback_model: Optional[str] = None
+    voice_id: str = "river"   # active TTS voice from the voice registry

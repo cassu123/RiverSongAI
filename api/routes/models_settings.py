@@ -265,21 +265,34 @@ async def save_memory_settings(
 # =============================================================================
 
 @router.get("/settings/voice")
-async def get_voice_settings(authorization: Optional[str] = Header(default=None)):
+async def get_voice_settings(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
     """
     Return the active TTS provider, the full voice registry, and which voices
-    are installed on disk. Uses the curated VoiceRegistry display names.
+    are installed on disk. Active voice is read from per-user SQLite settings.
     """
-    _require_user(authorization)
-    settings   = get_settings()
+    user_id  = _require_user(authorization)
+    settings = get_settings()
     provider   = settings.tts_provider
     model_path = settings.piper_model_path
 
     from providers.tts.voice_registry import VoiceRegistry
     import os
 
-    model_dir       = os.path.dirname(model_path) if model_path else ""
-    active_voice_id = getattr(settings, "active_voice_id", "") or ""
+    model_dir = os.path.dirname(model_path) if model_path else ""
+
+    # Read active voice from per-user DB (falls back to system default)
+    active_voice_id = getattr(settings, "active_voice_id", "river") or "river"
+    try:
+        mm = getattr(request.app.state, "memory_manager", None)
+        if mm and user_id != "default":
+            row = await mm._store.get_llm_settings(user_id)
+            if row.voice_id:
+                active_voice_id = row.voice_id
+    except Exception:
+        pass
 
     # Build the voice list from the registry, annotating installed/active status
     voices = []
@@ -344,25 +357,24 @@ class VoiceSwitchBody(BaseModel):
 @router.post("/settings/voice")
 async def set_active_voice(
     body: VoiceSwitchBody,
+    request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
     """
-    Switch the active voice by writing ACTIVE_VOICE_ID (and PIPER_MODEL_PATH
-    for Piper voices) to .env.  Kokoro voices need no file check — the model
-    auto-downloads on first use.
+    Switch the active voice — saved to SQLite per user, takes effect on
+    the next conversation (new WebSocket connection). No restart required.
     """
-    _require_user(authorization)
+    user_id  = _require_user(authorization)
     settings = get_settings()
 
     from providers.tts.voice_registry import VoiceRegistry
     import os
-    import re
 
     entry = VoiceRegistry.get(body.voice_id)
     if not entry:
         raise HTTPException(status_code=404, detail=f"Unknown voice ID: {body.voice_id}")
 
-    # Piper voices need the .onnx file to be present
+    # Piper voices need the .onnx file on disk
     if entry.engine == "piper":
         model_dir = os.path.dirname(settings.piper_model_path) if settings.piper_model_path else ""
         if not model_dir:
@@ -374,35 +386,14 @@ async def set_active_voice(
                 detail=f"{entry.display_name} is not installed. "
                        f"Run: python scripts/download_voices.py {entry.voice_id}",
             )
-    else:
-        new_piper_path = None  # Kokoro doesn't use a file path
 
-    # Rewrite .env
-    env_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"
-    )
-    if not os.path.exists(env_path):
-        raise HTTPException(status_code=500, detail=".env file not found.")
-
-    with open(env_path, "r") as f:
-        content = f.read()
-
-    def _replace_or_append(text: str, key: str, value: str) -> str:
-        pattern     = rf"^{re.escape(key)}=.*$"
-        replacement = f"{key}={value}"
-        updated = re.sub(pattern, replacement, text, flags=re.MULTILINE)
-        if updated == text and replacement not in text:
-            updated = text.rstrip() + f"\n{replacement}\n"
-        return updated
-
-    content = _replace_or_append(content, "ACTIVE_VOICE_ID", entry.voice_id)
-    if new_piper_path:
-        content = _replace_or_append(content, "PIPER_MODEL_PATH", new_piper_path)
-
-    tmp = env_path + ".tmp"
-    with open(tmp, "w") as f:
-        f.write(content)
-    os.replace(tmp, env_path)
+    # Save voice_id to SQLite (same store as LLM settings)
+    mm = getattr(request.app.state, "memory_manager", None)
+    if mm:
+        store = mm._store
+        current = await store.get_llm_settings(user_id)
+        current.voice_id = entry.voice_id
+        await store.save_llm_settings(current)
 
     logger.info("Voice switched to %s (%s) [%s]", entry.display_name, entry.voice_id, entry.engine)
     return {
@@ -410,7 +401,7 @@ async def set_active_voice(
         "voice_id":     entry.voice_id,
         "display_name": entry.display_name,
         "engine":       entry.engine,
-        "note":         "Restart the service for the new voice to take effect.",
+        "note":         "Active on your next conversation.",
     }
 
 

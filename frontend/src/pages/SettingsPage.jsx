@@ -549,7 +549,7 @@ function VoiceSection({ voiceSettings, token, onSwitched }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Switch failed')
-      setSwitchMsg(`✓ Switched to ${data.display_name}. Restart the service to apply.`)
+      setSwitchMsg(`✓ Switched to ${data.display_name}. Active on your next conversation.`)
       onSwitched()
     } catch (e) {
       setSwitchMsg(`✗ ${e.message}`)
@@ -681,9 +681,9 @@ function VoiceSection({ voiceSettings, token, onSwitched }) {
       })}
 
       <p className="settings-hint" style={{ marginTop: 4 }}>
-        To install a voice: <code>python scripts/download_voices.py atlas aria</code> on the server,
-        or edit <code>deploy.sh</code> to auto-download on every update. After switching,
-        restart the service: <code>sudo systemctl restart river-song</code>
+        Voice changes take effect on your next conversation — no restart needed.
+        To install more voices: <code>python scripts/download_voices.py atlas aria</code> on the server,
+        or add them to <code>deploy.sh</code> to auto-download on every update.
       </p>
     </>
   )
