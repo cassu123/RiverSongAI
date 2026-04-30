@@ -57,9 +57,11 @@ boto3==1.38.0                   # Amazon Bedrock (and AWS SDK)
 #   Runs real-time on CPU — no VRAM required
 #   github.com/hexgrad/kokoro
 # -----------------------------------------------------------------------------
-# kokoro 0.8+ requires Python <3.13; pin to 0.7.16 for Python 3.13 servers.
-# On Python 3.10-3.12 you can upgrade to: kokoro==0.9.4
-kokoro==0.7.16
+# kokoro requires Python <3.13 — incompatible with Python 3.13+ servers.
+# Install manually on Python 3.10-3.12 only:
+#   pip install kokoro==0.9.4          (Python 3.10-3.12)
+#   pip install kokoro==0.7.16         (Python 3.8-3.12, broader compat)
+# The app handles missing kokoro gracefully — Piper voices still work.
 
 # Future TTS engines (uncomment when GPU VRAM >= threshold):
 # chatterbox-tts==0.1.7          # 350M params, <4.5 GB VRAM, emotive tags
