@@ -482,8 +482,10 @@ export default function SettingsPage() {
 // Voice Section — curated voice registry with install status + live switching
 // =============================================================================
 
-const QUALITY_LABELS = { low: 'Fast', medium: 'Balanced', high: 'High Quality' }
+const QUALITY_LABELS = { fast: 'Fast', balanced: 'Balanced', high: 'High Quality' }
 const ACCENT_ORDER   = ['American', 'British', 'British (Northern)']
+const ENGINE_LABELS  = { piper: 'Piper', kokoro: 'Kokoro · CPU' }
+const ENGINE_COLORS  = { piper: 'var(--md-outline)', kokoro: 'var(--md-tertiary)' }
 
 function VoiceSection({ voiceSettings, token, onSwitched }) {
   const [switching, setSwitching] = useState(null)
@@ -579,12 +581,20 @@ function VoiceSection({ voiceSettings, token, onSwitched }) {
                         </div>
 
                         <div className="model-card-meta">
-                          <span className={`badge badge--${v.quality === 'high' ? 'cost' : v.quality === 'low' ? 'cpu' : 'gpu'}`}>
-                            {QUALITY_LABELS[v.quality]}
+                          <span className={`badge badge--${v.quality === 'high' ? 'cost' : v.quality === 'fast' ? 'cpu' : 'gpu'}`}>
+                            {QUALITY_LABELS[v.quality] || v.quality}
                           </span>
-                          <span className="badge" style={{ background: 'var(--md-surface-container-highest)', color: 'var(--md-on-surface-variant)' }}>
-                            {v.size_mb.toFixed(0)} MB
+                          <span className="badge" style={{
+                            background: 'color-mix(in srgb,' + ENGINE_COLORS[v.engine] + ' 14%, transparent)',
+                            color: ENGINE_COLORS[v.engine],
+                          }}>
+                            {ENGINE_LABELS[v.engine] || v.engine}
                           </span>
+                          {v.engine === 'piper' && v.size_mb > 0 && (
+                            <span className="badge" style={{ background: 'var(--md-surface-container-highest)', color: 'var(--md-on-surface-variant)' }}>
+                              {v.size_mb.toFixed(0)} MB
+                            </span>
+                          )}
                         </div>
 
                         <div style={{ fontSize: '0.72rem', color: 'var(--md-on-surface-variant)', lineHeight: 1.4 }}>

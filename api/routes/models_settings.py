@@ -278,18 +278,29 @@ async def get_voice_settings(authorization: Optional[str] = Header(default=None)
     from providers.tts.voice_registry import VoiceRegistry
     import os
 
-    model_dir = os.path.dirname(model_path) if model_path else ""
-    active_filename = os.path.basename(model_path) if model_path else ""
+    model_dir       = os.path.dirname(model_path) if model_path else ""
+    active_voice_id = getattr(settings, "active_voice_id", "") or ""
 
     # Build the voice list from the registry, annotating installed/active status
     voices = []
     for entry in VoiceRegistry.list_all():
-        installed_path = os.path.join(model_dir, entry.filename) if model_dir else ""
-        installed = bool(installed_path and os.path.exists(installed_path))
-        active    = entry.filename == active_filename and installed
+        if entry.engine == "kokoro":
+            # Kokoro voices: always available once the package is installed;
+            # model auto-downloads from HuggingFace on first synthesize()
+            installed = True
+            path      = None
+        else:
+            # Piper voices: check for the .onnx file on disk
+            installed_path = os.path.join(model_dir, entry.filename) if model_dir and entry.filename else ""
+            installed = bool(installed_path and os.path.exists(installed_path))
+            path      = installed_path if installed else None
+
+        active = entry.voice_id == active_voice_id
+
         voices.append({
             "voice_id":    entry.voice_id,
             "display_name":entry.display_name,
+            "engine":      entry.engine,
             "filename":    entry.filename,
             "lang":        entry.lang,
             "accent":      entry.accent,
@@ -300,22 +311,25 @@ async def get_voice_settings(authorization: Optional[str] = Header(default=None)
             "default":     entry.default,
             "installed":   installed,
             "active":      active,
-            "path":        installed_path if installed else None,
+            "path":        path,
         })
 
-    # Active voice display name
-    active_entry = next((v for v in voices if v["active"]), None)
-    active_name  = active_entry["display_name"] if active_entry else (
-        active_filename.removesuffix(".onnx") if active_filename else "None"
-    )
+    active_entry   = next((v for v in voices if v["active"]), None)
+    active_name    = active_entry["display_name"] if active_entry else (active_voice_id or "None")
+    active_engine  = active_entry["engine"] if active_entry else provider
+    provider_labels = {
+        "piper":  "Piper (local binary)",
+        "kokoro": "Kokoro (neural, CPU)",
+        "none":   "Disabled",
+    }
 
     return {
-        "provider":       provider,
-        "provider_label": {"piper": "Piper (local)", "none": "Disabled"}.get(provider, provider),
-        "active_voice":   active_name,
-        "active_path":    model_path,
-        "active_voice_id": active_entry["voice_id"] if active_entry else None,
-        "voices":         voices,
+        "provider":        active_engine,
+        "provider_label":  provider_labels.get(active_engine, active_engine),
+        "active_voice":    active_name,
+        "active_path":     model_path,
+        "active_voice_id": active_voice_id,
+        "voices":          voices,
     }
 
 
@@ -329,8 +343,9 @@ async def set_active_voice(
     authorization: Optional[str] = Header(default=None),
 ):
     """
-    Switch the active Piper voice by updating PIPER_MODEL_PATH in .env.
-    The voice must be installed on disk (download it first via the download script).
+    Switch the active voice by writing ACTIVE_VOICE_ID (and PIPER_MODEL_PATH
+    for Piper voices) to .env.  Kokoro voices need no file check — the model
+    auto-downloads on first use.
     """
     _require_user(authorization)
     settings = get_settings()
@@ -343,43 +358,53 @@ async def set_active_voice(
     if not entry:
         raise HTTPException(status_code=404, detail=f"Unknown voice ID: {body.voice_id}")
 
-    model_dir = os.path.dirname(settings.piper_model_path) if settings.piper_model_path else ""
-    if not model_dir:
-        raise HTTPException(status_code=500, detail="PIPER_MODEL_PATH not configured.")
+    # Piper voices need the .onnx file to be present
+    if entry.engine == "piper":
+        model_dir = os.path.dirname(settings.piper_model_path) if settings.piper_model_path else ""
+        if not model_dir:
+            raise HTTPException(status_code=500, detail="PIPER_MODEL_PATH not configured.")
+        new_piper_path = os.path.join(model_dir, entry.filename)
+        if not os.path.exists(new_piper_path):
+            raise HTTPException(
+                status_code=404,
+                detail=f"{entry.display_name} is not installed. "
+                       f"Run: python scripts/download_voices.py {entry.voice_id}",
+            )
+    else:
+        new_piper_path = None  # Kokoro doesn't use a file path
 
-    new_path = os.path.join(model_dir, entry.filename)
-    if not os.path.exists(new_path):
-        raise HTTPException(
-            status_code=404,
-            detail=f"{entry.display_name} is not installed. Download it first: "
-                   f"python scripts/download_voices.py {entry.voice_id}"
-        )
-
-    # Rewrite PIPER_MODEL_PATH in .env
-    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+    # Rewrite .env
+    env_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"
+    )
     if not os.path.exists(env_path):
         raise HTTPException(status_code=500, detail=".env file not found.")
 
     with open(env_path, "r") as f:
         content = f.read()
 
-    pattern = r"^PIPER_MODEL_PATH=.*$"
-    replacement = f"PIPER_MODEL_PATH={new_path}"
-    new_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+    def _replace_or_append(text: str, key: str, value: str) -> str:
+        pattern     = rf"^{re.escape(key)}=.*$"
+        replacement = f"{key}={value}"
+        updated = re.sub(pattern, replacement, text, flags=re.MULTILINE)
+        if updated == text and replacement not in text:
+            updated = text.rstrip() + f"\n{replacement}\n"
+        return updated
 
-    if new_content == content and replacement not in content:
-        new_content = content.rstrip() + f"\nPIPER_MODEL_PATH={new_path}\n"
+    content = _replace_or_append(content, "ACTIVE_VOICE_ID", entry.voice_id)
+    if new_piper_path:
+        content = _replace_or_append(content, "PIPER_MODEL_PATH", new_piper_path)
 
     tmp = env_path + ".tmp"
     with open(tmp, "w") as f:
-        f.write(new_content)
+        f.write(content)
     os.replace(tmp, env_path)
 
-    logger.info("Voice switched to %s (%s)", entry.display_name, entry.voice_id)
+    logger.info("Voice switched to %s (%s) [%s]", entry.display_name, entry.voice_id, entry.engine)
     return {
-        "ok":          True,
-        "voice_id":    entry.voice_id,
-        "display_name":entry.display_name,
-        "path":        new_path,
-        "note":        "Restart the service for the new voice to take effect.",
+        "ok":           True,
+        "voice_id":     entry.voice_id,
+        "display_name": entry.display_name,
+        "engine":       entry.engine,
+        "note":         "Restart the service for the new voice to take effect.",
     }

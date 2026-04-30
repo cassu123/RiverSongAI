@@ -46,12 +46,24 @@ boto3==1.38.0                   # Amazon Bedrock (and AWS SDK)
 
 
 # -----------------------------------------------------------------------------
-# TTS -- Piper (local binary via subprocess)
-# Piper is NOT a pip package. Install separately:
-#   setup.sh handles download from github.com/rhasspy/piper/releases
-# Voice models: huggingface.co/rhasspy/piper-voices
-# sounddevice is intentionally excluded -- audio returns to browser as WAV bytes
+# TTS -- Multi-engine (Piper + Kokoro)
+#
+# Piper (local binary, zero Python deps):
+#   Binary: /usr/local/bin/piper  (pre-installed)
+#   Models: python scripts/download_voices.py [voice_id ...]
+#
+# Kokoro (Python, CPU-native, 82M params):
+#   28 built-in English voices, auto-downloads ~325 MB model on first use
+#   Runs real-time on CPU — no VRAM required
+#   github.com/hexgrad/kokoro
 # -----------------------------------------------------------------------------
+kokoro==0.9.4
+# kokoro-onnx==0.5.0            # Pure-ONNX variant — use if torch unavailable
+
+# Future TTS engines (uncomment when GPU VRAM >= threshold):
+# chatterbox-tts==0.1.7          # 350M params, <4.5 GB VRAM, emotive tags
+# f5-tts==1.1.20                 # Flow-matching, zero-shot cloning, needs 8 GB VRAM
+# outetts==0.4.4                 # 500M, GGUF-compatible CPU+GPU
 
 
 # -----------------------------------------------------------------------------
