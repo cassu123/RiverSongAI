@@ -48,10 +48,10 @@ class PiperTTS(TTSProvider):
     Returns raw WAV bytes -- no audio device is opened on the server.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, model_path_override: str = "") -> None:
         settings = get_settings()
         self._piper_path: str = settings.piper_executable_path
-        self._model_path: str = settings.piper_model_path
+        self._model_path: str = model_path_override or settings.piper_model_path
 
         # Single worker: TTS is sequential -- one response at a time.
         self._executor = ThreadPoolExecutor(

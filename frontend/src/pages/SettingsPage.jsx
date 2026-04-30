@@ -487,9 +487,32 @@ const ACCENT_ORDER   = ['American', 'British', 'British (Northern)']
 const ENGINE_LABELS  = { piper: 'Piper', kokoro: 'Kokoro · CPU' }
 const ENGINE_COLORS  = { piper: 'var(--md-outline)', kokoro: 'var(--md-tertiary)' }
 
+async function playVoicePreview(voice_id, token) {
+  const res = await fetch(`/api/tts/preview/${voice_id}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || res.statusText)
+  }
+  const { audio_b64 } = await res.json()
+  const binary = atob(audio_b64)
+  const bytes  = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  const ctx    = new AudioContext()
+  const buffer = await ctx.decodeAudioData(bytes.buffer)
+  const source = ctx.createBufferSource()
+  source.buffer = buffer
+  source.connect(ctx.destination)
+  source.start()
+  return new Promise(resolve => { source.onended = () => { ctx.close(); resolve() } })
+}
+
 function VoiceSection({ voiceSettings, token, onSwitched }) {
   const [switching, setSwitching] = useState(null)
   const [switchMsg, setSwitchMsg] = useState('')
+  const [previewing, setPreviewing] = useState(null)
+  const [previewErr, setPreviewErr] = useState('')
 
   if (voiceSettings.provider === 'none') {
     return (
@@ -502,6 +525,18 @@ function VoiceSection({ voiceSettings, token, onSwitched }) {
   const voices  = voiceSettings.voices || []
   const accents = [...new Set(voices.map(v => v.accent))]
     .sort((a, b) => (ACCENT_ORDER.indexOf(a) + 99) - (ACCENT_ORDER.indexOf(b) + 99))
+
+  const handlePreview = async (voice_id) => {
+    setPreviewing(voice_id)
+    setPreviewErr('')
+    try {
+      await playVoicePreview(voice_id, token)
+    } catch (e) {
+      setPreviewErr(`Preview failed: ${e.message}`)
+    } finally {
+      setPreviewing(null)
+    }
+  }
 
   const handleSelect = async (voice_id) => {
     setSwitching(voice_id)
@@ -537,10 +572,16 @@ function VoiceSection({ voiceSettings, token, onSwitched }) {
 
       {switchMsg && (
         <p className="settings-hint" style={{
-          marginBottom: 16,
+          marginBottom: 8,
           color: switchMsg.startsWith('✓') ? 'var(--md-tertiary)' : 'var(--md-error)',
         }}>
           {switchMsg}
+        </p>
+      )}
+
+      {previewErr && (
+        <p className="settings-hint" style={{ marginBottom: 8, color: 'var(--md-error)' }}>
+          {previewErr}
         </p>
       )}
 
@@ -600,6 +641,32 @@ function VoiceSection({ voiceSettings, token, onSwitched }) {
                         <div style={{ fontSize: '0.72rem', color: 'var(--md-on-surface-variant)', lineHeight: 1.4 }}>
                           {v.description}
                         </div>
+
+                        {/* Preview button */}
+                        {v.installed && (
+                          <button
+                            onClick={e => { e.stopPropagation(); handlePreview(v.voice_id) }}
+                            disabled={previewing === v.voice_id}
+                            style={{
+                              marginTop: 4,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              fontSize: '0.6875rem',
+                              fontWeight: 500,
+                              color: previewing === v.voice_id ? 'var(--md-primary)' : 'var(--md-on-surface-variant)',
+                              background: 'var(--md-surface-container-highest)',
+                              border: '1px solid var(--md-outline-variant)',
+                              borderRadius: 'var(--md-shape-full)',
+                              padding: '3px 10px',
+                              cursor: previewing === v.voice_id ? 'default' : 'pointer',
+                              transition: 'color 150ms, border-color 150ms',
+                              alignSelf: 'flex-start',
+                            }}
+                          >
+                            {previewing === v.voice_id ? '◉ Playing…' : '▶ Preview'}
+                          </button>
+                        )}
 
                         {!v.installed && <div className="model-card-locked">NOT INSTALLED</div>}
                         {switching === v.voice_id && <div className="model-card-locked" style={{ color: 'var(--md-primary)' }}>SWITCHING…</div>}

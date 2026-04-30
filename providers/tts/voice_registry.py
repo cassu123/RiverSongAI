@@ -41,6 +41,7 @@ class VoiceEntry:
     quality:      str    # "fast" | "balanced" | "high"
     size_mb:      float  # approximate download size
     description:  str    # one-line character note
+    preview_text: str    # short intro phrase played by the preview button
     default:      bool = False
     # Piper-only extras (blank for Kokoro)
     filename:     str = ""      # .onnx filename on disk
@@ -54,7 +55,7 @@ class VoiceEntry:
 _CATALOG: List[VoiceEntry] = [
 
     # =========================================================================
-    # PIPER VOICES — local .onnx files, downloaded via scripts/download_voices.py
+    # PIPER VOICES
     # =========================================================================
 
     # ── Piper · American Female ───────────────────────────────────────────────
@@ -65,6 +66,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/lessac/medium/en_US-lessac-medium.onnx",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=60.3, description="Warm, clear American female. Default River Song voice.",
+        preview_text="Hi, I'm River — your personal AI assistant. I'm ready when you are.",
         default=True,
     ),
     VoiceEntry(
@@ -74,6 +76,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/lessac/high/en_US-lessac-high.onnx",
         lang="en_US", accent="American", gender="female", quality="high",
         size_mb=108.6, description="River at full fidelity — richer, slightly slower.",
+        preview_text="Hi, I'm River — your personal AI assistant. I'm ready when you are.",
     ),
     VoiceEntry(
         voice_id="aurora",  display_name="Aurora",
@@ -82,6 +85,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/amy/medium/en_US-amy-medium.onnx",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=60.3, description="Bright, energetic American female.",
+        preview_text="Hey there! I'm Aurora, and I can't wait to help you get things done.",
     ),
     VoiceEntry(
         voice_id="sage",    display_name="Sage",
@@ -90,6 +94,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/kristin/medium/en_US-kristin-medium.onnx",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=60.6, description="Calm, measured American female.",
+        preview_text="Hello. I'm Sage. Ask me anything — I'm here to help, at your pace.",
     ),
     VoiceEntry(
         voice_id="echo",    display_name="Echo",
@@ -98,6 +103,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/ljspeech/medium/en_US-ljspeech-medium.onnx",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=60.6, description="Classic, crisp American female.",
+        preview_text="Hello, I'm Echo. Clear, direct, and ready to assist you.",
     ),
     VoiceEntry(
         voice_id="echo-hd", display_name="Echo HD",
@@ -106,6 +112,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/ljspeech/high/en_US-ljspeech-high.onnx",
         lang="en_US", accent="American", gender="female", quality="high",
         size_mb=108.9, description="Echo at full fidelity.",
+        preview_text="Hello, I'm Echo. Clear, direct, and ready to assist you.",
     ),
     VoiceEntry(
         voice_id="nova",    display_name="Nova",
@@ -114,6 +121,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=60.3, description="Smooth, modern American female.",
+        preview_text="Hi, I'm Nova. Let's make things happen — what can I do for you?",
     ),
 
     # ── Piper · American Male ────────────────────────────────────────────────
@@ -124,6 +132,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/ryan/medium/en_US-ryan-medium.onnx",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=60.3, description="Natural, confident American male.",
+        preview_text="Hey, I'm Atlas. Whatever you need, I've got you covered.",
     ),
     VoiceEntry(
         voice_id="atlas-hd", display_name="Atlas HD",
@@ -132,6 +141,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/ryan/high/en_US-ryan-high.onnx",
         lang="en_US", accent="American", gender="male", quality="high",
         size_mb=115.2, description="Atlas at full fidelity — deep and rich.",
+        preview_text="Hey, I'm Atlas. Whatever you need, I've got you covered.",
     ),
     VoiceEntry(
         voice_id="orion",   display_name="Orion",
@@ -140,6 +150,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/joe/medium/en_US-joe-medium.onnx",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=60.3, description="Casual, friendly American male.",
+        preview_text="Hey! Orion here. What are we working on today?",
     ),
     VoiceEntry(
         voice_id="sterling", display_name="Sterling",
@@ -148,6 +159,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/john/medium/en_US-john-medium.onnx",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=60.6, description="Authoritative American male.",
+        preview_text="Good day. I'm Sterling, and I'm at your service.",
     ),
     VoiceEntry(
         voice_id="falcon",  display_name="Falcon",
@@ -156,6 +168,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/norman/medium/en_US-norman-medium.onnx",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=60.6, description="Smooth, broadcast-style American male.",
+        preview_text="Hello, I'm Falcon. Precise, professional, and ready to assist.",
     ),
     VoiceEntry(
         voice_id="ghost",   display_name="Ghost",
@@ -164,6 +177,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/ryan/low/en_US-ryan-low.onnx",
         lang="en_US", accent="American", gender="male", quality="fast",
         size_mb=60.2, description="Fast low-latency male — best for quick responses.",
+        preview_text="Ghost here. Fast responses, no fuss — what do you need?",
     ),
     VoiceEntry(
         voice_id="vector",  display_name="Vector",
@@ -172,6 +186,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_US/hfc_male/medium/en_US-hfc_male-medium.onnx",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=60.3, description="Clean, neutral American male.",
+        preview_text="Hi, I'm Vector. Straightforward and ready to help.",
     ),
 
     # ── Piper · British Female ────────────────────────────────────────────────
@@ -182,6 +197,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_GB/cori/medium/en_GB-cori-medium.onnx",
         lang="en_GB", accent="British", gender="female", quality="balanced",
         size_mb=60.6, description="Warm, refined British female.",
+        preview_text="Hello, I'm Aria. Shall we get started? I'm here whenever you need me.",
     ),
     VoiceEntry(
         voice_id="aria-hd", display_name="Aria HD",
@@ -190,6 +206,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_GB/cori/high/en_GB-cori-high.onnx",
         lang="en_GB", accent="British", gender="female", quality="high",
         size_mb=108.9, description="Aria at full fidelity.",
+        preview_text="Hello, I'm Aria. Shall we get started? I'm here whenever you need me.",
     ),
     VoiceEntry(
         voice_id="luna",    display_name="Luna",
@@ -198,6 +215,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_GB/alba/medium/en_GB-alba-medium.onnx",
         lang="en_GB", accent="British", gender="female", quality="balanced",
         size_mb=60.3, description="Soft Scottish-accented female.",
+        preview_text="Hello there. I'm Luna — soft-spoken but always listening.",
     ),
     VoiceEntry(
         voice_id="ember",   display_name="Ember",
@@ -206,6 +224,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_GB/jenny_dioco/medium/en_GB-jenny_dioco-medium.onnx",
         lang="en_GB", accent="British", gender="female", quality="balanced",
         size_mb=60.3, description="Clear, expressive British female.",
+        preview_text="Hi, I'm Ember. I love a good conversation — what's on your mind?",
     ),
 
     # ── Piper · British Male ──────────────────────────────────────────────────
@@ -216,6 +235,7 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_GB/alan/medium/en_GB-alan-medium.onnx",
         lang="en_GB", accent="British", gender="male", quality="balanced",
         size_mb=60.3, description="Steady, authoritative British male.",
+        preview_text="Good day. Rex speaking. How may I assist you?",
     ),
     VoiceEntry(
         voice_id="blaze",   display_name="Blaze",
@@ -224,12 +244,11 @@ _CATALOG: List[VoiceEntry] = [
         hf_path="en/en_GB/northern_english_male/medium/en_GB-northern_english_male-medium.onnx",
         lang="en_GB", accent="British (Northern)", gender="male", quality="balanced",
         size_mb=60.3, description="Northern English male — grounded and direct.",
+        preview_text="Alright, I'm Blaze. No nonsense — just tell me what you need.",
     ),
 
     # =========================================================================
-    # KOKORO VOICES — pip install kokoro, runs on CPU, no VRAM needed
-    # 82M parameter neural TTS, ~325 MB shared model, ~real-time on CPU
-    # More natural prosody and intonation than Piper
+    # KOKORO VOICES
     # =========================================================================
 
     # ── Kokoro · American Female ──────────────────────────────────────────────
@@ -238,66 +257,77 @@ _CATALOG: List[VoiceEntry] = [
         engine="kokoro",    voice_code="af_sky",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=0, description="Airy, natural American female. Great all-rounder.",
+        preview_text="Hi, I'm Sky — light, clear, and always here for you.",
     ),
     VoiceEntry(
         voice_id="bella",   display_name="Bella",
         engine="kokoro",    voice_code="af_bella",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=0, description="Warm, expressive American female. Highly natural.",
+        preview_text="Hello! I'm Bella. I love helping people — so let's get to it.",
     ),
     VoiceEntry(
         voice_id="celeste", display_name="Celeste",
         engine="kokoro",    voice_code="af_river",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=0, description="Flowing, melodic American female.",
+        preview_text="Hello, I'm Celeste. I'm here to guide you through anything.",
     ),
     VoiceEntry(
         voice_id="scarlet", display_name="Scarlet",
         engine="kokoro",    voice_code="af_heart",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=0, description="Warm-hearted, emotive American female.",
+        preview_text="Hi there. I'm Scarlet — I care about getting things right for you.",
     ),
     VoiceEntry(
         voice_id="jade",    display_name="Jade",
         engine="kokoro",    voice_code="af_nicole",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=0, description="Smooth, refined American female.",
+        preview_text="Hello, I'm Jade. Thoughtful and ready to assist.",
     ),
     VoiceEntry(
         voice_id="harper",  display_name="Harper",
         engine="kokoro",    voice_code="af_sarah",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=0, description="Bright, conversational American female.",
+        preview_text="Hey! I'm Harper. What are we chatting about today?",
     ),
     VoiceEntry(
         voice_id="vega",    display_name="Vega",
         engine="kokoro",    voice_code="af_jessica",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=0, description="Clear, precise American female.",
+        preview_text="Hello, I'm Vega. Accurate, dependable, and ready to help.",
     ),
     VoiceEntry(
         voice_id="kore",    display_name="Kore",
         engine="kokoro",    voice_code="af_kore",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=0, description="Crisp, energetic American female.",
+        preview_text="Hi, I'm Kore! Give me something interesting to work with.",
     ),
     VoiceEntry(
         voice_id="lyra",    display_name="Lyra",
         engine="kokoro",    voice_code="af_nova",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=0, description="Modern, polished American female.",
+        preview_text="Hello, I'm Lyra — your sleek, capable AI assistant.",
     ),
     VoiceEntry(
         voice_id="alloy",   display_name="Alloy",
         engine="kokoro",    voice_code="af_alloy",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=0, description="Neutral, versatile American female.",
+        preview_text="Hi, I'm Alloy. Flexible and ready for whatever you throw at me.",
     ),
     VoiceEntry(
         voice_id="siren",   display_name="Siren",
         engine="kokoro",    voice_code="af_aoede",
         lang="en_US", accent="American", gender="female", quality="balanced",
         size_mb=0, description="Musical, compelling American female.",
+        preview_text="Hello. I'm Siren — and I have a feeling we'll work well together.",
     ),
 
     # ── Kokoro · American Male ────────────────────────────────────────────────
@@ -306,54 +336,63 @@ _CATALOG: List[VoiceEntry] = [
         engine="kokoro",    voice_code="am_adam",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=0, description="Strong, deep American male.",
+        preview_text="I'm Thor. Strong, steady, and here to carry the load.",
     ),
     VoiceEntry(
         voice_id="cipher",  display_name="Cipher",
         engine="kokoro",    voice_code="am_echo",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=0, description="Clear, resonant American male.",
+        preview_text="Cipher here. Anything complex? That's my specialty.",
     ),
     VoiceEntry(
         voice_id="bolt",    display_name="Bolt",
         engine="kokoro",    voice_code="am_eric",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=0, description="Energetic, direct American male.",
+        preview_text="Hey, I'm Bolt — fast answers, no delays. What do you need?",
     ),
     VoiceEntry(
         voice_id="fenrir",  display_name="Fenrir",
         engine="kokoro",    voice_code="am_fenrir",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=0, description="Commanding, powerful American male.",
+        preview_text="I'm Fenrir. Powerful, focused, and ready for a challenge.",
     ),
     VoiceEntry(
         voice_id="hawk",    display_name="Hawk",
         engine="kokoro",    voice_code="am_liam",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=0, description="Sharp, focused American male.",
+        preview_text="Hawk here — sharp eyes on the details. What can I help with?",
     ),
     VoiceEntry(
         voice_id="axiom",   display_name="Axiom",
         engine="kokoro",    voice_code="am_michael",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=0, description="Authoritative, broadcast American male.",
+        preview_text="Good day. I'm Axiom — authoritative, clear, and at your service.",
     ),
     VoiceEntry(
         voice_id="onyx",    display_name="Onyx",
         engine="kokoro",    voice_code="am_onyx",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=0, description="Deep, smooth American male.",
+        preview_text="Hello, I'm Onyx. Deep, smooth, and ready to assist.",
     ),
     VoiceEntry(
         voice_id="puck",    display_name="Puck",
         engine="kokoro",    voice_code="am_puck",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=0, description="Playful, quick-witted American male.",
+        preview_text="Puck here! Quick, clever, and full of good ideas — what's up?",
     ),
     VoiceEntry(
         voice_id="jolly",   display_name="Jolly",
         engine="kokoro",    voice_code="am_santa",
         lang="en_US", accent="American", gender="male", quality="balanced",
         size_mb=0, description="Warm, jolly American male. Seasonal favourite.",
+        preview_text="Ho ho! I'm Jolly, and helping you puts a smile on my face!",
     ),
 
     # ── Kokoro · British Female ────────────────────────────────────────────────
@@ -362,24 +401,28 @@ _CATALOG: List[VoiceEntry] = [
         engine="kokoro",    voice_code="bf_alice",
         lang="en_GB", accent="British", gender="female", quality="balanced",
         size_mb=0, description="Crisp, classic British female.",
+        preview_text="Hello, I'm Alice — crisp, proper, and entirely at your disposal.",
     ),
     VoiceEntry(
         voice_id="elara",   display_name="Elara",
         engine="kokoro",    voice_code="bf_emma",
         lang="en_GB", accent="British", gender="female", quality="balanced",
         size_mb=0, description="Refined, elegant British female.",
+        preview_text="Good day. I'm Elara. Refined and ready to be of service.",
     ),
     VoiceEntry(
         voice_id="isadora", display_name="Isadora",
         engine="kokoro",    voice_code="bf_isabella",
         lang="en_GB", accent="British", gender="female", quality="balanced",
         size_mb=0, description="Sophisticated, expressive British female.",
+        preview_text="Hello, I'm Isadora. Sophisticated assistance — that's what I do.",
     ),
     VoiceEntry(
         voice_id="lily",    display_name="Lily",
         engine="kokoro",    voice_code="bf_lily",
         lang="en_GB", accent="British", gender="female", quality="balanced",
         size_mb=0, description="Soft, melodic British female.",
+        preview_text="Hello there. I'm Lily — gentle, warm, and happy to help.",
     ),
 
     # ── Kokoro · British Male ─────────────────────────────────────────────────
@@ -388,24 +431,28 @@ _CATALOG: List[VoiceEntry] = [
         engine="kokoro",    voice_code="bm_daniel",
         lang="en_GB", accent="British", gender="male", quality="balanced",
         size_mb=0, description="Sharp, precise British male.",
+        preview_text="Dagger here. Sharp, precise — tell me what needs doing.",
     ),
     VoiceEntry(
         voice_id="fable",   display_name="Fable",
         engine="kokoro",    voice_code="bm_fable",
         lang="en_GB", accent="British", gender="male", quality="balanced",
         size_mb=0, description="Storytelling, narrative British male.",
+        preview_text="Hello, I'm Fable. Every question is a story worth exploring.",
     ),
     VoiceEntry(
         voice_id="baron",   display_name="Baron",
         engine="kokoro",    voice_code="bm_george",
         lang="en_GB", accent="British", gender="male", quality="balanced",
         size_mb=0, description="Distinguished, formal British male.",
+        preview_text="Good day. Baron at your service — distinguished and dependable.",
     ),
     VoiceEntry(
         voice_id="rook",    display_name="Rook",
         engine="kokoro",    voice_code="bm_lewis",
         lang="en_GB", accent="British", gender="male", quality="balanced",
         size_mb=0, description="Grounded, steady British male.",
+        preview_text="Rook here. Steady, reliable, and ready for whatever's next.",
     ),
 ]
 

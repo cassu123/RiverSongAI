@@ -408,3 +408,72 @@ async def set_active_voice(
         "engine":       entry.engine,
         "note":         "Restart the service for the new voice to take effect.",
     }
+
+
+# =============================================================================
+# Voice preview — synthesize a voice's intro phrase and return WAV base64
+# =============================================================================
+
+@router.get("/tts/preview/{voice_id}")
+async def preview_voice(
+    voice_id: str,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Synthesize the preview phrase for a given voice and return it as
+    base64-encoded WAV audio. The frontend plays this directly in the browser.
+    Works for both Piper (if installed) and Kokoro voices.
+    """
+    _require_user(authorization)
+
+    from providers.tts.voice_registry import VoiceRegistry
+    import base64
+    import os
+
+    entry = VoiceRegistry.get(voice_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail=f"Unknown voice ID: {voice_id}")
+
+    settings = get_settings()
+
+    # Build a temporary provider for this specific voice
+    try:
+        if entry.engine == "kokoro":
+            from providers.tts.kokoro_provider import KokoroTTS
+            provider = KokoroTTS(voice_code=entry.voice_code)
+
+        elif entry.engine == "piper":
+            model_dir = os.path.dirname(settings.piper_model_path) if settings.piper_model_path else ""
+            if not model_dir:
+                raise HTTPException(status_code=503, detail="PIPER_MODEL_PATH not configured.")
+            model_path = os.path.join(model_dir, entry.filename)
+            if not os.path.exists(model_path):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"{entry.display_name} is not installed. "
+                           f"Run: python scripts/download_voices.py {entry.voice_id}",
+                )
+            from providers.tts.piper import PiperTTS
+            # Override the model path for this preview only
+            provider = PiperTTS(model_path_override=model_path)
+
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported engine: {entry.engine}")
+
+        wav_bytes = await provider.synthesize(entry.preview_text)
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Voice preview failed for %s: %s", voice_id, exc)
+        raise HTTPException(status_code=502, detail=f"Synthesis failed: {exc}")
+
+    if not wav_bytes:
+        raise HTTPException(status_code=502, detail="No audio produced.")
+
+    return {
+        "voice_id":    entry.voice_id,
+        "display_name":entry.display_name,
+        "preview_text":entry.preview_text,
+        "audio_b64":   base64.b64encode(wav_bytes).decode("ascii"),
+    }
