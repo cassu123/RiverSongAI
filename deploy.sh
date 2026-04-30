@@ -13,6 +13,10 @@ source venv/bin/activate
 pip install "setuptools<71" --quiet
 pip install -r requirements.txt --no-build-isolation --quiet
 
+echo "==> Ensuring espeak-ng data path..."
+sudo mkdir -p /usr/share/espeak-ng-data
+sudo ln -sf /usr/lib/x86_64-linux-gnu/espeak-ng-data/* /usr/share/espeak-ng-data/ 2>/dev/null || true
+
 echo "==> Downloading voice models (new voices only)..."
 python scripts/download_voices.py
 
