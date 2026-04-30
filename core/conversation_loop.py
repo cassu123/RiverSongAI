@@ -124,25 +124,51 @@ def _build_llm_provider(
 
 def _build_tts_provider() -> TTSProvider:
     """
-    Instantiate the TTS provider named in TTS_PROVIDER.
+    Instantiate the TTS provider based on the active voice in the registry.
 
-    Returns:
-        TTSProvider: Concrete provider instance ready to use.
+    Resolution order:
+      1. Look up ACTIVE_VOICE_ID in the voice registry → use that entry's engine
+      2. Fall back to TTS_PROVIDER setting → piper | none
+      3. If TTS_PROVIDER is unset or "none" → NullTTS
 
-    Raises:
-        ValueError: If the configured provider key is not supported.
-        FileNotFoundError: If the Piper binary or model file is missing.
-        RuntimeError: If the provider fails to initialize.
+    This means switching voices via the Settings UI automatically switches the
+    underlying engine (piper ↔ kokoro) without touching TTS_PROVIDER in .env.
     """
-    key = get_settings().tts_provider
+    settings = get_settings()
+
+    # Try the voice registry first
+    active_id = getattr(settings, "active_voice_id", "") or ""
+    if active_id:
+        try:
+            from providers.tts.voice_registry import VoiceRegistry
+            entry = VoiceRegistry.get(active_id)
+            if entry:
+                if entry.engine == "kokoro":
+                    from providers.tts.kokoro_provider import KokoroTTS
+                    return KokoroTTS(voice_code=entry.voice_code)
+                if entry.engine == "piper":
+                    from providers.tts.piper import PiperTTS
+                    return PiperTTS()
+        except Exception as exc:
+            import logging as _log
+            _log.getLogger(__name__).warning(
+                "Voice registry lookup failed for '%s': %s — falling back to TTS_PROVIDER",
+                active_id, exc,
+            )
+
+    # Registry miss → fall back to legacy TTS_PROVIDER key
+    key = settings.tts_provider
     if key == "piper":
         from providers.tts.piper import PiperTTS
         return PiperTTS()
+    if key == "kokoro":
+        from providers.tts.kokoro_provider import KokoroTTS
+        return KokoroTTS()
     if key in ("none", "disabled", ""):
         from providers.tts.null_tts import NullTTS
         return NullTTS()
     raise ValueError(
-        f"Unsupported TTS_PROVIDER '{key}'. Supported values: piper, none"
+        f"Unsupported TTS_PROVIDER '{key}'. Supported values: piper | kokoro | none"
     )
 
 

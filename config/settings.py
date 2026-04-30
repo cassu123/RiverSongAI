@@ -181,7 +181,15 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     tts_provider: str = Field(
         default="piper",
-        description="TTS provider key. Supported: piper",
+        description="TTS provider key. Supported: piper | kokoro",
+    )
+    active_voice_id: str = Field(
+        default="river",
+        description=(
+            "Voice ID from the voice registry (providers/tts/voice_registry.py). "
+            "Determines both the engine (piper vs kokoro) and the specific voice. "
+            "Changed via Settings UI or: python scripts/download_voices.py."
+        ),
     )
     piper_executable_path: str = Field(
         default="/usr/local/bin/piper",
