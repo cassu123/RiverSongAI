@@ -369,6 +369,29 @@
   height: 56px;
 }
 
+.conv-mic-btn:active:not(:disabled) {
+  transform: scale(0.92);
+  background: rgba(0,170,255,0.15);
+  border-color: var(--primary);
+}
+
+.conv-status-strip {
+  text-align: center;
+  padding: 4px 16px;
+  flex-shrink: 0;
+}
+
+.conv-status-error {
+  font-size: 0.75rem;
+  color: var(--error);
+}
+
+.conv-status-waiting {
+  font-size: 0.72rem;
+  color: var(--md-outline);
+  letter-spacing: 0.04em;
+}
+
 .conv-input-bar--speak {
   justify-content: center;
   gap: 20px;

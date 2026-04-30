@@ -491,7 +491,7 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
     # ── Patterns ──────────────────────────────────────────────────────────────
     MI_UNIT  = r"(?:miles?|mi\.?|kilometers?|km)"
     DAY_UNIT = r"(?:years?|months?|weeks?|days?)"
-    NUM      = r"[\d,]+(?:\.\d+)?"
+    NUM      = r"\d[\d,]*(?:\.\d+)?"
 
     # Named mileage: "every 7,500 miles", "at 5000 km", "7,500-mile"
     RE_MI_NAMED = re.compile(
@@ -616,6 +616,8 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
         # Named mileage units
         for m in RE_MI_NAMED.finditer(text):
             raw, unit = m.group(1).replace(",", ""), m.group(2)
+            if not raw:
+                continue
             v = to_miles(float(raw), unit)
             if 100 <= v <= 200_000:
                 miles = v if miles is None else min(miles, v)
@@ -630,6 +632,8 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
         for m in RE_DAY_NAMED.finditer(text):
             if m.group(1) and m.group(2):
                 raw, unit = m.group(1).replace(",", ""), m.group(2)
+                if not raw:
+                    continue
                 v = to_days(float(raw), unit)
                 if 7 <= v <= 3650:
                     days = v if days is None else min(days, v)

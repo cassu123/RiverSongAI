@@ -50,9 +50,13 @@ function MdIcon({ name, size = 20, style }) {
 export default function Sidebar({
   currentPage, onNavigate, isAdmin, showAdminToggle, onAdminToggle,
   displayName, onLogout, mobileOpen, onMobileClose,
+  enabledFeatures, userIsAdmin,
 }) {
   const [collapsed, setCollapsed] = useState(false)
-  const items = isAdmin ? ADMIN_ITEMS : USER_ITEMS
+  const baseItems = isAdmin ? ADMIN_ITEMS : USER_ITEMS
+  const items = userIsAdmin || !enabledFeatures
+    ? baseItems
+    : baseItems.filter(i => enabledFeatures.has(i.key))
 
   const initials = displayName
     ? displayName.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()

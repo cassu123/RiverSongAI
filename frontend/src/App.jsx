@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth }        from './context/AuthContext.jsx'
 import Sidebar            from './components/Sidebar.jsx'
 import ErrorBoundary      from './components/ErrorBoundary.jsx'
@@ -25,7 +25,8 @@ import MaintenancePulsePage    from './pages/MaintenancePulsePage.jsx'
 import GoogleCallbackPage      from './pages/GoogleCallbackPage.jsx'
 import ReadingOAuthCallbackPage from './pages/ReadingOAuthCallbackPage.jsx'
 
-const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'analytics'])
+const ADMIN_PAGES    = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'analytics'])
+const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings']) // never hidden for non-child users
 
 function load(key, fallback) {
   try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback }
@@ -37,8 +38,9 @@ function save(key, value) {
 }
 
 export default function App() {
-  const { user, loading, logout, setupRequired } = useAuth()
+  const { user, token, loading, logout, setupRequired } = useAuth()
   const [authView,      setAuthView]      = useState('login') // 'login' | 'signup'
+  const [enabledFeatures, setEnabledFeatures] = useState(null) // null = not loaded yet
   const [currentPage,   setCurrentPage]   = useState(() => load('rs-page', 'speak'))
   const [adminMode,     setAdminMode]     = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -79,6 +81,23 @@ export default function App() {
     setAdminMode(userIsAdmin)
   }, [userIsAdmin])
 
+  // Load enabled features whenever user/token changes
+  useEffect(() => {
+    if (!user || !token) { setEnabledFeatures(null); return }
+    fetch('/api/features', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setEnabledFeatures(new Set(d.features || [])))
+      .catch(() => setEnabledFeatures(new Set()))
+  }, [user?.id, token])
+
+  const refreshFeatures = useCallback(() => {
+    if (!token) return
+    fetch('/api/features', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setEnabledFeatures(new Set(d.features || [])))
+      .catch(() => {})
+  }, [token])
+
   if (window.location.pathname === '/callback') {
     return <GoogleCallbackPage onSuccess={() => window.history.replaceState({}, '', '/')} />
   }
@@ -105,8 +124,16 @@ export default function App() {
       : <SignupPage onSwitchToLogin={()  => setAuthView('login')}  />
   }
 
+  const featureEnabled = (page) => {
+    if (userIsAdmin) return true
+    if (ALWAYS_VISIBLE.has(page)) return true
+    if (!enabledFeatures) return false
+    return enabledFeatures.has(page)
+  }
+
   const handleNavigate = (page) => {
     if (ADMIN_PAGES.has(page) && !adminMode) return
+    if (!featureEnabled(page)) return
     setCurrentPage(page)
     window.scrollTo(0, 0)
   }
@@ -148,6 +175,8 @@ export default function App() {
         onLogout={logout}
         mobileOpen={mobileNavOpen}
         onMobileClose={() => setMobileNavOpen(false)}
+        enabledFeatures={enabledFeatures}
+        userIsAdmin={userIsAdmin}
       />
 
       <main className="app-main">
@@ -169,7 +198,7 @@ export default function App() {
                 onThemeChange={setTheme}
               />
             )}
-            {currentPage === 'settings'   && <SettingsPage />}
+            {currentPage === 'settings'   && <SettingsPage onFeaturesChanged={refreshFeatures} />}
             {currentPage === 'feeds'      && <FeedsPage />}
             {currentPage === 'google'     && <GooglePage />}
             {currentPage === 'commerce'   && <CommercePage />}

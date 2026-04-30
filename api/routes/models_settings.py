@@ -113,7 +113,7 @@ def _get_enabled_providers() -> dict:
 # =============================================================================
 
 @router.get("/models")
-async def list_models():
+async def list_models(request: Request):
     """
     Return the LLM model catalog split into local and cloud sections.
     Local models include an `available` flag based on what Ollama has pulled.
@@ -122,17 +122,29 @@ async def list_models():
     installed = _get_ollama_installed_models()
     enabled   = _get_enabled_providers()
 
-    local_models = [_model_to_dict(m, installed) for m in LLMRegistry.list_local()]
+    hidden_llms: set[str] = set()
+    try:
+        config = await request.app.state.memory_manager._store.get_admin_config()
+        hidden_llms = set(config.get("hidden_llms", []))
+    except Exception:
+        pass
+
+    local_models = [
+        _model_to_dict(m, installed)
+        for m in LLMRegistry.list_local()
+        if m.model_id not in hidden_llms
+    ]
     cloud_models = [
         {**_model_to_dict(m), "available": enabled.get(m.provider, False)}
         for m in LLMRegistry.list_cloud()
+        if m.model_id not in hidden_llms
     ]
 
     return {
         "local":             local_models,
         "cloud":             cloud_models,
         "enabled_providers": enabled,
-        "ollama_reachable":  bool(installed) or True,  # True even if 0 models pulled
+        "ollama_reachable":  bool(installed) or True,
     }
 
 
@@ -294,17 +306,29 @@ async def get_voice_settings(
     except Exception:
         pass
 
+    # Check kokoro once — requires Python <3.13; skip all kokoro voices if unavailable
+    try:
+        import kokoro  # noqa: F401
+        kokoro_available = True
+    except ImportError:
+        kokoro_available = False
+
+    hidden_voices: set[str] = set()
+    try:
+        config = await request.app.state.memory_manager._store.get_admin_config()
+        hidden_voices = set(config.get("hidden_voices", []))
+    except Exception:
+        pass
+
     # Build the voice list from the registry, annotating installed/active status
     voices = []
     for entry in VoiceRegistry.list_all():
+        if entry.voice_id in hidden_voices:
+            continue
         if entry.engine == "kokoro":
-            # Kokoro voices: available only if the kokoro package is importable.
-            # kokoro requires Python <3.13; mark unavailable on Python 3.13+.
-            try:
-                import kokoro  # noqa: F401
-                installed = True
-            except ImportError:
-                installed = False
+            if not kokoro_available:
+                continue
+            installed = True
             path = None
         else:
             # Piper voices: check for the .onnx file on disk

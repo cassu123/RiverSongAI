@@ -45,6 +45,17 @@ logger = logging.getLogger(__name__)
 WHISPER_SAMPLE_RATE: int = 16_000
 
 
+def _cuda_usable() -> bool:
+    """Return True only if CUDA is available AND a quick tensor op succeeds."""
+    try:
+        import torch
+        t = torch.tensor([1.0], device="cuda")
+        _ = t + t
+        return True
+    except Exception:
+        return False
+
+
 class WhisperLocalSTT(STTProvider):
     """
     STT provider backed by a locally running Whisper model.
@@ -70,8 +81,10 @@ class WhisperLocalSTT(STTProvider):
             self._model_size,
         )
         try:
-            self._model = whisper.load_model(self._model_size)
-            logger.info("Whisper model '%s' loaded.", self._model_size)
+            import torch
+            device = "cuda" if torch.cuda.is_available() and _cuda_usable() else "cpu"
+            self._model = whisper.load_model(self._model_size, device=device)
+            logger.info("Whisper model '%s' loaded on %s.", self._model_size, device)
         except Exception as exc:
             raise RuntimeError(
                 f"Failed to load Whisper model '{self._model_size}': {exc}"

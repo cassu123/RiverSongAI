@@ -8,8 +8,8 @@
 // deal with CORS during development.
 //
 // Proxy rules:
-//   /health  -> http://localhost:8000/health   (REST health check)
-//   /ws      -> ws://localhost:8000/ws         (WebSocket conversation)
+//    /health  -> http://localhost:8000/health   (REST health check)
+//    /ws      -> ws://localhost:8000/ws         (WebSocket conversation)
 //
 // In production, serve the built frontend behind the same reverse proxy
 // as the backend (e.g., nginx), and these proxy rules are no longer needed.
@@ -23,6 +23,7 @@ export default defineConfig({
 
   server: {
     port: 5173,
+    allowedHosts: ['app.riversongai.com'],
     proxy: {
       // All REST API endpoints
       '/api': {

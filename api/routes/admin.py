@@ -14,6 +14,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request, Header
 from pydantic import BaseModel
 
+from api.routes.features import ALL_FEATURES, ALL_FEATURE_KEYS
+
 from core.auth import decode_token
 
 logger = logging.getLogger(__name__)
@@ -40,7 +42,12 @@ class UpdateUserBody(BaseModel):
     is_approved: Optional[bool] = None
 
 
-VALID_ROLES = {"admin", "user", "child", "guest"}
+class ModelVisibilityBody(BaseModel):
+    hidden_voices: list[str] = []
+    hidden_llms:   list[str] = []
+
+
+VALID_ROLES = {"admin", "parent", "user", "child", "guest"}
 
 
 @router.get("/users")
@@ -76,3 +83,199 @@ async def update_user(
 
     updated = await store.get_user_by_id(user_id)
     return updated
+
+
+# =============================================================================
+# Model visibility
+# =============================================================================
+
+@router.get("/model-visibility")
+async def get_model_visibility(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    store  = _get_store(request)
+    config = await store.get_admin_config()
+
+    hidden_voices = config.get("hidden_voices", [])
+    hidden_llms   = config.get("hidden_llms",   [])
+
+    # Full catalogs so the admin UI can render all toggles without a second call
+    import os
+    from config.settings import get_settings
+    from providers.tts.voice_registry import VoiceRegistry
+    from providers.llm.registry import LLMRegistry
+
+    settings  = get_settings()
+    model_dir = os.path.dirname(settings.piper_model_path) if settings.piper_model_path else ""
+
+    try:
+        import kokoro  # noqa: F401
+        kokoro_ok = True
+    except ImportError:
+        kokoro_ok = False
+
+    all_voices = []
+    for e in VoiceRegistry.list_all():
+        if e.engine == "kokoro" and not kokoro_ok:
+            continue
+        installed_path = os.path.join(model_dir, e.filename) if model_dir and e.filename else ""
+        all_voices.append({
+            "voice_id":     e.voice_id,
+            "display_name": e.display_name,
+            "engine":       e.engine,
+            "accent":       e.accent,
+            "installed":    bool(installed_path and os.path.exists(installed_path)),
+            "hidden":       e.voice_id in hidden_voices,
+        })
+
+    all_llms = []
+    for m in [*LLMRegistry.list_local(), *LLMRegistry.list_cloud()]:
+        all_llms.append({
+            "model_id":     m.model_id,
+            "display_name": m.display_name,
+            "provider":     m.provider,
+            "is_cloud":     m.is_cloud,
+            "hidden":       m.model_id in hidden_llms,
+        })
+
+    return {
+        "hidden_voices": hidden_voices,
+        "hidden_llms":   hidden_llms,
+        "all_voices":    all_voices,
+        "all_llms":      all_llms,
+    }
+
+
+@router.put("/model-visibility")
+async def set_model_visibility(
+    body: ModelVisibilityBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    store  = _get_store(request)
+    config = await store.get_admin_config()
+    config["hidden_voices"] = body.hidden_voices
+    config["hidden_llms"]   = body.hidden_llms
+    await store.set_admin_config(config)
+    logger.info("Admin updated model visibility: %d voices hidden, %d LLMs hidden",
+                len(body.hidden_voices), len(body.hidden_llms))
+    return {"hidden_voices": body.hidden_voices, "hidden_llms": body.hidden_llms}
+
+
+# =============================================================================
+# Feature visibility (global show/hide per feature key)
+# =============================================================================
+
+class FeatureVisibilityBody(BaseModel):
+    hidden_features: list[str] = []
+
+
+@router.get("/feature-visibility")
+async def get_feature_visibility(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    store  = _get_store(request)
+    config = await store.get_admin_config()
+    hidden = config.get("hidden_features", [])
+    return {
+        "hidden_features": hidden,
+        "all_features":    [
+            {**f, "hidden": f["key"] in hidden}
+            for f in ALL_FEATURES
+        ],
+    }
+
+
+@router.put("/feature-visibility")
+async def set_feature_visibility(
+    body: FeatureVisibilityBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    # Validate keys
+    invalid = [k for k in body.hidden_features if k not in ALL_FEATURE_KEYS]
+    if invalid:
+        raise HTTPException(status_code=400, detail=f"Unknown feature keys: {invalid}")
+    store  = _get_store(request)
+    config = await store.get_admin_config()
+    config["hidden_features"] = body.hidden_features
+    await store.set_admin_config(config)
+    logger.info("Admin updated feature visibility: %d features hidden", len(body.hidden_features))
+    return {"hidden_features": body.hidden_features}
+
+
+# =============================================================================
+# Family management — parent-child link assignment
+# =============================================================================
+
+class ParentChildBody(BaseModel):
+    parent_id: str
+    child_id:  str
+
+
+@router.get("/family")
+async def list_family(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    store = _get_store(request)
+    links = await store.list_all_parent_child()
+    users = await store.list_users()
+    return {"links": links, "users": users}
+
+
+@router.post("/family")
+async def add_family_link(
+    body: ParentChildBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    store   = _get_store(request)
+
+    parent = await store.get_user_by_id(body.parent_id)
+    child  = await store.get_user_by_id(body.child_id)
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent user not found.")
+    if not child:
+        raise HTTPException(status_code=404, detail="Child user not found.")
+    if body.parent_id == body.child_id:
+        raise HTTPException(status_code=400, detail="Parent and child cannot be the same user.")
+
+    await store.add_parent_child(body.parent_id, body.child_id)
+
+    # Auto-promote parent's role to 'parent' if they're a plain user
+    if parent["role"] == "user":
+        await store.update_user(body.parent_id, role="parent")
+
+    logger.info("Admin %s linked parent %s → child %s", payload["sub"], body.parent_id, body.child_id)
+    return {"parent_id": body.parent_id, "child_id": body.child_id}
+
+
+@router.delete("/family/{parent_id}/{child_id}")
+async def remove_family_link(
+    parent_id: str,
+    child_id:  str,
+    request:   Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    store   = _get_store(request)
+    await store.remove_parent_child(parent_id, child_id)
+
+    # If parent now has no children, demote back to user
+    remaining = await store.get_children_of_parent(parent_id)
+    if not remaining:
+        parent = await store.get_user_by_id(parent_id)
+        if parent and parent["role"] == "parent":
+            await store.update_user(parent_id, role="user")
+
+    logger.info("Admin %s removed parent %s → child %s link", payload["sub"], parent_id, child_id)
+    return {"removed": True}
