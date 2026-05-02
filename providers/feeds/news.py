@@ -121,6 +121,16 @@ SOURCE_CATEGORIES: Dict[str, Dict[str, str]] = {
     "science":       {"label": "Science",            "icon": "science"},
 }
 
+# Sports-related category keys — these belong on the Sports tab, not News
+SPORTS_CATEGORIES: frozenset = frozenset({"sports", "nfl", "nba", "mlb", "nhl", "nascar"})
+
+# Filtered views used by the respective API endpoints
+NEWS_SOURCES = [s for s in CURATED_SOURCES if s["category"] not in SPORTS_CATEGORIES]
+NEWS_SOURCE_CATEGORIES = {k: v for k, v in SOURCE_CATEGORIES.items() if k not in SPORTS_CATEGORIES}
+
+SPORTS_RSS_SOURCES = [s for s in CURATED_SOURCES if s["category"] in SPORTS_CATEGORIES]
+SPORTS_RSS_CATEGORIES = {k: v for k, v in SOURCE_CATEGORIES.items() if k in SPORTS_CATEGORIES}
+
 _NEWSAPI_BASE      = "https://newsapi.org/v2"
 _WORLD_NEWS_BASE   = "https://api.worldnewsapi.com"
 _APITUBE_BASE      = "https://apitube.io/v1/news"

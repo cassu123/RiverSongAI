@@ -198,6 +198,33 @@ CREATE TABLE IF NOT EXISTS child_features (
     child_id         TEXT PRIMARY KEY,
     enabled_features TEXT NOT NULL DEFAULT '[]'
 );
+
+CREATE TABLE IF NOT EXISTS analytics_platforms (
+    id          TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL,
+    platform    TEXT NOT NULL,
+    enabled     INTEGER NOT NULL DEFAULT 1,
+    api_key     TEXT NOT NULL DEFAULT '',
+    api_secret  TEXT NOT NULL DEFAULT '',
+    notes       TEXT NOT NULL DEFAULT '',
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    UNIQUE(user_id, platform)
+);
+
+CREATE TABLE IF NOT EXISTS analytics_snapshots (
+    id          TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL,
+    platform    TEXT NOT NULL,
+    date        TEXT NOT NULL,
+    metrics     TEXT NOT NULL DEFAULT '{}',
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    UNIQUE(user_id, platform, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_snapshots_user_platform
+    ON analytics_snapshots(user_id, platform, date);
 """
 
 
@@ -1192,4 +1219,148 @@ class SQLiteStore:
             "INSERT OR REPLACE INTO child_features (child_id, enabled_features) VALUES (?,?)",
             (child_id, json.dumps(features)),
         )
+
+    # -------------------------------------------------------------------------
+    # Analytics — platforms
+    # -------------------------------------------------------------------------
+
+    async def get_analytics_platforms(self, user_id: str) -> list[dict]:
+        return await self._run(self._sync_get_analytics_platforms, user_id)
+
+    def _sync_get_analytics_platforms(self, user_id: str) -> list[dict]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT * FROM analytics_platforms WHERE user_id=? ORDER BY platform",
+            (user_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    async def upsert_analytics_platform(
+        self, user_id: str, platform: str, enabled: bool,
+        api_key: str = "", api_secret: str = "", notes: str = "",
+    ) -> None:
+        await self._run(
+            self._sync_upsert_analytics_platform,
+            user_id, platform, enabled, api_key, api_secret, notes,
+        )
+
+    def _sync_upsert_analytics_platform(
+        self, user_id: str, platform: str, enabled: bool,
+        api_key: str, api_secret: str, notes: str,
+    ) -> None:
+        conn = self._get_conn()
+        now = _now_str()
+        existing = conn.execute(
+            "SELECT id FROM analytics_platforms WHERE user_id=? AND platform=?",
+            (user_id, platform),
+        ).fetchone()
+        if existing:
+            conn.execute(
+                """UPDATE analytics_platforms SET enabled=?, api_key=?, api_secret=?,
+                   notes=?, updated_at=? WHERE user_id=? AND platform=?""",
+                (int(enabled), api_key, api_secret, notes, now, user_id, platform),
+            )
+        else:
+            conn.execute(
+                """INSERT INTO analytics_platforms
+                   (id, user_id, platform, enabled, api_key, api_secret, notes, created_at, updated_at)
+                   VALUES (?,?,?,?,?,?,?,?,?)""",
+                (str(uuid.uuid4()), user_id, platform, int(enabled),
+                 api_key, api_secret, notes, now, now),
+            )
+        conn.commit()
+
+    async def delete_analytics_platform(self, user_id: str, platform: str) -> None:
+        await self._run(self._sync_delete_analytics_platform, user_id, platform)
+
+    def _sync_delete_analytics_platform(self, user_id: str, platform: str) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            "DELETE FROM analytics_platforms WHERE user_id=? AND platform=?",
+            (user_id, platform),
+        )
+        conn.commit()
+
+    # -------------------------------------------------------------------------
+    # Analytics — snapshots
+    # -------------------------------------------------------------------------
+
+    async def get_analytics_snapshots(
+        self, user_id: str, platform: Optional[str] = None, days: int = 90,
+    ) -> list[dict]:
+        return await self._run(self._sync_get_analytics_snapshots, user_id, platform, days)
+
+    def _sync_get_analytics_snapshots(
+        self, user_id: str, platform: Optional[str], days: int,
+    ) -> list[dict]:
+        conn = self._get_conn()
+        if platform:
+            rows = conn.execute(
+                """SELECT * FROM analytics_snapshots
+                   WHERE user_id=? AND platform=?
+                     AND date >= date('now', ?)
+                   ORDER BY platform, date""",
+                (user_id, platform, f"-{days} days"),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT * FROM analytics_snapshots
+                   WHERE user_id=?
+                     AND date >= date('now', ?)
+                   ORDER BY platform, date""",
+                (user_id, f"-{days} days"),
+            ).fetchall()
+        result = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d["metrics"] = json.loads(d["metrics"])
+            except (json.JSONDecodeError, TypeError):
+                d["metrics"] = {}
+            result.append(d)
+        return result
+
+    async def upsert_analytics_snapshot(
+        self, user_id: str, platform: str, date: str, metrics: dict,
+    ) -> str:
+        return await self._run(
+            self._sync_upsert_analytics_snapshot, user_id, platform, date, metrics,
+        )
+
+    def _sync_upsert_analytics_snapshot(
+        self, user_id: str, platform: str, date: str, metrics: dict,
+    ) -> str:
+        conn = self._get_conn()
+        now = _now_str()
+        existing = conn.execute(
+            "SELECT id FROM analytics_snapshots WHERE user_id=? AND platform=? AND date=?",
+            (user_id, platform, date),
+        ).fetchone()
+        if existing:
+            conn.execute(
+                "UPDATE analytics_snapshots SET metrics=?, updated_at=? WHERE id=?",
+                (json.dumps(metrics), now, existing[0]),
+            )
+            conn.commit()
+            return existing[0]
+        snap_id = str(uuid.uuid4())
+        conn.execute(
+            """INSERT INTO analytics_snapshots
+               (id, user_id, platform, date, metrics, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?)""",
+            (snap_id, user_id, platform, date, json.dumps(metrics), now, now),
+        )
+        conn.commit()
+        return snap_id
+
+    async def delete_analytics_snapshot(self, snapshot_id: str, user_id: str) -> None:
+        await self._run(self._sync_delete_analytics_snapshot, snapshot_id, user_id)
+
+    def _sync_delete_analytics_snapshot(self, snapshot_id: str, user_id: str) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            "DELETE FROM analytics_snapshots WHERE id=? AND user_id=?",
+            (snapshot_id, user_id),
+        )
+        conn.commit()
         conn.commit()

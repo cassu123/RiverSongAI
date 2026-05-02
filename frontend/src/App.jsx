@@ -20,12 +20,13 @@ import GooglePage         from './pages/GooglePage.jsx'
 import CommercePage       from './pages/CommercePage.jsx'
 import ReadingPage        from './pages/ReadingPage.jsx'
 import AnalyticsPage      from './pages/AnalyticsPage.jsx'
+import LinksPage          from './pages/LinksPage.jsx'
 import InventoryPage           from './pages/InventoryPage.jsx'
 import MaintenancePulsePage    from './pages/MaintenancePulsePage.jsx'
 import GoogleCallbackPage      from './pages/GoogleCallbackPage.jsx'
 import ReadingOAuthCallbackPage from './pages/ReadingOAuthCallbackPage.jsx'
 
-const ADMIN_PAGES    = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'analytics'])
+const ADMIN_PAGES    = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch'])
 const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings']) // never hidden for non-child users
 
 function load(key, fallback) {
@@ -57,7 +58,7 @@ export default function App() {
   useEffect(() => {
     save(themeKey, theme)
     document.documentElement.setAttribute('data-theme', theme)
-  }, [theme, themeKey])
+  }, [theme]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -196,6 +197,7 @@ export default function App() {
                 onSave={setProfile}
                 theme={theme}
                 onThemeChange={setTheme}
+                onNavigate={handleNavigate}
               />
             )}
             {currentPage === 'settings'   && <SettingsPage onFeaturesChanged={refreshFeatures} />}
@@ -204,6 +206,7 @@ export default function App() {
             {currentPage === 'commerce'   && <CommercePage />}
             {currentPage === 'reading'    && <ReadingPage />}
             {currentPage === 'analytics'  && <AnalyticsPage />}
+            {currentPage === 'links'      && <LinksPage onNavigate={handleNavigate} />}
             {currentPage === 'inventory'    && <InventoryPage />}
             {currentPage === 'maintenance' && <MaintenancePulsePage />}
           </div>

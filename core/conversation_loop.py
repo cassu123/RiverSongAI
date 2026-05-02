@@ -26,6 +26,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
 from typing import Any, Callable, Coroutine, List, Optional
@@ -229,13 +230,22 @@ class ConversationLoop:
             return
 
         logger.info("Initializing ConversationLoop providers...")
+        loop = asyncio.get_running_loop()
         try:
-            self._stt = _build_stt_provider()
-            self._llm = _build_llm_provider(
-                provider_override=self._llm_provider_override,
-                model_override=self._llm_model_override,
-            )
-            self._tts = _build_tts_provider(voice_id_override=self._voice_id_override)
+            llm_provider_override = self._llm_provider_override
+            llm_model_override    = self._llm_model_override
+            voice_id_override     = self._voice_id_override
+
+            def _build_all():
+                stt = _build_stt_provider()
+                llm = _build_llm_provider(
+                    provider_override=llm_provider_override,
+                    model_override=llm_model_override,
+                )
+                tts = _build_tts_provider(voice_id_override=voice_id_override)
+                return stt, llm, tts
+
+            self._stt, self._llm, self._tts = await loop.run_in_executor(None, _build_all)
         except Exception as exc:
             raise RuntimeError(
                 f"ConversationLoop failed to initialize: {exc}"

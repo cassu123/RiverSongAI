@@ -23,7 +23,12 @@ from pydantic import BaseModel
 
 from core.auth import decode_token
 from config.settings import get_settings
-from providers.feeds.news import fetch_articles, CURATED_SOURCES, SOURCE_CATEGORIES
+from providers.feeds.news import (
+    fetch_articles,
+    CURATED_SOURCES, SOURCE_CATEGORIES,
+    NEWS_SOURCES, NEWS_SOURCE_CATEGORIES,
+    SPORTS_RSS_SOURCES, SPORTS_RSS_CATEGORIES,
+)
 from providers.feeds.weather import fetch_weather, fetch_nws_alerts
 from providers.feeds.sports import search_teams, fetch_teams_feed, fetch_standings
 from providers.feeds.stocks import (
@@ -65,6 +70,7 @@ class PrefsUpdate(BaseModel):
     weather_lon: Optional[float] = None
     weather_unit: str = "celsius"
     sport_teams: list = []
+    sports_news_sources: list = []
     stock_tickers: list = []
     refresh_news_min: int = 30
     refresh_weather_min: int = 30
@@ -101,8 +107,14 @@ async def save_preferences(
 
 @router.get("/news/sources")
 async def get_news_sources():
-    """Return the full curated RSS source catalogue with category metadata."""
-    return {"sources": CURATED_SOURCES, "categories": SOURCE_CATEGORIES}
+    """Return curated RSS sources for the News tab (sports categories excluded)."""
+    return {"sources": NEWS_SOURCES, "categories": NEWS_SOURCE_CATEGORIES}
+
+
+@router.get("/sports/news/sources")
+async def get_sports_news_sources():
+    """Return sports RSS source catalogue for the Sports tab."""
+    return {"sources": SPORTS_RSS_SOURCES, "categories": SPORTS_RSS_CATEGORIES}
 
 
 @router.get("/news")
@@ -182,6 +194,29 @@ async def get_weather_alerts(
 # ---------------------------------------------------------------------------
 # Sports
 # ---------------------------------------------------------------------------
+
+@router.get("/sports/news")
+async def get_sports_news(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Fetch sports headline articles from RSS feeds for the Sports tab."""
+    user_id = _require_user(authorization)
+    store = _store(request)
+    prefs = await store.get_feed_preferences(user_id)
+
+    # Use user's saved sports news sources; fall back to all sports RSS sources
+    saved = prefs.get("sports_news_sources") or []
+    sources = saved if saved else SPORTS_RSS_SOURCES
+
+    settings = get_settings()
+    articles = await fetch_articles(
+        sources=sources,
+        newsapi_key=settings.news_api_key,
+        limit_per_source=8,
+    )
+    return articles
+
 
 @router.get("/sports/standings")
 async def get_standings(league_id: str = Query(...), season: str = Query(default="")):

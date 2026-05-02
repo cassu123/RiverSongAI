@@ -76,8 +76,11 @@ async def fetch_weather(
             "weathercode",
             "windspeed_10m",
             "winddirection_10m",
+            "windgusts_10m",
             "relative_humidity_2m",
             "precipitation",
+            "uv_index",
+            "visibility",
         ]),
         "hourly": ",".join([
             "temperature_2m",
@@ -92,6 +95,9 @@ async def fetch_weather(
             "temperature_2m_min",
             "precipitation_sum",
             "windspeed_10m_max",
+            "uv_index_max",
+            "sunrise",
+            "sunset",
         ]),
         "temperature_unit": temp_unit,
         "wind_speed_unit": wind_unit,
@@ -120,8 +126,11 @@ async def fetch_weather(
         "weathercode": current_raw.get("weathercode"),
         "wind_speed": current_raw.get("windspeed_10m"),
         "wind_direction": current_raw.get("winddirection_10m"),
+        "wind_gusts": current_raw.get("windgusts_10m"),
         "humidity": current_raw.get("relative_humidity_2m"),
         "precipitation": current_raw.get("precipitation"),
+        "uv_index": current_raw.get("uv_index"),
+        "visibility": current_raw.get("visibility"),  # metres
         "unit": unit_sym,
         "wind_unit": "km/h",
     }
@@ -156,20 +165,36 @@ async def fetch_weather(
             "wind_speed": hourly_wind[i] if i < len(hourly_wind) else None,
         })
 
+    def _daily_val(key: str, idx: int):
+        arr = daily_raw.get(key) or []
+        return arr[idx] if idx < len(arr) else None
+
     dates = daily_raw.get("time", [])
     daily: List[Dict[str, Any]] = []
     for i, date in enumerate(dates):
         daily.append({
             "date": date,
-            "condition": _WMO_CODES.get((daily_raw.get("weathercode") or [])[i] if daily_raw.get("weathercode") else -1, "Unknown"),
-            "weathercode": (daily_raw.get("weathercode") or [])[i] if daily_raw.get("weathercode") else None,
-            "temp_max": (daily_raw.get("temperature_2m_max") or [])[i] if daily_raw.get("temperature_2m_max") else None,
-            "temp_min": (daily_raw.get("temperature_2m_min") or [])[i] if daily_raw.get("temperature_2m_min") else None,
-            "precipitation": (daily_raw.get("precipitation_sum") or [])[i] if daily_raw.get("precipitation_sum") else None,
-            "wind_max": (daily_raw.get("windspeed_10m_max") or [])[i] if daily_raw.get("windspeed_10m_max") else None,
+            "condition": _WMO_CODES.get(_daily_val("weathercode", i) or -1, "Unknown"),
+            "weathercode": _daily_val("weathercode", i),
+            "temp_max": _daily_val("temperature_2m_max", i),
+            "temp_min": _daily_val("temperature_2m_min", i),
+            "precipitation": _daily_val("precipitation_sum", i),
+            "wind_max": _daily_val("windspeed_10m_max", i),
+            "uv_index_max": _daily_val("uv_index_max", i),
+            "sunrise": _daily_val("sunrise", i),
+            "sunset": _daily_val("sunset", i),
         })
 
-    air_quality = await fetch_air_quality(lat, lon)
+    import asyncio as _asyncio
+    air_quality, location_name = await _asyncio.gather(
+        fetch_air_quality(lat, lon),
+        _reverse_geocode(lat, lon),
+        return_exceptions=True,
+    )
+    if isinstance(air_quality, Exception):
+        air_quality = {}
+    if isinstance(location_name, Exception):
+        location_name = ""
 
     return {
         "current": current,
@@ -180,7 +205,29 @@ async def fetch_weather(
         "timezone": data.get("timezone"),
         "lat": lat,
         "lon": lon,
+        "location_name": location_name,
     }
+
+
+async def _reverse_geocode(lat: float, lon: float) -> str:
+    """Return a short human-readable location name via Nominatim (no key needed)."""
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={"lat": lat, "lon": lon, "format": "json", "zoom": 10},
+                headers={"User-Agent": "RiverSongAI/1.0 (riversongai.com)"},
+            )
+            resp.raise_for_status()
+            addr = resp.json().get("address", {})
+        parts = [
+            addr.get("city") or addr.get("town") or addr.get("village") or addr.get("county"),
+            addr.get("state"),
+        ]
+        return ", ".join(p for p in parts if p)
+    except Exception as exc:
+        logger.debug("Reverse geocode failed: %s", exc)
+        return ""
 
 
 async def fetch_air_quality(lat: float, lon: float) -> Dict[str, Any]:
