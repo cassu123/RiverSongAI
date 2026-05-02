@@ -63,6 +63,11 @@ export default function ConversationPage() {
     try { const v = localStorage.getItem(avatarKey(user.id)); return v === null ? true : v === 'true' } catch { return true }
   })
 
+  const [showTranscript, setShowTranscript] = useState(() => {
+    if (!user) return true
+    try { const v = localStorage.getItem(`rs-transcript:${user?.id}`); return v === null ? true : v === 'true' } catch { return true }
+  })
+
   // Read-only: active model + voice from settings (display only — change in Settings)
   const [activeModel, setActiveModel] = useState(null)   // { display_name, vram_gb }
   const [activeVoice, setActiveVoice] = useState(null)   // { active_voice, provider_label }
@@ -108,10 +113,16 @@ export default function ConversationPage() {
     if (user) { try { localStorage.setItem(avatarKey(user.id), String(next)) } catch {} }
   }
 
+  const toggleTranscript = () => {
+    const next = !showTranscript
+    setShowTranscript(next)
+    if (user) { try { localStorage.setItem(`rs-transcript:${user?.id}`, String(next)) } catch {} }
+  }
+
   const handleMessage = useCallback((event) => {
     const { type, text, message, data } = event
     switch (type) {
-      case 'connected':       setConvState('connecting'); setError(null); break
+      case 'connected':       setConvState('idle');       setError(null); break
       case 'listening':       setConvState('listening');  setStreamingResponse(''); setError(null); break
       case 'transcribing':    setConvState('transcribing'); break
       case 'transcript':      if (text) setMessages(p => [...p, { role: 'user', text }]); break
@@ -138,11 +149,31 @@ export default function ConversationPage() {
 
   const { sendMessage, connectionStatus } = useWebSocket(wsUrl, handleMessage)
 
+  // When the WebSocket connects, mark as idle so the mic becomes usable.
+  // The backend may take several seconds to initialize providers (Whisper,
+  // LLM, TTS) and its "connected"/"idle" messages can be delayed; this
+  // keeps the UI responsive regardless of backend timing.
+  useEffect(() => {
+    if (connectionStatus === 'connected') {
+      setConvState(s => (s === 'connecting' ? 'idle' : s))
+    } else if (connectionStatus === 'disconnected' || connectionStatus === 'reconnecting') {
+      setConvState('connecting')
+    }
+  }, [connectionStatus])
+
   const handleAudioComplete = useCallback(wavB64 => {
     sendMessage({ type: 'audio_data', data: wavB64 })
   }, [sendMessage])
 
-  const { startRecording, audioLevel } = useAudioRecorder({ onComplete: handleAudioComplete })
+  const handleNoSpeech = useCallback(() => {
+    // Recording ended without detecting speech — reset so user can try again
+    setConvState(s => (s === 'listening' ? 'idle' : s))
+  }, [])
+
+  const { startRecording, audioLevel } = useAudioRecorder({
+    onComplete: handleAudioComplete,
+    onNoSpeech: handleNoSpeech,
+  })
 
   const canSpeak  = convState === 'idle' && connectionStatus === 'connected'
   const isActive  = convState !== 'idle' && convState !== 'connecting'
@@ -155,9 +186,15 @@ export default function ConversationPage() {
       setError('Microphone not available. Use https://riversongai.com — mic requires HTTPS.')
       return
     }
+    // Show listening immediately — don't wait for backend round-trip
+    setConvState('listening')
     const granted = await startRecording()
-    if (granted) sendMessage({ type: 'start' })
-    else setError('Microphone access denied. Click the lock icon in your browser address bar and allow the microphone.')
+    if (granted) {
+      sendMessage({ type: 'start' })
+    } else {
+      setConvState('idle')
+      setError('Microphone access denied. Click the lock icon in your browser address bar and allow the microphone.')
+    }
   }, [canSpeak, startRecording, sendMessage])
 
   const handleReset = useCallback(() => {
@@ -239,6 +276,13 @@ export default function ConversationPage() {
             >
               <AvatarIcon />
             </button>
+            <button
+              className={`conv-icon-btn ${showTranscript ? 'conv-icon-btn--on' : ''}`}
+              onClick={toggleTranscript}
+              title={showTranscript ? 'Hide transcript' : 'Show transcript'}
+            >
+              <TranscriptIcon />
+            </button>
 
             {/* Compact model+voice when avatar hidden */}
             {!showAvatar && (activeModel || activeVoice) && (
@@ -309,12 +353,14 @@ export default function ConversationPage() {
               </div>
             )}
           </div>
-        ) : (
+        ) : showTranscript ? (
           <ConversationPanel messages={displayMessages} streamingResponse={displayStreaming} />
+        ) : (
+          <div className="conv-transcript-off">Transcript hidden — tap <TranscriptIcon /> to show</div>
         )}
 
-        {/* Status + error — always visible regardless of avatar */}
-        {(error || !canSpeak) && (
+        {/* Status + error — only show during initial connect or on error */}
+        {(error || convState === 'connecting') && (
           <div className="conv-status-strip">
             {error
               ? <span className="conv-status-error">{error}</span>
@@ -387,6 +433,17 @@ function ResetIcon() {
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
       <path d="M2 8a6 6 0 1 0 1.5-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
       <polyline points="2,4 2,8 6,8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function TranscriptIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+      <line x1="4.5" y1="5.5" x2="11.5" y2="5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="4.5" y1="8"   x2="11.5" y2="8"   stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="4.5" y1="10.5" x2="8.5" y2="10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
     </svg>
   )
 }

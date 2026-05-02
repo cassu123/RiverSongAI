@@ -76,13 +76,15 @@ function bufferToBase64(buffer) {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useAudioRecorder({ onComplete }) {
+export function useAudioRecorder({ onComplete, onNoSpeech }) {
   const [isRecording, setIsRecording] = useState(false)
   const [audioLevel,  setAudioLevel]  = useState(0)
 
-  // Keep onComplete ref fresh without invalidating the start/stop callbacks
+  // Keep callbacks fresh without invalidating start/stop
   const onCompleteRef = useRef(onComplete)
+  const onNoSpeechRef = useRef(onNoSpeech)
   useEffect(() => { onCompleteRef.current = onComplete }, [onComplete])
+  useEffect(() => { onNoSpeechRef.current = onNoSpeech }, [onNoSpeech])
 
   // Audio graph refs -- hold nodes between renders
   const contextRef   = useRef(null)
@@ -120,6 +122,8 @@ export function useAudioRecorder({ onComplete }) {
       const sampleRate = context?.sampleRate ?? 44100
       const wavBuf     = encodeWAV(flat, sampleRate)
       onCompleteRef.current?.(bufferToBase64(wavBuf))
+    } else {
+      onNoSpeechRef.current?.()
     }
 
     if (context && context.state !== 'closed') context.close().catch(() => {})

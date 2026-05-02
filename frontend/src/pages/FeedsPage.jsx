@@ -118,6 +118,8 @@ const SOURCE_CAT_COLORS = {
   sport:         '#80E8A0',  // legacy compat
 }
 
+const SPORTS_CATS = new Set(['sports', 'nfl', 'nba', 'mlb', 'nhl', 'nascar'])
+
 function NewsTab({ prefs, savePrefs }) {
   const [showSettings, setShowSettings] = useState(false)
   const [allSources, setAllSources]     = useState([])
@@ -204,6 +206,7 @@ function NewsTab({ prefs, savePrefs }) {
   }
 
   const filtered = articles.filter(a => {
+    if (SPORTS_CATS.has(a.category)) return false
     if (activeCat !== 'all' && a.category !== activeCat) return false
     if (search) {
       const q = search.toLowerCase()
@@ -398,6 +401,29 @@ function NewsTab({ prefs, savePrefs }) {
 // WEATHER TAB
 // =============================================================================
 
+const UV_LEVELS = [
+  { max: 2,  label: 'Low',       color: '#00cc44' },
+  { max: 5,  label: 'Moderate',  color: '#ffcc00' },
+  { max: 7,  label: 'High',      color: '#ff8800' },
+  { max: 10, label: 'Very High', color: '#ff3300' },
+  { max: 99, label: 'Extreme',   color: '#9933cc' },
+]
+
+function uvInfo(uv) {
+  if (uv == null) return null
+  return UV_LEVELS.find(l => uv <= l.max) || UV_LEVELS[UV_LEVELS.length - 1]
+}
+
+function WindArrow({ degrees }) {
+  return (
+    <span
+      className="feeds-wind-arrow"
+      style={{ transform: `rotate(${degrees}deg)` }}
+      title={`${degrees}°`}
+    >↑</span>
+  )
+}
+
 function WeatherTab({ prefs, savePrefs }) {
   const [showSettings, setShowSettings] = useState(false)
   const [weather, setWeather]           = useState(null)
@@ -406,33 +432,89 @@ function WeatherTab({ prefs, savePrefs }) {
   const [error, setError]               = useState('')
   const [locating, setLocating]         = useState(false)
   const [radarFrames, setRadarFrames]   = useState([])
+  const [secondsLeft, setSecondsLeft]   = useState(0)
+  const [expandedAlerts, setExpandedAlerts] = useState(new Set())
+  const [notifPermission, setNotifPermission] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
+  )
+  const timerRef      = useRef(null)
+  const alertPollRef  = useRef(null)
+  const seenAlertIds  = useRef(new Set(
+    JSON.parse(localStorage.getItem('rs-seen-alerts') || '[]')
+  ))
+
+  const loadAlerts = useCallback(async () => {
+    if (prefs?.weather_lat == null) return
+    try {
+      const al = await apiFetch('/weather/alerts')
+      const incoming = al.alerts || []
+      setAlerts(incoming)
+
+      // Fire browser notifications for new Extreme/Severe alerts
+      const newCritical = incoming.filter(a =>
+        (a.severity === 'Extreme' || a.severity === 'Severe') &&
+        !seenAlertIds.current.has(a.id)
+      )
+      newCritical.forEach(a => {
+        seenAlertIds.current.add(a.id)
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification(`⚠ ${a.event}`, {
+            body: a.headline,
+            tag: a.id,
+            icon: '/favicon.ico',
+          })
+        }
+      })
+      if (newCritical.length) {
+        localStorage.setItem('rs-seen-alerts', JSON.stringify([...seenAlertIds.current]))
+      }
+    } catch (_) { /* silently ignore alert failures */ }
+  }, [prefs?.weather_lat, prefs?.weather_lon])
 
   const load = useCallback(() => {
     if (prefs?.weather_lat == null) return
     setLoading(true)
     setError('')
-    Promise.all([
-      apiFetch('/weather'),
-      apiFetch('/weather/alerts').catch(() => ({ alerts: [], count: 0 })),
-    ])
-      .then(([wx, al]) => { setWeather(wx); setAlerts(al.alerts || []) })
+    apiFetch('/weather')
+      .then(wx => { setWeather(wx); startTimer() })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
-  }, [prefs?.weather_lat, prefs?.weather_lon, prefs?.weather_unit])
+    loadAlerts()
+  }, [prefs?.weather_lat, prefs?.weather_lon, prefs?.weather_unit]) // eslint-disable-line
 
   useEffect(() => { load() }, [load])
 
-  // Fetch all RainViewer radar frames for animation
+  // Auto-poll alerts every 5 minutes independently of the weather refresh
+  useEffect(() => {
+    if (prefs?.weather_lat == null) return
+    alertPollRef.current = setInterval(loadAlerts, 5 * 60 * 1000)
+    return () => clearInterval(alertPollRef.current)
+  }, [loadAlerts])
+
+  // Fetch RainViewer radar frames
   useEffect(() => {
     if (prefs?.weather_lat == null) return
     fetch('https://api.rainviewer.com/public/weather-maps.json')
       .then(r => r.json())
-      .then(d => {
-        const frames = d?.radar?.past || []
-        if (frames.length) setRadarFrames(frames)
-      })
-      .catch(e => console.warn('RainViewer fetch failed:', e))
+      .then(d => { const f = d?.radar?.past || []; if (f.length) setRadarFrames(f) })
+      .catch(() => {})
   }, [prefs?.weather_lat])
+
+  const startTimer = useCallback(() => {
+    const mins = prefs?.refresh_weather_min || 30
+    setSecondsLeft(mins * 60)
+  }, [prefs?.refresh_weather_min])
+
+  useEffect(() => {
+    if (secondsLeft <= 0) return
+    timerRef.current = setInterval(() => {
+      setSecondsLeft(s => {
+        if (s <= 1) { load(); return 0 }
+        return s - 1
+      })
+    }, 1000)
+    return () => clearInterval(timerRef.current)
+  }, [secondsLeft, load])
 
   const getLocation = () => {
     setLocating(true)
@@ -441,19 +523,52 @@ function WeatherTab({ prefs, savePrefs }) {
         savePrefs({ weather_lat: pos.coords.latitude, weather_lon: pos.coords.longitude })
         setLocating(false)
       },
-      () => {
-        setError('Location permission denied.')
-        setLocating(false)
-      }
+      () => { setError('Location permission denied.'); setLocating(false) }
     )
+  }
+
+  const requestNotifications = async () => {
+    if (typeof Notification === 'undefined') return
+    const result = await Notification.requestPermission()
+    setNotifPermission(result)
+  }
+
+  const toggleAlertExpand = (id) => {
+    setExpandedAlerts(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
   }
 
   const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+  const criticalAlerts = alerts.filter(a => a.severity === 'Extreme' || a.severity === 'Severe')
+  const refreshMins  = prefs?.refresh_weather_min || 30
+  const totalSecs    = refreshMins * 60
+  const progressPct  = totalSecs > 0 ? ((totalSecs - secondsLeft) / totalSecs) * 100 : 0
+  const minsLeft     = Math.floor(secondsLeft / 60)
+  const secsLeft     = secondsLeft % 60
+
   return (
     <>
+      {/* Extreme/Severe alert banner — shown at very top */}
+      {criticalAlerts.length > 0 && (
+        <div className="feeds-alert-banner" style={{ borderColor: criticalAlerts[0].color, background: criticalAlerts[0].color + '18' }}>
+          <span className="feeds-alert-banner-icon">⚠</span>
+          <span className="feeds-alert-banner-text" style={{ color: criticalAlerts[0].color }}>
+            {criticalAlerts.length === 1
+              ? criticalAlerts[0].event
+              : `${criticalAlerts.length} active ${criticalAlerts[0].severity.toLowerCase()} alerts`}
+          </span>
+          <span className="feeds-alert-banner-sub">{criticalAlerts[0].headline}</span>
+        </div>
+      )}
+
       <div className="feeds-section-header">
-        <span className="feeds-section-title">Current Weather</span>
+        <span className="feeds-section-title">
+          {weather?.location_name || 'Current Weather'}
+        </span>
         <button className="feeds-gear-btn" onClick={() => setShowSettings(s => !s)}>
           <IconGear /> {showSettings ? 'Close' : 'Settings'}
         </button>
@@ -476,24 +591,35 @@ function WeatherTab({ prefs, savePrefs }) {
           </div>
           <div className="feeds-settings-row">
             <span className="feeds-settings-label">Temperature unit</span>
-            <select
-              className="feeds-refresh-select"
-              value={prefs.weather_unit}
-              onChange={e => savePrefs({ weather_unit: e.target.value })}
-            >
+            <select className="feeds-refresh-select" value={prefs.weather_unit}
+              onChange={e => savePrefs({ weather_unit: e.target.value })}>
               <option value="celsius">Celsius (°C)</option>
               <option value="fahrenheit">Fahrenheit (°F)</option>
             </select>
           </div>
           <div className="feeds-settings-row">
             <span className="feeds-settings-label">Refresh interval</span>
-            <select
-              className="feeds-refresh-select"
-              value={prefs.refresh_weather_min}
-              onChange={e => savePrefs({ refresh_weather_min: Number(e.target.value) })}
-            >
+            <select className="feeds-refresh-select" value={prefs.refresh_weather_min}
+              onChange={e => savePrefs({ refresh_weather_min: Number(e.target.value) })}>
               {REFRESH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
+          </div>
+          <div className="feeds-settings-row">
+            <span className="feeds-settings-label">Severe weather notifications</span>
+            {notifPermission === 'unsupported' && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Not supported in this browser.</span>
+            )}
+            {notifPermission === 'granted' && (
+              <span style={{ fontSize: '0.8rem', color: '#00cc44' }}>✓ Enabled — you'll be alerted for Extreme and Severe events.</span>
+            )}
+            {notifPermission === 'denied' && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--error)' }}>Blocked — enable notifications for this site in your browser settings.</span>
+            )}
+            {notifPermission === 'default' && (
+              <button className="btn--primary" onClick={requestNotifications}>
+                Enable Notifications
+              </button>
+            )}
           </div>
           <div className="feeds-settings-actions">
             <button className="btn--primary" onClick={() => { load(); setShowSettings(false) }}>
@@ -504,9 +630,7 @@ function WeatherTab({ prefs, savePrefs }) {
       )}
 
       {prefs?.weather_lat == null && (
-        <div className="feeds-empty">
-          No location set. Open Settings and click "Use My Location".
-        </div>
+        <div className="feeds-empty">No location set. Open Settings and click "Use My Location".</div>
       )}
 
       {loading && <div className="feeds-loading">Fetching weather…</div>}
@@ -514,31 +638,133 @@ function WeatherTab({ prefs, savePrefs }) {
 
       {weather && !loading && (
         <>
+          {/* Refresh countdown */}
+          {secondsLeft > 0 && (
+            <div className="feeds-refresh-bar">
+              <div className="feeds-refresh-progress">
+                <div className="feeds-refresh-fill" style={{ width: `${progressPct}%` }} />
+              </div>
+              <span>Refresh in {minsLeft}:{String(secsLeft).padStart(2, '0')}</span>
+              <button className="feeds-refresh-now-btn" onClick={load}>Refresh now</button>
+            </div>
+          )}
+
           {/* Current conditions */}
           <div className="feeds-weather-current">
-            <div>
+            <div className="feeds-weather-current-primary">
               <div className="feeds-weather-temp">
                 {Math.round(weather.current.temperature)}{weather.unit}
               </div>
+              <div className="feeds-wx-icon" style={{ fontSize: '2.5rem' }}>{wmoIcon(weather.current.weathercode)}</div>
               <div className="feeds-weather-condition">{weather.current.condition}</div>
             </div>
-            <div className="feeds-weather-meta">
-              <div className="feeds-weather-meta-item">
-                Feels like {Math.round(weather.current.feels_like)}{weather.unit}
+            <div className="feeds-weather-detail-grid">
+              <div className="feeds-weather-detail-item">
+                <span className="feeds-weather-detail-label">Feels like</span>
+                <span className="feeds-weather-detail-val">{Math.round(weather.current.feels_like)}{weather.unit}</span>
               </div>
-              <div className="feeds-weather-meta-item">
-                Humidity {weather.current.humidity}%
+              <div className="feeds-weather-detail-item">
+                <span className="feeds-weather-detail-label">Humidity</span>
+                <span className="feeds-weather-detail-val">{weather.current.humidity}%</span>
               </div>
-              <div className="feeds-weather-meta-item">
-                Wind {weather.current.wind_speed} {weather.current.wind_unit}
+              <div className="feeds-weather-detail-item">
+                <span className="feeds-weather-detail-label">Wind</span>
+                <span className="feeds-weather-detail-val">
+                  {weather.current.wind_direction != null && <WindArrow degrees={weather.current.wind_direction} />}
+                  {' '}{weather.current.wind_speed} {weather.current.wind_unit}
+                </span>
               </div>
+              {weather.current.wind_gusts != null && (
+                <div className="feeds-weather-detail-item">
+                  <span className="feeds-weather-detail-label">Gusts</span>
+                  <span className="feeds-weather-detail-val">{weather.current.wind_gusts} {weather.current.wind_unit}</span>
+                </div>
+              )}
+              {weather.current.visibility != null && (
+                <div className="feeds-weather-detail-item">
+                  <span className="feeds-weather-detail-label">Visibility</span>
+                  <span className="feeds-weather-detail-val">
+                    {weather.current.visibility >= 1000
+                      ? `${(weather.current.visibility / 1000).toFixed(0)} km`
+                      : `${weather.current.visibility} m`}
+                  </span>
+                </div>
+              )}
+              {weather.current.uv_index != null && (() => {
+                const uv = uvInfo(weather.current.uv_index)
+                return (
+                  <div className="feeds-weather-detail-item">
+                    <span className="feeds-weather-detail-label">UV Index</span>
+                    <span className="feeds-uv-badge" style={{ color: uv.color }}>
+                      {weather.current.uv_index} <span style={{ fontSize: '0.68rem' }}>{uv.label}</span>
+                    </span>
+                  </div>
+                )
+              })()}
               {weather.current.precipitation > 0 && (
-                <div className="feeds-weather-meta-item">
-                  Precipitation {weather.current.precipitation} mm
+                <div className="feeds-weather-detail-item">
+                  <span className="feeds-weather-detail-label">Precip</span>
+                  <span className="feeds-weather-detail-val">{weather.current.precipitation} mm</span>
                 </div>
               )}
             </div>
           </div>
+
+          {/* Active alerts — right below current conditions */}
+          {alerts.length > 0 && (
+            <>
+              <div className="feeds-subsection-label" style={{ color: alerts[0].color }}>
+                ⚠ Active Alerts ({alerts.length})
+              </div>
+              <div className="feeds-nws-alerts">
+                {alerts.map(alert => {
+                  const expanded = expandedAlerts.has(alert.id)
+                  return (
+                    <div key={alert.id} className="feeds-nws-alert"
+                      style={{ borderColor: alert.color, background: alert.color + '14' }}>
+                      <div className="feeds-nws-alert-header">
+                        <span className="feeds-nws-alert-event" style={{ color: alert.color }}>
+                          {alert.event}
+                        </span>
+                        <span className="feeds-nws-alert-sev"
+                          style={{ background: alert.color + '28', color: alert.color }}>
+                          {alert.severity}
+                        </span>
+                        {alert.urgency && (
+                          <span className="feeds-nws-alert-sev" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-dim)' }}>
+                            {alert.urgency}
+                          </span>
+                        )}
+                      </div>
+                      <div className="feeds-nws-alert-headline">{alert.headline}</div>
+                      {alert.description && (
+                        <>
+                          <div className={`feeds-nws-alert-desc${expanded ? ' feeds-nws-alert-desc--expanded' : ''}`}>
+                            {alert.description}
+                          </div>
+                          {alert.description.length > 200 && (
+                            <button className="feeds-alert-expand-btn" onClick={() => toggleAlertExpand(alert.id)}>
+                              {expanded ? '▲ Show less' : '▼ Show more'}
+                            </button>
+                          )}
+                        </>
+                      )}
+                      {alert.instruction && (
+                        <div className="feeds-nws-alert-instruction">
+                          <strong>What to do:</strong> {alert.instruction}
+                        </div>
+                      )}
+                      <div className="feeds-nws-alert-meta">
+                        {alert.onset && <span>Onset: {new Date(alert.onset).toLocaleString()}</span>}
+                        {alert.expires && <span>Expires: {new Date(alert.expires).toLocaleString()}</span>}
+                        <span style={{ marginLeft: 'auto' }}>{alert.sender}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
 
           {/* Hourly strip */}
           {weather.hourly?.length > 0 && (
@@ -569,6 +795,9 @@ function WeatherTab({ prefs, savePrefs }) {
             {weather.daily.map((day, i) => {
               const d = new Date(day.date + 'T00:00:00')
               const name = i === 0 ? 'Today' : DAY_NAMES[d.getDay()]
+              const uv = uvInfo(day.uv_index_max)
+              const rise = day.sunrise ? new Date(day.sunrise).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : null
+              const set  = day.sunset  ? new Date(day.sunset).toLocaleTimeString('en-US',  { hour: 'numeric', minute: '2-digit', hour12: true }) : null
               return (
                 <div key={day.date} className="feeds-weather-day">
                   <div className="feeds-weather-day-name">{name}</div>
@@ -576,6 +805,12 @@ function WeatherTab({ prefs, savePrefs }) {
                   <div className="feeds-weather-day-high">{Math.round(day.temp_max)}{weather.unit}</div>
                   <div className="feeds-weather-day-low">{Math.round(day.temp_min)}{weather.unit}</div>
                   <div className="feeds-weather-day-cond">{day.condition}</div>
+                  {day.precipitation > 0 && (
+                    <div style={{ fontSize: '0.62rem', color: '#4db8ff' }}>💧{day.precipitation}mm</div>
+                  )}
+                  {uv && <div className="feeds-weather-day-uv" style={{ color: uv.color }}>UV {day.uv_index_max}</div>}
+                  {rise && <div className="feeds-weather-day-sun">🌅{rise}</div>}
+                  {set  && <div className="feeds-weather-day-sun">🌇{set}</div>}
                 </div>
               )
             })}
@@ -586,49 +821,6 @@ function WeatherTab({ prefs, savePrefs }) {
             <>
               <div className="feeds-subsection-label">Air Quality</div>
               <AirQualityPanel aq={weather.air_quality} />
-            </>
-          )}
-
-          {/* NWS Active Alerts */}
-          {alerts.length > 0 && (
-            <>
-              <div className="feeds-subsection-label" style={{ color: alerts[0]?.color }}>
-                ⚠ Active Alerts ({alerts.length})
-              </div>
-              <div className="feeds-nws-alerts">
-                {alerts.map(alert => (
-                  <div
-                    key={alert.id}
-                    className="feeds-nws-alert"
-                    style={{ borderColor: alert.color, background: alert.color + '14' }}
-                  >
-                    <div className="feeds-nws-alert-header">
-                      <span className="feeds-nws-alert-event" style={{ color: alert.color }}>
-                        {alert.event}
-                      </span>
-                      <span className="feeds-nws-alert-sev"
-                        style={{ background: alert.color + '28', color: alert.color }}>
-                        {alert.severity}
-                      </span>
-                    </div>
-                    <div className="feeds-nws-alert-headline">{alert.headline}</div>
-                    {alert.description && (
-                      <div className="feeds-nws-alert-desc">{alert.description}</div>
-                    )}
-                    {alert.instruction && (
-                      <div className="feeds-nws-alert-instruction">
-                        <strong>What to do:</strong> {alert.instruction}
-                      </div>
-                    )}
-                    <div className="feeds-nws-alert-meta">
-                      {alert.expires && (
-                        <span>Expires: {new Date(alert.expires).toLocaleString()}</span>
-                      )}
-                      <span style={{ marginLeft: 'auto' }}>{alert.sender}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </>
           )}
 
@@ -843,6 +1035,12 @@ function SportsTab({ prefs, savePrefs }) {
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
   const searchTimer = useRef(null)
+  const [headlines, setHeadlines] = useState([])
+  const [headlinesLoading, setHeadlinesLoading] = useState(false)
+  const [headlinesError, setHeadlinesError] = useState('')
+  const [headlineSearch, setHeadlineSearch] = useState('')
+  const [allSportsSources, setAllSportsSources] = useState([])
+  const [sportsCatMeta, setSportsCatMeta] = useState({})
 
   const load = useCallback(() => {
     if (!prefs?.sport_teams?.length) return
@@ -867,6 +1065,28 @@ function SportsTab({ prefs, savePrefs }) {
     })
   }, [prefs?.sport_teams])
 
+  // Load available sports RSS sources
+  useEffect(() => {
+    apiFetch('/sports/news/sources')
+      .then(data => {
+        setAllSportsSources(Array.isArray(data) ? data : (data.sources || []))
+        setSportsCatMeta(Array.isArray(data) ? {} : (data.categories || {}))
+      })
+      .catch(() => {})
+  }, [])
+
+  // Reload sports headlines whenever selected sources change
+  const loadHeadlines = useCallback(() => {
+    setHeadlinesLoading(true)
+    setHeadlinesError('')
+    apiFetch('/sports/news')
+      .then(setHeadlines)
+      .catch(e => setHeadlinesError(e.message))
+      .finally(() => setHeadlinesLoading(false))
+  }, [prefs?.sports_news_sources]) // eslint-disable-line
+
+  useEffect(() => { loadHeadlines() }, [loadHeadlines])
+
   const doSearch = (q) => {
     clearTimeout(searchTimer.current)
     setSearchQ(q)
@@ -886,6 +1106,14 @@ function SportsTab({ prefs, savePrefs }) {
   }
   const removeTeam = (id) => savePrefs({ sport_teams: (prefs.sport_teams || []).filter(t => t.id !== id) })
   const isAdded = (id) => (prefs?.sport_teams || []).some(t => t.id === id)
+
+  const toggleSportsSource = (src) => {
+    const current = prefs.sports_news_sources || []
+    const exists = current.find(s => s.url === src.url)
+    const updated = exists ? current.filter(s => s.url !== src.url) : [...current, src]
+    savePrefs({ sports_news_sources: updated })
+  }
+  const isSportsSourceSelected = (src) => (prefs?.sports_news_sources || []).some(s => s.url === src.url)
 
   const teams = prefs?.sport_teams || []
 
@@ -957,6 +1185,51 @@ function SportsTab({ prefs, savePrefs }) {
             </div>
           )}
 
+          {allSportsSources.length > 0 && (
+            <div className="feeds-settings-row">
+              <span className="feeds-settings-label">Headlines sources</span>
+              {[...new Set(allSportsSources.map(s => s.category))].map(cat => {
+                const meta  = sportsCatMeta[cat] || {}
+                const label = meta.label || cat
+                const color = SOURCE_CAT_COLORS[cat] || 'var(--md-on-surface-variant)'
+                const sourcesInCat = allSportsSources.filter(s => s.category === cat)
+                const selectedCount = sourcesInCat.filter(s => isSportsSourceSelected(s)).length
+                return (
+                  <div key={cat}>
+                    <div className="feeds-sports-section-title" style={{ marginTop: 14, color }}>
+                      {label}
+                      {selectedCount > 0 && (
+                        <span style={{
+                          marginLeft: 8, fontSize: '0.625rem', fontWeight: 500,
+                          background: color + '22', color, borderRadius: 10, padding: '1px 7px',
+                        }}>
+                          {selectedCount} selected
+                        </span>
+                      )}
+                    </div>
+                    <div className="feeds-source-category-grid">
+                      {sourcesInCat.map(src => (
+                        <button
+                          key={src.url}
+                          className={`feeds-source-cat-btn${isSportsSourceSelected(src) ? ' feeds-source-cat-btn--active' : ''}`}
+                          style={isSportsSourceSelected(src) ? { '--cat-color': color, borderColor: color, color } : {}}
+                          onClick={() => toggleSportsSource(src)}
+                        >
+                          {src.name} {isSportsSourceSelected(src) && '✓'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+              {(prefs?.sports_news_sources?.length ?? 0) === 0 && (
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: 8 }}>
+                  No sources selected — all sports headlines are shown by default.
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="feeds-settings-row">
             <span className="feeds-settings-label">Refresh interval</span>
             <select className="feeds-refresh-select" value={prefs.refresh_sports_min}
@@ -965,7 +1238,7 @@ function SportsTab({ prefs, savePrefs }) {
             </select>
           </div>
           <div className="feeds-settings-actions">
-            <button className="btn--primary" onClick={() => { load(); setShowSettings(false) }}>Apply & Refresh</button>
+            <button className="btn--primary" onClick={() => { load(); loadHeadlines(); setShowSettings(false) }}>Apply & Refresh</button>
           </div>
         </div>
       )}
@@ -992,7 +1265,7 @@ function SportsTab({ prefs, savePrefs }) {
 
           {/* Sub-tabs */}
           <div className="feeds-sports-tab-bar">
-            {['results', 'fixtures', 'standings'].map(tab => (
+            {['results', 'fixtures', 'standings', 'headlines'].map(tab => (
               <button key={tab}
                 className={`feeds-sports-tab${sportsTab === tab ? ' feeds-sports-tab--active' : ''}`}
                 onClick={() => setSportsTab(tab)}>
@@ -1039,6 +1312,51 @@ function SportsTab({ prefs, savePrefs }) {
                   <StandingsTable rows={rows} followedIds={followedTeamIds} />
                 </div>
               ))}
+            </>
+          )}
+
+          {sportsTab === 'headlines' && (
+            <>
+              <input
+                className="feeds-news-search"
+                style={{ marginBottom: 12 }}
+                placeholder="Search sports headlines…"
+                value={headlineSearch}
+                onChange={e => setHeadlineSearch(e.target.value)}
+              />
+              {headlinesLoading && <div className="feeds-loading">Fetching sports headlines…</div>}
+              {headlinesError && <div className="feeds-error">{headlinesError}</div>}
+              {!headlinesLoading && headlines.length > 0 && (() => {
+                const q = headlineSearch.toLowerCase()
+                const shown = headlineSearch
+                  ? headlines.filter(a => (a.title + a.summary + a.source).toLowerCase().includes(q))
+                  : headlines
+                return shown.length > 0
+                  ? <div className="feeds-news-list">
+                      {shown.map(a => (
+                        <a
+                          key={a.id || a.url}
+                          className="feeds-news-list-item"
+                          href={a.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {a.image_url && <img className="feeds-news-list-thumb" src={a.image_url} alt="" loading="lazy" onError={e => { e.target.style.display = 'none' }} />}
+                          <div className="feeds-news-list-text">
+                            <div className="feeds-news-list-title">{a.title}</div>
+                            <div className="feeds-news-list-meta">
+                              <span style={{ color: SOURCE_CAT_COLORS[a.category] || 'var(--primary)' }}>{a.source}</span>
+                              <span>{formatDate(a.published_at)}</span>
+                            </div>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  : <div className="feeds-empty">No headlines match your search.</div>
+              })()}
+              {!headlinesLoading && !headlinesError && headlines.length === 0 && (
+                <div className="feeds-empty">No sports headlines found.</div>
+              )}
             </>
           )}
         </>

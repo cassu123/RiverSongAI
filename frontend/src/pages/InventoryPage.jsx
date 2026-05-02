@@ -914,9 +914,220 @@ function CollaboratorsPanel({ home }) {
   )
 }
 
+// ─── Print Tab ───────────────────────────────────────────────────────────────
+
+const LABEL_PRESETS = [
+  { key: '12mm', label: '12mm Tape', w: 55, h: 12, tier: 0 },
+  { key: '18mm', label: '18mm Tape', w: 65, h: 18, tier: 1 },
+  { key: '24mm', label: '24mm Tape', w: 75, h: 24, tier: 2 },
+  { key: '36mm', label: '36mm Tape', w: 90, h: 36, tier: 3 },
+  { key: 'full', label: 'Full Page', w: null, h: null, tier: 4 },
+]
+
+function LabelCard({ item, preset, showQR, showSerial, showMfr, showLoc }) {
+  const raw = item.qr_code_data || ''
+  const qrSrc = raw
+    ? (raw.startsWith('data:') ? raw : `data:image/png;base64,${raw}`)
+    : null
+
+  if (preset.tier === 4) {
+    return (
+      <div className="inv-label inv-label--full">
+        <div className="inv-label-full-body">
+          <div className="inv-label-full-ein">{item.ein}</div>
+          <div className="inv-label-full-name">{item.name}</div>
+          {showMfr && (item.manufacturer || item.model_number) && (
+            <div className="inv-label-full-field">
+              {[item.manufacturer, item.model_number].filter(Boolean).join(' · ')}
+            </div>
+          )}
+          {showSerial && item.serial_number && (
+            <div className="inv-label-full-field">S/N: {item.serial_number}</div>
+          )}
+          {showLoc && item.location && (
+            <div className="inv-label-full-field">{item.location}</div>
+          )}
+        </div>
+        {showQR && qrSrc && <img src={qrSrc} alt="label" className="inv-label-full-qr" />}
+      </div>
+    )
+  }
+
+  const tapeStyle = { width: `${preset.w}mm`, height: `${preset.h}mm` }
+  const qrSize   = `${preset.h - 2}mm`
+
+  return (
+    <div className={`inv-label inv-label--tape inv-label--${preset.key}`} style={tapeStyle}>
+      {showQR && preset.tier >= 2 && qrSrc && (
+        <img src={qrSrc} alt="label" className="inv-label-tape-qr" style={{ height: qrSize, width: qrSize }} />
+      )}
+      <div className="inv-label-tape-text">
+        <div className={`inv-label-tape-ein${preset.tier === 0 ? ' inv-label-tape-ein--solo' : ''}`}>{item.ein}</div>
+        {preset.tier >= 1 && <div className="inv-label-tape-name">{item.name}</div>}
+        {preset.tier >= 2 && showSerial && item.serial_number && (
+          <div className="inv-label-tape-sub">S/N: {item.serial_number}</div>
+        )}
+        {preset.tier >= 2 && showMfr && item.manufacturer && (
+          <div className="inv-label-tape-sub">{item.manufacturer}</div>
+        )}
+        {preset.tier >= 2 && showLoc && item.location && (
+          <div className="inv-label-tape-sub">{item.location}</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PrintTab({ items }) {
+  const [selected,   setSelected]   = useState(() => new Set(items.map(i => i.id)))
+  const [presetKey,  setPresetKey]  = useState('24mm')
+  const [copies,     setCopies]     = useState(1)
+  const [showQR,     setShowQR]     = useState(true)
+  const [showSerial, setShowSerial] = useState(true)
+  const [showMfr,    setShowMfr]    = useState(true)
+  const [showLoc,    setShowLoc]    = useState(false)
+
+  const preset        = LABEL_PRESETS.find(p => p.key === presetKey) || LABEL_PRESETS[2]
+  const selectedItems = items.filter(i => selected.has(i.id))
+  const totalLabels   = selectedItems.length * copies
+
+  const toggleItem = (id) => setSelected(prev => {
+    const n = new Set(prev)
+    n.has(id) ? n.delete(id) : n.add(id)
+    return n
+  })
+
+  const handlePrint = () => {
+    const old = document.getElementById('inv-dyn-print-style')
+    if (old) old.remove()
+    const s = document.createElement('style')
+    s.id = 'inv-dyn-print-style'
+    s.textContent = preset.tier < 4
+      ? `@page { size: ${preset.w}mm ${preset.h}mm; margin: 0.5mm; }`
+      : `@page { size: letter; margin: 0.4in; }`
+    document.head.appendChild(s)
+    window.print()
+    setTimeout(() => document.getElementById('inv-dyn-print-style')?.remove(), 2000)
+  }
+
+  const fieldRows = [
+    { label: 'QR / Barcode',    val: showQR,     set: setShowQR,     enabled: preset.tier >= 2 },
+    { label: 'Serial Number',   val: showSerial, set: setShowSerial, enabled: preset.tier >= 2 },
+    { label: 'Manufacturer',    val: showMfr,    set: setShowMfr,    enabled: preset.tier >= 2 },
+    { label: 'Location / Room', val: showLoc,    set: setShowLoc,    enabled: preset.tier >= 2 },
+  ]
+
+  return (
+    <div className="inv-print-tab">
+      {/* Hidden print output — visible only during window.print() */}
+      <div id="inv-print-root">
+        <div className={`inv-label-sheet inv-label-sheet--${preset.key}`}>
+          {selectedItems.flatMap((item) =>
+            Array.from({ length: copies }, (_, ci) => (
+              <LabelCard
+                key={`${item.id}-${ci}`}
+                item={item}
+                preset={preset}
+                showQR={showQR}
+                showSerial={showSerial}
+                showMfr={showMfr}
+                showLoc={showLoc}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="inv-print-layout">
+        {/* Item selection */}
+        <div className="inv-print-panel">
+          <div className="inv-print-panel-header">
+            <span className="inv-print-panel-title">SELECT ITEMS</span>
+            <div className="inv-print-sel-btns">
+              <button className="inv-btn inv-btn--ghost inv-btn--sm" onClick={() => setSelected(new Set(items.map(i => i.id)))}>ALL</button>
+              <button className="inv-btn inv-btn--ghost inv-btn--sm" onClick={() => setSelected(new Set())}>NONE</button>
+              <span className="inv-print-count">{selected.size}/{items.length}</span>
+            </div>
+          </div>
+          <div className="inv-print-item-list">
+            {items.map(item => (
+              <label key={item.id} className="inv-print-item-row">
+                <input type="checkbox" checked={selected.has(item.id)} onChange={() => toggleItem(item.id)} />
+                <span className="inv-print-item-name">{item.name}</span>
+                <span className="inv-print-item-ein">{item.ein}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Settings + print */}
+        <div className="inv-print-panel inv-print-panel--right">
+          <div className="inv-print-panel-title">LABEL SIZE</div>
+          <div className="inv-print-size-grid">
+            {LABEL_PRESETS.map(p => (
+              <button
+                key={p.key}
+                className={`inv-print-size-btn${presetKey === p.key ? ' inv-print-size-btn--active' : ''}`}
+                onClick={() => setPresetKey(p.key)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="inv-print-panel-title" style={{ marginTop: 18 }}>FIELDS</div>
+          {fieldRows.map(({ label, val, set, enabled }) => (
+            <label key={label} className={`inv-print-toggle${!enabled ? ' inv-print-toggle--dim' : ''}`}>
+              <input type="checkbox" checked={val && enabled} disabled={!enabled} onChange={e => set(e.target.checked)} />
+              {label}
+              {!enabled && <span className="inv-print-toggle-note">not on {preset.key}</span>}
+            </label>
+          ))}
+
+          <div className="inv-print-panel-title" style={{ marginTop: 18 }}>COPIES PER LABEL</div>
+          <input
+            type="number" min={1} max={10} value={copies}
+            className="inv-input inv-print-copies"
+            onChange={e => setCopies(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+          />
+
+          <button className="inv-btn inv-print-btn" onClick={handlePrint} disabled={selected.size === 0}>
+            PRINT {totalLabels} LABEL{totalLabels !== 1 ? 'S' : ''}
+          </button>
+
+          {preset.tier < 4 && (
+            <div className="inv-print-tip">
+              Set your P-touch tape width to <strong>{preset.key}</strong> in your printer driver before printing.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* On-screen preview */}
+      <div className="inv-print-preview-wrap">
+        <div className="inv-print-panel-title">PREVIEW — {preset.label}</div>
+        {selectedItems.length === 0 ? (
+          <div className="inv-empty-state inv-empty-state--sm">No items selected.</div>
+        ) : (
+          <div className="inv-print-preview">
+            <LabelCard
+              item={selectedItems[0]}
+              preset={preset}
+              showQR={showQR}
+              showSerial={showSerial}
+              showMfr={showMfr}
+              showLoc={showLoc}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main page ───────────────────────────────────────────────────────────────
 
-const PAGE_TABS = ['ITEMS', 'AUDIT', 'HISTORY', 'SETTINGS']
+const PAGE_TABS = ['ITEMS', 'AUDIT', 'HISTORY', 'PRINT', 'SETTINGS']
 
 export default function InventoryPage() {
   const { token } = useAuth()
@@ -1236,6 +1447,11 @@ export default function InventoryPage() {
       {/* History tab */}
       {activeHome && activeTab === 'HISTORY' && (
         <HistoryTab home={activeHome} token={token} userTimezone={userTimezone} />
+      )}
+
+      {/* Print tab */}
+      {activeHome && activeTab === 'PRINT' && (
+        <PrintTab items={items} />
       )}
 
       {/* Modals */}

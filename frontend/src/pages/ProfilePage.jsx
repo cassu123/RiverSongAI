@@ -13,7 +13,7 @@ const THEMES = [
   { key: 'dune',      label: 'Dune',      primary: '#deb651', bg: '#0a0804' },
 ]
 
-export default function ProfilePage({ profile, onSave, theme, onThemeChange }) {
+export default function ProfilePage({ profile, onSave, theme, onThemeChange, onNavigate }) {
   const { token } = useAuth()
   const [form,    setForm]    = useState({ ...profile })
   const [pwForm,  setPwForm]  = useState({ current: '', next: '', confirm: '' })
@@ -218,6 +218,15 @@ export default function ProfilePage({ profile, onSave, theme, onThemeChange }) {
                 </button>
               ))}
             </div>
+          </section>
+
+          {/* Linked Accounts shortcut */}
+          <section className="card profile-links-card">
+            <div className="card-title">LINKED ACCOUNTS</div>
+            <p className="profile-hint">Connect TikTok, Amazon, Etsy, Instagram, and more to power your Analytics dashboard.</p>
+            <button className="btn btn--outlined profile-links-btn" onClick={() => onNavigate?.('links')}>
+              Manage Linked Accounts →
+            </button>
           </section>
         </div>
       </div>

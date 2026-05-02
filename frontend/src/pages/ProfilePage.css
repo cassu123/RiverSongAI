@@ -259,3 +259,8 @@
     width: 100%;
   }
 }
+
+.profile-links-btn {
+  margin-top: 10px;
+  font-size: 0.7rem !important;
+}
