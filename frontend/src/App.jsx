@@ -23,6 +23,7 @@ import AnalyticsPage      from './pages/AnalyticsPage.jsx'
 import LinksPage          from './pages/LinksPage.jsx'
 import InventoryPage           from './pages/InventoryPage.jsx'
 import MaintenancePulsePage    from './pages/MaintenancePulsePage.jsx'
+import CulinaryPage            from './pages/CulinaryPage.jsx'
 import GoogleCallbackPage      from './pages/GoogleCallbackPage.jsx'
 import ReadingOAuthCallbackPage from './pages/ReadingOAuthCallbackPage.jsx'
 
@@ -209,6 +210,7 @@ export default function App() {
             {currentPage === 'links'      && <LinksPage onNavigate={handleNavigate} />}
             {currentPage === 'inventory'    && <InventoryPage />}
             {currentPage === 'maintenance' && <MaintenancePulsePage />}
+            {currentPage === 'culinary'    && <CulinaryPage />}
           </div>
         </ErrorBoundary>
       </main>
