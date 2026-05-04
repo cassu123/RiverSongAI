@@ -16,6 +16,7 @@ const USER_ITEMS = [
   { key: 'feeds',       label: 'Feeds',       icon: 'feed' },
   { key: 'google',      label: 'Google',      icon: 'hub',      soon: true },
   { key: 'reading',     label: 'Reading',     icon: 'auto_stories' },
+  { key: 'culinary',    label: 'Culinary',    icon: 'restaurant_menu' },
 ]
 
 const ADMIN_ITEMS = [
@@ -33,6 +34,7 @@ const ADMIN_ITEMS = [
   { key: 'feeds',       label: 'Feeds',       icon: 'feed' },
   { key: 'google',      label: 'Google',      icon: 'hub',        soon: true },
   { key: 'reading',     label: 'Reading',     icon: 'auto_stories' },
+  { key: 'culinary',    label: 'Culinary',    icon: 'restaurant_menu' },
   { key: 'users',       label: 'Users',       icon: 'group' },
   { key: 'killswitch',  label: 'Kill Switch', icon: 'power_settings_new' },
 ]
