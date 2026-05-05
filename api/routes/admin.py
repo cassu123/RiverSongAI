@@ -9,7 +9,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
+import uuid
+from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Header
 from pydantic import BaseModel
@@ -279,3 +280,124 @@ async def remove_family_link(
 
     logger.info("Admin %s removed parent %s → child %s link", payload["sub"], parent_id, child_id)
     return {"removed": True}
+
+
+# =============================================================================
+# Family Groups — shared access to culinary / inventory / store / maintenance
+# =============================================================================
+
+VALID_MODULES    = {"culinary", "inventory", "store", "maintenance"}
+VALID_RELATIONS  = {"parent", "child", "spouse", "guardian", "member", "other"}
+
+
+class FamilyGroupCreate(BaseModel):
+    name:           str
+    shared_modules: List[str] = ["culinary", "inventory", "store", "maintenance"]
+
+
+class FamilyGroupUpdate(BaseModel):
+    name:           Optional[str]       = None
+    shared_modules: Optional[List[str]] = None
+
+
+class FamilyMemberAdd(BaseModel):
+    profile_id:   str
+    relationship: str = "member"
+
+
+@router.get("/family-groups")
+async def list_family_groups(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    store = _get_store(request)
+    groups = await store.list_family_groups()
+    users  = await store.list_users()
+    return {"groups": groups, "users": users}
+
+
+@router.post("/family-groups", status_code=201)
+async def create_family_group(
+    body:    FamilyGroupCreate,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    invalid = [m for m in body.shared_modules if m not in VALID_MODULES]
+    if invalid:
+        raise HTTPException(status_code=400, detail=f"Invalid modules: {invalid}")
+    store    = _get_store(request)
+    group_id = str(uuid.uuid4())
+    group    = await store.create_family_group(group_id, body.name.strip(), body.shared_modules)
+    logger.info("Admin %s created family group %s (%s)", payload["sub"], group_id, body.name)
+    return group
+
+
+@router.patch("/family-groups/{group_id}")
+async def update_family_group(
+    group_id: str,
+    body:     FamilyGroupUpdate,
+    request:  Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    if body.shared_modules is not None:
+        invalid = [m for m in body.shared_modules if m not in VALID_MODULES]
+        if invalid:
+            raise HTTPException(status_code=400, detail=f"Invalid modules: {invalid}")
+    store  = _get_store(request)
+    result = await store.update_family_group(group_id, body.name, body.shared_modules)
+    if not result:
+        raise HTTPException(status_code=404, detail="Family group not found.")
+    return result
+
+
+@router.delete("/family-groups/{group_id}", status_code=204)
+async def delete_family_group(
+    group_id: str,
+    request:  Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    store   = _get_store(request)
+    group   = await store.get_family_group(group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Family group not found.")
+    await store.delete_family_group(group_id)
+    logger.info("Admin %s deleted family group %s", payload["sub"], group_id)
+
+
+@router.post("/family-groups/{group_id}/members", status_code=201)
+async def add_family_member(
+    group_id: str,
+    body:     FamilyMemberAdd,
+    request:  Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    if body.relationship not in VALID_RELATIONS:
+        raise HTTPException(status_code=400, detail=f"Invalid relationship. Choose from: {', '.join(VALID_RELATIONS)}")
+    store = _get_store(request)
+    group = await store.get_family_group(group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Family group not found.")
+    user = await store.get_user_by_id(body.profile_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    result = await store.add_family_member(group_id, body.profile_id, body.relationship)
+    logger.info("Admin %s added %s to family group %s as %s", payload["sub"], body.profile_id, group_id, body.relationship)
+    return result
+
+
+@router.delete("/family-groups/{group_id}/members/{profile_id}", status_code=204)
+async def remove_family_member(
+    group_id:   str,
+    profile_id: str,
+    request:    Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    store   = _get_store(request)
+    await store.remove_family_member(group_id, profile_id)
+    logger.info("Admin %s removed %s from family group %s", payload["sub"], profile_id, group_id)
