@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useWebSocket } from '../hooks/useWebSocket.js'
 import './CulinaryPage.css'
 
 // ── tiny helpers ─────────────────────────────────────────────────────────────
@@ -51,6 +52,33 @@ function smartCookingMethod(equipmentNeeded = [], ownedEquipment = {}) {
   return equipmentNeeded[0] || 'Oven'
 }
 
+// ── Star Rating ───────────────────────────────────────────────────────────────
+
+function StarRating({ value, onChange, size = 16 }) {
+  const [hovered, setHovered] = useState(0)
+  const filled = hovered || value || 0
+  return (
+    <div
+      className="star-rating"
+      onMouseLeave={() => onChange && setHovered(0)}
+      style={{ fontSize: size }}
+    >
+      {[1, 2, 3, 4, 5].map(n => (
+        <button
+          key={n}
+          className={`star-btn${filled >= n ? ' filled' : ''}`}
+          style={{ cursor: onChange ? 'pointer' : 'default' }}
+          onMouseEnter={() => onChange && setHovered(n)}
+          onClick={e => { e.stopPropagation(); onChange && onChange(n) }}
+          tabIndex={onChange ? 0 : -1}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ── API helpers ───────────────────────────────────────────────────────────────
 
 function useApi(token) {
@@ -94,12 +122,21 @@ function useApi(token) {
     [headers]
   )
 
+  const patch = useCallback(
+    (path, body) => fetch(`/api/culinary${path}`, {
+      method: 'PATCH',
+      headers: headers(),
+      body: JSON.stringify(body),
+    }).then(r => r.json()),
+    [headers]
+  )
+
   const del = useCallback(
     (path) => fetch(`/api/culinary${path}`, { method: 'DELETE', headers: headers() }),
     [headers]
   )
 
-  return { get, post, put, del }
+  return { get, post, put, patch, del }
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -115,18 +152,29 @@ export default function CulinaryPage() {
   }, []) // eslint-disable-line
 
   const tabs = [
-    { key: 'library',   label: 'Library',       icon: 'menu_book' },
-    { key: 'stockroom', label: 'Stockroom',      icon: 'warehouse' },
-    { key: 'prep',      label: 'Prep Deck',      icon: 'set_meal' },
-    { key: 'walmart',   label: 'Walmart Export', icon: 'shopping_cart' },
-    { key: 'settings',  label: 'Equipment',      icon: 'kitchen' },
+    { key: 'library',   label: 'Library',          icon: 'menu_book' },
+    { key: 'dinner',    label: "What's for Dinner", icon: 'dinner_dining' },
+    { key: 'stockroom', label: 'Stockroom',         icon: 'warehouse' },
+    { key: 'prep',      label: 'Prep Deck',         icon: 'set_meal' },
+    { key: 'walmart',   label: 'Walmart Export',    icon: 'shopping_cart' },
+    { key: 'settings',  label: 'Equipment',         icon: 'kitchen' },
   ]
 
   return (
     <div className="culinary-page page-wrap">
-      <div className="culinary-header">
-        <Icon name="restaurant_menu" size={32} />
-        <h1>CULINARY</h1>
+      <div className="page-header-row">
+        <div>
+          <div className="page-breadcrumb">
+            <span>◢</span><span>HOME</span>
+            <span className="page-breadcrumb-sep">/</span>
+            <span>CULINARY</span>
+          </div>
+          <h1 className="page-title">Culinary</h1>
+          <p className="page-subtitle">
+            <span className="page-subtitle-dot" />
+            Recipe library, prep planning &amp; household meal voting
+          </p>
+        </div>
       </div>
 
       <div className="culinary-tabs">
@@ -142,11 +190,12 @@ export default function CulinaryPage() {
         ))}
       </div>
 
-      {tab === 'library'   && <LibraryTab   api={api} household={household} />}
-      {tab === 'stockroom' && <StockroomTab api={api} household={household} />}
-      {tab === 'prep'      && <PrepDeckTab  api={api} household={household} />}
-      {tab === 'walmart'   && <WalmartTab   api={api} household={household} />}
-      {tab === 'settings'  && <EquipmentTab api={api} />}
+      {tab === 'library'   && <LibraryTab      api={api} household={household} />}
+      {tab === 'dinner'    && <WhatsDinnerTab  api={api} token={token} />}
+      {tab === 'stockroom' && <StockroomTab    api={api} household={household} />}
+      {tab === 'prep'      && <PrepDeckTab     api={api} household={household} />}
+      {tab === 'walmart'   && <WalmartTab      api={api} household={household} />}
+      {tab === 'settings'  && <EquipmentTab    api={api} />}
     </div>
   )
 }
@@ -154,11 +203,12 @@ export default function CulinaryPage() {
 // ── Library Tab ───────────────────────────────────────────────────────────────
 
 function LibraryTab({ api }) {
-  const [recipes, setRecipes] = useState([])
+  const [recipes, setRecipes]   = useState([])
   const [selected, setSelected] = useState(null)
   const [showIngest, setShowIngest] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading]   = useState(false)
+  const [sort, setSort]         = useState('newest') // newest | rating
 
   const load = useCallback(() => {
     api.get('/recipes').then(setRecipes).catch(() => {})
@@ -187,15 +237,47 @@ function LibraryTab({ api }) {
     }
   }
 
+  const rateRecipe = async (recipeId, rating) => {
+    const updated = await api.patch(`/recipes/${recipeId}/rate`, { rating })
+    setRecipes(prev => prev.map(r => r.id === recipeId ? { ...r, rating: updated.rating } : r))
+    if (selected?.id === recipeId) setSelected(prev => ({ ...prev, rating: updated.rating }))
+  }
+
+  const suggestForDinner = async (recipeId) => {
+    try {
+      await api.post('/dinner/suggest', { recipe_id: recipeId })
+      alert('Recipe added to the dinner queue!')
+    } catch {
+      alert('Could not suggest recipe. Try again.')
+    }
+  }
+
+  const sorted = [...recipes].sort((a, b) => {
+    if (sort === 'rating') return (b.rating || 0) - (a.rating || 0)
+    return new Date(b.created_at) - new Date(a.created_at)
+  })
+
   return (
     <div>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <button className="cul-btn cul-btn-primary" onClick={() => setShowIngest(true)}>
           <Icon name="upload_file" size={16} /> Ingest PDF / URL
         </button>
         <button className="cul-btn cul-btn-secondary" onClick={() => setShowCreate(true)}>
           <Icon name="add" size={16} /> Manual Entry
         </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)' }}>Sort:</span>
+          {[['newest', 'Newest'], ['rating', 'Top Rated']].map(([key, label]) => (
+            <button
+              key={key}
+              className={`cul-btn cul-btn-sm ${sort === key ? 'cul-btn-primary' : 'cul-btn-secondary'}`}
+              onClick={() => setSort(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {recipes.length === 0 && !loading && (
@@ -206,7 +288,7 @@ function LibraryTab({ api }) {
       )}
 
       <div className="cul-grid-3">
-        {recipes.map(r => (
+        {sorted.map(r => (
           <div
             key={r.id}
             className="recipe-card"
@@ -220,6 +302,13 @@ function LibraryTab({ api }) {
             </div>
             <div className="recipe-card-body">
               <h3>{r.title}</h3>
+              <div style={{ marginBottom: 6 }}>
+                <StarRating
+                  value={r.rating}
+                  onChange={rating => rateRecipe(r.id, rating)}
+                  size={14}
+                />
+              </div>
               <div className="recipe-meta">
                 <span className="recipe-tag">{r.meal_type}</span>
                 {r.primary_protein && (
@@ -233,6 +322,13 @@ function LibraryTab({ api }) {
                   {r.blacklisted.length} flagged ingredient{r.blacklisted.length > 1 ? 's' : ''}
                 </div>
               )}
+              <button
+                className="cul-btn cul-btn-secondary cul-btn-sm"
+                style={{ marginTop: 10, width: '100%' }}
+                onClick={e => { e.stopPropagation(); suggestForDinner(r.id) }}
+              >
+                <Icon name="dinner_dining" size={13} /> Suggest for Dinner
+              </button>
             </div>
           </div>
         ))}
@@ -255,9 +351,17 @@ function LibraryTab({ api }) {
       {selected && (
         <RecipeDetailModal
           recipe={selected}
+          api={api}
           onClose={() => { setSelected(null); load() }}
           onDelete={() => deleteRecipe(selected.id)}
           onSendToPrep={() => sendToPrep(selected.id)}
+          onRate={rateRecipe}
+          onSuggestDinner={() => suggestForDinner(selected.id)}
+          onSave={async (id, data) => {
+            const updated = await api.put(`/recipes/${id}`, data)
+            setRecipes(prev => prev.map(r => r.id === id ? updated : r))
+            setSelected(updated)
+          }}
         />
       )}
     </div>
@@ -500,15 +604,71 @@ function CreateRecipeModal({ api, onClose }) {
 
 // ── Recipe Detail Modal ───────────────────────────────────────────────────────
 
-function RecipeDetailModal({ recipe, onClose, onDelete, onSendToPrep }) {
+function RecipeDetailModal({ recipe, onClose, onDelete, onSendToPrep, onRate, onSuggestDinner, onSave }) {
+  const [localRating, setLocalRating] = useState(recipe.rating || 0)
+  const [editing, setEditing]         = useState(false)
+  const [saving, setSaving]           = useState(false)
+
+  // Edit fields — kept in sync with recipe prop via startEdit()
+  const [editTitle,     setEditTitle]     = useState('')
+  const [editMealType,  setEditMealType]  = useState('')
+  const [editProtein,   setEditProtein]   = useState('')
+  const [editServings,  setEditServings]  = useState(4)
+  const [editImageUrl,  setEditImageUrl]  = useState('')
+  const [editIngs,      setEditIngs]      = useState([])
+  const [editSteps,     setEditSteps]     = useState([])
+  const [editEquipment, setEditEquipment] = useState([])
+
+  const startEdit = () => {
+    setEditTitle(recipe.title || '')
+    setEditMealType(recipe.meal_type || 'Other')
+    setEditProtein(recipe.primary_protein || '')
+    setEditServings(recipe.servings || 4)
+    setEditImageUrl(recipe.image_url || '')
+    setEditIngs(recipe.ingredients?.length ? recipe.ingredients.map(i => ({ ...i })) : [{ name: '', qty: '', unit: '' }])
+    setEditSteps(recipe.steps?.length ? [...recipe.steps] : [''])
+    setEditEquipment(recipe.equipment_needed?.length ? [...recipe.equipment_needed] : [''])
+    setEditing(true)
+  }
+
+  const saveEdit = async () => {
+    if (!editTitle.trim() || !onSave) return
+    setSaving(true)
+    await onSave(recipe.id, {
+      title:            editTitle.trim(),
+      meal_type:        editMealType,
+      primary_protein:  editProtein.trim() || null,
+      servings:         parseInt(editServings) || 4,
+      image_url:        editImageUrl.trim() || null,
+      ingredients:      editIngs.filter(i => i.name?.trim()),
+      steps:            editSteps.filter(s => s.trim()),
+      equipment_needed: editEquipment.filter(e => e.trim()),
+    })
+    setSaving(false)
+    setEditing(false)
+  }
+
+  const handleRate = (rating) => {
+    setLocalRating(rating)
+    onRate && onRate(recipe.id, rating)
+  }
+
+  const setIng = (i, field, val) =>
+    setEditIngs(prev => prev.map((x, j) => j === i ? { ...x, [field]: val } : x))
+  const removeIng   = (i) => setEditIngs(prev => prev.filter((_, j) => j !== i))
+  const removeStep  = (i) => setEditSteps(prev => prev.filter((_, j) => j !== i))
+  const removeEq    = (i) => setEditEquipment(prev => prev.filter((_, j) => j !== i))
+
   const blacklistSet = new Set((recipe.blacklisted || []).map(b => b.name?.toLowerCase()))
 
   return (
-    <div className="cul-modal-backdrop" onClick={onClose}>
+    <div className="cul-modal-backdrop" onClick={editing ? undefined : onClose}>
       <div className="cul-modal cul-modal-recipe" onClick={e => e.stopPropagation()}>
+
+        {/* ── Hero (always visible, image URL editable in edit mode) ── */}
         <div className="recipe-hero-wrap">
-          {recipe.image_url
-            ? <img className="recipe-hero-img" src={recipe.image_url} alt={recipe.title} />
+          {(editing ? editImageUrl : recipe.image_url)
+            ? <img className="recipe-hero-img" src={editing ? editImageUrl : recipe.image_url} alt={recipe.title} />
             : <div className="recipe-hero-placeholder"><Icon name="restaurant_menu" size={48} /></div>
           }
           <div className="recipe-hero-gradient" />
@@ -516,64 +676,202 @@ function RecipeDetailModal({ recipe, onClose, onDelete, onSendToPrep }) {
         </div>
 
         <div style={{ padding: '0 24px 24px' }}>
-          <h2 style={{ marginTop: 16 }}>{recipe.title}</h2>
 
-          <div className="recipe-meta" style={{ marginBottom: 14 }}>
-            <span className="recipe-tag">{recipe.meal_type}</span>
-            {recipe.primary_protein && <span className="recipe-tag protein">{recipe.primary_protein}</span>}
-            <span className="recipe-tag">{recipe.servings} servings</span>
-            {recipe.source_type !== 'manual' && <span className="recipe-tag">{recipe.source_type}</span>}
-          </div>
-
-          {recipe.blacklisted?.length > 0 && (
-            <div className="cul-card" style={{ borderColor: 'var(--error)', marginBottom: 14 }}>
-              <div className="cul-card-title"><Icon name="warning" size={16} /> Flagged Ingredients</div>
-              {recipe.blacklisted.map((b, i) => (
-                <div key={i} style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-                  <span style={{ color: 'var(--error)' }}>{b.name}</span>
-                  {b.substitute && <span style={{ color: 'var(--on-surface-variant)' }}> → suggest: {b.substitute}</span>}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="cul-section-title">Ingredients</div>
-          <ul className="ing-list">
-            {(recipe.ingredients || []).map((ing, i) => (
-              <li
-                key={i}
-                className={`ing-chip${blacklistSet.has(ing.name?.toLowerCase()) ? ' blacklisted' : ''}`}
-              >
-                {ing.qty} {ing.unit} {ing.name}
-              </li>
-            ))}
-          </ul>
-
-          <div className="cul-section-title">Steps</div>
-          <ol className="steps-list">
-            {(recipe.steps || []).map((step, i) => (
-              <li key={i}>{step}</li>
-            ))}
-          </ol>
-
-          {recipe.equipment_needed?.length > 0 && (
+          {/* ══ VIEW MODE ══════════════════════════════════════════════ */}
+          {!editing && (
             <>
-              <div className="cul-section-title">Equipment Needed</div>
+              <h2 style={{ marginTop: 16 }}>{recipe.title}</h2>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <StarRating value={localRating} onChange={handleRate} size={22} />
+                {localRating > 0 && (
+                  <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>{localRating} / 5</span>
+                )}
+              </div>
+
+              <div className="recipe-meta" style={{ marginBottom: 14 }}>
+                <span className="recipe-tag">{recipe.meal_type}</span>
+                {recipe.primary_protein && <span className="recipe-tag protein">{recipe.primary_protein}</span>}
+                <span className="recipe-tag">{recipe.servings} servings</span>
+                {recipe.source_type !== 'manual' && <span className="recipe-tag">{recipe.source_type}</span>}
+              </div>
+
+              {recipe.blacklisted?.length > 0 && (
+                <div className="cul-card" style={{ borderColor: 'var(--error)', marginBottom: 14 }}>
+                  <div className="cul-card-title"><Icon name="warning" size={16} /> Flagged Ingredients</div>
+                  {recipe.blacklisted.map((b, i) => (
+                    <div key={i} style={{ fontSize: '0.85rem', marginBottom: 4 }}>
+                      <span style={{ color: 'var(--error)' }}>{b.name}</span>
+                      {b.substitute && <span style={{ color: 'var(--on-surface-variant)' }}> → suggest: {b.substitute}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="cul-section-title">Ingredients</div>
               <ul className="ing-list">
-                {recipe.equipment_needed.map((e, i) => <li key={i} className="ing-chip">{e}</li>)}
+                {(recipe.ingredients || []).map((ing, i) => (
+                  <li key={i} className={`ing-chip${blacklistSet.has(ing.name?.toLowerCase()) ? ' blacklisted' : ''}`}>
+                    {ing.qty} {ing.unit} {ing.name}
+                  </li>
+                ))}
               </ul>
+
+              <div className="cul-section-title">Steps</div>
+              <ol className="steps-list">
+                {(recipe.steps || []).map((step, i) => <li key={i}>{step}</li>)}
+              </ol>
+
+              {recipe.equipment_needed?.length > 0 && (
+                <>
+                  <div className="cul-section-title">Equipment Needed</div>
+                  <ul className="ing-list">
+                    {recipe.equipment_needed.map((e, i) => <li key={i} className="ing-chip">{e}</li>)}
+                  </ul>
+                </>
+              )}
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
+                <button className="cul-btn cul-btn-secondary" onClick={startEdit}>
+                  <Icon name="edit" size={15} /> Edit
+                </button>
+                <button className="cul-btn cul-btn-primary" onClick={onSendToPrep}>
+                  <Icon name="set_meal" size={15} /> Send to Prep Deck
+                </button>
+                {onSuggestDinner && (
+                  <button className="cul-btn cul-btn-secondary" onClick={onSuggestDinner}>
+                    <Icon name="dinner_dining" size={15} /> Suggest for Dinner
+                  </button>
+                )}
+                <button className="cul-btn cul-btn-danger" onClick={onDelete}>
+                  <Icon name="delete" size={15} /> Delete
+                </button>
+                <button className="cul-btn cul-btn-secondary" onClick={onClose}>Close</button>
+              </div>
             </>
           )}
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
-            <button className="cul-btn cul-btn-primary" onClick={onSendToPrep}>
-              <Icon name="set_meal" size={15} /> Send to Prep Deck
-            </button>
-            <button className="cul-btn cul-btn-danger" onClick={onDelete}>
-              <Icon name="delete" size={15} /> Delete
-            </button>
-            <button className="cul-btn cul-btn-secondary" onClick={onClose}>Close</button>
-          </div>
+          {/* ══ EDIT MODE ══════════════════════════════════════════════ */}
+          {editing && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0 14px' }}>
+                <Icon name="edit" size={18} />
+                <span style={{ fontFamily: 'var(--font-display, monospace)', fontSize: '1rem', color: 'var(--primary)', letterSpacing: '0.06em' }}>
+                  EDITING
+                </span>
+              </div>
+
+              {/* Title */}
+              <div className="cul-input-row">
+                <label>Title</label>
+                <input className="cul-input" value={editTitle} onChange={e => setEditTitle(e.target.value)} />
+              </div>
+
+              {/* Meal type + Protein */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginBottom: 4 }}>Meal Type</div>
+                  <select className="cul-select" style={{ width: '100%' }} value={editMealType} onChange={e => setEditMealType(e.target.value)}>
+                    {MEAL_TYPES.map(m => <option key={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginBottom: 4 }}>Protein</div>
+                  <input className="cul-input" placeholder="Chicken, Beef…" value={editProtein} onChange={e => setEditProtein(e.target.value)} />
+                </div>
+              </div>
+
+              {/* Servings + Image URL */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <div style={{ flexBasis: 90 }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginBottom: 4 }}>Servings</div>
+                  <input className="cul-input" type="number" min={1} value={editServings} onChange={e => setEditServings(e.target.value)} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginBottom: 4 }}>Image URL</div>
+                  <input className="cul-input" placeholder="https://… (optional)" value={editImageUrl} onChange={e => setEditImageUrl(e.target.value)} />
+                </div>
+              </div>
+
+              {/* Ingredients */}
+              <div className="cul-section-title">Ingredients</div>
+              {editIngs.map((ing, i) => (
+                <div key={i} style={{ display: 'flex', gap: 5, marginBottom: 6, alignItems: 'center' }}>
+                  <input className="cul-input" style={{ flex: 3 }} placeholder="Name" value={ing.name} onChange={e => setIng(i, 'name', e.target.value)} />
+                  <input className="cul-input" style={{ flex: 1 }} placeholder="Qty" value={ing.qty} onChange={e => setIng(i, 'qty', e.target.value)} />
+                  <input className="cul-input" style={{ flex: 1 }} placeholder="Unit" value={ing.unit} onChange={e => setIng(i, 'unit', e.target.value)} />
+                  <button
+                    className="cul-btn cul-btn-danger cul-btn-sm"
+                    style={{ flexShrink: 0 }}
+                    onClick={() => removeIng(i)}
+                    disabled={editIngs.length === 1}
+                  >
+                    <Icon name="close" size={14} />
+                  </button>
+                </div>
+              ))}
+              <button className="cul-btn cul-btn-secondary cul-btn-sm" onClick={() => setEditIngs(p => [...p, { name: '', qty: '', unit: '' }])}>
+                <Icon name="add" size={14} /> Add Ingredient
+              </button>
+
+              {/* Steps */}
+              <div className="cul-section-title" style={{ marginTop: 16 }}>Steps</div>
+              {editSteps.map((step, i) => (
+                <div key={i} style={{ display: 'flex', gap: 5, marginBottom: 6, alignItems: 'flex-start' }}>
+                  <div style={{ flex: '0 0 22px', height: 22, marginTop: 10, background: 'var(--primary)', color: 'var(--on-primary, #000)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>
+                    {i + 1}
+                  </div>
+                  <textarea
+                    className="cul-input"
+                    style={{ flex: 1, minHeight: 52, resize: 'vertical' }}
+                    value={step}
+                    onChange={e => setEditSteps(prev => prev.map((x, j) => j === i ? e.target.value : x))}
+                  />
+                  <button
+                    className="cul-btn cul-btn-danger cul-btn-sm"
+                    style={{ flexShrink: 0, marginTop: 4 }}
+                    onClick={() => removeStep(i)}
+                    disabled={editSteps.length === 1}
+                  >
+                    <Icon name="close" size={14} />
+                  </button>
+                </div>
+              ))}
+              <button className="cul-btn cul-btn-secondary cul-btn-sm" onClick={() => setEditSteps(p => [...p, ''])}>
+                <Icon name="add" size={14} /> Add Step
+              </button>
+
+              {/* Equipment */}
+              <div className="cul-section-title" style={{ marginTop: 16 }}>Equipment Needed</div>
+              {editEquipment.map((eq, i) => (
+                <div key={i} style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
+                  <input className="cul-input" placeholder="e.g. Instant Pot" value={eq} onChange={e => setEditEquipment(prev => prev.map((x, j) => j === i ? e.target.value : x))} />
+                  <button
+                    className="cul-btn cul-btn-danger cul-btn-sm"
+                    style={{ flexShrink: 0 }}
+                    onClick={() => removeEq(i)}
+                    disabled={editEquipment.length === 1}
+                  >
+                    <Icon name="close" size={14} />
+                  </button>
+                </div>
+              ))}
+              <button className="cul-btn cul-btn-secondary cul-btn-sm" onClick={() => setEditEquipment(p => [...p, ''])}>
+                <Icon name="add" size={14} /> Add Equipment
+              </button>
+
+              {/* Save / Cancel */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+                <button className="cul-btn cul-btn-primary" onClick={saveEdit} disabled={saving || !editTitle.trim()}>
+                  {saving ? 'Saving…' : <><Icon name="check" size={15} /> Save Changes</>}
+                </button>
+                <button className="cul-btn cul-btn-secondary" onClick={() => setEditing(false)}>
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+
         </div>
       </div>
     </div>
@@ -1327,6 +1625,225 @@ function WalmartTab({ api }) {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── Equipment Tab ─────────────────────────────────────────────────────────────
+
+// ── What's for Dinner Tab ─────────────────────────────────────────────────────
+
+function WhatsDinnerTab({ api, token }) {
+  const [proposals, setProposals]     = useState([])
+  const [cookNowResult, setCookNowResult] = useState(null)
+  const [loading, setLoading]         = useState(true)
+
+  const load = useCallback(() => {
+    api.get('/dinner')
+      .then(data => { setProposals(data); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [api])
+
+  useEffect(() => { load() }, [load])
+
+  const proto    = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'
+  const wsUrl    = token ? `${proto}://${window.location.host}/api/culinary/ws?token=${token}` : null
+  const handleWs = useCallback((msg) => {
+    if (msg.event === 'dinner_updated') setProposals(msg.data.proposals || [])
+  }, [])
+  useWebSocket(wsUrl || '', handleWs)
+
+  const vote = async (proposalId, v) => {
+    await api.post(`/dinner/${proposalId}/vote`, { vote: v })
+    load()
+  }
+
+  const dismiss = async (proposalId) => {
+    await api.del(`/dinner/${proposalId}`)
+    load()
+  }
+
+  const cookNow = async (proposalId) => {
+    const result = await api.post(`/dinner/${proposalId}/cook-now`, {})
+    setCookNowResult(result)
+    load()
+  }
+
+  const sendToPrep = async (recipeId, proposalId) => {
+    try {
+      const active = await api.get('/prep')
+      await api.post(`/prep/${active.id}/add-recipe`, { recipe_id: recipeId })
+    } catch {
+      const session = await api.post('/prep', { label: 'Tonight\'s Dinner' })
+      await api.post(`/prep/${session.id}/add-recipe`, { recipe_id: recipeId })
+    }
+    await api.del(`/dinner/${proposalId}`)
+    load()
+  }
+
+  if (loading) {
+    return <div className="cul-empty"><Icon name="dinner_dining" size={48} />Loading...</div>
+  }
+
+  return (
+    <div>
+      <div className="cul-card-title" style={{ marginBottom: 16 }}>
+        <Icon name="how_to_vote" size={20} /> Household Dinner Vote
+      </div>
+
+      {proposals.length === 0 && (
+        <div className="cul-empty">
+          <Icon name="dinner_dining" size={48} />
+          No dinner suggestions yet. Open a recipe in the Library and click{' '}
+          <strong>Suggest for Dinner</strong>.
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {proposals.map(p => (
+          <DinnerProposalCard
+            key={p.id}
+            proposal={p}
+            onVoteYes={() => vote(p.id, 'yes')}
+            onVoteNo={() => vote(p.id, 'no')}
+            onDismiss={() => dismiss(p.id)}
+            onCookNow={() => cookNow(p.id)}
+            onSendToPrep={() => sendToPrep(p.recipe_id, p.id)}
+          />
+        ))}
+      </div>
+
+      {cookNowResult && (
+        <CookNowModal result={cookNowResult} onClose={() => setCookNowResult(null)} />
+      )}
+    </div>
+  )
+}
+
+function DinnerProposalCard({ proposal, onVoteYes, onVoteNo, onDismiss, onCookNow, onSendToPrep }) {
+  const recipe   = proposal.recipe || {}
+  const approved = proposal.status === 'approved'
+  const yesCount = proposal.votes_yes?.length || 0
+  const noCount  = proposal.votes_no?.length  || 0
+
+  return (
+    <div className={`dinner-card${approved ? ' dinner-card-approved' : ''}`}>
+      {/* Recipe info */}
+      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+        {recipe.image_url ? (
+          <img
+            src={recipe.image_url}
+            alt={recipe.title}
+            className="dinner-card-thumb"
+          />
+        ) : (
+          <div className="dinner-card-thumb dinner-card-thumb-placeholder">
+            <Icon name="restaurant_menu" size={28} />
+          </div>
+        )}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: '1.05rem', marginBottom: 4 }}>
+            {recipe.title || 'Unknown Recipe'}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+            {recipe.meal_type && <span className="recipe-tag">{recipe.meal_type}</span>}
+            {recipe.primary_protein && <span className="recipe-tag protein">{recipe.primary_protein}</span>}
+            {recipe.servings && <span className="recipe-tag">{recipe.servings} srv</span>}
+            {recipe.rating > 0 && (
+              <span className="recipe-tag" style={{ color: 'var(--primary)' }}>
+                {'★'.repeat(recipe.rating)}{'☆'.repeat(5 - recipe.rating)}
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          className="cul-btn cul-btn-secondary cul-btn-sm"
+          onClick={onDismiss}
+          title="Remove from queue"
+        >
+          <Icon name="close" size={14} />
+        </button>
+      </div>
+
+      {/* Vote tally */}
+      <div className="dinner-vote-row">
+        <span className="dinner-vote-count yes">{yesCount} Yes</span>
+        <span className="dinner-vote-count no">{noCount} No</span>
+      </div>
+
+      {/* Vote buttons */}
+      {!approved && (
+        <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+          <button className="cul-btn vote-btn-yes" onClick={onVoteYes}>
+            <Icon name="thumb_up" size={16} /> Yes, I'm feeling this
+          </button>
+          <button className="cul-btn vote-btn-no" onClick={onVoteNo}>
+            <Icon name="thumb_down" size={16} /> No thanks
+          </button>
+        </div>
+      )}
+
+      {/* Execution menu — shown on approval */}
+      {approved && (
+        <div className="dinner-approved-banner">
+          <Icon name="check_circle" size={18} />
+          <span>Let's cook this! Choose how to proceed:</span>
+          <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+            <button className="cul-btn cul-btn-primary" onClick={onCookNow}>
+              <Icon name="skillet" size={15} /> Cook Now
+            </button>
+            <button className="cul-btn cul-btn-secondary" onClick={onSendToPrep}>
+              <Icon name="set_meal" size={15} /> Send to Prep Deck
+            </button>
+            <button className="cul-btn vote-btn-no" onClick={onVoteNo}>
+              <Icon name="thumb_down" size={15} /> Actually, no
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CookNowModal({ result, onClose }) {
+  return (
+    <div className="cul-modal-backdrop" onClick={onClose}>
+      <div className="cul-modal" onClick={e => e.stopPropagation()}>
+        <button className="cul-modal-close" onClick={onClose}><Icon name="close" /></button>
+        <h2><Icon name="skillet" size={20} /> Cook Now — {result.title}</h2>
+
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
+          padding: '10px 14px', borderRadius: 8,
+          background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
+        }}>
+          <Icon name="people" size={18} />
+          <span style={{ fontSize: '0.9rem' }}>Scaled for <strong>{result.servings}</strong> servings</span>
+        </div>
+
+        <div className="cul-section-title">Shopping List</div>
+        <ul className="prep-shopping-list">
+          {(result.shopping_list || []).map((ing, i) => (
+            <li key={i}>
+              <span className="prep-shopping-qty">{ing.qty} {ing.unit}</span>
+              <span>{ing.name}</span>
+            </li>
+          ))}
+        </ul>
+
+        {result.steps?.length > 0 && (
+          <>
+            <div className="cul-section-title" style={{ marginTop: 16 }}>Steps</div>
+            <ol className="steps-list">
+              {result.steps.map((s, i) => <li key={i}>{s}</li>)}
+            </ol>
+          </>
+        )}
+
+        <button className="cul-btn cul-btn-primary" style={{ marginTop: 16 }} onClick={onClose}>
+          Done
+        </button>
       </div>
     </div>
   )
