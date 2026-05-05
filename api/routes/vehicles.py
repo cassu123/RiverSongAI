@@ -39,6 +39,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, sessionmaker
 
 from core.auth import decode_token
+from core.family import resolve_module_owner
 from vehicles.management import (
     AssignmentExistsError,
     PermissionDeniedError,
@@ -165,7 +166,7 @@ def get_current_user_id(request: Request) -> str:
     user_id = str(payload.get("sub", ""))
     if not user_id:
         raise HTTPException(status_code=401, detail="Token missing sub claim")
-    return user_id
+    return resolve_module_owner(user_id, "maintenance")
 
 
 def get_current_user_role(request: Request) -> str:

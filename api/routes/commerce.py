@@ -39,6 +39,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, sessionmaker
 
 from core.auth import decode_token
+from core.family import resolve_module_owner
 from commercial_inventory.management import (
     PermissionDeniedError,
     WorkspaceNotFoundError,
@@ -125,7 +126,8 @@ def get_current_biz_user(request: Request, db: Session = Depends(get_db)) -> Biz
     if not user_id or not email:
         raise HTTPException(status_code=401, detail="Token missing required fields")
 
-    return get_or_create_biz_user(db, external_user_id=user_id, email=email, display_name=display_name)
+    effective_id = resolve_module_owner(user_id, "store")
+    return get_or_create_biz_user(db, external_user_id=effective_id, email=email, display_name=display_name)
 
 
 # ---------------------------------------------------------------------------
