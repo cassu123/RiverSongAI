@@ -86,6 +86,21 @@ _Session = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
 Base.metadata.create_all(_engine)
 
 
+def _migrate_culinary_schema() -> None:
+    import sqlalchemy
+    with _engine.connect() as conn:
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE cul_kitchen_equipment ADD COLUMN capabilities_json TEXT"
+            ))
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+
+
+_migrate_culinary_schema()
+
+
 def get_db() -> Generator[Session, None, None]:
     db = _Session()
     try:
@@ -201,6 +216,28 @@ Original steps:
 {steps}
 """
 
+_KNOWN_EQUIPMENT_TYPES = [
+    "air_fryer", "instant_pot", "dutch_oven", "sous_vide",
+    "slow_cooker", "stand_mixer", "wok", "grill",
+]
+
+_EQUIPMENT_IDENTIFY_PROMPT = """
+You are a kitchen appliance classifier. Given a brand and model, identify which categories apply.
+
+Valid categories: air_fryer, instant_pot, dutch_oven, sous_vide, slow_cooker, stand_mixer, wok, grill
+
+Rules:
+- A device can match multiple categories (e.g. Instant Pot Duo is both instant_pot and slow_cooker)
+- Only include categories the device genuinely supports
+- "label" should be a short, clean product name
+
+Return ONLY valid JSON (no markdown, no explanation):
+{{"label": "Brand Model Name", "types": ["type1", "type2"]}}
+
+Brand: {make}
+Model: {model}
+"""
+
 
 async def _call_ollama(prompt: str) -> str:
     async with httpx.AsyncClient(timeout=180) as client:
@@ -220,6 +257,21 @@ async def _call_ollama_vision(prompt: str, image_b64: str) -> str:
         )
         resp.raise_for_status()
         return resp.json().get("response", "")
+
+
+async def _identify_equipment(make: str, model: str) -> dict:
+    """Ask Ollama to classify a kitchen device; returns {label, types}."""
+    prompt = _EQUIPMENT_IDENTIFY_PROMPT.format(make=make, model=model)
+    try:
+        raw = await _call_ollama(prompt)
+        data = _extract_json(raw)
+        if isinstance(data, dict):
+            types = [t for t in data.get("types", []) if t in _KNOWN_EQUIPMENT_TYPES]
+            label = data.get("label") or f"{make} {model}".strip()
+            return {"label": label, "types": types}
+    except Exception:
+        pass
+    return {"label": f"{make} {model}".strip(), "types": []}
 
 
 def _chunk_text(text: str, size: int = 20000) -> List[str]:
@@ -612,15 +664,18 @@ class AddRecipeToPrep(BaseModel):
 
 
 class EquipmentItemCreate(BaseModel):
-    equipment_type: str
-    label:          str
-    make:           Optional[str] = None
-    model:          Optional[str] = None
+    make:  str
+    model: str
 
 
 class EquipmentItemUpdate(BaseModel):
     make:  Optional[str] = None
     model: Optional[str] = None
+
+
+class EquipmentIdentifyRequest(BaseModel):
+    make:  str
+    model: str
 
 
 class WalmartMappingCreate(BaseModel):
@@ -686,12 +741,21 @@ def _stock_out(s: StockroomItem) -> dict:
 
 
 def _equipment_out(eq: KitchenEquipment) -> dict:
+    raw_caps = eq.capabilities_json
+    if raw_caps:
+        try:
+            capabilities = json.loads(raw_caps)
+        except Exception:
+            capabilities = [eq.equipment_type] if eq.equipment_type else []
+    else:
+        capabilities = [eq.equipment_type] if eq.equipment_type else []
     return {
         "id":             eq.id,
         "equipment_type": eq.equipment_type,
         "label":          eq.label,
         "make":           eq.make,
         "model":          eq.model,
+        "capabilities":   capabilities,
     }
 
 
@@ -811,6 +875,14 @@ def list_equipment(request: Request, db: Session = Depends(get_db)):
     return [_equipment_out(e) for e in hh.equipment_items]
 
 
+@router.post("/household/equipment/identify")
+async def identify_equipment(body: EquipmentIdentifyRequest, request: Request):
+    """Classify a device by brand + model without saving — returns {label, types}."""
+    _get_user_id(request)  # auth check
+    result = await _identify_equipment(body.make.strip(), body.model.strip())
+    return result
+
+
 @router.post("/household/equipment", status_code=status.HTTP_201_CREATED)
 async def add_equipment(
     body: EquipmentItemCreate,
@@ -819,17 +891,22 @@ async def add_equipment(
 ):
     uid = _get_user_id(request)
     hh = _get_household(db, uid)
+    identified = await _identify_equipment(body.make.strip(), body.model.strip())
+    types = identified["types"]
+    primary_type = types[0] if types else "other"
     eq = KitchenEquipment(
         household_id=hh.id,
-        equipment_type=body.equipment_type,
-        label=body.label,
-        make=body.make,
-        model=body.model,
+        equipment_type=primary_type,
+        label=identified["label"],
+        make=body.make.strip(),
+        model=body.model.strip(),
+        capabilities_json=json.dumps(types),
     )
     db.add(eq)
-    flag = f"has_{body.equipment_type}"
-    if hasattr(hh, flag):
-        setattr(hh, flag, True)
+    for t in types:
+        flag = f"has_{t}"
+        if hasattr(hh, flag):
+            setattr(hh, flag, True)
     db.commit()
     db.refresh(eq)
     await _ws_manager.broadcast(hh.id, "equipment_updated", _equipment_out(eq))
@@ -869,9 +946,14 @@ async def delete_equipment(
     eq = db.query(KitchenEquipment).filter_by(id=eq_id, household_id=hh.id).first()
     if not eq:
         raise HTTPException(status_code=404, detail="Equipment not found")
-    flag = f"has_{eq.equipment_type}"
-    if hasattr(hh, flag):
-        setattr(hh, flag, False)
+    try:
+        caps = json.loads(eq.capabilities_json or "[]")
+    except Exception:
+        caps = [eq.equipment_type] if eq.equipment_type else []
+    for t in caps:
+        flag = f"has_{t}"
+        if hasattr(hh, flag):
+            setattr(hh, flag, False)
     db.delete(eq)
     db.commit()
     await _ws_manager.broadcast(hh.id, "equipment_deleted", {"id": eq_id})

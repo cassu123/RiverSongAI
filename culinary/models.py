@@ -173,10 +173,11 @@ class KitchenEquipment(Base):
     id           = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     household_id = Column(String, ForeignKey("cul_households.id"), nullable=False, index=True)
 
-    equipment_type = Column(String, nullable=False)  # e.g. "air_fryer"
-    label          = Column(String, nullable=False)  # e.g. "Air Fryer"
-    make           = Column(String, nullable=True)
-    model          = Column(String, nullable=True)
+    equipment_type    = Column(String, nullable=False)  # primary type, e.g. "air_fryer"
+    label             = Column(String, nullable=False)  # e.g. "Cosori Pro Gen 2"
+    make              = Column(String, nullable=True)
+    model             = Column(String, nullable=True)
+    capabilities_json = Column(Text, nullable=True)     # JSON list of all equipment_type keys
 
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now, onupdate=_now)
