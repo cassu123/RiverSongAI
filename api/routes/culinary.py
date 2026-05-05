@@ -111,42 +111,11 @@ def _get_user_id(request: Request) -> str:
     return uid
 
 
-_MAIN_DB_PATH = os.environ.get("MAIN_DB_PATH", "./data/river_song.db")
-
-import sqlite3 as _sqlite3
-
-
-def _resolve_culinary_owner(user_id: str) -> str:
-    """
-    Return the effective owner_id for the culinary household.
-    If the user belongs to a family group with culinary sharing, all members
-    resolve to 'family:<group_id>' so they share one household.
-    """
-    try:
-        conn = _sqlite3.connect(_MAIN_DB_PATH)
-        conn.row_factory = _sqlite3.Row
-        row = conn.execute(
-            """
-            SELECT fg.id, fg.shared_modules
-            FROM family_memberships fm
-            JOIN family_groups fg ON fg.id = fm.family_group_id
-            WHERE fm.profile_id = ?
-            """,
-            (user_id,),
-        ).fetchone()
-        conn.close()
-        if row:
-            import json as _json
-            modules = _json.loads(row["shared_modules"] or "[]")
-            if "culinary" in modules:
-                return f"family:{row['id']}"
-    except Exception:
-        pass
-    return user_id
+from core.family import resolve_module_owner as _resolve_module_owner
 
 
 def _get_household(db: Session, owner_id: str) -> Household:
-    effective_id = _resolve_culinary_owner(owner_id)
+    effective_id = _resolve_module_owner(owner_id, "culinary")
     hh = db.query(Household).filter_by(owner_id=effective_id).first()
     if not hh:
         hh = Household(owner_id=effective_id)

@@ -1010,9 +1010,10 @@ function FamilyGroupsSection({ data, token, onChanged }) {
   return (
     <Section title="ADMIN — FAMILY GROUPS">
       <p className="settings-hint" style={{ marginBottom: 16 }}>
-        Family groups give multiple profiles shared access to selected modules.
-        Each profile can belong to one group. Shared data is owned by the group —
-        members read and write the same recipes, inventory, and more.
+        Family groups give multiple profiles shared data access to selected modules
+        (culinary, inventory, store, maintenance). All members see and edit the
+        same records. For controlling which features children can access, use
+        Parental Controls below.
       </p>
 
       {err && <p style={{ color: 'var(--md-error)', fontSize: '0.8rem', marginBottom: 10 }}>{err}</p>}
@@ -1277,10 +1278,11 @@ function AdminFamilySection({ data, token, onChanged }) {
   }
 
   return (
-    <Section title="ADMIN — FAMILY MANAGEMENT">
+    <Section title="ADMIN — PARENTAL CONTROLS">
       <p className="settings-hint" style={{ marginBottom: 16 }}>
-        Link parent accounts to child accounts. A child can have multiple parents.
-        Assigning a child automatically promotes a user to the parent role.
+        Link parent accounts to child accounts to control which features children
+        can access. This is separate from Family Groups — parental controls manage
+        feature visibility only, not shared data.
       </p>
 
       {/* Add link */}
