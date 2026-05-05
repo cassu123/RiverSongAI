@@ -12,6 +12,8 @@ import logging
 import uuid
 from typing import List, Optional
 
+from core.family_migration import migrate_member_to_family
+
 from fastapi import APIRouter, HTTPException, Request, Header
 from pydantic import BaseModel
 
@@ -387,7 +389,12 @@ async def add_family_member(
         raise HTTPException(status_code=404, detail="User not found.")
     result = await store.add_family_member(group_id, body.profile_id, body.relationship)
     logger.info("Admin %s added %s to family group %s as %s", payload["sub"], body.profile_id, group_id, body.relationship)
-    return result
+
+    # Migrate any existing personal module data to the shared family scope
+    summary = migrate_member_to_family(group_id, body.profile_id, group["shared_modules"])
+    logger.info("Auto-migration for %s → group %s: %s", body.profile_id[:8], group_id[:8], summary)
+
+    return {**result, "migration": summary}
 
 
 @router.delete("/family-groups/{group_id}/members/{profile_id}", status_code=204)
