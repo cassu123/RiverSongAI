@@ -101,7 +101,7 @@ export default function CulinaryPage() {
   ]
 
   return (
-    <div className="culinary-page">
+    <div className="culinary-page page-wrap">
       <div className="culinary-header">
         <Icon name="restaurant_menu" size={32} />
         <h1>CULINARY</h1>
