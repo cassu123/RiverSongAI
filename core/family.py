@@ -12,14 +12,16 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import sqlite3
 
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-_MAIN_DB_PATH = os.environ.get("MAIN_DB_PATH", "./data/river_song.db")
+
+def _db_path() -> str:
+    from config.settings import get_settings
+    return get_settings().db_path
 
 
 def resolve_module_owner(user_id: str, module: str) -> str:
@@ -32,7 +34,7 @@ def resolve_module_owner(user_id: str, module: str) -> str:
     not in a group or the module is not shared.
     """
     try:
-        conn = sqlite3.connect(_MAIN_DB_PATH)
+        conn = sqlite3.connect(_db_path())
         conn.row_factory = sqlite3.Row
         row = conn.execute(
             """
