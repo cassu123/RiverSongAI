@@ -59,6 +59,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from core.auth import decode_token
 from culinary.models import (
     Base,
+    DinnerProposal,
     Household,
     KitchenEquipment,
     MealType,
@@ -96,7 +97,14 @@ def _migrate_culinary_schema() -> None:
             ))
             conn.commit()
         except Exception:
-            pass  # column already exists
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE cul_recipes ADD COLUMN rating INTEGER"
+            ))
+            conn.commit()
+        except Exception:
+            pass
 
 
 _migrate_culinary_schema()
@@ -691,6 +699,18 @@ class WalmartMappingCreate(BaseModel):
     walmart_item_id: str
 
 
+class RateRecipeRequest(BaseModel):
+    rating: int  # 1-5
+
+
+class SuggestDinnerRequest(BaseModel):
+    recipe_id: str
+
+
+class VoteRequest(BaseModel):
+    vote: str  # "yes" | "no"
+
+
 # ---------------------------------------------------------------------------
 # Serializers
 # ---------------------------------------------------------------------------
@@ -726,12 +746,27 @@ def _recipe_out(r: Recipe) -> dict:
         "image_url":        r.image_url,
         "source_url":       r.source_url,
         "source_type":      r.source_type.value if r.source_type else "manual",
+        "rating":           r.rating,
         "ingredients":      json.loads(r.ingredients_json or "[]"),
         "steps":            json.loads(r.steps_json or "[]"),
         "equipment_needed": json.loads(r.equipment_needed_json or "[]"),
         "blacklisted":      json.loads(r.blacklisted_json or "[]"),
         "created_at":       r.created_at.isoformat() if r.created_at else None,
         "updated_at":       r.updated_at.isoformat() if r.updated_at else None,
+    }
+
+
+def _proposal_out(p: DinnerProposal) -> dict:
+    return {
+        "id":           p.id,
+        "household_id": p.household_id,
+        "recipe_id":    p.recipe_id,
+        "recipe":       _recipe_out(p.recipe) if p.recipe else None,
+        "proposed_by":  p.proposed_by,
+        "votes_yes":    json.loads(p.votes_yes or "[]"),
+        "votes_no":     json.loads(p.votes_no  or "[]"),
+        "status":       p.status,
+        "created_at":   p.created_at.isoformat() if p.created_at else None,
     }
 
 
@@ -1063,6 +1098,166 @@ async def delete_recipe(recipe_id: str, request: Request, db: Session = Depends(
     db.delete(r)
     db.commit()
     await _ws_manager.broadcast(hh.id, "recipe_deleted", {"id": recipe_id})
+
+
+@router.patch("/recipes/{recipe_id}/rate")
+async def rate_recipe(
+    recipe_id: str,
+    body: RateRecipeRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    uid = _get_user_id(request)
+    hh = _get_household(db, uid)
+    r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    if not (1 <= body.rating <= 5):
+        raise HTTPException(status_code=422, detail="Rating must be 1–5")
+    r.rating = body.rating
+    db.commit()
+    db.refresh(r)
+    await _ws_manager.broadcast(hh.id, "recipe_updated", _recipe_out(r))
+    return _recipe_out(r)
+
+
+# ---------------------------------------------------------------------------
+# "What's for Dinner" — proposal queue & voting
+# ---------------------------------------------------------------------------
+
+def _active_proposals(db: Session, household_id: str) -> list[DinnerProposal]:
+    return (
+        db.query(DinnerProposal)
+        .filter(
+            DinnerProposal.household_id == household_id,
+            DinnerProposal.status.in_(["pending", "approved"]),
+        )
+        .order_by(DinnerProposal.created_at.desc())
+        .all()
+    )
+
+
+@router.get("/dinner")
+def get_dinner_proposals(request: Request, db: Session = Depends(get_db)):
+    uid = _get_user_id(request)
+    hh  = _get_household(db, uid)
+    return [_proposal_out(p) for p in _active_proposals(db, hh.id)]
+
+
+@router.post("/dinner/suggest", status_code=status.HTTP_201_CREATED)
+async def suggest_dinner(
+    body: SuggestDinnerRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    uid = _get_user_id(request)
+    hh  = _get_household(db, uid)
+    recipe = db.query(Recipe).filter_by(id=body.recipe_id, household_id=hh.id).first()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    p = DinnerProposal(household_id=hh.id, recipe_id=recipe.id, proposed_by=uid)
+    db.add(p)
+    db.commit()
+    db.refresh(p)
+    proposals = [_proposal_out(x) for x in _active_proposals(db, hh.id)]
+    await _ws_manager.broadcast(hh.id, "dinner_updated", {"proposals": proposals})
+    return _proposal_out(p)
+
+
+@router.post("/dinner/{proposal_id}/vote")
+async def vote_dinner(
+    proposal_id: str,
+    body: VoteRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    uid = _get_user_id(request)
+    hh  = _get_household(db, uid)
+    p   = db.query(DinnerProposal).filter_by(id=proposal_id, household_id=hh.id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+
+    yes_list = json.loads(p.votes_yes or "[]")
+    no_list  = json.loads(p.votes_no  or "[]")
+    yes_list = [u for u in yes_list if u != uid]
+    no_list  = [u for u in no_list  if u != uid]
+
+    if body.vote == "yes":
+        yes_list.append(uid)
+        p.status = "approved"
+    elif body.vote == "no":
+        no_list.append(uid)
+    else:
+        raise HTTPException(status_code=422, detail="vote must be 'yes' or 'no'")
+
+    p.votes_yes = json.dumps(yes_list)
+    p.votes_no  = json.dumps(no_list)
+    db.commit()
+    db.refresh(p)
+    proposals = [_proposal_out(x) for x in _active_proposals(db, hh.id)]
+    await _ws_manager.broadcast(hh.id, "dinner_updated", {"proposals": proposals})
+    return _proposal_out(p)
+
+
+@router.delete("/dinner/{proposal_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def dismiss_dinner(
+    proposal_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    uid = _get_user_id(request)
+    hh  = _get_household(db, uid)
+    p   = db.query(DinnerProposal).filter_by(id=proposal_id, household_id=hh.id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    db.delete(p)
+    db.commit()
+    proposals = [_proposal_out(x) for x in _active_proposals(db, hh.id)]
+    await _ws_manager.broadcast(hh.id, "dinner_updated", {"proposals": proposals})
+
+
+@router.post("/dinner/{proposal_id}/cook-now")
+async def cook_now(
+    proposal_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Scale the proposed recipe to 4 servings and return a single-use shopping list."""
+    uid = _get_user_id(request)
+    hh  = _get_household(db, uid)
+    p   = db.query(DinnerProposal).filter_by(id=proposal_id, household_id=hh.id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    recipe = p.recipe
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    original_servings = recipe.servings or 4
+    target_servings   = 4
+    factor            = target_servings / original_servings
+
+    scaled = []
+    for ing in json.loads(recipe.ingredients_json or "[]"):
+        try:
+            raw_qty = float(str(ing.get("qty", 0)).strip() or 0) * factor
+            qty_out = int(raw_qty) if raw_qty == int(raw_qty) else round(raw_qty, 2)
+        except (ValueError, TypeError):
+            qty_out = ing.get("qty", "")
+        scaled.append({"name": ing.get("name", ""), "qty": qty_out, "unit": ing.get("unit", "")})
+
+    # Dismiss the proposal — it's been acted on
+    db.delete(p)
+    db.commit()
+    proposals = [_proposal_out(x) for x in _active_proposals(db, hh.id)]
+    await _ws_manager.broadcast(hh.id, "dinner_updated", {"proposals": proposals})
+
+    return {
+        "recipe_id":     recipe.id,
+        "title":         recipe.title,
+        "servings":      target_servings,
+        "shopping_list": scaled,
+        "steps":         json.loads(recipe.steps_json or "[]"),
+    }
 
 
 # ---------------------------------------------------------------------------

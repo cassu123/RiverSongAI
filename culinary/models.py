@@ -66,11 +66,12 @@ class Household(Base):
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now, onupdate=_now)
 
-    recipes          = relationship("Recipe",           back_populates="household", cascade="all, delete-orphan")
-    stockroom_items  = relationship("StockroomItem",    back_populates="household", cascade="all, delete-orphan")
-    prep_sessions    = relationship("PrepSession",      back_populates="household", cascade="all, delete-orphan")
-    walmart_mappings = relationship("WalmartMapping",   back_populates="household", cascade="all, delete-orphan")
-    equipment_items  = relationship("KitchenEquipment", back_populates="household", cascade="all, delete-orphan")
+    recipes           = relationship("Recipe",           back_populates="household", cascade="all, delete-orphan")
+    stockroom_items   = relationship("StockroomItem",    back_populates="household", cascade="all, delete-orphan")
+    prep_sessions     = relationship("PrepSession",      back_populates="household", cascade="all, delete-orphan")
+    walmart_mappings  = relationship("WalmartMapping",   back_populates="household", cascade="all, delete-orphan")
+    equipment_items   = relationship("KitchenEquipment", back_populates="household", cascade="all, delete-orphan")
+    dinner_proposals  = relationship("DinnerProposal",   back_populates="household", cascade="all, delete-orphan")
 
 
 class Recipe(Base):
@@ -98,6 +99,7 @@ class Recipe(Base):
     equipment_needed_json = Column(Text, nullable=False, default="[]")
     # Flagged blacklist ingredients found during ingest
     blacklisted_json     = Column(Text, nullable=False, default="[]")
+    rating               = Column(Integer, nullable=True)  # 1–5 stars
 
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now, onupdate=_now)
@@ -198,3 +200,26 @@ class WalmartMapping(Base):
     created_at = Column(DateTime, default=_now)
 
     household = relationship("Household", back_populates="walmart_mappings")
+
+
+class DinnerProposal(Base):
+    """
+    A household-scoped dinner suggestion. Multiple proposals can coexist.
+    status: pending → approved (any yes vote) → dismissed (acted on or cleared).
+    """
+    __tablename__ = "cul_active_vote"
+
+    id           = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    household_id = Column(String, ForeignKey("cul_households.id"), nullable=False, index=True)
+    recipe_id    = Column(String, ForeignKey("cul_recipes.id"),    nullable=False)
+
+    proposed_by = Column(String, nullable=True)              # JWT sub of proposer
+    votes_yes   = Column(Text, nullable=False, default="[]") # JSON list of user_ids
+    votes_no    = Column(Text, nullable=False, default="[]") # JSON list of user_ids
+    status      = Column(String, nullable=False, default="pending")  # pending | approved | dismissed
+
+    created_at  = Column(DateTime, default=_now)
+    updated_at  = Column(DateTime, default=_now, onupdate=_now)
+
+    household = relationship("Household", back_populates="dinner_proposals")
+    recipe    = relationship("Recipe")
