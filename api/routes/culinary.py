@@ -30,6 +30,7 @@ WS         /ws/culinary
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -58,6 +59,7 @@ from core.auth import decode_token
 from culinary.models import (
     Base,
     Household,
+    KitchenEquipment,
     MealType,
     PrepSession,
     PrepSessionRecipe,
@@ -162,22 +164,26 @@ def _flag_blacklist(ingredients: list[dict]) -> list[dict]:
 # Ollama helpers
 # ---------------------------------------------------------------------------
 
-OLLAMA_BASE = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.environ.get("LLM_MODEL", "llama3.2")
+OLLAMA_BASE         = os.environ.get("OLLAMA_BASE_URL",       "http://localhost:11434")
+OLLAMA_MODEL        = os.environ.get("CULINARY_LLM_MODEL",    "qwen2.5:14b")
+OLLAMA_VISION_MODEL = os.environ.get("CULINARY_VISION_MODEL", "gemma3:12b")
 
 _RECIPE_SCHEMA_PROMPT = """
-You are a recipe parser. Extract structured data from the text below and return ONLY valid JSON
-with exactly this schema (no markdown, no prose, just JSON):
+You are a recipe parser. Extract ALL recipes found in the text below.
+Return ONLY a valid JSON array — even if there is just one recipe. No markdown, no prose.
+Each element must follow this exact schema:
 
-{
-  "title": "string",
-  "meal_type": "Breakfast|Lunch|Dinner|Snack|Dessert|Other",
-  "primary_protein": "string or null",
-  "servings": integer,
-  "ingredients": [{"name": "string", "qty": "string", "unit": "string"}],
-  "steps": ["string"],
-  "equipment_needed": ["string"]
-}
+[
+  {
+    "title": "string",
+    "meal_type": "Breakfast|Lunch|Dinner|Snack|Dessert|Other",
+    "primary_protein": "string or null",
+    "servings": integer,
+    "ingredients": [{"name": "string", "qty": "string", "unit": "string"}],
+    "steps": ["string"],
+    "equipment_needed": ["string"]
+  }
+]
 
 Recipe text:
 """
@@ -193,7 +199,7 @@ Original steps:
 
 
 async def _call_ollama(prompt: str) -> str:
-    async with httpx.AsyncClient(timeout=120) as client:
+    async with httpx.AsyncClient(timeout=180) as client:
         resp = await client.post(
             f"{OLLAMA_BASE}/api/generate",
             json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
@@ -202,11 +208,305 @@ async def _call_ollama(prompt: str) -> str:
         return resp.json().get("response", "")
 
 
+async def _call_ollama_vision(prompt: str, image_b64: str) -> str:
+    async with httpx.AsyncClient(timeout=180) as client:
+        resp = await client.post(
+            f"{OLLAMA_BASE}/api/generate",
+            json={"model": OLLAMA_VISION_MODEL, "prompt": prompt, "images": [image_b64], "stream": False},
+        )
+        resp.raise_for_status()
+        return resp.json().get("response", "")
+
+
+def _chunk_text(text: str, size: int = 20000) -> List[str]:
+    text = text.strip()
+    return [text[i:i + size] for i in range(0, len(text), size)] if text else []
+
+
+def _collect_parsed(raw: str) -> List[dict]:
+    try:
+        result = _extract_json(raw)
+    except Exception:
+        return []
+    if isinstance(result, dict):
+        result = [result]
+    return [r for r in result if isinstance(r, dict)] if isinstance(result, list) else []
+
+
+# ---------------------------------------------------------------------------
+# JSON-LD / schema.org Recipe helpers (zero-AI structured extraction)
+# ---------------------------------------------------------------------------
+
+_UNITS = {
+    "cup","cups","c","tablespoon","tablespoons","tbsp","tbsps","tbs",
+    "teaspoon","teaspoons","tsp","tsps","pound","pounds","lb","lbs",
+    "ounce","ounces","oz","gram","grams","g","kilogram","kilograms","kg",
+    "liter","liters","l","ml","milliliter","milliliters","quart","quarts",
+    "qt","pint","pints","pt","gallon","gallons","package","packages","pkg",
+    "can","cans","jar","jars","slice","slices","piece","pieces","bunch",
+    "bunches","clove","cloves","stalk","stalks","head","heads","pinch",
+    "pinches","dash","dashes","handful","inch","inches","strip","strips",
+    "sprig","sprigs","sheet","sheets","link","links","fillet","fillets",
+}
+
+_UNICODE_FRACS = {
+    "½": "1/2", "⅓": "1/3", "⅔": "2/3", "¼": "1/4",
+    "¾": "3/4", "⅛": "1/8", "⅜": "3/8", "⅝": "5/8", "⅞": "7/8",
+}
+
+_MEAL_TYPE_MAP = {
+    "breakfast": "Breakfast", "brunch": "Breakfast",
+    "lunch": "Lunch",
+    "dinner": "Dinner", "main course": "Dinner", "main dish": "Dinner", "entree": "Dinner",
+    "snack": "Snack", "appetizer": "Snack", "starter": "Snack",
+    "dessert": "Dessert", "sweet": "Dessert", "baking": "Dessert",
+}
+
+_NUM_PAT = re.compile(r"^([\d\s./]+)")
+
+
+def _parse_ingredient(s: str) -> dict:
+    for uc, asc in _UNICODE_FRACS.items():
+        s = s.replace(uc, asc)
+    s = s.strip()
+    qty = unit = ""
+    m = _NUM_PAT.match(s)
+    if m:
+        qty = m.group(1).strip()
+        rest = s[m.end():].strip()
+        words = rest.split()
+        if words and words[0].lower().rstrip(".") in _UNITS:
+            unit = words[0]
+            name = " ".join(words[1:])
+        else:
+            name = rest
+    else:
+        name = s
+    return {"name": name.strip() or s, "qty": qty, "unit": unit}
+
+
+def _parse_yield(y: Any) -> int:
+    if isinstance(y, list):
+        y = y[0] if y else "4"
+    m = re.search(r"\d+", str(y))
+    return int(m.group()) if m else 4
+
+
+def _parse_steps(instructions: Any) -> List[str]:
+    if isinstance(instructions, str):
+        return [s.strip() for s in re.split(r"\.\s+|\n", instructions) if s.strip()]
+    if not isinstance(instructions, list):
+        return []
+    steps: List[str] = []
+    for item in instructions:
+        if isinstance(item, str):
+            steps.append(item.strip())
+        elif isinstance(item, dict):
+            text = item.get("text") or item.get("name") or ""
+            if text:
+                steps.append(text.strip())
+            for sub in item.get("itemListElement", []):
+                if isinstance(sub, dict):
+                    t = sub.get("text") or sub.get("name") or ""
+                    if t:
+                        steps.append(t.strip())
+    return [s for s in steps if s]
+
+
+def _extract_image_url(image: Any) -> Optional[str]:
+    """Normalise schema.org image field — string, list, or ImageObject."""
+    if not image:
+        return None
+    if isinstance(image, str):
+        return image or None
+    if isinstance(image, list):
+        image = image[0] if image else None
+        if not image:
+            return None
+    if isinstance(image, str):  # unwrapped from a list of plain URLs
+        return image or None
+    if isinstance(image, dict):
+        return image.get("url") or image.get("contentUrl") or None
+    return None
+
+
+def _jsonld_to_recipe(node: dict) -> Optional[dict]:
+    """Convert a schema.org Recipe node to our internal recipe dict."""
+    t = node.get("@type", "")
+    if "Recipe" not in (t if isinstance(t, str) else " ".join(t)):
+        return None
+    raw_category = node.get("recipeCategory", "") or ""
+    if isinstance(raw_category, list):
+        raw_category = " ".join(raw_category)
+    meal_type = "Other"
+    for key, val in _MEAL_TYPE_MAP.items():
+        if key in raw_category.lower():
+            meal_type = val
+            break
+    return {
+        "title":            node.get("name", "Untitled Recipe"),
+        "meal_type":        meal_type,
+        "primary_protein":  None,
+        "servings":         _parse_yield(node.get("recipeYield", 4)),
+        "image_url":        _extract_image_url(node.get("image")),
+        "ingredients":      [_parse_ingredient(i) for i in node.get("recipeIngredient", [])],
+        "steps":            _parse_steps(node.get("recipeInstructions", [])),
+        "equipment_needed": [],
+    }
+
+
+def _extract_jsonld_recipes(html: str) -> List[dict]:
+    """Pull all schema.org Recipe objects from JSON-LD blocks in an HTML page."""
+    blocks = re.findall(r'<script[^>]*ld\+json[^>]*>([\s\S]*?)</script>', html, re.I)
+    found: List[dict] = []
+    for block in blocks:
+        try:
+            data = json.loads(block.strip())
+        except Exception:
+            continue
+        nodes = data if isinstance(data, list) else [data]
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            # Handle @graph wrapper (common on WordPress sites)
+            for item in node.get("@graph", [node]):
+                if not isinstance(item, dict):
+                    continue
+                recipe = _jsonld_to_recipe(item)
+                if recipe:
+                    found.append(recipe)
+    return found
+
+
 def _extract_json(text: str) -> Any:
     match = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", text)
     if match:
         return json.loads(match.group(1))
     return json.loads(text)
+
+
+def _extract_og_image(html: str) -> Optional[str]:
+    """Pull the best available social/meta image from an HTML page."""
+    patterns = [
+        r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+        r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image["\']',
+    ]
+    for pat in patterns:
+        m = re.search(pat, html, re.I)
+        if m:
+            url = m.group(1).strip()
+            if url.startswith("http"):
+                return url
+    return None
+
+
+def _is_bot_challenge(html: str) -> bool:
+    """Detect bot challenge / CAPTCHA gate pages (Walmart, Cloudflare, etc.)."""
+    lower = html.lower()
+    indicators = [
+        "robot or human",
+        "are you a robot",
+        "verify you are human",
+        "automated access",
+        "bot detected",
+        "checking your browser",
+        "access denied",
+        "enable javascript and cookies",
+        "challenge-form",
+        "cf-challenge",
+    ]
+    return any(phrase in lower for phrase in indicators) and len(html) < 60_000
+
+
+def _extract_nextdata_recipes(html: str) -> List[dict]:
+    """Extract recipes from Next.js __NEXT_DATA__ JSON (Walmart and similar SPA sites)."""
+    m = re.search(r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>([\s\S]*?)</script>', html, re.I)
+    if not m:
+        return []
+    try:
+        data = json.loads(m.group(1))
+    except Exception:
+        return []
+
+    def _find_recipe_nodes(obj: Any, depth: int = 0) -> List[dict]:
+        if depth > 10 or not isinstance(obj, (dict, list)):
+            return []
+        found: List[dict] = []
+        if isinstance(obj, dict):
+            has_name = bool(obj.get("title") or obj.get("name"))
+            has_ingredients = bool(obj.get("ingredients") or obj.get("recipeIngredients"))
+            has_steps = bool(
+                obj.get("instructions") or obj.get("steps") or obj.get("recipeInstructions")
+            )
+            if has_name and (has_ingredients or has_steps):
+                found.append(obj)
+            for v in obj.values():
+                found.extend(_find_recipe_nodes(v, depth + 1))
+        else:
+            for item in obj:
+                found.extend(_find_recipe_nodes(item, depth + 1))
+        return found
+
+    parsed: List[dict] = []
+    for raw in _find_recipe_nodes(data):
+        name = raw.get("title") or raw.get("name") or "Untitled Recipe"
+
+        raw_ings = raw.get("ingredients") or raw.get("recipeIngredients") or []
+        ingredients: List[dict] = []
+        for ing in raw_ings if isinstance(raw_ings, list) else []:
+            if isinstance(ing, str):
+                ingredients.append(_parse_ingredient(ing))
+            elif isinstance(ing, dict):
+                text = ing.get("text") or ing.get("name") or ing.get("description") or ""
+                if text:
+                    ingredients.append(_parse_ingredient(str(text)))
+
+        raw_steps = (
+            raw.get("instructions") or raw.get("steps") or raw.get("recipeInstructions") or []
+        )
+        steps = _parse_steps(raw_steps)
+
+        raw_yield = raw.get("recipeYield") or raw.get("servings") or raw.get("yield") or 4
+        servings = _parse_yield(raw_yield)
+
+        raw_image = (
+            raw.get("image") or raw.get("images")
+            or raw.get("imageUrl") or raw.get("imageURL")
+        )
+        image_url = _extract_image_url(raw_image)
+        if not image_url and isinstance(raw_image, list) and raw_image:
+            first = raw_image[0]
+            if isinstance(first, dict):
+                image_url = (
+                    first.get("url") or first.get("src")
+                    or first.get("uri") or first.get("contentUrl")
+                )
+            elif isinstance(first, str) and first.startswith("http"):
+                image_url = first
+
+        raw_category = raw.get("category") or raw.get("recipeCategory") or ""
+        if isinstance(raw_category, list):
+            raw_category = " ".join(raw_category)
+        meal_type = "Other"
+        for key, val in _MEAL_TYPE_MAP.items():
+            if key in str(raw_category).lower():
+                meal_type = val
+                break
+
+        parsed.append({
+            "title":            name,
+            "meal_type":        meal_type,
+            "primary_protein":  None,
+            "servings":         servings,
+            "image_url":        image_url,
+            "ingredients":      ingredients,
+            "steps":            steps,
+            "equipment_needed": [],
+        })
+
+    return parsed
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +551,7 @@ class RecipeCreate(BaseModel):
     meal_type:       str  = "Other"
     primary_protein: Optional[str] = None
     servings:        int  = 4
+    image_url:       Optional[str] = None
     ingredients:     List[Dict[str, Any]] = []
     steps:           List[str] = []
     equipment_needed: List[str] = []
@@ -261,6 +562,7 @@ class RecipeUpdate(BaseModel):
     meal_type:       Optional[str] = None
     primary_protein: Optional[str] = None
     servings:        Optional[int] = None
+    image_url:       Optional[str] = None
     ingredients:     Optional[List[Dict[str, Any]]] = None
     steps:           Optional[List[str]] = None
     equipment_needed: Optional[List[str]] = None
@@ -305,6 +607,18 @@ class AddRecipeToPrep(BaseModel):
     servings_target: Optional[int] = None
 
 
+class EquipmentItemCreate(BaseModel):
+    equipment_type: str
+    label:          str
+    make:           Optional[str] = None
+    model:          Optional[str] = None
+
+
+class EquipmentItemUpdate(BaseModel):
+    make:  Optional[str] = None
+    model: Optional[str] = None
+
+
 class WalmartMappingCreate(BaseModel):
     ingredient_name: str
     walmart_item_id: str
@@ -342,6 +656,7 @@ def _recipe_out(r: Recipe) -> dict:
         "meal_type":        r.meal_type.value if r.meal_type else "Other",
         "primary_protein":  r.primary_protein,
         "servings":         r.servings,
+        "image_url":        r.image_url,
         "source_url":       r.source_url,
         "source_type":      r.source_type.value if r.source_type else "manual",
         "ingredients":      json.loads(r.ingredients_json or "[]"),
@@ -363,6 +678,16 @@ def _stock_out(s: StockroomItem) -> dict:
         "state":        s.state.value if s.state else "Good",
         "created_at":   s.created_at.isoformat() if s.created_at else None,
         "updated_at":   s.updated_at.isoformat() if s.updated_at else None,
+    }
+
+
+def _equipment_out(eq: KitchenEquipment) -> dict:
+    return {
+        "id":             eq.id,
+        "equipment_type": eq.equipment_type,
+        "label":          eq.label,
+        "make":           eq.make,
+        "model":          eq.model,
     }
 
 
@@ -472,6 +797,83 @@ async def update_household(
 
 
 # ---------------------------------------------------------------------------
+# Kitchen Equipment (make / model)
+# ---------------------------------------------------------------------------
+
+@router.get("/household/equipment")
+def list_equipment(request: Request, db: Session = Depends(get_db)):
+    uid = _get_user_id(request)
+    hh = _get_household(db, uid)
+    return [_equipment_out(e) for e in hh.equipment_items]
+
+
+@router.post("/household/equipment", status_code=status.HTTP_201_CREATED)
+async def add_equipment(
+    body: EquipmentItemCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    uid = _get_user_id(request)
+    hh = _get_household(db, uid)
+    eq = KitchenEquipment(
+        household_id=hh.id,
+        equipment_type=body.equipment_type,
+        label=body.label,
+        make=body.make,
+        model=body.model,
+    )
+    db.add(eq)
+    flag = f"has_{body.equipment_type}"
+    if hasattr(hh, flag):
+        setattr(hh, flag, True)
+    db.commit()
+    db.refresh(eq)
+    await _ws_manager.broadcast(hh.id, "equipment_updated", _equipment_out(eq))
+    return _equipment_out(eq)
+
+
+@router.put("/household/equipment/{eq_id}")
+async def update_equipment(
+    eq_id: str,
+    body: EquipmentItemUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    uid = _get_user_id(request)
+    hh = _get_household(db, uid)
+    eq = db.query(KitchenEquipment).filter_by(id=eq_id, household_id=hh.id).first()
+    if not eq:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    if body.make is not None:
+        eq.make = body.make
+    if body.model is not None:
+        eq.model = body.model
+    db.commit()
+    db.refresh(eq)
+    await _ws_manager.broadcast(hh.id, "equipment_updated", _equipment_out(eq))
+    return _equipment_out(eq)
+
+
+@router.delete("/household/equipment/{eq_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_equipment(
+    eq_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    uid = _get_user_id(request)
+    hh = _get_household(db, uid)
+    eq = db.query(KitchenEquipment).filter_by(id=eq_id, household_id=hh.id).first()
+    if not eq:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    flag = f"has_{eq.equipment_type}"
+    if hasattr(hh, flag):
+        setattr(hh, flag, False)
+    db.delete(eq)
+    db.commit()
+    await _ws_manager.broadcast(hh.id, "equipment_deleted", {"id": eq_id})
+
+
+# ---------------------------------------------------------------------------
 # Recipe Library
 # ---------------------------------------------------------------------------
 
@@ -498,6 +900,7 @@ async def create_recipe(
         meal_type=meal,
         primary_protein=body.primary_protein,
         servings=body.servings,
+        image_url=body.image_url,
         source_type=SourceType.MANUAL,
         ingredients_json=json.dumps(body.ingredients),
         steps_json=json.dumps(body.steps),
@@ -548,6 +951,8 @@ async def update_recipe(
         r.steps_json = json.dumps(body.steps)
     if body.equipment_needed is not None:
         r.equipment_needed_json = json.dumps(body.equipment_needed)
+    if body.image_url is not None:
+        r.image_url = body.image_url
     db.commit()
     db.refresh(r)
     await _ws_manager.broadcast(hh.id, "recipe_updated", _recipe_out(r))
@@ -580,74 +985,162 @@ async def ingest_recipe(
     uid = _get_user_id(request)
     hh = _get_household(db, uid)
 
-    raw_text = ""
-    src_type = SourceType.MANUAL
+    src_type   = SourceType.MANUAL
     actual_url = source_url
+    all_parsed: List[dict] = []
 
     if file and file.filename:
-        # PDF ingestion via PyMuPDF
         try:
             import fitz  # PyMuPDF
         except ImportError:
             raise HTTPException(status_code=500, detail="PyMuPDF not installed. Run: pip install pymupdf")
+
         content = await file.read()
-        doc = fitz.open(stream=content, filetype="pdf")
-        raw_text = "\n".join(page.get_text() for page in doc)
+        doc     = fitz.open(stream=content, filetype="pdf")
         src_type = SourceType.PDF
 
+        text_pages:  List[str] = []
+        image_pages: List[str] = []  # base64 PNG per scanned page
+
+        for page in doc:
+            text = page.get_text().strip()
+            if len(text) > 100:
+                text_pages.append(text)
+            else:
+                # Scanned page — render at 150 DPI and send to vision model
+                pix = page.get_pixmap(dpi=150)
+                image_pages.append(base64.b64encode(pix.tobytes("png")).decode())
+
+        # ── text track: chunk and send to qwen2.5:14b ──────────────────────
+        if text_pages:
+            full_text = "\n\n".join(text_pages)
+            for chunk in _chunk_text(full_text, 20000):
+                try:
+                    raw = await _call_ollama(_RECIPE_SCHEMA_PROMPT + chunk)
+                    all_parsed.extend(_collect_parsed(raw))
+                except Exception as exc:
+                    logger.warning("Text chunk parse failed: %s", exc)
+
+        # ── image track: each page → gemma3:12b vision ──────────────────────
+        for b64 in image_pages:
+            try:
+                raw = await _call_ollama_vision(_RECIPE_SCHEMA_PROMPT, b64)
+                all_parsed.extend(_collect_parsed(raw))
+            except Exception as exc:
+                logger.warning("Image page parse failed: %s", exc)
+
     elif source_url:
-        # URL ingestion via BeautifulSoup
         try:
             from bs4 import BeautifulSoup
         except ImportError:
             raise HTTPException(status_code=500, detail="BeautifulSoup not installed. Run: pip install beautifulsoup4")
+
+        _fetch_headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+        }
         async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
-            resp = await client.get(source_url, headers={"User-Agent": "RiverSongAI/1.0"})
-        soup = BeautifulSoup(resp.text, "html.parser")
-        for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
-            tag.decompose()
-        raw_text = soup.get_text(separator="\n", strip=True)
+            resp = await client.get(source_url, headers=_fetch_headers)
+        html     = resp.text
         src_type = SourceType.URL
+
+        if _is_bot_challenge(html):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "This site uses bot protection and blocked the request. "
+                    "Try copying the recipe text and using the Manual Entry form instead."
+                ),
+            )
+
+        # ── Track 1a: JSON-LD structured extraction (instant, no AI) ────────
+        jsonld_recipes = _extract_jsonld_recipes(html)
+        if jsonld_recipes:
+            logger.info("JSON-LD found: %d recipe(s)", len(jsonld_recipes))
+            all_parsed.extend(jsonld_recipes)
+
+        # ── Track 1b: Next.js __NEXT_DATA__ (other SPA sites) ───────────────
+        if not all_parsed:
+            nextdata_recipes = _extract_nextdata_recipes(html)
+            if nextdata_recipes:
+                logger.info("__NEXT_DATA__ found: %d recipe(s)", len(nextdata_recipes))
+                all_parsed.extend(nextdata_recipes)
+
+        if not all_parsed:
+            # ── Track 2: Fallback — scrape text → qwen2.5:14b ───────────────
+            logger.info("No structured data found — falling back to AI text parse")
+            soup = BeautifulSoup(html, "html.parser")
+            for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+                tag.decompose()
+            raw_text = soup.get_text(separator="\n", strip=True)
+
+            for chunk in _chunk_text(raw_text, 20000):
+                try:
+                    raw = await _call_ollama(_RECIPE_SCHEMA_PROMPT + chunk)
+                    all_parsed.extend(_collect_parsed(raw))
+                except Exception as exc:
+                    logger.warning("URL chunk parse failed: %s", exc)
+
+        # ── Image fallback: og:image for any recipe missing an image ─────────
+        og_image = _extract_og_image(html)
+        if og_image:
+            for recipe_dict in all_parsed:
+                if not recipe_dict.get("image_url"):
+                    recipe_dict["image_url"] = og_image
 
     else:
         raise HTTPException(status_code=422, detail="Provide either a PDF file or a source_url")
 
-    # Cap text to avoid overwhelming the model
-    raw_text = raw_text[:8000]
+    if not all_parsed:
+        raise HTTPException(status_code=502, detail="No recipes found in source")
 
-    try:
-        ollama_response = await _call_ollama(_RECIPE_SCHEMA_PROMPT + raw_text)
-        parsed = _extract_json(ollama_response)
-    except Exception as exc:
-        logger.warning("Ollama parse failed: %s", exc)
-        raise HTTPException(status_code=502, detail=f"Ollama parsing failed: {exc}")
+    # Deduplicate by normalised title across all chunks
+    seen:          set  = set()
+    unique_parsed: List[dict] = []
+    for item in all_parsed:
+        key = item.get("title", "").lower().strip()
+        if key and key not in seen:
+            seen.add(key)
+            unique_parsed.append(item)
 
-    ingredients = parsed.get("ingredients", [])
-    blacklisted = _flag_blacklist(ingredients)
-    meal_type_raw = parsed.get("meal_type", "Other")
-    try:
-        meal = MealType(meal_type_raw)
-    except ValueError:
-        meal = MealType.OTHER
+    saved: List[Recipe] = []
+    for item in unique_parsed:
+        ingredients = item.get("ingredients", [])
+        blacklisted = _flag_blacklist(ingredients)
+        try:
+            meal = MealType(item.get("meal_type", "Other"))
+        except ValueError:
+            meal = MealType.OTHER
 
-    r = Recipe(
-        household_id=hh.id,
-        title=parsed.get("title", "Untitled Recipe"),
-        meal_type=meal,
-        primary_protein=parsed.get("primary_protein"),
-        servings=int(parsed.get("servings", 4)),
-        source_url=actual_url,
-        source_type=src_type,
-        ingredients_json=json.dumps(ingredients),
-        steps_json=json.dumps(parsed.get("steps", [])),
-        equipment_needed_json=json.dumps(parsed.get("equipment_needed", [])),
-        blacklisted_json=json.dumps(blacklisted),
-    )
-    db.add(r)
+        r = Recipe(
+            household_id=hh.id,
+            title=item.get("title", "Untitled Recipe"),
+            meal_type=meal,
+            primary_protein=item.get("primary_protein"),
+            servings=int(item.get("servings", 4) or 4),
+            image_url=item.get("image_url"),
+            source_url=actual_url,
+            source_type=src_type,
+            ingredients_json=json.dumps(ingredients),
+            steps_json=json.dumps(item.get("steps", [])),
+            equipment_needed_json=json.dumps(item.get("equipment_needed", [])),
+            blacklisted_json=json.dumps(blacklisted),
+        )
+        db.add(r)
+        db.flush()
+        saved.append(r)
+
     db.commit()
-    db.refresh(r)
-    await _ws_manager.broadcast(hh.id, "recipe_created", _recipe_out(r))
-    return _recipe_out(r)
+    for r in saved:
+        db.refresh(r)
+        await _ws_manager.broadcast(hh.id, "recipe_created", _recipe_out(r))
+
+    return {"count": len(saved), "recipes": [_recipe_out(r) for r in saved]}
 
 
 # ---------------------------------------------------------------------------

@@ -193,7 +193,7 @@
   background: var(--md-surface-container, #1e1e1e);
   border: 1px solid var(--md-outline-variant, #333);
   border-radius: 10px;
-  padding: 16px;
+  overflow: hidden;
   cursor: pointer;
   transition: border-color 150ms, box-shadow 150ms;
 }
@@ -203,7 +203,43 @@
   box-shadow: 0 0 0 1px var(--primary);
 }
 
-.recipe-card h3 {
+/* top banner image area */
+.recipe-card-banner {
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.recipe-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.recipe-card-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.18);
+}
+
+.recipe-card-body {
+  padding: 14px 16px;
+}
+
+.recipe-card-body h3 {
+  margin: 0 0 6px 0;
+  font-size: 0.95rem;
+  color: var(--on-surface);
+}
+
+/* keep old h3 rule for cards that haven't been restructured */
+.recipe-card > h3 {
   margin: 0 0 6px 0;
   font-size: 0.95rem;
   color: var(--on-surface);
@@ -425,6 +461,66 @@
   font-size: 1.2rem;
   color: var(--primary);
   font-family: var(--font-display, monospace);
+}
+
+/* recipe detail modal — no top padding, hero sits flush */
+.cul-modal.cul-modal-recipe {
+  padding: 0;
+}
+
+/* ── Hero image (recipe detail modal) ─────────────────────────────────────── */
+
+.recipe-hero-wrap {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
+  border-radius: 14px 14px 0 0;
+  flex-shrink: 0;
+}
+
+.recipe-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.recipe-hero-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.18);
+}
+
+.recipe-hero-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 45%, var(--md-surface-container, #1e1e1e) 100%);
+  pointer-events: none;
+}
+
+/* close button positioned over the hero */
+.recipe-hero-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0,0,0,0.55);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  z-index: 2;
+}
+
+.recipe-hero-close:hover {
+  background: rgba(0,0,0,0.8);
 }
 
 /* ── Steps list ────────────────────────────────────────────────────────────── */
