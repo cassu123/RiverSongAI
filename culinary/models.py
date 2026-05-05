@@ -66,10 +66,11 @@ class Household(Base):
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now, onupdate=_now)
 
-    recipes         = relationship("Recipe",        back_populates="household", cascade="all, delete-orphan")
-    stockroom_items = relationship("StockroomItem", back_populates="household", cascade="all, delete-orphan")
-    prep_sessions   = relationship("PrepSession",   back_populates="household", cascade="all, delete-orphan")
-    walmart_mappings = relationship("WalmartMapping", back_populates="household", cascade="all, delete-orphan")
+    recipes          = relationship("Recipe",           back_populates="household", cascade="all, delete-orphan")
+    stockroom_items  = relationship("StockroomItem",    back_populates="household", cascade="all, delete-orphan")
+    prep_sessions    = relationship("PrepSession",      back_populates="household", cascade="all, delete-orphan")
+    walmart_mappings = relationship("WalmartMapping",   back_populates="household", cascade="all, delete-orphan")
+    equipment_items  = relationship("KitchenEquipment", back_populates="household", cascade="all, delete-orphan")
 
 
 class Recipe(Base):
@@ -88,6 +89,8 @@ class Recipe(Base):
     source_url      = Column(Text,             nullable=True)
     source_type     = Column(Enum(SourceType), default=SourceType.MANUAL, nullable=False)
     servings        = Column(Integer,          default=4, nullable=False)
+
+    image_url            = Column(Text, nullable=True)
 
     # JSON arrays stored as text (SQLite-compatible)
     ingredients_json     = Column(Text, nullable=False, default="[]")
@@ -161,6 +164,24 @@ class PrepSessionRecipe(Base):
 
     session = relationship("PrepSession", back_populates="recipes")
     recipe  = relationship("Recipe",      back_populates="prep_entries")
+
+
+class KitchenEquipment(Base):
+    """Owned kitchen equipment with make/model for recipe personalization."""
+    __tablename__ = "cul_kitchen_equipment"
+
+    id           = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    household_id = Column(String, ForeignKey("cul_households.id"), nullable=False, index=True)
+
+    equipment_type = Column(String, nullable=False)  # e.g. "air_fryer"
+    label          = Column(String, nullable=False)  # e.g. "Air Fryer"
+    make           = Column(String, nullable=True)
+    model          = Column(String, nullable=True)
+
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now, onupdate=_now)
+
+    household = relationship("Household", back_populates="equipment_items")
 
 
 class WalmartMapping(Base):
