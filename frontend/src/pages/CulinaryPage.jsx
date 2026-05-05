@@ -29,6 +29,28 @@ const EQUIPMENT_KEYS = [
   { key: 'grill',       label: 'Grill' },
 ]
 
+const COOKING_METHOD_OPTIONS = ['Air Fryer', 'Instant Pot', 'Slow Cooker', 'Oven', 'Stovetop', 'Grill', 'Sous Vide', 'Dutch Oven', 'Wok']
+
+// Map cooking method label → household equipment key
+const METHOD_TO_EQ_KEY = {
+  'Air Fryer':  'air_fryer',
+  'Instant Pot': 'instant_pot',
+  'Slow Cooker': 'slow_cooker',
+  'Grill':      'grill',
+  'Sous Vide':  'sous_vide',
+  'Dutch Oven': 'dutch_oven',
+  'Wok':        'wok',
+}
+
+function smartCookingMethod(equipmentNeeded = [], ownedEquipment = {}) {
+  for (const method of equipmentNeeded) {
+    const key = METHOD_TO_EQ_KEY[method]
+    if (!key) return method               // no special equipment needed (Oven, Stovetop)
+    if (ownedEquipment[key]) return method // user owns this equipment
+  }
+  return equipmentNeeded[0] || 'Oven'
+}
+
 // ── API helpers ───────────────────────────────────────────────────────────────
 
 function useApi(token) {
@@ -698,13 +720,16 @@ function StockroomTab({ api }) {
 
 // ── Prep Deck Tab ─────────────────────────────────────────────────────────────
 
-function PrepDeckTab({ api }) {
-  const [session, setSession]     = useState(null)
-  const [loading, setLoading]     = useState(true)
+function PrepDeckTab({ api, household }) {
+  const [session, setSession]           = useState(null)
+  const [loading, setLoading]           = useState(true)
+  const [recipeDetails, setRecipeDetails] = useState({}) // recipe_id → full recipe
   const [shoppingList, setShoppingList] = useState(null)
-  const [staging, setStaging]     = useState(null)
-  const [view, setView]           = useState('overview') // overview | shopping | staging
-  const [newLabel, setNewLabel]   = useState('')
+  const [staging, setStaging]           = useState(null)
+  const [view, setView]                 = useState('overview') // overview | cooking | shopping | staging
+  const [newLabel, setNewLabel]         = useState('')
+
+  const ownedEquipment = household?.equipment || {}
 
   const loadSession = useCallback(() => {
     setLoading(true)
@@ -714,6 +739,17 @@ function PrepDeckTab({ api }) {
   }, [api])
 
   useEffect(() => { loadSession() }, [loadSession])
+
+  // Load full recipe details whenever session changes
+  useEffect(() => {
+    if (!session?.recipes?.length) return
+    session.recipes.forEach(entry => {
+      if (recipeDetails[entry.recipe_id]) return
+      api.get(`/recipes/${entry.recipe_id}`)
+        .then(r => setRecipeDetails(prev => ({ ...prev, [entry.recipe_id]: r })))
+        .catch(() => {})
+    })
+  }, [session, api]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const createSession = async () => {
     const s = await api.post('/prep', { label: newLabel || 'Meal Prep Session' })
@@ -727,6 +763,7 @@ function PrepDeckTab({ api }) {
     setSession(null)
     setShoppingList(null)
     setStaging(null)
+    setRecipeDetails({})
   }
 
   const removeRecipe = async (entryId) => {
@@ -776,6 +813,7 @@ function PrepDeckTab({ api }) {
 
   return (
     <div>
+      {/* Session header */}
       <div className="cul-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
           <div>
@@ -802,7 +840,9 @@ function PrepDeckTab({ api }) {
           <PrepRecipeCard
             key={entry.entry_id}
             entry={entry}
+            recipe={recipeDetails[entry.recipe_id] || null}
             api={api}
+            ownedEquipment={ownedEquipment}
             onRemove={() => removeRecipe(entry.entry_id)}
           />
         ))}
@@ -817,10 +857,16 @@ function PrepDeckTab({ api }) {
             <Icon name="list_alt" size={15} /> Overview
           </button>
           <button
+            className={`cul-btn ${view === 'cooking' ? 'cul-btn-primary' : 'cul-btn-secondary'}`}
+            onClick={() => setView('cooking')}
+          >
+            <Icon name="local_fire_department" size={15} /> Cooking Guide
+          </button>
+          <button
             className={`cul-btn ${view === 'shopping' ? 'cul-btn-primary' : 'cul-btn-secondary'}`}
             onClick={loadShoppingList}
           >
-            <Icon name="shopping_cart" size={15} /> Master Shopping List
+            <Icon name="shopping_cart" size={15} /> Shopping List
           </button>
           <button
             className={`cul-btn ${view === 'staging' ? 'cul-btn-primary' : 'cul-btn-secondary'}`}
@@ -831,6 +877,63 @@ function PrepDeckTab({ api }) {
         </div>
       )}
 
+      {/* Overview */}
+      {view === 'overview' && session.recipes.length > 0 && (
+        <div className="cul-grid-2">
+          {session.recipes.map(entry => {
+            const recipe = recipeDetails[entry.recipe_id]
+            const method = recipe ? smartCookingMethod(recipe.equipment_needed, ownedEquipment) : null
+            const methodKey = method ? METHOD_TO_EQ_KEY[method] : null
+            const owned = methodKey ? ownedEquipment[methodKey] : true
+            return (
+              <div key={entry.entry_id} className="cul-card" style={{ margin: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: 4 }}>{entry.recipe_title}</div>
+                {entry.servings_target && (
+                  <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginBottom: 6 }}>
+                    Target: {entry.servings_target} servings
+                  </div>
+                )}
+                {recipe && (
+                  <>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginBottom: 6 }}>
+                      {recipe.ingredients.length} ingredient{recipe.ingredients.length !== 1 ? 's' : ''}
+                      {recipe.steps.length > 0 && ` · ${recipe.steps.length} step${recipe.steps.length !== 1 ? 's' : ''}`}
+                    </div>
+                    {method && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                        <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 99, background: owned ? 'var(--primary-container)' : 'var(--surface-variant)', color: owned ? 'var(--on-primary-container)' : 'var(--on-surface-variant)' }}>
+                          {method}
+                        </span>
+                        {owned && <span style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)' }}>Recommended</span>}
+                      </div>
+                    )}
+                  </>
+                )}
+                {!recipe && (
+                  <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)' }}>Loading details...</div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Cooking Guide */}
+      {view === 'cooking' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {session.recipes.map(entry => (
+            <CookingGuideCard
+              key={entry.entry_id}
+              entry={entry}
+              recipe={recipeDetails[entry.recipe_id] || null}
+              api={api}
+              ownedEquipment={ownedEquipment}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Shopping List */}
       {view === 'shopping' && shoppingList && (
         <div className="cul-card">
           <div className="cul-card-title"><Icon name="shopping_cart" size={16} /> Master Shopping List</div>
@@ -857,6 +960,7 @@ function PrepDeckTab({ api }) {
         </div>
       )}
 
+      {/* Staging Area */}
       {view === 'staging' && staging && (
         <div>
           <div className="cul-section-title">Staging Area — Recipe Piles</div>
@@ -887,9 +991,82 @@ function PrepDeckTab({ api }) {
   )
 }
 
+// ── Cooking Guide Card ────────────────────────────────────────────────────────
+
+function CookingGuideCard({ entry, recipe, api, ownedEquipment }) {
+  const defaultMethod = recipe ? smartCookingMethod(recipe.equipment_needed, ownedEquipment) : 'Oven'
+  const [method, setMethod]           = useState(defaultMethod)
+  const [translating, setTranslating] = useState(false)
+  const [steps, setSteps]             = useState(null)
+
+  // Update method when recipe loads
+  useEffect(() => {
+    if (recipe) setMethod(smartCookingMethod(recipe.equipment_needed, ownedEquipment))
+  }, [recipe, ownedEquipment]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const displaySteps = steps || recipe?.steps || []
+  const methodKey = METHOD_TO_EQ_KEY[method]
+  const owned = !methodKey || ownedEquipment[methodKey]
+
+  const translate = async () => {
+    setTranslating(true)
+    try {
+      const result = await api.post(`/recipes/${entry.recipe_id}/translate-equipment`, { equipment: method })
+      setSteps(result.rewritten_steps)
+    } finally {
+      setTranslating(false)
+    }
+  }
+
+  return (
+    <div className="cul-card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        <div style={{ fontWeight: 600, fontSize: '1rem' }}>{entry.recipe_title}</div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select
+            className="cul-select"
+            value={method}
+            onChange={e => { setMethod(e.target.value); setSteps(null) }}
+            style={{ fontSize: '0.82rem' }}
+          >
+            {COOKING_METHOD_OPTIONS.map(m => (
+              <option key={m} value={m}>{m}{METHOD_TO_EQ_KEY[m] && ownedEquipment[METHOD_TO_EQ_KEY[m]] ? ' ✓' : ''}</option>
+            ))}
+          </select>
+          {!owned && (
+            <span style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)' }}>not owned</span>
+          )}
+          <button className="cul-btn cul-btn-secondary cul-btn-sm" onClick={translate} disabled={translating || !recipe}>
+            {translating ? 'Rewriting...' : `Rewrite for ${method}`}
+          </button>
+          {steps && (
+            <button className="cul-btn cul-btn-secondary cul-btn-sm" onClick={() => setSteps(null)}>
+              Original
+            </button>
+          )}
+        </div>
+      </div>
+
+      {!recipe && (
+        <div style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem' }}>Loading recipe...</div>
+      )}
+
+      {displaySteps.length > 0 && (
+        <ol className="steps-list" style={{ fontSize: '0.88rem', margin: 0 }}>
+          {displaySteps.map((step, i) => <li key={i}>{step}</li>)}
+        </ol>
+      )}
+
+      {recipe && displaySteps.length === 0 && (
+        <div style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem' }}>No steps recorded for this recipe.</div>
+      )}
+    </div>
+  )
+}
+
 // ── Prep Recipe Card (with Adjuster + Cooking Method) ────────────────────────
 
-function PrepRecipeCard({ entry, api, onRemove }) {
+function PrepRecipeCard({ entry, recipe, api, ownedEquipment, onRemove }) {
   const [expanded, setExpanded]       = useState(false)
 
   // Adjuster
@@ -898,10 +1075,14 @@ function PrepRecipeCard({ entry, api, onRemove }) {
   const [scaling, setScaling]         = useState(false)
   const [scaleResult, setScaleResult] = useState(null)
 
-  // Cooking Method
-  const [eqTarget, setEqTarget]           = useState('Air Fryer')
+  // Cooking Method — smart default from recipe equipment + owned equipment
+  const [eqTarget, setEqTarget]           = useState(() => recipe ? smartCookingMethod(recipe.equipment_needed, ownedEquipment) : 'Oven')
   const [translating, setTranslating]     = useState(false)
   const [rewrittenSteps, setRewrittenSteps] = useState(null)
+
+  useEffect(() => {
+    if (recipe) setEqTarget(smartCookingMethod(recipe.equipment_needed, ownedEquipment))
+  }, [recipe, ownedEquipment]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleScale = async () => {
     setScaling(true)
@@ -992,8 +1173,8 @@ function PrepRecipeCard({ entry, api, onRemove }) {
           <div className="cul-section-title" style={{ marginTop: 16 }}>Cooking Method</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <select className="cul-select" value={eqTarget} onChange={e => setEqTarget(e.target.value)}>
-              {['Air Fryer', 'Instant Pot', 'Slow Cooker', 'Oven', 'Stovetop', 'Grill', 'Sous Vide'].map(eq => (
-                <option key={eq}>{eq}</option>
+              {COOKING_METHOD_OPTIONS.map(m => (
+                <option key={m} value={m}>{m}{METHOD_TO_EQ_KEY[m] && ownedEquipment[METHOD_TO_EQ_KEY[m]] ? ' ✓' : ''}</option>
               ))}
             </select>
             <button className="cul-btn cul-btn-secondary cul-btn-sm" onClick={handleTranslate} disabled={translating}>
@@ -1154,12 +1335,13 @@ function WalmartTab({ api }) {
 // ── Equipment Tab ─────────────────────────────────────────────────────────────
 
 function EquipmentTab({ api }) {
-  const [items, setItems]     = useState([])
-  const [adding, setAdding]   = useState(false)
-  const [newType, setNewType] = useState(EQUIPMENT_KEYS[0].key)
-  const [newMake, setNewMake] = useState('')
-  const [newModel, setNewModel] = useState('')
-  const [saving, setSaving]   = useState(false)
+  const [items, setItems]         = useState([])
+  const [adding, setAdding]       = useState(false)
+  const [newMake, setNewMake]     = useState('')
+  const [newModel, setNewModel]   = useState('')
+  const [preview, setPreview]     = useState(null)   // {label, types} from /identify
+  const [identifying, setIdentifying] = useState(false)
+  const [saving, setSaving]       = useState(false)
 
   const load = useCallback(() => {
     api.get('/household/equipment').then(setItems).catch(() => {})
@@ -1167,21 +1349,43 @@ function EquipmentTab({ api }) {
 
   useEffect(() => { load() }, [load])
 
+  const identify = async () => {
+    if (!newMake.trim() && !newModel.trim()) return
+    setIdentifying(true)
+    setPreview(null)
+    try {
+      const result = await api.post('/household/equipment/identify', {
+        make: newMake.trim(),
+        model: newModel.trim(),
+      })
+      setPreview(result)
+    } catch {
+      setPreview({ label: `${newMake} ${newModel}`.trim(), types: [] })
+    } finally {
+      setIdentifying(false)
+    }
+  }
+
   const addItem = async () => {
     if (saving) return
     setSaving(true)
-    const label = EQUIPMENT_KEYS.find(e => e.key === newType)?.label || newType
     await api.post('/household/equipment', {
-      equipment_type: newType,
-      label,
-      make:  newMake.trim()  || null,
-      model: newModel.trim() || null,
+      make:  newMake.trim(),
+      model: newModel.trim(),
     })
     setAdding(false)
     setNewMake('')
     setNewModel('')
+    setPreview(null)
     setSaving(false)
     load()
+  }
+
+  const cancelAdd = () => {
+    setAdding(false)
+    setNewMake('')
+    setNewModel('')
+    setPreview(null)
   }
 
   const updateItem = async (id, make, model) => {
@@ -1202,7 +1406,7 @@ function EquipmentTab({ api }) {
       <div className="cul-card">
         <div className="cul-card-title"><Icon name="kitchen" size={18} /> Kitchen Equipment</div>
         <p style={{ margin: '0 0 14px 0', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
-          Add your appliances with make and model to personalize recipes and power the AI Equipment Translator.
+          Enter the brand and model — the AI will identify what it is, including multifunctional devices.
         </p>
 
         {items.length === 0 && !adding && (
@@ -1226,39 +1430,55 @@ function EquipmentTab({ api }) {
         {adding ? (
           <div className="cul-card" style={{ background: 'var(--surface-variant)', marginBottom: 10 }}>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={{ flex: 1, minWidth: 140 }}>
-                <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginBottom: 4 }}>Equipment</div>
-                <select className="cul-select" value={newType} onChange={e => setNewType(e.target.value)}>
-                  {EQUIPMENT_KEYS.map(({ key, label }) => (
-                    <option key={key} value={key}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ flex: 1, minWidth: 120 }}>
-                <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginBottom: 4 }}>Make</div>
+              <div style={{ flex: 1, minWidth: 130 }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginBottom: 4 }}>Brand</div>
                 <input
                   className="cul-input"
-                  placeholder="e.g. Cosori"
+                  placeholder="e.g. Instant Pot"
                   value={newMake}
-                  onChange={e => setNewMake(e.target.value)}
+                  onChange={e => { setNewMake(e.target.value); setPreview(null) }}
                 />
               </div>
-              <div style={{ flex: 1, minWidth: 120 }}>
+              <div style={{ flex: 1, minWidth: 130 }}>
                 <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginBottom: 4 }}>Model</div>
                 <input
                   className="cul-input"
-                  placeholder="e.g. Pro Gen 2"
+                  placeholder="e.g. Duo 7-in-1"
                   value={newModel}
-                  onChange={e => setNewModel(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && addItem()}
+                  onChange={e => { setNewModel(e.target.value); setPreview(null) }}
+                  onKeyDown={e => e.key === 'Enter' && !preview && identify()}
                 />
               </div>
             </div>
+
+            {preview && (
+              <div style={{ marginTop: 10, padding: '8px 10px', background: 'var(--surface)', borderRadius: 8 }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', marginBottom: 4 }}>Detected</div>
+                <div style={{ fontWeight: 500, marginBottom: 4 }}>{preview.label}</div>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {preview.types.length > 0
+                    ? preview.types.map(t => (
+                        <span key={t} style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 99, background: 'var(--primary-container)', color: 'var(--on-primary-container)' }}>
+                          {EQUIPMENT_KEYS.find(k => k.key === t)?.label || t}
+                        </span>
+                      ))
+                    : <span style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)' }}>No matching category — will still be saved.</span>
+                  }
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-              <button className="cul-btn cul-btn-primary cul-btn-sm" onClick={addItem} disabled={saving}>
-                {saving ? 'Saving...' : 'Add'}
-              </button>
-              <button className="cul-btn cul-btn-secondary cul-btn-sm" onClick={() => setAdding(false)}>
+              {!preview ? (
+                <button className="cul-btn cul-btn-primary cul-btn-sm" onClick={identify} disabled={identifying || (!newMake.trim() && !newModel.trim())}>
+                  {identifying ? 'Identifying...' : 'Identify'}
+                </button>
+              ) : (
+                <button className="cul-btn cul-btn-primary cul-btn-sm" onClick={addItem} disabled={saving}>
+                  {saving ? 'Saving...' : 'Add'}
+                </button>
+              )}
+              <button className="cul-btn cul-btn-secondary cul-btn-sm" onClick={cancelAdd}>
                 Cancel
               </button>
             </div>
@@ -1283,23 +1503,36 @@ function EquipmentItemCard({ item, onUpdate, onDelete }) {
     setEditing(false)
   }
 
+  const caps = item.capabilities || (item.equipment_type ? [item.equipment_type] : [])
+
   return (
-    <div className="stock-item">
-      <Icon name="kitchen" size={20} />
+    <div className="stock-item" style={{ alignItems: 'flex-start' }}>
+      <Icon name="kitchen" size={20} style={{ marginTop: 2 }} />
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 500 }}>{item.label}</div>
         {!editing ? (
-          (item.make || item.model) && (
-            <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginTop: 2 }}>
-              {[item.make, item.model].filter(Boolean).join(' · ')}
-            </div>
-          )
+          <>
+            {(item.make || item.model) && (
+              <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginTop: 2 }}>
+                {[item.make, item.model].filter(Boolean).join(' · ')}
+              </div>
+            )}
+            {caps.length > 0 && (
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
+                {caps.map(t => (
+                  <span key={t} style={{ fontSize: '0.7rem', padding: '2px 7px', borderRadius: 99, background: 'var(--primary-container)', color: 'var(--on-primary-container)' }}>
+                    {EQUIPMENT_KEYS.find(k => k.key === t)?.label || t}
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
         ) : (
           <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
             <input
               className="cul-input"
               style={{ flex: 1, minWidth: 100 }}
-              placeholder="Make"
+              placeholder="Brand"
               value={make}
               onChange={e => setMake(e.target.value)}
             />
