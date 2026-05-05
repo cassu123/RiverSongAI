@@ -30,6 +30,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, sessionmaker
 
 from core.auth import decode_token
+from core.family import resolve_module_owner
 from inventory.auth import HomeNotFoundError, PermissionDeniedError, set_active_home
 from inventory.management import (
     add_attachment,
@@ -122,7 +123,8 @@ def get_current_inv_user(request: Request, db: Session = Depends(get_db)) -> Inv
     if not user_id or not email:
         raise HTTPException(status_code=401, detail="Token missing required fields")
 
-    return get_or_create_inv_user(db, external_user_id=user_id, email=email, display_name=display_name)
+    effective_id = resolve_module_owner(user_id, "inventory")
+    return get_or_create_inv_user(db, external_user_id=effective_id, email=email, display_name=display_name)
 
 
 # ---------------------------------------------------------------------------
