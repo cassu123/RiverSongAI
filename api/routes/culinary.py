@@ -31,6 +31,7 @@ WS         /ws/culinary
 from __future__ import annotations
 
 import base64
+import html
 import json
 import logging
 import os
@@ -348,24 +349,31 @@ def _parse_yield(y: Any) -> int:
     return int(m.group()) if m else 4
 
 
+def _strip_html(text: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = html.unescape(text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def _parse_steps(instructions: Any) -> List[str]:
     if isinstance(instructions, str):
-        return [s.strip() for s in re.split(r"\.\s+|\n", instructions) if s.strip()]
+        cleaned = _strip_html(instructions)
+        return [s.strip() for s in re.split(r"\.\s+|\n", cleaned) if s.strip()]
     if not isinstance(instructions, list):
         return []
     steps: List[str] = []
     for item in instructions:
         if isinstance(item, str):
-            steps.append(item.strip())
+            steps.append(_strip_html(item))
         elif isinstance(item, dict):
             text = item.get("text") or item.get("name") or ""
             if text:
-                steps.append(text.strip())
+                steps.append(_strip_html(text))
             for sub in item.get("itemListElement", []):
                 if isinstance(sub, dict):
                     t = sub.get("text") or sub.get("name") or ""
                     if t:
-                        steps.append(t.strip())
+                        steps.append(_strip_html(t))
     return [s for s in steps if s]
 
 
