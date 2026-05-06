@@ -169,6 +169,6 @@ async def music_search(
 async def music_play(video_id: str):
     from providers.google.youtube_music import YouTubeMusicProvider
     provider = YouTubeMusicProvider()
-    # Playback is fire-and-forget in the background
-    await provider.play_video_id(video_id)
+    # Playback in the background so we can respond immediately
+    asyncio.create_task(provider.play_video_id(video_id))
     return {"ok": True}
