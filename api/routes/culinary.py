@@ -2262,7 +2262,7 @@ def walmart_export(
         item_id = mappings.get(name_key)
         if item_id:
             try:
-                qty = max(1, int(float(ing.get("qty", 1))))
+                qty = max(1, int(_parse_qty(str(ing.get("qty", 1)))))
             except (ValueError, TypeError):
                 qty = 1
             cart_items.append(f"{item_id}_{qty}")

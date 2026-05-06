@@ -1594,10 +1594,18 @@ function WalmartTab({ api }) {
   useEffect(() => { loadMappings() }, [loadMappings])
 
   const addMapping = async () => {
-    if (!ingName.trim() || !itemId.trim()) return
+    let finalId = itemId.trim()
+    if (!ingName.trim() || !finalId) return
+
+    // Auto-extract ID if a URL was pasted
+    if (finalId.includes('walmart.com')) {
+      const match = finalId.match(/\/(\d+)(\?|$)/)
+      if (match) finalId = match[1]
+    }
+
     await api.post('/walmart/mappings', {
       ingredient_name: ingName.trim(),
-      walmart_item_id: itemId.trim(),
+      walmart_item_id: finalId,
     })
     setIngName('')
     setItemId('')
@@ -1605,58 +1613,87 @@ function WalmartTab({ api }) {
   }
 
   const deleteMapping = async (id) => {
+    if (!confirm('Delete this mapping?')) return
     await api.del(`/walmart/mappings/${id}`)
     loadMappings()
   }
 
   const exportCart = async () => {
     setExporting(true)
-    const result = await api.post('/walmart/export', {})
-    setExportResult(result)
-    setExporting(false)
+    try {
+      const result = await api.post('/walmart/export', {})
+      setExportResult(result)
+    } catch (e) {
+      alert('Export failed: ' + e.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const searchWalmart = (q) => {
+    window.open(`https://www.walmart.com/search?q=${encodeURIComponent(q)}`, '_blank')
   }
 
   return (
-    <div>
+    <div className="walmart-tab">
       <div className="cul-card">
         <div className="cul-card-title"><Icon name="shopping_cart" size={18} /> Generate Walmart Cart</div>
         <p style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
           Generates a cart URL from the active Prep Deck session's shopping list using your Walmart Item ID mappings.
         </p>
-        <button className="cul-btn cul-btn-primary" onClick={exportCart} disabled={exporting}>
-          <Icon name="open_in_new" size={15} /> {exporting ? 'Building...' : 'Export to Walmart Cart'}
-        </button>
+        
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="cul-btn cul-btn-primary" onClick={exportCart} disabled={exporting}>
+            <Icon name="open_in_new" size={15} /> {exporting ? 'Building...' : 'Export to Walmart Cart'}
+          </button>
+          {exportResult && (
+            <button className="cul-btn" onClick={() => setExportResult(null)}>Clear Result</button>
+          )}
+        </div>
 
         {exportResult && (
-          <div style={{ marginTop: 14 }}>
+          <div style={{ marginTop: 14, padding: 12, background: 'var(--surface-container-low)', borderRadius: 8, border: '1px solid var(--outline-variant)' }}>
             {exportResult.cart_url ? (
               <>
-                <div style={{ fontSize: '0.85rem', marginBottom: 6, color: 'var(--on-surface-variant)' }}>
-                  {exportResult.mapped_count} item{exportResult.mapped_count !== 1 ? 's' : ''} mapped
+                <div style={{ fontSize: '0.85rem', marginBottom: 8, color: 'var(--on-surface)' }}>
+                  <strong>{exportResult.mapped_count}</strong> item{exportResult.mapped_count !== 1 ? 's' : ''} ready to add.
                 </div>
-                <div className="walmart-url-box">{exportResult.cart_url}</div>
-                <a
-                  className="cul-btn cul-btn-primary"
-                  href={exportResult.cart_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ textDecoration: 'none', display: 'inline-flex' }}
-                >
-                  <Icon name="open_in_new" size={15} /> Open Cart
-                </a>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <a
+                    className="cul-btn cul-btn-primary"
+                    href={exportResult.cart_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ textDecoration: 'none', display: 'inline-flex', flex: 1, justifyContent: 'center' }}
+                  >
+                    <Icon name="open_in_new" size={15} /> OPEN WALMART CART
+                  </a>
+                </div>
               </>
             ) : (
-              <div style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem' }}>
-                No mapped items found. Add Walmart Item ID mappings below.
+              <div style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem', marginBottom: 10 }}>
+                No mapped items found in the current shopping list.
               </div>
             )}
 
             {exportResult.unmapped?.length > 0 && (
-              <div className="walmart-unmapped">
-                <h4><Icon name="warning" size={14} /> Unmapped — Add Manually</h4>
-                <ul>
-                  {exportResult.unmapped.map((u, i) => <li key={i}>{u}</li>)}
-                </ul>
+              <div className="walmart-unmapped" style={{ background: 'transparent', padding: 0 }}>
+                <h4 style={{ fontSize: '0.75rem', color: 'var(--secondary)', marginBottom: 6 }}>
+                  <Icon name="warning" size={12} /> {exportResult.unmapped.length} UNMAPPED INGREDIENTS
+                </h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {exportResult.unmapped.map((u, i) => (
+                    <button 
+                      key={i} 
+                      className="feature-tag" 
+                      style={{ cursor: 'pointer', border: '1px solid var(--outline-variant)' }}
+                      onClick={() => { setIngName(u); setItemId('') }}
+                      title="Click to map this ingredient"
+                    >
+                      {u}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -1664,41 +1701,50 @@ function WalmartTab({ api }) {
       </div>
 
       <div className="cul-card">
-        <div className="cul-card-title"><Icon name="table_view" size={16} /> Ingredient → Walmart Item ID Mappings</div>
+        <div className="cul-card-title"><Icon name="table_view" size={16} /> Ingredient → Walmart Mapping</div>
+        <p style={{ margin: '0 0 12px 0', fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>
+          Map your favorite products to ingredients. Tip: Paste a Walmart item URL to auto-extract the ID.
+        </p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
           <input
             className="cul-input"
-            style={{ flex: 2, minWidth: 140 }}
-            placeholder="Ingredient name (e.g. chicken breast)"
+            style={{ flex: 2, minWidth: 160 }}
+            placeholder="Ingredient (e.g. eggs)"
             value={ingName}
             onChange={e => setIngName(e.target.value)}
           />
           <input
             className="cul-input"
-            style={{ flex: 1, minWidth: 120 }}
-            placeholder="Walmart Item ID"
+            style={{ flex: 3, minWidth: 200 }}
+            placeholder="Walmart Item ID or URL"
             value={itemId}
             onChange={e => setItemId(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addMapping()}
           />
-          <button className="cul-btn cul-btn-primary" onClick={addMapping}>Add</button>
+          <button className="cul-btn cul-btn-secondary" onClick={() => searchWalmart(ingName || 'grocery')} disabled={!ingName}>
+            Search
+          </button>
+          <button className="cul-btn cul-btn-primary" onClick={addMapping} disabled={!ingName || !itemId}>
+            Link
+          </button>
         </div>
 
         {mappings.length === 0 ? (
-          <div style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem' }}>
-            No mappings yet. Add ingredient → Walmart Item ID pairs above.
+          <div style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem', textAlign: 'center', padding: '20px 0' }}>
+            No mappings yet. Use the fields above to link your pantry items.
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
             {mappings.map(m => (
-              <div key={m.id} className="stock-item">
-                <div style={{ flex: 1, fontSize: '0.88rem' }}>{m.ingredient_name}</div>
-                <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--primary)' }}>
+              <div key={m.id} className="stock-item" style={{ padding: '8px 12px' }}>
+                <div style={{ flex: 1, fontSize: '0.88rem', fontWeight: 500 }}>{m.ingredient_name}</div>
+                <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--primary)', background: 'var(--surface-container-high)', padding: '2px 6px', borderRadius: 4 }}>
                   {m.walmart_item_id}
                 </div>
                 <button
                   className="cul-btn cul-btn-danger cul-btn-sm"
                   onClick={() => deleteMapping(m.id)}
+                  style={{ marginLeft: 8 }}
                 >
                   <Icon name="delete" size={14} />
                 </button>
