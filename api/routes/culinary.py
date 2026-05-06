@@ -25,7 +25,7 @@ POST       /api/culinary/prep/{session_id}/complete
 GET/POST/DELETE /api/culinary/walmart/mappings[/{mapping_id}]
 POST       /api/culinary/walmart/export
 
-WS         /ws/culinary
+WS         /api/culinary/ws
 """
 
 from __future__ import annotations
@@ -383,10 +383,17 @@ def _parse_qty(s: str) -> float:
         return 0.0
 
 
+def _safe_json(s: Optional[str], default: Any) -> Any:
+    try:
+        return json.loads(s) if s else default
+    except (json.JSONDecodeError, TypeError):
+        return default
+
+
 def _format_qty(v: float) -> str:
     """Format a float quantity back to a string, rounding to fractions if possible."""
-    if v == int(v):
-        return str(int(v))
+    if abs(v - round(v)) < 1e-9:
+        return str(round(v))
     
     whole = int(v)
     frac = v - whole
@@ -500,9 +507,9 @@ def _jsonld_to_recipe(node: dict) -> Optional[dict]:
     }
 
 
-def _extract_jsonld_recipes(html: str) -> List[dict]:
+def _extract_jsonld_recipes(page_html: str) -> List[dict]:
     """Pull all schema.org Recipe objects from JSON-LD blocks in an HTML page."""
-    blocks = re.findall(r'<script[^>]*ld\+json[^>]*>([\s\S]*?)</script>', html, re.I)
+    blocks = re.findall(r'<script[^>]*ld\+json[^>]*>([\s\S]*?)</script>', page_html, re.I)
     found: List[dict] = []
     for block in blocks:
         try:
@@ -530,7 +537,7 @@ def _extract_json(text: str) -> Any:
     return json.loads(text)
 
 
-def _extract_og_image(html: str) -> Optional[str]:
+def _extract_og_image(page_html: str) -> Optional[str]:
     """Pull the best available social/meta image from an HTML page."""
     patterns = [
         r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
@@ -539,7 +546,7 @@ def _extract_og_image(html: str) -> Optional[str]:
         r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image["\']',
     ]
     for pat in patterns:
-        m = re.search(pat, html, re.I)
+        m = re.search(pat, page_html, re.I)
         if m:
             url = m.group(1).strip()
             if url.startswith("http"):
@@ -547,9 +554,9 @@ def _extract_og_image(html: str) -> Optional[str]:
     return None
 
 
-def _is_bot_challenge(html: str) -> bool:
+def _is_bot_challenge(page_html: str) -> bool:
     """Detect bot challenge / CAPTCHA gate pages (Walmart, Cloudflare, etc.)."""
-    lower = html.lower()
+    lower = page_html.lower()
     indicators = [
         "robot or human",
         "are you a robot",
@@ -562,24 +569,31 @@ def _is_bot_challenge(html: str) -> bool:
         "challenge-form",
         "cf-challenge",
     ]
-    return any(phrase in lower for phrase in indicators) and len(html) < 60_000
+    return any(phrase in lower for phrase in indicators) and len(page_html) < 60_000
 
 
-def _extract_microdata_recipes(html: str) -> List[dict]:
+def _extract_microdata_recipes(page_html: str) -> List[dict]:
     """Pull schema.org Recipe data from Microdata (itemprop) tags."""
     try:
         from bs4 import BeautifulSoup
     except ImportError:
         return []
 
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(page_html, "html.parser")
     # Instant Pot and others use itemprop="recipeIngredient" for list items
     ingredients = [i.get_text(strip=True) for i in soup.find_all(attrs={"itemprop": "recipeIngredient"})]
     if not ingredients:
         return []
 
-    # Find the title — prioritising itemprop="name" then h1
-    title_node = soup.find(attrs={"itemprop": "name"}) or soup.find("h1")
+    # Scope title search to the recipe container to avoid picking up site/author names
+    recipe_container = (
+        soup.find(attrs={"itemtype": re.compile(r"schema\.org/Recipe", re.I)})
+    )
+    title_node = (
+        (recipe_container.find(attrs={"itemprop": "name"}) if recipe_container else None)
+        or soup.find(attrs={"itemprop": "name"})
+        or soup.find("h1")
+    )
     title = title_node.get_text(strip=True) if title_node else "Untitled Recipe"
 
     # Instructions — look for itemprop="recipeInstructions" first
@@ -615,7 +629,7 @@ def _extract_microdata_recipes(html: str) -> List[dict]:
 
     # Try to find a specific recipe image, fallback to OG
     image_node = soup.find(attrs={"itemprop": "image"})
-    image_url = _extract_image_url(image_node.get("src") if image_node else None) or _extract_og_image(html)
+    image_url = _extract_image_url(image_node.get("src") if image_node else None) or _extract_og_image(page_html)
 
     return [{
         "title": title,
@@ -627,9 +641,9 @@ def _extract_microdata_recipes(html: str) -> List[dict]:
     }]
 
 
-def _extract_nextdata_recipes(html: str) -> List[dict]:
+def _extract_nextdata_recipes(page_html: str) -> List[dict]:
     """Extract recipes from Next.js __NEXT_DATA__ JSON (Walmart and similar SPA sites)."""
-    m = re.search(r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>([\s\S]*?)</script>', html, re.I)
+    m = re.search(r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>([\s\S]*?)</script>', page_html, re.I)
     if not m:
         return []
     try:
@@ -885,10 +899,10 @@ def _recipe_out(r: Recipe) -> dict:
         "source_url":       r.source_url,
         "source_type":      r.source_type.value if r.source_type else "manual",
         "rating":           r.rating,
-        "ingredients":      json.loads(r.ingredients_json or "[]"),
-        "steps":            json.loads(r.steps_json or "[]"),
-        "equipment_needed": json.loads(r.equipment_needed_json or "[]"),
-        "blacklisted":      json.loads(r.blacklisted_json or "[]"),
+        "ingredients":      _safe_json(r.ingredients_json, []),
+        "steps":            _safe_json(r.steps_json, []),
+        "equipment_needed": _safe_json(r.equipment_needed_json, []),
+        "blacklisted":      _safe_json(r.blacklisted_json, []),
         "created_at":       r.created_at.isoformat() if r.created_at else None,
         "updated_at":       r.updated_at.isoformat() if r.updated_at else None,
     }
@@ -901,8 +915,8 @@ def _proposal_out(p: DinnerProposal) -> dict:
         "recipe_id":    p.recipe_id,
         "recipe":       _recipe_out(p.recipe) if p.recipe else None,
         "proposed_by":  p.proposed_by,
-        "votes_yes":    json.loads(p.votes_yes or "[]"),
-        "votes_no":     json.loads(p.votes_no  or "[]"),
+        "votes_yes":    _safe_json(p.votes_yes, []),
+        "votes_no":     _safe_json(p.votes_no,  []),
         "status":       p.status,
         "created_at":   p.created_at.isoformat() if p.created_at else None,
     }
@@ -1013,6 +1027,7 @@ async def culinary_ws(websocket: WebSocket, token: str = ""):
         except WebSocketDisconnect:
             _ws_manager.disconnect(hh.id, websocket)
     finally:
+        db.rollback()
         db.close()
 
 
@@ -1107,10 +1122,51 @@ async def update_equipment(
     eq = db.query(KitchenEquipment).filter_by(id=eq_id, household_id=hh.id).first()
     if not eq:
         raise HTTPException(status_code=404, detail="Equipment not found")
-    if body.make is not None:
+
+    make_changed = body.make is not None
+    model_changed = body.model is not None
+    if make_changed:
         eq.make = body.make
-    if body.model is not None:
+    if model_changed:
         eq.model = body.model
+
+    if make_changed or model_changed:
+        old_caps: set = set()
+        try:
+            old_caps.update(json.loads(eq.capabilities_json or "[]"))
+        except Exception:
+            if eq.equipment_type:
+                old_caps.add(eq.equipment_type)
+
+        identified = await _identify_equipment(eq.make, eq.model)
+        new_types = identified["types"]
+        eq.equipment_type = new_types[0] if new_types else "other"
+        eq.label = identified["label"]
+        eq.capabilities_json = json.dumps(new_types)
+
+        # Capabilities on sibling equipment — needed to safely clear old flags
+        siblings = db.query(KitchenEquipment).filter(
+            KitchenEquipment.household_id == hh.id,
+            KitchenEquipment.id != eq_id,
+        ).all()
+        sibling_caps: set = set()
+        for s_eq in siblings:
+            try:
+                sibling_caps.update(json.loads(s_eq.capabilities_json or "[]"))
+            except Exception:
+                if s_eq.equipment_type:
+                    sibling_caps.add(s_eq.equipment_type)
+
+        for t in old_caps:
+            if t not in new_types and t not in sibling_caps:
+                flag = f"has_{t}"
+                if hasattr(hh, flag):
+                    setattr(hh, flag, False)
+        for t in new_types:
+            flag = f"has_{t}"
+            if hasattr(hh, flag):
+                setattr(hh, flag, True)
+
     db.commit()
     db.refresh(eq)
     await _ws_manager.broadcast(hh.id, "equipment_updated", _equipment_out(eq))
@@ -1132,11 +1188,25 @@ async def delete_equipment(
         caps = json.loads(eq.capabilities_json or "[]")
     except Exception:
         caps = [eq.equipment_type] if eq.equipment_type else []
+
+    # Determine which capabilities remain on other equipment before clearing flags
+    remaining = db.query(KitchenEquipment).filter(
+        KitchenEquipment.household_id == hh.id,
+        KitchenEquipment.id != eq_id,
+    ).all()
+    remaining_caps: set = set()
+    for r_eq in remaining:
+        try:
+            remaining_caps.update(json.loads(r_eq.capabilities_json or "[]"))
+        except Exception:
+            if r_eq.equipment_type:
+                remaining_caps.add(r_eq.equipment_type)
+
+    db.delete(eq)
     for t in caps:
         flag = f"has_{t}"
-        if hasattr(hh, flag):
+        if hasattr(hh, flag) and t not in remaining_caps:
             setattr(hh, flag, False)
-    db.delete(eq)
     db.commit()
     await _ws_manager.broadcast(hh.id, "equipment_deleted", {"id": eq_id})
 
@@ -1376,12 +1446,9 @@ async def cook_now(
     factor            = target_servings / original_servings
 
     scaled = []
-    for ing in json.loads(recipe.ingredients_json or "[]"):
-        try:
-            raw_qty = float(str(ing.get("qty", 0)).strip() or 0) * factor
-            qty_out = int(raw_qty) if raw_qty == int(raw_qty) else round(raw_qty, 2)
-        except (ValueError, TypeError):
-            qty_out = ing.get("qty", "")
+    for ing in _safe_json(recipe.ingredients_json, []):
+        raw_qty = _parse_qty(str(ing.get("qty", ""))) * factor
+        qty_out = _format_qty(raw_qty) if raw_qty > 0 else ing.get("qty", "")
         scaled.append({"name": ing.get("name", ""), "qty": qty_out, "unit": ing.get("unit", "")})
 
     # Dismiss the proposal — it's been acted on
@@ -1395,7 +1462,7 @@ async def cook_now(
         "title":         recipe.title,
         "servings":      target_servings,
         "shopping_list": scaled,
-        "steps":         json.loads(recipe.steps_json or "[]"),
+        "steps":         _safe_json(recipe.steps_json, []),
     }
 
 
@@ -1494,10 +1561,10 @@ async def ingest_recipe(
             logger.error("Failed to fetch recipe URL %s: %s", source_url, exc)
             raise HTTPException(status_code=502, detail=f"Could not reach the recipe site: {exc}")
 
-        html     = resp.text
-        src_type = SourceType.URL
+        page_html = resp.text
+        src_type  = SourceType.URL
 
-        if _is_bot_challenge(html):
+        if _is_bot_challenge(page_html):
             raise HTTPException(
                 status_code=422,
                 detail=(
@@ -1507,21 +1574,21 @@ async def ingest_recipe(
             )
 
         # ── Track 1a: JSON-LD structured extraction (instant, no AI) ────────
-        jsonld_recipes = _extract_jsonld_recipes(html)
+        jsonld_recipes = _extract_jsonld_recipes(page_html)
         if jsonld_recipes:
             logger.info("JSON-LD found: %d recipe(s)", len(jsonld_recipes))
             all_parsed.extend(jsonld_recipes)
 
         # ── Track 1b: Microdata (itemprop="recipeIngredient" etc.) ──────────
         if not all_parsed:
-            microdata_recipes = _extract_microdata_recipes(html)
+            microdata_recipes = _extract_microdata_recipes(page_html)
             if microdata_recipes:
                 logger.info("Microdata found: %d recipe(s)", len(microdata_recipes))
                 all_parsed.extend(microdata_recipes)
 
         # ── Track 1c: Next.js __NEXT_DATA__ (other SPA sites) ───────────────
         if not all_parsed:
-            nextdata_recipes = _extract_nextdata_recipes(html)
+            nextdata_recipes = _extract_nextdata_recipes(page_html)
             if nextdata_recipes:
                 logger.info("__NEXT_DATA__ found: %d recipe(s)", len(nextdata_recipes))
                 all_parsed.extend(nextdata_recipes)
@@ -1529,7 +1596,7 @@ async def ingest_recipe(
         if not all_parsed:
             # ── Track 2: Fallback — scrape text → qwen2.5:14b ───────────────
             logger.info("No structured data found — falling back to AI text parse")
-            soup = BeautifulSoup(html, "html.parser")
+            soup = BeautifulSoup(page_html, "html.parser")
             for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
                 tag.decompose()
             raw_text = soup.get_text(separator="\n", strip=True)
@@ -1542,7 +1609,7 @@ async def ingest_recipe(
                     logger.warning("URL chunk parse failed: %s", exc)
 
         # ── Image fallback: og:image for any recipe missing an image ─────────
-        og_image = _extract_og_image(html)
+        og_image = _extract_og_image(page_html)
         if og_image:
             for recipe_dict in all_parsed:
                 if not recipe_dict.get("image_url"):
@@ -1691,8 +1758,8 @@ async def translate_equipment(
         if not isinstance(new_steps, list):
             new_steps = steps
     except Exception as exc:
-        logger.warning("Equipment translation failed: %s", exc)
-        raise HTTPException(status_code=502, detail=f"Ollama translation failed: {exc}")
+        logger.error("Equipment translation failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=502, detail="Equipment translation failed. Please try again.")
 
     return {
         "recipe_id":    recipe_id,
@@ -2005,15 +2072,19 @@ def get_shopping_list(session_id: str, request: Request, db: Session = Depends(g
         ingredients_json = entry.scaled_ingredients_json or (
             entry.recipe.ingredients_json if entry.recipe else "[]"
         )
-        ingredients = json.loads(ingredients_json)
+        try:
+            ingredients = json.loads(ingredients_json)
+        except (json.JSONDecodeError, TypeError):
+            continue
         for ing in ingredients:
             name_key = ing.get("name", "").lower().strip()
             if name_key in good_stock:
                 continue
             if name_key in aggregated:
                 try:
-                    aggregated[name_key]["qty"] = str(
-                        round(float(aggregated[name_key]["qty"]) + float(ing.get("qty", 0)), 2)
+                    aggregated[name_key]["qty"] = _format_qty(
+                        _parse_qty(str(aggregated[name_key]["qty"]))
+                        + _parse_qty(str(ing.get("qty", 0)))
                     )
                 except (ValueError, TypeError):
                     pass

@@ -1041,6 +1041,7 @@ function SportsTab({ prefs, savePrefs }) {
   const [headlineSearch, setHeadlineSearch] = useState('')
   const [allSportsSources, setAllSportsSources] = useState([])
   const [sportsCatMeta, setSportsCatMeta] = useState({})
+  const [selectedEvent, setSelectedEvent] = useState(null)
 
   const load = useCallback(() => {
     if (!prefs?.sport_teams?.length) return

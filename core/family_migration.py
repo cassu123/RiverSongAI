@@ -105,7 +105,7 @@ def _migrate_culinary(profile_id: str, family_owner: str, group_id: str) -> dict
 
         for tbl in (
             "cul_recipes", "cul_stockroom", "cul_prep_sessions",
-            "cul_walmart_mappings", "cul_kitchen_equipment",
+            "cul_walmart_mappings", "cul_kitchen_equipment", "cul_active_vote",
         ):
             cur = conn.execute(
                 f"UPDATE {tbl} SET household_id=? WHERE household_id=?",
