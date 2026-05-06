@@ -774,6 +774,13 @@
   .cul-btn-sm { width: auto; }
 }
 
+@media (max-width: 1024px) {
+  .cul-grid-2, .cul-grid-3 { grid-template-columns: 1fr; }
+  .recipe-hero-wrap { height: 180px; }
+  .cul-btn { width: 100%; }
+  .cul-btn-sm { width: auto; }
+}
+
 @media (max-width: 480px) {
   .cul-grid-2, .cul-grid-3 { grid-template-columns: 1fr; }
   .page-title { font-size: 1.5rem; }
