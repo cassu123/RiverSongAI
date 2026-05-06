@@ -2,6 +2,19 @@ import React, { useState } from 'react'
 import './ProfilePage.css'
 import { useAuth } from '../context/AuthContext'
 
+// ── tiny helpers ─────────────────────────────────────────────────────────────
+
+function Icon({ name, size = 18, className = '', style = {} }) {
+  return (
+    <span
+      className={`material-symbols-rounded ${className}`}
+      style={{ fontSize: size, lineHeight: 1, ...style }}
+    >
+      {name}
+    </span>
+  )
+}
+
 const THEMES = [
   { key: 'halo',          label: 'Halo Blue',     primary: '#35a7ff', bg: '#080c13' },
   { key: 'crimson-dark',  label: 'Crimson Dark',  primary: '#c53a1f', bg: '#140c0b' },
@@ -220,13 +233,122 @@ export default function ProfilePage({ profile, onSave, theme, onThemeChange, onN
             </div>
           </section>
 
-          {/* Linked Accounts shortcut */}
-          <section className="card profile-links-card">
-            <div className="card-title">LINKED ACCOUNTS</div>
-            <p className="profile-hint">Connect TikTok, Amazon, Etsy, Instagram, and more to power your Analytics dashboard.</p>
-            <button className="btn btn--outlined profile-links-btn" onClick={() => onNavigate?.('linked-accounts')}>
-              Manage Linked Accounts →
-            </button>
+          {/* Linked Accounts section */}
+          <section className={`card profile-links-card ${showLinked ? 'profile-links-card--expanded' : ''}`}>
+            <div className="profile-links-header" onClick={() => setShowLinked(!showLinked)}>
+              <div className="card-title">LINKED ACCOUNTS</div>
+              <span className="profile-links-chevron">{showLinked ? '▲' : '▼'}</span>
+            </div>
+            
+            <p className="profile-hint">Manage API keys for Amazon SP-API and Walmart Marketplace integration.</p>
+
+            {showLinked && (
+              <div className="profile-links-content">
+                {loadingLinks ? (
+                  <div className="profile-loading">RETRIEVING ENCRYPTED KEYS...</div>
+                ) : (
+                  <>
+                    <div className="profile-links-subgrid">
+                      {/* Amazon */}
+                      <div className="profile-links-subgroup">
+                        <div className="profile-subgroup-title">AMAZON SP-API</div>
+                        <div className="profile-fields">
+                          <label className="profile-label">
+                            LWA APP ID
+                            <input
+                              className="profile-input"
+                              value={integrations.amazon_sp_api.lwa_app_id}
+                              onChange={e => handleLinkChange('amazon_sp_api', 'lwa_app_id', e.target.value)}
+                              placeholder="amzn1.application-oa2-client..."
+                            />
+                          </label>
+                          <label className="profile-label">
+                            LWA CLIENT SECRET
+                            <input
+                              className="profile-input"
+                              type="password"
+                              value={integrations.amazon_sp_api.lwa_client_secret === '__SET__' ? '' : integrations.amazon_sp_api.lwa_client_secret}
+                              onChange={e => handleLinkChange('amazon_sp_api', 'lwa_client_secret', e.target.value)}
+                              placeholder={integrations.amazon_sp_api.lwa_client_secret === '__SET__' ? '••••••••' : 'Paste secret'}
+                            />
+                          </label>
+                          <label className="profile-label">
+                            LWA REFRESH TOKEN
+                            <input
+                              className="profile-input"
+                              type="password"
+                              value={integrations.amazon_sp_api.lwa_refresh_token === '__SET__' ? '' : integrations.amazon_sp_api.lwa_refresh_token}
+                              onChange={e => handleLinkChange('amazon_sp_api', 'lwa_refresh_token', e.target.value)}
+                              placeholder={integrations.amazon_sp_api.lwa_refresh_token === '__SET__' ? '••••••••' : 'Atzr|...'}
+                            />
+                          </label>
+                          <label className="profile-label">
+                            AWS ACCESS KEY
+                            <input
+                              className="profile-input"
+                              value={integrations.amazon_sp_api.aws_access_key}
+                              onChange={e => handleLinkChange('amazon_sp_api', 'aws_access_key', e.target.value)}
+                              placeholder="AKIA..."
+                            />
+                          </label>
+                          <label className="profile-label">
+                            AWS SECRET KEY
+                            <input
+                              className="profile-input"
+                              type="password"
+                              value={integrations.amazon_sp_api.aws_secret_key === '__SET__' ? '' : integrations.amazon_sp_api.aws_secret_key}
+                              onChange={e => handleLinkChange('amazon_sp_api', 'aws_secret_key', e.target.value)}
+                              placeholder={integrations.amazon_sp_api.aws_secret_key === '__SET__' ? '••••••••' : 'Paste secret'}
+                            />
+                          </label>
+                          <label className="profile-label">
+                            SELLER ID
+                            <input
+                              className="profile-input"
+                              value={integrations.amazon_sp_api.seller_id}
+                              onChange={e => handleLinkChange('amazon_sp_api', 'seller_id', e.target.value)}
+                              placeholder="A123456789..."
+                            />
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Walmart */}
+                      <div className="profile-links-subgroup">
+                        <div className="profile-subgroup-title">WALMART MARKETPLACE</div>
+                        <div className="profile-fields">
+                          <label className="profile-label">
+                            CLIENT ID
+                            <input
+                              className="profile-input"
+                              value={integrations.walmart_api.client_id}
+                              onChange={e => handleLinkChange('walmart_api', 'client_id', e.target.value)}
+                            />
+                          </label>
+                          <label className="profile-label">
+                            CLIENT SECRET
+                            <input
+                              className="profile-input"
+                              type="password"
+                              value={integrations.walmart_api.client_secret === '__SET__' ? '' : integrations.walmart_api.client_secret}
+                              onChange={e => handleLinkChange('walmart_api', 'client_secret', e.target.value)}
+                              placeholder={integrations.walmart_api.client_secret === '__SET__' ? '••••••••' : 'Paste secret'}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="profile-save-row">
+                      <button className="btn btn--primary" onClick={handleLinksSave} disabled={savingLinks}>
+                        {savingLinks ? 'SYNCING...' : 'SAVE INTEGRATIONS'}
+                      </button>
+                      {linksMsg && <span className="profile-saved-msg">{linksMsg}</span>}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </section>
         </div>
       </div>

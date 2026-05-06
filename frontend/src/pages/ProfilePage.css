@@ -260,7 +260,64 @@
   }
 }
 
-.profile-links-btn {
-  margin-top: 10px;
-  font-size: 0.7rem !important;
+/* ── Linked Accounts embedded section ───────────────────────────────────── */
+
+.profile-links-card {
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.profile-links-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding-bottom: 8px;
+}
+
+.profile-links-chevron {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.profile-links-content {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  animation: profile-fade-in 0.3s ease;
+}
+
+@keyframes profile-fade-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.profile-links-subgrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.profile-subgroup-title {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  color: var(--primary);
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+  opacity: 0.9;
+}
+
+.profile-loading {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 20px 0;
+  letter-spacing: 0.1em;
+}
+
+@media (min-width: 1200px) {
+  .profile-links-subgrid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
