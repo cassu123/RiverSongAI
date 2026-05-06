@@ -2181,15 +2181,29 @@ def create_walmart_mapping(
     uid = _get_user_id(request)
     hh = _get_household(db, uid)
     name_norm = body.ingredient_name.lower().strip()
+    item_id   = body.walmart_item_id.strip()
+
+    # 1. Backend URL Extraction
+    if "walmart.com" in item_id:
+        match = re.search(r"/(\d+)(\?|$)", item_id)
+        if match:
+            item_id = match.group(1)
+        else:
+            raise HTTPException(status_code=422, detail="Invalid Walmart URL. Could not find Item ID.")
+
+    # 2. Validation: Must be numeric
+    if not item_id.isdigit():
+        raise HTTPException(status_code=422, detail="Invalid Walmart Item ID. Must be a number.")
+
     existing = db.query(WalmartMapping).filter_by(household_id=hh.id, ingredient_name=name_norm).first()
     if existing:
-        existing.walmart_item_id = body.walmart_item_id
+        existing.walmart_item_id = item_id
         db.commit()
         return {"id": existing.id, "ingredient_name": existing.ingredient_name, "walmart_item_id": existing.walmart_item_id}
     m = WalmartMapping(
         household_id=hh.id,
         ingredient_name=name_norm,
-        walmart_item_id=body.walmart_item_id,
+        walmart_item_id=item_id,
     )
     db.add(m)
     db.commit()
