@@ -1171,6 +1171,48 @@
 .feeds-standings-gd--pos { color: #00cc44; }
 .feeds-standings-gd--neg { color: #ff3322; }
 
+/* ── Tablet & Mobile Adjustments ────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .feeds-weather-current {
+    flex-direction: column;
+    padding: 16px;
+  }
+  .feeds-weather-detail-grid {
+    width: 100%;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+  .feeds-weather-forecast {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .feeds-news-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+  .feeds-stocks-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .feeds-weather-forecast {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .feeds-tab {
+    padding: 8px 12px;
+    font-size: 0.65rem;
+  }
+  .feeds-match-body {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .feeds-match-centre {
+    order: -1;
+    width: 100%;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+}
+
 /* ── Match Stats Page ─────────────────────────────────────────────────── */
 
 .feeds-match-card--clickable {

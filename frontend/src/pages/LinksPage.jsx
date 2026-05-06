@@ -41,9 +41,24 @@ const PLATFORMS = [
   },
   // E-Commerce
   {
-    key: 'amazon', label: 'Amazon', color: '#ff9900', category: 'ecommerce', authType: 'apikey',
-    keyLabel: 'Access Key ID', secretLabel: 'Secret Access Key',
+    key: 'amazon', label: 'Amazon', color: '#ff9900', category: 'ecommerce', authType: 'commerce',
+    fields: [
+      { name: 'lwa_app_id', label: 'LWA APP ID', type: 'text', placeholder: 'amzn1.application-oa2-client...' },
+      { name: 'lwa_client_secret', label: 'LWA CLIENT SECRET', type: 'password' },
+      { name: 'lwa_refresh_token', label: 'LWA REFRESH TOKEN', type: 'password' },
+      { name: 'aws_access_key', label: 'AWS ACCESS KEY', type: 'text' },
+      { name: 'aws_secret_key', label: 'AWS SECRET KEY', type: 'password' },
+      { name: 'seller_id', label: 'SELLER ID', type: 'text' },
+    ],
     hint: 'Use the Amazon Selling Partner API (SP-API). Register your app in Seller Central.',
+  },
+  {
+    key: 'walmart', label: 'Walmart', color: '#ffc220', category: 'ecommerce', authType: 'commerce',
+    fields: [
+      { name: 'client_id', label: 'CLIENT ID', type: 'text' },
+      { name: 'client_secret', label: 'CLIENT SECRET', type: 'password' },
+    ],
+    hint: 'Walmart Marketplace API credentials from developer.walmart.com.',
   },
   {
     key: 'etsy', label: 'Etsy', color: '#f56400', category: 'ecommerce', authType: 'apikey',
@@ -335,6 +350,38 @@ export default function LinksPage({ onNavigate }) {
       <h1 className="page-title">Linked Accounts</h1>
       <p className="page-subtitle">
         Connect your platforms in one place. API keys are stored securely and used to pull data into Analytics.
+      </p>
+
+      {loading ? (
+        <div className="lk-loading">Loading…</div>
+      ) : (
+        <>
+          {err && <div className="lk-error">{err}</div>}
+
+          <div className="lk-summary">
+            <span className="lk-summary-count">{totalConnected}</span>
+            <span className="lk-summary-label"> of {PLATFORMS.filter(p => p.authType === 'apikey').length} platforms connected</span>
+          </div>
+
+          <div className="lk-categories">
+            {CATEGORIES.map(cat => (
+              <CategorySection
+                key={cat.key}
+                category={cat.key}
+                stored={stored}
+                readingConnections={readingConnections}
+                onSave={handleSave}
+                onRemove={handleRemove}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+urely and used to pull data into Analytics.
       </p>
 
       {loading ? (
