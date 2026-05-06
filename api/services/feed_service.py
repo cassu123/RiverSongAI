@@ -15,7 +15,9 @@ from fastapi import HTTPException
 from config.settings import get_settings
 from providers.feeds.news import fetch_articles
 from providers.feeds.weather import fetch_weather, fetch_nws_alerts
-from providers.feeds.sports import search_teams, fetch_teams_feed, fetch_standings
+from providers.feeds.sports import (
+    search_teams, fetch_teams_feed, fetch_standings, fetch_event_stats
+)
 from providers.feeds.stocks import (
     fetch_quotes, fetch_chart, search_symbols,
     fetch_finnhub_quotes, fetch_finnhub_news,
@@ -113,6 +115,10 @@ class FeedService:
     @staticmethod
     async def get_sports_standings(league_id: str, season: str = "") -> List[Dict[str, Any]]:
         return await fetch_standings(league_id, season)
+
+    @staticmethod
+    async def get_sports_event_stats(event_id: str) -> List[Dict[str, Any]]:
+        return await fetch_event_stats(event_id)
 
     @staticmethod
     async def get_stock_news(ticker: str) -> List[Dict[str, Any]]:

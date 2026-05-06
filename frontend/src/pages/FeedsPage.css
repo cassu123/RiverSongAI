@@ -1171,6 +1171,175 @@
 .feeds-standings-gd--pos { color: #00cc44; }
 .feeds-standings-gd--neg { color: #ff3322; }
 
+/* ── Match Stats Page ─────────────────────────────────────────────────── */
+
+.feeds-match-card--clickable {
+  cursor: pointer;
+}
+.feeds-match-card--clickable:hover {
+  background: var(--bg-panel);
+  border-color: var(--primary);
+}
+
+.feeds-match-stats-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: feeds-fade-in 0.3s ease;
+}
+
+@keyframes feeds-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.feeds-match-stats-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.feeds-back-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0;
+}
+.feeds-back-btn:hover { text-decoration: underline; }
+
+.feeds-match-stats-league {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.feeds-match-stats-hero {
+  background: var(--bg-card);
+  border: 1px solid var(--border-bright);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+}
+
+.feeds-match-stats-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.feeds-match-stats-team img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.feeds-match-stats-team-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: center;
+  color: var(--text);
+}
+
+.feeds-match-stats-score-wrap {
+  text-align: center;
+  min-width: 120px;
+}
+
+.feeds-match-stats-score {
+  font-family: var(--font-display);
+  font-size: 2.8rem;
+  color: var(--primary);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.feeds-match-stats-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.feeds-match-stats-body {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.feeds-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.feeds-stat-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.feeds-stat-label {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.feeds-stat-comparison {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.feeds-stat-val {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  min-width: 32px;
+}
+
+.feeds-stat-val--home { text-align: right; }
+.feeds-stat-val--away { text-align: left; }
+
+.feeds-stat-bar-bg {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-panel);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.feeds-stat-bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  transition: width 0.4s ease-out;
+}
+
+.feeds-stat-bar-fill--home {
+  left: 0;
+  background: var(--primary);
+}
+
+.feeds-stat-bar-fill--away {
+  right: 0;
+  background: var(--secondary);
+}
+
 /* Stocks layout */
 
 /* Summary bar */

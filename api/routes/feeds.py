@@ -155,6 +155,12 @@ async def sports_search(q: str = Query(..., min_length=2)):
     return await FeedService.search_sports_teams(q)
 
 
+@router.get("/sports/event-stats")
+async def get_event_stats(event_id: str = Query(...)):
+    """Fetch detailed statistics for a specific event."""
+    return await FeedService.get_sports_event_stats(event_id)
+
+
 @router.get("/sports")
 async def get_sports(
     request: Request,
