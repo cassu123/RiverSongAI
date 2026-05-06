@@ -36,6 +36,7 @@ import json
 import logging
 import os
 import re
+import sqlalchemy
 from datetime import datetime, timezone
 from fractions import Fraction
 from typing import Any, Dict, Generator, List, Optional
@@ -60,6 +61,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from core.auth import decode_token
 from culinary.models import (
     Base,
+    BannedIngredient,
     DinnerProposal,
     Household,
     KitchenEquipment,
@@ -111,6 +113,54 @@ def _migrate_culinary_schema() -> None:
 _migrate_culinary_schema()
 
 
+# ---------------------------------------------------------------------------
+# Hardcoded Defaults (to be migrated)
+# ---------------------------------------------------------------------------
+
+_DEFAULT_BLACKLIST = {
+    "bell pepper", "bell peppers",
+    "pearl onion", "pearl onions",
+    "quinoa",
+    "radish", "radishes",
+    "zucchini",
+    "mushroom", "mushrooms",
+}
+
+_DEFAULT_SUBSTITUTIONS = {
+    "bell pepper":  "poblano pepper",
+    "bell peppers": "poblano peppers",
+    "pearl onion":  "shallot",
+    "pearl onions": "shallots",
+    "quinoa":       "brown rice",
+    "radish":       "turnip",
+    "radishes":     "turnips",
+    "zucchini":     "yellow squash",
+    "mushroom":     "eggplant",
+    "mushrooms":    "eggplant",
+}
+
+
+def _seed_banned_ingredients() -> None:
+    """One-time migration: seed existing households with the old hardcoded blacklist."""
+    with _Session() as session:
+        households = session.query(Household).all()
+        for hh in households:
+            # Only seed if they have NO banned ingredients yet
+            existing = session.query(BannedIngredient).filter_by(household_id=hh.id).count()
+            if existing == 0:
+                for name in _DEFAULT_BLACKLIST:
+                    bi = BannedIngredient(
+                        household_id=hh.id,
+                        name=name,
+                        substitute=_DEFAULT_SUBSTITUTIONS.get(name)
+                    )
+                    session.add(bi)
+        session.commit()
+
+
+_seed_banned_ingredients()
+
+
 def get_db() -> Generator[Session, None, None]:
     db = _Session()
     try:
@@ -154,37 +204,17 @@ def _get_household(db: Session, owner_id: str) -> Household:
 # Ingredient blacklist
 # ---------------------------------------------------------------------------
 
-BLACKLIST = {
-    "bell pepper", "bell peppers",
-    "pearl onion", "pearl onions",
-    "quinoa",
-    "radish", "radishes",
-    "zucchini",
-    "mushroom", "mushrooms",
-}
+def _flag_blacklist(db: Session, household_id: str, ingredients: list[dict]) -> list[dict]:
+    banned = db.query(BannedIngredient).filter_by(household_id=household_id).all()
+    banned_map = {b.name.lower(): b.substitute for b in banned}
 
-SUBSTITUTIONS = {
-    "bell pepper":  "poblano pepper",
-    "bell peppers": "poblano peppers",
-    "pearl onion":  "shallot",
-    "pearl onions": "shallots",
-    "quinoa":       "brown rice",
-    "radish":       "turnip",
-    "radishes":     "turnips",
-    "zucchini":     "yellow squash",
-    "mushroom":     "eggplant",
-    "mushrooms":    "eggplant",
-}
-
-
-def _flag_blacklist(ingredients: list[dict]) -> list[dict]:
     flagged = []
     for ing in ingredients:
         name_lower = ing.get("name", "").lower().strip()
-        if name_lower in BLACKLIST:
+        if name_lower in banned_map:
             flagged.append({
                 "name":        ing["name"],
-                "substitute":  SUBSTITUTIONS.get(name_lower, ""),
+                "substitute":  banned_map[name_lower],
             })
     return flagged
 
@@ -246,6 +276,16 @@ Return ONLY valid JSON (no markdown, no explanation):
 
 Brand: {make}
 Model: {model}
+"""
+
+_SUBSTITUTE_RECOMMEND_PROMPT = """
+You are a culinary expert. Recommend 3-5 approved substitutes for the ingredient: {ingredient}.
+For each substitute, provide a short reason why it works well.
+Return ONLY a JSON array of objects. No markdown, no prose.
+Each element must follow this exact schema:
+[
+  {{"name": "string", "reason": "string"}}
+]
 """
 
 
@@ -916,6 +956,20 @@ class WalmartMappingCreate(BaseModel):
     walmart_item_id: str
 
 
+class BannedIngredientCreate(BaseModel):
+    name:       str
+    substitute: Optional[str] = None
+
+
+class BannedIngredientUpdate(BaseModel):
+    name:       Optional[str] = None
+    substitute: Optional[str] = None
+
+
+class SubstituteRecommendRequest(BaseModel):
+    ingredient: str
+
+
 class RateRecipeRequest(BaseModel):
     rating: int  # 1-5
 
@@ -1016,6 +1070,17 @@ def _equipment_out(eq: KitchenEquipment) -> dict:
         "make":           eq.make,
         "model":          eq.model,
         "capabilities":   capabilities,
+    }
+
+
+def _banned_out(bi: BannedIngredient) -> dict:
+    return {
+        "id":           bi.id,
+        "household_id": bi.household_id,
+        "name":         bi.name,
+        "substitute":   bi.substitute,
+        "created_at":   bi.created_at.isoformat() if bi.created_at else None,
+        "updated_at":   bi.updated_at.isoformat() if bi.updated_at else None,
     }
 
 
@@ -1124,6 +1189,93 @@ async def update_household(
     db.refresh(hh)
     await _ws_manager.broadcast(hh.id, "household_updated", _household_out(hh))
     return _household_out(hh)
+
+
+# ---------------------------------------------------------------------------
+# Banned Ingredients
+# ---------------------------------------------------------------------------
+
+@router.get("/household/banned")
+def list_banned_ingredients(request: Request, db: Session = Depends(get_db)):
+    uid = _get_user_id(request)
+    hh = _get_household(db, uid)
+    return [_banned_out(bi) for bi in hh.banned_ingredients]
+
+
+@router.post("/household/banned", status_code=status.HTTP_201_CREATED)
+async def add_banned_ingredient(
+    body: BannedIngredientCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    uid = _get_user_id(request)
+    hh = _get_household(db, uid)
+    bi = BannedIngredient(
+        household_id=hh.id,
+        name=body.name.strip().lower(),
+        substitute=body.substitute.strip() if body.substitute else None,
+    )
+    db.add(bi)
+    db.commit()
+    db.refresh(bi)
+    await _ws_manager.broadcast(hh.id, "banned_updated", _banned_out(bi))
+    return _banned_out(bi)
+
+
+@router.put("/household/banned/{bi_id}")
+async def update_banned_ingredient(
+    bi_id: str,
+    body: BannedIngredientUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    uid = _get_user_id(request)
+    hh = _get_household(db, uid)
+    bi = db.query(BannedIngredient).filter_by(id=bi_id, household_id=hh.id).first()
+    if not bi:
+        raise HTTPException(status_code=404, detail="Banned ingredient not found")
+
+    if body.name is not None:
+        bi.name = body.name.strip().lower()
+    if body.substitute is not None:
+        bi.substitute = body.substitute.strip() if body.substitute else None
+
+    db.commit()
+    db.refresh(bi)
+    await _ws_manager.broadcast(hh.id, "banned_updated", _banned_out(bi))
+    return _banned_out(bi)
+
+
+@router.delete("/household/banned/{bi_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_banned_ingredient(
+    bi_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    uid = _get_user_id(request)
+    hh = _get_household(db, uid)
+    bi = db.query(BannedIngredient).filter_by(id=bi_id, household_id=hh.id).first()
+    if not bi:
+        raise HTTPException(status_code=404, detail="Banned ingredient not found")
+    db.delete(bi)
+    db.commit()
+    await _ws_manager.broadcast(hh.id, "banned_deleted", {"id": bi_id})
+
+
+@router.post("/household/banned/recommend")
+async def recommend_substitutes(body: SubstituteRecommendRequest, request: Request):
+    """Ask AI for substitute recommendations for a given ingredient."""
+    _get_user_id(request)  # auth check
+    prompt = _SUBSTITUTE_RECOMMEND_PROMPT.format(ingredient=body.ingredient)
+    try:
+        raw = await _call_ollama(prompt)
+        recommendations = _extract_json(raw)
+        if not isinstance(recommendations, list):
+            return []
+        return recommendations
+    except Exception as exc:
+        logger.error("Substitute recommendation failed: %s", exc)
+        return []
 
 
 # ---------------------------------------------------------------------------
@@ -1287,15 +1439,42 @@ def list_recipes(request: Request, db: Session = Depends(get_db)):
     return [_recipe_out(r) for r in hh.recipes]
 
 
+@router.get("/recipes/duplicates")
+def list_duplicate_recipes(request: Request, db: Session = Depends(get_db)):
+    """Group recipes by normalized title and return groups with >1 item."""
+    uid = _get_user_id(request)
+    hh = _get_household(db, uid)
+    
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for r in hh.recipes:
+        key = (r.title or "Untitled").strip().lower()
+        groups[key].append(_recipe_out(r))
+    
+    return [g for g in groups.values() if len(g) > 1]
+
+
 @router.post("/recipes", status_code=status.HTTP_201_CREATED)
 async def create_recipe(
     body: RecipeCreate,
     request: Request,
     db: Session = Depends(get_db),
+    force: bool = False,
 ):
     uid = _get_user_id(request)
     hh = _get_household(db, uid)
-    blacklisted = _flag_blacklist(body.ingredients)
+
+    # Duplicate check
+    title_norm = body.title.strip().lower()
+    if not force:
+        existing = db.query(Recipe).filter(
+            Recipe.household_id == hh.id,
+            sqlalchemy.func.lower(Recipe.title) == title_norm
+        ).first()
+        if existing:
+            raise HTTPException(status_code=409, detail=f"A recipe with title '{body.title}' already exists.")
+
+    blacklisted = _flag_blacklist(db, hh.id, body.ingredients)
     meal = MealType(body.meal_type) if body.meal_type in [m.value for m in MealType] else MealType.OTHER
     r = Recipe(
         household_id=hh.id,
@@ -1349,7 +1528,7 @@ async def update_recipe(
         r.servings = body.servings
     if body.ingredients is not None:
         r.ingredients_json = json.dumps(body.ingredients)
-        r.blacklisted_json = json.dumps(_flag_blacklist(body.ingredients))
+        r.blacklisted_json = json.dumps(_flag_blacklist(db, hh.id, body.ingredients))
     if body.steps is not None:
         r.steps_json = json.dumps(body.steps)
     if body.equipment_needed is not None:
@@ -1541,6 +1720,7 @@ async def ingest_recipe(
     db: Session = Depends(get_db),
     source_url: Optional[str] = Form(default=None),
     file: Optional[UploadFile] = File(default=None),
+    force: bool = False,
 ):
     uid = _get_user_id(request)
     hh = _get_household(db, uid)
@@ -1695,11 +1875,22 @@ async def ingest_recipe(
             seen.add(key)
             unique_parsed.append(item)
 
+    # Duplicate check against DB
+    if not force:
+        titles = [item.get("title", "").strip().lower() for item in unique_parsed if item.get("title")]
+        if titles:
+            existing = db.query(Recipe).filter(
+                Recipe.household_id == hh.id,
+                sqlalchemy.func.lower(Recipe.title).in_(titles)
+            ).first()
+            if existing:
+                raise HTTPException(status_code=409, detail=f"Recipe '{existing.title}' already exists in your library.")
+
     saved: List[Recipe] = []
     try:
         for item in unique_parsed:
             ingredients = item.get("ingredients", [])
-            blacklisted = _flag_blacklist(ingredients)
+            blacklisted = _flag_blacklist(db, hh.id, ingredients)
             try:
                 meal = MealType(item.get("meal_type", "Other"))
             except ValueError:

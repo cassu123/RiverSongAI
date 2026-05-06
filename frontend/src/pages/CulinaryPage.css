@@ -602,6 +602,30 @@
 .star-btn:active { transform: scale(0.88); }
 .star-btn.filled { color: var(--md-primary); }
 
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--md-surface-container-highest);
+  border-top-color: var(--md-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.feature-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--md-shape-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--md-surface-container-highest);
+  color: var(--md-on-surface-variant);
+  border: none;
+}
+
 /* ── Dinner proposal card ────────────────────────────────────────────────── */
 
 .dinner-card {

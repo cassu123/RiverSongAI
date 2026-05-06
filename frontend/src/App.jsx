@@ -20,8 +20,6 @@ import GooglePage         from './pages/GooglePage.jsx'
 import CommercePage       from './pages/CommercePage.jsx'
 import ReadingPage        from './pages/ReadingPage.jsx'
 import AnalyticsPage      from './pages/AnalyticsPage.jsx'
-import LinksPage          from './pages/LinksPage.jsx'
-import LinkedAccountsPage from './pages/LinkedAccountsPage.jsx'
 import InventoryPage           from './pages/InventoryPage.jsx'
 import MaintenancePulsePage    from './pages/MaintenancePulsePage.jsx'
 import CulinaryPage            from './pages/CulinaryPage.jsx'
@@ -199,7 +197,6 @@ export default function App() {
                 onSave={setProfile}
                 theme={theme}
                 onThemeChange={setTheme}
-                onNavigate={handleNavigate}
               />
             )}
             {currentPage === 'settings'   && <SettingsPage onFeaturesChanged={refreshFeatures} />}
@@ -212,13 +209,6 @@ export default function App() {
 
             {currentPage === 'maintenance' && <MaintenancePulsePage />}
             {currentPage === 'culinary'    && <CulinaryPage />}
-          </div>
-        </ErrorBoundary>
-      </main>
-    </div>
-  )
-}
-linaryPage />}
           </div>
         </ErrorBoundary>
       </main>
