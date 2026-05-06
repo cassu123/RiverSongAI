@@ -153,7 +153,7 @@ def create_app() -> FastAPI:
         killswitch_router, home_router, conversation_router, settings_router,
         admin_router, routines_router, inventory_router, commerce_router,
         vehicles_router, feeds_router, reading_router, features_router,
-        parent_router, analytics_router, culinary_router, location_router
+        parent_router, analytics_router, culinary_router, location_router, google_router
     )
 
     app.include_router(auth_router)
@@ -176,6 +176,7 @@ def create_app() -> FastAPI:
     app.include_router(analytics_router)
     app.include_router(culinary_router)
     app.include_router(location_router)
+    app.include_router(google_router)
 
     # Serve the built React frontend — must be last so API routes take priority
     import os

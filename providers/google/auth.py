@@ -37,7 +37,7 @@ from typing import List, Optional
 
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import InstalledAppFlow, Flow
 from googleapiclient.discovery import build
 
 
@@ -216,6 +216,59 @@ class GoogleAuth:
         except Exception as exc:
             logger.warning(
                 "Could not load credentials from '%s': %s. Will re-authorize.",
+                token_path,
+                exc,
+            )
+            return None
+
+    def _save_credentials(self, token_path: Path, creds: Credentials) -> None:
+        """Persist Credentials to a token JSON file."""
+        tmp_path = token_path.with_suffix(".tmp")
+        try:
+            with tmp_path.open("w", encoding="utf-8") as fh:
+                fh.write(creds.to_json())
+            tmp_path.replace(token_path)
+            logger.debug("Token saved to '%s'.", token_path)
+        except Exception as exc:
+            logger.error("Failed to save token to '%s': %s", token_path, exc)
+            if tmp_path.exists():
+                tmp_path.unlink(missing_ok=True)
+            raise
+
+
+# =============================================================================
+# Standalone authorization helper
+# Run: python -m providers.google.auth --user-id primary_user
+# =============================================================================
+
+def _build_google_auth_from_settings() -> "GoogleAuth":
+    """Build a GoogleAuth instance using current application settings."""
+    from config.settings import get_settings
+    s = get_settings()
+    return GoogleAuth(
+        client_secrets_path=s.google_client_secrets_path,
+        token_storage_path=s.google_token_storage_path,
+    )
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
+    parser = argparse.ArgumentParser(
+        description="Authorize a user for Google Services."
+    )
+    parser.add_argument(
+        "--user-id",
+        default="primary_user",
+        help="User ID to authorize (default: primary_user)",
+    )
+    args = parser.parse_args()
+
+    auth = _build_google_auth_from_settings()
+    credentials = auth.authorize_user(args.user_id)
+    print(f"Authorization complete for user '{args.user_id}'.")
+    print(f"Token saved to: {auth._token_path(args.user_id)}")
+: %s. Will re-authorize.",
                 token_path,
                 exc,
             )
