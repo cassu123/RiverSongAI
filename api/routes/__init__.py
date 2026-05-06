@@ -18,6 +18,7 @@ from .parent import router as parent_router
 from .analytics import router as analytics_router
 from .culinary import router as culinary_router
 from .location import router as location_router
+from .google import router as google_router
 
 __all__ = [
     "health_router",
@@ -40,4 +41,5 @@ __all__ = [
     "analytics_router",
     "culinary_router",
     "location_router",
+    "google_router",
 ]

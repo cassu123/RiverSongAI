@@ -1,4 +1,13 @@
-import React from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '../context/AuthContext'
+import './GooglePage.css'
+
+const API_BASE = '/api/google'
+
+function authHeaders() {
+  const token = localStorage.getItem('rs-auth-token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
 const GOOGLE_FEATURES = [
   {
@@ -32,6 +41,69 @@ const GOOGLE_FEATURES = [
 ]
 
 export default function GooglePage() {
+  const { token } = useAuth()
+  const [status, setStatus] = useState({ connected: false, loading: true })
+  const [calendar, setCalendar] = useState({ events: [], loading: false })
+  const [gmail, setGmail] = useState({ messages: [], loading: false })
+  const [error, setError] = useState('')
+
+  const loadStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/status`, { headers: authHeaders() })
+      const data = await res.json()
+      setStatus({ ...data, loading: false })
+      if (data.connected) {
+        loadData()
+      }
+    } catch (err) {
+      setStatus({ connected: false, loading: false })
+    }
+  }, [])
+
+  const loadData = async () => {
+    setCalendar(prev => ({ ...prev, loading: true }))
+    setGmail(prev => ({ ...prev, loading: true }))
+
+    try {
+      const [calRes, mailRes] = await Promise.all([
+        fetch(`${API_BASE}/calendar/upcoming`, { headers: authHeaders() }),
+        fetch(`${API_BASE}/gmail/unread`, { headers: authHeaders() })
+      ])
+      const calData = await calRes.json()
+      const mailData = await mailRes.json()
+
+      setCalendar({ events: calData.events || [], loading: false })
+      setGmail({ messages: mailData.messages || [], loading: false })
+    } catch (err) {
+      console.error('Failed to load Google data:', err)
+      setCalendar(prev => ({ ...prev, loading: false }))
+      setGmail(prev => ({ ...prev, loading: false }))
+    }
+  }
+
+  useEffect(() => {
+    loadStatus()
+    // Check for error in URL
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('error')) {
+      setError(params.get('error'))
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [loadStatus])
+
+  const handleConnect = async () => {
+    try {
+      const redirectUri = `${window.location.origin}/api/google/auth/callback`
+      const res = await fetch(`${API_BASE}/auth/url?redirect_uri=${encodeURIComponent(redirectUri)}`, {
+        headers: authHeaders()
+      })
+      const { auth_url } = await res.json()
+      window.location.href = auth_url
+    } catch (err) {
+      setError('Failed to initiate Google connection.')
+    }
+  }
+
   return (
     <div className="page-wrap">
       <div className="page-breadcrumb">
@@ -44,20 +116,80 @@ export default function GooglePage() {
         Connect your Google account to bring Calendar, Gmail, Maps, and Music into conversation.
       </p>
 
-      <div className="coming-soon-banner">
-        <span className="coming-soon-tag">COMING SOON</span>
-        <span className="coming-soon-text">
-          Google OAuth and service integrations are scaffolded. The connection flow and conversation hooks ship in a future phase.
-        </span>
+      {error && <div className="google-error-banner">{error}</div>}
+
+      <div className="google-status-section">
+        {status.loading ? (
+          <div className="google-status-card google-status-card--loading">CHECKING CONNECTION...</div>
+        ) : status.connected ? (
+          <div className="google-status-card google-status-card--connected">
+            <div className="google-status-info">
+              <div className="google-status-dot" />
+              <div className="google-status-text">CONNECTED AS {status.email || 'GOOGLE USER'}</div>
+            </div>
+            <button className="google-btn google-btn--outline" onClick={handleConnect}>RECONNECT</button>
+          </div>
+        ) : (
+          <div className="google-status-card google-status-card--disconnected">
+            <div className="google-status-text">NOT CONNECTED</div>
+            <button className="google-btn google-btn--primary" onClick={handleConnect}>CONNECT GOOGLE ACCOUNT</button>
+          </div>
+        )}
       </div>
 
-      <div className="feature-card-grid">
+      <div className="google-data-grid">
+        {/* Calendar Preview */}
+        <div className={`google-data-card ${!status.connected ? 'google-data-card--locked' : ''}`}>
+          <div className="google-data-header">
+            <IconCalendar />
+            <h3>UPCOMING EVENTS</h3>
+          </div>
+          {status.connected ? (
+            calendar.loading ? <div className="google-data-loading">Loading events...</div> :
+            calendar.events.length > 0 ? (
+              <div className="google-event-list">
+                {calendar.events.slice(0, 3).map(ev => (
+                  <div key={ev.id} className="google-event-item">
+                    <div className="google-event-time">
+                      {ev.start.dateTime ? new Date(ev.start.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'All Day'}
+                    </div>
+                    <div className="google-event-title">{ev.summary}</div>
+                  </div>
+                ))}
+              </div>
+            ) : <div className="google-data-empty">No upcoming events.</div>
+          ) : <div className="google-data-locked-msg">Connect account to see events</div>}
+        </div>
+
+        {/* Gmail Preview */}
+        <div className={`google-data-card ${!status.connected ? 'google-data-card--locked' : ''}`}>
+          <div className="google-data-header">
+            <IconMail />
+            <h3>UNREAD MESSAGES</h3>
+          </div>
+          {status.connected ? (
+            gmail.loading ? <div className="google-data-loading">Loading messages...</div> :
+            gmail.messages.length > 0 ? (
+              <div className="google-mail-list">
+                {gmail.messages.slice(0, 3).map(msg => (
+                  <div key={msg.id} className="google-mail-item">
+                    <div className="google-mail-from">{msg.from.split('<')[0].trim()}</div>
+                    <div className="google-mail-subj">{msg.subject}</div>
+                  </div>
+                ))}
+              </div>
+            ) : <div className="google-data-empty">No unread messages.</div>
+          ) : <div className="google-data-locked-msg">Connect account to see emails</div>}
+        </div>
+      </div>
+
+      <div className="feature-card-grid" style={{ marginTop: '2rem' }}>
         {GOOGLE_FEATURES.map(({ key, icon: Icon, title, desc, tags }) => (
-          <div key={key} className="feature-card feature-card--locked">
+          <div key={key} className={`feature-card ${!status.connected ? 'feature-card--locked' : ''}`}>
             <div className="feature-card-header">
               <div className="feature-card-icon"><Icon /></div>
               <div className="feature-card-title">{title}</div>
-              <div className="feature-card-badge">SOON</div>
+              {status.connected && <div className="feature-card-badge feature-card-badge--active">ACTIVE</div>}
             </div>
             <p className="feature-card-desc">{desc}</p>
             <div className="feature-card-tags">
