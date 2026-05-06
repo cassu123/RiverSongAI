@@ -328,6 +328,46 @@ _MEAL_TYPE_MAP = {
     "dessert": "Dessert", "sweet": "Dessert", "baking": "Dessert",
 }
 
+_PROTEIN_MAP = {
+    "chicken": "Chicken",
+    "beef":    "Beef",
+    "steak":   "Beef",
+    "pork":    "Pork",
+    "bacon":   "Pork",
+    "ham":     "Pork",
+    "fish":    "Fish",
+    "salmon":  "Fish",
+    "cod":     "Fish",
+    "tuna":    "Fish",
+    "shrimp":  "Seafood",
+    "prawn":   "Seafood",
+    "crab":    "Seafood",
+    "lobster": "Seafood",
+    "turkey":  "Turkey",
+    "lamb":    "Lamb",
+    "tofu":    "Vegetarian",
+    "paneer":  "Vegetarian",
+    "egg":     "Vegetarian",
+}
+
+
+def _detect_protein(title: str, ingredients: List[dict]) -> Optional[str]:
+    """Identify the primary protein from recipe title or ingredient names."""
+    # 1. Check title first (highest weight)
+    title_lower = title.lower()
+    for key, val in _PROTEIN_MAP.items():
+        if key in title_lower:
+            return val
+
+    # 2. Check ingredients
+    for ing in ingredients:
+        name_lower = ing.get("name", "").lower()
+        for key, val in _PROTEIN_MAP.items():
+            if key in name_lower:
+                return val
+
+    return None
+
 _METRIC_TO_IMPERIAL = {
     "g": ("oz", 0.035274),
     "gram": ("ounce", 0.035274),
@@ -495,13 +535,17 @@ def _jsonld_to_recipe(node: dict) -> Optional[dict]:
         if key in raw_category.lower():
             meal_type = val
             break
+
+    title       = node.get("name", "Untitled Recipe")
+    ingredients = [_parse_ingredient(i) for i in node.get("recipeIngredient", [])]
+
     return {
-        "title":            node.get("name", "Untitled Recipe"),
+        "title":            title,
         "meal_type":        meal_type,
-        "primary_protein":  None,
+        "primary_protein":  _detect_protein(title, ingredients),
         "servings":         _parse_yield(node.get("recipeYield", 4)),
         "image_url":        _extract_image_url(node.get("image")),
-        "ingredients":      [_parse_ingredient(i) for i in node.get("recipeIngredient", [])],
+        "ingredients":      ingredients,
         "steps":            _parse_steps(node.get("recipeInstructions", [])),
         "equipment_needed": [],
     }
@@ -631,12 +675,15 @@ def _extract_microdata_recipes(page_html: str) -> List[dict]:
     image_node = soup.find(attrs={"itemprop": "image"})
     image_url = _extract_image_url(image_node.get("src") if image_node else None) or _extract_og_image(page_html)
 
+    parsed_ingredients = [_parse_ingredient(i) for i in ingredients]
+
     return [{
         "title": title,
-        "ingredients": [_parse_ingredient(i) for i in ingredients],
+        "ingredients": parsed_ingredients,
         "steps": [s for s in steps if s],
         "servings": servings,
         "meal_type": "Other",
+        "primary_protein": _detect_protein(title, parsed_ingredients),
         "image_url": image_url,
     }]
 
@@ -715,11 +762,10 @@ def _extract_nextdata_recipes(page_html: str) -> List[dict]:
             if key in str(raw_category).lower():
                 meal_type = val
                 break
-
         parsed.append({
             "title":            name,
             "meal_type":        meal_type,
-            "primary_protein":  None,
+            "primary_protein":  _detect_protein(name, ingredients),
             "servings":         servings,
             "image_url":        image_url,
             "ingredients":      ingredients,
