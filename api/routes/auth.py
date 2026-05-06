@@ -184,6 +184,58 @@ async def change_password(body: ChangePasswordBody, request: Request, authorizat
     return {"status": "ok"}
 
 
+# ---------------------------------------------------------------------------
+# Integrations / API Keys
+# ---------------------------------------------------------------------------
+
+class IntegrationsUpdate(BaseModel):
+    amazon_sp_api: Optional[dict] = None
+    walmart_api:   Optional[dict] = None
+
+
+@router.get("/integrations")
+async def get_integrations(request: Request, authorization: Optional[str] = Header(default=None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    payload = decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    mm = request.app.state.memory_manager
+    prefs = await mm.get_preferences(payload["sub"])
+
+    # Extract known integration keys
+    integrations = {
+        "amazon_sp_api": None,
+        "walmart_api":   None,
+    }
+    for p in prefs:
+        if p.category in integrations:
+            try:
+                integrations[p.category] = json.loads(p.value)
+            except:
+                pass
+    return integrations
+
+
+@router.put("/integrations")
+async def save_integrations(body: IntegrationsUpdate, request: Request, authorization: Optional[str] = Header(default=None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    payload = decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    mm = request.app.state.memory_manager
+    data = body.model_dump()
+    for key, val in data.items():
+        if val is not None:
+            await mm.upsert_preference(payload["sub"], category=key, value=json.dumps(val))
+
+    return {"ok": True}
+
+
+
 # =============================================================================
 # Google OAuth
 # =============================================================================
