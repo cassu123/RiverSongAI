@@ -1134,6 +1134,10 @@ function SportsTab({ prefs, savePrefs }) {
 
   const followedTeamIds = new Set(teams.map(t => t.id))
 
+  if (selectedEvent) {
+    return <MatchStats event={selectedEvent} onBack={() => setSelectedEvent(null)} />
+  }
+
   return (
     <>
       <div className="feeds-section-header">
@@ -1281,7 +1285,7 @@ function SportsTab({ prefs, savePrefs }) {
             <>
               {filterEvents(data.results).length > 0
                 ? <div className="feeds-sports-grid">
-                    {filterEvents(data.results).map(e => <MatchCard key={e.id} event={e} />)}
+                    {filterEvents(data.results).map(e => <MatchCard key={e.id} event={e} onClick={() => setSelectedEvent(e)} />)}
                   </div>
                 : <div className="feeds-empty">No recent results found.</div>
               }
@@ -1292,7 +1296,7 @@ function SportsTab({ prefs, savePrefs }) {
             <>
               {filterEvents(data.fixtures).length > 0
                 ? <div className="feeds-sports-grid">
-                    {filterEvents(data.fixtures).map(e => <MatchCard key={e.id} event={e} />)}
+                    {filterEvents(data.fixtures).map(e => <MatchCard key={e.id} event={e} onClick={() => setSelectedEvent(e)} />)}
                   </div>
                 : <div className="feeds-empty">No upcoming fixtures found.</div>
               }
@@ -1365,9 +1369,9 @@ function SportsTab({ prefs, savePrefs }) {
   )
 }
 
-function MatchCard({ event }) {
+function MatchCard({ event, onClick }) {
   return (
-    <div className="feeds-match-card">
+    <div className={`feeds-match-card${onClick ? ' feeds-match-card--clickable' : ''}`} onClick={onClick}>
       <div className="feeds-match-header">
         <span className="feeds-match-league">{event.league}</span>
         <span className="feeds-match-date">{event.date}</span>
@@ -1400,6 +1404,71 @@ function MatchCard({ event }) {
           }
           <span className="feeds-match-team-name">{event.away_team}</span>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function MatchStats({ event, onBack }) {
+  const [stats, setStats] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setLoading(true)
+    apiFetch(`/sports/event-stats?event_id=${event.id}`)
+      .then(setStats)
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [event.id])
+
+  return (
+    <div className="feeds-match-stats-page">
+      <div className="feeds-match-stats-header">
+        <button className="feeds-back-btn" onClick={onBack}>← Back to results</button>
+        <div className="feeds-match-stats-league">{event.league}</div>
+      </div>
+
+      <div className="feeds-match-stats-hero">
+        <div className="feeds-match-stats-team">
+          {event.home_badge && <img src={event.home_badge} alt="" />}
+          <div className="feeds-match-stats-team-name">{event.home_team}</div>
+        </div>
+        <div className="feeds-match-stats-score-wrap">
+          <div className="feeds-match-stats-score">
+            {event.finished ? `${event.home_score} – ${event.away_score}` : 'vs'}
+          </div>
+          <div className="feeds-match-stats-date">{event.date}</div>
+        </div>
+        <div className="feeds-match-stats-team">
+          {event.away_badge && <img src={event.away_badge} alt="" />}
+          <div className="feeds-match-stats-team-name">{event.away_team}</div>
+        </div>
+      </div>
+
+      <div className="feeds-match-stats-body">
+        <div className="feeds-subsection-label">Game Statistics</div>
+        {loading && <div className="feeds-loading">Loading stats…</div>}
+        {error && <div className="feeds-error">{error}</div>}
+        {!loading && stats.length > 0 && (
+          <div className="feeds-stats-list">
+            {stats.map((s, i) => (
+              <div key={i} className="feeds-stat-row">
+                <div className="feeds-stat-label">{s.label}</div>
+                <div className="feeds-stat-comparison">
+                  <div className="feeds-stat-val feeds-stat-val--home">{s.home}</div>
+                  <div className="feeds-stat-bar-bg">
+                    <div className="feeds-stat-bar-fill feeds-stat-bar-fill--home" style={{ width: `${(parseFloat(s.home) / (parseFloat(s.home) + parseFloat(s.away) || 1)) * 100}%` }} />
+                  </div>
+                  <div className="feeds-stat-val feeds-stat-val--away">{s.away}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {!loading && !error && stats.length === 0 && (
+          <div className="feeds-empty">Detailed stats are not available for this game.</div>
+        )}
       </div>
     </div>
   )

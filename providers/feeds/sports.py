@@ -127,6 +127,21 @@ async def fetch_standings(league_id: str, season: str = "") -> List[Dict[str, An
     return [_format_standing(r) for r in rows]
 
 
+async def fetch_event_stats(event_id: str) -> List[Dict[str, Any]]:
+    """Fetch detailed statistics for a specific event (game)."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{_BASE}/lookupeventstats.php", params={"id": event_id})
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as exc:
+        logger.warning("TheSportsDB event stats failed for event %s: %s", event_id, exc)
+        return []
+
+    stats = data.get("eventstats") or []
+    return [_format_stat(s) for s in stats]
+
+
 def _format_team(t: Dict) -> Dict[str, Any]:
     return {
         "id": t.get("idTeam") or "",
@@ -186,4 +201,12 @@ def _format_event(e: Dict) -> Dict[str, Any]:
         "result": f"{home} {home_score}–{away_score} {away}" if finished else f"{home} vs {away}",
         "home_badge": e.get("strHomeTeamBadge") or "",
         "away_badge": e.get("strAwayTeamBadge") or "",
+    }
+
+
+def _format_stat(s: Dict) -> Dict[str, Any]:
+    return {
+        "label": s.get("strStat") or "",
+        "home": s.get("strValueHome") or "0",
+        "away": s.get("strValueAway") or "0",
     }
