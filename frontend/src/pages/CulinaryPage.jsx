@@ -5,11 +5,11 @@ import './CulinaryPage.css'
 
 // ── tiny helpers ─────────────────────────────────────────────────────────────
 
-function Icon({ name, size = 20 }) {
+function Icon({ name, size = 20, className = '', style = {} }) {
   return (
     <span
-      className="material-symbols-rounded"
-      style={{ fontSize: size, lineHeight: 1 }}
+      className={`material-symbols-rounded ${className}`}
+      style={{ fontSize: size, lineHeight: 1, ...style }}
     >
       {name}
     </span>
@@ -209,6 +209,9 @@ function LibraryTab({ api }) {
   const [showCreate, setShowCreate] = useState(false)
   const [loading, setLoading]   = useState(false)
   const [sort, setSort]         = useState('newest') // newest | rating
+  const [search, setSearch]     = useState('')
+  const [mealFilter, setMealFilter] = useState('All')
+  const [proteinFilter, setProteinFilter] = useState('All')
 
   const load = useCallback(() => {
     api.get('/recipes').then(setRecipes).catch(() => {})
@@ -252,21 +255,31 @@ function LibraryTab({ api }) {
     }
   }
 
-  const sorted = [...recipes].sort((a, b) => {
+  // Extract unique proteins from all recipes
+  const proteins = ['All', ...new Set(recipes.map(r => r.primary_protein).filter(Boolean))].sort()
+
+  const filtered = recipes.filter(r => {
+    const matchesSearch = r.title.toLowerCase().includes(search.toLowerCase())
+    const matchesMeal = mealFilter === 'All' || r.meal_type === mealFilter
+    const matchesProtein = proteinFilter === 'All' || r.primary_protein === proteinFilter
+    return matchesSearch && matchesMeal && matchesProtein
+  })
+
+  const sorted = [...filtered].sort((a, b) => {
     if (sort === 'rating') return (b.rating || 0) - (a.rating || 0)
     return new Date(b.created_at) - new Date(a.created_at)
   })
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="cul-tab-actions">
         <button className="cul-btn cul-btn-primary" onClick={() => setShowIngest(true)}>
           <Icon name="upload_file" size={16} /> Ingest PDF / URL
         </button>
         <button className="cul-btn cul-btn-secondary" onClick={() => setShowCreate(true)}>
           <Icon name="add" size={16} /> Manual Entry
         </button>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+        <div className="cul-tab-sort">
           <span style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)' }}>Sort:</span>
           {[['newest', 'Newest'], ['rating', 'Top Rated']].map(([key, label]) => (
             <button
@@ -280,10 +293,37 @@ function LibraryTab({ api }) {
         </div>
       </div>
 
-      {recipes.length === 0 && !loading && (
+      <div className="cul-card" style={{ marginBottom: 20 }}>
+        <div className="cul-filter-bar">
+          <div className="cul-search-wrap">
+            <Icon name="search" className="cul-search-icon" size={18} />
+            <input
+              className="cul-input cul-search-input"
+              placeholder="Search recipes..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="cul-filter-group">
+            <span className="cul-filter-label">Meal:</span>
+            <select className="cul-select" value={mealFilter} onChange={e => setMealFilter(e.target.value)}>
+              <option value="All">All Types</option>
+              {MEAL_TYPES.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <div className="cul-filter-group">
+            <span className="cul-filter-label">Protein:</span>
+            <select className="cul-select" value={proteinFilter} onChange={e => setProteinFilter(e.target.value)}>
+              {proteins.map(p => <option key={p} value={p}>{p === 'All' ? 'All Proteins' : p}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {sorted.length === 0 && !loading && (
         <div className="cul-empty">
           <Icon name="menu_book" size={48} />
-          No recipes yet. Ingest a PDF or URL to get started.
+          {recipes.length === 0 ? 'No recipes yet. Ingest a PDF or URL to get started.' : 'No recipes match your filters.'}
         </div>
       )}
 
@@ -566,10 +606,10 @@ function CreateRecipeModal({ api, onClose }) {
 
         <div className="cul-section-title">Ingredients</div>
         {ingredients.map((ing, i) => (
-          <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-            <input className="cul-input" style={{ flex: 3 }} placeholder="Name" value={ing.name} onChange={e => setIngredients(p => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
-            <input className="cul-input" style={{ flex: 1 }} placeholder="Qty" value={ing.qty} onChange={e => setIngredients(p => p.map((x, j) => j === i ? { ...x, qty: e.target.value } : x))} />
-            <input className="cul-input" style={{ flex: 1 }} placeholder="Unit" value={ing.unit} onChange={e => setIngredients(p => p.map((x, j) => j === i ? { ...x, unit: e.target.value } : x))} />
+          <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+            <input className="cul-input" style={{ flex: 3, minWidth: 140 }} placeholder="Name" value={ing.name} onChange={e => setIngredients(p => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
+            <input className="cul-input" style={{ flex: 1, minWidth: 60 }} placeholder="Qty" value={ing.qty} onChange={e => setIngredients(p => p.map((x, j) => j === i ? { ...x, qty: e.target.value } : x))} />
+            <input className="cul-input" style={{ flex: 1, minWidth: 60 }} placeholder="Unit" value={ing.unit} onChange={e => setIngredients(p => p.map((x, j) => j === i ? { ...x, unit: e.target.value } : x))} />
           </div>
         ))}
         <button className="cul-btn cul-btn-secondary cul-btn-sm" onClick={addIngredient}><Icon name="add" size={14} /> Add</button>
@@ -796,10 +836,10 @@ function RecipeDetailModal({ recipe, onClose, onDelete, onSendToPrep, onRate, on
               {/* Ingredients */}
               <div className="cul-section-title">Ingredients</div>
               {editIngs.map((ing, i) => (
-                <div key={i} style={{ display: 'flex', gap: 5, marginBottom: 6, alignItems: 'center' }}>
-                  <input className="cul-input" style={{ flex: 3 }} placeholder="Name" value={ing.name} onChange={e => setIng(i, 'name', e.target.value)} />
-                  <input className="cul-input" style={{ flex: 1 }} placeholder="Qty" value={ing.qty} onChange={e => setIng(i, 'qty', e.target.value)} />
-                  <input className="cul-input" style={{ flex: 1 }} placeholder="Unit" value={ing.unit} onChange={e => setIng(i, 'unit', e.target.value)} />
+                <div key={i} style={{ display: 'flex', gap: 5, marginBottom: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input className="cul-input" style={{ flex: 3, minWidth: 140 }} placeholder="Name" value={ing.name} onChange={e => setIng(i, 'name', e.target.value)} />
+                  <input className="cul-input" style={{ flex: 1, minWidth: 60 }} placeholder="Qty" value={ing.qty} onChange={e => setIng(i, 'qty', e.target.value)} />
+                  <input className="cul-input" style={{ flex: 1, minWidth: 60 }} placeholder="Unit" value={ing.unit} onChange={e => setIng(i, 'unit', e.target.value)} />
                   <button
                     className="cul-btn cul-btn-danger cul-btn-sm"
                     style={{ flexShrink: 0 }}
@@ -1142,6 +1182,7 @@ function PrepDeckTab({ api, household }) {
             api={api}
             ownedEquipment={ownedEquipment}
             onRemove={() => removeRecipe(entry.entry_id)}
+            onUpdate={loadSession}
           />
         ))}
       </div>
@@ -1364,14 +1405,14 @@ function CookingGuideCard({ entry, recipe, api, ownedEquipment }) {
 
 // ── Prep Recipe Card (with Adjuster + Cooking Method) ────────────────────────
 
-function PrepRecipeCard({ entry, recipe, api, ownedEquipment, onRemove }) {
+function PrepRecipeCard({ entry, recipe, api, ownedEquipment, onRemove, onUpdate }) {
   const [expanded, setExpanded]       = useState(false)
 
   // Adjuster
-  const [containers, setContainers]   = useState(8)
-  const [contOz, setContOz]           = useState(8)
-  const [scaling, setScaling]         = useState(false)
-  const [scaleResult, setScaleResult] = useState(null)
+  const [targetServings, setTargetServings] = useState(entry.servings_target || recipe?.servings || 4)
+  const [scaling, setScaling]               = useState(false)
+  const [scaleResult, setScaleResult]       = useState(null)
+  const [saving, setSaving]                 = useState(false)
 
   // Cooking Method — smart default from recipe equipment + owned equipment
   const [eqTarget, setEqTarget]           = useState(() => recipe ? smartCookingMethod(recipe.equipment_needed, ownedEquipment) : 'Oven')
@@ -1379,17 +1420,44 @@ function PrepRecipeCard({ entry, recipe, api, ownedEquipment, onRemove }) {
   const [rewrittenSteps, setRewrittenSteps] = useState(null)
 
   useEffect(() => {
-    if (recipe) setEqTarget(smartCookingMethod(recipe.equipment_needed, ownedEquipment))
+    if (recipe) {
+      setEqTarget(smartCookingMethod(recipe.equipment_needed, ownedEquipment))
+      if (!entry.servings_target && recipe.servings) {
+        setTargetServings(recipe.servings)
+      }
+    }
   }, [recipe, ownedEquipment]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleScale = async () => {
     setScaling(true)
-    const result = await api.post(`/recipes/${entry.recipe_id}/scale`, {
-      target_containers: parseInt(containers),
-      container_oz:      parseInt(contOz),
-    })
-    setScaleResult(result)
-    setScaling(false)
+    try {
+      const result = await api.post(`/recipes/${entry.recipe_id}/scale`, {
+        target_servings: parseInt(targetServings),
+      })
+      setScaleResult(result)
+    } catch (e) {
+      alert('Scaling failed: ' + e.message)
+    } finally {
+      setScaling(false)
+    }
+  }
+
+  const handleSaveToPrep = async () => {
+    if (!scaleResult) return
+    setSaving(true)
+    try {
+      await api.put(`/prep/${entry.session_id}/recipes/${entry.entry_id}/scale`, {
+        target_servings: scaleResult.target_servings,
+        scaled_ingredients: scaleResult.scaled_ingredients,
+      })
+      if (onUpdate) onUpdate()
+      setScaleResult(null)
+      alert('Scaled amounts saved to Prep Deck.')
+    } catch (e) {
+      alert('Failed to save to Prep Deck: ' + e.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleTranslate = async () => {
@@ -1405,11 +1473,10 @@ function PrepRecipeCard({ entry, recipe, api, ownedEquipment, onRemove }) {
         <Icon name="restaurant_menu" size={18} />
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 500 }}>{entry.recipe_title}</div>
-          {entry.servings_target && (
-            <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)' }}>
-              Target: {entry.servings_target} servings
-            </div>
-          )}
+          <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)' }}>
+            {entry.servings_target ? `Target: ${entry.servings_target} servings` : `Original: ${recipe?.servings || 4} servings`}
+            {entry.scaled_ingredients && <span style={{ color: 'var(--primary)', marginLeft: 8 }}>(Scaled)</span>}
+          </div>
         </div>
         <button
           className={`cul-btn cul-btn-sm ${expanded ? 'cul-btn-primary' : 'cul-btn-secondary'}`}
@@ -1429,35 +1496,35 @@ function PrepRecipeCard({ entry, recipe, api, ownedEquipment, onRemove }) {
           {/* ── Adjuster ──────────────────────────────────────────── */}
           <div className="cul-section-title">The Adjuster</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Scale to</span>
             <input
               className="cul-input"
               type="number"
               min={1}
               style={{ maxWidth: 80 }}
-              value={containers}
-              onChange={e => setContainers(e.target.value)}
-              placeholder="Containers"
+              value={targetServings}
+              onChange={e => setTargetServings(e.target.value)}
+              placeholder="Servings"
             />
-            <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>containers ×</span>
-            <input
-              className="cul-input"
-              type="number"
-              min={1}
-              style={{ maxWidth: 70 }}
-              value={contOz}
-              onChange={e => setContOz(e.target.value)}
-              placeholder="oz"
-            />
-            <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>oz each</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>servings</span>
             <button className="cul-btn cul-btn-primary cul-btn-sm" onClick={handleScale} disabled={scaling}>
-              {scaling ? 'Scaling...' : 'Scale'}
+              {scaling ? 'Scaling...' : 'Preview Scale'}
             </button>
           </div>
 
           {scaleResult && (
-            <div className="cul-card" style={{ marginTop: 10 }}>
-              <div className="cul-card-title">
-                ×{scaleResult.scale_factor} — {scaleResult.total_oz} oz total
+            <div className="cul-card" style={{ marginTop: 10, border: '1px solid var(--primary)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div className="cul-card-title" style={{ margin: 0 }}>
+                  Preview: ×{scaleResult.scale_factor} multiplier
+                </div>
+                <button 
+                  className="cul-btn cul-btn-primary cul-btn-sm" 
+                  onClick={handleSaveToPrep}
+                  disabled={saving}
+                >
+                  <Icon name="save" size={14} /> {saving ? 'Saving...' : 'Save to Prep Deck'}
+                </button>
               </div>
               <ul className="ing-list">
                 {(scaleResult.scaled_ingredients || []).map((ing, i) => (

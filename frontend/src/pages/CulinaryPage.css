@@ -182,6 +182,7 @@
   gap: 12px;
   align-items: center;
   margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 .cul-input-row label {
   font-size: 0.75rem;
@@ -190,6 +191,12 @@
   min-width: 80px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  flex-shrink: 0;
+}
+.cul-input-row .cul-input, 
+.cul-input-row .cul-select {
+  flex: 1;
+  min-width: 200px;
 }
 
 /* ── Section label ───────────────────────────────────────────────────────── */
@@ -674,8 +681,69 @@
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 
+.cul-tab-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.cul-tab-sort {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.cul-filter-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.cul-search-wrap {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+}
+
+.cul-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.cul-search-input {
+  padding-left: 40px !important;
+}
+
+.cul-filter-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cul-filter-label {
+  font-size: 0.78rem;
+  color: var(--md-on-surface-variant);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 @media (max-width: 768px) {
-  .culinary-tabs { margin-bottom: 20px; }
+  .cul-tab-sort { margin-left: 0; width: 100%; justify-content: flex-start; margin-top: 4px; }
+  .cul-filter-bar { gap: 10px; }
+  .cul-search-wrap { width: 100%; }
+  .cul-filter-group { width: 100%; justify-content: space-between; }
+  .cul-filter-group .cul-select { flex: 1; }
+  .culinary-page { padding: 16px 12px 24px; width: 100%; box-sizing: border-box; overflow-x: hidden; }
+  .culinary-tabs { margin-bottom: 20px; padding-bottom: 4px; }
   .culinary-tab  { padding: 0 14px; height: 44px; font-size: 0.8125rem; }
 
   .cul-grid-2,
@@ -686,7 +754,28 @@
     overflow-y: auto;
     padding: 12px;
   }
-  .cul-modal { max-height: none; border-radius: var(--md-shape-xl); }
+  .cul-modal { 
+    max-height: none; 
+    border-radius: var(--md-shape-xl); 
+    padding: 16px;
+    width: 100%;
+    box-sizing: border-box;
+  }
 
+  .recipe-hero-wrap { height: 160px; }
   .dinner-card-thumb { width: 64px; height: 64px; }
+  
+  .cul-input-row .cul-input, 
+  .cul-input-row .cul-select {
+    min-width: 100%;
+  }
+
+  .cul-btn { width: 100%; }
+  .cul-btn-sm { width: auto; }
+}
+
+@media (max-width: 480px) {
+  .cul-grid-2, .cul-grid-3 { grid-template-columns: 1fr; }
+  .page-title { font-size: 1.5rem; }
+  .recipe-hero-wrap { height: 140px; }
 }

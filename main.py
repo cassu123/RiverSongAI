@@ -148,25 +148,13 @@ def create_app() -> FastAPI:
     app.add_middleware(_CloudflareIPMiddleware)
 
     # Register API routers
-    from api.routes.health import router as health_router
-    from api.routes.auth import router as auth_router
-    from api.routes.conversation import router as conversation_router
-    from api.routes.models_settings import router as settings_router
-    from api.routes.dashboard import router as dashboard_router
-    from api.routes.memory import router as memory_router
-    from api.routes.killswitch import router as killswitch_router
-    from api.routes.home import router as home_router
-    from api.routes.admin import router as admin_router
-    from api.routes.routines import router as routines_router
-    from api.routes.inventory import router as inventory_router
-    from api.routes.commerce  import router as commerce_router
-    from api.routes.vehicles  import router as vehicles_router
-    from api.routes.feeds     import router as feeds_router
-    from api.routes.reading   import router as reading_router
-    from api.routes.features   import router as features_router
-    from api.routes.parent     import router as parent_router
-    from api.routes.analytics  import router as analytics_router
-    from api.routes.culinary   import router as culinary_router
+    from api.routes import (
+        auth_router, health_router, dashboard_router, memory_router,
+        killswitch_router, home_router, conversation_router, settings_router,
+        admin_router, routines_router, inventory_router, commerce_router,
+        vehicles_router, feeds_router, reading_router, features_router,
+        parent_router, analytics_router, culinary_router, location_router
+    )
 
     app.include_router(auth_router)
     app.include_router(health_router)
@@ -187,6 +175,7 @@ def create_app() -> FastAPI:
     app.include_router(parent_router)
     app.include_router(analytics_router)
     app.include_router(culinary_router)
+    app.include_router(location_router)
 
     # Serve the built React frontend — must be last so API routes take priority
     import os
