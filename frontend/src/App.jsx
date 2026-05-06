@@ -208,11 +208,17 @@ export default function App() {
             {currentPage === 'commerce'   && <CommercePage />}
             {currentPage === 'reading'    && <ReadingPage />}
             {currentPage === 'analytics'  && <AnalyticsPage />}
-            {currentPage === 'links'           && <LinksPage onNavigate={handleNavigate} />}
-            {currentPage === 'linked-accounts' && <LinkedAccountsPage onBack={() => handleNavigate('profile')} />}
             {currentPage === 'inventory'    && <InventoryPage />}
+
             {currentPage === 'maintenance' && <MaintenancePulsePage />}
             {currentPage === 'culinary'    && <CulinaryPage />}
+          </div>
+        </ErrorBoundary>
+      </main>
+    </div>
+  )
+}
+linaryPage />}
           </div>
         </ErrorBoundary>
       </main>
