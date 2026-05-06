@@ -224,7 +224,7 @@ export default function ProfilePage({ profile, onSave, theme, onThemeChange, onN
           <section className="card profile-links-card">
             <div className="card-title">LINKED ACCOUNTS</div>
             <p className="profile-hint">Connect TikTok, Amazon, Etsy, Instagram, and more to power your Analytics dashboard.</p>
-            <button className="btn btn--outlined profile-links-btn" onClick={() => onNavigate?.('links')}>
+            <button className="btn btn--outlined profile-links-btn" onClick={() => onNavigate?.('linked-accounts')}>
               Manage Linked Accounts →
             </button>
           </section>
