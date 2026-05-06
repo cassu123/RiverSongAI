@@ -368,6 +368,25 @@ def _detect_protein(title: str, ingredients: List[dict]) -> Optional[str]:
 
     return None
 
+
+def _backfill_protein() -> None:
+    with _Session() as session:
+        recipes = session.query(Recipe).filter(Recipe.primary_protein.is_(None)).all()
+        updated = 0
+        for r in recipes:
+            ingredients = json.loads(r.ingredients_json or "[]")
+            protein = _detect_protein(r.title or "", ingredients)
+            if protein:
+                r.primary_protein = protein
+                updated += 1
+        if updated:
+            session.commit()
+            logger.info("Backfilled primary_protein for %d existing recipes", updated)
+
+
+_backfill_protein()
+
+
 _METRIC_TO_IMPERIAL = {
     "g": ("oz", 0.035274),
     "gram": ("ounce", 0.035274),
@@ -1282,7 +1301,7 @@ async def create_recipe(
         household_id=hh.id,
         title=body.title,
         meal_type=meal,
-        primary_protein=body.primary_protein,
+        primary_protein=body.primary_protein or _detect_protein(body.title, body.ingredients),
         servings=body.servings,
         image_url=body.image_url,
         source_type=SourceType.MANUAL,
@@ -1686,11 +1705,13 @@ async def ingest_recipe(
             except ValueError:
                 meal = MealType.OTHER
 
+            title = item.get("title", "Untitled Recipe")
+            protein = item.get("primary_protein") or _detect_protein(title, ingredients)
             r = Recipe(
                 household_id=hh.id,
-                title=item.get("title", "Untitled Recipe"),
+                title=title,
                 meal_type=meal,
-                primary_protein=item.get("primary_protein"),
+                primary_protein=protein,
                 servings=_parse_yield(item.get("servings", 4)),
                 image_url=item.get("image_url"),
                 source_url=actual_url,
