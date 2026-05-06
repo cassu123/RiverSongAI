@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import './ProfilePage.css'
 import { useAuth } from '../context/AuthContext'
 
@@ -26,13 +26,74 @@ const THEMES = [
   { key: 'dune',      label: 'Dune',      primary: '#deb651', bg: '#0a0804' },
 ]
 
-export default function ProfilePage({ profile, onSave, theme, onThemeChange, onNavigate }) {
+export default function ProfilePage({ profile, onSave, theme, onThemeChange }) {
   const { token } = useAuth()
   const [form,    setForm]    = useState({ ...profile })
   const [pwForm,  setPwForm]  = useState({ current: '', next: '', confirm: '' })
   const [saved,   setSaved]   = useState(false)
   const [pwError, setPwError] = useState('')
   const [pwOk,    setPwOk]    = useState(false)
+
+  // Integrations state
+  const [showLinked, setShowLinked] = useState(false)
+  const [loadingLinks, setLoadingLinks] = useState(false)
+  const [savingLinks, setSavingLinks] = useState(false)
+  const [linksMsg, setLinksMsg] = useState('')
+  const [integrations, setIntegrations] = useState({
+    amazon_sp_api: { lwa_app_id: '', lwa_client_secret: '', lwa_refresh_token: '', aws_access_key: '', aws_secret_key: '', seller_id: '' },
+    walmart_api: { client_id: '', client_secret: '' }
+  })
+
+  const loadIntegrations = useCallback(async () => {
+    setLoadingLinks(true)
+    try {
+      const res = await fetch('/api/auth/integrations', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await res.json()
+      setIntegrations({
+        amazon_sp_api: { ...integrations.amazon_sp_api, ...(data.amazon_sp_api || {}) },
+        walmart_api:   { ...integrations.walmart_api,   ...(data.walmart_api || {}) }
+      })
+    } catch (e) {
+      console.error('Failed to load integrations:', e)
+    } finally {
+      setLoadingLinks(false)
+    }
+  }, [token]) // eslint-disable-line
+
+  useEffect(() => {
+    if (showLinked) loadIntegrations()
+  }, [showLinked, loadIntegrations])
+
+  const handleLinkChange = (platform, field, value) => {
+    setIntegrations(prev => ({
+      ...prev,
+      [platform]: { ...prev[platform], [field]: value }
+    }))
+  }
+
+  const handleLinksSave = async () => {
+    setSavingLinks(true)
+    setLinksMsg('')
+    try {
+      const res = await fetch('/api/auth/integrations', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(integrations)
+      })
+      if (!res.ok) throw new Error('Failed to save integrations')
+      setLinksMsg('Integrations updated successfully.')
+      setTimeout(() => setLinksMsg(''), 3000)
+    } catch (e) {
+      setLinksMsg('Error saving integrations.')
+    } finally {
+      setSavingLinks(false)
+    }
+  }
 
   const initials = form.displayName
     ? form.displayName.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
@@ -237,7 +298,10 @@ export default function ProfilePage({ profile, onSave, theme, onThemeChange, onN
           <section className={`card profile-links-card ${showLinked ? 'profile-links-card--expanded' : ''}`}>
             <div className="profile-links-header" onClick={() => setShowLinked(!showLinked)}>
               <div className="card-title">LINKED ACCOUNTS</div>
-              <span className="profile-links-chevron">{showLinked ? '▲' : '▼'}</span>
+              <Icon 
+                name={showLinked ? 'expand_less' : 'expand_more'} 
+                style={{ color: 'var(--text-dim)', transition: 'transform 0.2s' }} 
+              />
             </div>
             
             <p className="profile-hint">Manage API keys for Amazon SP-API and Walmart Marketplace integration.</p>

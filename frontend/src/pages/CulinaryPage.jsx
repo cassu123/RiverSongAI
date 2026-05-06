@@ -87,28 +87,33 @@ function useApi(token) {
     [token]
   )
 
+  const _handle = async (r) => {
+    const data = await r.json().catch(() => ({}))
+    if (!r.ok) {
+      const err = new Error(data.detail || r.statusText)
+      err.status = r.status
+      err.detail = data.detail
+      throw err
+    }
+    return data
+  }
+
   const get = useCallback(
-    (path) => fetch(`/api/culinary${path}`, { headers: headers() }).then(r => {
-      if (!r.ok) throw Object.assign(new Error(r.statusText), { status: r.status })
-      return r.json()
-    }),
+    (path) => fetch(`/api/culinary${path}`, { headers: headers() }).then(_handle),
     [headers]
   )
 
   const post = useCallback(
     (path, body, formData = false) => {
+      const opts = { method: 'POST' }
       if (formData) {
-        return fetch(`/api/culinary${path}`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body,
-        }).then(r => r.json())
+        opts.headers = { Authorization: `Bearer ${token}` }
+        opts.body = body
+      } else {
+        opts.headers = headers()
+        opts.body = JSON.stringify(body)
       }
-      return fetch(`/api/culinary${path}`, {
-        method: 'POST',
-        headers: headers(),
-        body: JSON.stringify(body),
-      }).then(r => r.json())
+      return fetch(`/api/culinary${path}`, opts).then(_handle)
     },
     [headers, token]
   )
@@ -118,7 +123,7 @@ function useApi(token) {
       method: 'PUT',
       headers: headers(),
       body: JSON.stringify(body),
-    }).then(r => r.json()),
+    }).then(_handle),
     [headers]
   )
 
@@ -127,12 +132,18 @@ function useApi(token) {
       method: 'PATCH',
       headers: headers(),
       body: JSON.stringify(body),
-    }).then(r => r.json()),
+    }).then(_handle),
     [headers]
   )
 
   const del = useCallback(
-    (path) => fetch(`/api/culinary${path}`, { method: 'DELETE', headers: headers() }),
+    (path) => fetch(`/api/culinary${path}`, {
+      method: 'DELETE',
+      headers: headers(),
+    }).then(r => {
+      if (!r.ok) throw new Error(r.statusText)
+      return r
+    }),
     [headers]
   )
 
@@ -157,6 +168,7 @@ export default function CulinaryPage() {
     { key: 'stockroom', label: 'Stockroom',         icon: 'warehouse' },
     { key: 'prep',      label: 'Prep Deck',         icon: 'set_meal' },
     { key: 'walmart',   label: 'Walmart Export',    icon: 'shopping_cart' },
+    { key: 'banned',    label: 'Banned Items',      icon: 'block' },
     { key: 'settings',  label: 'Equipment',         icon: 'kitchen' },
   ]
 
@@ -195,7 +207,207 @@ export default function CulinaryPage() {
       {tab === 'stockroom' && <StockroomTab    api={api} household={household} />}
       {tab === 'prep'      && <PrepDeckTab     api={api} household={household} />}
       {tab === 'walmart'   && <WalmartTab      api={api} household={household} />}
+      {tab === 'banned'    && <BannedTab       api={api} />}
       {tab === 'settings'  && <EquipmentTab    api={api} />}
+    </div>
+  )
+}
+
+// ── Banned Tab ────────────────────────────────────────────────────────────────
+
+function BannedTab({ api }) {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [newName, setNewName] = useState('')
+  const [newSub, setNewSub] = useState('')
+  const [recommendingFor, setRecommendingFor] = useState(null) // item object
+  const [recommendations, setRecommendations] = useState([])
+  const [recLoading, setRecLoading] = useState(false)
+
+  const load = useCallback(() => {
+    setLoading(true)
+    api.get('/household/banned')
+      .then(data => { setItems(data); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [api])
+
+  useEffect(() => { load() }, [load])
+
+  const add = async () => {
+    if (!newName.trim()) return
+    try {
+      await api.post('/household/banned', { name: newName.trim(), substitute: newSub.trim() || null })
+      setNewName('')
+      setNewSub('')
+      load()
+    } catch (e) {
+      alert(e.message || 'Failed to add ingredient.')
+    }
+  }
+
+  const remove = async (id) => {
+    if (!confirm('Remove this from your banned list?')) return
+    try {
+      await api.del(`/household/banned/${id}`)
+      load()
+    } catch (e) {
+      alert(e.message || 'Failed to remove ingredient.')
+    }
+  }
+
+  const updateSub = async (id, sub) => {
+    try {
+      await api.put(`/household/banned/${id}`, { substitute: sub })
+      setRecommendingFor(null)
+      load()
+    } catch (e) {
+      alert(e.message || 'Failed to update substitute.')
+    }
+  }
+
+  const getRecommendations = async (item) => {
+    setRecommendingFor(item)
+    setRecLoading(true)
+    setRecommendations([])
+    try {
+      const recs = await api.post('/household/banned/recommend', { ingredient: item.name })
+      setRecommendations(recs)
+    } finally {
+      setRecLoading(false)
+    }
+  }
+
+  return (
+    <div>
+      <div className="cul-card">
+        <div className="cul-card-title"><Icon name="block" size={18} /> Add Banned Ingredient</div>
+        <p style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
+          Flag ingredients you want to avoid. The system will suggest substitutes during recipe ingest.
+        </p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <input
+            className="cul-input"
+            style={{ flex: 1, minWidth: 200 }}
+            placeholder="Ingredient name (e.g. Mushrooms)"
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && add()}
+          />
+          <input
+            className="cul-input"
+            style={{ flex: 1, minWidth: 200 }}
+            placeholder="Approved substitute (optional)"
+            value={newSub}
+            onChange={e => setNewSub(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && add()}
+          />
+          <button className="cul-btn cul-btn-primary" onClick={add} disabled={!newName.trim()}>
+            Add
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="cul-empty">Loading...</div>
+      ) : items.length === 0 ? (
+        <div className="cul-empty">
+          <Icon name="block" size={48} />
+          No banned ingredients. Add one above to start filtering your recipes.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {items.map(item => (
+            <div key={item.id} className="stock-item" style={{ alignItems: 'flex-start', padding: '12px 16px' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--error)' }}>
+                  {item.name}
+                </div>
+                <div style={{ fontSize: '0.88rem', marginTop: 4 }}>
+                  {item.substitute ? (
+                    <>
+                      <span style={{ color: 'var(--on-surface-variant)' }}>Substitute:</span>{' '}
+                      <span style={{ fontWeight: 500 }}>{item.substitute}</span>
+                    </>
+                  ) : (
+                    <span style={{ fontStyle: 'italic', color: 'var(--on-surface-variant)' }}>
+                      No substitute defined
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="cul-btn cul-btn-secondary cul-btn-sm"
+                  onClick={() => getRecommendations(item)}
+                >
+                  <Icon name="auto_awesome" size={14} /> AI Recs
+                </button>
+                <button
+                  className="cul-btn cul-btn-danger cul-btn-sm"
+                  onClick={() => remove(item.id)}
+                >
+                  <Icon name="delete" size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {recommendingFor && (
+        <div className="cul-modal-backdrop" onClick={() => setRecommendingFor(null)}>
+          <div className="cul-modal" onClick={e => e.stopPropagation()}>
+            <button className="cul-modal-close" onClick={() => setRecommendingFor(null)}>
+              <Icon name="close" />
+            </button>
+            <h2>
+              <Icon name="auto_awesome" size={20} style={{ color: 'var(--primary)' }} />{' '}
+              Substitutes for {recommendingFor.name}
+            </h2>
+
+            {recLoading ? (
+              <div style={{ padding: '20px 0', textAlign: 'center' }}>
+                <div className="loading-spinner" style={{ margin: '0 auto 12px' }} />
+                <p style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)' }}>
+                  AI is searching for the best culinary substitutes...
+                </p>
+              </div>
+            ) : recommendations.length === 0 ? (
+              <div className="cul-empty">No recommendations found.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+                {recommendations.map((rec, i) => (
+                  <button
+                    key={i}
+                    className="cul-card"
+                    style={{
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'transform 0.1s',
+                      margin: 0,
+                    }}
+                    onClick={() => updateSub(recommendingFor.id, rec.name)}
+                  >
+                    <div style={{ fontWeight: 600, color: 'var(--primary)', marginBottom: 4 }}>
+                      {rec.name}
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)' }}>
+                      {rec.reason}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              className="cul-btn cul-btn-secondary"
+              style={{ marginTop: 20, width: '100%' }}
+              onClick={() => setRecommendingFor(null)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -207,6 +419,7 @@ function LibraryTab({ api }) {
   const [selected, setSelected] = useState(null)
   const [showIngest, setShowIngest] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
+  const [showDuplicates, setShowDuplicates] = useState(false)
   const [loading, setLoading]   = useState(false)
   const [sort, setSort]         = useState('newest') // newest | rating
   const [search, setSearch]     = useState('')
@@ -278,6 +491,9 @@ function LibraryTab({ api }) {
         </button>
         <button className="cul-btn cul-btn-secondary" onClick={() => setShowCreate(true)}>
           <Icon name="add" size={16} /> Manual Entry
+        </button>
+        <button className="cul-btn cul-btn-secondary" onClick={() => setShowDuplicates(true)}>
+          <Icon name="content_copy" size={16} /> Find Duplicates
         </button>
         <div className="cul-tab-sort">
           <span style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)' }}>Sort:</span>
@@ -388,6 +604,13 @@ function LibraryTab({ api }) {
         />
       )}
 
+      {showDuplicates && (
+        <DuplicateResolverModal
+          api={api}
+          onClose={() => { setShowDuplicates(false); load() }}
+        />
+      )}
+
       {selected && (
         <RecipeDetailModal
           recipe={selected}
@@ -418,7 +641,7 @@ function IngestModal({ api, onClose }) {
   const [error, setError]     = useState('')
   const [result, setResult]   = useState(null)
 
-  const submit = async () => {
+  const submit = async (force = false) => {
     setError('')
     setResult(null)
     setLoading(true)
@@ -434,13 +657,14 @@ function IngestModal({ api, onClose }) {
         setLoading(false)
         return
       }
-      const res = await api.post('/recipes/ingest', fd, true)
-      if (res.count != null) {
-        setResult(res)
-      } else {
-        setError(res.detail || 'Ingest failed.')
-      }
+      const res = await api.post(`/recipes/ingest${force ? '?force=true' : ''}`, fd, true)
+      setResult(res)
     } catch (e) {
+      if (e.status === 409) {
+        if (window.confirm(e.message + '\n\nAdd it anyway?')) {
+          return submit(true)
+        }
+      }
       setError(e?.message || 'Network error.')
     } finally {
       setLoading(false)
@@ -541,7 +765,94 @@ function IngestModal({ api, onClose }) {
   )
 }
 
-// ── Create Recipe Modal ───────────────────────────────────────────────────────
+// ── Duplicate Resolver Modal ──────────────────────────────────────────────────
+
+function DuplicateResolverModal({ api, onClose }) {
+  const [groups, setGroups]   = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await api.get('/recipes/duplicates')
+      setGroups(data)
+    } finally {
+      setLoading(false)
+    }
+  }, [api])
+
+  useEffect(() => { load() }, [load])
+
+  const deleteOne = async (id) => {
+    try {
+      await api.del(`/recipes/${id}`)
+      load()
+    } catch (e) {
+      alert(e.message || 'Failed to delete recipe.')
+    }
+  }
+
+  return (
+    <div className="cul-modal-backdrop" onClick={onClose}>
+      <div className="cul-modal cul-modal-recipe" style={{ maxWidth: 800 }} onClick={e => e.stopPropagation()}>
+        <button className="cul-modal-close" onClick={onClose}><Icon name="close" /></button>
+        <div style={{ padding: 24 }}>
+          <h2>Duplicate Recipes</h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', marginBottom: 20 }}>
+            The following recipes have matching titles. You can delete the copies you don't need.
+          </p>
+
+          {loading ? (
+            <div className="cul-empty">Finding duplicates...</div>
+          ) : groups.length === 0 ? (
+            <div className="cul-empty">
+              <Icon name="check_circle" size={48} style={{ color: 'var(--primary)', opacity: 1 }} />
+              No duplicate recipes found in your library.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              {groups.map((group, i) => (
+                <div key={i} className="cul-card" style={{ margin: 0, padding: 16 }}>
+                  <div className="cul-card-title" style={{ border: 'none', marginBottom: 10 }}>
+                    <Icon name="content_copy" size={16} /> Group: {group[0].title}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                    {group.map(r => (
+                      <div key={r.id} className="stock-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8, padding: 10 }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--on-surface)' }}>
+                          {r.meal_type} · {r.servings} srv
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)' }}>
+                          Added {new Date(r.created_at).toLocaleDateString()}
+                        </div>
+                        {r.source_url && (
+                          <div style={{ fontSize: '0.72rem', color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {r.source_url}
+                          </div>
+                        )}
+                        <button
+                          className="cul-btn cul-btn-danger cul-btn-sm"
+                          onClick={() => deleteOne(r.id)}
+                          style={{ marginTop: 4 }}
+                        >
+                          <Icon name="delete" size={13} /> Delete This Copy
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
+            <button className="cul-btn cul-btn-primary" onClick={onClose}>Done</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function CreateRecipeModal({ api, onClose }) {
   const [title, setTitle]         = useState('')
@@ -558,21 +869,31 @@ function CreateRecipeModal({ api, onClose }) {
   const addStep       = () => setSteps(p => [...p, ''])
   const addEquipment  = () => setEquipment(p => [...p, ''])
 
-  const submit = async () => {
+  const submit = async (force = false) => {
     if (!title.trim()) return
     setSaving(true)
-    await api.post('/recipes', {
-      title: title.trim(),
-      meal_type: mealType,
-      primary_protein: protein || null,
-      servings: parseInt(servings),
-      image_url: imageUrl.trim() || null,
-      ingredients: ingredients.filter(i => i.name.trim()),
-      steps: steps.filter(s => s.trim()),
-      equipment_needed: equipment.filter(e => e.trim()),
-    })
-    setSaving(false)
-    onClose()
+    try {
+      await api.post(`/recipes${force ? '?force=true' : ''}`, {
+        title: title.trim(),
+        meal_type: mealType,
+        primary_protein: protein || null,
+        servings: parseInt(servings),
+        image_url: imageUrl.trim() || null,
+        ingredients: ingredients.filter(i => i.name.trim()),
+        steps: steps.filter(s => s.trim()),
+        equipment_needed: equipment.filter(e => e.trim()),
+      })
+      onClose()
+    } catch (e) {
+      if (e.status === 409) {
+        if (window.confirm(e.message + '\n\nAdd it anyway?')) {
+          return submit(true)
+        }
+      }
+      alert(e.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (

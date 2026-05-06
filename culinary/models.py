@@ -72,6 +72,7 @@ class Household(Base):
     walmart_mappings  = relationship("WalmartMapping",   back_populates="household", cascade="all, delete-orphan")
     equipment_items   = relationship("KitchenEquipment", back_populates="household", cascade="all, delete-orphan")
     dinner_proposals  = relationship("DinnerProposal",   back_populates="household", cascade="all, delete-orphan")
+    banned_ingredients = relationship("BannedIngredient", back_populates="household", cascade="all, delete-orphan")
 
 
 class Recipe(Base):
@@ -106,6 +107,25 @@ class Recipe(Base):
 
     household = relationship("Household", back_populates="recipes")
     prep_entries = relationship("PrepSessionRecipe", back_populates="recipe", cascade="all, delete-orphan")
+
+
+class BannedIngredient(Base):
+    """
+    Household-specific banned ingredients with preferred substitutes.
+    Used during recipe ingest and scaling to flag/auto-replace items.
+    """
+    __tablename__ = "cul_banned_ingredients"
+
+    id           = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    household_id = Column(String, ForeignKey("cul_households.id"), nullable=False, index=True)
+
+    name       = Column(String, nullable=False, index=True)
+    substitute = Column(String, nullable=True)
+
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now, onupdate=_now)
+
+    household = relationship("Household", back_populates="banned_ingredients")
 
 
 class StockroomItem(Base):
