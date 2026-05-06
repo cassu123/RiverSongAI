@@ -492,6 +492,68 @@ def _is_bot_challenge(html: str) -> bool:
     return any(phrase in lower for phrase in indicators) and len(html) < 60_000
 
 
+def _extract_microdata_recipes(html: str) -> List[dict]:
+    """Pull schema.org Recipe data from Microdata (itemprop) tags."""
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return []
+
+    soup = BeautifulSoup(html, "html.parser")
+    # Instant Pot and others use itemprop="recipeIngredient" for list items
+    ingredients = [i.get_text(strip=True) for i in soup.find_all(attrs={"itemprop": "recipeIngredient"})]
+    if not ingredients:
+        return []
+
+    # Find the title — prioritising itemprop="name" then h1
+    title_node = soup.find(attrs={"itemprop": "name"}) or soup.find("h1")
+    title = title_node.get_text(strip=True) if title_node else "Untitled Recipe"
+
+    # Instructions — look for itemprop="recipeInstructions" first
+    steps: List[str] = []
+    instruction_nodes = soup.find_all(attrs={"itemprop": "recipeInstructions"})
+    if instruction_nodes:
+        for node in instruction_nodes:
+            # If the node contains <li> children, extract those
+            lis = node.find_all("li")
+            if lis:
+                steps.extend([li.get_text(strip=True) for li in lis])
+            else:
+                steps.extend(_parse_steps(node.get_text(separator="\n")))
+    else:
+        # Fallback for sites with Microdata ingredients but unstructured instructions
+        # Look for headers like "Instructions" or "Directions"
+        for h in soup.find_all(["h2", "h3", "h4"]):
+            h_text = h.get_text().lower()
+            if "instruction" in h_text or "direction" in h_text:
+                # Check siblings or parent for a list
+                container = h.find_next(["ul", "ol", "div"])
+                if container:
+                    lis = container.find_all("li")
+                    if lis:
+                        steps = [li.get_text(strip=True) for li in lis]
+                    else:
+                        steps = [p.get_text(strip=True) for p in container.find_all("p") if len(p.get_text()) > 10]
+                if steps:
+                    break
+
+    yield_node = soup.find(attrs={"itemprop": "recipeYield"})
+    servings = _parse_yield(yield_node.get_text()) if yield_node else 4
+
+    # Try to find a specific recipe image, fallback to OG
+    image_node = soup.find(attrs={"itemprop": "image"})
+    image_url = _extract_image_url(image_node.get("src") if image_node else None) or _extract_og_image(html)
+
+    return [{
+        "title": title,
+        "ingredients": [_parse_ingredient(i) for i in ingredients],
+        "steps": [s for s in steps if s],
+        "servings": servings,
+        "meal_type": "Other",
+        "image_url": image_url,
+    }]
+
+
 def _extract_nextdata_recipes(html: str) -> List[dict]:
     """Extract recipes from Next.js __NEXT_DATA__ JSON (Walmart and similar SPA sites)."""
     m = re.search(r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>([\s\S]*?)</script>', html, re.I)
@@ -641,10 +703,7 @@ class RecipeUpdate(BaseModel):
 
 
 class ScaleRequest(BaseModel):
-    target_containers: int
-    container_oz:      int
-    protein_oz:        Optional[int] = None
-    side_oz:           Optional[int] = None
+    target_servings: int
 
 
 class EquipmentTranslateRequest(BaseModel):
@@ -677,6 +736,11 @@ class PrepSessionCreate(BaseModel):
 class AddRecipeToPrep(BaseModel):
     recipe_id:      str
     servings_target: Optional[int] = None
+
+
+class PrepRecipeScaleUpdate(BaseModel):
+    target_servings: int
+    scaled_ingredients: List[Dict[str, Any]]
 
 
 class EquipmentItemCreate(BaseModel):
@@ -814,9 +878,10 @@ def _session_out(ps: PrepSession) -> dict:
             {
                 "entry_id":          pr.id,
                 "recipe_id":         pr.recipe_id,
+                "session_id":        pr.session_id,
                 "recipe_title":      pr.recipe.title if pr.recipe else "",
                 "servings_target":   pr.servings_target,
-                "scaled_ingredients": json.loads(pr.scaled_ingredients_json or "[]"),
+                "scaled_ingredients": json.loads(pr.scaled_ingredients_json) if pr.scaled_ingredients_json else None,
             }
             for pr in ps.recipes
         ],
@@ -1285,7 +1350,14 @@ async def ingest_recipe(
             raise HTTPException(status_code=500, detail="PyMuPDF not installed. Run: pip install pymupdf")
 
         content = await file.read()
-        doc     = fitz.open(stream=content, filetype="pdf")
+        try:
+            doc = fitz.open(stream=content, filetype="pdf")
+        except Exception as exc:
+            logger.error("Failed to parse uploaded PDF: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The uploaded file is not a valid PDF or is corrupted. Ensure you are uploading a direct PDF file."
+            )
         src_type = SourceType.PDF
 
         text_pages:  List[str] = []
@@ -1333,8 +1405,21 @@ async def ingest_recipe(
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.5",
         }
-        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
-            resp = await client.get(source_url, headers=_fetch_headers)
+        try:
+            async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+                resp = await client.get(source_url, headers=_fetch_headers)
+                resp.raise_for_status()
+        except httpx.TimeoutException:
+            raise HTTPException(status_code=504, detail="Request to recipe site timed out.")
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Recipe site returned an error: {exc.response.status_code} {exc.response.reason_phrase}"
+            )
+        except Exception as exc:
+            logger.error("Failed to fetch recipe URL %s: %s", source_url, exc)
+            raise HTTPException(status_code=502, detail=f"Could not reach the recipe site: {exc}")
+
         html     = resp.text
         src_type = SourceType.URL
 
@@ -1353,7 +1438,14 @@ async def ingest_recipe(
             logger.info("JSON-LD found: %d recipe(s)", len(jsonld_recipes))
             all_parsed.extend(jsonld_recipes)
 
-        # ── Track 1b: Next.js __NEXT_DATA__ (other SPA sites) ───────────────
+        # ── Track 1b: Microdata (itemprop="recipeIngredient" etc.) ──────────
+        if not all_parsed:
+            microdata_recipes = _extract_microdata_recipes(html)
+            if microdata_recipes:
+                logger.info("Microdata found: %d recipe(s)", len(microdata_recipes))
+                all_parsed.extend(microdata_recipes)
+
+        # ── Track 1c: Next.js __NEXT_DATA__ (other SPA sites) ───────────────
         if not all_parsed:
             nextdata_recipes = _extract_nextdata_recipes(html)
             if nextdata_recipes:
@@ -1398,33 +1490,41 @@ async def ingest_recipe(
             unique_parsed.append(item)
 
     saved: List[Recipe] = []
-    for item in unique_parsed:
-        ingredients = item.get("ingredients", [])
-        blacklisted = _flag_blacklist(ingredients)
-        try:
-            meal = MealType(item.get("meal_type", "Other"))
-        except ValueError:
-            meal = MealType.OTHER
+    try:
+        for item in unique_parsed:
+            ingredients = item.get("ingredients", [])
+            blacklisted = _flag_blacklist(ingredients)
+            try:
+                meal = MealType(item.get("meal_type", "Other"))
+            except ValueError:
+                meal = MealType.OTHER
 
-        r = Recipe(
-            household_id=hh.id,
-            title=item.get("title", "Untitled Recipe"),
-            meal_type=meal,
-            primary_protein=item.get("primary_protein"),
-            servings=int(item.get("servings", 4) or 4),
-            image_url=item.get("image_url"),
-            source_url=actual_url,
-            source_type=src_type,
-            ingredients_json=json.dumps(ingredients),
-            steps_json=json.dumps(item.get("steps", [])),
-            equipment_needed_json=json.dumps(item.get("equipment_needed", [])),
-            blacklisted_json=json.dumps(blacklisted),
+            r = Recipe(
+                household_id=hh.id,
+                title=item.get("title", "Untitled Recipe"),
+                meal_type=meal,
+                primary_protein=item.get("primary_protein"),
+                servings=_parse_yield(item.get("servings", 4)),
+                image_url=item.get("image_url"),
+                source_url=actual_url,
+                source_type=src_type,
+                ingredients_json=json.dumps(ingredients),
+                steps_json=json.dumps(item.get("steps", [])),
+                equipment_needed_json=json.dumps(item.get("equipment_needed", [])),
+                blacklisted_json=json.dumps(blacklisted),
+            )
+            db.add(r)
+            db.flush()
+            saved.append(r)
+
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.error("Failed to save ingested recipes: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error while saving recipes: {exc}"
         )
-        db.add(r)
-        db.flush()
-        saved.append(r)
-
-    db.commit()
     for r in saved:
         db.refresh(r)
         await _ws_manager.broadcast(hh.id, "recipe_created", _recipe_out(r))
@@ -1449,46 +1549,32 @@ def scale_recipe(
     if not r:
         raise HTTPException(status_code=404, detail="Recipe not found")
 
-    total_oz = body.target_containers * body.container_oz
     orig_servings = r.servings or 1
-    scale_factor = body.target_containers / orig_servings
+    scale_factor = body.target_servings / orig_servings
 
     ingredients = json.loads(r.ingredients_json or "[]")
     scaled = []
     for ing in ingredients:
         try:
-            orig_qty = float(ing.get("qty", 1))
-            new_qty = round(orig_qty * scale_factor, 2)
+            raw_qty = str(ing.get("qty", "")).strip()
+            if not raw_qty:
+                new_qty = ""
+            else:
+                f_qty = float(raw_qty)
+                new_qty = round(f_qty * scale_factor, 2)
+                if new_qty == int(new_qty):
+                    new_qty = int(new_qty)
         except (ValueError, TypeError):
             new_qty = ing.get("qty", "")
+        
         scaled.append({**ing, "qty": str(new_qty)})
-
-    grocery_list = scaled.copy()
-    if body.protein_oz and body.side_oz:
-        protein_ratio = body.protein_oz / body.container_oz
-        side_ratio = body.side_oz / body.container_oz
-        grocery_list = [
-            {
-                **ing,
-                "qty": str(round(float(ing.get("qty", 0)) * protein_ratio, 2)),
-                "_component": "protein",
-            }
-            if i < len(scaled) // 2
-            else {
-                **ing,
-                "qty": str(round(float(ing.get("qty", 0)) * side_ratio, 2)),
-                "_component": "side",
-            }
-            for i, ing in enumerate(scaled)
-        ]
 
     return {
         "recipe_id":        recipe_id,
-        "target_containers": body.target_containers,
-        "container_oz":     body.container_oz,
-        "total_oz":         total_oz,
+        "original_servings": orig_servings,
+        "target_servings":   body.target_servings,
         "scale_factor":     round(scale_factor, 3),
-        "scaled_ingredients": grocery_list,
+        "scaled_ingredients": scaled,
     }
 
 
@@ -1755,6 +1841,34 @@ async def add_recipe_to_prep(
         servings_target=body.servings_target,
     )
     db.add(entry)
+    db.commit()
+    db.refresh(session)
+    out = _session_out(session)
+    await _ws_manager.broadcast(hh.id, "prep_updated", out)
+    return out
+
+
+@router.put("/prep/{session_id}/recipes/{entry_id}/scale")
+async def update_prep_recipe_scale(
+    session_id: str,
+    entry_id: str,
+    body: PrepRecipeScaleUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    uid = _get_user_id(request)
+    hh = _get_household(db, uid)
+    session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Prep session not found")
+    
+    entry = db.query(PrepSessionRecipe).filter_by(id=entry_id, session_id=session_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Recipe entry not found in session")
+
+    entry.servings_target = body.target_servings
+    entry.scaled_ingredients_json = json.dumps(body.scaled_ingredients)
+    
     db.commit()
     db.refresh(session)
     out = _session_out(session)
