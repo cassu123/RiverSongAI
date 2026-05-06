@@ -1413,6 +1413,7 @@ function PrepRecipeCard({ entry, recipe, api, ownedEquipment, onRemove, onUpdate
   const [scaling, setScaling]               = useState(false)
   const [scaleResult, setScaleResult]       = useState(null)
   const [saving, setSaving]                 = useState(false)
+  const [preferSystem, setPreferSystem]     = useState('')
 
   // Cooking Method — smart default from recipe equipment + owned equipment
   const [eqTarget, setEqTarget]           = useState(() => recipe ? smartCookingMethod(recipe.equipment_needed, ownedEquipment) : 'Oven')
@@ -1433,6 +1434,7 @@ function PrepRecipeCard({ entry, recipe, api, ownedEquipment, onRemove, onUpdate
     try {
       const result = await api.post(`/recipes/${entry.recipe_id}/scale`, {
         target_servings: parseInt(targetServings),
+        prefer_system:   preferSystem || null,
       })
       setScaleResult(result)
     } catch (e) {
@@ -1507,6 +1509,18 @@ function PrepRecipeCard({ entry, recipe, api, ownedEquipment, onRemove, onUpdate
               placeholder="Servings"
             />
             <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>servings</span>
+            
+            <select
+              className="cul-select"
+              value={preferSystem}
+              onChange={e => setPreferSystem(e.target.value)}
+              style={{ fontSize: '0.8rem', minWidth: 120 }}
+            >
+              <option value="">Original Units</option>
+              <option value="imperial">Prefer Imperial (oz, lb)</option>
+              <option value="metric">Prefer Metric (g, ml)</option>
+            </select>
+
             <button className="cul-btn cul-btn-primary cul-btn-sm" onClick={handleScale} disabled={scaling}>
               {scaling ? 'Scaling...' : 'Preview Scale'}
             </button>

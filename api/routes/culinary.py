@@ -37,6 +37,7 @@ import logging
 import os
 import re
 from datetime import datetime, timezone
+from fractions import Fraction
 from typing import Any, Dict, Generator, List, Optional
 
 import httpx
@@ -327,7 +328,79 @@ _MEAL_TYPE_MAP = {
     "dessert": "Dessert", "sweet": "Dessert", "baking": "Dessert",
 }
 
+_METRIC_TO_IMPERIAL = {
+    "g": ("oz", 0.035274),
+    "gram": ("ounce", 0.035274),
+    "grams": ("ounces", 0.035274),
+    "kg": ("lb", 2.20462),
+    "kilogram": ("pound", 2.20462),
+    "kilograms": ("pounds", 2.20462),
+    "ml": ("fl oz", 0.033814),
+    "milliliter": ("fluid ounce", 0.033814),
+    "milliliters": ("fluid ounces", 0.033814),
+    "l": ("qt", 1.05669),
+    "liter": ("quart", 1.05669),
+    "liters": ("quarts", 1.05669),
+}
+
+_IMPERIAL_TO_METRIC = {
+    "oz": ("g", 28.3495),
+    "ounce": ("gram", 28.3495),
+    "ounces": ("grams", 28.3495),
+    "lb": ("kg", 0.453592),
+    "pound": ("kilogram", 0.453592),
+    "pounds": ("kilograms", 0.453592),
+    "fl oz": ("ml", 29.5735),
+    "fluid ounce": ("milliliter", 29.5735),
+    "fluid ounces": ("milliliters", 29.5735),
+    "cup": ("ml", 236.588),
+    "cups": ("ml", 236.588),
+}
+
 _NUM_PAT = re.compile(r"^([\d\s./]+)")
+
+
+def _parse_qty(s: str) -> float:
+    """Parse a quantity string into a float, handling fractions and spaces."""
+    s = s.strip()
+    if not s:
+        return 0.0
+    try:
+        # Handle mixed fractions like "1 1/2"
+        if " " in s:
+            parts = s.split()
+            total = 0.0
+            for p in parts:
+                if "/" in p:
+                    total += float(Fraction(p))
+                else:
+                    total += float(p)
+            return total
+        if "/" in s:
+            return float(Fraction(s))
+        return float(s)
+    except (ValueError, ZeroDivisionError):
+        return 0.0
+
+
+def _format_qty(v: float) -> str:
+    """Format a float quantity back to a string, rounding to fractions if possible."""
+    if v == int(v):
+        return str(int(v))
+    
+    whole = int(v)
+    frac = v - whole
+    
+    frac_str = ""
+    if abs(frac - 0.25) < 0.01: frac_str = "1/4"
+    elif abs(frac - 0.50) < 0.01: frac_str = "1/2"
+    elif abs(frac - 0.75) < 0.01: frac_str = "3/4"
+    elif abs(frac - 0.33) < 0.02: frac_str = "1/3"
+    elif abs(frac - 0.66) < 0.02: frac_str = "2/3"
+    
+    if frac_str:
+        return f"{whole if whole > 0 else ''} {frac_str}".strip()
+    return str(round(v, 2))
 
 
 def _parse_ingredient(s: str) -> dict:
@@ -704,6 +777,7 @@ class RecipeUpdate(BaseModel):
 
 class ScaleRequest(BaseModel):
     target_servings: int
+    prefer_system:   Optional[str] = None  # "metric" or "imperial"
 
 
 class EquipmentTranslateRequest(BaseModel):
@@ -1555,25 +1629,36 @@ def scale_recipe(
     ingredients = json.loads(r.ingredients_json or "[]")
     scaled = []
     for ing in ingredients:
-        try:
-            raw_qty = str(ing.get("qty", "")).strip()
-            if not raw_qty:
-                new_qty = ""
-            else:
-                f_qty = float(raw_qty)
-                new_qty = round(f_qty * scale_factor, 2)
-                if new_qty == int(new_qty):
-                    new_qty = int(new_qty)
-        except (ValueError, TypeError):
-            new_qty = ing.get("qty", "")
+        raw_qty_str = str(ing.get("qty", "")).strip()
+        unit        = str(ing.get("unit", "")).strip()
         
-        scaled.append({**ing, "qty": str(new_qty)})
+        # 1. Parse and Scale
+        f_qty = _parse_qty(raw_qty_str)
+        if f_qty > 0:
+            new_qty = f_qty * scale_factor
+            new_unit = unit
+            
+            # 2. Convert if system preference set
+            u_lower = unit.lower()
+            if body.prefer_system == "imperial" and u_lower in _METRIC_TO_IMPERIAL:
+                new_unit, ratio = _METRIC_TO_IMPERIAL[u_lower]
+                new_qty *= ratio
+            elif body.prefer_system == "metric" and u_lower in _IMPERIAL_TO_METRIC:
+                new_unit, ratio = _IMPERIAL_TO_METRIC[u_lower]
+                new_qty *= ratio
+                
+            formatted_qty = _format_qty(new_qty)
+            scaled.append({**ing, "qty": formatted_qty, "unit": new_unit})
+        else:
+            # Non-numeric qty (e.g. "a pinch")
+            scaled.append({**ing})
 
     return {
         "recipe_id":        recipe_id,
         "original_servings": orig_servings,
         "target_servings":   body.target_servings,
         "scale_factor":     round(scale_factor, 3),
+        "prefer_system":    body.prefer_system,
         "scaled_ingredients": scaled,
     }
 
