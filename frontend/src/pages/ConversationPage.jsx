@@ -55,8 +55,23 @@ export default function ConversationPage() {
 
   const [convState,         setConvState]         = useState('connecting')
   const [messages,          setMessages]          = useState([])
-  const [streamingResponse, setStreamingResponse] = useState('')
+  const [streamingContent,  setStreamingContent]  = useState('')
   const [error,             setError]             = useState(null)
+
+  const streamTimeoutRef = useRef(null)
+
+  const finalizeStream = useCallback(() => {
+    setStreamingContent(current => {
+      if (current) {
+        setMessages(p => [...p, { role: 'assistant', text: current }])
+      }
+      return ''
+    })
+    if (streamTimeoutRef.current) {
+      clearTimeout(streamTimeoutRef.current)
+      streamTimeoutRef.current = null
+    }
+  }, [])
 
   const [showAvatar, setShowAvatar] = useState(() => {
     if (!user) return true
@@ -120,17 +135,35 @@ export default function ConversationPage() {
   }
 
   const handleMessage = useCallback((event) => {
-    const { type, text, message, data } = event
+    const { type, text, content, message, data } = event
     switch (type) {
       case 'connected':       setConvState('idle');       setError(null); break
-      case 'listening':       setConvState('listening');  setStreamingResponse(''); setError(null); break
+      case 'listening':       setConvState('listening');  setStreamingContent(''); setError(null); break
       case 'transcribing':    setConvState('transcribing'); break
       case 'transcript':      if (text) setMessages(p => [...p, { role: 'user', text }]); break
-      case 'thinking':        setConvState('thinking');   setStreamingResponse(''); break
-      case 'response_chunk':  setStreamingResponse(p => p + (text || '')); break
+      case 'thinking':        setConvState('thinking');   setStreamingContent(''); break
+      case 'response_chunk':  setStreamingContent(p => p + (text || '')); break
+      case 'token':
+        setStreamingContent(p => p + (content || ''))
+        // Reset 30s timeout on every token
+        if (streamTimeoutRef.current) clearTimeout(streamTimeoutRef.current)
+        streamTimeoutRef.current = setTimeout(() => {
+          console.warn('Streaming timed out after 30s, finalizing.')
+          finalizeStream()
+        }, 30000)
+        break
+      case 'stream_done':
+        finalizeStream()
+        break
       case 'response_complete':
-        setStreamingResponse('')
-        if (text) setMessages(p => [...p, { role: 'assistant', text }])
+        if (text) {
+          setMessages(p => {
+            const last = p[p.length - 1]
+            if (last?.role === 'assistant' && last.text === text) return p
+            return [...p, { role: 'assistant', text }]
+          })
+        }
+        setStreamingContent('')
         break
       case 'speaking': setConvState('speaking'); break
       case 'audio':
@@ -212,13 +245,13 @@ export default function ConversationPage() {
     }
     sendMessage({ type: 'reset_history' })
     setMessages([])
-    setStreamingResponse('')
+    setStreamingContent('')
     setError(null)
     setViewingSession(null)
   }, [connectionStatus, messages, sendMessage, user, activeModel])
 
   const displayMessages = viewingSession ? viewingSession.messages : messages
-  const displayStreaming = viewingSession ? '' : streamingResponse
+  const displayStreaming = viewingSession ? '' : streamingContent
 
   return (
     <div className="conv-page">
@@ -354,7 +387,7 @@ export default function ConversationPage() {
             )}
           </div>
         ) : showTranscript ? (
-          <ConversationPanel messages={displayMessages} streamingResponse={displayStreaming} />
+          <ConversationPanel messages={displayMessages} streamingContent={displayStreaming} />
         ) : (
           <div className="conv-transcript-off">Transcript hidden — tap <TranscriptIcon /> to show</div>
         )}

@@ -31,14 +31,14 @@ function ThinkingBubble({ startTime }) {
   )
 }
 
-export default function ConversationPanel({ messages, streamingResponse, isThinking, thinkingStart }) {
+export default function ConversationPanel({ messages, streamingContent, isThinking, thinkingStart }) {
   const bottomRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamingResponse, isThinking])
+  }, [messages, streamingContent, isThinking])
 
-  if (messages.length === 0 && !streamingResponse && !isThinking) {
+  if (messages.length === 0 && !streamingContent && !isThinking) {
     return (
       <div className="chat-panel chat-panel--empty">
         <div className="chat-empty-icon">
@@ -77,17 +77,17 @@ export default function ConversationPanel({ messages, streamingResponse, isThink
         ))}
 
         {/* Chain of thought thinking display */}
-        {isThinking && !streamingResponse && thinkingStart && (
+        {isThinking && !streamingContent && thinkingStart && (
           <ThinkingBubble startTime={thinkingStart} />
         )}
 
         {/* Streaming assistant response */}
-        {streamingResponse && (
+        {streamingContent && (
           <div className="chat-row chat-row--assistant">
             <div className="chat-avatar chat-avatar--rs" aria-hidden="true">RS</div>
             <div className="chat-bubble chat-bubble--assistant chat-bubble--streaming">
               <p className="chat-bubble-text">
-                {streamingResponse}
+                {streamingContent}
                 <span className="chat-cursor" aria-hidden="true" />
               </p>
             </div>

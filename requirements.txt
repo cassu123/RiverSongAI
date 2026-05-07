@@ -109,6 +109,13 @@ python-amazon-sp-api==2.1.8          # Amazon Selling Partner API (auth + endpoi
 
 
 # -----------------------------------------------------------------------------
+# Memory / Vector Store (Phase 1)
+# -----------------------------------------------------------------------------
+pybind11==2.13.6                     # C++ binding tool required for building chroma-hnswlib
+chromadb==0.6.3                      # Local vector database for semantic memory
+
+
+# -----------------------------------------------------------------------------
 # Inventory System
 # -----------------------------------------------------------------------------
 sqlalchemy==2.0.49                   # ORM for inventory.db (SQLite)

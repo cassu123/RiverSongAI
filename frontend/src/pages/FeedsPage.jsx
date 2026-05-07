@@ -120,6 +120,8 @@ const SOURCE_CAT_COLORS = {
 
 const SPORTS_CATS = new Set(['sports', 'nfl', 'nba', 'mlb', 'nhl', 'nascar'])
 
+const ESPN_LEAGUES_STUB = new Set(['f1', 'nascar', 'ufc', 'boxing', 'rugby', 'cricket', 'afl', 'esports'])
+
 function NewsTab({ prefs, savePrefs }) {
   const [showSettings, setShowSettings] = useState(false)
   const [allSources, setAllSources]     = useState([])
@@ -982,6 +984,232 @@ function FormGuide({ form }) {
   )
 }
 
+function ScoreCard({ game, leagueIcon, onClick }) {
+  const isScheduled = game.status === 'STATUS_SCHEDULED'
+  return (
+    <div className="feeds-match-card feeds-match-card--clickable" onClick={onClick}>
+      <div className="feeds-match-header">
+        <span className="feeds-match-league">{leagueIcon} {game.short_name}</span>
+        {game.is_live ? (
+          <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>             
+            <span style={{                                                                 
+              width:8, height:8, borderRadius:'50%', background:'#ef4444',                 
+              animation:'sports-pulse 1.5s ease-in-out infinite',                          
+            }} />                                         
+            <span style={{ color:'#ef4444', fontSize:'0.6rem', fontWeight:700, letterSpacing:'0.1em' }}>LIVE</span>                                                   
+          </span>
+        ) : (
+          <span className="feeds-match-date">{game.status_detail}</span>
+        )}
+      </div>
+      <div className="feeds-match-body">
+        <div className="feeds-match-team">
+          {game.home_logo ? (
+            <img className="feeds-match-badge" src={game.home_logo} alt="" />
+          ) : (
+            <div style={{ width: 40, height: 40, background: 'var(--bg-panel)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>
+              {game.home_abbr}
+            </div>
+          )}
+          <span className="feeds-match-team-name" style={{ 
+            fontWeight: game.home_winner ? 700 : 400,
+            color: game.home_winner ? 'var(--md-on-surface)' : 'var(--md-on-surface-variant)'
+          }}>
+            {game.home_team}
+          </span>
+        </div>
+
+        <div className="feeds-match-centre">
+          {!isScheduled ? (
+            <div className="feeds-match-score" style={{ fontFamily: 'monospace', fontSize: '1.25rem' }}>
+              {game.home_score} – {game.away_score}
+            </div>
+          ) : (
+            <div className="feeds-match-vs">VS</div>
+          )}
+        </div>
+
+        <div className="feeds-match-team">
+          {game.away_logo ? (
+            <img className="feeds-match-badge" src={game.away_logo} alt="" />
+          ) : (
+            <div style={{ width: 40, height: 40, background: 'var(--bg-panel)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>
+              {game.away_abbr}
+            </div>
+          )}
+          <span className="feeds-match-team-name" style={{ 
+            fontWeight: game.away_winner ? 700 : 400,
+            color: game.away_winner ? 'var(--md-on-surface)' : 'var(--md-on-surface-variant)'
+          }}>
+            {game.away_team}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BoxScorePanel({ game, onBack }) {
+  const [bsData, setBsData] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    apiFetch(`/sports/boxscore/${game.league_id}/${game.id}`)
+      .then(setBsData)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [game.id, game.league_id])
+
+  const renderBoxBody = () => {
+    if (!bsData?.boxscore) return <div>Detailed stats loading...</div>
+
+    const lid = game.league_id
+    const teams = bsData.boxscore.teams || []
+    
+    // Football
+    if (lid === 'nfl' || lid === 'ncaaf') {
+      const stats = teams.map(t => t.linescore || [])
+      return (
+        <table className="sports-bs-table">
+          <thead>
+            <tr>
+              <th>TEAM</th>
+              {stats[0]?.map((_, i) => <th key={i}>Q{i+1}</th>)}
+              <th>T</th>
+            </tr>
+          </thead>
+          <tbody>
+            {teams.map((t, i) => (
+              <tr key={t.team.id} className={i === 0 ? 'home-row' : 'away-row'}>
+                <td>{t.team.abbreviation}</td>
+                {t.linescore?.map((q, j) => <td key={j}>{q.displayValue}</td>)}
+                <td className="score-col">{t.score}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )
+    }
+
+    // Basketball
+    if (['nba', 'wnba', 'ncaab', 'ncaabw'].includes(lid)) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <table className="sports-bs-table">
+            <thead>
+              <tr>
+                <th>TEAM</th>
+                {teams[0]?.linescore?.map((_, i) => <th key={i}>Q{i+1}</th>)}
+                <th>T</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teams.map((t, i) => (
+                <tr key={t.team.id} className={i === 0 ? 'home-row' : 'away-row'}>
+                  <td>{t.team.abbreviation}</td>
+                  {t.linescore?.map((q, j) => <td key={j}>{q.displayValue}</td>)}
+                  <td className="score-col">{t.score}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="feeds-subsection-label">Top Performers</div>
+          {bsData.boxscore.players?.map(pGrp => (
+            <div key={pGrp.team.id} style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--md-primary)', marginBottom: 4 }}>{pGrp.team.displayName}</div>
+              <table className="sports-bs-table">
+                <thead>
+                  <tr>
+                    <th>NAME</th>
+                    <th>PTS</th>
+                    <th>REB</th>
+                    <th>AST</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pGrp.statistics[0]?.athletes.slice(0, 5).map(a => (
+                    <tr key={a.athlete.id}>
+                      <td>{a.athlete.displayName}</td>
+                      <td>{a.stats[0]}</td>
+                      <td>{a.stats[1]}</td>
+                      <td>{a.stats[2]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    // Baseball
+    if (lid === 'mlb') {
+      return (
+        <table className="sports-bs-table">
+          <thead>
+            <tr>
+              <th>TEAM</th>
+              {[...Array(9)].map((_, i) => <th key={i}>{i+1}</th>)}
+              <th>R</th><th>H</th><th>E</th>
+            </tr>
+          </thead>
+          <tbody>
+            {teams.reverse().map((t, i) => (
+              <tr key={t.team.id} className={i === 1 ? 'home-row' : 'away-row'}>
+                <td>{t.team.abbreviation}</td>
+                {t.linescore?.map((q, j) => <td key={j}>{q.displayValue}</td>)}
+                <td className="score-col">{t.score}</td>
+                <td>{t.hits}</td>
+                <td>{t.errors}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )
+    }
+
+    return <div style={{ textAlign: 'center', color: 'var(--md-on-surface-variant)', fontSize: '0.8rem', padding: '20px 0' }}>Detailed stats not available for this sport.</div>
+  }
+
+  return (
+    <div className="feeds-match-stats-page">
+      <div className="feeds-match-stats-header">
+        <button className="feeds-back-btn" onClick={onBack}>← Back to Scoreboard</button>
+        <div className="feeds-match-stats-league">{game.short_name}</div>
+      </div>
+
+      <div className="feeds-match-stats-hero" style={{ padding: '16px 24px' }}>
+        <div className="feeds-match-stats-team">
+          {game.home_logo && <img src={game.home_logo} alt="" style={{ width: 48, height: 48 }} />}
+          <div className="feeds-match-stats-team-name">{game.home_team}</div>
+          <div className="feeds-match-stats-score">{game.home_score}</div>
+        </div>
+        <div className="feeds-match-stats-score-wrap" style={{ minWidth: 80 }}>
+           <div style={{ fontSize: '0.75rem', color: 'var(--md-on-surface-variant)', marginBottom: 4 }}>{game.status_detail}</div>
+           {game.is_live && (
+             <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>             
+               <span style={{ width:6, height:6, borderRadius:'50%', background:'#ef4444', animation:'sports-pulse 1.5s ease-in-out infinite' }} />                                         
+               <span style={{ color:'#ef4444', fontSize:'0.55rem', fontWeight:700 }}>LIVE</span>                                                   
+             </span>
+           )}
+        </div>
+        <div className="feeds-match-stats-team">
+          {game.away_logo && <img src={game.away_logo} alt="" style={{ width: 48, height: 48 }} />}
+          <div className="feeds-match-stats-team-name">{game.away_team}</div>
+          <div className="feeds-match-stats-score">{game.away_score}</div>
+        </div>
+      </div>
+
+      <div className="feeds-match-stats-body">
+        {loading ? <div className="feeds-loading">Loading stats…</div> : renderBoxBody()}
+        {!loading && !bsData && <div>Stats unavailable — ESPN may not have detailed data for this game yet.</div>}
+      </div>
+    </div>
+  )
+}
+
 function Countdown({ dateStr, timeStr }) {
   const [label, setLabel] = useState('')
   useEffect(() => {
@@ -1024,6 +1252,14 @@ function SportsTab({ prefs, savePrefs }) {
   const [scoreboardLoading, setScoreboardLoading] = useState(false)
   const [leagueRegistry, setLeagueRegistry] = useState([])
 
+  // Schedule & Standings states
+  const [schedule, setSchedule] = useState([])
+  const [scheduleLoading, setScheduleLoading] = useState(false)
+  const scheduleCache = useRef({}) // { teamId_or_all: {data, ts} }
+
+  const [espnStandings, setEspnStandings] = useState({})
+  const [standingsLoading, setStandingsLoading] = useState(false)
+
   // Picker states
   const [showPicker, setShowPicker] = useState(false)
   const [leagues, setLeagues] = useState([])
@@ -1049,6 +1285,114 @@ function SportsTab({ prefs, savePrefs }) {
 
   useEffect(() => { load() }, [load])
 
+  // Load league registry once
+  useEffect(() => {
+    apiFetch('/sports/leagues').then(setLeagueRegistry).catch(() => {})
+  }, [])
+
+  const loadScoreboard = useCallback(async () => {
+    const teams = prefs?.sport_teams || []
+    if (!teams.length) return
+
+    setScoreboardLoading(true)
+    try {
+      const leagueIds = [...new Set(teams.map(t => t.league_id).filter(id => id && !ESPN_LEAGUES_STUB.has(id)))]
+      const results = await Promise.all(
+        leagueIds.map(id => apiFetch(`/sports/scoreboard/${id}`).catch(() => []))
+      )
+      const flat = results.flat()
+      const seen = new Set()
+      const deduped = flat.filter(ev => {
+        if (seen.has(ev.id)) return false
+        seen.add(ev.id)
+        return true
+      })
+      deduped.sort((a, b) => {
+        if (a.is_live && !b.is_live) return -1
+        if (!a.is_live && b.is_live) return 1
+        return new Date(a.date) - new Date(b.date)
+      })
+      setScoreboard(deduped)
+    } finally {
+      setScoreboardLoading(false)
+    }
+  }, [prefs?.sport_teams])
+
+  useEffect(() => {
+    if (sportsTab === 'scoreboard' || (prefs?.sport_teams?.length && scoreboard.length === 0)) {
+      loadScoreboard()
+    }
+  }, [sportsTab, loadScoreboard, scoreboard.length])
+
+  useEffect(() => {
+    if (sportsTab !== 'scoreboard') return
+    const id = setInterval(loadScoreboard, 60000)
+    return () => clearInterval(id)
+  }, [sportsTab, loadScoreboard])
+
+  const loadSchedule = useCallback(async () => {
+    const teams = prefs?.sport_teams || []
+    if (!teams.length) return
+
+    const cacheKey = filterTeam
+    const cached = scheduleCache.current[cacheKey]
+    if (cached && Date.now() - cached.ts < 10 * 60 * 1000) {
+      setSchedule(cached.data)
+      return
+    }
+
+    setScheduleLoading(true)
+    try {
+      let results = []
+      if (filterTeam !== 'all') {
+        const t = teams.find(x => x.id === filterTeam)
+        if (t) results = await apiFetch(`/sports/schedule/${t.league_id}/${t.id}`).catch(() => [])
+      } else {
+        const teamResults = await Promise.all(
+          teams.map(t => apiFetch(`/sports/schedule/${t.league_id}/${t.id}`).catch(() => []))
+        )
+        const flat = teamResults.flat()
+        const seen = new Set()
+        results = flat.filter(ev => {
+          if (seen.has(ev.id)) return false
+          seen.add(ev.id)
+          return true
+        }).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 20)
+      }
+      setSchedule(results)
+      scheduleCache.current[cacheKey] = { data: results, ts: Date.now() }
+    } finally {
+      setScheduleLoading(false)
+    }
+  }, [prefs?.sport_teams, filterTeam])
+
+  useEffect(() => {
+    if (sportsTab === 'schedule') loadSchedule()
+  }, [sportsTab, loadSchedule])
+
+  const loadEspnStandings = useCallback(async () => {
+    const teams = prefs?.sport_teams || []
+    if (!teams.length) return
+    
+    setStandingsLoading(true)
+    try {
+      const leagueIds = [...new Set(teams.map(t => t.league_id).filter(id => id && !ESPN_LEAGUES_STUB.has(id)))]
+      const results = await Promise.all(
+        leagueIds.map(async id => ({ id, rows: await apiFetch(`/sports/espn-standings/${id}`).catch(() => []) }))
+      )
+      const newStandings = {}
+      results.forEach(r => { newStandings[r.id] = r.rows })
+      setEspnStandings(newStandings)
+    } finally {
+      setStandingsLoading(false)
+    }
+  }, [prefs?.sport_teams])
+
+  useEffect(() => {
+    if (sportsTab === 'standings') loadEspnStandings()
+  }, [sportsTab, loadEspnStandings])
+
+  // Load standings (Legacy - keep as fallback)
   useEffect(() => {
     if (!prefs?.sport_teams?.length) return
     const leagueIds = [...new Set(prefs.sport_teams.map(t => t.league_id).filter(Boolean))]
@@ -1148,7 +1492,7 @@ function SportsTab({ prefs, savePrefs }) {
   const followedTeamIds = new Set(teams.map(t => t.id))
 
   if (selectedEvent) {
-    return <MatchStats event={selectedEvent} onBack={() => setSelectedEvent(null)} />
+    return <BoxScorePanel game={selectedEvent} onBack={() => setSelectedEvent(null)} />
   }
 
   const pickerCategories = [...new Set(leagues.map(l => l.category))]
@@ -1210,7 +1554,7 @@ function SportsTab({ prefs, savePrefs }) {
           </div>
 
           <div className="feeds-sports-tab-bar">
-            {['results', 'fixtures', 'standings', 'headlines'].map(tab => (
+            {['scoreboard', 'results', 'fixtures', 'schedule', 'standings', 'headlines'].map(tab => (
               <button key={tab}
                 className={`feeds-sports-tab${sportsTab === tab ? ' feeds-sports-tab--active' : ''}`}
                 onClick={() => setSportsTab(tab)}>
@@ -1219,8 +1563,109 @@ function SportsTab({ prefs, savePrefs }) {
             ))}
           </div>
 
-          {loading && <div className="feeds-loading">Fetching data…</div>}
+          {(loading || scoreboardLoading || scheduleLoading || standingsLoading) && <div className="feeds-loading">Fetching data…</div>}
           {error && <div className="feeds-error">{error}</div>}
+
+          {sportsTab === 'schedule' && !scheduleLoading && (
+            <div className="feeds-body">
+              {schedule.length > 0 ? (
+                schedule.map(game => (
+                  <div key={game.id} className="sports-schedule-row">
+                    <div style={{ width: 80, color: 'var(--md-on-surface-variant)', fontSize: '0.75rem' }}>
+                      {new Date(game.date).toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {game.away_logo && <img src={game.away_logo} alt="" style={{ width: 24, height: 24 }} />}
+                      <span style={{ fontWeight: 500 }}>{game.away_abbr}</span>
+                    </div>
+                    <span style={{ color: 'var(--md-on-surface-variant)', padding: '0 4px' }}>at</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {game.home_logo && <img src={game.home_logo} alt="" style={{ width: 24, height: 24 }} />}
+                      <span style={{ fontWeight: 500 }}>{game.home_abbr}</span>
+                    </div>
+                    <div style={{ flex: 1 }} />
+                    <div style={{ color: 'var(--md-on-surface-variant)', fontSize: '0.75rem' }}>{game.status_detail}</div>
+                    <span style={{ fontSize: '1rem' }}>{leagueRegistry.find(l => l.id === game.league_id)?.icon}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="feeds-empty">No upcoming games found for your followed teams.</div>
+              )}
+            </div>
+          )}
+
+          {sportsTab === 'standings' && !standingsLoading && (
+            <>
+              {Object.entries(espnStandings).filter(([lid]) => filterTeam === 'all' || teams.find(t => t.id === filterTeam)?.league_id === lid).map(([lid, rows]) => {
+                const info = leagueRegistry.find(l => l.id === lid)
+                if (!rows.length) return null
+                
+                const isSoccer = ['mls', 'epl', 'laliga', 'seriea', 'bundesliga', 'ligue1', 'ucl', 'uel', 'ligamx', 'nwsl'].includes(lid)
+                const isFootball = lid === 'nfl' || lid === 'ncaaf'
+                const isBasketball = ['nba', 'wnba', 'ncaab'].includes(lid)
+                const isBaseball = lid === 'mlb'
+                const isHockey = lid === 'nhl'
+
+                return (
+                  <div key={lid} style={{ marginBottom: 24 }}>
+                    <div className="feeds-subsection-label" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: '1.2rem' }}>{info?.icon}</span> {info?.label}
+                    </div>
+                    <div className="feeds-standings-wrap">
+                      <table className="sports-bs-table">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th style={{ textAlign: 'left' }}>TEAM</th>
+                            {isSoccer && <><th title="Matches Played">MP</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>PTS</th></>}
+                            {isFootball && <><th>W</th><th>L</th><th>PCT</th><th>PF</th><th>PA</th></>}
+                            {isBasketball && <><th>W</th><th>L</th><th>PCT</th><th>GB</th></>}
+                            {isBaseball && <><th>W</th><th>L</th><th>PCT</th><th>GB</th></>}
+                            {isHockey && <><th title="Games Played">GP</th><th>W</th><th>L</th><th>OTL</th><th>PTS</th></>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((row, idx) => {
+                            const isFollowed = teams.some(t => t.id === row.team_id)
+                            return (
+                              <tr key={row.team_id} className={isFollowed ? 'home-row' : 'away-row'} style={isFollowed ? { borderLeft: '3px solid var(--md-primary)', paddingLeft: 5 } : {}}>
+                                <td>{idx + 1}</td>
+                                <td style={{ textAlign: 'left', fontWeight: isFollowed ? 700 : 400 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    {row.logo && <img src={row.logo} alt="" style={{ width: 18, height: 18 }} />}
+                                    {row.team}
+                                  </div>
+                                </td>
+                                {isSoccer && <>
+                                  <td>{row.stats.gamesPlayed}</td><td>{row.stats.wins}</td><td>{row.stats.draws}</td><td>{row.stats.losses}</td>
+                                  <td className={parseInt(row.stats.goalDifference) >= 0 ? 'gd-pos' : 'gd-neg'}>{row.stats.goalDifference}</td>
+                                  <td className="score-col">{row.stats.points}</td>
+                                </>}
+                                {isFootball && <>
+                                  <td>{row.stats.wins}</td><td>{row.stats.losses}</td><td>{row.stats.winPercent}</td>
+                                  <td>{row.stats.pointsFor}</td><td>{row.stats.pointsAgainst}</td>
+                                </>}
+                                {isBasketball && <>
+                                  <td>{row.stats.wins}</td><td>{row.stats.losses}</td><td>{row.stats.winPercent}</td><td>{row.stats.gamesBack}</td>
+                                </>}
+                                {isBaseball && <>
+                                  <td>{row.stats.wins}</td><td>{row.stats.losses}</td><td>{row.stats.winPercent}</td><td>{row.stats.gamesBack}</td>
+                                </>}
+                                {isHockey && <>
+                                  <td>{row.stats.gamesPlayed}</td><td>{row.stats.wins}</td><td>{row.stats.losses}</td>
+                                  <td>{row.stats.overtimeLosses}</td><td className="score-col">{row.stats.points}</td>
+                                </>}
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )
+              })}
+            </>
+          )}
 
           {data && !loading && sportsTab === 'results' && (
             <div className="feeds-sports-grid">

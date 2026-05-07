@@ -118,3 +118,44 @@ class ClaudeAPILLM(LLMProvider):
             raise RuntimeError(
                 f"Unexpected error communicating with Anthropic API: {exc}"
             ) from exc
+
+    async def chat_with_tools(self, messages: list, tools: list) -> dict:
+        """
+        Send a message to Claude with a list of available tools.
+        If Claude chooses to use a tool, returns a tool_call dict.
+        Otherwise returns a text response.
+        """
+        system_prompt = ""
+        chat_messages = messages
+        if messages and messages[0].get("role") == "system":
+            system_prompt = messages[0]["content"]
+            chat_messages = messages[1:]
+
+        try:
+            response = await self._client.messages.create(
+                model=self._model,
+                max_tokens=self._max_tokens,
+                temperature=self._temperature,
+                system=system_prompt,
+                messages=chat_messages,
+                tools=tools
+            )
+
+            if response.stop_reason == "tool_use":
+                # Find the first tool_use block
+                tool_use_block = next((b for b in response.content if b.type == "tool_use"), None)
+                if tool_use_block:
+                    return {
+                        "type": "tool_call",
+                        "tool_name": tool_use_block.name,
+                        "tool_input": tool_use_block.input,
+                        "tool_use_id": tool_use_block.id
+                    }
+
+            # Default to text response
+            text = "".join(b.text for b in response.content if b.type == "text")
+            return {"type": "text", "content": text}
+
+        except Exception as exc:
+            logger.error("Claude tool use call failed: %s", exc)
+            return {"type": "text", "content": f"I had trouble reaching my cloud brain for tool use: {exc}"}

@@ -6,6 +6,7 @@ Sports provider using ESPN's public API.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Any, Dict, List, Optional
@@ -126,11 +127,13 @@ async def get_scoreboard(league_id: str) -> list[dict]:
                     "status": event["status"]["type"]["name"],
                     "status_detail": event["status"]["type"]["shortDetail"],
                     "is_live": event["status"]["type"]["state"] == "in",
+                    "home_id": competition["competitors"][0]["team"]["id"],
                     "home_team": competition["competitors"][0]["team"]["displayName"],
                     "home_abbr": competition["competitors"][0]["team"]["abbreviation"],
                     "home_logo": competition["competitors"][0]["team"]["logo"] if "logo" in competition["competitors"][0]["team"] else "",
                     "home_score": competition["competitors"][0].get("score", ""),
                     "home_winner": competition["competitors"][0].get("winner", False),
+                    "away_id": competition["competitors"][1]["team"]["id"],
                     "away_team": competition["competitors"][1]["team"]["displayName"],
                     "away_abbr": competition["competitors"][1]["team"]["abbreviation"],
                     "away_logo": competition["competitors"][1]["team"]["logo"] if "logo" in competition["competitors"][1]["team"] else "",
@@ -256,6 +259,126 @@ async def get_boxscore(event_id: str, league_id: str) -> dict:
     except Exception as exc:
         logger.warning("ESPN get_boxscore failed for %s: %s", event_id, exc)
         return {}
+
+
+# =============================================================================
+# Public aliases expected by feed_service.py
+# =============================================================================
+
+async def fetch_standings(league_id: str, season: str = "") -> list[dict]:
+    """Wrapper for get_standings. season param accepted but unused — ESPN returns current season."""
+    return await get_standings(league_id)
+
+
+async def search_teams(q: str) -> list[dict]:
+    """Search for teams by name or abbreviation across all active ESPN leagues."""
+    if not q or not q.strip():
+        return []
+
+    q_lower = q.strip().lower()
+    cached = _get_from_cache(f"search_teams:{q_lower}")
+    if cached is not None:
+        return cached
+
+    active_leagues = [lid for lid, info in ESPN_LEAGUES.items() if not info.get("stub")]
+    all_results = await asyncio.gather(
+        *[get_teams(lid) for lid in active_leagues],
+        return_exceptions=True,
+    )
+
+    matches: list[dict] = []
+    seen: set[str] = set()
+    for teams in all_results:
+        if isinstance(teams, Exception) or not teams:
+            continue
+        for team in teams:
+            if team["id"] in seen:
+                continue
+            if q_lower in team["name"].lower() or q_lower in team.get("abbr", "").lower():
+                matches.append(team)
+                seen.add(team["id"])
+
+    _set_cache(f"search_teams:{q_lower}", matches, 3600)
+    return matches
+
+
+async def fetch_teams_feed(teams: list[dict]) -> dict:
+    """
+    Aggregate live scores and upcoming fixtures for the given teams.
+    Each team dict must have 'id' and 'league_id' keys.
+    Returns {"results": [live/recent events], "fixtures": [upcoming events]}.
+    """
+    if not teams:
+        return {"results": [], "fixtures": []}
+
+    team_id_set = {str(t["id"]) for t in teams if t.get("id")}
+    unique_leagues = list({t["league_id"] for t in teams if t.get("league_id")})
+
+    # Fetch scoreboards and schedules concurrently
+    scoreboard_task = asyncio.gather(
+        *[get_scoreboard(lid) for lid in unique_leagues], return_exceptions=True
+    )
+    schedule_tasks = [
+        get_schedule(str(t["id"]), t["league_id"])
+        for t in teams if t.get("id") and t.get("league_id")
+    ]
+    schedule_task = asyncio.gather(*schedule_tasks, return_exceptions=True)
+
+    scoreboard_results, schedule_results = await asyncio.gather(scoreboard_task, schedule_task)
+
+    results: list[dict] = []
+    seen_event_ids: set[str] = set()
+    for board in scoreboard_results:
+        if isinstance(board, Exception) or not board:
+            continue
+        for event in board:
+            if event["id"] in seen_event_ids:
+                continue
+            if str(event.get("home_id", "")) in team_id_set or str(event.get("away_id", "")) in team_id_set:
+                results.append(event)
+                seen_event_ids.add(event["id"])
+
+    fixtures: list[dict] = []
+    for sched in schedule_results:
+        if isinstance(sched, Exception) or not sched:
+            continue
+        for event in sched:
+            if event["id"] not in seen_event_ids:
+                fixtures.append(event)
+                seen_event_ids.add(event["id"])
+
+    return {"results": results, "fixtures": fixtures}
+
+
+async def fetch_event_stats(event_id: str) -> dict:
+    """
+    Retrieve boxscore/stats for a single event.
+    Searches cached scoreboards to determine the league, then calls get_boxscore.
+    """
+    # Search through all cached scoreboards to find which league owns this event
+    for lid in ESPN_LEAGUES:
+        cached = _get_from_cache(f"scoreboard:{lid}")
+        if not cached:
+            continue
+        for event in cached:
+            if event["id"] == event_id:
+                return await get_boxscore(event_id, lid)
+
+    # Not in any cached scoreboard — try active leagues' live scoreboards
+    active_leagues = [lid for lid, info in ESPN_LEAGUES.items() if not info.get("stub")]
+    boards = await asyncio.gather(
+        *[get_scoreboard(lid) for lid in active_leagues], return_exceptions=True
+    )
+    for lid, board in zip(active_leagues, boards):
+        if isinstance(board, Exception):
+            continue
+        for event in (board or []):
+            if event["id"] == event_id:
+                return await get_boxscore(event_id, lid)
+
+    logger.warning("fetch_event_stats: event %s not found in any league scoreboard.", event_id)
+    return {}
+
 
 # LEGACY — TheSportsDB
 # def _get_base() -> str:

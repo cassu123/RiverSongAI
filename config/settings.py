@@ -425,6 +425,38 @@ class Settings(BaseSettings):
         default=10,
         description="Maximum number of recent summaries injected into the LLM context.",
     )
+    embedding_model: str = Field(
+        default="nomic-embed-text",
+        description="Ollama model name used for generating semantic embeddings.",
+    )
+    chroma_path: str = Field(
+        default="/mnt/data/river-song/chroma",
+        description="Absolute path to the ChromaDB persistent storage directory.",
+    )
+    semantic_memory_enabled: bool = Field(
+        default=False,
+        description="Enable vector-based semantic search for memory retrieval.",
+    )
+    llm_streaming_enabled: bool = Field(
+        default=False,
+        description="Enable real-time token streaming over WebSocket for the conversation UI.",
+    )
+    tool_use_enabled: bool = Field(
+        default=False,
+        description="Enable LLM tool use (function calling) for taking actions.",
+    )
+    tool_use_provider: str = Field(
+        default="ollama",
+        description="Primary LLM provider to use for tool calling (ollama or anthropic).",
+    )
+    vision_model: str = Field(
+        default="moondream",
+        description="Ollama model name used for local image analysis (Phase 4).",
+    )
+    vision_enabled: bool = Field(
+        default=False,
+        description="Enable local image analysis capabilities.",
+    )
 
     # -------------------------------------------------------------------------
     # Intent Router (Phase 2+)

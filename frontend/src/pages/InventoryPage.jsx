@@ -151,8 +151,37 @@ function ItemModal({ existing, homeQrStandard, onSave, onClose }) {
   } : { ...EMPTY_ITEM })
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
+  const [analyzing, setAnalyzing] = useState(false)
+
+  const { token } = useAuth()
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const handleAnalyzePhoto = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setAnalyzing(true); setError('')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/vision/inventory-item', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd
+      })
+      if (!res.ok) throw new Error(res.status === 503 ? 'Vision model not enabled.' : 'Analysis failed.')
+      const data = await res.json()
+
+      if (data.name) set('name', data.name)
+      if (data.category && CATEGORIES.includes(data.category)) set('category', data.category)
+      if (data.description) set('description', data.description)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAnalyzing(false)
+    }
+  }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -181,7 +210,13 @@ function ItemModal({ existing, homeQrStandard, onSave, onClose }) {
           <div className="inv-form-col">
             <div className="inv-form-section-title">IDENTIFICATION</div>
             <label className="inv-form-label">Name *
-              <input className="inv-input" value={form.name} onChange={e => set('name', e.target.value)} required />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input className="inv-input" style={{ flex: 1 }} value={form.name} onChange={e => set('name', e.target.value)} required />
+                <label className="inv-btn inv-btn--ghost inv-btn--sm" style={{ flexShrink: 0, cursor: analyzing ? 'default' : 'pointer', height: 38, opacity: analyzing ? 0.7 : 1 }}>
+                  {analyzing ? '…' : <IconScan />} {analyzing ? 'Analyzing...' : 'Analyze Photo'}
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAnalyzePhoto} disabled={analyzing} />
+                </label>
+              </div>
             </label>
             <label className="inv-form-label">Category
               <select className="inv-select" value={form.category} onChange={e => set('category', e.target.value)}>

@@ -134,3 +134,52 @@ class OllamaLLM(LLMProvider):
             raise RuntimeError(
                 f"Failed to communicate with Ollama at '{self._base_url}': {exc}"
             ) from exc
+
+    async def stream_chat(self, messages: list[dict]) -> AsyncGenerator[str, None]:
+        """
+        Alias for stream_response, specifically for Phase 2 implementation.
+        """
+        async for chunk in self.stream_response(messages):
+            yield chunk
+
+    async def chat_with_tools(self, messages: list, tools: list) -> dict:
+        """
+        Send a message to Ollama with a list of available tools.
+        Returns a tool_call dict if a tool is requested, else a text response.
+        """
+        try:
+            # We must map our tool schemas to Ollama's format if they differ.
+            # Ollama uses the same format as OpenAI/Anthropic for the most part.
+            formatted_tools = []
+            for t in tools:
+                formatted_tools.append({
+                    "type": "function",
+                    "function": {
+                        "name": t["name"],
+                        "description": t["description"],
+                        "parameters": t["input_schema"]
+                    }
+                })
+
+            response = await self._client.chat(
+                model=self._model,
+                messages=messages,
+                tools=formatted_tools,
+                options={"temperature": self._temperature}
+            )
+
+            message = response.get("message", {})
+            if message.get("tool_calls"):
+                tc = message["tool_calls"][0]
+                return {
+                    "type": "tool_call",
+                    "tool_name": tc["function"]["name"],
+                    "tool_input": tc["function"]["arguments"],
+                    "tool_use_id": None
+                }
+
+            return {"type": "text", "content": message.get("content", "")}
+
+        except Exception as exc:
+            logger.error("Ollama tool use call failed: %s", exc)
+            return {"type": "text", "content": f"My local brain had a hiccup during tool use: {exc}"}

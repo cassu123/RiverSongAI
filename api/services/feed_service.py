@@ -101,12 +101,11 @@ class FeedService:
     @staticmethod
     async def get_sports_feed(store: Any, user_id: str) -> Dict[str, Any]:
         prefs = await store.get_feed_preferences(user_id)
-        teams = prefs.get("sport_teams") or []
-        team_ids = [t["id"] for t in teams if t.get("id")]
-        if not team_ids:
+        teams = [t for t in (prefs.get("sport_teams") or []) if t.get("id") and t.get("league_id")]
+        if not teams:
             return {"results": [], "fixtures": []}
 
-        return await fetch_teams_feed(team_ids)
+        return await fetch_teams_feed(teams)
 
     @staticmethod
     async def search_sports_teams(q: str) -> List[Dict[str, Any]]:

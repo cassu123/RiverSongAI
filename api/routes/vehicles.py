@@ -721,6 +721,20 @@ async def upload_manual(
                 status_code=422,
                 detail="No maintenance data found. Check that the PDF contains a maintenance schedule or specifications section."
             )
+            
+        # Phase 5: Ingest into RAG provider for conversational retrieval
+        try:
+            from providers.rag.rag_provider import RAGProvider
+            rag = RAGProvider()
+            await rag.ingest_pdf(data, {
+                "vehicle_id": vehicle_id,
+                "filename": file.filename,
+                "user_id": user_id,
+                "type": "vehicle_manual"
+            })
+            logger.info("Manual '%s' ingested into RAG store for vehicle %s.", file.filename, vehicle_id)
+        except Exception as rag_exc:
+            logger.warning("RAG ingestion failed for manual (non-fatal): %s", rag_exc)
 
         result = apply_manual_intervals(db, user_id, vehicle_id, items)
         return result

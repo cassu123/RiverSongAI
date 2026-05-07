@@ -11,6 +11,7 @@ git pull origin main
 echo "==> Installing Python dependencies..."
 source venv/bin/activate
 pip install "setuptools<71" --quiet
+pip install pybind11 --quiet
 pip install -r requirements.txt --no-build-isolation --quiet
 
 echo "==> Ensuring espeak-ng data path..."

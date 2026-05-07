@@ -68,9 +68,37 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
   const [imagePreview, setImagePreview] = useState(initial?.image_data || null);
   const [error, setError]           = useState('');
   const [saving, setSaving]         = useState(false);
+  const [analyzing, setAnalyzing]   = useState(false);
   const fileRef = useRef();
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const handleAnalyzePhoto = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAnalyzing(true);
+    setError('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/vision/listing', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd
+      });
+      if (!res.ok) throw new Error(res.status === 503 ? 'Vision model not enabled.' : 'Analysis failed.');
+      const data = await res.json();
+
+      if (data.title) setForm(f => ({ ...f, name: data.title }));
+      if (data.description) setForm(f => ({ ...f, description: data.description }));
+      // Use tags or other fields if needed, but the prompt says title, description, tags
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -120,11 +148,17 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
             }
           </div>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
-          {imagePreview && (
-            <button className="iv-btn iv-btn--ghost iv-btn--sm" onClick={() => { setImagePreview(null); setImageFile(null); }}>
-              Remove
-            </button>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+            {imagePreview && (
+              <button className="iv-btn iv-btn--ghost iv-btn--sm" onClick={() => { setImagePreview(null); setImageFile(null); }}>
+                Remove
+              </button>
+            )}
+            <label className="iv-btn iv-btn--ghost iv-btn--sm" style={{ cursor: analyzing ? 'default' : 'pointer', opacity: analyzing ? 0.7 : 1 }}>
+              {analyzing ? 'Analyzing...' : 'Analyze Photo'}
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAnalyzePhoto} disabled={analyzing} />
+            </label>
+          </div>
         </div>
 
         {/* Fields */}
