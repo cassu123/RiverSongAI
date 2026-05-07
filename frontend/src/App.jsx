@@ -109,7 +109,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', color:'var(--primary)', fontFamily:'var(--font-display)', letterSpacing:'0.15em' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100dvh', color:'var(--primary)', fontFamily:'var(--font-display)', letterSpacing:'0.15em' }}>
         LOADING...
       </div>
     )

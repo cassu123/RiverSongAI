@@ -1091,7 +1091,12 @@ function PrintTab({ items }) {
             onChange={e => setCopies(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
           />
 
-          <button className="inv-btn inv-print-btn" onClick={handlePrint} disabled={selected.size === 0}>
+          <button
+            className="inv-btn inv-print-btn"
+            onClick={handlePrint}
+            disabled={selected.size === 0}
+            title={selected.size === 0 ? 'Select items to print labels' : undefined}
+          >
             PRINT {totalLabels} LABEL{totalLabels !== 1 ? 'S' : ''}
           </button>
 
@@ -1310,6 +1315,7 @@ export default function InventoryPage() {
             <button className="inv-btn inv-btn--ghost inv-btn--sm" onClick={downloadManifest}>
               ⬇ INSURANCE PDF
             </button>
+            <div style={{ flex: 1 }} />
             <button className="inv-btn inv-btn--danger-ghost inv-btn--sm" onClick={() => { if (window.confirm(`Delete home "${activeHome.name}" and all its items?`)) deleteHome(activeHome.id) }}>
               DELETE HOME
             </button>
@@ -1321,7 +1327,14 @@ export default function InventoryPage() {
       {homes.length === 0 && (
         <div className="inv-empty-state">
           <IconHome />
-          <p>No homes yet. Create one to start tracking your inventory.</p>
+          <p>No homes yet. Create your first home to start tracking inventory.</p>
+          <button                                                                           
+            className="inv-btn"
+            style={{ marginTop: 16 }}                                                       
+            onClick={() => { setEditingHome(null); setShowHomeModal(true) }}
+          >                                                                                 
+            + NEW HOME
+          </button>                                                                         
         </div>
       )}
 
@@ -1379,9 +1392,19 @@ export default function InventoryPage() {
             <div className="inv-loading">LOADING ITEMS…</div>
           ) : filteredItems.length === 0 ? (
             <div className="inv-empty-state inv-empty-state--sm">
-              {search || filterStatus !== 'ALL' || filterCategory !== 'ALL'
-                ? 'No items match your filters.'
-                : 'No items in this home yet. Click + ADD ITEM to get started.'}
+              {search || filterStatus !== 'ALL' || filterCategory !== 'ALL' ? (
+                'No items match your filters.'                                                  
+              ) : (
+                <>                                                                              
+                  <p style={{ margin: '0 0 12px' }}>No items in this home yet.</p>
+                  <button                                                                       
+                    className="inv-btn"
+                    onClick={() => { setEditingItem(null); setShowItemModal(true) }}            
+                  >       
+                    + ADD ITEM
+                  </button>                                                                     
+                </>
+              )}                                                                                
             </div>
           ) : (
             <div className="inv-table-wrap card">

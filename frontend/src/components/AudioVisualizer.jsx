@@ -89,6 +89,7 @@ export default function AudioVisualizer({ audioLevel }) {
       width={300}
       height={300}
       className="audio-visualizer-canvas"
+      style={{ width: '100%', height: '100%', maxWidth: 300, maxHeight: 300 }}
       aria-hidden="true"
     />
   )

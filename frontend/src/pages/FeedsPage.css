@@ -2,6 +2,8 @@
    FeedsPage.css
    ========================================================================= */
 
+.feeds-page { max-width: 1200px; margin: 0 auto; }
+
 /* Tab bar */
 .feeds-tabs {
   display: flex;
@@ -1171,7 +1173,292 @@
 .feeds-standings-gd--pos { color: #00cc44; }
 .feeds-standings-gd--neg { color: #ff3322; }
 
-/* ── Tablet & Mobile Adjustments ────────────────────────────────────────── */
+/* ── Sport Picker Overlay ────────────────────────────────────────────── */
+.sport-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.sport-picker-panel {
+  width: 100%;
+  max-width: 700px;
+  max-height: 80vh;
+  background: var(--bg-panel);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--md-elevation-5);
+}
+
+.sport-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.sport-picker-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  color: var(--md-on-surface);
+}
+
+.sport-picker-close {
+  background: none;
+  border: none;
+  color: var(--md-on-surface-variant);
+  cursor: pointer;
+  font-size: 1.5rem;
+  padding: 4px;
+  line-height: 1;
+}
+
+.sport-picker-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.sport-cat-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.sport-cat-pill {
+  border-radius: var(--md-shape-full);
+  padding: 4px 14px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid var(--md-outline-variant);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+}
+
+.sport-cat-pill--active {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border-color: transparent;
+}
+
+.league-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.league-card {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-md);
+  padding: 0 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.league-card:hover {
+  border-color: var(--md-primary);
+  background: color-mix(in srgb, var(--md-primary-container) 8%, transparent);
+}
+
+.league-card--stub {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
+}
+
+.league-icon { font-size: 1.5rem; }
+.league-label { font-size: 0.875rem; font-weight: 500; color: var(--md-on-surface); }
+.league-stub-badge {
+  font-size: 0.55rem;
+  background: var(--md-surface-variant);
+  color: var(--md-on-surface-variant);
+  border-radius: var(--md-shape-full);
+  padding: 2px 8px;
+  margin-left: auto;
+}
+
+.team-picker-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.back-btn {
+  background: none;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-full);
+  color: var(--md-on-surface-variant);
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.team-search-input {
+  width: 100%;
+  background: var(--bg-panel);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-md);
+  color: var(--text);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.team-card {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-md);
+}
+
+.team-card-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.team-card-name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--md-on-surface);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.team-add-btn {
+  background: transparent;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-full);
+  color: var(--md-on-surface-variant);
+  font-size: 0.6875rem;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.team-added-mark {
+  color: var(--md-primary);
+  font-weight: bold;
+}
+
+/* ── My Teams Rail ────────────────────────────────────────────────── */
+.sports-teams-rail {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 0 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--md-outline-variant) transparent;
+  margin-bottom: 12px;
+}
+
+.sports-teams-rail::-webkit-scrollbar { height: 4px; }
+.sports-teams-rail::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: 2px; }
+
+.rail-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border-radius: var(--md-shape-full);
+  border: 1px solid var(--md-outline-variant);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.rail-chip--all {
+  padding: 6px 14px;
+}
+
+.rail-chip--active {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  border-color: var(--md-secondary);
+}
+
+.rail-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.rail-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 0.625rem;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 2px;
+}
+.rail-remove:hover { opacity: 1; }
+
+.rail-add-teams-btn {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border-radius: var(--md-shape-full);
+  border: 1px dashed var(--md-outline-variant);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.rail-add-teams-btn:hover { border-color: var(--md-primary); color: var(--md-primary); }
+
+/* ── Headlines settings ─────────────────────────────────────────────── */
+.headlines-settings-toggle {
+  background: none;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-sm);
+  color: var(--md-on-surface-variant);
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  cursor: pointer;
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 
 @media (max-width: 1024px) {
   .feeds-weather-current {
@@ -1185,15 +1472,15 @@
   .feeds-weather-forecast {
     grid-template-columns: repeat(4, 1fr);
   }
-  .feeds-news-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  }
   .feeds-stocks-grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
 }
 
 @media (max-width: 768px) {
+  .feeds-news-grid {
+    grid-template-columns: 1fr !important;
+  }
   .feeds-weather-forecast {
     grid-template-columns: repeat(2, 1fr);
   }

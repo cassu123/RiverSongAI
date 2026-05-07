@@ -757,3 +757,20 @@
   color: var(--warn);
   border-color: var(--warn);
 }
+
+@media (max-width: 1024px) {
+  .conv-top-bar {
+    padding: 10px 16px;
+  }
+  .conv-mic-btn--large {
+    width: 64px;
+    height: 64px;
+  }
+  .conv-history-item-date {
+    min-width: 90px;
+    font-size: 0.52rem;
+  }
+  .conv-history-panel {
+    padding: 12px 14px;
+  }
+}

@@ -2,6 +2,8 @@
    AnalyticsPage.css
    ============================================================ */
 
+.analytics-page { max-width: 1200px; margin: 0 auto; }
+
 /* ── Controls bar ─────────────────────────────────────────── */
 .an-controls {
   display: flex;
@@ -539,8 +541,8 @@
 }
 
 /* ── Responsive ───────────────────────────────────────────── */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+  .an-platform-grid { grid-template-columns: 1fr !important; }
   .an-summary-bar { flex-direction: column; gap: 1px; }
-  .an-platform-grid { grid-template-columns: 1fr 1fr; }
   .an-detail-charts { grid-template-columns: 1fr; }
 }

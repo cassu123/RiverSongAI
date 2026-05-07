@@ -6,10 +6,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  min-height: 100dvh;
   width: 100vw;
   background: var(--bg);
-  overflow: hidden;
+  overflow-y: auto;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .auth-card {

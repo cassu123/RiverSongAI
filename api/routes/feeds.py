@@ -133,6 +133,42 @@ async def get_weather_alerts(
 # Sports
 # ---------------------------------------------------------------------------
 
+from providers.feeds.sports import (
+    get_leagues, get_teams, get_scoreboard,
+    get_standings as espn_get_standings,
+    get_schedule, get_boxscore,
+)
+
+@router.get("/sports/leagues")
+async def list_leagues():
+    """Return list of supported leagues from the ESPN registry."""
+    return await get_leagues()
+
+@router.get("/sports/teams/{league_id}")
+async def list_teams(league_id: str):
+    """Return all teams in a specific league via ESPN."""
+    return await get_teams(league_id)
+
+@router.get("/sports/scoreboard/{league_id}")
+async def scoreboard(league_id: str):
+    """Return live scores and today's schedule for a league via ESPN."""
+    return await get_scoreboard(league_id)
+
+@router.get("/sports/espn-standings/{league_id}")
+async def espn_standings(league_id: str):
+    """Return league standings table via ESPN."""
+    return await espn_get_standings(league_id)
+
+@router.get("/sports/schedule/{league_id}/{team_id}")
+async def team_schedule(league_id: str, team_id: str):
+    """Return upcoming games for a specific team via ESPN."""
+    return await get_schedule(team_id, league_id)
+
+@router.get("/sports/boxscore/{league_id}/{event_id}")
+async def event_boxscore(league_id: str, event_id: str):
+    """Return detailed game summary/plays for an event via ESPN."""
+    return await get_boxscore(event_id, league_id)
+
 @router.get("/sports/news")
 async def get_sports_news(
     request: Request,

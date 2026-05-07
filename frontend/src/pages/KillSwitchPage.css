@@ -9,6 +9,21 @@
 .ks-wrap {
   overflow-y: auto;
   height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .ks-layout {
+    max-width: 100%;
+  }
+  .ks-reset-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ks-activate-btn {
+    width: 100%;
+  }
 }
 
 .ks-page-title {

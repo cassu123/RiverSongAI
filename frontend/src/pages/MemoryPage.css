@@ -5,6 +5,52 @@
 .memory-page-wrap {
   overflow-y: auto;
   height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .mem-row--facts { grid-template-columns: 28px 140px 1fr 80px 100px !important; }
+  .mem-row--preferences { grid-template-columns: 140px 1fr 90px 100px !important; }
+}
+
+@media (max-width: 768px) {
+  .mem-page-toolbar { flex-direction: column; align-items: flex-start; }
+  .mem-page-search-row { width: 100%; }
+  .mem-page-search { width: 100%; flex: 1; }
+  
+  .mem-row--header { display: none; }
+  .mem-rows { max-height: none; }
+  
+  .mem-row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 16px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-bright);
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  
+  .mem-col-key, .mem-col-value, .mem-col-summary, .mem-col-date {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .mem-col-key::before     { content: "KEY";     font-size: 0.6rem; color: var(--text-dim); display: block; margin-bottom: 2px; }
+  .mem-col-value::before   { content: "VALUE";   font-size: 0.6rem; color: var(--text-dim); display: block; margin-bottom: 2px; }
+  .mem-col-summary::before { content: "SUMMARY"; font-size: 0.6rem; color: var(--text-dim); display: block; margin-bottom: 2px; }
+  .mem-col-date::before    { content: "DATE";    font-size: 0.6rem; color: var(--text-dim); display: block; margin-bottom: 2px; }
+  
+  .mem-col-key { font-size: 0.8rem; }
+  .mem-col-value, .mem-col-summary { white-space: normal; overflow: visible; font-size: 0.85rem; }
+  .mem-col-date { margin-top: 4px; }
+  
+  .mem-page-stats { width: 100%; justify-content: space-between; gap: 0; }
 }
 
 /* Stats in header */

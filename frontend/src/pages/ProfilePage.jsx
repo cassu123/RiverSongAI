@@ -199,14 +199,21 @@ export default function ProfilePage({ profile, onSave, theme, onThemeChange }) {
               </label>
 
               <label className="profile-label">
-                DATE OF BIRTH
+                DATE OF BIRTH — OPTIONAL
                 <input
                   className="profile-input"
                   name="birthday"
                   type="date"
                   value={form.birthday}
                   onChange={handleField}
+                  style={{ colorScheme: 'dark' }}
                 />
+                <p style={{
+                  fontSize: '0.72rem', color: 'var(--md-on-surface-variant)',                      
+                  margin: '4px 0 0', lineHeight: 1.4,                                              
+                }}>
+                  Used for personalized briefings and age-appropriate recommendations.             
+                </p>
               </label>
             </div>
 

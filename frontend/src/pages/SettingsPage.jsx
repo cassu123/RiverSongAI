@@ -136,6 +136,7 @@ export default function SettingsPage({ onFeaturesChanged }) {
   const [llmSettings,      setLlmSettings]      = useState(null)
   const [memSettings,      setMemSettings]      = useState(null)
   const [voiceSettings,    setVoiceSettings]    = useState(null)
+  const [modelFilter,      setModelFilter]      = useState('ALL')
   const [loading,          setLoading]          = useState(true)
   const [saveStatus,       setSaveStatus]       = useState('')
 
@@ -285,8 +286,27 @@ export default function SettingsPage({ onFeaturesChanged }) {
   const currentProvider = llmSettings?.provider || 'ollama'
   const currentModel    = llmSettings?.model    || ''
 
+  const recommendedModels = models.local.filter(m => m.vram_gb != null && m.vram_gb <= 4)
+  const filteredLocalModels = models.local.filter(m => {
+    if (modelFilter === 'ALL') return true
+    if (modelFilter === 'GPU') return m.vram_gb != null && m.vram_gb <= 4
+    if (modelFilter === 'RAM') return m.vram_gb != null && m.vram_gb > 4
+    if (modelFilter === 'SPEAK') return m.vram_gb != null && m.vram_gb <= 4
+    return true
+  })
+
   return (
     <div className="settings-page page-wrap">
+      {/* CSS for recommended strip */}
+      <style>{`
+        .model-recommended-strip {
+          display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;
+          padding: 12px 14px;
+          background: color-mix(in srgb, var(--md-tertiary) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--md-tertiary) 20%, transparent);
+          border-radius: var(--md-shape-md);
+        }
+      `}</style>
 
       <div className="page-breadcrumb">
         <span>◢</span><span>SYSTEM</span>
@@ -314,14 +334,58 @@ export default function SettingsPage({ onFeaturesChanged }) {
           faster for real-time voice conversation.
         </p>
 
+        {/* RECOMMENDED STRIP */}
+        {recommendedModels.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 500, letterSpacing: '0.08em', color: 'var(--md-tertiary)', marginBottom: 8, textTransform: 'uppercase' }}>
+              ⚡ RECOMMENDED FOR SPEAK
+            </div>
+            <div className="model-recommended-strip">
+              {recommendedModels.map(m => (
+                <ModelCard
+                  key={`rec/${m.provider}/${m.model_id}`}
+                  model={m}
+                  isSelected={currentProvider === m.provider && currentModel === m.model_id}
+                  isDisabled={false}
+                  onSelect={selectModel}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Local models */}
         <div className="model-group">
+          {/* QUICK FILTER BAR */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+            {['ALL', 'GPU', 'RAM', 'SPEAK'].map(f => (
+              <button
+                key={f}
+                onClick={() => setModelFilter(f)}
+                style={{
+                  padding: '3px 12px',
+                  borderRadius: 'var(--md-shape-full)',
+                  fontSize: '0.6875rem',
+                  fontWeight: 500,
+                  letterSpacing: '0.06em',
+                  cursor: 'pointer',
+                  border: modelFilter === f ? 'none' : '1px solid var(--md-outline-variant)',
+                  background: modelFilter === f ? 'var(--md-primary-container)' : 'transparent',
+                  color: modelFilter === f ? 'var(--md-on-primary-container)' : 'var(--md-on-surface-variant)',
+                  marginRight: 4
+                }}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
           <h3 className="model-group-title">
             <span className="model-group-badge model-group-badge--local">LOCAL</span>
             Ollama — runs on your machine
           </h3>
           <div className="model-grid">
-            {models.local.map(m => (
+            {filteredLocalModels.map(m => (
               <ModelCard
                 key={`${m.provider}/${m.model_id}`}
                 model={m}
@@ -601,6 +665,7 @@ function VoiceSection({ voiceSettings, token, onSwitched }) {
   const [switchMsg, setSwitchMsg] = useState('')
   const [previewing, setPreviewing] = useState(null)
   const [previewErr, setPreviewErr] = useState('')
+  const [accentFilter, setAccentFilter] = useState('ALL')
 
   if (voiceSettings.provider === 'none') {
     return (
@@ -673,7 +738,30 @@ function VoiceSection({ voiceSettings, token, onSwitched }) {
         </p>
       )}
 
-      {accents.map(accent => {
+      {/* ACCENT FILTER TABS */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16, overflowX: 'auto' }}>
+        {['ALL', ...accents].map(accent => (
+          <button
+            key={accent}
+            onClick={() => setAccentFilter(accent)}
+            style={{
+              padding: '4px 14px',
+              borderRadius: 'var(--md-shape-full)',
+              fontSize: '0.6875rem',
+              fontWeight: 500,
+              letterSpacing: '0.06em',
+              cursor: 'pointer',
+              border: accentFilter === accent ? 'none' : '1px solid var(--md-outline-variant)',
+              background: accentFilter === accent ? 'var(--md-secondary-container)' : 'transparent',
+              color: accentFilter === accent ? 'var(--md-on-secondary-container)' : 'var(--md-on-surface-variant)',
+            }}
+          >
+            {accent}
+          </button>
+        ))}
+      </div>
+
+      {accents.filter(a => accentFilter === 'ALL' || a === accentFilter).map(accent => {
         const av      = voices.filter(v => v.accent === accent)
         const females = av.filter(v => v.gender === 'female')
         const males   = av.filter(v => v.gender === 'male')
@@ -698,6 +786,9 @@ function VoiceSection({ voiceSettings, token, onSwitched }) {
                         className={`model-card${v.active ? ' model-card--selected' : ''}${!v.installed ? ' model-card--disabled' : ''}`}
                         onClick={() => v.installed && !v.active && handleSelect(v.voice_id)}
                         disabled={!v.installed || switching === v.voice_id}
+                        style={{
+                          ...(v.active ? { outline: '2px solid var(--md-primary)', outlineOffset: '2px' } : {})
+                        }}
                         title={!v.installed
                           ? `Not installed. Run: python scripts/download_voices.py ${v.voice_id}`
                           : v.description}
@@ -758,6 +849,12 @@ function VoiceSection({ voiceSettings, token, onSwitched }) {
 
                         {!v.installed && <div className="model-card-locked">NOT INSTALLED</div>}
                         {switching === v.voice_id && <div className="model-card-locked" style={{ color: 'var(--md-primary)' }}>SWITCHING…</div>}
+                        {v.active && (
+                          <span style={{
+                            fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em',
+                            color: 'var(--md-primary)', textTransform: 'uppercase', marginTop: 2
+                          }}>ACTIVE</span>
+                        )}
                         {v.active && <div className="model-card-active-dot" />}
                       </button>
                     ))}
@@ -827,7 +924,7 @@ function ParentChildrenSection({ data, token, onChanged }) {
             <span style={{ fontWeight: 400, fontSize: '0.72rem', color: 'var(--md-outline)', marginLeft: 8 }}>{child.email}</span>
             {saving === child.id && <span style={{ marginLeft: 8, fontSize: '0.7rem', color: 'var(--md-primary)' }}>Saving…</span>}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '4px 12px' }}>
+          <div className="settings-grid">
             {(data.globally_on || []).map(key => {
               const enabled  = (child.enabled_features || []).includes(key)
               const locked   = !globallyOn.has(key)
@@ -899,7 +996,7 @@ function AdminFeatureSection({ featureVis, token, onChanged }) {
         Useful while building or fixing a feature. Admin always sees everything.
         {saving && <span style={{ marginLeft: 8, color: 'var(--md-primary)' }}>Saving…</span>}
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '4px 12px' }}>
+      <div className="settings-grid">
         {(featureVis.all_features || []).map(f => (
           <label key={f.key} className="toggle-row" style={{ opacity: f.hidden ? 0.55 : 1 }}>
             <span className="toggle-label" style={{ fontSize: '0.8rem' }}>{f.label}</span>
@@ -1414,7 +1511,7 @@ function AdminVisibilitySection({ visibility, token, onChanged }) {
             <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
               {accent.toUpperCase()}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '4px 12px' }}>
+            <div className="settings-grid">
               {group.map(v => {
                 const hidden = (visibility.hidden_voices || []).includes(v.voice_id)
                 return (
@@ -1454,7 +1551,7 @@ function AdminVisibilitySection({ visibility, token, onChanged }) {
             <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
               {(PROVIDER_DISPLAY[provider] || provider).toUpperCase()}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '4px 12px' }}>
+            <div className="settings-grid">
               {group.map(m => {
                 const hidden = (visibility.hidden_llms || []).includes(m.model_id)
                 return (

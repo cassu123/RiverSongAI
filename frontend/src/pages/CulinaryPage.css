@@ -245,7 +245,8 @@
 
 .recipe-card-banner {
   width: 100%;
-  height: 128px;
+  aspect-ratio: 16 / 9;
+  height: auto;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -752,6 +753,18 @@
   align-items: center;
 }
 
+.cul-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .cul-modal-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .cul-filter-label {
   font-size: 0.78rem;
   color: var(--md-on-surface-variant);
@@ -766,12 +779,9 @@
   .cul-search-wrap { width: 100%; }
   .cul-filter-group { width: 100%; justify-content: space-between; }
   .cul-filter-group .cul-select { flex: 1; }
-  .culinary-page { padding: 16px 12px 24px; width: 100%; box-sizing: border-box; overflow-x: hidden; }
+  .culinary-page { width: 100%; box-sizing: border-box; }
   .culinary-tabs { margin-bottom: 20px; padding-bottom: 4px; }
   .culinary-tab  { padding: 0 14px; height: 44px; font-size: 0.8125rem; }
-
-  .cul-grid-2,
-  .cul-grid-3 { grid-template-columns: 1fr; }
 
   .cul-modal-backdrop {
     align-items: flex-start;
@@ -786,9 +796,9 @@
     box-sizing: border-box;
   }
 
-  .recipe-hero-wrap { height: 160px; }
+  .recipe-hero-wrap { aspect-ratio: 16 / 9; height: auto; }
   .dinner-card-thumb { width: 64px; height: 64px; }
-  
+
   .cul-input-row .cul-input, 
   .cul-input-row .cul-select {
     min-width: 100%;
@@ -799,14 +809,12 @@
 }
 
 @media (max-width: 1024px) {
-  .cul-grid-2, .cul-grid-3 { grid-template-columns: 1fr; }
-  .recipe-hero-wrap { height: 180px; }
+  .recipe-hero-wrap { aspect-ratio: 16 / 9; height: auto; }
   .cul-btn { width: 100%; }
   .cul-btn-sm { width: auto; }
 }
 
 @media (max-width: 480px) {
-  .cul-grid-2, .cul-grid-3 { grid-template-columns: 1fr; }
   .page-title { font-size: 1.5rem; }
   .recipe-hero-wrap { height: 140px; }
 }

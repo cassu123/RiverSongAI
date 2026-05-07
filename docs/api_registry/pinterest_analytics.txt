@@ -1,0 +1,37 @@
+SERVICE: Pinterest API v5
+WHAT IT DOES: Lets River Song pull your Pinterest account followers, pin impressions, saves, and click-through data from Pinterest Analytics.
+HOW TO GET IT:
+  1. Your Pinterest account must be a Business account (not personal).
+     To convert: pinterest.com -> Settings -> Account settings -> Convert to business.
+     It is free and does not delete your existing pins or boards.
+  2. Go to developers.pinterest.com and sign in with your Business account.
+  3. Click "My Apps" -> "New App".
+  4. Fill in the app name (e.g. "River Song"), description, and website URL.
+     For website URL, use http://localhost:8000 if you do not have a public domain.
+  5. Under "Scopes", select:
+       user_accounts:read
+       pins:read
+       boards:read
+       analytics:read
+  6. Copy the App ID and App Secret Key shown.
+     These go in PINTEREST_APP_ID and PINTEREST_APP_SECRET.
+  7. Set the redirect URI to: http://localhost:8000/callback/pinterest
+  8. Use the OAuth 2.0 flow River Song generates to authorize your Pinterest account.
+     River Song will store the resulting refresh token automatically.
+     The refresh token goes in PINTEREST_REFRESH_TOKEN.
+  Link: https://developers.pinterest.com/docs/getting-started/introduction
+VARIABLE NAME: PINTEREST_APP_ID, PINTEREST_APP_SECRET, PINTEREST_REFRESH_TOKEN
+WHERE TO PUT IT: .env
+NOTES:
+  - Pinterest access tokens expire after 30 days. Refresh tokens are valid for 1 year.
+    River Song will use the refresh token to get new access tokens automatically.
+  - The analytics:read scope gives access to account-level metrics (impressions, saves,
+    clicks, outbound clicks). Pin-level analytics requires the same scope.
+  - Pinterest Analytics data is available at daily granularity for up to 90 days back.
+  - "Followers" via the API is a point-in-time count, not a trend. Historical follower
+    growth data is not available through the Pinterest API.
+  - Revenue is not tracked directly by Pinterest's API. If you use Pinterest Shopping Ads
+    or have Product Pins, conversion/revenue data is in the Ads API, which requires a
+    separate Pinterest Ads account and higher API tier approval.
+  - Pinterest app review is not required for personal business account access. Your app
+    is active in Development mode immediately and can analyze your own account data.

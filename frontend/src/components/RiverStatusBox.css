@@ -192,6 +192,12 @@
   animation: rsb-blink 0.75s step-end infinite;
 }
 
+@media (max-width: 1024px) {
+  .rsb { min-height: 140px; }
+  .rsb-body { padding: 16px 12px; }
+  .rsb-hint, .rsb-stream { padding: 6px 12px 10px; font-size: 0.78rem; }
+}
+
 @keyframes rsb-blink {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0; }
