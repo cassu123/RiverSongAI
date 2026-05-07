@@ -70,15 +70,15 @@ export default function Sidebar({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        width: collapsed ? 72 : 260,
+        width: collapsed ? '72px' : '260px',
         flexShrink: 0,
         background: 'var(--md-surface-container-low)',
         borderRight: '1px solid var(--md-outline-variant)',
-        transition: 'width 250ms cubic-bezier(0.2, 0, 0, 1)',
+        transition: 'width 250ms cubic-bezier(0.2, 0, 0, 1), transform 250ms cubic-bezier(0.2, 0, 0, 1)',
         zIndex: 50,
         overflow: 'hidden',
       }}
-      className={`sidebar ${mobileOpen ? 'sidebar--mobile-open' : ''}`}
+      className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''} ${mobileOpen ? 'sidebar--mobile-open' : ''}`}
     >
       {/* ── Brand header ── */}
       <div style={{

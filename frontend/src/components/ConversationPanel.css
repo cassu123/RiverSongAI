@@ -236,7 +236,15 @@
   50%       { opacity: 1;   transform: scale(1.4); }
 }
 
-/* Scrollbar */
+@media (max-width: 1024px) {
+  .chat-messages {
+    padding: 16px 16px 8px;
+    gap: 12px;
+  }
+  .chat-bubble {
+    max-width: 88%;
+  }
+}
 .chat-panel::-webkit-scrollbar       { width: 4px; }
 .chat-panel::-webkit-scrollbar-track { background: transparent; }
 .chat-panel::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }

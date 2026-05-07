@@ -2,6 +2,8 @@
    ReadingPage.css
    ============================================================================= */
 
+.reading-page { max-width: 1200px; margin: 0 auto; }
+
 /* ── Manage services button ────────────────────────────────────────────────── */
 
 .reading-manage-btn {
@@ -1474,7 +1476,14 @@
 
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 
-@media (max-width: 600px) {
+@media (max-width: 1024px) {
+  .reading-cover-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 14px;
+  }
+}
+
+@media (max-width: 768px) {
   .reading-cover-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 14px;
@@ -1494,3 +1503,4 @@
     font-size: 0.5rem;
   }
 }
+

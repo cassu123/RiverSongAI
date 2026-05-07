@@ -277,6 +277,13 @@ function BannedTab({ api }) {
     }
   }
 
+  const dupes = items.filter((item, idx) =>
+    items.findIndex(other =>                                                          
+      other.name.trim().toLowerCase() === item.name.trim().toLowerCase() && other.id
+!== item.id                                                                           
+    ) !== -1    
+  )
+
   return (
     <div>
       <div className="cul-card">
@@ -316,11 +323,31 @@ function BannedTab({ api }) {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {dupes.length > 0 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,                                   
+              padding: '10px 14px', marginBottom: 12,                                           
+              background: 'color-mix(in srgb, var(--warn) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--warn) 30%, transparent)',             
+              borderRadius: 'var(--md-shape-md)', fontSize: '0.8125rem',
+              color: 'var(--warn)',                                                             
+            }}>           
+              ⚠ {dupes.length} duplicate ingredient{dupes.length > 1 ? 's' : ''} detected —     
+              consider removing or merging them.                                                
+            </div>
+          )}
           {items.map(item => (
             <div key={item.id} className="stock-item" style={{ alignItems: 'flex-start', padding: '12px 16px' }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--error)' }}>
+                <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--md-on-surface)' }}>
                   {item.name}
+                  <span style={{                                                                      
+                    display: 'inline-flex', alignItems: 'center', gap: 4,                             
+                    fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em',
+                    background: 'var(--md-error-container)', color: 'var(--md-on-error-container)',   
+                    borderRadius: 'var(--md-shape-full)', padding: '2px 8px', marginLeft: 8,          
+                    textTransform: 'uppercase', verticalAlign: 'middle',                              
+                  }}>BANNED</span>
                 </div>
                 <div style={{ fontSize: '0.88rem', marginTop: 4 }}>
                   {item.substitute ? (
@@ -816,7 +843,7 @@ function DuplicateResolverModal({ api, onClose }) {
                   <div className="cul-card-title" style={{ border: 'none', marginBottom: 10 }}>
                     <Icon name="content_copy" size={16} /> Group: {group[0].title}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                  <div className="cul-modal-grid">
                     {group.map(r => (
                       <div key={r.id} className="stock-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8, padding: 10 }}>
                         <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--on-surface)' }}>

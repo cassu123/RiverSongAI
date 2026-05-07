@@ -41,7 +41,7 @@ CURATED_SOURCES: List[Dict[str, str]] = [
     {"name": "THV11 (CBS AR)",   "url": "https://www.thv11.com/feeds/syndication/rss",              "category": "local"},
     {"name": "KARK 4 (NBC AR)",  "url": "https://www.kark.com/feed/",                               "category": "local"},
     {"name": "KATV (ABC AR)",    "url": "https://www.katv.com/feed/",                               "category": "local"},
-    {"name": "Arkansas Online",  "url": "https://www.arkansasonline.com/feeds/rss/",                "category": "local"},
+    {"name": "Arkansas Online",  "url": "https://www.arkansasonline.com/rss/headlines/",            "category": "local"},
 
     # ── Technology ────────────────────────────────────────────────────────────
     {"name": "The Verge",        "url": "https://www.theverge.com/rss/index.xml",                   "category": "technology"},
@@ -67,7 +67,7 @@ CURATED_SOURCES: List[Dict[str, str]] = [
     # ── Sports — NFL ─────────────────────────────────────────────────────────
     {"name": "ESPN NFL",         "url": "https://www.espn.com/espn/rss/nfl/news",                   "category": "nfl"},
     {"name": "FOX Sports NFL",   "url": "https://api.foxsports.com/v1/rss?id=2",                    "category": "nfl"},
-    {"name": "NFL.com",          "url": "https://www.nfl.com/rss/rsslanding.html",                  "category": "nfl"},
+    {"name": "CBS Sports NFL",   "url": "https://www.cbssports.com/rss/headlines/nfl/",              "category": "nfl"},
 
     # ── Sports — NBA ─────────────────────────────────────────────────────────
     {"name": "ESPN NBA",         "url": "https://www.espn.com/espn/rss/nba/news",                   "category": "nba"},

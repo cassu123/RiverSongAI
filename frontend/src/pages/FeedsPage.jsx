@@ -140,8 +140,6 @@ function NewsTab({ prefs, savePrefs }) {
   useEffect(() => {
     apiFetch('/news/sources')
       .then(data => {
-        // API now returns { sources: [...], categories: {...} }
-        // Keep backward compat with old array shape
         if (Array.isArray(data)) {
           setAllSources(data)
         } else {
@@ -169,7 +167,6 @@ function NewsTab({ prefs, savePrefs }) {
     setSecondsLeft(mins * 60)
   }, [prefs?.refresh_news_min])
 
-  // Countdown timer
   useEffect(() => {
     if (secondsLeft <= 0) return
     timerRef.current = setInterval(() => {
@@ -450,7 +447,6 @@ function WeatherTab({ prefs, savePrefs }) {
       const incoming = al.alerts || []
       setAlerts(incoming)
 
-      // Fire browser notifications for new Extreme/Severe alerts
       const newCritical = incoming.filter(a =>
         (a.severity === 'Extreme' || a.severity === 'Severe') &&
         !seenAlertIds.current.has(a.id)
@@ -468,7 +464,7 @@ function WeatherTab({ prefs, savePrefs }) {
       if (newCritical.length) {
         localStorage.setItem('rs-seen-alerts', JSON.stringify([...seenAlertIds.current]))
       }
-    } catch (_) { /* silently ignore alert failures */ }
+    } catch (_) { }
   }, [prefs?.weather_lat, prefs?.weather_lon])
 
   const load = useCallback(() => {
@@ -484,14 +480,12 @@ function WeatherTab({ prefs, savePrefs }) {
 
   useEffect(() => { load() }, [load])
 
-  // Auto-poll alerts every 5 minutes independently of the weather refresh
   useEffect(() => {
     if (prefs?.weather_lat == null) return
     alertPollRef.current = setInterval(loadAlerts, 5 * 60 * 1000)
     return () => clearInterval(alertPollRef.current)
   }, [loadAlerts])
 
-  // Fetch RainViewer radar frames
   useEffect(() => {
     if (prefs?.weather_lat == null) return
     fetch('https://api.rainviewer.com/public/weather-maps.json')
@@ -552,7 +546,6 @@ function WeatherTab({ prefs, savePrefs }) {
 
   return (
     <>
-      {/* Extreme/Severe alert banner — shown at very top */}
       {criticalAlerts.length > 0 && (
         <div className="feeds-alert-banner" style={{ borderColor: criticalAlerts[0].color, background: criticalAlerts[0].color + '18' }}>
           <span className="feeds-alert-banner-icon">⚠</span>
@@ -638,7 +631,6 @@ function WeatherTab({ prefs, savePrefs }) {
 
       {weather && !loading && (
         <>
-          {/* Refresh countdown */}
           {secondsLeft > 0 && (
             <div className="feeds-refresh-bar">
               <div className="feeds-refresh-progress">
@@ -649,7 +641,6 @@ function WeatherTab({ prefs, savePrefs }) {
             </div>
           )}
 
-          {/* Current conditions */}
           <div className="feeds-weather-current">
             <div className="feeds-weather-current-primary">
               <div className="feeds-weather-temp">
@@ -710,7 +701,6 @@ function WeatherTab({ prefs, savePrefs }) {
             </div>
           </div>
 
-          {/* Active alerts — right below current conditions */}
           {alerts.length > 0 && (
             <>
               <div className="feeds-subsection-label" style={{ color: alerts[0].color }}>
@@ -766,7 +756,6 @@ function WeatherTab({ prefs, savePrefs }) {
             </>
           )}
 
-          {/* Hourly strip */}
           {weather.hourly?.length > 0 && (
             <>
               <div className="feeds-subsection-label">Next 24 Hours</div>
@@ -789,7 +778,6 @@ function WeatherTab({ prefs, savePrefs }) {
             </>
           )}
 
-          {/* 7-day forecast */}
           <div className="feeds-subsection-label">7-Day Forecast</div>
           <div className="feeds-weather-forecast">
             {weather.daily.map((day, i) => {
@@ -816,7 +804,6 @@ function WeatherTab({ prefs, savePrefs }) {
             })}
           </div>
 
-          {/* Air quality */}
           {weather.air_quality?.aqi != null && (
             <>
               <div className="feeds-subsection-label">Air Quality</div>
@@ -824,7 +811,6 @@ function WeatherTab({ prefs, savePrefs }) {
             </>
           )}
 
-          {/* Radar */}
           <div className="feeds-subsection-label">Live Radar</div>
           <RadarMap lat={prefs.weather_lat} lon={prefs.weather_lon} frames={radarFrames} />
         </>
@@ -870,7 +856,6 @@ function RadarMap({ lat, lon, frames }) {
   const playRef = useRef(false)
   const LRef = useRef(null)
 
-  // Init map once
   useEffect(() => {
     if (!mapRef.current) return
     let cancelled = false
@@ -891,12 +876,10 @@ function RadarMap({ lat, lon, frames }) {
     }
   }, []) // eslint-disable-line
 
-  // Pre-load all radar layers when frames arrive
   useEffect(() => {
     if (!frames.length || !instanceRef.current || !LRef.current) return
     const L = LRef.current
     const map = instanceRef.current
-    // Remove old layers
     layersRef.current.forEach(l => map.removeLayer(l))
     layersRef.current = frames.map((f, i) => {
       const layer = L.tileLayer(
@@ -909,14 +892,12 @@ function RadarMap({ lat, lon, frames }) {
     setFrameIdx(frames.length - 1)
   }, [frames])
 
-  // Show only active frame
   useEffect(() => {
     layersRef.current.forEach((l, i) => {
       l.setOpacity(i === frameIdx ? 0.65 : 0)
     })
   }, [frameIdx])
 
-  // Animation loop
   useEffect(() => {
     playRef.current = playing
     if (!playing) return
@@ -1024,17 +1005,12 @@ function Countdown({ dateStr, timeStr }) {
 }
 
 function SportsTab({ prefs, savePrefs }) {
-  const [showSettings, setShowSettings] = useState(false)
-  const [sportsTab, setSportsTab] = useState('results')
+  const [sportsTab, setSportsTab] = useState('scoreboard')
   const [filterTeam, setFilterTeam] = useState('all')
   const [data, setData] = useState(null)
   const [standings, setStandings] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [searchQ, setSearchQ] = useState('')
-  const [searchResults, setSearchResults] = useState([])
-  const [searching, setSearching] = useState(false)
-  const searchTimer = useRef(null)
   const [headlines, setHeadlines] = useState([])
   const [headlinesLoading, setHeadlinesLoading] = useState(false)
   const [headlinesError, setHeadlinesError] = useState('')
@@ -1042,6 +1018,24 @@ function SportsTab({ prefs, savePrefs }) {
   const [allSportsSources, setAllSportsSources] = useState([])
   const [sportsCatMeta, setSportsCatMeta] = useState({})
   const [selectedEvent, setSelectedEvent] = useState(null)
+
+  // Scoreboard states
+  const [scoreboard, setScoreboard] = useState([])
+  const [scoreboardLoading, setScoreboardLoading] = useState(false)
+  const [leagueRegistry, setLeagueRegistry] = useState([])
+
+  // Picker states
+  const [showPicker, setShowPicker] = useState(false)
+  const [leagues, setLeagues] = useState([])
+  const [leaguesLoading, setLeaguesLoading] = useState(false)
+  const [activeCategory, setActiveCategory] = useState('American Pro')
+  const [selectedLeague, setSelectedLeague] = useState(null)
+  const [leagueTeams, setLeagueTeams] = useState([])
+  const [teamsLoading, setTeamsLoading] = useState(false)
+  const [teamSearch, setTeamSearch] = useState('')
+  
+  // Headline settings toggle
+  const [showHeadlineSettings, setShowHeadlineSettings] = useState(false)
 
   const load = useCallback(() => {
     if (!prefs?.sport_teams?.length) return
@@ -1055,7 +1049,6 @@ function SportsTab({ prefs, savePrefs }) {
 
   useEffect(() => { load() }, [load])
 
-  // Load standings for all unique leagues of followed teams
   useEffect(() => {
     if (!prefs?.sport_teams?.length) return
     const leagueIds = [...new Set(prefs.sport_teams.map(t => t.league_id).filter(Boolean))]
@@ -1066,7 +1059,27 @@ function SportsTab({ prefs, savePrefs }) {
     })
   }, [prefs?.sport_teams])
 
-  // Load available sports RSS sources
+  useEffect(() => {
+    if (showPicker && !leagues.length) {
+      setLeaguesLoading(true)
+      apiFetch('/sports/leagues')
+        .then(setLeagues)
+        .catch(() => {})
+        .finally(() => setLeaguesLoading(false))
+    }
+  }, [showPicker, leagues.length])
+
+  useEffect(() => {
+    if (selectedLeague) {
+      setTeamsLoading(true)
+      setLeagueTeams([])
+      apiFetch(`/sports/teams/${selectedLeague.id}`)
+        .then(setLeagueTeams)
+        .catch(() => {})
+        .finally(() => setTeamsLoading(false))
+    }
+  }, [selectedLeague])
+
   useEffect(() => {
     apiFetch('/sports/news/sources')
       .then(data => {
@@ -1076,7 +1089,6 @@ function SportsTab({ prefs, savePrefs }) {
       .catch(() => {})
   }, [])
 
-  // Reload sports headlines whenever selected sources change
   const loadHeadlines = useCallback(() => {
     setHeadlinesLoading(true)
     setHeadlinesError('')
@@ -1088,24 +1100,25 @@ function SportsTab({ prefs, savePrefs }) {
 
   useEffect(() => { loadHeadlines() }, [loadHeadlines])
 
-  const doSearch = (q) => {
-    clearTimeout(searchTimer.current)
-    setSearchQ(q)
-    if (q.length < 2) { setSearchResults([]); return }
-    searchTimer.current = setTimeout(async () => {
-      setSearching(true)
-      try { setSearchResults(await apiFetch(`/sports/search?q=${encodeURIComponent(q)}`)) }
-      catch { setSearchResults([]) }
-      setSearching(false)
-    }, 400)
-  }
-
   const addTeam = (team) => {
     const current = prefs.sport_teams || []
     if (current.find(t => t.id === team.id)) return
-    savePrefs({ sport_teams: [...current, team] })
+    const newTeam = {
+      id: team.id,
+      name: team.name,
+      abbr: team.abbr,
+      badge_url: team.logo,
+      league_id: team.league_id,
+      league_label: team.league_label,
+      icon: team.icon,
+      sport: team.sport
+    }
+    savePrefs({ sport_teams: [...current, newTeam] })
   }
-  const removeTeam = (id) => savePrefs({ sport_teams: (prefs.sport_teams || []).filter(t => t.id !== id) })
+  const removeTeam = (id) => {
+    if (filterTeam === id) setFilterTeam('all')
+    savePrefs({ sport_teams: (prefs.sport_teams || []).filter(t => t.id !== id) })
+  }
   const isAdded = (id) => (prefs?.sport_teams || []).some(t => t.id === id)
 
   const toggleSportsSource = (src) => {
@@ -1125,7 +1138,6 @@ function SportsTab({ prefs, savePrefs }) {
     return events.filter(e => e.home_team === team.name || e.away_team === team.name)
   }
 
-  // Standings to show: leagues of filtered team, or all
   const standingLeagues = filterTeam === 'all'
     ? Object.entries(standings)
     : Object.entries(standings).filter(([id]) => {
@@ -1139,136 +1151,64 @@ function SportsTab({ prefs, savePrefs }) {
     return <MatchStats event={selectedEvent} onBack={() => setSelectedEvent(null)} />
   }
 
+  const pickerCategories = [...new Set(leagues.map(l => l.category))]
+  const filteredTeams = leagueTeams.filter(t => 
+    t.name.toLowerCase().includes(teamSearch.toLowerCase()) || 
+    t.abbr.toLowerCase().includes(teamSearch.toLowerCase())
+  )
+
   return (
     <>
       <div className="feeds-section-header">
         <span className="feeds-section-title">Your Teams</span>
-        <button className="feeds-gear-btn" onClick={() => setShowSettings(s => !s)}>
-          <IconGear /> {showSettings ? 'Close' : 'Settings'}
-        </button>
       </div>
 
-      {showSettings && (
-        <div className="feeds-settings-panel">
-          <div className="feeds-settings-row">
-            <span className="feeds-settings-label">Search & add teams</span>
-            <input className="feeds-settings-input" placeholder="Search for a team…"
-              value={searchQ} onChange={e => doSearch(e.target.value)} />
-            {searching && <div className="feeds-loading">Searching…</div>}
-            {searchResults.length > 0 && (
-              <div className="feeds-search-results">
-                {searchResults.map(team => (
-                  <div key={team.id} className="feeds-search-result-item">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      {team.badge_url && <img src={team.badge_url} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />}
-                      <div>
-                        <div className="feeds-search-result-name">{team.name}</div>
-                        <div className="feeds-search-result-meta">{team.sport} · {team.league} · {team.country}</div>
-                      </div>
-                    </div>
-                    <button className="feeds-add-btn" onClick={() => addTeam(team)} disabled={isAdded(team.id)}>
-                      {isAdded(team.id) ? '✓ Added' : '+ Add'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {teams.length > 0 && (
-            <div className="feeds-settings-row">
-              <span className="feeds-settings-label">Following ({teams.length})</span>
-              <div className="feeds-source-chips">
-                {teams.map(t => (
-                  <div key={t.id} className="feeds-chip">
-                    {t.badge_url && <img src={t.badge_url} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />}
-                    {t.name}
-                    <button className="feeds-chip-remove" onClick={() => removeTeam(t.id)}>×</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {allSportsSources.length > 0 && (
-            <div className="feeds-settings-row">
-              <span className="feeds-settings-label">Headlines sources</span>
-              {[...new Set(allSportsSources.map(s => s.category))].map(cat => {
-                const meta  = sportsCatMeta[cat] || {}
-                const label = meta.label || cat
-                const color = SOURCE_CAT_COLORS[cat] || 'var(--md-on-surface-variant)'
-                const sourcesInCat = allSportsSources.filter(s => s.category === cat)
-                const selectedCount = sourcesInCat.filter(s => isSportsSourceSelected(s)).length
-                return (
-                  <div key={cat}>
-                    <div className="feeds-sports-section-title" style={{ marginTop: 14, color }}>
-                      {label}
-                      {selectedCount > 0 && (
-                        <span style={{
-                          marginLeft: 8, fontSize: '0.625rem', fontWeight: 500,
-                          background: color + '22', color, borderRadius: 10, padding: '1px 7px',
-                        }}>
-                          {selectedCount} selected
-                        </span>
-                      )}
-                    </div>
-                    <div className="feeds-source-category-grid">
-                      {sourcesInCat.map(src => (
-                        <button
-                          key={src.url}
-                          className={`feeds-source-cat-btn${isSportsSourceSelected(src) ? ' feeds-source-cat-btn--active' : ''}`}
-                          style={isSportsSourceSelected(src) ? { '--cat-color': color, borderColor: color, color } : {}}
-                          onClick={() => toggleSportsSource(src)}
-                        >
-                          {src.name} {isSportsSourceSelected(src) && '✓'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-              {(prefs?.sports_news_sources?.length ?? 0) === 0 && (
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: 8 }}>
-                  No sources selected — all sports headlines are shown by default.
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="feeds-settings-row">
-            <span className="feeds-settings-label">Refresh interval</span>
-            <select className="feeds-refresh-select" value={prefs.refresh_sports_min}
-              onChange={e => savePrefs({ refresh_sports_min: Number(e.target.value) })}>
-              {REFRESH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-          <div className="feeds-settings-actions">
-            <button className="btn--primary" onClick={() => { load(); loadHeadlines(); setShowSettings(false) }}>Apply & Refresh</button>
-          </div>
+      {teams.length === 0 ? (
+        <div className="feeds-empty" style={{ textAlign: 'center', padding: '40px 0' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🏟️ </div>                     
+          <p style={{ margin: '0 0 16px', color: 'var(--md-on-surface-variant)' }}>          
+            No teams followed yet.                                                           
+          </p>                                                                               
+          <button                                                                            
+            style={{                                        
+              padding: '8px 20px', borderRadius: 'var(--md-shape-full)',                     
+              background: 'var(--md-primary-container)', color: 'var(--md-on-primary-container)',                                                      
+              border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.875rem'
+            }}                                                                               
+            onClick={() => setShowPicker(true)}             
+          >                                                                                  
+            + Add Your Teams                                
+          </button>
         </div>
-      )}
-
-      {!teams.length && (
-        <div className="feeds-empty">No teams followed. Open Settings and search for your teams.</div>
-      )}
-
-      {teams.length > 0 && (
+      ) : (
         <>
-          {/* Team filter chips */}
-          <div className="feeds-team-filter">
-            <button className={`feeds-team-chip${filterTeam === 'all' ? ' feeds-team-chip--active' : ''}`}
-              onClick={() => setFilterTeam('all')}>All teams</button>
-            {teams.map(t => (
-              <button key={t.id}
-                className={`feeds-team-chip${filterTeam === t.id ? ' feeds-team-chip--active' : ''}`}
-                onClick={() => setFilterTeam(t.id)}>
-                {t.badge_url && <img className="feeds-team-chip-badge" src={t.badge_url} alt="" />}
-                {t.name}
+          <div className="sports-teams-rail">
+            <button 
+              className={`rail-chip rail-chip--all${filterTeam === 'all' ? ' rail-chip--active' : ''}`}
+              onClick={() => setFilterTeam('all')}
+            >
+              ALL
+            </button>
+            {teams.map(team => (
+              <button 
+                key={team.id}
+                className={`rail-chip${filterTeam === team.id ? ' rail-chip--active' : ''}`}
+                onClick={() => setFilterTeam(team.id)}
+              >
+                {team.badge_url ? (
+                  <img src={team.badge_url} alt="" className="rail-logo" />
+                ) : (
+                  <span style={{ fontSize: '0.875rem' }}>{team.icon}</span>
+                )}
+                <span className="rail-abbr">{team.abbr}</span>
+                <span className="rail-remove" onClick={(e) => { e.stopPropagation(); removeTeam(team.id); }}>×</span>
               </button>
             ))}
+            <button className="rail-add-teams-btn" onClick={() => setShowPicker(true)}>
+              + ADD TEAMS
+            </button>
           </div>
 
-          {/* Sub-tabs */}
           <div className="feeds-sports-tab-bar">
             {['results', 'fixtures', 'standings', 'headlines'].map(tab => (
               <button key={tab}
@@ -1283,31 +1223,27 @@ function SportsTab({ prefs, savePrefs }) {
           {error && <div className="feeds-error">{error}</div>}
 
           {data && !loading && sportsTab === 'results' && (
-            <>
+            <div className="feeds-sports-grid">
               {filterEvents(data.results).length > 0
-                ? <div className="feeds-sports-grid">
-                    {filterEvents(data.results).map(e => <MatchCard key={e.id} event={e} onClick={() => setSelectedEvent(e)} />)}
-                  </div>
+                ? filterEvents(data.results).map(e => <MatchCard key={e.id} event={e} onClick={() => setSelectedEvent(e)} />)
                 : <div className="feeds-empty">No recent results found.</div>
               }
-            </>
+            </div>
           )}
 
           {data && !loading && sportsTab === 'fixtures' && (
-            <>
+            <div className="feeds-sports-grid">
               {filterEvents(data.fixtures).length > 0
-                ? <div className="feeds-sports-grid">
-                    {filterEvents(data.fixtures).map(e => <MatchCard key={e.id} event={e} onClick={() => setSelectedEvent(e)} />)}
-                  </div>
+                ? filterEvents(data.fixtures).map(e => <MatchCard key={e.id} event={e} onClick={() => setSelectedEvent(e)} />)
                 : <div className="feeds-empty">No upcoming fixtures found.</div>
               }
-            </>
+            </div>
           )}
 
           {sportsTab === 'standings' && (
             <>
               {standingLeagues.length === 0 && (
-                <div className="feeds-empty">No standings available. Make sure your followed teams have a league assigned.</div>
+                <div className="feeds-empty">No standings available.</div>
               )}
               {standingLeagues.map(([leagueId, rows]) => rows.length > 0 && (
                 <div key={leagueId} style={{ marginBottom: 24 }}>
@@ -1322,13 +1258,70 @@ function SportsTab({ prefs, savePrefs }) {
 
           {sportsTab === 'headlines' && (
             <>
-              <input
-                className="feeds-news-search"
-                style={{ marginBottom: 12 }}
-                placeholder="Search sports headlines…"
-                value={headlineSearch}
-                onChange={e => setHeadlineSearch(e.target.value)}
-              />
+              <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                <input
+                  className="feeds-news-search"
+                  placeholder="Search sports headlines…"
+                  value={headlineSearch}
+                  onChange={e => setHeadlineSearch(e.target.value)}
+                />
+                <button 
+                  className="headlines-settings-toggle"
+                  onClick={() => setShowHeadlineSettings(!showHeadlineSettings)}
+                >
+                  <IconGear /> Settings
+                </button>
+              </div>
+
+              {showHeadlineSettings && (
+                <div className="feeds-settings-panel" style={{ marginBottom: 16 }}>
+                  <div className="feeds-settings-row">
+                    <span className="feeds-settings-label">Headlines sources</span>
+                    {[...new Set(allSportsSources.map(s => s.category))].map(cat => {
+                      const meta  = sportsCatMeta[cat] || {}
+                      const label = meta.label || cat
+                      const color = SOURCE_CAT_COLORS[cat] || 'var(--md-on-surface-variant)'
+                      const sourcesInCat = allSportsSources.filter(s => s.category === cat)
+                      const selectedCount = sourcesInCat.filter(s => isSportsSourceSelected(s)).length
+                      return (
+                        <div key={cat}>
+                          <div className="feeds-sports-section-title" style={{ marginTop: 14, color }}>
+                            {label}
+                            {selectedCount > 0 && (
+                              <span style={{
+                                marginLeft: 8, fontSize: '0.625rem', fontWeight: 500,
+                                background: color + '22', color, borderRadius: 10, padding: '1px 7px',
+                              }}>
+                                {selectedCount} selected
+                              </span>
+                            )}
+                          </div>
+                          <div className="feeds-source-category-grid">
+                            {sourcesInCat.map(src => (
+                              <button
+                                key={src.url}
+                                className={`feeds-source-cat-btn${isSportsSourceSelected(src) ? ' feeds-source-cat-btn--active' : ''}`}
+                                style={isSportsSourceSelected(src) ? { '--cat-color': color, borderColor: color, color } : {}}
+                                onClick={() => toggleSportsSource(src)}
+                              >
+                                {src.name} {isSportsSourceSelected(src) && '✓'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="feeds-settings-row">
+                    <span className="feeds-settings-label">Refresh interval</span>
+                    <select className="feeds-refresh-select" value={prefs.refresh_sports_min}
+                      onChange={e => savePrefs({ refresh_sports_min: Number(e.target.value) })}>
+                      {REFRESH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+
               {headlinesLoading && <div className="feeds-loading">Fetching sports headlines…</div>}
               {headlinesError && <div className="feeds-error">{headlinesError}</div>}
               {!headlinesLoading && headlines.length > 0 && (() => {
@@ -1339,13 +1332,7 @@ function SportsTab({ prefs, savePrefs }) {
                 return shown.length > 0
                   ? <div className="feeds-news-list">
                       {shown.map(a => (
-                        <a
-                          key={a.id || a.url}
-                          className="feeds-news-list-item"
-                          href={a.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
+                        <a key={a.id || a.url} className="feeds-news-list-item" href={a.url} target="_blank" rel="noopener noreferrer">
                           {a.image_url && <img className="feeds-news-list-thumb" src={a.image_url} alt="" loading="lazy" onError={e => { e.target.style.display = 'none' }} />}
                           <div className="feeds-news-list-text">
                             <div className="feeds-news-list-title">{a.title}</div>
@@ -1359,12 +1346,89 @@ function SportsTab({ prefs, savePrefs }) {
                     </div>
                   : <div className="feeds-empty">No headlines match your search.</div>
               })()}
-              {!headlinesLoading && !headlinesError && headlines.length === 0 && (
-                <div className="feeds-empty">No sports headlines found.</div>
-              )}
             </>
           )}
         </>
+      )}
+
+      {showPicker && (
+        <div className="sport-picker-backdrop" onClick={() => setShowPicker(false)}>
+          <div className="sport-picker-panel" onClick={e => e.stopPropagation()}>
+            <div className="sport-picker-header">
+              <span className="sport-picker-title">{selectedLeague ? 'Select Team' : 'Add Teams'}</span>
+              <button className="sport-picker-close" onClick={() => setShowPicker(false)}>&times;</button>
+            </div>
+
+            <div className="sport-picker-body">
+              {leaguesLoading && <div className="feeds-loading">Loading leagues…</div>}
+
+              {!selectedLeague && !leaguesLoading && (
+                <>
+                  <div className="sport-cat-pills">
+                    {pickerCategories.map(cat => (
+                      <button
+                        key={cat}
+                        className={`sport-cat-pill${activeCategory === cat ? ' sport-cat-pill--active' : ''}`}
+                        onClick={() => setActiveCategory(cat)}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="league-grid">
+                    {leagues.filter(l => l.category === activeCategory).map(league => (
+                      <div 
+                        key={league.id} 
+                        className={`league-card${league.stub ? ' league-card--stub' : ''}`}
+                        onClick={() => !league.stub && setSelectedLeague(league)}
+                      >
+                        <span className="league-icon">{league.icon}</span>
+                        <span className="league-label">{league.label}</span>
+                        {league.stub && <span className="league-stub-badge">COMING SOON</span>}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {selectedLeague && (
+                <>
+                  <div className="team-picker-header">
+                    <button className="back-btn" onClick={() => setSelectedLeague(null)}>&larr; Back</button>
+                    <span className="league-label">{selectedLeague.icon} {selectedLeague.label}</span>
+                  </div>
+                  <input 
+                    className="team-search-input" 
+                    placeholder="Search teams…" 
+                    value={teamSearch}
+                    onChange={e => setTeamSearch(e.target.value)}
+                    autoFocus
+                  />
+                  {teamsLoading && <div className="feeds-loading">Loading teams…</div>}
+                  <div className="team-grid">
+                    {filteredTeams.map(team => (
+                      <div key={team.id} className="team-card">
+                        {team.logo ? (
+                          <img src={team.logo} alt="" className="team-card-logo" />
+                        ) : (
+                          <div className="team-card-logo" style={{ background: 'var(--md-surface-variant)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyCenter: 'center', fontSize: '0.65rem', fontWeight: 'bold', color: 'var(--md-on-surface-variant)' }}>
+                            {team.abbr}
+                          </div>
+                        )}
+                        <span className="team-card-name" title={team.name}>{team.name}</span>
+                        {isAdded(team.id) ? (
+                          <span className="team-added-mark">✓</span>
+                        ) : (
+                          <button className="team-add-btn" onClick={() => addTeam(team)}>+ Add</button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </>
   )
@@ -1778,7 +1842,6 @@ function StocksTab({ prefs, savePrefs }) {
 
       {!loading && quotes.length > 0 && (
         <>
-          {/* Summary bar */}
           <div className="feeds-stocks-summary">
             {topGainer && (
               <div className="feeds-stocks-summary-item">
@@ -1806,7 +1869,6 @@ function StocksTab({ prefs, savePrefs }) {
             </div>
           </div>
 
-          {/* Sort controls */}
           <div className="feeds-stocks-controls">
             <span className="feeds-sort-label">Sort:</span>
             {[['change', 'By Move'], ['alpha', 'A–Z'], ['price', 'By Price']].map(([val, label]) => (
@@ -1828,10 +1890,6 @@ function StocksTab({ prefs, savePrefs }) {
   )
 }
 
-// =============================================================================
-// WMO weather code → emoji icon
-// =============================================================================
-
 function wmoIcon(code) {
   if (code === 0)                       return '☀️'
   if (code === 1)                       return '🌤️'
@@ -1848,20 +1906,12 @@ function wmoIcon(code) {
   return '🌡️'
 }
 
-// =============================================================================
-// Helpers
-// =============================================================================
-
 function formatDate(iso) {
   if (!iso) return ''
   try {
     return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
   } catch { return iso }
 }
-
-// =============================================================================
-// Icons
-// =============================================================================
 
 function IconNews() {
   return (

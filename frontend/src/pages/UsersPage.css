@@ -5,6 +5,28 @@
 .users-wrap {
   overflow-y: auto;
   height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .users-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .users-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .users-role-group {
+    flex-wrap: wrap;
+  }
+  .users-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 0.6rem;
+  }
 }
 
 /* Add card */

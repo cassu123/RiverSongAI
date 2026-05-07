@@ -2,7 +2,46 @@
    InventoryPage.css
    ============================================================ */
 
-.inv-page { display: flex; flex-direction: column; gap: 20px; }
+.inv-page { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; }
+
+/* ── ... rest of the styles ... */
+
+@media (max-width: 768px) {
+  .inv-table-header {
+    grid-template-columns: 2fr 1fr 1fr 1fr !important;
+  }
+  .inv-col-sn, .inv-col-price, .inv-col-ein { display: none; }
+  .inv-table-row {
+    grid-template-columns: 2fr 1fr 1fr 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .inv-table-header { display: none; }
+  .inv-table-body { display: flex; flex-direction: column; gap: 12px; }
+  .inv-table-row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    gap: 4px;
+  }
+  .inv-col-name, .inv-col-cat, .inv-col-loc, .inv-col-status { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+  .inv-col-cat::before { content: 'CATEGORY'; font-size: 0.6rem; color: var(--text-dim); }
+  .inv-col-loc::before { content: 'LOCATION'; font-size: 0.6rem; color: var(--text-dim); }
+  .inv-col-status::before { content: 'STATUS'; font-size: 0.6rem; color: var(--text-dim); }
+  
+  .inv-page-header { flex-direction: column; align-items: flex-start; }
+  .inv-scan-bar { width: 100%; }
+  .inv-scan-input { width: 100%; }
+  
+  .inv-items-toolbar { flex-direction: column; align-items: flex-start; }
+  .inv-items-toolbar-left, .inv-items-toolbar-right { width: 100%; }
+  .inv-search, .inv-filter-select { width: 100%; }
+}
 
 .inv-page-header {
   display: flex;
@@ -272,14 +311,18 @@
   gap: 6px;
 }
 .inv-btn:hover:not(:disabled) { background: rgba(0,255,180,0.07); box-shadow: var(--glow-sm); }
-.inv-btn:disabled { opacity: 0.5; cursor: default; }
+.inv-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+}
 .inv-btn--sm  { padding: 5px 12px; font-size: 0.55rem; }
 .inv-btn--ghost { color: var(--text-dim); border-color: var(--border); }
 .inv-btn--ghost:hover:not(:disabled) { color: var(--text); border-color: var(--border-bright); background: rgba(255,255,255,0.04); box-shadow: none; }
 .inv-btn--danger { color: var(--error); border-color: var(--error); }
 .inv-btn--danger:hover:not(:disabled) { background: rgba(255,68,51,0.08); box-shadow: none; }
-.inv-btn--danger-ghost { color: var(--text-dim); border-color: var(--border); }
-.inv-btn--danger-ghost:hover:not(:disabled) { color: var(--error); border-color: var(--error); background: transparent; box-shadow: none; }
+.inv-btn--danger-ghost { color: var(--error); border-color: var(--error); opacity: 0.75; }
+.inv-btn--danger-ghost:hover:not(:disabled) { opacity: 1; background: rgba(255,68,51,0.08); box-shadow: none; }
 
 /* ── Modal ────────────────────────────────────────────────── */
 .inv-modal-overlay {

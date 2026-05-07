@@ -5,6 +5,29 @@
 .home-wrap {
   overflow-y: auto;
   height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .home-setup-card, .home-unreachable-card {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .home-device-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+  
+  .home-filter-row {
+    justify-content: flex-start;
+  }
+  
+  .home-setup-code {
+    margin-left: 0;
+    margin-top: 10px;
+  }
 }
 
 /* Setup / unreachable cards */

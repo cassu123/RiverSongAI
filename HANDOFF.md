@@ -69,6 +69,13 @@ River Song AI is **live in production** at `https://riversongai.com`.
 ---
 
 ## Known Fixes Applied
+- **Global Responsive Overhaul**: Standardized all modules for tablets and mobile.
+  - Unified 1024px (Tablet) and 768px (Mobile) breakpoints.
+  - Sidebar refactored to a fixed-width (260px) drawer on all tablets.
+  - Grid systems forced to 2-columns (tablet) and 1-column (mobile) for maximum legibility.
+  - Fixed 16:9 aspect ratios for all recipe and news thumbnails.
+  - Converted complex tables (Inventory, Memory) into responsive card layouts.
+  - Refactored inline grid styles into reusable CSS classes (.settings-grid, .cul-modal-grid).
 - Python 3.14 on Ubuntu 25.10: numpy/scipy updated, audible commented out
 - npm: `--legacy-peer-deps` added to setup.sh and deploy.sh
 - `pydantic[email]` added to requirements.txt

@@ -459,16 +459,18 @@ input:checked + .slider:before {
 }
 
 /* Responsive adjustments */
-@media (max-width: 800px) {
+@media (max-width: 1024px) {
   .pos-layout {
     flex-direction: column;
     overflow-y: auto;
   }
   .pos-main {
     overflow-y: visible;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
   }
   .pos-sidebar {
     min-width: 100%;
-    border-top: 1px solid var(--border);
+    max-width: 100%;
   }
 }

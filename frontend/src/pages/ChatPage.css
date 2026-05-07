@@ -6,15 +6,15 @@
   background: var(--bg);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .chat-page {
     height: 100dvh;
     position: fixed;
-    top: 52px; /* height of mobile topbar */
+    top: 64px; /* height of mobile topbar in global.css */
     left: 0;
     right: 0;
     bottom: 0;
-    height: calc(100dvh - 52px);
+    height: calc(100dvh - 64px);
   }
 
   .chat-input-bar {
