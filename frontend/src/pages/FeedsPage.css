@@ -1459,6 +1459,31 @@
   gap: 6px;
 }
 
+@keyframes sports-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.3); }
+}
+
+.sports-bs-table {
+  width: 100%; border-collapse: collapse; font-size: 0.8125rem;
+  font-family: 'DM Mono', 'Roboto Mono', monospace;
+}
+.sports-bs-table th {
+  color: var(--md-on-surface-variant); font-weight: 500; font-size: 0.6875rem;
+  letter-spacing: 0.06em; padding: 4px 8px; border-bottom: 1px solid var(--md-outline-variant);
+  text-align: center;
+}
+.sports-bs-table td { padding: 6px 8px; text-align: center; }
+.sports-bs-table td:first-child { text-align: left; font-family: inherit; }
+.sports-bs-table tr.home-row td { color: var(--md-on-surface); }
+.sports-bs-table tr.away-row td { color: var(--md-on-surface-variant); }
+.sports-bs-table .score-col { font-weight: 600; color: var(--md-primary); }
+
+.sports-schedule-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 0;
+  border-bottom: 1px solid var(--md-outline-variant);
+  font-size: 0.875rem;
+}
 
 @media (max-width: 1024px) {
   .feeds-weather-current {

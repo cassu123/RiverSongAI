@@ -891,10 +891,42 @@ function CreateRecipeModal({ api, onClose }) {
   const [steps, setSteps]         = useState([''])
   const [equipment, setEquipment] = useState([''])
   const [saving, setSaving]       = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
 
   const addIngredient = () => setIngredients(p => [...p, { name: '', qty: '', unit: '' }])
   const addStep       = () => setSteps(p => [...p, ''])
   const addEquipment  = () => setEquipment(p => [...p, ''])
+
+  const handleAnalyzePhoto = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setAnalyzing(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      // Use the root /api/vision route
+      const res = await fetch('/api/vision/recipe', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${api.token || token}` },
+        body: fd
+      })
+      if (!res.ok) throw new Error(res.status === 503 ? 'Vision model not enabled.' : 'Analysis failed.')
+      const data = await res.json()
+
+      if (data.title) setTitle(data.title)
+      if (data.ingredients?.length) {
+        setIngredients(data.ingredients.map(name => ({ name, qty: '', unit: '' })))
+      }
+      if (data.notes && !steps.some(s => s.trim())) {
+        setSteps([data.notes])
+      }
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setAnalyzing(false)
+    }
+  }
 
   const submit = async (force = false) => {
     if (!title.trim()) return
@@ -949,7 +981,13 @@ function CreateRecipeModal({ api, onClose }) {
         </div>
         <div className="cul-input-row">
           <label>Image URL</label>
-          <input className="cul-input" value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://... (optional)" />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="cul-input" style={{ flex: 1 }} value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://... (optional)" />
+            <label className="cul-btn cul-btn-secondary" style={{ flexShrink: 0, cursor: analyzing ? 'default' : 'pointer', opacity: analyzing ? 0.7 : 1 }}>
+              <Icon name="visibility" size={16} /> {analyzing ? 'Analyzing...' : 'Analyze Photo'}
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAnalyzePhoto} disabled={analyzing} />
+            </label>
+          </div>
         </div>
 
         <div className="cul-section-title">Ingredients</div>

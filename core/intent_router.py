@@ -800,6 +800,27 @@ INTENT_REGISTRY: List[Intent] = [
         handler=_handle_maps,
     ),
     Intent(
+        name="document_qa",
+        phrases=[
+            "according to the manual",
+            "what does the manual say",
+            "what does the guide say",
+            "how do i maintain",
+            "specs for",
+            "technical details for",
+            "operating instructions",
+        ],
+        keywords=[
+            "manual",
+            "guide",
+            "instructions",
+            "specs",
+            "specifications",
+            "maintenance",
+        ],
+        handler=lambda t, u: "", # Return empty string to let conversation loop handle LLM turn
+    ),
+    Intent(
         name="weather",
         phrases=[
             "what's the weather",

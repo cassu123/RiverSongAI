@@ -186,6 +186,8 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                     audio_bytes=audio_bytes,
                     on_event=lambda evt: _send(websocket, evt),
                 )
+                if get_settings().llm_streaming_enabled:
+                    await _send(websocket, {"type": "stream_done"})
 
             elif msg_type == "text_input":
                 text = message.get("text", "").strip()
@@ -196,6 +198,8 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                     text=text,
                     on_event=lambda evt: _send(websocket, evt),
                 )
+                if get_settings().llm_streaming_enabled:
+                    await _send(websocket, {"type": "stream_done"})
 
             elif msg_type == "reset_history":
                 await loop.reset_history()

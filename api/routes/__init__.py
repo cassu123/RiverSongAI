@@ -19,6 +19,7 @@ from .analytics import router as analytics_router
 from .culinary import router as culinary_router
 from .location import router as location_router
 from .google import router as google_router
+from .vision import router as vision_router
 
 __all__ = [
     "health_router",
@@ -42,4 +43,5 @@ __all__ = [
     "culinary_router",
     "location_router",
     "google_router",
+    "vision_router",
 ]
