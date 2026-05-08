@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import './RoutinesPage.css'
 
@@ -35,9 +35,10 @@ export default function RoutinesPage() {
   const [form,     setForm]     = useState(BLANK)
   const [confirm,  setConfirm]  = useState(null)
   const [running,  setRunning]  = useState(null)   // id of routine being run
-  const [output,   setOutput]   = useState(null)   // { name, text } for output modal
+  const [output,   setOutput]   = useState(null)
+  const [n8nStatus, setN8nStatus] = useState({ n8n_available: false, n8n_url: "" })   // { name, text } for output modal
 
-  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
+  const authHeaders = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token])
 
   const fetchRoutines = useCallback(async () => {
     if (!token) return
@@ -49,6 +50,16 @@ export default function RoutinesPage() {
   }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchRoutines() }, [fetchRoutines])
+
+  const fetchN8nStatus = useCallback(async () => {
+    try {
+      const res = await safeFetch(`/api/webhooks/n8n/status`, { headers: authHeaders })
+      if (res.ok) setN8nStatus(await res.json())
+    } catch {}
+  }, [authHeaders])
+
+  useEffect(() => { fetchN8nStatus() }, [fetchN8nStatus])
+    
 
   // Mirror to localStorage so Dashboard widget still works
   useEffect(() => {
@@ -239,6 +250,39 @@ export default function RoutinesPage() {
         </div>
       )}
 
+      
+      {/* n8n Status section */}
+      <div className="card routines-n8n-card" style={{ marginBottom: 24, padding: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.05em", color: "var(--md-on-surface)" }}>
+              ADVANCED ORCHESTRATION (n8n)
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "var(--md-outline)", marginTop: 4 }}>
+              {n8nStatus.n8n_available 
+                ? "n8n is online and ready for complex multi-step automations." 
+                : "n8n instance not detected. Advanced routines are unavailable."}
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span className={`badge ${n8nStatus.n8n_available ? "badge--cpu" : "badge--cost"}`}>
+              {n8nStatus.n8n_available ? "ONLINE" : "OFFLINE"}
+            </span>
+            {n8nStatus.n8n_available && (
+              <a 
+                href={n8nStatus.n8n_url} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="btn btn--cta"
+                style={{ fontSize: "0.7rem", padding: "6px 12px" }}
+              >
+                OPEN n8n EDITOR
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    
       {/* Routine list */}
       {!loading && routines.length === 0 ? (
         <div className="card routines-empty">

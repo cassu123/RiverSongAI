@@ -6,7 +6,9 @@ Vector storage using ChromaDB for semantic memory retrieval.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
 from typing import Any, Dict, List, Optional
 
 from config.settings import get_settings
@@ -65,12 +67,13 @@ class VectorStore:
             return
 
         try:
-            self._collection.upsert(
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, lambda: self._collection.upsert(
                 ids=[id],
                 embeddings=[embedding],
                 metadatas=[metadata],
                 documents=[text]
-            )
+            ))
         except Exception as exc:
             logger.warning("ChromaDB upsert failed for id %s: %s", id, exc)
 
@@ -94,11 +97,12 @@ class VectorStore:
             return []
 
         try:
-            results = self._collection.query(
+            loop = asyncio.get_running_loop()
+            results = await loop.run_in_executor(None, lambda: self._collection.query(
                 query_embeddings=[embedding],
                 n_results=n_results,
                 where=where
-            )
+            ))
 
             # Flatten results
             output = []

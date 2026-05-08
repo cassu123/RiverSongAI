@@ -430,8 +430,52 @@ async def set_active_voice(
 
 
 # =============================================================================
-# Voice preview — synthesize a voice's intro phrase and return WAV base64
+# Orchestration settings (Phase 9)
 # =============================================================================
+
+class OrchestrationSettingsBody(BaseModel):
+    n8n_enabled: bool
+    n8n_url: str
+    n8n_api_key: str
+    n8n_webhook_secret: str
+
+
+@router.get("/settings/orchestration")
+async def get_orchestration_settings(request: Request, authorization: Optional[str] = Header(default=None)):
+    """Return the current n8n orchestration settings."""
+    _require_user(authorization)
+    s = get_settings()
+    return {
+        "n8n_enabled":        s.n8n_enabled,
+        "n8n_url":            s.n8n_url,
+        "n8n_api_key":        s.n8n_api_key,
+        "n8n_webhook_secret": s.n8n_webhook_secret,
+    }
+
+
+@router.post("/settings/orchestration")
+async def save_orchestration_settings(
+    request: Request,
+    body: OrchestrationSettingsBody,
+    authorization: Optional[str] = Header(default=None),
+):
+    user_id = _require_user(authorization)
+    # Note: These are global server settings (Phase 9/10), 
+    # but we restrict saving to admins only for security.
+    payload = decode_token(authorization.removeprefix("Bearer "))
+    if payload.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can modify orchestration settings.")
+
+    # In a real app we might persist these to .env or a DB. 
+    # For now, we update the runtime settings singleton.
+    s = get_settings()
+    s.n8n_enabled = body.n8n_enabled
+    s.n8n_url = body.n8n_url
+    s.n8n_api_key = body.n8n_api_key
+    s.n8n_webhook_secret = body.n8n_webhook_secret
+    
+    logger.info("Orchestration settings saved by admin %s.", user_id)
+    return {"status": "ok"}
 
 @router.get("/tts/preview/{voice_id}")
 async def preview_voice(

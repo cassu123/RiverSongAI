@@ -1,55 +1,23 @@
-# =============================================================================
-# providers/llm/claude_api.py
-#
-# File Purpose:
-#   Anthropic Claude API provider for River Song AI.
-#   Cloud LLM -- requires ANTHROPIC_API_KEY in .env.
-#   Displays a delay warning before each request (user preference).
-#
-# Key Classes:
-#   ClaudeAPILLM -- LLMProvider implementation using the Anthropic streaming API
-#
-# Dependencies:
-#   anthropic==0.96.0
-#   providers.base (LLMProvider)
-#   config.settings (get_settings)
-#
-# Usage Example:
-#   provider = ClaudeAPILLM()
-#   async for chunk in provider.stream_response(messages):
-#       print(chunk, end="", flush=True)
-# =============================================================================
+"""
+providers/llm/claude_api.py
+
+Anthropic Claude API provider for River Song AI.
+"""
 
 from __future__ import annotations
 
 import logging
-from typing import AsyncGenerator, List
+from typing import AsyncGenerator, List, Optional
 
 import anthropic
-
 from config.settings import get_settings
 from providers.base import LLMProvider
 
-
 logger = logging.getLogger(__name__)
-
-_CLOUD_DELAY_WARNING = (
-    "[Cloud LLM] Request sent to Anthropic Claude API. "
-    "Response time depends on network and API load."
-)
-
 
 class ClaudeAPILLM(LLMProvider):
     """
-    Purpose:
-        Stream responses from Anthropic Claude via the official SDK.
-
-    Assumptions/Constraints:
-        - ANTHROPIC_API_KEY must be set in .env
-        - messages[0] must be the system prompt with role "system"
-        - The Anthropic API separates the system prompt from the message list;
-          this provider handles that extraction automatically
-        - A delay warning is logged before every request (cloud latency notice)
+    Stream responses from Anthropic Claude via the official SDK.
     """
 
     def __init__(self) -> None:
@@ -59,72 +27,8 @@ class ClaudeAPILLM(LLMProvider):
         self._temperature: float = settings.llm_temperature
         self._client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
-        logger.info("ClaudeAPILLM initialized (model=%s).", self._model)
-
-    async def stream_response(
-        self, messages: List[dict]
-    ) -> AsyncGenerator[str, None]:
-        """
-        Stream a chat completion from Claude.
-
-        Args:
-            messages: Conversation history. If messages[0].role == "system",
-                      it is extracted and passed as the Anthropic system parameter.
-                      Remaining messages must alternate user/assistant.
-
-        Yields:
-            str: Text chunks as they stream from the API.
-
-        Raises:
-            RuntimeError: On API error, auth failure, or network timeout.
-        """
-        if not messages:
-            logger.warning("stream_response called with empty messages list.")
-            return
-
-        logger.info(_CLOUD_DELAY_WARNING)
-
-        system_prompt = ""
-        chat_messages = messages
-
-        if messages and messages[0].get("role") == "system":
-            system_prompt = messages[0]["content"]
-            chat_messages = messages[1:]
-
-        try:
-            async with self._client.messages.stream(
-                model=self._model,
-                max_tokens=self._max_tokens,
-                system=system_prompt,
-                messages=chat_messages,
-            ) as stream:
-                async for text in stream.text_stream:
-                    if text:
-                        yield text
-
-        except anthropic.AuthenticationError as exc:
-            raise RuntimeError(
-                "Anthropic API authentication failed. Check ANTHROPIC_API_KEY in .env."
-            ) from exc
-        except anthropic.RateLimitError as exc:
-            raise RuntimeError(
-                "Anthropic API rate limit exceeded. Try again shortly."
-            ) from exc
-        except anthropic.APIError as exc:
-            raise RuntimeError(
-                f"Anthropic API error (model={self._model}): {exc}"
-            ) from exc
-        except Exception as exc:
-            raise RuntimeError(
-                f"Unexpected error communicating with Anthropic API: {exc}"
-            ) from exc
-
-    async def chat_with_tools(self, messages: list, tools: list) -> dict:
-        """
-        Send a message to Claude with a list of available tools.
-        If Claude chooses to use a tool, returns a tool_call dict.
-        Otherwise returns a text response.
-        """
+    async def chat(self, messages: List[dict]) -> str:
+        """Non-streaming chat."""
         system_prompt = ""
         chat_messages = messages
         if messages and messages[0].get("role") == "system":
@@ -137,7 +41,52 @@ class ClaudeAPILLM(LLMProvider):
                 max_tokens=self._max_tokens,
                 temperature=self._temperature,
                 system=system_prompt,
-                messages=chat_messages,
+                messages=chat_messages
+            )
+            return "".join(b.text for b in response.content if b.type == "text")
+        except Exception as exc:
+            logger.error("Claude API call failed: %s", exc)
+            return f"I had trouble reaching my cloud brain: {exc}"
+
+    async def stream_response(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+        """Stream response from Claude."""
+        system_prompt = ""
+        chat_messages = messages
+        if messages and messages[0].get("role") == "system":
+            system_prompt = messages[0]["content"]
+            chat_messages = messages[1:]
+
+        try:
+            async with self._client.messages.stream(
+                model=self._model,
+                max_tokens=self._max_tokens,
+                temperature=self._temperature,
+                system=system_prompt,
+                messages=chat_messages
+            ) as stream:
+                async for text in stream.text_stream:
+                    yield text
+        except Exception as exc:
+            logger.error("Claude streaming failed: %s", exc)
+            yield f"\n[Claude API Error]: {exc}"
+
+    async def chat_with_tools(self, messages: list, tools: list, system: str = "") -> dict:
+        """
+        Send a message to Claude with a list of available tools.
+        If Claude chooses to use a tool, returns a tool_call dict.
+        Otherwise returns a text response.
+        """
+        if not system and messages and messages[0].get("role") == "system":
+            system = messages[0]["content"]
+            messages = messages[1:]
+
+        try:
+            response = await self._client.messages.create(
+                model=self._model,
+                max_tokens=self._max_tokens,
+                temperature=self._temperature,
+                system=system,
+                messages=messages,
                 tools=tools
             )
 
