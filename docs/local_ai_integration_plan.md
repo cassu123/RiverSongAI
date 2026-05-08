@@ -273,6 +273,95 @@ docker run -d \
 
 ---
 
+# RiverSongAI v3.0.0 — "The Companion"
+
+> Phases 1–10 above = v2.x (complete). Everything below is v3.0.0.
+
+## Vision
+From a feature-rich assistant → a **living, ambient AI companion** that's always present, always connected, and unmistakably River Song.
+
+---
+
+## Phase 11 — The Voice (Sprint 1)
+*She needs to sound right and always be listening.*
+
+| Task | What | How |
+|---|---|---|
+| Wake word | "Hey River" triggers listening without clicking | openWakeWord (free, local, custom wake word) |
+| ElevenLabs voice | British female voice clone — warm, sophisticated | ElevenLabs API ($5/mo) — replaces Piper/Kokoro as default |
+| Streaming TTS | Words play as they're generated, not after | Stream audio chunks from ElevenLabs while LLM types |
+| Ambient mode toggle | Always-on mic with visual indicator | Frontend mic state + backend audio loop |
+
+---
+
+## Phase 12 — The Connection (Sprint 2)
+*She needs real data to be genuinely useful.*
+
+| Task | What | How |
+|---|---|---|
+| Google OAuth live | Calendar read/write, Gmail read | client_secrets.json → OAuth flow |
+| "Schedule X for Friday" | Creates real Google Calendar events | Calendar tool already wired, just needs auth |
+| "Read my emails" | Summarizes unread Gmail | Gmail provider already exists |
+| Web search | "River, look that up" | Brave Search API (free tier, 2000/day) |
+| Home Assistant | Voice control lights, locks, scenes | Existing HA instance + Long-Lived Token |
+
+---
+
+## Phase 13 — The Personality (Sprint 2–3)
+*She needs to feel like River Song, not a generic assistant.*
+
+| Task | What | How |
+|---|---|---|
+| Character system prompt | Witty, warm, British, calls you "sweetie" | Persistent system prompt with River Song persona |
+| Personal memory | Remembers your name, preferences, habits | Semantic memory already built — wire to persona |
+| Proactive morning briefing | Reads weather, calendar, emails at 8am | n8n cron → trigger River Song briefing |
+| Evening summary | End-of-day recap of what happened | Same pattern |
+
+---
+
+## Phase 14 — The Presence (Sprint 3–4)
+*She needs to exist beyond the browser tab.*
+
+| Task | What | How |
+|---|---|---|
+| Desktop widget | Always-visible floating overlay | Electron app wrapping existing React UI |
+| Mobile PWA | Install River Song on your phone | manifest.json + service worker + responsive UI |
+| Animated visual | Waveform / orb that reacts to her voice | Canvas/WebGL audio visualizer in frontend |
+| Push notifications | Proactive alerts to phone/desktop | Web Push API |
+
+---
+
+## Phase 15 — The Intelligence (Sprint 4)
+*She needs to think ahead, not just react.*
+
+| Task | What | How |
+|---|---|---|
+| Pattern learning | Notices "you ask about weather every morning" | Usage analytics → preference store |
+| Smart reminders | "You have a vet appointment tomorrow" | Calendar scan on startup |
+| Cross-tool reasoning | "Based on your inventory, you need milk" | Multi-tool chain in conversation loop |
+| Health dashboard | Is River Song's brain healthy? | Backend status endpoint + UI card |
+
+---
+
+## v3.0.0 Build Order (Gemini Sprint Sequence)
+
+```
+Sprint 1:  Wake word → ElevenLabs → Streaming TTS
+Sprint 2:  Google OAuth → Home Assistant → Web search
+Sprint 3:  River Song persona → Morning briefing
+Sprint 4:  Desktop widget (Electron) → Mobile PWA
+Sprint 5:  Animated UI → Push notifications → Health dashboard
+```
+
+## v3.0.0 Experience Target
+
+| Version | Experience |
+|---|---|
+| v2.x (now) | Open the browser, click to talk, she responds |
+| v3.0.0 | Say "Hey River" from anywhere → she answers in a British voice → checks your calendar → controls your lights |
+
+---
+
 ## Quick Wins (Can Do Today)
 
 1. `ollama pull nomic-embed-text` — enables Phase 1 immediately
