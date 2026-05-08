@@ -136,6 +136,12 @@ export default function SettingsPage({ onFeaturesChanged }) {
   const [llmSettings,      setLlmSettings]      = useState(null)
   const [memSettings,      setMemSettings]      = useState(null)
   const [voiceSettings,    setVoiceSettings]    = useState(null)
+  const [orchestrationSettings, setOrchestrationSettings] = useState({
+    n8n_enabled: false,
+    n8n_url: '',
+    n8n_api_key: '',
+    n8n_webhook_secret: ''
+  })
   const [modelFilter,      setModelFilter]      = useState('ALL')
   const [loading,          setLoading]          = useState(true)
   const [saveStatus,       setSaveStatus]       = useState('')
@@ -157,17 +163,18 @@ export default function SettingsPage({ onFeaturesChanged }) {
         fetch(`${API_BASE}/api/admin/feature-visibility`, { headers }).then(r => r.json()).catch(() => null),
         fetch(`${API_BASE}/api/admin/family`, { headers }).then(r => r.json()).catch(() => null),
         fetch(`${API_BASE}/api/admin/family-groups`, { headers }).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/api/settings/orchestration`, { headers }).then(r => r.json()).catch(() => null),
       )
     }
     if (user?.role === 'parent') {
       fetches.push(
-        null, null, null, // pad to keep indices consistent
+        null, null, null, null, // pad to keep indices consistent
         fetch(`${API_BASE}/api/parent/children`, { headers }).then(r => r.json()).catch(() => null),
       )
     }
 
     Promise.all(fetches)
-      .then(([modData, llmData, memData, voiceData, visData, featVisData, familyRaw, familyGroupsRaw, childrenRaw]) => {
+      .then(([modData, llmData, memData, voiceData, visData, featVisData, familyRaw, familyGroupsRaw, orchData, childrenRaw]) => {
         setModels({ local: modData.local || [], cloud: modData.cloud || [] })
         setEnabledProviders(modData.enabled_providers || {})
         setLlmSettings(llmData)
@@ -177,6 +184,7 @@ export default function SettingsPage({ onFeaturesChanged }) {
         if (featVisData)      setFeatureVis(featVisData)
         if (familyRaw)        setFamilyData(familyRaw)
         if (familyGroupsRaw)  setFamilyGroups(familyGroupsRaw)
+        if (orchData)         setOrchestrationSettings(orchData)
         if (childrenRaw)      setChildrenData(childrenRaw)
         setLoading(false)
       })
@@ -185,7 +193,7 @@ export default function SettingsPage({ onFeaturesChanged }) {
         setLoading(false)
         setSaveStatus('error')
       })
-  }, [user?.id, token])
+  }, [user?.id, user?.role, token])
 
   // ---- Save LLM selection ----
   const selectModel = useCallback(async (model) => {
@@ -245,6 +253,28 @@ export default function SettingsPage({ onFeaturesChanged }) {
       setTimeout(() => setSaveStatus(''), 4000)
     }
   }, [llmSettings, user?.id, token])
+
+  // ---- Save orchestration settings ----
+  const saveOrchestration = useCallback(async (patch) => {
+    const next = { ...orchestrationSettings, ...patch }
+    setOrchestrationSettings(next)
+    setSaveStatus('saving')
+    try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const res = await fetch(`${API_BASE}/api/settings/orchestration`, {
+        method:  'POST',
+        headers,
+        body:    JSON.stringify(next),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2500)
+    } catch {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }, [orchestrationSettings, token])
 
   // ---- Save memory settings ----
   const saveMemory = useCallback(async (patch) => {
@@ -324,6 +354,53 @@ export default function SettingsPage({ onFeaturesChanged }) {
         </div>
       )}
 
+      
+      {/* ================================================================ */}
+      {/* ORCHESTRATION                                                   */}
+      {/* ================================================================ */}
+      {orchestrationSettings && user?.role === "admin" && (
+        <Section title="ORCHESTRATION (n8n)">
+          <Toggle
+            id="n8n-toggle"
+            label="Enable n8n integration"
+            checked={orchestrationSettings.n8n_enabled}
+            onChange={v => saveOrchestration({ n8n_enabled: v })}
+          />
+          <label className="select-row">
+            <span className="select-label">n8n URL</span>
+            <input
+              type="text"
+              className="settings-input"
+              value={orchestrationSettings.n8n_url}
+              onChange={e => saveOrchestration({ n8n_url: e.target.value })}
+            />
+          </label>
+          <label className="select-row">
+            <span className="select-label">n8n API Key</span>
+            <input
+              type="password"
+              className="settings-input"
+              value={orchestrationSettings.n8n_api_key}
+              placeholder="••••••••"
+              onChange={e => saveOrchestration({ n8n_api_key: e.target.value })}
+            />
+          </label>
+          <label className="select-row">
+            <span className="select-label">n8n Webhook Secret</span>
+            <input
+              type="text"
+              className="settings-input"
+              value={orchestrationSettings.n8n_webhook_secret}
+              onChange={e => saveOrchestration({ n8n_webhook_secret: e.target.value })}
+            />
+          </label>
+          <p className="settings-hint">
+            n8n handles complex multi-step routines. The webhook secret is required
+            to validate incoming requests from n8n to River Song.
+          </p>
+        </Section>
+      )}
+    
       {/* ================================================================ */}
       {/* AI MODEL                                                         */}
       {/* ================================================================ */}

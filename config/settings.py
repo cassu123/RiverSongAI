@@ -459,6 +459,26 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
+    # Orchestration (Phase 9)
+    # -------------------------------------------------------------------------
+    n8n_enabled: bool = Field(
+        default=False,
+        description="Enable advanced orchestration via n8n.",
+    )
+    n8n_url: str = Field(
+        default="http://localhost:5678",
+        description="Base URL for the n8n instance.",
+    )
+    n8n_api_key: str = Field(
+        default="",
+        description="API key for the n8n instance.",
+    )
+    n8n_webhook_secret: str = Field(
+        default="",
+        description="Secret key for validating incoming n8n webhooks.",
+    )
+
+    # -------------------------------------------------------------------------
     # Intent Router (Phase 2+)
     # -------------------------------------------------------------------------
     intent_confidence_threshold: float = Field(

@@ -48,7 +48,9 @@ class VisionProvider:
                     "images": [image_b64]
                 }]
             )
-            return response.get("message", {}).get("content", "")
+            if isinstance(response, dict):
+                return response.get("message", {}).get("content", "")
+            return getattr(getattr(response, "message", None), "content", "") or ""
         except Exception as exc:
             logger.error("Ollama vision analysis failed: %s", exc)
             return f"Error during image analysis: {str(exc)}"

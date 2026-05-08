@@ -419,6 +419,8 @@ export default function AnalyticsPage() {
   const [err,              setErr]              = useState('')
   const [showSettings,     setShowSettings]     = useState(false)
   const [visiblePlatforms, setVisiblePlatforms] = useState(() => loadVisible(userId))
+  const [businessReport, setBusinessReport] = useState(null)
+  const [generatingReport, setGeneratingReport] = useState(false)
 
   function handleVisibleChange(next) {
     setVisiblePlatforms(next)
@@ -427,6 +429,22 @@ export default function AnalyticsPage() {
     if (selectedPlatform && !next.has(selectedPlatform)) setSelectedPlatform(null)
   }
 
+  
+  const handleGenerateReport = async () => {
+    setGeneratingReport(true)
+    try {
+      const res = await fetch("/api/analytics/business-report?days=" + days, {
+        headers: authHeaders(),
+      })
+      const data = await res.json()
+      setBusinessReport(data.report)
+    } catch (e) {
+      setErr("Failed to generate report: " + e.message)
+    } finally {
+      setGeneratingReport(false)
+    }
+  }
+    
   const loadData = useCallback(async () => {
     setLoading(true)
     setErr('')
@@ -531,6 +549,40 @@ export default function AnalyticsPage() {
       {err && <div className="an-error">{err}</div>}
 
       {snapshots.length > 0 && <SummaryBar snapshots={latestSnapshots} />}
+      
+      {/* AI Business Report Section */}
+      <div className="card analytics-report-card" style={{ marginBottom: 24, padding: 20, border: "1px solid var(--md-outline-variant)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.05em", color: "var(--md-primary)" }}>
+            AI BUSINESS STRATEGIST
+          </div>
+          <button 
+            className="btn btn--cta" 
+            onClick={handleGenerateReport} 
+            disabled={generatingReport}
+          >
+            {generatingReport ? "ANALYZING..." : "GENERATE AI REPORT"}
+          </button>
+        </div>
+        {businessReport ? (
+          <div style={{ 
+            whiteSpace: "pre-wrap", 
+            fontSize: "0.85rem", 
+            lineHeight: 1.6, 
+            color: "var(--md-on-surface)",
+            background: "var(--md-surface-container-highest)",
+            padding: 16,
+            borderRadius: 8
+          }}>
+            {businessReport}
+          </div>
+        ) : (
+          <div style={{ fontSize: "0.75rem", color: "var(--md-outline)" }}>
+            Click the button to generate a natural-language summary of your recent sales, revenue, and product performance.
+          </div>
+        )}
+      </div>
+    
 
       <div className="an-platform-grid">
         {sortedPlatforms.map(p => (

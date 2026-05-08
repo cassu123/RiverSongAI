@@ -63,6 +63,26 @@ class SnapshotBody(BaseModel):
 # Platforms
 # ---------------------------------------------------------------------------
 
+@router.get("/business-report")
+async def get_business_report(
+    request: Request,
+    days: int = Query(default=30, ge=1, le=365),
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Generate an AI-driven business report.
+    This reuses the logic from the LLM tool but exposes it as a clean API.
+    """
+    user_id = _require_user(authorization)
+    from core.tools import _exec_generate_business_report
+    
+    try:
+        report = await _exec_generate_business_report({"days": days}, user_id)
+        return {"report": report}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(exc)}")
+
+
 @router.get("/platforms")
 async def list_platforms(
     request: Request,

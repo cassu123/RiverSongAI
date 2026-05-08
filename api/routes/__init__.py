@@ -20,6 +20,8 @@ from .culinary import router as culinary_router
 from .location import router as location_router
 from .google import router as google_router
 from .vision import router as vision_router
+from .shopify_webhooks import router as shopify_webhooks_router
+from . import n8n_webhooks
 
 __all__ = [
     "health_router",
@@ -44,4 +46,6 @@ __all__ = [
     "location_router",
     "google_router",
     "vision_router",
+    "shopify_webhooks_router",
+    "n8n_webhooks",
 ]

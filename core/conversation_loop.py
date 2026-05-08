@@ -469,7 +469,7 @@ class ConversationLoop:
                             await on_event({"type": "token", "content": chunk})
                     else:
                         full_response = res["content"]
-                        await on_event({"type": "response_complete", "text": full_response})
+                        await on_event({"type": "token", "content": full_response})
                 else:
                     # Fallback to normal streaming if chat_with_tools is missing
                     async for chunk in self._llm.stream_response(self._history):
@@ -556,7 +556,23 @@ class ConversationLoop:
             spoken_response = ""
             intent_name = "conversation"
 
-        if intent_name != "conversation" and spoken_response:
+        # Inject RAG document context when the document_qa intent was triggered
+        if intent_name == "document_qa" and self._settings.semantic_memory_enabled:
+            try:
+                from providers.rag.rag_provider import RAGProvider
+                rag = RAGProvider()
+                rag_results = await rag.query_documents(text, n_results=5)
+                if rag_results:
+                    doc_context = rag.format_context(rag_results)
+                    if self._history and self._history[0]["role"] == "system":
+                        self._history[0] = {
+                            "role": "system",
+                            "content": self._history[0]["content"] + f"\n\nRELEVANT DOCUMENT EXCERPTS:\n{doc_context}"
+                        }
+            except Exception as exc:
+                logger.warning("RAG context injection failed: %s", exc)
+
+        if intent_name != "conversation" and spoken_response and intent_name != "document_qa":
             self._history.append({"role": "user", "content": text})
             self._history.append({"role": "assistant", "content": spoken_response})
             await on_event({"type": "response_complete", "text": spoken_response})
@@ -569,9 +585,65 @@ class ConversationLoop:
         full_response = ""
         try:
             await on_event({"type": "thinking"})
-            async for chunk in self._llm.stream_response(self._history):
-                full_response += chunk
-                await on_event({"type": "response_chunk", "text": chunk})
+
+            # Phase 3: Tool Use / Function Calling
+            if self._settings.tool_use_enabled:
+                from core.tools import TOOL_SCHEMAS, execute_tool
+                tool_system_prompt = (
+                    "You have access to tools. If the user asks for an action that matches "
+                    "a tool, use the tool. If not, respond normally."
+                )
+                if hasattr(self._llm, "chat_with_tools"):
+                    messages_with_tools = self._history.copy()
+                    if messages_with_tools[0]["role"] == "system":
+                        messages_with_tools[0]["content"] += f"\n\n{tool_system_prompt}"
+                    
+                    res = await self._llm.chat_with_tools(messages_with_tools, TOOL_SCHEMAS)
+                    if res["type"] == "tool_call":
+                        tool_name = res["tool_name"]
+                        tool_input = res["tool_input"]
+                        tool_id = res.get("tool_use_id")
+                        logger.info("LLM requested tool: %s", tool_name)
+                        result_text = await execute_tool(tool_name, tool_input, {"user_id": self._user_id})
+                        
+                        if self._llm.__class__.__name__ == "ClaudeAPILLM":
+                            self._history.append({
+                                "role": "assistant",
+                                "content": [{"type": "tool_use", "id": tool_id, "name": tool_name, "input": tool_input}]
+                            })
+                            self._history.append({
+                                "role": "user",
+                                "content": [{"type": "tool_result", "tool_use_id": tool_id, "content": result_text}]
+                            })
+                        else:
+                            self._history.append({
+                                "role": "assistant", "content": "",
+                                "tool_calls": [{"function": {"name": tool_name, "arguments": tool_input}}]
+                            })
+                            self._history.append({"role": "tool", "content": result_text})
+                            
+                        async for chunk in self._llm.stream_response(self._history):
+                            full_response += chunk
+                            await on_event({"type": "token", "content": chunk})
+                    else:
+                        full_response = res["content"]
+                        await on_event({"type": "token", "content": full_response})
+                else:
+                    async for chunk in self._llm.stream_response(self._history):
+                        full_response += chunk
+                        await on_event({"type": "response_chunk", "text": chunk})
+
+            # Phase 2: Normal streaming (no tool use enabled)
+            elif self._settings.llm_streaming_enabled and self._llm.__class__.__name__ == "OllamaLLM":
+                stream_chat_fn = getattr(self._llm, "stream_chat", self._llm.stream_response)
+                async for chunk in stream_chat_fn(self._history):
+                    full_response += chunk
+                    await on_event({"type": "token", "content": chunk})
+            else:
+                async for chunk in self._llm.stream_response(self._history):
+                    full_response += chunk
+                    await on_event({"type": "response_chunk", "text": chunk})
+
         except Exception as exc:
             self._history.pop()
             logger.error("LLM streaming failed: %s", exc)
