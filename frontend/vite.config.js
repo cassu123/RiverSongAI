@@ -21,6 +21,23 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
 
+  build: {
+    chunkSizeWarningLimit: 1200,  // vendor-three (Three.js ecosystem) is ~1.1MB — expected
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-three': [
+            'three',
+            '@react-three/fiber',
+            '@react-three/drei',
+            '@react-three/postprocessing',
+          ],
+        },
+      },
+    },
+  },
+
   server: {
     port: 5173,
     allowedHosts: ['app.riversongai.com'],

@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import RiverSong          from '../components/RiverSong.jsx'
+import React, { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from 'react'
+const RiverSong = lazy(() => import('../components/RiverSong.jsx'))
 import ConversationPanel  from '../components/ConversationPanel.jsx'
 import { useWebSocket }   from '../hooks/useWebSocket.js'
 import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
@@ -273,7 +273,9 @@ export default function ConversationPage() {
       {/* Avatar zone */}
       {showAvatar && (
         <div className="conv-portrait-zone">
-          <RiverSong state={convState} audioLevel={visualLvl} />
+          <Suspense fallback={<div className="conv-avatar-loading" />}>
+            <RiverSong state={convState} audioLevel={visualLvl} />
+          </Suspense>
 
           {/* State tabs */}
           <div className="conv-state-bar">
