@@ -11,6 +11,7 @@
 # -----------------------------------------------------------------------------
 fastapi==0.136.0
 uvicorn[standard]==0.44.0       # ASGI server; [standard] pulls websockets + uvloop
+starlette==1.0.0                # WebSocket state management (directly imported)
 python-multipart==0.0.27        # Form data parsing for FastAPI
 pypdf==6.10.2                   # PDF text extraction for vehicle manual uploads
 pymupdf==1.27.2.3               # Culinary: PDF ingestion + image ripping
@@ -99,6 +100,7 @@ googlemaps==4.10.0                   # Google Maps Platform Python client
 # -----------------------------------------------------------------------------
 ytmusicapi==1.11.5                   # Unofficial YouTube Music API client
 yt-dlp==2026.3.17                    # Audio stream extraction for playback
+sounddevice==0.5.5                   # Audio playback for YouTube Music provider
 
 
 # -----------------------------------------------------------------------------
