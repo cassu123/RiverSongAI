@@ -131,7 +131,8 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
     saveWidgets(DEFAULT_VISIBLE)
   }
 
-  const show = (key) => !arrange || visible[key]  // in arrange mode show all for toggling
+  // In arrange mode, show all widgets so they can be toggled
+  const show = (key) => arrange || visible[key]
 
   // Derived status values
   const statusOk  = !stats || stats.status === 'operational'
@@ -211,7 +212,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
         <div className="dashboard-left">
 
           {/* Health Status */}
-          {visible['health_status'] && (
+          {show('health_status') && (
             <WidgetShell
               label={null}
               widgetKey="health_status"
@@ -225,7 +226,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
           )}
 
           {/* System Status — admin only */}
-          {isAdmin && visible['system_status'] && (
+          {isAdmin && show('system_status') && (
             <WidgetShell
               label="SYSTEM STATUS"
               widgetKey="system_status"
@@ -258,7 +259,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
           )}
 
           {/* Recent Sessions */}
-          {visible['recent_sessions'] && (
+          {show('recent_sessions') && (
             <WidgetShell
               label="RECENT SESSIONS"
               widgetKey="recent_sessions"
@@ -282,7 +283,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
           )}
 
           {/* Memory Activity */}
-          {visible['memory_activity'] && (
+          {show('memory_activity') && (
             <WidgetShell
               label="MEMORY ACTIVITY"
               widgetKey="memory_activity"
@@ -312,7 +313,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
         <div className="dashboard-right">
 
           {/* River Status */}
-          {visible['river_status'] && (
+          {show('river_status') && (
             <WidgetShell
               label={null}
               widgetKey="river_status"
@@ -326,7 +327,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
           )}
 
           {/* Quick Actions */}
-          {visible['quick_actions'] && (
+          {show('quick_actions') && (
             <WidgetShell
               label="QUICK ACTIONS"
               widgetKey="quick_actions"
@@ -352,7 +353,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
           )}
 
           {/* Active Routines */}
-          {visible['active_routines'] && (
+          {show('active_routines') && (
             <WidgetShell
               label="ACTIVE ROUTINES"
               widgetKey="active_routines"
