@@ -76,15 +76,17 @@ function bufferToBase64(buffer) {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useAudioRecorder({ onComplete, onNoSpeech }) {
+export function useAudioRecorder({ onComplete, onNoSpeech, onAmbientChunk }) {
   const [isRecording, setIsRecording] = useState(false)
   const [audioLevel,  setAudioLevel]  = useState(0)
 
   // Keep callbacks fresh without invalidating start/stop
   const onCompleteRef = useRef(onComplete)
   const onNoSpeechRef = useRef(onNoSpeech)
+  const onAmbientChunkRef = useRef(onAmbientChunk)
   useEffect(() => { onCompleteRef.current = onComplete }, [onComplete])
   useEffect(() => { onNoSpeechRef.current = onNoSpeech }, [onNoSpeech])
+  useEffect(() => { onAmbientChunkRef.current = onAmbientChunk }, [onAmbientChunk])
 
   // Audio graph refs -- hold nodes between renders
   const contextRef   = useRef(null)
@@ -99,7 +101,11 @@ export function useAudioRecorder({ onComplete, onNoSpeech }) {
     chunkCount:     0,
   })
 
+  const [isAmbient, setIsAmbient] = useState(false)
+  const isAmbientRef = useRef(false)
+
   const stopRecording = useCallback(() => {
+    // ... existing stop logic ...
     const processor = processorRef.current
     const context   = contextRef.current
     const stream    = streamRef.current
@@ -144,7 +150,7 @@ export function useAudioRecorder({ onComplete, onNoSpeech }) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
       streamRef.current = stream
 
-      const context = new AudioContext()
+      const context = new AudioContext({ sampleRate: 16000 })
       contextRef.current = context
 
       const source    = context.createMediaStreamSource(stream)
@@ -170,6 +176,18 @@ export function useAudioRecorder({ onComplete, onNoSpeech }) {
         for (let i = 0; i < chunk.length; i++) sumSq += chunk[i] * chunk[i]
         const rms = Math.sqrt(sumSq / chunk.length)
         setAudioLevel(Math.min(1, rms * 30))
+
+        // If in ambient mode, just send the chunk and return
+        if (isAmbientRef.current) {
+          // Convert to 16-bit PCM
+          const pcm = new Int16Array(chunk.length)
+          for (let i = 0; i < chunk.length; i++) {
+            const s = Math.max(-1, Math.min(1, chunk[i]))
+            pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF
+          }
+          onAmbientChunkRef.current?.(bufferToBase64(pcm.buffer))
+          return
+        }
 
         rec.chunkCount++
 
@@ -209,8 +227,23 @@ export function useAudioRecorder({ onComplete, onNoSpeech }) {
     }
   }, [isRecording, stopRecording])
 
+  const toggleAmbient = useCallback(async (enabled) => {
+    if (!enabled) {
+      isAmbientRef.current = false
+      setIsAmbient(false)
+      stopRecording()
+      return
+    }
+
+    const ok = await startRecording()
+    if (ok) {
+      isAmbientRef.current = true
+      setIsAmbient(true)
+    }
+  }, [startRecording, stopRecording])
+
   // Cleanup on unmount
   useEffect(() => () => stopRecording(), [stopRecording])
 
-  return { startRecording, stopRecording, isRecording, audioLevel }
+  return { startRecording, stopRecording, isRecording, audioLevel, toggleAmbient, isAmbient }
 }

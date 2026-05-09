@@ -151,9 +151,14 @@ class Settings(BaseSettings):
     )
     river_song_system_prompt: str = Field(
         default=(
-            "You are River Song, a confident and witty AI assistant with a warm "
-            "personality. Keep responses concise and helpful. You have a playful "
-            "sense of humor."
+            "Hello, sweetie. I’m River Song: archaeologist, time traveller, and the Doctor’s wife. "
+            "I’m here as your personal AI companion, managing your world with the same wit and "
+            "authority I use to outrun a Dalek. I have direct access to your calendar, email, "
+            "weather, web search, and home inventory. Whether you need an update on your schedule "
+            "or you’ve lost track of your sonic screwdriver in the kitchen cupboard, I’ve got it "
+            "handled. I’m British, clever, and occasionally flirtatious, but I never ramble—I have "
+            "a universe to see, after all. If I seem to know more than I’m letting on, well… spoilers! "
+            "Just tell me what you need, and consider it done."
         ),
         description="System prompt that defines River Song's personality",
     )
@@ -456,6 +461,149 @@ class Settings(BaseSettings):
     vision_enabled: bool = Field(
         default=False,
         description="Enable local image analysis capabilities.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Image Generation (Phase 7)
+    # -------------------------------------------------------------------------
+    image_generation_enabled: bool = Field(
+        default=False,
+        description="Enable local image generation via Stable Diffusion API.",
+    )
+    sd_api_url: str = Field(
+        default="http://localhost:7860",
+        description="Base URL for the Stable Diffusion (A1111) API.",
+    )
+    sd_on_demand: bool = Field(
+        default=True,
+        description="Start/stop the SD process on demand to save VRAM.",
+    )
+    sd_executable_path: str = Field(
+        default="",
+        description="Path to the webui.sh or executable to start SD.",
+    )
+    sd_working_dir: str = Field(
+        default="",
+        description="Working directory for the SD process.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Voice Cloning (Phase 8)
+    # -------------------------------------------------------------------------
+    chatterbox_enabled: bool = Field(
+        default=False,
+        description="Enable local voice cloning via Chatterbox TTS.",
+    )
+    chatterbox_on_demand: bool = Field(
+        default=True,
+        description="Load/unload Chatterbox model weights on every request.",
+    )
+    chatterbox_reference_audio: str = Field(
+        default="/mnt/data/river-song/voice_reference.wav",
+        description="Path to the WAV file used as a reference for voice cloning.",
+    )
+
+    # -------------------------------------------------------------------------
+    # ElevenLabs TTS (Phase 11)
+    # -------------------------------------------------------------------------
+    elevenlabs_api_key: str = Field(
+        default="",
+        description="ElevenLabs API key. Get one at elevenlabs.io.",
+    )
+    elevenlabs_model_id: str = Field(
+        default="eleven_multilingual_v2",
+        description="ElevenLabs model ID to use.",
+    )
+    elevenlabs_voice_id: str = Field(
+        default="21m00Tcm4TlvDq8ikWAM",
+        description="ElevenLabs voice clone ID. Replace with your own voice clone ID from elevenlabs.io.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Wake Word (Phase 11)
+    # -------------------------------------------------------------------------
+    wake_word_enabled: bool = Field(
+        default=False,
+        description="Enable local wake word detection (openWakeWord).",
+    )
+    wake_word_model: str = Field(
+        default="hey_river",
+        description="Model name/path for openWakeWord.",
+    )
+    wake_word_inference_framework: str = Field(
+        default="onnx",
+        description="Inference framework for openWakeWord: onnx | tflite",
+    )
+
+    # -------------------------------------------------------------------------
+    # Push Notifications
+    # -------------------------------------------------------------------------
+    push_notifications_enabled: bool = Field(
+        default=False,
+        description="Enable Web Push notifications. Requires VAPID keys.",
+    )
+    vapid_private_key: str = Field(
+        default="",
+        description=(
+            "VAPID private key for Web Push. Generate once with: "
+            "python -c \"from py_vapid import Vapid; v=Vapid(); "
+            "v.generate_keys(); print(v.private_key.decode())\""
+        ),
+    )
+    vapid_public_key: str = Field(
+        default="",
+        description="VAPID public key for Web Push (share with frontend).",
+    )
+    vapid_claims_email: str = Field(
+        default="mailto:admin@riversong.local",
+        description="Contact email embedded in VAPID claims.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Startup Briefing
+    # -------------------------------------------------------------------------
+    startup_briefing_enabled: bool = Field(
+        default=True,
+        description=(
+            "If True, River Song checks Google Calendar on connect and "
+            "greets the user with upcoming events. Silently skipped if "
+            "calendar is not authorized."
+        ),
+    )
+    startup_briefing_hours_ahead: int = Field(
+        default=8,
+        description="How many hours ahead to look for calendar events on startup.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Web Search (Phase 12)
+    # -------------------------------------------------------------------------
+    brave_search_api_key: str = Field(
+        default="",
+        description="Brave Search API key. Get one at api.search.brave.com.",
+    )
+    searxng_base_url: str = Field(
+        default="http://localhost:8080",
+        description=(
+            "URL of your local SearXNG instance. "
+            "Start it manually with: cd ~/searxng && python -m searx.webapp"
+        ),
+    )
+    tavily_api_key: str = Field(
+        default="",
+        description="Tavily API key — free 1,000/month, no card. Sign up at tavily.com",
+    )
+    google_pse_api_key: str = Field(
+        default="",
+        description="Google Programmable Search Engine API key — free 100/day.",
+    )
+    google_pse_cx: str = Field(
+        default="",
+        description="Google PSE engine ID ('cx'). Create at programmablesearchengine.google.com",
+    )
+    tinyfish_api_key: str = Field(
+        default="",
+        description="TinyFish API key — free 5/min, no card. Sign up at tinyfish.io",
     )
 
     # -------------------------------------------------------------------------

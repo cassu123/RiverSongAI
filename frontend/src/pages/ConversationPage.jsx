@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react'
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import RiverSong          from '../components/RiverSong.jsx'
 import ConversationPanel  from '../components/ConversationPanel.jsx'
 import { useWebSocket }   from '../hooks/useWebSocket.js'
 import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
 import { useAuth }        from '../context/AuthContext.jsx'
+import { AudioPlayer }    from '../utils/AudioPlayer.js'
 import './ConversationPage.css'
 
 const API_BASE    = import.meta.env.VITE_API_URL || ''
@@ -57,6 +58,7 @@ export default function ConversationPage() {
   const [messages,          setMessages]          = useState([])
   const [streamingContent,  setStreamingContent]  = useState('')
   const [error,             setError]             = useState(null)
+  const [ambientEnabled,    setAmbientEnabled]    = useState(false)
 
   const streamTimeoutRef = useRef(null)
 
@@ -91,48 +93,8 @@ export default function ConversationPage() {
   const [showHistory,    setShowHistory]    = useState(false)
   const [viewingSession, setViewingSession] = useState(null)
 
+  const audioPlayer = useMemo(() => new AudioPlayer(), [])
   const isPlayingRef = useRef(false)
-
-  useEffect(() => {
-    if (!user) return
-
-    const headers = { Authorization: `Bearer ${token}` }
-
-    // Load active model
-    fetch(`${API_BASE}/api/models`)
-      .then(r => r.json())
-      .then(data => {
-        // also fetch the user's selected model
-        return fetch(`${API_BASE}/api/settings/llm?user_id=${user.id}`, { headers })
-          .then(r => r.json())
-          .then(llm => {
-            const all = [...(data.local || []), ...(data.cloud || [])]
-            const entry = all.find(m => m.provider === llm.provider && m.model_id === llm.model)
-            setActiveModel(entry || null)
-          })
-      })
-      .catch(() => {})
-
-    // Load active voice
-    fetch(`${API_BASE}/api/settings/voice`, { headers })
-      .then(r => r.json())
-      .then(setActiveVoice)
-      .catch(() => {})
-
-    setHistory(loadHistory(user.id))
-  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const toggleAvatar = () => {
-    const next = !showAvatar
-    setShowAvatar(next)
-    if (user) { try { localStorage.setItem(avatarKey(user.id), String(next)) } catch {} }
-  }
-
-  const toggleTranscript = () => {
-    const next = !showTranscript
-    setShowTranscript(next)
-    if (user) { try { localStorage.setItem(`rs-transcript:${user?.id}`, String(next)) } catch {} }
-  }
 
   const handleMessage = useCallback((event) => {
     const { type, text, content, message, data } = event
@@ -142,6 +104,13 @@ export default function ConversationPage() {
       case 'transcribing':    setConvState('transcribing'); break
       case 'transcript':      if (text) setMessages(p => [...p, { role: 'user', text }]); break
       case 'thinking':        setConvState('thinking');   setStreamingContent(''); break
+      case 'proactive_briefing_start':
+        console.log('Proactive briefing starting:', text || 'Routine')
+        if (text) setMessages(p => [...p, { role: 'assistant', text }])
+        setConvState('thinking')
+        setStreamingContent('')
+        setError(null)
+        break
       case 'response_chunk':  setStreamingContent(p => p + (text || '')); break
       case 'token':
         setStreamingContent(p => p + (content || ''))
@@ -165,20 +134,34 @@ export default function ConversationPage() {
         }
         setStreamingContent('')
         break
-      case 'speaking': setConvState('speaking'); break
+      case 'speaking': 
+        setConvState('speaking')
+        audioPlayer.stop()
+        break
       case 'audio':
         if (data) {
           isPlayingRef.current = true
           setConvState('speaking')
-          playWavBase64(data).then(() => { isPlayingRef.current = false; setConvState('idle') })
+          audioPlayer.playBase64(data).then(() => {
+            isPlayingRef.current = false
+            // Note: with streaming audio, "idle" should only fire after the full queue is done
+            // But for now, we rely on the backend sending "idle" at the end of the turn
+          })
         }
         break
-      case 'idle':    if (!isPlayingRef.current) setConvState('idle'); break
+      case 'wake_word_detected':
+        // Automatically switch from ambient to active listening
+        console.log('Wake word detected!')
+        setConvState('listening_trigger') // Temporary state to trigger transition
+        break
+      case 'idle':    
+        if (!isPlayingRef.current) setConvState('idle')
+        break
       case 'routing': setConvState('routing'); break
       case 'error':   setError(message || 'An unknown error occurred.'); break
       default: break
     }
-  }, [])
+  }, [audioPlayer, finalizeStream])
 
   const { sendMessage, connectionStatus } = useWebSocket(wsUrl, handleMessage)
 
@@ -203,14 +186,45 @@ export default function ConversationPage() {
     setConvState(s => (s === 'listening' ? 'idle' : s))
   }, [])
 
-  const { startRecording, audioLevel } = useAudioRecorder({
+  const handleAmbientChunk = useCallback(b64 => {
+    sendMessage({ type: 'ambient_audio', data: b64 })
+  }, [sendMessage])
+
+  const { startRecording, stopRecording, audioLevel, toggleAmbient, isAmbient } = useAudioRecorder({
     onComplete: handleAudioComplete,
     onNoSpeech: handleNoSpeech,
+    onAmbientChunk: handleAmbientChunk,
   })
+
+  // Handle auto-start on wake word
+  useEffect(() => {
+    if (convState === 'listening' && isAmbient) {
+      console.log('Transitioning from ambient to listening turn...')
+      toggleAmbient(false).then(() => {
+        sendMessage({ type: 'start' })
+      })
+    }
+  }, [convState, isAmbient, toggleAmbient, sendMessage])
+
+  // Handle auto-start on wake word detection
+  useEffect(() => {
+    if (convState === 'listening_trigger') {
+      handleToggleAmbient().then(() => {
+        handleStartListening()
+      })
+    }
+  }, [convState, handleToggleAmbient, handleStartListening])
 
   const canSpeak  = convState === 'idle' && connectionStatus === 'connected'
   const isActive  = convState !== 'idle' && convState !== 'connecting'
-  const visualLvl = (convState === 'listening' || convState === 'speaking') ? audioLevel : 0
+  const visualLvl = (convState === 'listening' || convState === 'speaking' || isAmbient) ? audioLevel : 0
+
+  const handleToggleAmbient = useCallback(async () => {
+    const next = !ambientEnabled
+    setAmbientEnabled(next)
+    sendMessage({ type: 'ambient_mode', enabled: next })
+    await toggleAmbient(next)
+  }, [ambientEnabled, toggleAmbient, sendMessage])
 
   const handleStartListening = useCallback(async () => {
     if (!canSpeak) return
@@ -407,6 +421,14 @@ export default function ConversationPage() {
         {/* Input bar — voice only */}
         <div className="conv-input-bar conv-input-bar--speak">
           <button
+            className={`conv-ambient-btn ${ambientEnabled ? 'conv-ambient-btn--on' : ''}`}
+            onClick={handleToggleAmbient}
+            title={ambientEnabled ? 'Disable Ambient Mode (Wake Word)' : 'Enable Ambient Mode (Wake Word)'}
+          >
+            <SparkleIcon on={ambientEnabled} />
+          </button>
+          
+          <button
             className={`conv-mic-btn conv-mic-btn--large ${isActive ? 'conv-mic-btn--active' : ''} ${!canSpeak ? 'conv-mic-btn--disabled' : ''}`}
             onClick={handleStartListening}
             aria-label="Speak to River"
@@ -414,6 +436,7 @@ export default function ConversationPage() {
           >
             <MicIcon active={isActive} />
           </button>
+          
           <button className="conv-reset-btn" onClick={handleReset} title="Save & reset">
             <ResetIcon />
           </button>
@@ -424,6 +447,15 @@ export default function ConversationPage() {
 }
 
 // ── Icons ────────────────────────────────────────────────────────────────────
+
+function SparkleIcon({ on }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 16 16" fill={on ? "currentColor" : "none"}>
+      <path d="M8 1L9.5 5.5L14 7L9.5 8.5L8 13L6.5 8.5L2 7L6.5 5.5L8 1Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M12 11L12.5 12.5L14 13L12.5 13.5L12 15L11.5 13.5L10 13L11.5 12.5L12 11Z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
 
 function GpuIcon() {
   return (

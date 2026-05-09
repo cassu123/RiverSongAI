@@ -13,6 +13,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { registerPushNotifications } from '../utils/pushNotifications'
 
 const API_BASE = '' // same origin
 
@@ -641,6 +642,11 @@ export default function SettingsPage({ onFeaturesChanged }) {
           </p>
         </Section>
       )}
+
+      {/* ================================================================ */}
+      {/* NOTIFICATIONS                                                    */}
+      {/* ================================================================ */}
+      <NotificationsSection token={token} />
 
       {/* ================================================================ */}
       {/* PARENT — my children (parent only)                              */}
@@ -1653,3 +1659,88 @@ function AdminVisibilitySection({ visibility, token, onChanged }) {
     </Section>
   )
 }
+
+// =============================================================================
+// NotificationsSection — manage Web Push subscriptions
+// =============================================================================
+
+function NotificationsSection({ token }) {
+  const [status, setStatus] = useState('loading')
+  const [working, setWorking] = useState(false)
+  const [testResult, setTestResult] = useState('')
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setStatus('unsupported')
+      return
+    }
+
+    navigator.serviceWorker.ready.then(reg => {
+      reg.pushManager.getSubscription().then(sub => {
+        setStatus(sub ? 'subscribed' : 'idle')
+      })
+    })
+  }, [])
+
+  const handleEnable = async () => {
+    setWorking(true)
+    const res = await registerPushNotifications(API_BASE)
+    setStatus(res.status === 'subscribed' ? 'subscribed' : 'idle')
+    setWorking(false)
+  }
+
+  const handleTest = async () => {
+    setWorking(true)
+    setTestResult('')
+    try {
+      const res = await fetch(`${API_BASE}/api/push/test`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      setTestResult(`Sent to ${data.sent} device(s).`)
+    } catch (err) {
+      setTestResult('Failed to send test push.')
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  return (
+    <Section title="NOTIFICATIONS">
+      <div className="toggle-row">
+        <span className="toggle-label">Enable Push Notifications</span>
+        <button
+          className={`btn ${status === 'subscribed' ? 'btn--secondary' : 'btn--primary'}`}
+          onClick={handleEnable}
+          disabled={working || status === 'unsupported' || status === 'subscribed'}
+          style={{ padding: '6px 16px', fontSize: '0.8rem' }}
+        >
+          {status === 'subscribed' ? 'Enabled' : working ? 'Enabling…' : 'Enable'}
+        </button>
+      </div>
+
+      <p className="settings-hint">
+        {status === 'subscribed' && '✓ This device is subscribed to alerts.'}
+        {status === 'idle' && 'Alerts are not enabled on this device.'}
+        {status === 'unsupported' && '✗ Web Push is not supported by your browser.'}
+        {status === 'loading' && 'Checking status…'}
+      </p>
+
+      {status === 'subscribed' && (
+        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            className="btn btn--ghost"
+            onClick={handleTest}
+            disabled={working}
+            style={{ padding: '4px 12px', fontSize: '0.75rem' }}
+          >
+            {working ? 'Sending…' : 'Test Notification'}
+          </button>
+          {testResult && <span style={{ fontSize: '0.75rem', color: 'var(--md-tertiary)' }}>{testResult}</span>}
+        </div>
+      )}
+    </Section>
+  )
+}
+

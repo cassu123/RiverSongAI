@@ -15,6 +15,8 @@ DELETE /api/analytics/snapshots/{snap_id}    -- delete a snapshot
 from __future__ import annotations
 
 import logging
+import json
+import re
 from typing import Dict, Optional
 
 from fastapi import APIRouter, Header, HTTPException, Query, Request
@@ -123,6 +125,64 @@ async def delete_platform(
     store = _store(request)
     await store.delete_analytics_platform(user_id, platform.lower())
     return {"ok": True}
+
+
+@router.get("/{platform}/summary")
+async def get_platform_summary(
+    platform: str,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Generate an AI-driven summary and insights for a specific platform.
+    Uses the local Ollama LLM to generate 3 concise bullet-point insights.
+    """
+    allowed_platforms = ["tiktok", "instagram", "amazon", "etsy", "facebook"]
+    platform = platform.lower()
+    if platform not in allowed_platforms:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Platform '{platform}' not supported for AI summary. Use one of: {', '.join(allowed_platforms)}"
+        )
+
+    user_id = _require_user(authorization)
+    store = _store(request)
+    
+    # 1. Fetch recent metrics
+    snapshots = await store.get_analytics_snapshots(user_id, platform, days=30)
+    if not snapshots:
+        raise HTTPException(status_code=404, detail=f"No analytics data found for {platform} in the last 30 days.")
+
+    # 2. Call OllamaLLM to generate insights
+    from core.conversation_loop import _build_llm_provider
+    from datetime import datetime
+    
+    try:
+        llm = _build_llm_provider()
+        # We assume _build_llm_provider returns an OllamaLLM or compatible provider.
+        # If the provider itself fails to initialize, it should raise.
+    except Exception as exc:
+        logger.error("Failed to initialize LLM provider: %s", exc)
+        raise HTTPException(status_code=503, detail="Ollama LLM is currently unavailable.")
+    
+    prompt = (
+        f"Analyze these {platform} analytics snapshots from the last 30 days:\n"
+        f"{json.dumps(snapshots)}\n\n"
+        f"Provide exactly 3 concise bullet-point insights about trends, growth, or anomalies. "
+        f"Keep it brief and professional. Do not include any other text."
+    )
+    
+    try:
+        insights = await llm.chat([{"role": "user", "content": prompt}])
+        
+        return {
+            "platform": platform,
+            "insights": insights.strip(),
+            "generated_at": datetime.now().isoformat()
+        }
+    except Exception as exc:
+        logger.error("Ollama analysis failed for %s: %s", platform, exc)
+        raise HTTPException(status_code=503, detail="Ollama LLM failed to generate insights.")
 
 
 # ---------------------------------------------------------------------------

@@ -540,7 +540,55 @@
   border-radius: 2px;
 }
 
-/* ── Responsive ───────────────────────────────────────────── */
+/* ── AI Insights ── */
+.an-insights-box {
+  background: var(--bg);
+  border: 1px solid var(--border-bright);
+  border-radius: 4px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  animation: an-fade-in 0.3s ease;
+}
+
+.an-insights-box h3 {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin: 0 0 10px;
+}
+
+.an-insights-content {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.an-insights-error {
+  color: var(--error);
+  font-size: 0.72rem;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: rgba(255,60,60,0.06);
+  border: 1px solid rgba(255,60,60,0.2);
+  border-radius: 2px;
+}
+
+.an-loading-insights {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-bottom: 16px;
+}
+
+@keyframes an-fade-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Responsive ── */
 @media (max-width: 768px) {
   .an-platform-grid { grid-template-columns: 1fr !important; }
   .an-summary-bar { flex-direction: column; gap: 1px; }

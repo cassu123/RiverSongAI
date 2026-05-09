@@ -127,6 +127,62 @@ class GmailProvider:
         )
         return messages
 
+    async def search_messages(
+        self,
+        query: str,
+        max_results: int = 5,
+    ) -> List[Dict[str, Any]]:
+        """
+        Search for messages using a Gmail query (e.g. 'from:Amazon' or 'label:unread').
+
+        Args:
+            query: Gmail search query string.
+            max_results: Maximum number of results to return.
+
+        Returns:
+            List of message summary dicts.
+        """
+        def _fetch() -> List[Dict[str, Any]]:
+            service = self._auth.build_service(self._user_id, "gmail", "v1")
+            list_result = (
+                service.users()
+                .messages()
+                .list(
+                    userId="me",
+                    q=query,
+                    maxResults=max_results,
+                )
+                .execute()
+            )
+            messages_raw = list_result.get("messages", [])
+
+            summaries: List[Dict[str, Any]] = []
+            for msg_ref in messages_raw:
+                msg_id = msg_ref["id"]
+                msg = (
+                    service.users()
+                    .messages()
+                    .get(userId="me", id=msg_id, format="metadata",
+                         metadataHeaders=["From", "Subject", "Date"])
+                    .execute()
+                )
+                headers = {
+                    h["name"]: h["value"]
+                    for h in msg.get("payload", {}).get("headers", [])
+                }
+                summaries.append({
+                    "id": msg_id,
+                    "thread_id": msg.get("threadId", ""),
+                    "snippet": msg.get("snippet", ""),
+                    "from": headers.get("From", "Unknown sender"),
+                    "subject": headers.get("Subject", "(no subject)"),
+                    "date": headers.get("Date", ""),
+                })
+            return summaries
+
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(_executor, _fetch)
+
     async def get_message_body(self, message_id: str) -> str:
         """
         Fetch and decode the plain-text body of a specific message.

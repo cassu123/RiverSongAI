@@ -149,6 +149,14 @@ CREATE TABLE IF NOT EXISTS routines (
 
 CREATE INDEX IF NOT EXISTS idx_routines_user ON routines(user_id);
 
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    user_id           TEXT NOT NULL,
+    endpoint          TEXT NOT NULL,
+    subscription_json TEXT NOT NULL,
+    created_at        TEXT NOT NULL,
+    PRIMARY KEY (user_id, endpoint)
+);
+
 CREATE TABLE IF NOT EXISTS feed_preferences (
     user_id             TEXT PRIMARY KEY,
     news_sources        TEXT NOT NULL DEFAULT '[]',
@@ -1531,6 +1539,52 @@ class SQLiteStore:
         conn.execute(
             "DELETE FROM analytics_snapshots WHERE id=? AND user_id=?",
             (snapshot_id, user_id),
+        )
+        conn.commit()
+
+    # -------------------------------------------------------------------------
+    # Web Push Notifications
+    # -------------------------------------------------------------------------
+
+    async def save_push_subscription(self, user_id: str, subscription_json: str) -> None:
+        await self._run(self._sync_save_push_subscription, user_id, subscription_json)
+
+    def _sync_save_push_subscription(self, user_id: str, subscription_json: str) -> None:
+        import json
+        conn = self._get_conn()
+        sub = json.loads(subscription_json)
+        endpoint = sub["endpoint"]
+        now = _now_str()
+        conn.execute(
+            """
+            INSERT INTO push_subscriptions (user_id, endpoint, subscription_json, created_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(user_id, endpoint) DO UPDATE SET
+                subscription_json = excluded.subscription_json
+            """,
+            (user_id, endpoint, subscription_json, now),
+        )
+        conn.commit()
+
+    async def get_push_subscriptions(self, user_id: str) -> list[str]:
+        return await self._run(self._sync_get_push_subscriptions, user_id)
+
+    def _sync_get_push_subscriptions(self, user_id: str) -> list[str]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT subscription_json FROM push_subscriptions WHERE user_id=?",
+            (user_id,),
+        ).fetchall()
+        return [row[0] for row in rows]
+
+    async def delete_push_subscription(self, user_id: str, endpoint: str) -> None:
+        await self._run(self._sync_delete_push_subscription, user_id, endpoint)
+
+    def _sync_delete_push_subscription(self, user_id: str, endpoint: str) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            "DELETE FROM push_subscriptions WHERE user_id=? AND endpoint=?",
+            (user_id, endpoint),
         )
         conn.commit()
         conn.commit()

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import RiverStatusBox from '../components/RiverStatusBox.jsx'
+import HealthCard from '../components/HealthCard.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import './DashboardPage.css'
 
@@ -7,6 +8,7 @@ import './DashboardPage.css'
 // Widget registry — defines every available tile
 // ---------------------------------------------------------------------------
 const ALL_WIDGETS = [
+  { key: 'health_status',   label: 'River Song Health', col: 'left' },
   { key: 'system_status',   label: 'System Status',   col: 'left',  adminOnly: true },
   { key: 'recent_sessions', label: 'Recent Sessions',  col: 'left'  },
   { key: 'memory_activity', label: 'Memory Activity',  col: 'left'  },
@@ -207,6 +209,20 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
       {/* Dashboard grid */}
       <div className="dashboard">
         <div className="dashboard-left">
+
+          {/* Health Status */}
+          {visible['health_status'] && (
+            <WidgetShell
+              label={null}
+              widgetKey="health_status"
+              arrange={arrange}
+              visible={visible}
+              onToggle={toggleWidget}
+              noPad
+            >
+              <HealthCard />
+            </WidgetShell>
+          )}
 
           {/* System Status — admin only */}
           {isAdmin && visible['system_status'] && (
