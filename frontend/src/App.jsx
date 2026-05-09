@@ -1,33 +1,34 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react'
 import { useAuth }        from './context/AuthContext.jsx'
 import Sidebar            from './components/Sidebar.jsx'
 import ErrorBoundary      from './components/ErrorBoundary.jsx'
-import LoginPage          from './pages/LoginPage.jsx'
-import SignupPage         from './pages/SignupPage.jsx'
-import SetupPage          from './pages/SetupPage.jsx'
-import DashboardPage      from './pages/DashboardPage.jsx'
-import ConversationPage   from './pages/ConversationPage.jsx'
-import ChatPage           from './pages/ChatPage.jsx'
-import MemoryPage         from './pages/MemoryPage.jsx'
-import RoutinesPage       from './pages/RoutinesPage.jsx'
-import HomeNodePage       from './pages/HomeNodePage.jsx'
-import UsersPage          from './pages/UsersPage.jsx'
-import KillSwitchPage     from './pages/KillSwitchPage.jsx'
-import ProfilePage        from './pages/ProfilePage.jsx'
-import SettingsPage       from './pages/SettingsPage.jsx'
-import FeedsPage          from './pages/FeedsPage.jsx'
-import GooglePage         from './pages/GooglePage.jsx'
-import CommercePage       from './pages/CommercePage.jsx'
-import ReadingPage        from './pages/ReadingPage.jsx'
-import AnalyticsPage      from './pages/AnalyticsPage.jsx'
-import InventoryPage           from './pages/InventoryPage.jsx'
-import MaintenancePulsePage    from './pages/MaintenancePulsePage.jsx'
-import CulinaryPage            from './pages/CulinaryPage.jsx'
-import GoogleCallbackPage      from './pages/GoogleCallbackPage.jsx'
-import ReadingOAuthCallbackPage from './pages/ReadingOAuthCallbackPage.jsx'
 
-const ADMIN_PAGES    = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch'])
-const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings']) // never hidden for non-child users
+// Lazy load pages
+const LoginPage          = lazy(() => import('./pages/LoginPage.jsx'))
+const SignupPage         = lazy(() => import('./pages/SignupPage.jsx'))
+const SetupPage          = lazy(() => import('./pages/SetupPage.jsx'))
+const DashboardPage      = lazy(() => import('./pages/DashboardPage.jsx'))
+const ConversationPage   = lazy(() => import('./pages/ConversationPage.jsx'))
+const ChatPage           = lazy(() => import('./pages/ChatPage.jsx'))
+const MemoryPage         = lazy(() => import('./pages/MemoryPage.jsx'))
+const RoutinesPage       = lazy(() => import('./pages/RoutinesPage.jsx'))
+const HomeNodePage       = lazy(() => import('./pages/HomeNodePage.jsx'))
+const UsersPage          = lazy(() => import('./pages/UsersPage.jsx'))
+const KillSwitchPage     = lazy(() => import('./pages/KillSwitchPage.jsx'))
+const ProfilePage        = lazy(() => import('./pages/ProfilePage.jsx'))
+const SettingsPage       = lazy(() => import('./pages/SettingsPage.jsx'))
+const FeedsPage          = lazy(() => import('./pages/FeedsPage.jsx'))
+const GooglePage         = lazy(() => import('./pages/GooglePage.jsx'))
+const CommercePage       = lazy(() => import('./pages/CommercePage.jsx'))
+const ReadingPage        = lazy(() => import('./pages/ReadingPage.jsx'))
+const AnalyticsPage      = lazy(() => import('./pages/AnalyticsPage.jsx'))
+const InventoryPage           = lazy(() => import('./pages/InventoryPage.jsx'))
+const MaintenancePulsePage    = lazy(() => import('./pages/MaintenancePulsePage.jsx'))
+const CulinaryPage            = lazy(() => import('./pages/CulinaryPage.jsx'))
+const GoogleCallbackPage      = lazy(() => import('./pages/GoogleCallbackPage.jsx'))
+const ReadingOAuthCallbackPage = lazy(() => import('./pages/ReadingOAuthCallbackPage.jsx'))
+
+import { ADMIN_PAGES, ALWAYS_VISIBLE } from './utils/constants.js'
 
 function load(key, fallback) {
   try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback }
@@ -182,34 +183,36 @@ export default function App() {
 
       <main className="app-main">
         <ErrorBoundary key={currentPage}>
-          <div className="page-enter">
-            {currentPage === 'dashboard'  && <DashboardPage  onNavigate={handleNavigate} isAdmin={adminMode} />}
-            {currentPage === 'speak'      && <ConversationPage />}
-            {currentPage === 'chat'       && <ChatPage />}
-            {currentPage === 'memory'     && <MemoryPage />}
-            {currentPage === 'routines'   && <RoutinesPage />}
-            {currentPage === 'home'       && <HomeNodePage />}
-            {currentPage === 'users'      && <UsersPage />}
-            {currentPage === 'killswitch' && <KillSwitchPage />}
-            {currentPage === 'profile'    && (
-              <ProfilePage
-                profile={profile}
-                onSave={setProfile}
-                theme={theme}
-                onThemeChange={setTheme}
-              />
-            )}
-            {currentPage === 'settings'   && <SettingsPage onFeaturesChanged={refreshFeatures} />}
-            {currentPage === 'feeds'      && <FeedsPage />}
-            {currentPage === 'google'     && <GooglePage />}
-            {currentPage === 'commerce'   && <CommercePage />}
-            {currentPage === 'reading'    && <ReadingPage />}
-            {currentPage === 'analytics'  && <AnalyticsPage />}
-            {currentPage === 'inventory'    && <InventoryPage />}
+          <Suspense fallback={<div className="loading-screen">INITIALIZING...</div>}>
+            <div className="page-enter">
+              {currentPage === 'dashboard'  && <DashboardPage  onNavigate={handleNavigate} isAdmin={adminMode} />}
+              {currentPage === 'speak'      && <ConversationPage />}
+              {currentPage === 'chat'       && <ChatPage />}
+              {currentPage === 'memory'     && <MemoryPage />}
+              {currentPage === 'routines'   && <RoutinesPage />}
+              {currentPage === 'home'       && <HomeNodePage />}
+              {currentPage === 'users'      && <UsersPage />}
+              {currentPage === 'killswitch' && <KillSwitchPage />}
+              {currentPage === 'profile'    && (
+                <ProfilePage
+                  profile={profile}
+                  onSave={setProfile}
+                  theme={theme}
+                  onThemeChange={setTheme}
+                />
+              )}
+              {currentPage === 'settings'   && <SettingsPage onFeaturesChanged={refreshFeatures} />}
+              {currentPage === 'feeds'      && <FeedsPage />}
+              {currentPage === 'google'     && <GooglePage />}
+              {currentPage === 'commerce'   && <CommercePage />}
+              {currentPage === 'reading'    && <ReadingPage />}
+              {currentPage === 'analytics'  && <AnalyticsPage />}
+              {currentPage === 'inventory'    && <InventoryPage />}
 
-            {currentPage === 'maintenance' && <MaintenancePulsePage />}
-            {currentPage === 'culinary'    && <CulinaryPage />}
-          </div>
+              {currentPage === 'maintenance' && <MaintenancePulsePage />}
+              {currentPage === 'culinary'    && <CulinaryPage />}
+            </div>
+          </Suspense>
         </ErrorBoundary>
       </main>
     </div>
