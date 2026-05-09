@@ -1,9 +1,8 @@
 # =============================================================================
-# River Song AI -- Python Dependencies
+# River Song AI — Python Dependencies
 # =============================================================================
-# Install with: pip install -r requirements.txt --no-build-isolation
-# Requires Python 3.11+  |  setuptools<71 must be installed first:
-#   pip install "setuptools<71" && pip install -r requirements.txt --no-build-isolation
+# Install:  pip install -r requirements.txt
+# Requires: Python 3.11+
 # =============================================================================
 
 
@@ -28,20 +27,20 @@ python-dotenv==1.2.2            # .env file support
 
 
 # -----------------------------------------------------------------------------
-# STT -- Whisper (local, server-side transcription)
+# STT — Whisper (local, server-side transcription)
 # Audio capture happens in the browser; server receives WAV bytes over WebSocket
 # -----------------------------------------------------------------------------
 openai-whisper==20250625
-torch>=2.6.0                    # minimum safe version for multiple CVEs
+torch>=2.6.0                    # security floor: multiple CVEs in older versions
 numpy>=2.1.0                    # 2.x required for Python 3.13+
 scipy>=1.14.0                   # Resampling browser audio to 16 kHz for Whisper
 soundfile==0.13.1               # WAV decode (bytes -> numpy array)
 
 
 # -----------------------------------------------------------------------------
-# LLM -- Ollama (local primary) + cloud providers (optional, key required)
+# LLM — Ollama (local primary) + cloud providers (optional, key required)
 # -----------------------------------------------------------------------------
-ollama==0.6.1                   # Ollama client -- local LLM (primary)
+ollama==0.6.1                   # Ollama client — local LLM (primary)
 anthropic==0.96.0               # Claude API cloud LLM
 google-genai==1.16.0            # Google Gemini cloud LLM
 openai==1.82.0                  # OpenAI cloud LLM
@@ -50,40 +49,39 @@ boto3==1.38.0                   # Amazon Bedrock (and AWS SDK)
 
 
 # -----------------------------------------------------------------------------
-# TTS -- Multi-engine (Piper + Kokoro + ElevenLabs)
-# elevenlabs SDK not required — provider calls the REST API directly via httpx
-pywebpush>=2.0.0                      # Web Push notifications
-# openwakeword — tflite-runtime was removed from PyPI for Linux; install manually:
-#   pip install tflite-runtime --find-links https://github.com/google-coral/pycoral/releases/download/v2.0.0/tflite_runtime-2.5.0.post1-cp39-cp39-linux_x86_64.whl
+# TTS — Multi-engine (Piper + Kokoro + ElevenLabs)
+# Note: elevenlabs SDK not needed — provider calls REST API directly via httpx
+# -----------------------------------------------------------------------------
+pywebpush>=2.0.0                # Web Push notifications (push.py route)
+
+# Wake word — "Hey River" (openWakeWord)
+# tflite-runtime was removed from PyPI for Linux. Install manually:
+#   pip install tflite-runtime --find-links \
+#     https://github.com/google-coral/pycoral/releases/download/v2.0.0/\
+#     tflite_runtime-2.5.0.post1-cp39-cp39-linux_x86_64.whl
 #   pip install openwakeword==0.6.0
-# Wake word detection fails gracefully if not installed.
-#
-# Piper (local binary, zero Python deps):
-#   Binary: /usr/local/bin/piper  (pre-installed)
+# The app fails gracefully if not installed — wake word simply won't trigger.
+
+# Piper TTS (local binary, zero Python deps):
+#   Binary: /usr/local/bin/piper  (pre-installed on server)
 #   Models: python scripts/download_voices.py [voice_id ...]
 #
-# Kokoro (Python, CPU-native, 82M params):
-#   28 built-in English voices, auto-downloads ~325 MB model on first use
-#   Runs real-time on CPU — no VRAM required
-#   github.com/hexgrad/kokoro
-# -----------------------------------------------------------------------------
-# kokoro requires Python <3.13 — incompatible with Python 3.13+ servers.
-# Install manually on Python 3.10-3.12 only:
-#   pip install kokoro==0.9.4          (Python 3.10-3.12)
-#   pip install kokoro==0.7.16         (Python 3.8-3.12, broader compat)
-# The app handles missing kokoro gracefully — Piper voices still work.
-
-# Future TTS engines (uncomment when GPU VRAM >= threshold):
-# chatterbox-tts==0.1.7          # 350M params, <4.5 GB VRAM, emotive tags
-# f5-tts==1.1.20                 # Flow-matching, zero-shot cloning, needs 8 GB VRAM
-# outetts==0.4.4                 # 500M, GGUF-compatible CPU+GPU
+# Kokoro TTS (Python, CPU-native, 82M params, 28 English voices):
+#   Requires Python 3.10–3.12 (incompatible with 3.13+)
+#   Install manually: pip install kokoro==0.9.4
+#   The app handles missing kokoro gracefully — Piper voices still work.
+#
+# Optional TTS (uncomment when sufficient GPU VRAM is available):
+# chatterbox-tts==0.1.7          # Voice cloning, <4.5 GB VRAM
+# f5-tts==1.1.20                 # Flow-matching zero-shot, 8 GB VRAM required
+# outetts==0.4.4                 # 500M params, GGUF-compatible CPU+GPU
 
 
 # -----------------------------------------------------------------------------
-# Kill switch
+# Auth
 # -----------------------------------------------------------------------------
-bcrypt==5.0.0                   # Password hashing for kill switch reset
-PyJWT==2.12.1                   # JWT token generation and verification for auth
+bcrypt==5.0.0                   # Password hashing for kill switch
+PyJWT==2.12.1                   # JWT token generation and verification
 
 
 # -----------------------------------------------------------------------------
@@ -104,22 +102,16 @@ yt-dlp==2026.3.17                    # Audio stream extraction for playback
 
 
 # -----------------------------------------------------------------------------
-# Commerce Automation (Phase 8)
+# Commerce
 # -----------------------------------------------------------------------------
-python-amazon-sp-api==2.1.8          # Amazon Selling Partner API (auth + endpoints)
+python-amazon-sp-api==2.1.8          # Amazon Selling Partner API
 
 
 # -----------------------------------------------------------------------------
-# Reading Providers (Phase 6)
+# Memory / Vector Store
 # -----------------------------------------------------------------------------
-# audible==0.10.0                    # Audible library access and device auth (unsupported on Python 3.14+)
-
-
-# -----------------------------------------------------------------------------
-# Memory / Vector Store (Phase 1)
-# -----------------------------------------------------------------------------
-pybind11==2.13.6                     # C++ binding tool required for building chroma-hnswlib
-chromadb==1.5.9                      # Local vector database for semantic memory (upgraded for security)
+chromadb==1.5.9                      # Local vector database for semantic memory
+pybind11==2.13.6                     # C++ bindings required by chroma-hnswlib
 
 
 # -----------------------------------------------------------------------------
@@ -129,200 +121,22 @@ sqlalchemy==2.0.49                   # ORM for inventory.db (SQLite)
 qrcode[pil]==8.2                     # QR code PNG generation
 python-barcode[images]==0.16.1       # Code-128 barcode PNG generation
 reportlab==4.4.1                     # PDF label/report generation
-# easyocr                            # Optional: receipt OCR (large install, ~2 GB with torch)
+# easyocr                            # Optional: receipt OCR (~2 GB with torch)
                                      # Install manually: pip install easyocr
 
 
 # -----------------------------------------------------------------------------
 # Utilities
 # -----------------------------------------------------------------------------
-httpx==0.28.1                        # Async HTTP client (health checks, Libby, Walmart)
-feedparser==6.0.11                   # RSS/Atom feed parsing (news provider)
+httpx==0.28.1                        # Async HTTP client
+feedparser==6.0.11                   # RSS/Atom feed parsing
 
-# Pinned for security:
-requests>=2.32.0                     # CVE-2024-35195 and others
-urllib3>=2.2.2                       # CVE-2024-37891 and others
+
+# -----------------------------------------------------------------------------
+# Security floors — explicit safe minimums for transitive dependencies
+# -----------------------------------------------------------------------------
+setuptools>=78.1.1                   # CVE-2025-47273 path traversal
+requests>=2.32.0                     # CVE-2024-35195
+urllib3>=2.2.2                       # CVE-2024-37891
 certifi>=2024.7.4                    # stale certificate bundle
-cryptography>=43.0.1                 # CVE-2024-26130 and others
-setuptools>=78.1.1                   # CVE-2025-47273 path traversal fix
-
-
-# =============================================================================
-# NOT REQUIRED -- Codespace environment packages captured by pip freeze
-# These were leaked into requirements.txt by running `pip freeze` directly.
-# They are Codespace dev tools, Jupyter, CUDA drivers, and torch transitive
-# deps -- none of them are River Song dependencies.
-# =============================================================================
-
-# annotated-doc==0.0.4
-# annotated-types==0.7.0
-# anyio==4.11.0
-# argon2-cffi==25.1.0
-# argon2-cffi-bindings==25.1.0
-# arrow==1.4.0
-# asttokens==3.0.1
-# async-lru==2.0.5
-# attrs==25.4.0
-# babel==2.17.0
-# beautifulsoup4==4.14.2
-# bleach==6.3.0
-# boolean.py==5.0
-# CacheControl==0.14.4
-# cachetools==5.5.2
-# certifi==2025.11.12
-# cffi==2.0.0
-# charset-normalizer==3.4.4
-# click==8.3.2
-# colorama==0.4.6
-# comm==0.2.3
-# confuse==2.2.0
-# cuda-bindings==13.2.0           # torch transitive dep, Codespace-specific
-# cuda-pathfinder==1.5.3          # torch transitive dep
-# cuda-toolkit==13.0.2            # torch transitive dep
-# cyclonedx-python-lib==11.7.0    # Codespace dev tool
-# debugpy==1.8.17                 # Codespace debugger
-# decorator==5.2.1
-# defusedxml==0.7.1
-# executing==2.2.1
-# fastjsonschema==2.21.2
-# filelock==3.28.0
-# fqdn==1.5.1
-# fsspec==2026.3.0
-# gitdb==4.0.12                   # Codespace dev tool
-# GitPython==3.1.45               # Codespace dev tool
-# googleapis-common-protos==1.74.0
-# h11==0.16.0
-# httpcore==1.0.9
-# httplib2==0.31.2
-# httptools==0.7.1
-# idna==3.11
-# ipykernel==7.1.0                # Jupyter
-# ipython==9.7.0                  # Jupyter
-# ipython_pygments_lexers==1.1.1  # Jupyter
-# isoduration==20.11.0
-# jedi==0.19.2
-# Jinja2==3.1.6
-# json5==0.12.1
-# jsonpointer==3.0.0
-# jsonschema==4.25.1
-# jsonschema-specifications==2025.9.1
-# jupyter-events==0.12.0          # Jupyter
-# jupyter-lsp==2.3.0              # Jupyter
-# jupyter-server-mathjax==0.2.6   # Jupyter
-# jupyter_client==8.6.3           # Jupyter
-# jupyter_core==5.9.1             # Jupyter
-# jupyter_server==2.17.0          # Jupyter
-# jupyter_server_terminals==0.5.3 # Jupyter
-# jupyterlab==4.5.0               # Jupyter
-# jupyterlab_git==0.51.2          # Jupyter
-# jupyterlab_pygments==0.3.0      # Jupyter
-# jupyterlab_server==2.28.0       # Jupyter
-# lark==1.3.1
-# license-expression==30.4.4
-# llvmlite==0.47.0                # numba transitive dep
-# markdown-it-py==4.0.0
-# MarkupSafe==3.0.3
-# matplotlib-inline==0.2.1
-# mdurl==0.1.2
-# mistune==3.1.4
-# more-itertools==11.0.2
-# mpmath==1.3.0
-# msgpack==1.1.2
-# nbclient==0.10.2                # Jupyter
-# nbconvert==7.16.6               # Jupyter
-# nbdime==4.0.2                   # Jupyter
-# nbformat==5.10.4                # Jupyter
-# nest-asyncio==1.6.0
-# networkx==3.6.1
-# notebook_shim==0.2.4            # Jupyter
-# numba==0.65.0                   # torch transitive dep
-# nvidia-cublas==13.1.0.3         # CUDA -- Codespace-specific
-# nvidia-cuda-cupti==13.0.85      # CUDA -- Codespace-specific
-# nvidia-cuda-nvrtc==13.0.88      # CUDA -- Codespace-specific
-# nvidia-cuda-runtime==13.0.96    # CUDA -- Codespace-specific
-# nvidia-cudnn-cu13==9.19.0.56    # CUDA -- Codespace-specific
-# nvidia-cufft==12.0.0.61         # CUDA -- Codespace-specific
-# nvidia-cufile==1.15.1.6         # CUDA -- Codespace-specific
-# nvidia-curand==10.4.0.35        # CUDA -- Codespace-specific
-# nvidia-cusolver==12.0.4.66      # CUDA -- Codespace-specific
-# nvidia-cusparse==12.6.3.3       # CUDA -- Codespace-specific
-# nvidia-cusparselt-cu13==0.8.0   # CUDA -- Codespace-specific
-# nvidia-nccl-cu13==2.28.9        # CUDA -- Codespace-specific
-# nvidia-nvjitlink==13.0.88       # CUDA -- Codespace-specific
-# nvidia-nvshmem-cu13==3.4.5      # CUDA -- Codespace-specific
-# nvidia-nvtx==13.0.85            # CUDA -- Codespace-specific
-# oauthlib==3.3.1
-# packageurl-python==0.17.6
-# packaging==25.0
-# pandocfilters==1.5.1
-# parso==0.8.5
-# pbkdf2==1.3
-# pexpect==4.9.0
-# pillow==12.2.0
-# pip-api==0.0.34                 # Codespace dev tool
-# pip-requirements-parser==32.0.1 # Codespace dev tool
-# pip_audit==2.10.0               # Codespace dev tool
-# platformdirs==4.5.0
-# prometheus_client==0.23.1
-# prompt_toolkit==3.0.52
-# proto-plus==1.27.2
-# protobuf==7.34.1
-# psutil==7.1.3
-# ptyprocess==0.7.0
-# pure_eval==0.2.3
-# py-serializable==2.1.0
-# pyaes==1.6.1
-# pyasn1==0.6.3
-# pyasn1_modules==0.4.2
-# pycparser==2.23
-# pydantic_core==2.23.4
-# Pygments==2.19.2
-# pyparsing==3.3.2
-# python-dateutil==2.9.0.post0
-# python-json-logger==4.0.0
-# PyYAML==6.0.3
-# pyzmq==27.1.0
-# referencing==0.37.0
-# regex==2026.4.4
-# requests==2.32.5
-# requests-oauthlib==2.0.0
-# rfc3339-validator==0.1.4
-# rfc3986-validator==0.1.1
-# rfc3987-syntax==1.1.0
-# rich==15.0.0
-# rpds-py==0.29.0
-# rsa==4.9.1
-# Send2Trash==1.8.3
-# setuptools==70.3.0
-# six==1.17.0
-# smmap==5.0.2
-# sniffio==1.3.1
-# sortedcontainers==2.4.0
-# sounddevice==0.5.1              # REMOVED: audio no longer plays server-side
-# soupsieve==2.8
-# stack-data==0.6.3
-# starlette==0.41.3
-# sympy==1.14.0
-# terminado==0.18.1               # Jupyter
-# tiktoken==0.12.0
-# tinycss2==1.4.0
-# tomli==2.4.1
-# tomli_w==1.2.0
-# torch==2.11.0                   # whisper transitive dep -- installed automatically
-# tornado==6.5.2
-# tqdm==4.67.3
-# traitlets==5.14.3
-# triton==3.6.0                   # torch transitive dep
-# typing-inspection==0.4.2
-# typing_extensions==4.15.0
-# tzdata==2025.2
-# uri-template==1.3.0
-# uritemplate==4.2.0
-# urllib3==2.5.0
-# uvloop==0.22.1
-# watchfiles==1.1.1
-# wcwidth==0.2.14
-# webcolors==25.10.0
-# webencodings==0.5.1
-# websocket-client==1.9.0
-# websockets==13.1               # managed by uvicorn[standard]
+cryptography>=43.0.1                 # CVE-2024-26130
