@@ -126,3 +126,12 @@ class TTSProvider(ABC):
             RuntimeError: If synthesis fails (binary not found, model error, etc.).
         """
         ...
+
+    async def stream_synthesize(self, text: str) -> AsyncGenerator[bytes, None]:
+        """
+        Stream audio bytes for the given text. 
+        Default implementation just calls synthesize and yields once.
+        """
+        result = await self.synthesize(text)
+        if result:
+            yield result

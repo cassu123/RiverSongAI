@@ -196,6 +196,40 @@ TOOL_SCHEMAS = [
             },
             "required": []
         }
+    },
+    {
+        "name": "web_search",
+        "description": "Search the internet for real-time information or look something up.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The search terms or question to look up."},
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "search_emails",
+        "description": "Read or search through your Gmail inbox for unread messages or specific topics.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Search query for emails (e.g., 'from:Amazon' or 'unread')."},
+                "max_results": {"type": "integer", "description": "Number of emails to summarize. Defaults to 3."},
+            }
+        }
+    },
+    {
+        "name": "get_weather",
+        "description": "Get the current weather and forecast for a specific location or coordinates.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "location": {"type": "string", "description": "City name or 'current location'."},
+                "units": {"type": "string", "enum": ["celsius", "fahrenheit"], "description": "Temperature units."},
+            },
+            "required": ["location"]
+        }
     }
 ]
 
@@ -260,6 +294,15 @@ async def execute_tool(tool_name: str, tool_input: Dict[str, Any], context: Dict
 
         elif tool_name == "generate_business_report":
             return await _exec_generate_business_report(tool_input, user_id)
+
+        elif tool_name == "web_search":
+            return await _exec_web_search(tool_input, user_id)
+
+        elif tool_name == "search_emails":
+            return await _exec_search_emails(tool_input, user_id)
+
+        elif tool_name == "get_weather":
+            return await _exec_get_weather(tool_input, user_id)
 
         else:
             return f"Unknown tool '{tool_name}' requested."
@@ -558,6 +601,7 @@ def _get_commerce_db():
     return Session()
 
 async def _exec_search_commerce_products(args: dict, user_id: str) -> str:
+    db = None
     try:
         from commercial_inventory.management import get_workspaces_for_user, get_products, get_or_create_biz_user
         
@@ -565,7 +609,6 @@ async def _exec_search_commerce_products(args: dict, user_id: str) -> str:
         biz_user = get_or_create_biz_user(db, external_user_id=user_id, email=user_id)
         workspaces = get_workspaces_for_user(db, biz_user)
         if not workspaces:
-            db.close()
             return "You do not have any active store workspaces configured."
         
         query = args.get('query', '').lower()
@@ -576,14 +619,17 @@ async def _exec_search_commerce_products(args: dict, user_id: str) -> str:
                 if query in p.name.lower() or query in str(p.sku).lower():
                     results.append(f"{p.name} (SKU: {p.sku}) - {p.stock_qty} in stock at ${p.unit_price}")
                     
-        db.close()
         if not results:
             return f"No products found matching '{query}'."
         return "\n".join(results)
     except Exception as exc:
         return f"Error searching products: {exc}"
+    finally:
+        if db is not None:
+            db.close()
 
 async def _exec_create_commerce_sale(args: dict, user_id: str) -> str:
+    db = None
     try:
         from commercial_inventory.management import get_workspaces_for_user, get_products, get_or_create_biz_user, create_sale, LineItemIn
         from commercial_inventory.models import Customer
@@ -592,7 +638,6 @@ async def _exec_create_commerce_sale(args: dict, user_id: str) -> str:
         biz_user = get_or_create_biz_user(db, external_user_id=user_id, email=user_id)
         workspaces = get_workspaces_for_user(db, biz_user)
         if not workspaces:
-            db.close()
             return "You do not have any active store workspaces configured."
             
         ws = workspaces[0]  # default to first workspace for voice commands
@@ -602,11 +647,9 @@ async def _exec_create_commerce_sale(args: dict, user_id: str) -> str:
         target_product = next((p for p in products if p.sku.lower() == product_query or p.name.lower() == product_query or str(p.id) == product_query), None)
         
         if not target_product:
-            db.close()
             return f"Could not find a product matching '{args['product_id']}' to sell."
             
         if target_product.stock_qty < args['quantity']:
-            db.close()
             return f"Insufficient stock for {target_product.name}. You only have {target_product.stock_qty} units available."
             
         customer_id = None
@@ -626,11 +669,13 @@ async def _exec_create_commerce_sale(args: dict, user_id: str) -> str:
         from commercial_inventory.models import SaleStatus
         sale.status = SaleStatus.COMPLETED
         db.commit()
-        db.close()
         
         return f"Successfully logged sale of {args['quantity']}x {target_product.name}. Remaining stock: {target_product.stock_qty}."
     except Exception as exc:
         return f"Failed to log sale: {exc}"
+    finally:
+        if db is not None:
+            db.close()
 
 async def _exec_trigger_n8n(args: dict, user_id: str) -> str:
     try:
@@ -687,3 +732,114 @@ async def _exec_generate_business_report(args: dict, user_id: str) -> str:
         return report
     finally:
         db.close()
+
+async def _exec_web_search(args: dict, user_id: str) -> str:
+    try:
+        from providers.web.search import build_search_provider
+        provider = build_search_provider()
+        return await provider.search(args["query"])
+    except Exception as exc:
+        logger.error("Web search tool failed: %s", exc)
+        return f"I tried to search the web for '{args['query']}', but encountered an issue: {str(exc)}"
+
+async def _exec_search_emails(args: dict, user_id: str) -> str:
+    try:
+        from providers.google.gmail import build_gmail_provider
+        provider = build_gmail_provider(user_id=user_id)
+        
+        query = args.get("query", "is:unread")
+        max_results = args.get("max_results", 3)
+        
+        emails = await provider.search_messages(query, max_results=max_results)
+        if not emails:
+            return f"I searched your Gmail for '{query}' but didn't find any matching messages."
+            
+        summaries = []
+        for i, em in enumerate(emails):
+            snippet = em.get("snippet", "No snippet.")
+            subject = em.get("subject", "No subject")
+            sender = em.get("from", "Unknown sender")
+            summaries.append(f"{i+1}. From: {sender}\n   Subject: {subject}\n   Snippet: {snippet}")
+            
+        header = f"Found {len(summaries)} emails for '{query}':"
+        return header + "\n\n" + "\n\n".join(summaries)
+        
+    except Exception as exc:
+        logger.error("Gmail tool failed: %s", exc)
+        return f"I tried to read your emails, but encountered an issue: {str(exc)}. Make sure Google is linked in Settings."
+
+async def _exec_get_weather(args: dict, user_id: str) -> str:
+    try:
+        from providers.google.maps import build_maps_provider
+        from providers.web.weather import build_weather_provider
+        
+        location = args["location"]
+        units = args.get("units", "celsius")
+        
+        # 1. Geocode location name to lat/lon
+        maps = build_maps_provider()
+        geo = await maps.geocode(location)
+        if not geo:
+            return f"I couldn't find a place called '{location}'."
+        
+        lat = geo["geometry"]["location"]["lat"]
+        lon = geo["geometry"]["location"]["lng"]
+        addr = geo.get("formatted_address", location)
+        
+        # 2. Fetch weather
+        weather = build_weather_provider()
+        report = await weather.get_forecast(lat, lon, units)
+        
+        return f"Weather for {addr}:\n{report}"
+        
+    except Exception as exc:
+        logger.error("Weather tool failed: %s", exc)
+        return f"I tried to check the weather for '{args['location']}', but encountered an issue: {str(exc)}"
+
+
+async def get_upcoming_events(user_id: str, hours_ahead: int = 8) -> list[dict]:
+    """
+    Standalone helper to fetch calendar events for the near future.
+    Used by the startup briefing feature.
+    """
+    try:
+        from providers.google.calendar import build_calendar_provider
+        from datetime import datetime, timedelta, timezone
+        
+        provider = build_calendar_provider(user_id=user_id)
+        
+        # We query 1 day to be safe, then filter in memory
+        events = await provider.get_upcoming_events(days_ahead=1, max_results=10)
+        
+        if not events:
+            return []
+            
+        now = datetime.now(timezone.utc)
+        cutoff = now + timedelta(hours=hours_ahead)
+        
+        results = []
+        for e in events:
+            start_raw = e.get("start", {})
+            dt_str = start_raw.get("dateTime") or start_raw.get("date")
+            if not dt_str:
+                continue
+                
+            try:
+                # Handle both ISO formats
+                start_dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+                if start_dt.tzinfo is None:
+                    start_dt = start_dt.replace(tzinfo=timezone.utc)
+                
+                if now <= start_dt <= cutoff:
+                    results.append({
+                        "title": e.get("summary", "Untitled"),
+                        "time": start_dt.isoformat(),
+                        "location": e.get("location", "")
+                    })
+            except (ValueError, TypeError):
+                continue
+                
+        return results
+    except Exception as exc:
+        logger.debug("get_upcoming_events failed: %s", exc)
+        return []

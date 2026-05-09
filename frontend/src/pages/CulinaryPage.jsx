@@ -442,6 +442,7 @@ function BannedTab({ api }) {
 // ── Library Tab ───────────────────────────────────────────────────────────────
 
 function LibraryTab({ api }) {
+  const { token } = useAuth()
   const [recipes, setRecipes]   = useState([])
   const [selected, setSelected] = useState(null)
   const [showIngest, setShowIngest] = useState(false)
@@ -452,12 +453,55 @@ function LibraryTab({ api }) {
   const [search, setSearch]     = useState('')
   const [mealFilter, setMealFilter] = useState('All')
   const [proteinFilter, setProteinFilter] = useState('All')
+  const [generatingId, setGeneratingId] = useState(null)
 
   const load = useCallback(() => {
     api.get('/recipes').then(setRecipes).catch(() => {})
   }, [api])
 
   useEffect(() => { load() }, [load])
+
+  const handleGeneratePhoto = async (recipe) => {
+    setGeneratingId(recipe.id)
+    try {
+      const ingredients_preview = (recipe.ingredients || []).slice(0, 5).map(i => i.name).join(', ')
+      const prompt = `Beautiful food photography of ${recipe.title}, ${ingredients_preview}, rustic wooden table, natural lighting, cookbook style`
+      
+      const res = await fetch('/api/image/generate', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({
+          prompt,
+          width: 512,
+          height: 512,
+          steps: 20
+        }),
+        signal: AbortSignal.timeout(90000)
+      })
+
+      if (res.status === 503) {
+        throw new Error("Image generation unavailable. Start Stable Diffusion first.")
+      }
+      if (!res.ok) throw new Error("Image generation failed. Try again.")
+      
+      const blob = await res.blob()
+      const fd = new FormData()
+      fd.append('file', blob, 'recipe.png')
+      
+      // Upload the generated image back to the recipe
+      const updated = await api.post(`/recipes/${recipe.id}/image`, fd, true)
+      setRecipes(prev => prev.map(r => r.id === recipe.id ? { ...r, image_url: updated.image_url } : r))
+      if (selected?.id === recipe.id) setSelected(prev => ({ ...prev, image_url: updated.image_url }))
+      
+    } catch (err) {
+      alert(err.name === 'AbortError' ? 'Generation timed out (90s).' : err.message)
+    } finally {
+      setGeneratingId(null)
+    }
+  }
 
   const deleteRecipe = async (id) => {
     await api.del(`/recipes/${id}`)
@@ -580,7 +624,19 @@ function LibraryTab({ api }) {
             <div className="recipe-card-banner">
               {r.image_url
                 ? <img className="recipe-card-img" src={r.image_url} alt={r.title} loading="lazy" />
-                : <div className="recipe-card-placeholder"><Icon name="restaurant_menu" size={32} /></div>
+                : (
+                  <div className="recipe-card-placeholder">
+                    <Icon name="restaurant_menu" size={32} />
+                    <button 
+                      className="cul-btn cul-btn-secondary cul-btn-sm"
+                      style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', fontSize: '0.65rem' }}
+                      onClick={(e) => { e.stopPropagation(); handleGeneratePhoto(r) }}
+                      disabled={generatingId === r.id}
+                    >
+                      {generatingId === r.id ? 'Generating...' : '✨ Generate Photo'}
+                    </button>
+                  </div>
+                )
               }
             </div>
             <div className="recipe-card-body">

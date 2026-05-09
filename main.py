@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 from contextlib import asynccontextmanager
@@ -91,10 +92,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     memory_manager = MemoryManager(store)
     await memory_manager.initialize()
     app.state.memory_manager = memory_manager
+    app.state.active_connections = {} # user_id -> List[WebSocket]
     logger.info("Memory layer ready (db=%s).", settings.db_path)
+
+    # Start routine scheduler
+    from core.routines_scheduler import start_scheduler
+    scheduler_task = asyncio.create_task(start_scheduler(app))
 
     yield  # Application runs here
 
+    scheduler_task.cancel()
+    try:
+        await scheduler_task
+    except asyncio.CancelledError:
+        pass
     store.close()
     logger.info("River Song AI shutting down.")
 
@@ -154,7 +165,7 @@ def create_app() -> FastAPI:
         admin_router, routines_router, inventory_router, commerce_router,
         vehicles_router, feeds_router, reading_router, features_router,
         parent_router, analytics_router, culinary_router, location_router, google_router,
-        vision_router, n8n_webhooks, shopify_webhooks_router
+        vision_router, n8n_webhooks, shopify_webhooks_router, image_router, push_router
     )
 
     app.include_router(auth_router)
@@ -179,8 +190,9 @@ def create_app() -> FastAPI:
     app.include_router(location_router)
     app.include_router(google_router)
     app.include_router(vision_router)
-    app.include_router(n8n_webhooks.router)
     app.include_router(shopify_webhooks_router)
+    app.include_router(image_router)
+    app.include_router(push_router)
 
     # Serve the built React frontend — must be last so API routes take priority
     import os

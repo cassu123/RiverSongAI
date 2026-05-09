@@ -69,9 +69,53 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
   const [error, setError]           = useState('');
   const [saving, setSaving]         = useState(false);
   const [analyzing, setAnalyzing]   = useState(false);
+  const [generating, setGenerating] = useState(false);
   const fileRef = useRef();
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const handleGenerateImage = async () => {
+    if (!form.name.trim()) { setError('Product name is required for generation.'); return; }
+    
+    setGenerating(true);
+    setError('');
+    
+    const prompt = `Professional product photo of ${form.name}, ${form.description || ''}, clean white background, studio lighting, e-commerce style`;
+    
+    try {
+      const res = await fetch('/api/image/generate', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({
+          prompt,
+          width: 512,
+          height: 512,
+          steps: 20
+        }),
+        signal: AbortSignal.timeout(90000)
+      });
+      
+      if (res.status === 503) {
+        throw new Error("Image generation unavailable. Start Stable Diffusion first.");
+      }
+      if (!res.ok) throw new Error("Image generation failed. Try again.");
+      
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setImagePreview(url);
+      
+      const file = new File([blob], `${form.name.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
+      setImageFile(file);
+      
+    } catch (err) {
+      setError(err.name === 'AbortError' ? 'Generation timed out (90s).' : err.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const handleAnalyzePhoto = async (e) => {
     const file = e.target.files?.[0];
@@ -158,6 +202,14 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
               {analyzing ? 'Analyzing...' : 'Analyze Photo'}
               <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAnalyzePhoto} disabled={analyzing} />
             </label>
+            <button 
+              className="iv-btn iv-btn--ghost iv-btn--sm" 
+              onClick={handleGenerateImage} 
+              disabled={generating}
+              style={{ cursor: generating ? 'default' : 'pointer', opacity: generating ? 0.7 : 1 }}
+            >
+              {generating ? 'Generating...' : '✨ Generate Image'}
+            </button>
           </div>
         </div>
 

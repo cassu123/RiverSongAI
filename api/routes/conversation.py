@@ -39,6 +39,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -51,6 +52,7 @@ from starlette.websockets import WebSocketState
 from core.auth import decode_token
 from core.conversation_loop import ConversationLoop, _build_llm_provider, _build_stt_provider
 from core.memory_manager import MemoryManager
+from core.wake_word_service import WakeWordService
 from config.settings import get_settings
 
 
@@ -85,6 +87,11 @@ async def conversation_websocket(websocket: WebSocket) -> None:
     user_id: str = payload["sub"]
     logger.info("WebSocket connection from %s (user_id=%s).", websocket.client, user_id)
 
+    # Register active connection for proactive briefings
+    if user_id not in websocket.app.state.active_connections:
+        websocket.app.state.active_connections[user_id] = []
+    websocket.app.state.active_connections[user_id].append(websocket)
+
     memory_manager: MemoryManager | None = getattr(websocket.app.state, "memory_manager", None)
 
     # Load per-user LLM + voice settings from DB
@@ -117,6 +124,16 @@ async def conversation_websocket(websocket: WebSocket) -> None:
 
     try:
         await loop.initialize()
+        
+        # Fire-and-forget startup briefing — does not block the connection
+        async def _startup_briefing():
+            try:
+                await loop.run_startup_briefing(on_event=lambda evt: _send(websocket, evt))
+            except Exception as exc:
+                logger.debug("Startup briefing skipped: %s", exc)
+        
+        asyncio.create_task(_startup_briefing())
+
     except Exception as exc:
         logger.error("ConversationLoop initialization failed: %s", exc)
         await _send(websocket, {
@@ -128,27 +145,46 @@ async def conversation_websocket(websocket: WebSocket) -> None:
 
     await _send(websocket, {"type": "idle"})
 
+    # Wake word detection for Ambient Mode
+    def on_wake():
+        asyncio.create_task(_send(websocket, {"type": "wake_word_detected"}))
+    
+    wake_service = WakeWordService(on_wake_word=on_wake)
+    ambient_mode = False
+
     # Track whether we're waiting for the audio_data that follows a "start"
     waiting_for_audio: bool = False
 
     try:
         while True:
             raw = await websocket.receive_text()
-
+            # ... existing JSON parse ...
             try:
                 message = json.loads(raw)
             except json.JSONDecodeError:
-                logger.warning("Received non-JSON message: %s", raw[:200])
-                await _send(websocket, {
-                    "type": "error",
-                    "message": "Invalid message format -- expected JSON.",
-                })
                 continue
 
             msg_type = message.get("type", "")
-            logger.debug("Received message type='%s'.", msg_type)
 
-            if msg_type == "start":
+            if msg_type == "ambient_mode":
+                ambient_mode = bool(message.get("enabled", False))
+                logger.info("Ambient mode %s (user_id=%s)", "enabled" if ambient_mode else "disabled", user_id)
+                continue
+
+            elif msg_type == "ambient_audio":
+                if not ambient_mode:
+                    continue
+                
+                raw_data = message.get("data", "")
+                if raw_data:
+                    try:
+                        chunk = base64.b64decode(raw_data)
+                        wake_service.process_chunk(chunk)
+                    except Exception as exc:
+                        logger.warning("Wake word chunk processing failed: %s", exc)
+                continue
+
+            elif msg_type == "start":
                 # Tell the browser to start recording
                 waiting_for_audio = True
                 await _send(websocket, {"type": "listening"})
@@ -218,7 +254,7 @@ async def conversation_websocket(websocket: WebSocket) -> None:
 
     except WebSocketDisconnect:
         logger.info("Client disconnected from %s.", websocket.client)
-
+    
     except Exception as exc:
         logger.error(
             "Unexpected WebSocket error from %s: %s", websocket.client, exc, exc_info=True
@@ -228,6 +264,15 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                 "type": "error",
                 "message": "An unexpected server error occurred.",
             })
+            
+    finally:
+        # Unregister active connection
+        if user_id in websocket.app.state.active_connections:
+            try:
+                websocket.app.state.active_connections[user_id].remove(websocket)
+                if not websocket.app.state.active_connections[user_id]:
+                    del websocket.app.state.active_connections[user_id]
+            except: pass
 
 
 async def _send(websocket: WebSocket, payload: dict) -> None:

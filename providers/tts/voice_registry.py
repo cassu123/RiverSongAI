@@ -23,6 +23,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
+from config.settings import get_settings
+
 _HF_PIPER = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
 
 
@@ -453,6 +455,28 @@ _CATALOG: List[VoiceEntry] = [
         lang="en_GB", accent="British", gender="male", quality="balanced",
         size_mb=0, description="Grounded, steady British male.",
         preview_text="Rook here. Steady, reliable, and ready for whatever's next.",
+    ),
+
+    # =========================================================================
+    # CHATTERBOX VOICES (VOICE CLONING)
+    # =========================================================================
+    VoiceEntry(
+        voice_id="cloned",  display_name="River (Cloned)",
+        engine="chatterbox", voice_code="cloned",
+        lang="en_GB", accent="British", gender="female", quality="high",
+        size_mb=0, description="Your custom cloned voice. Requires voice_reference.wav.",
+        preview_text="Hello, sweetie. I'm your custom cloned voice — just like the real River Song.",
+    ),
+
+    # =========================================================================
+    # ELEVENLABS VOICES
+    # =========================================================================
+    VoiceEntry(
+        voice_id="eleven-river", display_name="River (Eleven)",
+        engine="elevenlabs",     voice_code=get_settings().elevenlabs_voice_id,
+        lang="en_GB", accent="British", gender="female", quality="high",
+        size_mb=0, description="Sophisticated British female via ElevenLabs API.",
+        preview_text="Hello, sweetie. I'm River Song. It's a pleasure to finally meet you properly.",
     ),
 ]
 

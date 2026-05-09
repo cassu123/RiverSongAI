@@ -21,6 +21,8 @@ from .location import router as location_router
 from .google import router as google_router
 from .vision import router as vision_router
 from .shopify_webhooks import router as shopify_webhooks_router
+from .image import router as image_router
+from .push import router as push_router
 from . import n8n_webhooks
 
 __all__ = [
@@ -47,5 +49,7 @@ __all__ = [
     "google_router",
     "vision_router",
     "shopify_webhooks_router",
+    "image_router",
+    "push_router",
     "n8n_webhooks",
 ]

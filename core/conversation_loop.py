@@ -30,7 +30,8 @@ import asyncio
 import base64
 import json
 import logging
-from typing import Any, Callable, Coroutine, List, Optional
+import re
+from typing import Any, Callable, Coroutine, List, Optional, AsyncGenerator
 
 from config.settings import get_settings
 from core.kill_switch import is_kill_switch_active
@@ -148,12 +149,20 @@ def _build_tts_provider(voice_id_override: Optional[str] = None) -> TTSProvider:
                 if entry.engine == "piper":
                     from providers.tts.piper import PiperTTS
                     return PiperTTS()
-        except Exception as exc:
+                if entry.engine == "chatterbox":
+                    from providers.tts.chatterbox_provider import ChatterboxTTS
+                    return ChatterboxTTS()
+                if entry.engine == "elevenlabs":
+                    from providers.tts.elevenlabs import ElevenLabsTTS
+                    return ElevenLabsTTS(voice_code=entry.voice_code)
+        except (RuntimeError, Exception) as exc:
             import logging as _log
             _log.getLogger(__name__).warning(
-                "Voice registry lookup failed for '%s': %s — falling back to TTS_PROVIDER",
+                "TTS provider initialization failed for '%s': %s — falling back to Piper",
                 active_id, exc,
             )
+            from providers.tts.piper import PiperTTS
+            return PiperTTS()
 
     # Registry miss → fall back to legacy TTS_PROVIDER key
     key = settings.tts_provider
@@ -257,6 +266,66 @@ class ConversationLoop:
         self._initialized = True
         logger.info("ConversationLoop ready.")
 
+    async def run_startup_briefing(self, on_event: EventCallback) -> None:
+        """
+        Check calendar and greet the user with upcoming events on first connect.
+        Ambient, non-blocking, non-history briefing.
+        """
+        if not self._settings.startup_briefing_enabled:
+            return
+
+        try:
+            from core.tools import get_upcoming_events
+            from datetime import datetime
+            import asyncio
+
+            # 1. Fetch events
+            events = await get_upcoming_events(self._user_id, hours_ahead=self._settings.startup_briefing_hours_ahead)
+            if not events:
+                return
+
+            # 2. Build briefing prompt
+            event_list = "\n".join([
+                f"- {e['title']} at {datetime.fromisoformat(e['time']).strftime('%I:%M %p')}"
+                for e in events
+            ])
+            
+            prompt = (
+                "The user has just opened the app. Greet them warmly as River Song "
+                "and mention their upcoming calendar events naturally, as if you "
+                f"noticed. Events today:\n{event_list}\n\n"
+                "Be brief — 2 sentences max. No markdown."
+            )
+
+            # 3. Generate greeting (10s timeout)
+            try:
+                response = await asyncio.wait_for(
+                    self._llm.chat([{"role": "user", "content": prompt}]),
+                    timeout=10.0
+                )
+            except asyncio.TimeoutError:
+                logger.debug("Startup briefing LLM timed out.")
+                return
+
+            if not response:
+                return
+
+            # 4. Dispatch events
+            await on_event({"type": "proactive_briefing_start", "text": response})
+            
+            # 5. Synthesize TTS
+            await on_event({"type": "speaking"})
+            audio_bytes = await self._tts.synthesize(response)
+            if audio_bytes:
+                import base64
+                b64 = base64.b64encode(audio_bytes).decode("utf-8")
+                await on_event({"type": "audio", "data": b64})
+            
+            await on_event({"type": "idle"})
+
+        except Exception as exc:
+            logger.debug("Startup briefing skipped: %s", exc)
+
     async def _rebuild_system_prompt(self) -> None:
         """Rebuild the system prompt with current memory context, then reset history."""
         memory_block = ""
@@ -268,6 +337,45 @@ class ConversationLoop:
 
         full_system = self._system_prompt + memory_block
         self._history = [{"role": "system", "content": full_system}]
+
+    async def _stream_sentences(self, stream: AsyncGenerator[str, None], on_token: Callable[[str], Coroutine[Any, Any, None]]) -> AsyncGenerator[str, None]:
+        """Buffer LLM tokens and yield complete sentences for TTS."""
+        buffer = ""
+        # Match sentence endings: . ! ? or newline
+        sentence_end = re.compile(r'(.+?[.!?\n]+)(?:\s+|$)')
+        
+        async for chunk in stream:
+            await on_token(chunk)
+            buffer += chunk
+            
+            while True:
+                match = sentence_end.search(buffer)
+                if not match:
+                    break
+                
+                sentence = match.group(1).strip()
+                if sentence:
+                    yield sentence
+                buffer = buffer[match.end():]
+        
+        # Final remaining text
+        if buffer.strip():
+            yield buffer.strip()
+
+    async def _process_tts_stream(self, sentence_stream: AsyncGenerator[str, None], on_event: EventCallback):
+        """Consume sentences and stream audio chunks to the browser."""
+        first_chunk = True
+        async for sentence in sentence_stream:
+            if first_chunk:
+                await on_event({"type": "speaking"})
+                first_chunk = False
+            
+            async for audio_chunk in self._tts.stream_synthesize(sentence):
+                if audio_chunk:
+                    await on_event({
+                        "type": "audio",
+                        "data": base64.b64encode(audio_chunk).decode("ascii"),
+                    })
 
     async def run_once(self, audio_bytes: bytes, on_event: EventCallback) -> None:
         """
@@ -399,100 +507,45 @@ class ConversationLoop:
             return
 
         # -----------------------------------------------------------------
-        # Step 4: LLM response (with optional Tool Use)
+        # Step 4: Stream LLM + interleaved TTS
         # -----------------------------------------------------------------
         self._history.append({"role": "user", "content": transcript})
+        await on_event({"type": "thinking"})
 
         full_response = ""
         try:
-            await on_event({"type": "thinking"})
+            # We use the streaming path for all LLM calls in this turn
+            async def on_token(t):
+                nonlocal full_response
+                full_response += t
+                await on_event({"type": "token", "content": t})
 
-            # Phase 3: Tool Use / Function Calling
+            # Handle Tool Use first if enabled
             if self._settings.tool_use_enabled:
                 from core.tools import TOOL_SCHEMAS, execute_tool
-                
-                # Instruction to use tools
-                tool_system_prompt = (
-                    "You have access to tools. If the user asks for an action that matches "
-                    "a tool, use the tool. If not, respond normally."
-                )
-                
-                # Use chat_with_tools if available on the provider
                 if hasattr(self._llm, "chat_with_tools"):
-                    # Build a messages list including the tool-specific system instruction
-                    messages_with_tools = self._history.copy()
-                    if messages_with_tools[0]["role"] == "system":
-                        messages_with_tools[0]["content"] += f"\n\n{tool_system_prompt}"
-                    
-                    res = await self._llm.chat_with_tools(messages_with_tools, TOOL_SCHEMAS)
-                    
+                    res = await self._llm.chat_with_tools(self._history, TOOL_SCHEMAS)
                     if res["type"] == "tool_call":
-                        # Execute the tool
-                        tool_name = res["tool_name"]
-                        tool_input = res["tool_input"]
-                        tool_id = res.get("tool_use_id")
-                        
-                        logger.info("LLM requested tool: %s", tool_name)
-                        result_text = await execute_tool(
-                            tool_name, 
-                            tool_input, 
-                            {"user_id": self._user_id}
-                        )
-                        
-                        # Add tool call and result to history
+                        result_text = await execute_tool(res["tool_name"], res["tool_input"], {"user_id": self._user_id})
+                        # Add to history and get final response summarization
                         if self._llm.__class__.__name__ == "ClaudeAPILLM":
-                            self._history.append({
-                                "role": "assistant",
-                                "content": [{"type": "tool_use", "id": tool_id, "name": tool_name, "input": tool_input}]
-                            })
-                            self._history.append({
-                                "role": "user",
-                                "content": [{"type": "tool_result", "tool_use_id": tool_id, "content": result_text}]
-                            })
+                            self._history.append({"role": "assistant", "content": [{"type": "tool_use", "id": res["tool_use_id"], "name": res["tool_name"], "input": res["tool_input"]}]})
+                            self._history.append({"role": "user", "content": [{"type": "tool_result", "tool_use_id": res["tool_use_id"], "content": result_text}]})
                         else:
-                            # Ollama / Generic format
-                            self._history.append({
-                                "role": "assistant",
-                                "content": "",
-                                "tool_calls": [{
-                                    "function": {"name": tool_name, "arguments": tool_input}
-                                }]
-                            })
-                            self._history.append({
-                                "role": "tool",
-                                "content": result_text
-                            })
-                            
-                        # Get final response summarizing the tool result
-                        async for chunk in self._llm.stream_response(self._history):
-                            full_response += chunk
-                            await on_event({"type": "token", "content": chunk})
-                    else:
-                        full_response = res["content"]
-                        await on_event({"type": "token", "content": full_response})
-                else:
-                    # Fallback to normal streaming if chat_with_tools is missing
-                    async for chunk in self._llm.stream_response(self._history):
-                        full_response += chunk
-                        await on_event({"type": "response_chunk", "text": chunk})
+                            self._history.append({"role": "assistant", "content": "", "tool_calls": [{"function": {"name": res["tool_name"], "arguments": res["tool_input"]}}]})
+                            self._history.append({"role": "tool", "content": result_text})
 
-            # Phase 2: Normal streaming (no tool use enabled)
-            elif self._settings.llm_streaming_enabled and self._llm.__class__.__name__ == "OllamaLLM":
-                # Note: we use getattr to safely call the newly added stream_chat
-                stream_chat_fn = getattr(self._llm, "stream_chat", self._llm.stream_response)
-                async for chunk in stream_chat_fn(self._history):
-                    full_response += chunk
-                    await on_event({"type": "token", "content": chunk})
-            else:
-                # Existing behavior: response_chunk
-                async for chunk in self._llm.stream_response(self._history):
-                    full_response += chunk
-                    await on_event({"type": "response_chunk", "text": chunk})
+            # Run the streaming pipeline
+            stream_fn = getattr(self._llm, "stream_chat", self._llm.stream_response)
+            llm_stream = stream_fn(self._history)
+            sentence_stream = self._stream_sentences(llm_stream, on_token)
+            
+            # Interleave TTS synthesis with LLM token arrival
+            await self._process_tts_stream(sentence_stream, on_event)
 
         except Exception as exc:
-            self._history.pop()
-            logger.error("LLM streaming failed: %s", exc)
-            await on_event({"type": "error", "message": f"LLM error: {exc}"})
+            logger.error("Conversation turn failed: %s", exc)
+            await on_event({"type": "error", "message": f"LLM/TTS error: {exc}"})
             await on_event({"type": "idle"})
             return
 
@@ -500,12 +553,7 @@ class ConversationLoop:
         await on_event({"type": "response_complete", "text": full_response})
 
         # -----------------------------------------------------------------
-        # Step 5: TTS synthesis -> send WAV to browser
-        # -----------------------------------------------------------------
-        await self._speak_and_send(full_response, on_event)
-
-        # -----------------------------------------------------------------
-        # Step 6: Record conversation summary (fire-and-forget on error)
+        # Step 6: Record conversation summary
         # -----------------------------------------------------------------
         if self._memory:
             try:
@@ -514,10 +562,44 @@ class ConversationLoop:
                     f"River Song responded: \"{full_response[:200]}\"."
                 )
                 await self._memory.record_summary(self._user_id, summary_text)
+                
+                # Phase 15: Habit Inference
+                asyncio.create_task(self._infer_habits(transcript, full_response))
             except Exception as exc:
                 logger.warning("Summary recording failed (user=%s): %s", self._user_id, exc)
 
         await on_event({"type": "idle"})
+
+    async def _infer_habits(self, user_text: str, assistant_text: str):
+        """Analyze the turn to infer new user patterns/habits."""
+        if not self._memory:
+            return
+            
+        prompt = (
+            f"Based on the following interaction, identify if the user has any specific "
+            f"habits, routines, or recurring preferences. "
+            f"If so, state them as a short preference (e.g., 'Prefers weather updates in the morning'). "
+            f"If no new patterns are found, respond with 'NONE'.\n\n"
+            f"User: {user_text}\n"
+            f"River: {assistant_text}\n\n"
+            f"Response format: 'Pattern: <description>'"
+        )
+        
+        try:
+            # Low-priority background inference
+            res = await self._llm.chat([{"role": "user", "content": prompt}])
+            if "Pattern:" in res:
+                pattern = res.split("Pattern:")[1].strip()
+                if pattern and pattern.upper() != "NONE":
+                    logger.info("Inferred new habit for %s: %s", self._user_id, pattern)
+                    await self._memory.upsert_preference(
+                        user_id=self._user_id,
+                        category="habit",
+                        value=pattern,
+                        confidence="low"
+                    )
+        except Exception as exc:
+            logger.debug("Habit inference skipped: %s", exc)
 
     async def _speak_and_send(self, text: str, on_event: EventCallback) -> None:
         """Synthesize text with Piper and send WAV bytes to the browser."""

@@ -175,8 +175,13 @@ function PlatformTile({ platform, snapshots, connected, onSelect, selected }) {
 
 // ─── Detail panel ────────────────────────────────────────────────────────────
 
-function PlatformDetail({ platform, snapshots, onAddData, onDeleteSnapshot }) {
+function PlatformDetail({ 
+  platform, snapshots, onAddData, onDeleteSnapshot, 
+  insights, loading, error, onFetchInsights 
+}) {
   const p = PLATFORM_MAP[platform] || { label: platform, color: '#888', metrics: [] }
+  const SUPPORTED_FOR_INSIGHTS = ['tiktok', 'instagram', 'amazon', 'etsy', 'facebook']
+
   if (!snapshots.length) return (
     <div className="an-detail">
       <div className="an-detail-header">
@@ -193,8 +198,28 @@ function PlatformDetail({ platform, snapshots, onAddData, onDeleteSnapshot }) {
     <div className="an-detail">
       <div className="an-detail-header">
         <h2 className="an-detail-title" style={{ color: p.color }}>{p.label}</h2>
-        <button className="btn" onClick={onAddData}>+ Add Data</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {SUPPORTED_FOR_INSIGHTS.includes(platform) && (
+            <button 
+              className="btn btn--secondary" 
+              onClick={onFetchInsights}
+              disabled={loading}
+            >
+              {loading ? 'Analyzing...' : insights ? '↺ Refresh Insights' : '✨ AI Insights'}
+            </button>
+          )}
+          <button className="btn" onClick={onAddData}>+ Add Data</button>
+        </div>
       </div>
+
+      {loading && <div className="an-loading-insights">River is analysing your data...</div>}
+      {error && <div className="an-insights-error">{error}</div>}
+      {insights && !loading && (
+        <div className="an-insights-box">
+          <h3>AI Insights</h3>
+          <div className="an-insights-content">{insights}</div>
+        </div>
+      )}
 
       <div className="an-detail-charts">
         {metrics.map(metric => {
@@ -422,6 +447,10 @@ export default function AnalyticsPage() {
   const [businessReport, setBusinessReport] = useState(null)
   const [generatingReport, setGeneratingReport] = useState(false)
 
+  const [platformInsights, setPlatformInsights] = useState({})
+  const [insightsLoading, setInsightsLoading] = useState({})
+  const [insightsError, setInsightsError] = useState({})
+
   function handleVisibleChange(next) {
     setVisiblePlatforms(next)
     saveVisible(userId, next)
@@ -429,6 +458,25 @@ export default function AnalyticsPage() {
     if (selectedPlatform && !next.has(selectedPlatform)) setSelectedPlatform(null)
   }
 
+  const fetchInsights = useCallback(async (platform) => {
+    setInsightsLoading(prev => ({ ...prev, [platform]: true }))
+    setInsightsError(prev => ({ ...prev, [platform]: '' }))
+    try {
+      const res = await fetch(`/api/analytics/${platform}/summary`, {
+        headers: authHeaders(),
+      })
+      if (res.status === 503) {
+        throw new Error("AI summary unavailable — Ollama is not running.")
+      }
+      if (!res.ok) throw new Error("Could not generate summary. Try again.")
+      const data = await res.json()
+      setPlatformInsights(prev => ({ ...prev, [platform]: data.insights }))
+    } catch (e) {
+      setInsightsError(prev => ({ ...prev, [platform]: e.message }))
+    } finally {
+      setInsightsLoading(prev => ({ ...prev, [platform]: false }))
+    }
+  }, [])
   
   const handleGenerateReport = async () => {
     setGeneratingReport(true)
@@ -606,6 +654,10 @@ export default function AnalyticsPage() {
           snapshots={snapshotsFor(selectedPlatform)}
           onAddData={() => setAddModalFor(selectedPlatform)}
           onDeleteSnapshot={handleDeleteSnapshot}
+          insights={platformInsights[selectedPlatform]}
+          loading={insightsLoading[selectedPlatform]}
+          error={insightsError[selectedPlatform]}
+          onFetchInsights={() => fetchInsights(selectedPlatform)}
         />
       )}
 
