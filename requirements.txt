@@ -32,6 +32,7 @@ python-dotenv==1.2.2            # .env file support
 # Audio capture happens in the browser; server receives WAV bytes over WebSocket
 # -----------------------------------------------------------------------------
 openai-whisper==20250625
+torch>=2.6.0                    # minimum safe version for multiple CVEs
 numpy>=2.1.0                    # 2.x required for Python 3.13+
 scipy>=1.14.0                   # Resampling browser audio to 16 kHz for Whisper
 soundfile==0.13.1               # WAV decode (bytes -> numpy array)
@@ -118,7 +119,7 @@ python-amazon-sp-api==2.1.8          # Amazon Selling Partner API (auth + endpoi
 # Memory / Vector Store (Phase 1)
 # -----------------------------------------------------------------------------
 pybind11==2.13.6                     # C++ binding tool required for building chroma-hnswlib
-chromadb==0.6.3                      # Local vector database for semantic memory
+chromadb==1.5.9                      # Local vector database for semantic memory (upgraded for security)
 
 
 # -----------------------------------------------------------------------------
@@ -137,6 +138,13 @@ reportlab==4.4.1                     # PDF label/report generation
 # -----------------------------------------------------------------------------
 httpx==0.28.1                        # Async HTTP client (health checks, Libby, Walmart)
 feedparser==6.0.11                   # RSS/Atom feed parsing (news provider)
+
+# Pinned for security:
+requests>=2.32.0                     # CVE-2024-35195 and others
+urllib3>=2.2.2                       # CVE-2024-37891 and others
+certifi>=2024.7.4                    # stale certificate bundle
+cryptography>=43.0.1                 # CVE-2024-26130 and others
+setuptools>=78.1.1                   # CVE-2025-47273 path traversal fix
 
 
 # =============================================================================
