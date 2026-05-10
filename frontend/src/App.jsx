@@ -59,6 +59,17 @@ export default function App() {
   useEffect(() => {
     save(themeKey, theme)
     document.documentElement.setAttribute('data-theme', theme)
+    // Push theme to server so Android app and other devices stay in sync
+    if (user) {
+      const token = load('rs-auth-token', null)
+      if (token) {
+        fetch('/api/auth/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ theme }),
+        }).catch(() => {}) // silent — local is already applied
+      }
+    }
   }, [theme]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -66,12 +77,27 @@ export default function App() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync display name and theme when user changes (login/logout)
+  // On login: pull theme from server so it matches across all devices
   useEffect(() => {
     if (user) {
       setProfile(p => ({ ...p, displayName: user.display_name, username: user.email }))
-      const saved = load(`rs-theme:${user.id}`, 'halo')
-      setTheme(saved)
-      document.documentElement.setAttribute('data-theme', saved)
+      const token = load('rs-auth-token', null)
+      fetch('/api/auth/profile', { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          const serverTheme = data?.theme
+          const localTheme = load(`rs-theme:${user.id}`, null)
+          // Server wins if it has a theme; otherwise fall back to local, then default
+          const resolved = serverTheme || localTheme || 'halo'
+          save(`rs-theme:${user.id}`, resolved)
+          setTheme(resolved)
+          document.documentElement.setAttribute('data-theme', resolved)
+        })
+        .catch(() => {
+          const saved = load(`rs-theme:${user.id}`, 'halo')
+          setTheme(saved)
+          document.documentElement.setAttribute('data-theme', saved)
+        })
     }
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 

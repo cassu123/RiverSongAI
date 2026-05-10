@@ -311,6 +311,7 @@ class SQLiteStore:
             "ALTER TABLE users ADD COLUMN is_approved INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE users ADD COLUMN google_id TEXT",
             "ALTER TABLE users ADD COLUMN google_email TEXT",
+            "ALTER TABLE users ADD COLUMN theme TEXT NOT NULL DEFAULT 'halo'",
             "ALTER TABLE llm_settings ADD COLUMN voice_id TEXT NOT NULL DEFAULT 'river'",
             "INSERT OR IGNORE INTO admin_config (key, value) VALUES ('__global__', '{}')",
         ]:
@@ -735,12 +736,20 @@ class SQLiteStore:
     def _sync_get_user_by_id(self, user_id: str) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT id, email, display_name, role, is_approved, created_at, password_hash FROM users WHERE id=?",
+            "SELECT id, email, display_name, role, is_approved, created_at, password_hash, theme FROM users WHERE id=?",
             (user_id,),
         ).fetchone()
         if row is None:
             return None
-        return {"id": row[0], "email": row[1], "display_name": row[2], "role": row[3], "is_approved": bool(row[4]), "created_at": row[5], "password_hash": row[6]}
+        return {"id": row[0], "email": row[1], "display_name": row[2], "role": row[3], "is_approved": bool(row[4]), "created_at": row[5], "password_hash": row[6], "theme": row[7] or "halo"}
+
+    async def update_user_theme(self, user_id: str, theme: str) -> None:
+        await self._run(self._sync_update_user_theme, user_id, theme)
+
+    def _sync_update_user_theme(self, user_id: str, theme: str) -> None:
+        conn = self._get_conn()
+        conn.execute("UPDATE users SET theme=?, updated_at=? WHERE id=?", (theme, _now_str(), user_id))
+        conn.commit()
 
     async def email_exists(self, email: str) -> bool:
         return await self._run(self._sync_email_exists, email)
