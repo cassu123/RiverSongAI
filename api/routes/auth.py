@@ -379,3 +379,39 @@ async def google_callback(request: Request, body: GoogleCallbackBody):
         "token": token,
         "user": {"id": user["id"], "email": user["email"], "display_name": user["display_name"], "role": user["role"], "is_approved": user["is_approved"]},
     }
+
+
+class ProfilePatch(BaseModel):
+    theme: Optional[str] = None
+    display_name: Optional[str] = None
+
+VALID_THEMES = {"halo", "crimson-dark", "combat", "midnight-violet", "amber", "arctic", "cyberpunk", "dune"}
+
+
+@router.get("/profile")
+async def get_profile(request: Request, authorization: Optional[str] = Header(default=None)):
+    store = request.app.state.memory_manager.store
+    token = (authorization or "").removeprefix("Bearer ").strip()
+    payload = decode_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user = await store.get_user_by_id(payload["sub"])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"id": user["id"], "email": user["email"], "display_name": user["display_name"], "role": user["role"], "theme": user.get("theme", "halo")}
+
+
+@router.patch("/profile")
+async def update_profile(body: ProfilePatch, request: Request, authorization: Optional[str] = Header(default=None)):
+    store = request.app.state.memory_manager.store
+    token = (authorization or "").removeprefix("Bearer ").strip()
+    payload = decode_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user_id = payload["sub"]
+    if body.theme is not None:
+        if body.theme not in VALID_THEMES:
+            raise HTTPException(status_code=400, detail=f"Invalid theme. Valid: {', '.join(VALID_THEMES)}")
+        await store.update_user_theme(user_id, body.theme)
+    user = await store.get_user_by_id(user_id)
+    return {"id": user["id"], "email": user["email"], "display_name": user["display_name"], "role": user["role"], "theme": user.get("theme", "halo")}
