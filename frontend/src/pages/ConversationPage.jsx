@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from 'react'
 const RiverSong = lazy(() => import('../components/RiverSong.jsx'))
 import ConversationPanel  from '../components/ConversationPanel.jsx'
+import AudioVisualizer    from '../components/AudioVisualizer.jsx'
 import { useWebSocket }   from '../hooks/useWebSocket.js'
 import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
 import { useAuth }        from '../context/AuthContext.jsx'
@@ -10,25 +11,6 @@ import './ConversationPage.css'
 const API_BASE    = import.meta.env.VITE_API_URL || ''
 const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const MAX_HISTORY_SESSIONS = 30
-
-async function playWavBase64(b64) {
-  try {
-    const binary = atob(b64)
-    const bytes  = new Uint8Array(binary.length)
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-    const ctx    = new AudioContext()
-    const buffer = await ctx.decodeAudioData(bytes.buffer)
-    const source = ctx.createBufferSource()
-    source.buffer = buffer
-    source.connect(ctx.destination)
-    return new Promise(resolve => {
-      source.onended = () => { ctx.close(); resolve() }
-      source.start()
-    })
-  } catch (err) {
-    console.error('[playWavBase64]', err)
-  }
-}
 
 function historyKey(userId) { return `rs-history:${userId}` }
 function avatarKey(userId)  { return `rs-avatar:${userId}`  }
@@ -85,9 +67,21 @@ export default function ConversationPage() {
     try { const v = localStorage.getItem(`rs-transcript:${user?.id}`); return v === null ? true : v === 'true' } catch { return true }
   })
 
+  const toggleAvatar = () => {
+    const next = !showAvatar
+    setShowAvatar(next)
+    if (user) localStorage.setItem(avatarKey(user.id), String(next))
+  }
+
+  const toggleTranscript = () => {
+    const next = !showTranscript
+    setShowTranscript(next)
+    if (user) localStorage.setItem(`rs-transcript:${user.id}`, String(next))
+  }
+
   // Read-only: active model + voice from settings (display only — change in Settings)
-  const [activeModel, setActiveModel] = useState(null)   // { display_name, vram_gb }
-  const [activeVoice, setActiveVoice] = useState(null)   // { active_voice, provider_label }
+  const [activeModel, setActiveModel] = useState(null)
+  const [activeVoice, setActiveVoice] = useState(null)
 
   const [history,        setHistory]        = useState([])
   const [showHistory,    setShowHistory]    = useState(false)
@@ -142,7 +136,8 @@ export default function ConversationPage() {
         if (data) {
           isPlayingRef.current = true
           setConvState('speaking')
-          audioPlayer.playBase64(data).then(() => {
+          const fmt = event.format || 'wav'
+          audioPlayer.playBase64(data, fmt).then(() => {
             isPlayingRef.current = false
             // Note: with streaming audio, "idle" should only fire after the full queue is done
             // But for now, we rely on the backend sending "idle" at the end of the turn
@@ -165,10 +160,6 @@ export default function ConversationPage() {
 
   const { sendMessage, connectionStatus } = useWebSocket(wsUrl, handleMessage)
 
-  // When the WebSocket connects, mark as idle so the mic becomes usable.
-  // The backend may take several seconds to initialize providers (Whisper,
-  // LLM, TTS) and its "connected"/"idle" messages can be delayed; this
-  // keeps the UI responsive regardless of backend timing.
   useEffect(() => {
     if (connectionStatus === 'connected') {
       setConvState(s => (s === 'connecting' ? 'idle' : s))
@@ -182,7 +173,6 @@ export default function ConversationPage() {
   }, [sendMessage])
 
   const handleNoSpeech = useCallback(() => {
-    // Recording ended without detecting speech — reset so user can try again
     setConvState(s => (s === 'listening' ? 'idle' : s))
   }, [])
 
@@ -196,7 +186,6 @@ export default function ConversationPage() {
     onAmbientChunk: handleAmbientChunk,
   })
 
-  // Handle auto-start on wake word
   useEffect(() => {
     if (convState === 'listening' && isAmbient) {
       console.log('Transitioning from ambient to listening turn...')
@@ -206,7 +195,6 @@ export default function ConversationPage() {
     }
   }, [convState, isAmbient, toggleAmbient, sendMessage])
 
-  // Handle auto-start on wake word detection
   useEffect(() => {
     if (convState === 'listening_trigger') {
       handleToggleAmbient().then(() => {
@@ -233,7 +221,6 @@ export default function ConversationPage() {
       setError('Microphone not available. Use https://riversongai.com — mic requires HTTPS.')
       return
     }
-    // Show listening immediately — don't wait for backend round-trip
     setConvState('listening')
     const granted = await startRecording()
     if (granted) {
@@ -267,17 +254,63 @@ export default function ConversationPage() {
   const displayMessages = viewingSession ? viewingSession.messages : messages
   const displayStreaming = viewingSession ? '' : streamingContent
 
+  // Load history on mount
+  useEffect(() => {
+    if (user) {
+      setHistory(loadHistory(user.id))
+    }
+  }, [user])
+
+  // Load current model/voice display
+  useEffect(() => {
+    if (!token) return
+    fetch('/api/settings/llm', { headers: { Authorization: `Bearer ${token}` }})
+      .then(r => r.json())
+      .then(d => setActiveModel({ display_name: d.model }))
+      .catch(() => {})
+    fetch('/api/settings/voice', { headers: { Authorization: `Bearer ${token}` }})
+      .then(r => r.json())
+      .then(d => setActiveVoice({ active_voice: d.active_voice }))
+      .catch(() => {})
+  }, [token])
+
   return (
     <div className="conv-page">
 
       {/* Avatar zone */}
       {showAvatar && (
         <div className="conv-portrait-zone">
-          <Suspense fallback={<div className="conv-avatar-loading" />}>
-            <RiverSong state={convState} audioLevel={visualLvl} />
-          </Suspense>
+          <div className="conv-avatar-container">
+            <Suspense fallback={<div className="conv-avatar-loading" />}>
+              <RiverSong state={convState} audioLevel={visualLvl} />
+            </Suspense>
+            {convState === 'speaking' && (
+              <div className="conv-visualizer-overlay">
+                <AudioVisualizer audioLevel={visualLvl} />
+              </div>
+            )}
+          </div>
 
-          {/* State tabs */}
+          {/* Ambient indicator */}
+          <div className="conv-ambient-indicator">
+            <span className={`conv-ambient-dot ${ambientEnabled ? 'conv-ambient-dot--on' : ''}`} />
+            <span className="conv-ambient-label">
+              {ambientEnabled ? 'AMBIENT — always listening' : 'PUSH TO TALK'}
+            </span>
+          </div>
+
+          {/* State pill */}
+          <div className="conv-state-pill-wrap">
+            <div className={`conv-state-pill conv-state-pill--${convState}`}>
+              {convState === 'listening' && "◉ LISTENING"}
+              {convState === 'thinking' && "◌ THINKING..."}
+              {convState === 'speaking' && "◈ SPEAKING"}
+              {convState === 'idle' && "◌ IDLE"}
+              {['connecting', 'transcribing', 'routing'].includes(convState) && convState.toUpperCase()}
+            </div>
+          </div>
+
+          {/* State tabs (Legacy but kept for layout) */}
           <div className="conv-state-bar">
             {STATE_TABS.map(s => (
               <div key={s} className={`conv-state-tab ${convState === s ? 'conv-state-tab--active' : ''}`}>
@@ -287,115 +320,61 @@ export default function ConversationPage() {
             ))}
           </div>
 
-          {/* Active config strip — read-only, change in Settings */}
+          {/* Active config strip */}
           <div className="conv-config-strip">
             {activeModel ? (
               <span className="conv-config-chip">
                 <GpuIcon />
                 {activeModel.display_name}
-                {activeModel.vram_gb != null && (
-                  <span className="conv-config-chip-tag">{activeModel.vram_gb} GB</span>
-                )}
               </span>
             ) : (
               <span className="conv-config-chip conv-config-chip--dim">No model selected</span>
             )}
-
             <span className="conv-config-sep">·</span>
-
             <span className="conv-config-chip">
               <VoiceIcon />
               {activeVoice?.active_voice || 'No voice'}
             </span>
           </div>
-
         </div>
       )}
 
       {/* Chat zone */}
       <div className="conv-chat-zone">
-
-        {/* Top bar */}
         <div className="conv-top-bar">
           <div className="conv-top-left">
-            <button
-              className={`conv-icon-btn ${showAvatar ? 'conv-icon-btn--on' : ''}`}
-              onClick={toggleAvatar}
-              title={showAvatar ? 'Hide avatar' : 'Show avatar'}
-            >
-              <AvatarIcon />
-            </button>
-            <button
-              className={`conv-icon-btn ${showTranscript ? 'conv-icon-btn--on' : ''}`}
-              onClick={toggleTranscript}
-              title={showTranscript ? 'Hide transcript' : 'Show transcript'}
-            >
-              <TranscriptIcon />
-            </button>
-
-            {/* Compact model+voice when avatar hidden */}
-            {!showAvatar && (activeModel || activeVoice) && (
-              <div className="conv-model-chip">
-                {activeModel && (
-                  <>
-                    <GpuIcon />
-                    <span>{activeModel.display_name}</span>
-                    {activeModel.vram_gb != null && (
-                      <span className="conv-model-chip-vram">{activeModel.vram_gb} GB</span>
-                    )}
-                  </>
-                )}
-                {activeModel && activeVoice && <span style={{ opacity: 0.4 }}>·</span>}
-                {activeVoice && (
-                  <>
-                    <VoiceIcon />
-                    <span>{activeVoice.active_voice}</span>
-                  </>
-                )}
-              </div>
-            )}
+            <button className={`conv-icon-btn ${showAvatar ? 'conv-icon-btn--on' : ''}`} onClick={toggleAvatar} title={showAvatar ? 'Hide avatar' : 'Show avatar'}><AvatarIcon /></button>
+            <button className={`conv-icon-btn ${showTranscript ? 'conv-icon-btn--on' : ''}`} onClick={toggleTranscript} title={showTranscript ? 'Hide transcript' : 'Show transcript'}><TranscriptIcon /></button>
           </div>
 
           <div className="conv-top-right">
-            {!showAvatar && error && (
-              <span className="conv-error-inline">{error}</span>
-            )}
             {!showAvatar && (
-              <div className="conv-status-dot-wrap" title={convState}>
-                <span className={`conv-status-dot ${isActive ? 'conv-status-dot--active' : ''}`} />
-                <span className="conv-status-label">{convState.toUpperCase()}</span>
+              <div className="conv-ambient-indicator conv-ambient-indicator--compact">
+                <span className={`conv-ambient-dot ${ambientEnabled ? 'conv-ambient-dot--on' : ''}`} />
               </div>
             )}
-            <button
-              className={`conv-icon-btn ${showHistory ? 'conv-icon-btn--on' : ''}`}
-              onClick={() => { setShowHistory(h => !h); setViewingSession(null) }}
-              title="Conversation history"
-            >
+            <button className={`conv-icon-btn ${showHistory ? 'conv-icon-btn--on' : ''}`} onClick={() => { setShowHistory(h => !h); setViewingSession(null) }} title="Conversation history">
               <HistoryIcon />
               {history.length > 0 && <span className="conv-history-count">{history.length}</span>}
             </button>
           </div>
         </div>
 
-        {/* History panel */}
         {showHistory ? (
           <div className="conv-history-panel">
             {viewingSession ? (
               <>
                 <div className="conv-history-session-header">
                   <button className="conv-history-back" onClick={() => setViewingSession(null)}>← Back</button>
-                  <span className="conv-history-session-meta">{fmtDate(viewingSession.date)} · {viewingSession.model}</span>
+                  <span className="conv-history-session-meta">{fmtDate(viewingSession.date)}</span>
                 </div>
                 <ConversationPanel messages={viewingSession.messages} />
               </>
-            ) : history.length === 0 ? (
-              <div className="conv-history-empty">No saved sessions yet. Conversations save when you hit Reset.</div>
             ) : (
               <div className="conv-history-list">
                 {[...history].reverse().map(s => (
                   <button key={s.id} className="conv-history-item" onClick={() => setViewingSession(s)}>
                     <span className="conv-history-item-date">{fmtDate(s.date)}</span>
-                    <span className="conv-history-item-model">{s.model}</span>
                     <span className="conv-history-item-count">{s.messages.length} msg</span>
                   </button>
                 ))}
@@ -405,50 +384,24 @@ export default function ConversationPage() {
         ) : showTranscript ? (
           <ConversationPanel messages={displayMessages} streamingContent={displayStreaming} />
         ) : (
-          <div className="conv-transcript-off">Transcript hidden — tap <TranscriptIcon /> to show</div>
+          <div className="conv-transcript-off">Transcript hidden</div>
         )}
 
-        {/* Status + error — only show during initial connect or on error */}
         {(error || convState === 'connecting') && (
           <div className="conv-status-strip">
-            {error
-              ? <span className="conv-status-error">{error}</span>
-              : <span className="conv-status-waiting">
-                  {connectionStatus === 'connected' ? 'Initializing…' : 'Connecting…'}
-                </span>
-            }
+            {error ? <span className="conv-status-error">{error}</span> : <span className="conv-status-waiting">Connecting...</span>}
           </div>
         )}
 
-        {/* Input bar — voice only */}
         <div className="conv-input-bar conv-input-bar--speak">
-          <button
-            className={`conv-ambient-btn ${ambientEnabled ? 'conv-ambient-btn--on' : ''}`}
-            onClick={handleToggleAmbient}
-            title={ambientEnabled ? 'Disable Ambient Mode (Wake Word)' : 'Enable Ambient Mode (Wake Word)'}
-          >
-            <SparkleIcon on={ambientEnabled} />
-          </button>
-          
-          <button
-            className={`conv-mic-btn conv-mic-btn--large ${isActive ? 'conv-mic-btn--active' : ''} ${!canSpeak ? 'conv-mic-btn--disabled' : ''}`}
-            onClick={handleStartListening}
-            aria-label="Speak to River"
-            disabled={!canSpeak}
-          >
-            <MicIcon active={isActive} />
-          </button>
-          
-          <button className="conv-reset-btn" onClick={handleReset} title="Save & reset">
-            <ResetIcon />
-          </button>
+          <button className={`conv-ambient-btn ${ambientEnabled ? 'conv-ambient-btn--on' : ''}`} onClick={handleToggleAmbient} title="Ambient Mode"><SparkleIcon on={ambientEnabled} /></button>
+          <button className={`conv-mic-btn conv-mic-btn--large ${isActive ? 'conv-mic-btn--active' : ''} ${!canSpeak ? 'conv-mic-btn--disabled' : ''}`} onClick={handleStartListening} disabled={!canSpeak}><MicIcon /></button>
+          <button className="conv-reset-btn" onClick={handleReset} title="Save & reset"><ResetIcon /></button>
         </div>
       </div>
     </div>
   )
 }
-
-// ── Icons ────────────────────────────────────────────────────────────────────
 
 function SparkleIcon({ on }) {
   return (
@@ -461,16 +414,8 @@ function SparkleIcon({ on }) {
 
 function GpuIcon() {
   return (
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+    <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
       <rect x="1" y="3" width="14" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
-      <line x1="4"  y1="3"  x2="4"  y2="1"  stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-      <line x1="7"  y1="3"  x2="7"  y2="1"  stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-      <line x1="10" y1="3"  x2="10" y2="1"  stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-      <line x1="13" y1="3"  x2="13" y2="1"  stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-      <line x1="4"  y1="13" x2="4"  y2="15" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-      <line x1="7"  y1="13" x2="7"  y2="15" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-      <line x1="10" y1="13" x2="10" y2="15" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-      <line x1="13" y1="13" x2="13" y2="15" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
       <rect x="4" y="5.5" width="5" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.1"/>
     </svg>
   )
@@ -478,7 +423,7 @@ function GpuIcon() {
 
 function VoiceIcon() {
   return (
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+    <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
       <path d="M8 1v14M4 3v10M12 3v10M1 6v4M15 6v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
     </svg>
   )
@@ -486,11 +431,10 @@ function VoiceIcon() {
 
 function MicIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
+    <svg width="24" height="24" viewBox="0 0 18 18" fill="none">
       <rect x="6" y="1" width="6" height="10" rx="3" stroke="currentColor" strokeWidth="1.4"/>
       <path d="M3 9a6 6 0 0 0 12 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
       <line x1="9" y1="15" x2="9" y2="17" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-      <line x1="6" y1="17" x2="12" y2="17" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
     </svg>
   )
 }
@@ -509,8 +453,6 @@ function TranscriptIcon() {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
       <line x1="4.5" y1="5.5" x2="11.5" y2="5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-      <line x1="4.5" y1="8"   x2="11.5" y2="8"   stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-      <line x1="4.5" y1="10.5" x2="8.5" y2="10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
     </svg>
   )
 }

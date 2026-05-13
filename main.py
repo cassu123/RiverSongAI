@@ -35,6 +35,13 @@ from core.kill_switch import is_kill_switch_active
 from core.memory_manager import MemoryManager
 from providers.memory.sqlite_store import SQLiteStore
 
+# Module-level variable to store the app instance for circular dependency resolution.
+_app_instance: FastAPI | None = None
+
+def get_app() -> FastAPI | None:
+    """Returns the globally initialized FastAPI application instance."""
+    return _app_instance
+
 
 def _configure_logging(log_level: str) -> None:
     """
@@ -67,6 +74,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     LLM/STT/TTS providers are still initialized lazily per-connection.
     """
     import os
+    import main as _main_module
+    _main_module._app_instance = app
+
     settings = get_settings()
     logger = logging.getLogger(__name__)
 
@@ -94,6 +104,47 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.memory_manager = memory_manager
     app.state.active_connections = {} # user_id -> List[WebSocket]
     logger.info("Memory layer ready (db=%s).", settings.db_path)
+
+    # Daemon registry (Task A)
+    from daemons.registry import DaemonRegistry
+    app.state.daemon_registry = DaemonRegistry()
+    logger.info("Daemon registry ready.")
+
+    # Context engine (Task B)
+    from core.context_engine import ContextEngine
+    app.state.context_engine = ContextEngine()
+    logger.info("Context engine ready.")
+
+    # Rover telemetry (Task Rover)
+    app.state.rover_telemetry = {}
+    logger.info("Rover telemetry initialized.")
+
+    # Load persistent AI feature flags and admin-saved config
+    try:
+        from api.routes.features import AI_FEATURE_MAP
+        config = await store.get_admin_config()
+        ai_config = config.get("ai_features", {})
+        for flag_name, attr in AI_FEATURE_MAP.items():
+            if flag_name in ai_config:
+                setattr(settings, attr, ai_config[flag_name])
+                logger.info("Applied persistent flag: %s = %s", flag_name, ai_config[flag_name])
+
+        # ElevenLabs
+        el_config = config.get("elevenlabs_config", {})
+        if el_config:
+            if el_config.get("api_key"): settings.elevenlabs_api_key = el_config["api_key"]
+            if el_config.get("voice_id"): settings.elevenlabs_voice_id = el_config["voice_id"]
+            if el_config.get("model_id"): settings.elevenlabs_model_id = el_config["model_id"]
+            logger.info("Applied persistent ElevenLabs settings.")
+
+        # Persona
+        p_config = config.get("persona_config", {})
+        if p_config:
+            if p_config.get("system_prompt"): settings.river_song_system_prompt = p_config["system_prompt"]
+            logger.info("Applied persistent Persona system prompt.")
+
+    except Exception as e:
+        logger.warning("Failed to apply persistent settings: %s", e)
 
     # Start routine scheduler
     from core.routines_scheduler import start_scheduler
@@ -166,7 +217,7 @@ def create_app() -> FastAPI:
         vehicles_router, feeds_router, reading_router, features_router,
         parent_router, analytics_router, culinary_router, location_router, google_router,
         vision_router, n8n_webhooks, shopify_webhooks_router, image_router, push_router,
-        legal_router
+        legal_router, rag_router, daemons_router, context_router, broadcast_router, rover_router
     )
 
     app.include_router(auth_router)
@@ -195,6 +246,11 @@ def create_app() -> FastAPI:
     app.include_router(image_router)
     app.include_router(push_router)
     app.include_router(legal_router)
+    app.include_router(rag_router)
+    app.include_router(daemons_router)
+    app.include_router(context_router)
+    app.include_router(broadcast_router)
+    app.include_router(rover_router)
 
     # Serve the built React frontend — must be last so API routes take priority
     import os

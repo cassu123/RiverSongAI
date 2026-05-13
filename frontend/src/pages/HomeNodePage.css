@@ -238,3 +238,133 @@
   letter-spacing: 0.1em;
   color: var(--text-muted);
 }
+
+/* Brightness Slider */
+.home-brightness-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  width: 100%;
+}
+
+.home-brightness-slider {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  background: var(--md-outline-variant);
+  border-radius: 2px;
+  accent-color: var(--md-primary);
+  cursor: pointer;
+}
+
+.home-brightness-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--md-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 5px var(--md-primary);
+}
+
+.home-brightness-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* Climate Control */
+.home-climate-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+.home-climate-info {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-dim);
+}
+
+.home-climate-target {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-climate-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.home-climate-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--md-surface-container-high);
+  border: 1px solid var(--md-outline);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.home-climate-btn:hover {
+  background: var(--md-primary);
+  color: black;
+}
+
+/* Scenes Strip */
+.home-scenes-strip {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.home-scenes-strip::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.home-scene-pill {
+  white-space: nowrap;
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-outline);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-scene-pill:hover {
+  background: var(--md-primary);
+  color: black;
+  border-color: var(--md-primary);
+  box-shadow: 0 0 10px rgba(0, 170, 255, 0.3);
+}
+
+.home-scene-pill--busy {
+  opacity: 0.6;
+  cursor: wait;
+}

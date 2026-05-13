@@ -28,6 +28,7 @@ const ADMIN_ITEMS = [
   { key: 'commerce',    label: 'Store',       icon: 'shopping_bag' },
   { key: 'routines',    label: 'Routines',    icon: 'routine' },
   { key: 'home',        label: 'Home Node',   icon: 'home_iot_device' },
+  { key: 'environment', label: 'Environment', icon: 'visibility' },
   { key: 'analytics',   label: 'Analytics',   icon: 'bar_chart' },
   { key: 'feeds',       label: 'Feeds',       icon: 'feed' },
   { key: 'google',      label: 'Google',      icon: 'hub',        soon: true },

@@ -299,3 +299,65 @@
   border-color: rgba(255,60,60,0.35);
   color: rgba(255,100,100,0.8);
 }
+
+/* Learned Patterns */
+.mem-section-heading {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 24px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mem-pattern-card {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--md-tertiary) 8%, var(--bg-card));
+  border: 1px solid var(--border-bright);
+  border-left: 3px solid var(--md-tertiary);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  transition: transform 0.1s;
+}
+
+.mem-pattern-card:hover {
+  transform: translateX(2px);
+}
+
+.mem-pattern-icon {
+  font-size: 1.1rem;
+  color: var(--md-tertiary);
+  margin-right: 12px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.mem-pattern-content {
+  flex: 1;
+}
+
+.mem-pattern-value {
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.mem-pattern-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+
+.mem-pattern-confidence {
+  text-transform: uppercase;
+  font-weight: 600;
+}

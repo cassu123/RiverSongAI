@@ -24,7 +24,7 @@ function fmtSchedule(r) {
   return 'Manual'
 }
 
-const BLANK = { name: '', trigger: 'daily', time: '07:00', days: [], prompt: '', enabled: true }
+const BLANK = { name: '', trigger: 'daily', time: '07:00', days: [], prompt: '', type: 'simple', webhook_url: '', enabled: true }
 
 export default function RoutinesPage() {
   const { token } = useAuth()
@@ -36,7 +36,8 @@ export default function RoutinesPage() {
   const [confirm,  setConfirm]  = useState(null)
   const [running,  setRunning]  = useState(null)   // id of routine being run
   const [output,   setOutput]   = useState(null)
-  const [n8nStatus, setN8nStatus] = useState({ n8n_available: false, n8n_url: "" })   // { name, text } for output modal
+  const [n8nStatus, setN8nStatus] = useState({ n8n_available: false, n8n_url: "", n8n_enabled: false })
+  const [testing,  setTesting]  = useState(false)
 
   const authHeaders = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token])
 
@@ -47,7 +48,7 @@ export default function RoutinesPage() {
       if (res.ok) setRoutines(await res.json())
     } catch {}
     setLoading(false)
-  }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token, authHeaders])
 
   useEffect(() => { fetchRoutines() }, [fetchRoutines])
 
@@ -59,17 +60,20 @@ export default function RoutinesPage() {
   }, [authHeaders])
 
   useEffect(() => { fetchN8nStatus() }, [fetchN8nStatus])
-    
-
-  // Mirror to localStorage so Dashboard widget still works
-  useEffect(() => {
-    try { localStorage.setItem('rs-routines', JSON.stringify(routines)) } catch {}
-  }, [routines])
 
   const openAdd = () => { setForm(BLANK); setEditing(null); setAdding(true) }
 
   const openEdit = (r) => {
-    setForm({ name: r.name, trigger: r.trigger, time: r.time || '07:00', days: r.days || [], prompt: r.prompt || '', enabled: r.enabled })
+    setForm({
+      name: r.name,
+      trigger: r.trigger,
+      time: r.time || '07:00',
+      days: r.days || [],
+      prompt: r.prompt || '',
+      type: r.type || 'simple',
+      webhook_url: r.webhook_url || '',
+      enabled: r.enabled
+    })
     setEditing(r.id)
     setAdding(true)
   }
@@ -77,11 +81,13 @@ export default function RoutinesPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.name.trim()) return
+    const payload = { ...form, name: form.name.trim() }
+    
     if (editing) {
       const res = await safeFetch(`/api/routines/${editing}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ ...form, name: form.name.trim() }),
+        body: JSON.stringify(payload),
       })
       if (res.ok) {
         const updated = await res.json()
@@ -91,7 +97,7 @@ export default function RoutinesPage() {
       const res = await safeFetch(`/api/routines`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ ...form, name: form.name.trim() }),
+        body: JSON.stringify(payload),
       })
       if (res.ok) {
         const newData = await res.json()
@@ -100,6 +106,24 @@ export default function RoutinesPage() {
     }
     setAdding(false)
     setEditing(null)
+  }
+
+  const handleTestWebhook = async () => {
+    if (!form.webhook_url) return
+    setTesting(true)
+    try {
+      const res = await fetch(form.webhook_url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ test: true, routine_name: form.name })
+      })
+      if (res.ok) alert('Webhook test successful!')
+      else alert(`Webhook test failed: ${res.status}`)
+    } catch (err) {
+      alert(`Webhook test error: ${err.message}`)
+    } finally {
+      setTesting(false)
+    }
   }
 
   const toggleEnabled = async (r) => {
@@ -228,15 +252,61 @@ export default function RoutinesPage() {
             )}
 
             <div className="rf-row">
-              <label className="rf-label">PROMPT <span className="rf-optional">(what River should do)</span></label>
-              <textarea
-                className="rf-textarea"
-                value={form.prompt}
-                onChange={e => setForm(f => ({ ...f, prompt: e.target.value }))}
-                placeholder="e.g. Give me a morning brief: today's calendar, weather, and any important reminders."
-                rows={3}
-              />
+              <label className="rf-label">TYPE</label>
+              <div className="rf-btn-group">
+                <button
+                  type="button"
+                  className={`rf-trigger-btn ${form.type === 'simple' ? 'rf-trigger-btn--on' : ''}`}
+                  onClick={() => setForm(f => ({ ...f, type: 'simple' }))}
+                >
+                  Simple (LLM)
+                </button>
+                <button
+                  type="button"
+                  className={`rf-trigger-btn ${form.type === 'advanced' ? 'rf-trigger-btn--on' : ''}`}
+                  onClick={() => setForm(f => ({ ...f, type: 'advanced' }))}
+                >
+                  Advanced (n8n)
+                </button>
+              </div>
             </div>
+
+            {form.type === 'advanced' ? (
+              <div className="rf-row">
+                <label className="rf-label">WEBHOOK URL</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    className="rf-input"
+                    style={{ flex: 1 }}
+                    value={form.webhook_url}
+                    onChange={e => setForm(f => ({ ...f, webhook_url: e.target.value }))}
+                    placeholder="https://n8n.example.com/webhook/..."
+                  />
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    onClick={handleTestWebhook}
+                    disabled={testing || !form.webhook_url}
+                  >
+                    {testing ? '...' : 'TEST'}
+                  </button>
+                </div>
+                <div className="rf-note">
+                  Create this workflow in n8n, then paste the production webhook URL here.
+                </div>
+              </div>
+            ) : (
+              <div className="rf-row">
+                <label className="rf-label">PROMPT <span className="rf-optional">(what River should do)</span></label>
+                <textarea
+                  className="rf-textarea"
+                  value={form.prompt}
+                  onChange={e => setForm(f => ({ ...f, prompt: e.target.value }))}
+                  placeholder="e.g. Give me a morning brief: today's calendar, weather, and any important reminders."
+                  rows={3}
+                />
+              </div>
+            )}
 
             <div className="rf-actions">
               <button className="btn btn--primary" type="submit">
@@ -251,37 +321,23 @@ export default function RoutinesPage() {
       )}
 
       
-      {/* n8n Status section */}
-      <div className="card routines-n8n-card" style={{ marginBottom: 24, padding: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.05em", color: "var(--md-on-surface)" }}>
-              ADVANCED ORCHESTRATION (n8n)
+      {/* n8n Status section (Banner style) */}
+      {n8nStatus.n8n_enabled && (
+        <div className="card routines-n8n-banner">
+          <div className="rn-banner-content">
+            <div className="rn-banner-text">
+              <div className="rn-banner-title">Advanced Automations Available</div>
+              <div className="rn-banner-sub">n8n is online and ready for complex multi-step orchestration.</div>
             </div>
-            <div style={{ fontSize: "0.75rem", color: "var(--md-outline)", marginTop: 4 }}>
-              {n8nStatus.n8n_available 
-                ? "n8n is online and ready for complex multi-step automations." 
-                : "n8n instance not detected. Advanced routines are unavailable."}
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span className={`badge ${n8nStatus.n8n_available ? "badge--cpu" : "badge--cost"}`}>
-              {n8nStatus.n8n_available ? "ONLINE" : "OFFLINE"}
-            </span>
-            {n8nStatus.n8n_available && (
-              <a 
-                href={n8nStatus.n8n_url} 
-                target="_blank" 
-                rel="noreferrer" 
-                className="btn btn--cta"
-                style={{ fontSize: "0.7rem", padding: "6px 12px" }}
-              >
-                OPEN n8n EDITOR
-              </a>
-            )}
+            <button 
+              onClick={() => window.open(n8nStatus.n8n_url || '/n8n', '_blank')}
+              className="btn btn--cta"
+            >
+              Open n8n Editor →
+            </button>
           </div>
         </div>
-      </div>
+      )}
     
       {/* Routine list */}
       {!loading && routines.length === 0 ? (
@@ -310,8 +366,8 @@ export default function RoutinesPage() {
                   <button
                     className="btn routines-run-btn"
                     onClick={() => handleRun(r)}
-                    disabled={running === r.id || !r.prompt}
-                    title={r.prompt ? 'Run now' : 'No prompt set'}
+                    disabled={running === r.id || (r.type !== 'advanced' && !r.prompt) || (r.type === 'advanced' && !r.webhook_url)}
+                    title={r.type === 'advanced' ? (r.webhook_url ? 'Run now' : 'No webhook set') : (r.prompt ? 'Run now' : 'No prompt set')}
                   >
                     {running === r.id ? '…' : '▸ RUN'}
                   </button>

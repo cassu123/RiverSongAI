@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useAuth } from '../context/AuthContext'
 import './HomeNodePage.css'
 
 const DOMAIN_ICON = {
@@ -20,12 +21,13 @@ const DOMAIN_LABEL = {
 }
 
 function isOn(device) {
-  return ['on', 'open', 'unlocked', 'home', 'playing', 'active'].includes(device.state)
+  return ['on', 'open', 'unlocked', 'home', 'playing', 'active', 'heat', 'cool', 'fan_only', 'dry'].includes(device.state)
 }
 
 function groupByDomain(devices) {
   const groups = {}
   for (const d of devices) {
+    if (['scene', 'script'].includes(d.domain)) continue // Handled by quick strip
     if (!groups[d.domain]) groups[d.domain] = []
     groups[d.domain].push(d)
   }
@@ -33,51 +35,81 @@ function groupByDomain(devices) {
 }
 
 export default function HomeNodePage() {
+  const { token } = useAuth()
   const [status,  setStatus]  = useState(null)   // { configured, reachable, url }
   const [devices, setDevices] = useState([])
   const [loading, setLoading] = useState(true)
   const [acting,  setActing]  = useState(null)   // entity_id currently being acted on
   const [filter,  setFilter]  = useState('all')
 
-  const fetchAll = useCallback(async () => {
-    setLoading(true)
+  const fetchAll = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true)
+    const headers = { Authorization: `Bearer ${token}` }
     try {
-      const st = await fetch('/api/home/status').then(r => r.json())
+      const st = await fetch('/api/home/status', { headers }).then(r => r.json())
       setStatus(st)
       if (st.configured && st.reachable) {
-        const devs = await fetch('/api/home/devices').then(r => r.json())
+        const devs = await fetch('/api/home/devices', { headers }).then(r => r.json())
         setDevices(Array.isArray(devs) ? devs : [])
       }
     } catch {
       setStatus({ configured: false, reachable: false, url: '' })
     } finally {
-      setLoading(false)
+      if (!isSilent) setLoading(false)
     }
-  }, [])
+  }, [token])
 
-  useEffect(() => { fetchAll() }, [fetchAll])
+  useEffect(() => { 
+    if (token) fetchAll() 
+  }, [token, fetchAll])
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    if (!status?.reachable || !token) return
+    const id = setInterval(() => fetchAll(true), 30000)
+    return () => clearInterval(id)
+  }, [status?.reachable, token, fetchAll])
 
   const callAction = async (entity_id, action, extra = {}) => {
     setActing(entity_id)
     try {
       await fetch('/api/home/action', {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body:    JSON.stringify({ entity_id, action, ...extra }),
       })
-      // Optimistic state flip
-      setDevices(prev => prev.map(d => {
-        if (d.entity_id !== entity_id) return d
-        const newState = action === 'turn_on' ? 'on' : action === 'turn_off' ? 'off' : (isOn(d) ? 'off' : 'on')
-        return { ...d, state: newState }
-      }))
+      
+      // Optimistic state flip for simple toggles
+      if (['turn_on', 'turn_off', 'lock', 'unlock', 'open', 'close'].includes(action)) {
+        setDevices(prev => prev.map(d => {
+          if (d.entity_id !== entity_id) return d
+          let newState = d.state
+          if (action === 'turn_on') newState = 'on'
+          else if (action === 'turn_off') newState = 'off'
+          else if (action === 'lock') newState = 'locked'
+          else if (action === 'unlock') newState = 'unlocked'
+          else if (action === 'open') newState = 'open'
+          else if (action === 'close') newState = 'closed'
+          return { ...d, state: newState, ...extra }
+        }))
+      } else if (action === 'set_temperature' || action === 'set_brightness') {
+         // Just update the attributes optimistically
+         setDevices(prev => prev.map(d => d.entity_id === entity_id ? { ...d, ...extra } : d))
+      }
     } finally {
       setActing(null)
     }
   }
 
-  const domains = [...new Set(devices.map(d => d.domain))].sort()
-  const filteredDevices = filter === 'all' ? devices : devices.filter(d => d.domain === filter)
+  const domains = [...new Set(devices.filter(d => !['scene', 'script'].includes(d.domain)).map(d => d.domain))].sort()
+  const scenes  = devices.filter(d => ['scene', 'script'].includes(d.domain))
+  
+  const filteredDevices = filter === 'all' 
+    ? devices.filter(d => !['scene', 'script'].includes(d.domain)) 
+    : devices.filter(d => d.domain === filter)
   const groups = groupByDomain(filteredDevices)
 
   return (
@@ -101,7 +133,7 @@ export default function HomeNodePage() {
         </div>
         {status?.reachable && (
           <div className="page-header-actions">
-            <button className="btn" onClick={fetchAll}>↺ REFRESH</button>
+            <button className="btn" onClick={() => fetchAll()}>↺ REFRESH</button>
           </div>
         )}
       </div>
@@ -142,13 +174,29 @@ export default function HomeNodePage() {
             Home Assistant is configured at <code>{status.url}</code> but is not responding.
             Make sure HA is running and the URL is correct, then refresh.
           </p>
-          <button className="btn" onClick={fetchAll}>↺ RETRY</button>
+          <button className="btn" onClick={() => fetchAll()}>↺ RETRY</button>
         </div>
       )}
 
       {/* Connected — device grid */}
       {!loading && status?.reachable && (
         <>
+          {/* Scenes quick-launch strip */}
+          {scenes.length > 0 && (
+            <div className="home-scenes-strip">
+              {scenes.map(s => (
+                <button 
+                  key={s.entity_id} 
+                  className={`home-scene-pill ${acting === s.entity_id ? 'home-scene-pill--busy' : ''}`}
+                  onClick={() => callAction(s.entity_id, 'turn_on')}
+                  disabled={acting === s.entity_id}
+                >
+                  {DOMAIN_ICON[s.domain]} {s.name}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Domain filter */}
           {domains.length > 1 && (
             <div className="home-filter-row">
@@ -203,34 +251,92 @@ export default function HomeNodePage() {
 
 function DeviceCard({ device, busy, onAction }) {
   const on = isOn(device)
-  const isScene  = device.domain === 'scene' || device.domain === 'script'
   const isLock   = device.domain === 'lock'
   const isCover  = device.domain === 'cover'
   const isClimate = device.domain === 'climate'
+  const isLight = device.domain === 'light'
+
+  const [localBrightness, setLocalBrightness] = useState(
+    Math.round((device.brightness ?? 255) / 255 * 100)
+  )
+  const brightTimer = useRef(null)
+
+  // Keep local brightness in sync with external updates if not currently dragging
+  useEffect(() => {
+    if (!brightTimer.current) {
+      setLocalBrightness(Math.round((device.brightness ?? 255) / 255 * 100))
+    }
+  }, [device.brightness])
 
   const handleToggle = () => {
-    if (isScene)  return onAction(device.entity_id, 'turn_on')
     if (isLock)   return onAction(device.entity_id, on ? 'lock' : 'unlock')
     if (isCover)  return onAction(device.entity_id, on ? 'close' : 'open')
     return onAction(device.entity_id, on ? 'turn_off' : 'turn_on')
+  }
+
+  const handleBrightnessChange = (e) => {
+    const val = parseInt(e.target.value)
+    setLocalBrightness(val)
+    if (brightTimer.current) clearTimeout(brightTimer.current)
+    brightTimer.current = setTimeout(() => {
+      onAction(device.entity_id, 'turn_on', { brightness_pct: val })
+      brightTimer.current = null
+    }, 400)
+  }
+
+  const handleTempAdjust = (delta) => {
+    const currentTarget = device.temperature || 20
+    const next = parseFloat((currentTarget + delta).toFixed(1))
+    onAction(device.entity_id, 'set_temperature', { temperature: next })
   }
 
   return (
     <div className={`card home-device-card ${on ? 'home-device-card--on' : ''} ${busy ? 'home-device-card--busy' : ''}`}>
       <div className="home-device-icon">{DOMAIN_ICON[device.domain] || '◦'}</div>
       <div className="home-device-name">{device.name}</div>
-      {isClimate && device.current_temp != null && (
-        <div className="home-device-meta">{device.current_temp}°</div>
+      
+      {isClimate && (
+        <div className="home-climate-row">
+          <div className="home-climate-info">
+            <span>{device.current_temp != null ? `${device.current_temp}°` : '--'}</span>
+            <span>Target: {device.temperature != null ? `${device.temperature}°` : '--'}</span>
+          </div>
+          <div className="home-climate-target">
+            <div className="home-climate-btns">
+              <button className="home-climate-btn" onClick={() => handleTempAdjust(-0.5)} disabled={busy}>−</button>
+              <button className="home-climate-btn" onClick={() => handleTempAdjust(0.5)} disabled={busy}>+</button>
+            </div>
+            <span style={{ fontSize: '0.65rem', color: 'var(--md-primary)', fontWeight: 600 }}>{device.state.toUpperCase()}</span>
+          </div>
+        </div>
       )}
-      {device.domain === 'light' && on && device.brightness != null && (
-        <div className="home-device-meta">{Math.round(device.brightness / 255 * 100)}%</div>
+
+      {isLight && on && (
+        <div className="home-brightness-row">
+          <input 
+            type="range" 
+            className="home-brightness-slider" 
+            min="1" max="100" 
+            value={localBrightness} 
+            onChange={handleBrightnessChange}
+            disabled={busy}
+          />
+          <span className="home-brightness-label">{localBrightness}%</span>
+        </div>
       )}
+
+      {!isClimate && !isLight && (
+        <div className="home-device-meta">
+          {on ? device.state.toUpperCase() : 'OFF'}
+        </div>
+      )}
+
       <button
         className={`home-device-btn ${on ? 'home-device-btn--on' : ''}`}
         onClick={handleToggle}
         disabled={busy}
       >
-        {busy ? '…' : isScene ? 'RUN' : isLock ? (on ? 'LOCK' : 'UNLOCK') : isCover ? (on ? 'CLOSE' : 'OPEN') : (on ? 'ON' : 'OFF')}
+        {busy ? '…' : isLock ? (on ? 'LOCK' : 'UNLOCK') : isCover ? (on ? 'CLOSE' : 'OPEN') : (on ? 'ON' : 'OFF')}
       </button>
     </div>
   )

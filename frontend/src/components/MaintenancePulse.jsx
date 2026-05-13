@@ -856,6 +856,111 @@ function SettingsPanel({ token, vehicles, people, selectedVehicleId, onPeopleRef
 }
 
 // ---------------------------------------------------------------------------
+// RAG Documents Q&A
+// ---------------------------------------------------------------------------
+
+function VehicleRAG({ token, vehicleId }) {
+  const [file, setFile] = useState(null);
+  const [ingesting, setIngesting] = useState(false);
+  const [question, setQuestion] = useState('');
+  const [asking, setAsking] = useState(false);
+  const [answer, setAnswer] = useState(null);
+  const [error, setError] = useState('');
+  const fileRef = useRef();
+
+  const handleIngest = async () => {
+    if (!file) return;
+    setIngesting(true); setError('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`/api/rag/ingest?doc_id=vehicle_${vehicleId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd
+      });
+      if (!res.ok) throw new Error('Ingestion failed');
+      alert('Document ingested successfully!');
+      setFile(null);
+      if (fileRef.current) fileRef.current.value = '';
+    } catch (e) { setError(e.message); }
+    finally { setIngesting(false); }
+  };
+
+  const handleAsk = async (e) => {
+    e.preventDefault();
+    if (!question.trim()) return;
+    setAsking(true); setError(''); setAnswer(null);
+    try {
+      const res = await fetch('/api/rag/query', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doc_id: `vehicle_${vehicleId}`, question: question.trim() })
+      });
+      if (!res.ok) throw new Error('Query failed');
+      const data = await res.json();
+      setAnswer(data);
+    } catch (e) { setError(e.message); }
+    finally { setAsking(false); }
+  };
+
+  return (
+    <div className="mp-rag-section">
+      <div className="mp-settings-label">VEHICLE KNOWLEDGE BASE (RAG)</div>
+      <p className="mp-settings-hint">
+        Upload manuals or service records to ask conversational questions about this vehicle.
+      </p>
+
+      {error && <div className="mp-flash mp-flash--err">{error}</div>}
+
+      <div className="mp-rag-upload">
+        <input ref={fileRef} type="file" accept=".pdf,.txt" style={{ display: 'none' }} onChange={(e) => setFile(e.target.files[0])} />
+        <button className="cyber-btn btn-xs" onClick={() => fileRef.current.click()}>
+          {file ? `[ ${file.name} ]` : 'SELECT MANUAL/RECORD'}
+        </button>
+        {file && (
+          <button className="cyber-btn btn-xs btn-save" onClick={handleIngest} disabled={ingesting}>
+            {ingesting ? 'INGESTING...' : 'INGEST DOCUMENT'}
+          </button>
+        )}
+      </div>
+
+      <form className="mp-rag-query" onSubmit={handleAsk}>
+        <input 
+          className="cyber-input" 
+          placeholder="Ask a question about this vehicle..." 
+          value={question}
+          onChange={e => setQuestion(e.target.value)}
+          disabled={asking}
+        />
+        <button className="cyber-btn btn-xs btn-save" type="submit" disabled={asking || !question.trim()}>
+          {asking ? 'ASKING...' : 'ASK'}
+        </button>
+      </form>
+
+      {answer && (
+        <div className="mp-rag-answer animate-fade-in">
+          <div className="mp-answer-text">{answer.answer}</div>
+          {answer.chunks?.length > 0 && (
+            <details className="mp-answer-sources">
+              <summary>View Sources ▸</summary>
+              <div className="mp-sources-list">
+                {answer.chunks.map((c, i) => (
+                  <div key={i} className="mp-source-item">
+                    <span className="mp-source-meta">Source: {c.source}</span>
+                    <p>{c.text}</p>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
@@ -1107,6 +1212,7 @@ export default function MaintenancePulse() {
     { key: 'log',      label: 'LOG SERVICE' },
     { key: 'specs',    label: 'EDIT SPECS' },
     { key: 'history',  label: 'HISTORY' },
+    { key: 'documents',label: 'DOCUMENTS' },
     { key: 'settings', label: 'SETTINGS' },
   ];
 
@@ -1521,6 +1627,14 @@ export default function MaintenancePulse() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── DOCUMENTS VIEW ── */}
+      {formMode === 'none' && view === 'documents' && currentVehicle && (
+        <div className="pulse-content animate-fade-in">
+          <h3 className="section-subtitle">&gt; VEHICLE DOCUMENTS (RAG) // {vehicleLabel.toUpperCase()}</h3>
+          <VehicleRAG token={token} vehicleId={selectedId} />
         </div>
       )}
 

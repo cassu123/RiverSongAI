@@ -12,9 +12,13 @@ const ALL_WIDGETS = [
   { key: 'system_status',   label: 'System Status',   col: 'left',  adminOnly: true },
   { key: 'recent_sessions', label: 'Recent Sessions',  col: 'left'  },
   { key: 'memory_activity', label: 'Memory Activity',  col: 'left'  },
+  { key: 'learned_patterns', label: 'Learned Patterns', col: 'left' },
+  { key: 'environment',     label: 'Environment',      col: 'left' },
   { key: 'river_status',    label: 'River Status',     col: 'right' },
   { key: 'quick_actions',   label: 'Quick Actions',    col: 'right' },
+  { key: 'rover',           label: 'Rover Status',     col: 'right' },
   { key: 'active_routines', label: 'Active Routines',  col: 'right' },
+  { key: 'briefing_setup',  label: 'Briefing Setup',   col: 'right' },
 ]
 
 const DEFAULT_VISIBLE = Object.fromEntries(ALL_WIDGETS.map(w => [w.key, true]))
@@ -43,10 +47,6 @@ function loadSessions(userId) {
   } catch { return [] }
 }
 
-function loadRoutines() {
-  try { return JSON.parse(localStorage.getItem('rs-routines') || '[]') } catch { return [] }
-}
-
 function fmtSchedule(r) {
   if (r.trigger === 'daily')   return `Daily ${r.time || ''}`
   if (r.trigger === 'weekly')  return (r.days?.length ? r.days.join('/') : '—') + (r.time ? ` ${r.time}` : '')
@@ -69,7 +69,7 @@ function fmtDate() {
 }
 
 // ---------------------------------------------------------------------------
-// Component
+// Main Dashboard Component
 // ---------------------------------------------------------------------------
 export default function DashboardPage({ onNavigate, isAdmin = false }) {
   const { user, token } = useAuth()
@@ -82,6 +82,11 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
   const [loading,    setLoading]    = useState(true)
   const [sessions,   setSessions]   = useState([])
   const [routines,   setRoutines]   = useState([])
+  const [patterns,   setPatterns]   = useState([])
+  const [rooms,      setRooms]      = useState({})
+  const [roverStatus, setRoverStatus] = useState(null)
+  const [briefingModal, setBriefingModal] = useState(null) // 'morning' | 'evening' | null
+  const [flash,      setFlash]      = useState(null)
 
   // Clock tick
   useEffect(() => {
@@ -105,16 +110,73 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
     }
   }, [userId, token])
 
+  const fetchRoutines = useCallback(async () => {
+    if (!token) return
+    try {
+      const res = await fetch('/api/routines', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setRoutines(data)
+        localStorage.setItem('rs-routines', JSON.stringify(data))
+      }
+    } catch {}
+  }, [token])
+
+  const fetchPatterns = useCallback(async () => {
+    if (!token) return
+    try {
+      const res = await fetch(`/api/memory/preferences?user_id=${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const highConfHabits = data
+          .filter(p => p.category?.includes('habit') || p.confidence === 'high')
+          .sort((a, b) => new Date(b.last_updated) - new Date(a.last_updated))
+          .slice(0, 4)
+        setPatterns(highConfHabits)
+      }
+    } catch {}
+  }, [userId, token])
+
+  const fetchEnvironment = useCallback(async () => {
+    if (!token) return
+    try {
+      const roomRes = await fetch('/api/context/rooms', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (roomRes.ok) {
+        const data = await roomRes.json()
+        setRooms(data.rooms || {})
+      }
+
+      const roverRes = await fetch('/api/rover/status', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (roverRes.ok) {
+        const data = await roverRes.json()
+        setRoverStatus(data)
+      }
+    } catch {}
+  }, [token])
+
   useEffect(() => {
     fetchStats()
-    const id = setInterval(fetchStats, 30000)
+    fetchRoutines()
+    fetchPatterns()
+    fetchEnvironment()
+    const id = setInterval(() => {
+      fetchStats()
+      fetchEnvironment()
+    }, 30000)
     return () => clearInterval(id)
-  }, [fetchStats])
+  }, [fetchStats, fetchRoutines, fetchPatterns, fetchEnvironment])
 
   // Load localStorage-backed data
   useEffect(() => {
     setSessions(loadSessions(userId))
-    setRoutines(loadRoutines())
   }, [userId])
 
   // Widget toggle
@@ -131,6 +193,13 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
     saveWidgets(DEFAULT_VISIBLE)
   }
 
+  const handleBriefingSaved = (msg) => {
+    setFlash(msg)
+    setBriefingModal(null)
+    fetchRoutines()
+    setTimeout(() => setFlash(null), 4000)
+  }
+
   // In arrange mode, show all widgets so they can be toggled
   const show = (key) => arrange || visible[key]
 
@@ -142,12 +211,15 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
   const sumCount  = stats ? stats.memory.summaries : '—'
   const firstName = user?.display_name?.split(' ')[0] || 'Operator'
 
-  // Bar chart: spread fact+summary count across 30 bars with some variation
+  // Bar chart
   const totalMemory = stats ? (stats.memory.facts + stats.memory.summaries) : 0
   const barHeights  = Array.from({ length: 30 }, (_, i) => {
     const base = totalMemory > 0 ? Math.min(48, 8 + (totalMemory / 30) * (0.5 + Math.sin(i * 1.3 + 1) * 0.5)) : 8 + Math.sin(i * 0.7) * 4
     return Math.max(6, Math.round(base))
   })
+
+  const morningRoutine = routines.find(r => r.name === 'Morning Briefing')
+  const eveningRoutine = routines.find(r => r.name === 'Evening Summary')
 
   return (
     <div className="page-wrap dashboard-wrap">
@@ -182,6 +254,8 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
           </button>
         </div>
       </div>
+
+      {flash && <div className="dash-flash animate-fade-in">{flash}</div>}
 
       {/* Arrange mode banner */}
       {arrange && (
@@ -308,6 +382,69 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
               </div>
             </WidgetShell>
           )}
+
+          {/* Learned Patterns Widget */}
+          {show('learned_patterns') && (
+            <WidgetShell
+              label="LEARNED PATTERNS"
+              widgetKey="learned_patterns"
+              arrange={arrange}
+              visible={visible}
+              onToggle={toggleWidget}
+            >
+              {patterns.length === 0 ? (
+                <div className="patterns-empty">No patterns learned yet — start talking to River Song!</div>
+              ) : (
+                <ul className="patterns-list">
+                  {patterns.map((p, i) => (
+                    <li key={i} className="patterns-item">
+                      <span className="patterns-item-icon">◈</span>
+                      <div className="patterns-item-content">
+                        <div className="patterns-item-text">{p.value}</div>
+                        <div className="patterns-item-date">{new Date(p.last_updated).toLocaleDateString()}</div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="patterns-footer">
+                <button className="dash-link" onClick={() => onNavigate('memory')}>View all →</button>
+              </div>
+            </WidgetShell>
+          )}
+
+          {/* Environment Widget */}
+          {show('environment') && (
+            <WidgetShell
+              label="ENVIRONMENT"
+              widgetKey="environment"
+              arrange={arrange}
+              visible={visible}
+              onToggle={toggleWidget}
+            >
+              <div className="dash-env-summary">
+                {Object.keys(rooms).length === 0 ? (
+                  <div className="patterns-empty">No sensors active.</div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                      {Object.entries(rooms).filter(([_, r]) => r.persons > 0).map(([name, r]) => (
+                        <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: '#00ff66' }}>
+                          <span>◉</span> {name.replace('_', ' ').toUpperCase()} ({r.persons})
+                        </div>
+                      ))}
+                    </div>
+                    {Object.entries(rooms).filter(([_, r]) => r.persons > 0).length === 0 && (
+                      <div className="patterns-empty" style={{ padding: '8px 0' }}>All rooms empty.</div>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="patterns-footer">
+                <button className="dash-link" onClick={() => onNavigate('environment')}>View details →</button>
+              </div>
+            </WidgetShell>
+          )}
         </div>
 
         <div className="dashboard-right">
@@ -339,6 +476,12 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
                 <button className="qa-btn" onClick={() => onNavigate('speak')}>
                   <span className="qa-dot" />LISTEN
                 </button>
+                <button className="qa-btn" onClick={() => setBriefingModal('morning')}>
+                  <span className="qa-dot" style={{ background: '#ffaa00' }} />☀ MORNING BRIEFING
+                </button>
+                <button className="qa-btn" onClick={() => setBriefingModal('evening')}>
+                  <span className="qa-dot" style={{ background: '#00aaff' }} />🌙 EVENING SUMMARY
+                </button>
                 <button className="qa-btn" onClick={() => onNavigate('routines')}>
                   <span className="qa-dot" style={{ background: 'var(--text-dim)' }} />NEW ROUTINE
                 </button>
@@ -348,6 +491,44 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
                 <button className="qa-btn" onClick={() => onNavigate('memory')}>
                   <span className="qa-dot" style={{ background: 'var(--text-muted)' }} />LOG EVENT
                 </button>
+              </div>
+            </WidgetShell>
+          )}
+
+          {/* Rover Status Widget */}
+          {show('rover') && roverStatus && (
+            <WidgetShell
+              label="ROVER STATUS"
+              widgetKey="rover"
+              arrange={arrange}
+              visible={visible}
+              onToggle={toggleWidget}
+            >
+              <div className="dash-rover-summary" style={{ fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ 
+                    padding: '2px 8px', borderRadius: 10, fontSize: '0.7rem', fontWeight: 600, color: 'black',
+                    background: roverStatus.telemetry_summary.mode === 'AUTO' ? '#00ff66' : '#ffaa00' 
+                  }}>
+                    {roverStatus.telemetry_summary.mode || 'OFFLINE'}
+                  </span>
+                  <span style={{ color: roverStatus.telemetry_summary.armed ? 'var(--md-error)' : 'var(--text-muted)' }}>
+                    {roverStatus.telemetry_summary.armed ? '◉ ARMED' : '◌ DISARMED'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                  <span>BATTERY</span>
+                  <span>{roverStatus.telemetry_summary.battery_pct != null ? `${roverStatus.telemetry_summary.battery_pct}%` : '--%'}</span>
+                </div>
+                <div style={{ height: 4, background: 'var(--md-outline-variant)', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
+                  <div style={{ 
+                    height: '100%', background: 'var(--md-primary)', 
+                    width: `${roverStatus.telemetry_summary.battery_pct || 0}%` 
+                  }} />
+                </div>
+              </div>
+              <div className="patterns-footer">
+                <button className="dash-link" onClick={() => onNavigate('environment')}>View details →</button>
               </div>
             </WidgetShell>
           )}
@@ -376,8 +557,46 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
               ))}
             </WidgetShell>
           )}
+
+          {/* Briefing Setup Widget */}
+          {show('briefing_setup') && (
+            <WidgetShell
+              label="BRIEFING SETUP"
+              widgetKey="briefing_setup"
+              arrange={arrange}
+              visible={visible}
+              onToggle={toggleWidget}
+            >
+              <div className="briefing-status">
+                <div className="briefing-status-item">
+                  <span className={`dot ${morningRoutine?.enabled ? 'dot--on' : 'dot--off'}`} />
+                  ☀ Morning: {morningRoutine ? morningRoutine.time : 'Not set'}
+                </div>
+                <div className="briefing-status-item">
+                  <span className={`dot ${eveningRoutine?.enabled ? 'dot--on' : 'dot--off'}`} />
+                  🌙 Evening: {eveningRoutine ? eveningRoutine.time : 'Not set'}
+                </div>
+                {morningRoutine && eveningRoutine && (
+                  <div style={{ marginTop: 8, color: 'var(--secondary)' }}>✓ Active</div>
+                )}
+              </div>
+              <div className="patterns-footer">
+                <button className="dash-link" onClick={() => setBriefingModal('morning')}>Edit briefings →</button>
+              </div>
+            </WidgetShell>
+          )}
         </div>
       </div>
+
+      {briefingModal && (
+        <BriefingModal
+          type={briefingModal}
+          token={token}
+          existing={briefingModal === 'morning' ? morningRoutine : eveningRoutine}
+          onClose={() => setBriefingModal(null)}
+          onSaved={handleBriefingSaved}
+        />
+      )}
     </div>
   )
 }
@@ -402,6 +621,120 @@ function WidgetShell({ label, widgetKey, arrange, visible, onToggle, children, s
           {visible[widgetKey] ? '● VISIBLE' : '○ HIDDEN'}
         </button>
       )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Briefing Modal
+// ---------------------------------------------------------------------------
+function BriefingModal({ type, token, existing, onClose, onSaved }) {
+  const isMorning = type === 'morning'
+  const [time, setTime] = useState(existing?.time || (isMorning ? '07:00' : '20:00'))
+  const [busy, setBusy] = useState(false)
+  const [checks, setChecks] = useState(() => {
+    if (isMorning) {
+      return { weather: true, calendar: true, email: true, news: false, reminders: false }
+    } else {
+      return { highlights: true, tomorrow: true, reminders: false, inventory: false }
+    }
+  })
+
+  const toggle = (k) => setChecks(prev => ({ ...prev, [k]: !prev[k] }))
+
+  const handleSave = async () => {
+    setBusy(true)
+    const name = isMorning ? "Morning Briefing" : "Evening Summary"
+    
+    let prompt = isMorning 
+      ? "Give me my morning briefing. Include: "
+      : "Give me my evening summary. Include: "
+
+    if (isMorning) {
+      const parts = []
+      if (checks.weather) parts.push("today's weather forecast")
+      if (checks.calendar) parts.push("my calendar events for today")
+      if (checks.email) parts.push("unread emails summary")
+      if (checks.news) parts.push("top news headlines")
+      if (checks.reminders) parts.push("reminder check")
+      prompt += parts.join(", ") + ". Keep it warm and concise."
+    } else {
+      const parts = []
+      if (checks.highlights) parts.push("highlights from today")
+      if (checks.tomorrow) parts.push("tomorrow's calendar preview")
+      if (checks.reminders) parts.push("any pending reminders")
+      if (checks.inventory) parts.push("inventory/shopping notes")
+      prompt += parts.join(", ") + ". Keep it reflective and warm."
+    }
+
+    const payload = {
+      name,
+      trigger: "daily",
+      time,
+      days: ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"],
+      enabled: true,
+      prompt
+    }
+
+    try {
+      const method = existing ? 'PATCH' : 'POST'
+      const url = existing ? `/api/routines/${existing.id}` : '/api/routines'
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      })
+      if (res.ok) {
+        onSaved(`✓ ${name} set for ${time}`)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="briefing-modal-overlay" onClick={onClose}>
+      <div className="card briefing-modal" onClick={e => e.stopPropagation()}>
+        <div className="card-title">{isMorning ? '☀ MORNING BRIEFING' : '🌙 EVENING SUMMARY'}</div>
+        
+        <div className="briefing-time-row">
+          <label>What time?</label>
+          <input 
+            type="time" 
+            className="briefing-time-input" 
+            value={time} 
+            onChange={e => setTime(e.target.value)} 
+          />
+        </div>
+
+        <div className="briefing-checks">
+          {isMorning ? (
+            <>
+              <label className="briefing-check-label"><input type="checkbox" checked={checks.weather} onChange={() => toggle('weather')} /> Weather</label>
+              <label className="briefing-check-label"><input type="checkbox" checked={checks.calendar} onChange={() => toggle('calendar')} /> Calendar</label>
+              <label className="briefing-check-label"><input type="checkbox" checked={checks.email} onChange={() => toggle('email')} /> Emails</label>
+              <label className="briefing-check-label"><input type="checkbox" checked={checks.news} onChange={() => toggle('news')} /> News</label>
+              <label className="briefing-check-label"><input type="checkbox" checked={checks.reminders} onChange={() => toggle('reminders')} /> Reminders</label>
+            </>
+          ) : (
+            <>
+              <label className="briefing-check-label"><input type="checkbox" checked={checks.highlights} onChange={() => toggle('highlights')} /> Highlights</label>
+              <label className="briefing-check-label"><input type="checkbox" checked={checks.tomorrow} onChange={() => toggle('tomorrow')} /> Tomorrow</label>
+              <label className="briefing-check-label"><input type="checkbox" checked={checks.reminders} onChange={() => toggle('reminders')} /> Reminders</label>
+              <label className="briefing-check-label"><input type="checkbox" checked={checks.inventory} onChange={() => toggle('inventory')} /> Shopping</label>
+            </>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+          <button className="btn btn--primary" onClick={handleSave} disabled={busy}>
+            {busy ? 'SAVING...' : existing ? 'UPDATE BRIEFING' : 'CREATE BRIEFING'}
+          </button>
+          <button className="btn" onClick={onClose}>CANCEL</button>
+        </div>
+      </div>
     </div>
   )
 }

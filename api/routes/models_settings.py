@@ -534,9 +534,119 @@ async def preview_voice(
     if not wav_bytes:
         raise HTTPException(status_code=502, detail="No audio produced.")
 
+# =============================================================================
+# ElevenLabs & Persona settings
+# =============================================================================
+
+def _require_admin(authorization: Optional[str]) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    payload = decode_token(authorization.removeprefix("Bearer "))
+    if not payload or payload.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required.")
+    return payload["sub"]
+
+
+class ElevenLabsBody(BaseModel):
+    api_key: str
+    voice_id: str = "21m00Tcm4TlvDq8ikWAM"
+    model_id: str = "eleven_multilingual_v2"
+
+
+@router.get("/settings/elevenlabs")
+async def get_elevenlabs_settings(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    _require_admin(authorization)
+    s = get_settings()
+    
+    key = s.elevenlabs_api_key
+    masked_key = ""
+    if key:
+        masked_key = f"...{key[-8:]}" if len(key) > 8 else "XXXXXXXX"
+
     return {
-        "voice_id":    entry.voice_id,
-        "display_name":entry.display_name,
-        "preview_text":entry.preview_text,
-        "audio_b64":   base64.b64encode(wav_bytes).decode("ascii"),
+        "api_key":  masked_key,
+        "voice_id": s.elevenlabs_voice_id,
+        "model_id": s.elevenlabs_model_id,
     }
+
+
+@router.post("/settings/elevenlabs")
+async def save_elevenlabs_settings(
+    request: Request,
+    body: ElevenLabsBody,
+    authorization: Optional[str] = Header(default=None),
+):
+    user_id = _require_admin(authorization)
+    
+    # Update live settings singleton
+    s = get_settings()
+    # If the user passed a masked key, don't overwrite with it
+    if not body.api_key.startswith("..."):
+        s.elevenlabs_api_key = body.api_key
+    s.elevenlabs_voice_id = body.voice_id
+    s.elevenlabs_model_id = body.model_id
+    
+    # Persist to admin_config
+    try:
+        store = request.app.state.memory_manager._store
+        config = await store.get_admin_config()
+        config["elevenlabs_config"] = body.model_dump()
+        await store.set_admin_config(config)
+    except Exception as e:
+        logger.warning("Failed to persist ElevenLabs settings to DB: %s", e)
+
+    logger.info("ElevenLabs settings saved by admin %s.", user_id)
+    return {"ok": True}
+
+
+class PersonaBody(BaseModel):
+    system_prompt: str
+
+
+@router.get("/settings/persona")
+async def get_persona(
+    request: Request,
+    authorization: Optional[str] = Header(default=None)
+):
+    _require_admin(authorization)
+    return {"system_prompt": get_settings().river_song_system_prompt}
+
+
+@router.get("/settings/persona/default")
+async def get_persona_default(
+    request: Request,
+    authorization: Optional[str] = Header(default=None)
+):
+    _require_admin(authorization)
+    # Extract the default value from the Pydantic Field
+    from config.settings import Settings
+    default_prompt = Settings.model_fields['river_song_system_prompt'].default
+    return {"system_prompt": default_prompt}
+
+
+@router.post("/settings/persona")
+async def save_persona(
+    request: Request,
+    body: PersonaBody, 
+    authorization: Optional[str] = Header(default=None)
+):
+    user_id = _require_admin(authorization)
+    
+    # Update live settings
+    s = get_settings()
+    s.river_song_system_prompt = body.system_prompt
+    
+    # Persist to admin_config
+    try:
+        store = request.app.state.memory_manager._store
+        config = await store.get_admin_config()
+        config["persona_config"] = {"system_prompt": body.system_prompt}
+        await store.set_admin_config(config)
+    except Exception as e:
+        logger.warning("Failed to persist Persona settings to DB: %s", e)
+        
+    logger.info("Persona settings updated by admin %s.", user_id)
+    return {"ok": True}
