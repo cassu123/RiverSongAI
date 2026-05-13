@@ -196,14 +196,6 @@ export default function ConversationPage() {
     }
   }, [convState, isAmbient, toggleAmbient, sendMessage])
 
-  useEffect(() => {
-    if (convState === 'listening_trigger') {
-      handleToggleAmbient().then(() => {
-        handleStartListening()
-      })
-    }
-  }, [convState, handleToggleAmbient, handleStartListening])
-
   const canSpeak  = convState === 'idle' && connectionStatus === 'connected'
   const isActive  = convState !== 'idle' && convState !== 'connecting'
   const visualLvl = (convState === 'listening' || convState === 'speaking' || isAmbient) ? audioLevel : 0
@@ -231,6 +223,14 @@ export default function ConversationPage() {
       setError('Microphone access denied. Click the lock icon in your browser address bar and allow the microphone.')
     }
   }, [canSpeak, startRecording, sendMessage])
+
+  useEffect(() => {
+    if (convState === 'listening_trigger') {
+      handleToggleAmbient().then(() => {
+        handleStartListening()
+      })
+    }
+  }, [convState, handleToggleAmbient, handleStartListening])
 
   const handleReset = useCallback(() => {
     if (connectionStatus !== 'connected') return
