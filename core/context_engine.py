@@ -35,13 +35,23 @@ class ContextEngine:
         # room_name -> RoomState
         self._rooms: Dict[str, RoomState] = {}
 
-    async def update_room(self, room: str, persons: int, activity: str = "present"):
+    async def update_room(
+        self,
+        room: str,
+        persons: int,
+        activity: str = "present",
+        temperature: Optional[float] = None,
+        lights_on: bool = False,
+    ):
         if room not in self._rooms:
             self._rooms[room] = RoomState()
-        
+
         state = self._rooms[room]
         state.persons = persons
         state.activity = activity
+        if temperature is not None:
+            state.temperature = temperature
+        state.lights_on = lights_on
         state.last_updated = datetime.now(timezone.utc)
         logger.debug(f"Context updated for room '{room}': {persons} person(s), {activity}")
 
