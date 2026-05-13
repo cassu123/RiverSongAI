@@ -70,6 +70,30 @@ class ClaudeAPILLM(LLMProvider):
             logger.error("Claude streaming failed: %s", exc)
             yield f"\n[Claude API Error]: {exc}"
 
+    async def stream_response_thinking(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+        """Extended thinking mode for Claude. Temperature forced to 1, budget 5000 tokens."""
+        system_prompt = ""
+        chat_messages = messages
+        if messages and messages[0].get("role") == "system":
+            system_prompt = messages[0]["content"]
+            chat_messages = messages[1:]
+        try:
+            async with self._client.messages.stream(
+                model=self._model,
+                max_tokens=max(self._max_tokens, 16000),
+                temperature=1,
+                thinking={"type": "enabled", "budget_tokens": 5000},
+                system=system_prompt,
+                messages=chat_messages,
+                betas=["interleaved-thinking-2025-05-14"],
+            ) as stream:
+                async for text in stream.text_stream:
+                    yield text
+        except Exception as exc:
+            logger.warning("Claude thinking mode failed, falling back: %s", exc)
+            async for chunk in self.stream_response(messages):
+                yield chunk
+
     async def chat_with_tools(self, messages: list, tools: list, system: str = "") -> dict:
         """
         Send a message to Claude with a list of available tools.

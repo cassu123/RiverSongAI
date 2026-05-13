@@ -144,7 +144,7 @@ class TinyFishSearchProvider(SearchProvider):
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.get(
-                    "https://api.tinyfish.io/search", 
+                    "https://api.tinyfish.io/search",
                     params={"q": query, "num": count},
                     headers=headers,
                     timeout=10.0
@@ -152,9 +152,8 @@ class TinyFishSearchProvider(SearchProvider):
                 if resp.status_code == 200:
                     logger.info("TinyFish: Using v1 GET endpoint")
                     return self._parse(resp.json(), query, count)
-            except Exception as exc:
-                logger.debug("TinyFish v1 GET endpoint failed: %s", exc)
-            pass
+        except Exception as exc:
+            logger.debug("TinyFish v1 GET endpoint failed: %s", exc)
 
         # Try endpoint 2
         async with httpx.AsyncClient() as client:

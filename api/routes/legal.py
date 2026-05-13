@@ -293,5 +293,285 @@ _PRIVACY_HTML = """<!DOCTYPE html>
 
 
 @router.get("/privacy", response_class=HTMLResponse, include_in_schema=False)
+@router.get("/privacy-policy", response_class=HTMLResponse, include_in_schema=False)
 async def privacy_policy():
     return _PRIVACY_HTML
+
+
+_TERMS_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — River Song AI</title>
+  <style>
+    :root {
+      --bg: #0f1316;
+      --surface: #171c1f;
+      --card: #1e2428;
+      --border: #2e3538;
+      --primary: #96cbff;
+      --text: #dee4e9;
+      --muted: #8a9ba8;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      padding: 0 16px 64px;
+    }
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+    }
+    header .logo {
+      width: 36px; height: 36px;
+      background: var(--primary);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; color: #003354;
+    }
+    header h1 { font-size: 1.1rem; color: var(--text); font-weight: 600; }
+    header p { font-size: 0.8rem; color: var(--muted); }
+    .wrapper { max-width: 760px; margin: 40px auto; }
+    .hero {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    .hero h2 { font-size: 1.6rem; color: var(--primary); margin-bottom: 8px; }
+    .hero p { color: var(--muted); font-size: 0.95rem; }
+    .hero .updated {
+      display: inline-block;
+      margin-top: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 20px;
+    }
+    section h3 {
+      font-size: 1.05rem;
+      color: var(--primary);
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    p { margin-bottom: 12px; color: var(--text); }
+    p:last-child { margin-bottom: 0; }
+    ul, ol { padding-left: 22px; margin-bottom: 12px; }
+    li { margin-bottom: 6px; color: var(--text); }
+    .highlight {
+      background: var(--surface);
+      border-left: 3px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+      padding: 12px 16px;
+      margin: 12px 0;
+      font-size: 0.95rem;
+    }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .contact-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-top: 12px;
+    }
+    .contact-card p { margin: 0; font-size: 0.95rem; }
+    .nav-links {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 24px;
+      font-size: 0.85rem;
+    }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">R</div>
+  <div>
+    <h1>River Song AI</h1>
+    <p>Personal AI Operating System</p>
+  </div>
+</header>
+
+<div class="wrapper">
+
+  <div class="hero">
+    <h2>Terms of Service</h2>
+    <p>By using River Song AI, you agree to these terms. Please read them carefully.</p>
+    <span class="updated">Last updated: May 13, 2026</span>
+  </div>
+
+  <section>
+    <h3>1. Acceptance of Terms</h3>
+    <p>By accessing or using River Song AI (&ldquo;the Application&rdquo;), you agree to be
+    bound by these Terms of Service (&ldquo;Terms&rdquo;). If you do not agree to these Terms,
+    do not use the Application.</p>
+    <p>These Terms apply to all users of River Song AI, including the web interface at
+    <strong>riversongai.com</strong> and the River Song AI Android application.</p>
+  </section>
+
+  <section>
+    <h3>2. Description of Service</h3>
+    <p>River Song AI is a personal AI assistant application that runs on privately owned
+    server hardware. The Application provides:</p>
+    <ul>
+      <li>AI-powered text and voice conversation</li>
+      <li>Personal memory and preference management</li>
+      <li>Integration with optional third-party services (Google, Audible, Home Assistant, etc.)</li>
+      <li>Routine automation and scheduling</li>
+      <li>Smart home control via Home Assistant</li>
+    </ul>
+    <div class="highlight">
+      River Song AI is a self-hosted, personal-use application. It is not a commercial SaaS
+      platform. Access is limited to authorised users only.
+    </div>
+  </section>
+
+  <section>
+    <h3>3. Authorised Use</h3>
+    <p>Access to River Song AI is restricted to authorised users. You may not:</p>
+    <ul>
+      <li>Share your account credentials with any other person</li>
+      <li>Attempt to gain unauthorised access to the server or any connected systems</li>
+      <li>Use the Application to generate, store, or distribute illegal content</li>
+      <li>Use the Application to harass, harm, or threaten any individual</li>
+      <li>Reverse-engineer, decompile, or tamper with the Application</li>
+      <li>Use the Application for any commercial purpose without explicit written consent</li>
+    </ul>
+  </section>
+
+  <section>
+    <h3>4. AI-Generated Content</h3>
+    <p>River Song AI uses large language models (LLMs) including Claude, Gemini, OpenAI GPT,
+    and locally hosted models to generate responses. You acknowledge that:</p>
+    <ul>
+      <li>AI responses may contain errors, inaccuracies, or outdated information</li>
+      <li>AI-generated content does not constitute professional advice of any kind
+      (medical, legal, financial, or otherwise)</li>
+      <li>You are solely responsible for how you act on information provided by the Application</li>
+      <li>When using cloud AI models, your messages are transmitted to the respective provider
+      under their own terms of service</li>
+    </ul>
+  </section>
+
+  <section>
+    <h3>5. Third-Party Services</h3>
+    <p>River Song AI optionally integrates with third-party services. Your use of those
+    services is governed by their respective terms of service and privacy policies:</p>
+    <ul>
+      <li>Google (Calendar, Gmail) &mdash; <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Google Terms of Service</a></li>
+      <li>Anthropic Claude &mdash; <a href="https://www.anthropic.com/legal/consumer-terms" target="_blank" rel="noopener">Anthropic Terms</a></li>
+      <li>OpenAI &mdash; <a href="https://openai.com/policies/terms-of-use" target="_blank" rel="noopener">OpenAI Terms</a></li>
+      <li>Google Gemini &mdash; <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Google Terms</a></li>
+    </ul>
+    <p>The Developer is not responsible for the availability, accuracy, or conduct of any
+    third-party service.</p>
+  </section>
+
+  <section>
+    <h3>6. Data and Privacy</h3>
+    <p>Your use of River Song AI is also governed by our
+    <a href="/privacy-policy">Privacy Policy</a>, which is incorporated into these Terms
+    by reference. The Privacy Policy explains how data is stored and handled.</p>
+    <p>In summary: your data is stored locally on privately owned hardware. The Developer
+    does not access, sell, or share your personal data.</p>
+  </section>
+
+  <section>
+    <h3>7. Availability and Uptime</h3>
+    <p>River Song AI runs on private hardware and is provided on a best-effort basis.
+    The Developer makes no guarantee of uptime, availability, or uninterrupted service.
+    The Application may be offline for maintenance, updates, or hardware issues at any time
+    without notice.</p>
+  </section>
+
+  <section>
+    <h3>8. Limitation of Liability</h3>
+    <p>To the fullest extent permitted by applicable law, the Developer shall not be liable
+    for any indirect, incidental, special, consequential, or punitive damages arising from
+    your use of or inability to use the Application, including but not limited to:</p>
+    <ul>
+      <li>Loss of data or corruption of data</li>
+      <li>Errors or inaccuracies in AI-generated responses</li>
+      <li>Interruption or unavailability of the service</li>
+      <li>Actions taken based on AI-generated content</li>
+    </ul>
+    <p>The Application is provided &ldquo;as is&rdquo; without warranty of any kind, express
+    or implied.</p>
+  </section>
+
+  <section>
+    <h3>9. Changes to Terms</h3>
+    <p>The Developer reserves the right to update these Terms at any time. When changes are
+    made, the &ldquo;Last updated&rdquo; date at the top of this page will be revised.
+    Continued use of River Song AI after changes are posted constitutes acceptance of the
+    updated Terms.</p>
+  </section>
+
+  <section>
+    <h3>10. Governing Law</h3>
+    <p>These Terms are governed by and construed in accordance with applicable law.
+    Any disputes arising from these Terms or your use of the Application shall be resolved
+    through good-faith negotiation in the first instance.</p>
+  </section>
+
+  <section>
+    <h3>11. Contact</h3>
+    <p>If you have any questions about these Terms of Service, please contact:</p>
+    <div class="contact-card">
+      <p><strong>River Song AI</strong></p>
+      <p>Email: <a href="mailto:chrisjoe12374@gmail.com">chrisjoe12374@gmail.com</a></p>
+      <p>Website: <a href="https://riversongai.com">riversongai.com</a></p>
+    </div>
+  </section>
+
+  <div class="nav-links">
+    <a href="/privacy-policy">Privacy Policy</a>
+    <a href="https://riversongai.com">Back to River Song AI</a>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 River Song AI &mdash; All rights reserved</p>
+  </footer>
+
+</div>
+</body>
+</html>"""
+
+
+@router.get("/terms", response_class=HTMLResponse, include_in_schema=False)
+@router.get("/terms-of-service", response_class=HTMLResponse, include_in_schema=False)
+async def terms_of_service():
+    return _TERMS_HTML
