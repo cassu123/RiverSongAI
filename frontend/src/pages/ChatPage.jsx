@@ -37,6 +37,16 @@ export default function ChatPage() {
   const [showHistory,    setShowHistory]    = useState(false)
   const [viewingSession, setViewingSession] = useState(null)
 
+  // Aggregator features
+  const [modelOpen, setModelOpen] = useState(false)
+  const [webSearch, setWebSearch] = useState(false)
+  const [thinkingMode, setThinkingMode] = useState(false)
+  const [showSystem, setShowSystem] = useState(false)
+  const [systemPrompt, setSystemPrompt] = useState('')
+  const [enhancing, setEnhancing] = useState(false)
+
+  const modelDropRef = useRef(null)
+
   // Mic-to-text: transcribe then inject into input
   const [isTranscribing, setIsTranscribing] = useState(false)
   const inputRef       = useRef(null)
@@ -73,9 +83,33 @@ export default function ChatPage() {
     }
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (modelDropRef.current && !modelDropRef.current.contains(e.target)) {
+        setModelOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [])
+
   const handleModelChange = async (e) => {
     const [provider, model_id] = e.target.value.split('::')
     setSelectedModel({ provider, model_id })
+    setSavingModel(true)
+    try {
+      await fetch(`${API_BASE}/api/settings/llm?user_id=${user.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ provider, model_id, cloud_fallback_enabled: false }),
+      })
+    } catch {}
+    setSavingModel(false)
+  }
+
+  const handleModelSelect = async (provider, model_id) => {
+    setSelectedModel({ provider, model_id })
+    setModelOpen(false)
     setSavingModel(true)
     try {
       await fetch(`${API_BASE}/api/settings/llm?user_id=${user.id}`, {
@@ -107,6 +141,9 @@ export default function ChatPage() {
           history: next.slice(-20).map(m => ({ role: m.role, content: m.text })),
           provider: selectedModel?.provider,
           model_id: selectedModel?.model_id,
+          web_search: webSearch,
+          thinking_mode: thinkingMode,
+          ...(systemPrompt.trim() ? { system_prompt: systemPrompt.trim() } : {}),
         }),
       })
 
@@ -139,7 +176,7 @@ export default function ChatPage() {
       setIsThinking(false)
       setThinkingStart(null)
     }
-  }, [inputText, isThinking, messages, selectedModel, token])
+  }, [inputText, isThinking, messages, selectedModel, token, webSearch, thinkingMode, systemPrompt])
 
   const handleKeyDown = useCallback(e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
@@ -211,9 +248,44 @@ export default function ChatPage() {
     await startRecording()
   }, [isRecording, isTranscribing, startRecording])
 
-  const modelValue = selectedModel ? `${selectedModel.provider}::${selectedModel.model_id}` : ''
+  const handleExport = () => {
+    const lines = ['# River Song — Chat Export', `*${new Date().toLocaleString()}*`, '']
+    messages.forEach(m => {
+      lines.push(`**${m.role === 'user' ? 'You' : 'River Song'}:** ${m.text}`)
+      lines.push('')
+    })
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `river-song-${Date.now()}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleEnhance = useCallback(async () => {
+    if (!inputText.trim() || enhancing) return
+    setEnhancing(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/conversation/enhance-prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ prompt: inputText.trim() }),
+      })
+      if (res.ok) {
+        const { enhanced } = await res.json()
+        if (enhanced) setInputText(enhanced)
+      }
+    } catch {} finally { setEnhancing(false) }
+  }, [inputText, enhancing, token])
+
   const displayMessages = viewingSession ? viewingSession.messages : messages
   const displayStreaming = viewingSession ? '' : streamingResponse
+
+  const isCloud = selectedModel && ['anthropic', 'openai', 'google'].includes(selectedModel.provider)
+  const currentModelName = selectedModel ? (
+    [...models.cloud, ...models.local].find(m => m.model_id === selectedModel.model_id)?.display_name || selectedModel.model_id
+  ) : 'SELECT MODEL'
 
   return (
     <div className="chat-page">
@@ -221,39 +293,66 @@ export default function ChatPage() {
       {/* Top bar */}
       <div className="chat-top-bar">
         <div className="chat-top-left">
-          <div className="chat-model-selector">
-            <label className="chat-model-label">MODEL</label>
-            <select
-              className="chat-model-select"
-              value={modelValue}
-              onChange={handleModelChange}
+          <div className="chat-model-pill-wrap" ref={modelDropRef}>
+            <button 
+              className="chat-model-pill" 
+              onClick={() => setModelOpen(!modelOpen)}
               disabled={savingModel}
             >
-              {models.cloud.length > 0 && (
-                <optgroup label="☁ CLOUD">
-                  {models.cloud.map(m => (
-                    <option key={`${m.provider}::${m.model_id}`} value={`${m.provider}::${m.model_id}`}>
-                      {m.display_name}
-                    </option>
-                  ))}
-                </optgroup>
+              {currentModelName}
+              {savingModel ? (
+                <span className="chat-model-badge">…</span>
+              ) : (
+                <span className="chat-model-badge">{isCloud ? '☁' : '⬡'}</span>
               )}
-              {models.local.length > 0 && (
-                <optgroup label="⬡ LOCAL">
-                  {models.local.map(m => (
-                    <option key={`${m.provider}::${m.model_id}`} value={`${m.provider}::${m.model_id}`}>
-                      {m.display_name}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-            {savingModel && <span className="chat-model-saving">saving...</span>}
+            </button>
+
+            {modelOpen && (
+              <div className="chat-model-dropdown">
+                {models.cloud.length > 0 && (
+                  <div className="chat-model-group">
+                    <div className="chat-model-group-label">☁ Cloud</div>
+                    {models.cloud.map(m => (
+                      <button
+                        key={`${m.provider}::${m.model_id}`}
+                        className={`chat-model-option ${selectedModel?.model_id === m.model_id ? 'chat-model-option--active' : ''}`}
+                        onClick={() => handleModelSelect(m.provider, m.model_id)}
+                      >
+                        {m.display_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {models.local.length > 0 && (
+                  <div className="chat-model-group">
+                    <div className="chat-model-group-label">⬡ Local</div>
+                    {models.local.map(m => (
+                      <button
+                        key={`${m.provider}::${m.model_id}`}
+                        className={`chat-model-option ${selectedModel?.model_id === m.model_id ? 'chat-model-option--active' : ''}`}
+                        onClick={() => handleModelSelect(m.provider, m.model_id)}
+                      >
+                        {m.display_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         <div className="chat-top-right">
           {error && <span className="chat-error-inline">{error}</span>}
+          
+          <button className="chat-icon-btn" onClick={handleExport} disabled={messages.length === 0} title="Export chat">
+            <ExportIcon />
+          </button>
+
+          <button className="chat-icon-btn" onClick={() => setShowSystem(!showSystem)} title="System prompt">
+            <SystemIcon />
+          </button>
+
           <button
             className={`chat-icon-btn ${showHistory ? 'chat-icon-btn--on' : ''}`}
             onClick={() => { setShowHistory(h => !h); setViewingSession(null) }}
@@ -263,6 +362,38 @@ export default function ChatPage() {
             {history.length > 0 && <span className="chat-history-count">{history.length}</span>}
           </button>
         </div>
+      </div>
+
+      {showSystem && (
+        <div className="chat-system-panel">
+          <div className="chat-system-label">SYSTEM PROMPT</div>
+          <textarea 
+            className="chat-system-input" 
+            rows={3} 
+            placeholder="Define River Song's behaviour for this session..." 
+            value={systemPrompt} 
+            onChange={e => setSystemPrompt(e.target.value)} 
+          />
+          <div className="chat-system-footer">
+            <span>{systemPrompt.length} characters</span>
+            <button className="chat-system-clear" onClick={() => setSystemPrompt('')}>CLEAR</button>
+          </div>
+        </div>
+      )}
+
+      <div className="chat-feature-row">
+        <button 
+          className={`chat-feature-chip ${webSearch ? 'chat-feature-chip--on' : ''}`} 
+          onClick={() => setWebSearch(w => !w)}
+        >
+          <WebIcon /> WEB
+        </button>
+        <button 
+          className={`chat-feature-chip ${thinkingMode ? 'chat-feature-chip--on' : ''}`} 
+          onClick={() => setThinkingMode(t => !t)}
+        >
+          <ThinkIcon /> THINK
+        </button>
       </div>
 
       {/* History panel */}
@@ -296,40 +427,58 @@ export default function ChatPage() {
 
       {/* Input bar */}
       <div className="chat-input-bar">
-        <button
-          className={`chat-mic-btn ${isRecording ? 'chat-mic-btn--active' : ''} ${isTranscribing ? 'chat-mic-btn--transcribing' : ''}`}
-          onClick={handleMic}
-          disabled={isTranscribing}
-          title={isRecording ? 'Listening...' : isTranscribing ? 'Transcribing...' : 'Voice input'}
-          aria-label="Voice input"
-        >
-          <MicIcon />
-        </button>
-
-        <div className="chat-input-wrap">
-          <textarea
-            ref={inputRef}
-            className="chat-text-input"
-            placeholder="Message River Song..."
-            value={inputText}
-            onChange={e => setInputText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isThinking || !!viewingSession}
-            rows={1}
-          />
+        <div className="chat-input-row">
           <button
-            className="chat-send-btn"
-            onClick={handleSend}
-            disabled={!inputText.trim() || isThinking || !!viewingSession}
-            aria-label="Send"
+            className={`chat-mic-btn ${isRecording ? 'chat-mic-btn--active' : ''} ${isTranscribing ? 'chat-mic-btn--transcribing' : ''}`}
+            onClick={handleMic}
+            disabled={isTranscribing}
+            title={isRecording ? 'Listening...' : isTranscribing ? 'Transcribing...' : 'Voice input'}
+            aria-label="Voice input"
           >
-            <SendIcon />
+            <MicIcon />
+          </button>
+
+          <div className="chat-input-wrap">
+            <textarea
+              ref={inputRef}
+              className="chat-text-input"
+              placeholder="Message River Song..."
+              value={inputText}
+              onChange={e => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isThinking || !!viewingSession}
+              rows={1}
+            />
+            
+            <button 
+              className={`chat-enhance-btn ${enhancing ? 'chat-enhance-btn--busy' : ''}`}
+              onClick={handleEnhance}
+              disabled={inputText.trim().length < 10 || enhancing || isThinking}
+              title="Enhance prompt"
+            >
+              <SparkleIcon />
+            </button>
+
+            <button
+              className="chat-send-btn"
+              onClick={handleSend}
+              disabled={!inputText.trim() || isThinking || !!viewingSession}
+              aria-label="Send"
+            >
+              <SendIcon />
+            </button>
+          </div>
+
+          <button className="chat-reset-btn" onClick={handleReset} title="Save & reset">
+            <ResetIcon />
           </button>
         </div>
 
-        <button className="chat-reset-btn" onClick={handleReset} title="Save & reset">
-          <ResetIcon />
-        </button>
+        {inputText.length > 0 && (
+          <div className="chat-token-count">
+            {Math.ceil(inputText.length / 4)} tokens
+          </div>
+        )}
       </div>
 
       <div className="chat-disclaimer">
@@ -337,6 +486,55 @@ export default function ChatPage() {
         Running on local hardware; responses may be slower than cloud AI.
       </div>
     </div>
+  )
+}
+
+function WebIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3"/>
+      <ellipse cx="8" cy="8" rx="3" ry="6.5" stroke="currentColor" strokeWidth="1.3"/>
+      <ellipse cx="8" cy="8" rx="6.5" ry="3" stroke="currentColor" strokeWidth="1.3"/>
+      <line x1="8" y1="1.5" x2="8" y2="14.5" stroke="currentColor" strokeWidth="1.3"/>
+    </svg>
+  )
+}
+
+function ThinkIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+      <path d="M9.5 1.5L4 9H8L6.5 14.5L12 7H8L9.5 1.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function SystemIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+      <line x1="2" y1="4" x2="14" y2="4" stroke="currentColor" strokeWidth="1.3"/>
+      <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="1.3"/>
+      <line x1="2" y1="12" x2="14" y2="12" stroke="currentColor" strokeWidth="1.3"/>
+      <circle cx="5" cy="4" r="1.5" fill="var(--bg)" stroke="currentColor" strokeWidth="1.3"/>
+      <circle cx="11" cy="8" r="1.5" fill="var(--bg)" stroke="currentColor" strokeWidth="1.3"/>
+      <circle cx="7" cy="12" r="1.5" fill="var(--bg)" stroke="currentColor" strokeWidth="1.3"/>
+    </svg>
+  )
+}
+
+function ExportIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+      <path d="M8 2V10M8 10L5 7M8 10L11 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M3 13H13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function SparkleIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+      <path d="M8 2C8 2 8.5 6 12 8C8.5 10 8 14 8 14C8 14 7.5 10 4 8C7.5 6 8 2 8 2Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+    </svg>
   )
 }
 

@@ -261,3 +261,10 @@
   border-top: 1px solid var(--md-outline-variant);
   padding-top: 8px;
 }
+
+/* Responsive additions */
+@media (max-width: 480px) {
+  .briefing-checks {
+    grid-template-columns: 1fr;
+  }
+}

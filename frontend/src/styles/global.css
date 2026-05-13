@@ -272,6 +272,14 @@
   flex-shrink: 0;
 }
 
+@media (max-width: 480px) {
+  .page-header-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+}
+
 /* ============================================================
    M3 Card variants
    ============================================================ */
@@ -492,11 +500,24 @@
 
 .dashboard {
   display: grid;
-  grid-template-columns: 1fr 380px;
-  grid-template-rows: auto auto 1fr;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto;
   gap: 16px;
   height: 100%;
   min-height: 0;
+}
+
+@media (min-width: 640px) {
+  .dashboard {
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: auto auto 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .dashboard {
+    grid-template-columns: 1fr 380px;
+  }
 }
 
 .dashboard-left  { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -622,6 +643,12 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+@media (max-width: 360px) {
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .qa-btn {
@@ -1722,4 +1749,9 @@
   .model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
   .voice-option { width: 100%; min-width: unset; }
+}
+
+@media (max-width: 640px) {
+  .page-wrap { padding: 12px 12px 24px; }
+  .btn, .qa-btn { min-height: 44px; }
 }

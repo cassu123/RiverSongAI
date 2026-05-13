@@ -133,3 +133,45 @@ class GeminiLLM(LLMProvider):
             raise RuntimeError(
                 f"Gemini API error (model={self._model}): {exc}"
             ) from exc
+
+    async def stream_response_thinking(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+        """Thinking mode for Gemini 2.5 models. Falls back for 2.0 and older."""
+        if "2.5" not in self._model:
+            async for chunk in self.stream_response(messages):
+                yield chunk
+            return
+        logger.info(_CLOUD_DELAY_WARNING)
+        system_instruction = None
+        chat_messages: List[genai_types.Content] = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if role == "system":
+                system_instruction = content
+                continue
+            gemini_role = "model" if role == "assistant" else "user"
+            chat_messages.append(
+                genai_types.Content(
+                    role=gemini_role,
+                    parts=[genai_types.Part(text=content)],
+                )
+            )
+        config = genai_types.GenerateContentConfig(
+            max_output_tokens=self._max_tokens,
+            temperature=self._temperature,
+            system_instruction=system_instruction,
+            thinking_config=genai_types.ThinkingConfig(thinking_budget=5000),
+        )
+        try:
+            async for chunk in await self._client.aio.models.generate_content_stream(
+                model=self._model,
+                contents=chat_messages,
+                config=config,
+            ):
+                text = chunk.text
+                if text:
+                    yield text
+        except Exception as exc:
+            logger.warning("Gemini thinking mode failed, falling back: %s", exc)
+            async for chunk in self.stream_response(messages):
+                yield chunk

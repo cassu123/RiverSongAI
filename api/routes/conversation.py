@@ -54,6 +54,7 @@ from core.conversation_loop import ConversationLoop, _build_llm_provider, _build
 from core.memory_manager import MemoryManager
 from core.wake_word_service import WakeWordService
 from config.settings import get_settings
+from providers.web.search import build_search_provider
 
 
 logger = logging.getLogger(__name__)
@@ -293,6 +294,9 @@ class _ChatRequest(BaseModel):
     history: list[dict] = []
     provider: str | None = None
     model_id: str | None = None
+    web_search: bool = False
+    system_prompt: str | None = None
+    thinking_mode: bool = False
 
 
 @router.post("/api/conversation/chat")
@@ -324,6 +328,18 @@ async def chat_http(
         except Exception:
             pass
 
+    if body.system_prompt and body.system_prompt.strip():
+        system_prompt = body.system_prompt.strip() + "\n\n" + system_prompt
+
+    if body.web_search:
+        try:
+            _searcher = build_search_provider()
+            _results = await _searcher.search(body.message, count=5)
+            if _results:
+                system_prompt += f"\n\n--- WEB SEARCH RESULTS ---\n{_results}\n--- END RESULTS ---\nUse these results to inform your answer where relevant."
+        except Exception as _exc:
+            logger.warning("Web search failed: %s", _exc)
+
     messages = [{"role": "system", "content": system_prompt}]
     for m in body.history[-20:]:
         role = m.get("role", "user")
@@ -338,7 +354,8 @@ async def chat_http(
 
     async def _stream():
         try:
-            async for chunk in llm.stream_response(messages):
+            method = llm.stream_response_thinking if body.thinking_mode else llm.stream_response
+            async for chunk in method(messages):
                 yield f"data: {chunk}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as exc:
@@ -516,6 +533,56 @@ async def extract_facts_http(
 
     asyncio.create_task(_run())
     return {"status": "processing"}
+
+
+# ---------------------------------------------------------------------------
+# HTTP: Enhance prompt
+# ---------------------------------------------------------------------------
+
+class _EnhanceRequest(BaseModel):
+    prompt: str
+
+
+@router.post("/api/conversation/enhance-prompt")
+async def enhance_prompt_http(
+    body: _EnhanceRequest,
+    request: Request,
+) -> dict:
+    """
+    Rewrites a short user prompt into a clearer, more detailed version.
+    Uses the default LLM. Returns {"enhanced": "<improved prompt>"}.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.removeprefix("Bearer ").strip()
+    payload = decode_token(token) if token else None
+    if not payload:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    if not body.prompt or not body.prompt.strip():
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Prompt is empty.")
+    meta_prompt = (
+        "Rewrite the following user prompt to be clearer, more specific, and better "
+        "structured for an AI assistant. Return only the improved prompt — no explanation, "
+        "no preamble, no quotes.\n\nOriginal prompt:\n"
+        + body.prompt.strip()
+    )
+    messages = [
+        {"role": "system", "content": "You are a prompt engineering assistant."},
+        {"role": "user", "content": meta_prompt},
+    ]
+    try:
+        llm = _build_llm_provider()
+        full = ""
+        async for chunk in llm.stream_response(messages):
+            full += chunk
+        enhanced = full.strip()
+        if not enhanced:
+            enhanced = body.prompt.strip()
+        return {"enhanced": enhanced}
+    except Exception as exc:
+        logger.error("Enhance prompt error: %s", exc)
+        return {"enhanced": body.prompt.strip()}
 
 
 # ---------------------------------------------------------------------------

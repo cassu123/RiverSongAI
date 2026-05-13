@@ -100,6 +100,17 @@ class LLMProvider(ABC):
         """
         ...
 
+    async def stream_response_thinking(
+        self, messages: List[dict]
+    ) -> AsyncGenerator[str, None]:
+        """
+        Stream a response with extended thinking enabled.
+        Default implementation falls back to stream_response for providers
+        that do not support native thinking mode.
+        """
+        async for chunk in self.stream_response(messages):
+            yield chunk
+
 
 class TTSProvider(ABC):
     """

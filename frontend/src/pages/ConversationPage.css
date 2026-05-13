@@ -903,3 +903,21 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .conv-portrait-zone {
+    padding-top: 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .conv-avatar-container {
+    width: 100%;
+    max-width: 280px;
+    height: 280px;
+  }
+}
