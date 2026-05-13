@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from 'react'
-const RiverSong = lazy(() => import('../components/RiverSong.jsx'))
 import ConversationPanel  from '../components/ConversationPanel.jsx'
 import AudioVisualizer    from '../components/AudioVisualizer.jsx'
 import { useWebSocket }   from '../hooks/useWebSocket.js'
@@ -7,6 +6,8 @@ import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
 import { useAuth }        from '../context/AuthContext.jsx'
 import { AudioPlayer }    from '../utils/AudioPlayer.js'
 import './ConversationPage.css'
+
+const RiverSong = lazy(() => import('../components/RiverSong.jsx'))
 
 const API_BASE    = import.meta.env.VITE_API_URL || ''
 const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
