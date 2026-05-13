@@ -23,6 +23,11 @@ from .vision import router as vision_router
 from .shopify_webhooks import router as shopify_webhooks_router
 from .image import router as image_router
 from .push import router as push_router
+from .rag import router as rag_router
+from .daemons import router as daemons_router
+from .context import router as context_router
+from .broadcast import router as broadcast_router
+from .rover import router as rover_router
 from . import n8n_webhooks
 from .legal import router as legal_router
 
@@ -52,6 +57,11 @@ __all__ = [
     "shopify_webhooks_router",
     "image_router",
     "push_router",
+    "rag_router",
+    "daemons_router",
+    "context_router",
+    "broadcast_router",
+    "rover_router",
     "n8n_webhooks",
     "legal_router",
 ]

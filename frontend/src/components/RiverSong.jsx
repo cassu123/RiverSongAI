@@ -20,7 +20,7 @@ function getCSSVar(name) {
   return val || null
 }
 
-function AvatarModel({ state, audioLevel }) {
+function AvatarModel({ state, audioLevel, lipSyncOpen = 0 }) {
   const { scene } = useGLTF('/avatar.glb')
   const groupRef = useRef()
   
@@ -50,27 +50,52 @@ function AvatarModel({ state, audioLevel }) {
   useFrame((stateObj) => {
     if (!groupRef.current) return
 
-    const scaleBase = 1.0
-    const scaleAdd = (state === 'speaking' || state === 'listening') ? audioLevel * 0.8 : 0
-    const targetScale = scaleBase + scaleAdd
-    groupRef.current.scale.setScalar(
-      groupRef.current.scale.x + (targetScale - groupRef.current.scale.x) * 0.3
-    )
-
-    const targetY = -1.5 + ((state === 'speaking' || state === 'listening') ? audioLevel * 0.6 : 0)
-    groupRef.current.position.y += (targetY - groupRef.current.position.y) * 0.3
+    // Driver: use lipSyncOpen if > 0, fallback to audioLevel
+    const driver = lipSyncOpen > 0 ? lipSyncOpen : audioLevel
 
     if (state === 'speaking' || state === 'listening') {
-      groupRef.current.rotation.y = Math.sin(stateObj.clock.elapsedTime * 20) * audioLevel * 0.4
-      groupRef.current.rotation.z = Math.cos(stateObj.clock.elapsedTime * 25) * audioLevel * 0.2
+      const scaleBase = 1.0
+      const scaleAdd = driver * 0.8
+      const targetScale = scaleBase + scaleAdd
+      groupRef.current.scale.setScalar(
+        groupRef.current.scale.x + (targetScale - groupRef.current.scale.x) * 0.3
+      )
+
+      const targetY = -1.5 + (driver * 0.6)
+      groupRef.current.position.y += (targetY - groupRef.current.position.y) * 0.3
+
+      groupRef.current.rotation.y = Math.sin(stateObj.clock.elapsedTime * 20) * driver * 0.4
+      groupRef.current.rotation.z = Math.cos(stateObj.clock.elapsedTime * 25) * driver * 0.2
+    } else if (state === 'idle') {
+      // Idle breathing animation
+      const breathingFreq = 0.8
+      const breathingAmpY = 0.05
+      const breathingAmpScale = 0.01
+
+      const targetY = -1.5 + Math.sin(stateObj.clock.elapsedTime * breathingFreq) * breathingAmpY
+      const targetScale = 1.0 + Math.sin(stateObj.clock.elapsedTime * breathingFreq) * breathingAmpScale
+
+      groupRef.current.position.y += (targetY - groupRef.current.position.y) * 0.1
+      groupRef.current.scale.setScalar(
+        groupRef.current.scale.x + (targetScale - groupRef.current.scale.x) * 0.1
+      )
+
+      groupRef.current.rotation.y += (0 - groupRef.current.rotation.y) * 0.1
+      groupRef.current.rotation.z += (0 - groupRef.current.rotation.z) * 0.1
     } else {
+      // Other states (thinking, connecting, error)
+      groupRef.current.scale.setScalar(
+        groupRef.current.scale.x + (1.0 - groupRef.current.scale.x) * 0.3
+      )
+      groupRef.current.position.y += (-1.5 - groupRef.current.position.y) * 0.3
       groupRef.current.rotation.y += (0 - groupRef.current.rotation.y) * 0.1
       groupRef.current.rotation.z += (0 - groupRef.current.rotation.z) * 0.1
     }
   })
 
+  const driver = lipSyncOpen > 0 ? lipSyncOpen : audioLevel
   const glowIntensity = (state === 'speaking' || state === 'listening')
-    ? 0.5 + audioLevel * 3.5
+    ? 0.5 + driver * 3.5
     : 0.3
 
   return (
@@ -95,7 +120,7 @@ function AvatarModel({ state, audioLevel }) {
 
 useGLTF.preload('/avatar.glb')
 
-export default function RiverSong({ state, audioLevel = 0 }) {
+export default function RiverSong({ state, audioLevel = 0, lipSyncOpen = 0, compact = false }) {
   const [mounted, setMounted] = useState(false)
   
   useEffect(() => {
@@ -112,9 +137,10 @@ export default function RiverSong({ state, audioLevel = 0 }) {
   }, [state])
 
   const isSpeaking = state === 'speaking' || state === 'listening'
+  const driver = lipSyncOpen > 0 ? lipSyncOpen : audioLevel
 
   // CSS bloom
-  const glowStrength = isSpeaking ? 1.2 + audioLevel * 3 : 0.6
+  const glowStrength = isSpeaking ? 1.2 + driver * 3 : 0.6
   const canvasStyle = {
     filter: `brightness(${1 + glowStrength * 0.3}) drop-shadow(0 0 ${6 + glowStrength * 10}px ${color})`,
     transition: 'filter 0.1s ease',
@@ -122,19 +148,30 @@ export default function RiverSong({ state, audioLevel = 0 }) {
   }
 
   return (
-    <div className="river-song-wrapper">
+    <div className={`river-song-wrapper ${compact ? 'river-song-wrapper--compact' : ''}`}>
+      <style>{`
+        .river-song-wrapper--compact {
+          transform: scale(1.3);
+        }
+      `}</style>
       <div className="river-song-scanlines" aria-hidden="true" />
       <div className="river-song-vignette"  aria-hidden="true" />
 
       <div className="river-song-canvas" style={canvasStyle}>
         {mounted && (
-          <Canvas camera={{ position: [0, 0, 4.5], fov: 45 }} gl={{ antialias: true }}>
+          <Canvas 
+            camera={{ 
+              position: compact ? [0, 0, 3.5] : [0, 0, 4.5], 
+              fov: compact ? 50 : 45 
+            }} 
+            gl={{ antialias: true }}
+          >
             <ambientLight intensity={0.4} />
             <pointLight position={[0, 4, 3]} intensity={2.0} color={color} />
             <pointLight position={[0, -2, 2]} intensity={0.6} color={color} />
 
             <Float speed={state === 'thinking' ? 5 : 2.5} rotationIntensity={0.5} floatIntensity={1}>
-              <AvatarModel state={state} audioLevel={audioLevel} />
+              <AvatarModel state={state} audioLevel={audioLevel} lipSyncOpen={lipSyncOpen} />
             </Float>
 
             {state !== 'connecting' && (

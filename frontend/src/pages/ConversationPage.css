@@ -785,19 +785,121 @@
   border-color: var(--warn);
 }
 
-@media (max-width: 1024px) {
-  .conv-top-bar {
-    padding: 10px 16px;
-  }
-  .conv-mic-btn--large {
-    width: 64px;
-    height: 64px;
-  }
-  .conv-history-item-date {
-    min-width: 90px;
-    font-size: 0.52rem;
-  }
-  .conv-history-panel {
-    padding: 12px 14px;
-  }
+/* Visualizer Overlay */
+.conv-avatar-container {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.conv-visualizer-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Ambient Indicator */
+.conv-ambient-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 4px 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+
+.conv-ambient-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  box-shadow: 0 0 2px rgba(0,0,0,0.3);
+}
+
+.conv-ambient-dot--on {
+  background: #00ff66;
+  box-shadow: 0 0 8px #00ff66;
+  animation: ambient-pulse 2s infinite ease-in-out;
+}
+
+@keyframes ambient-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.conv-ambient-label {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.conv-ambient-indicator--compact {
+  margin-top: 0;
+  padding: 4px;
+}
+
+/* State Pills */
+.conv-state-pill-wrap {
+  margin-top: 16px;
+}
+
+.conv-state-pill {
+  padding: 4px 16px;
+  border-radius: 20px;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+}
+
+.conv-state-pill--listening {
+  color: #00ff66;
+  border-color: #00ff66;
+  box-shadow: 0 0 8px rgba(0, 255, 102, 0.2);
+}
+
+.conv-state-pill--thinking {
+  color: #ffaa00;
+  border-color: #ffaa00;
+}
+
+.conv-state-pill--speaking {
+  color: #00aaff;
+  border-color: #00aaff;
+  box-shadow: 0 0 8px rgba(0, 170, 255, 0.2);
+}
+
+.conv-state-pill--idle {
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+
+/* Streaming Cursor */
+.chat-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1.2em;
+  background: var(--primary);
+  margin-left: 4px;
+  vertical-align: middle;
+  animation: cursor-blink 1s infinite step-end;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }

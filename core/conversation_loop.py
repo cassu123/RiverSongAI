@@ -319,7 +319,9 @@ class ConversationLoop:
             if audio_bytes:
                 import base64
                 b64 = base64.b64encode(audio_bytes).decode("utf-8")
-                await on_event({"type": "audio", "data": b64})
+                # ElevenLabs returns mp3, Piper/Kokoro return wav
+                fmt = "mp3" if self._tts.__class__.__name__ == "ElevenLabsTTS" else "wav"
+                await on_event({"type": "audio", "data": b64, "format": fmt})
             
             await on_event({"type": "idle"})
 
@@ -335,7 +337,19 @@ class ConversationLoop:
             except Exception as exc:
                 logger.warning("Memory context build failed (user=%s): %s", self._user_id, exc)
 
-        full_system = self._system_prompt + memory_block
+        # NEW: inject live environment context (Task D)
+        context_block = ""
+        try:
+            from main import get_app
+            app = get_app()
+            if app:
+                engine = getattr(app.state, "context_engine", None)
+                if engine:
+                    context_block = engine.build_context_block()
+        except Exception as exc:
+            logger.debug("Context injection skipped: %s", exc)
+
+        full_system = self._system_prompt + memory_block + context_block
         self._history = [{"role": "system", "content": full_system}]
 
     async def _stream_sentences(self, stream: AsyncGenerator[str, None], on_token: Callable[[str], Coroutine[Any, Any, None]]) -> AsyncGenerator[str, None]:
@@ -364,18 +378,40 @@ class ConversationLoop:
 
     async def _process_tts_stream(self, sentence_stream: AsyncGenerator[str, None], on_event: EventCallback):
         """Consume sentences and stream audio chunks to the browser."""
-        first_chunk = True
         async for sentence in sentence_stream:
-            if first_chunk:
-                await on_event({"type": "speaking"})
-                first_chunk = False
+            if not sentence.strip():
+                continue
             
-            async for audio_chunk in self._tts.stream_synthesize(sentence):
-                if audio_chunk:
-                    await on_event({
-                        "type": "audio",
-                        "data": base64.b64encode(audio_chunk).decode("ascii"),
-                    })
+            audio_data = b""
+            async for chunk in self._tts.stream_synthesize(sentence):
+                if chunk:
+                    audio_data += chunk
+            
+            if audio_data:
+                await on_event({"type": "speaking"})
+                # ElevenLabs returns mp3, Piper/Kokoro return wav
+                fmt = "mp3" if self._tts.__class__.__name__ == "ElevenLabsTTS" else "wav"
+                await on_event({
+                    "type": "audio",
+                    "data": base64.b64encode(audio_data).decode("ascii"),
+                    "format": fmt,
+                })
+                # NEW: trigger Herald lip-sync in background (non-blocking)
+                asyncio.create_task(
+                    self._trigger_herald_lip_sync(audio_data, fmt)
+                )
+
+    async def _trigger_herald_lip_sync(self, audio_bytes: bytes, fmt: str) -> None:
+        """Calls the Herald daemon to compute and broadcast lip-sync timings."""
+        import base64
+        try:
+            from daemons.registry import call_daemon
+            await call_daemon("herald", "lip_sync", {
+                "audio_b64": base64.b64encode(audio_bytes).decode("ascii"),
+                "format": fmt,
+            })
+        except Exception as e:
+            logger.debug("Lip-sync trigger skipped: %s", e)
 
     async def run_once(self, audio_bytes: bytes, on_event: EventCallback) -> None:
         """
@@ -602,14 +638,17 @@ class ConversationLoop:
             logger.debug("Habit inference skipped: %s", exc)
 
     async def _speak_and_send(self, text: str, on_event: EventCallback) -> None:
-        """Synthesize text with Piper and send WAV bytes to the browser."""
+        """Synthesize text and send audio bytes to the browser."""
         try:
             await on_event({"type": "speaking"})
             wav_bytes = await self._tts.synthesize(text)
             if wav_bytes:
+                # ElevenLabs returns mp3, Piper/Kokoro return wav
+                fmt = "mp3" if self._tts.__class__.__name__ == "ElevenLabsTTS" else "wav"
                 await on_event({
                     "type": "audio",
                     "data": base64.b64encode(wav_bytes).decode("ascii"),
+                    "format": fmt,
                 })
         except Exception as exc:
             logger.error("TTS synthesis failed: %s", exc)

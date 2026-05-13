@@ -137,6 +137,11 @@ export default function SettingsPage({ onFeaturesChanged }) {
   const [llmSettings,      setLlmSettings]      = useState(null)
   const [memSettings,      setMemSettings]      = useState(null)
   const [voiceSettings,    setVoiceSettings]    = useState(null)
+  const [aiFeatures,       setAiFeatures]       = useState({})
+  const [elevenLabsSettings, setElevenLabsSettings] = useState(null)
+  const [personaSettings,    setPersonaSettings]    = useState(null)
+  const [daemonStatus,       setDaemonStatus]       = useState({})
+  const [wakeWordRestart,    setWakeWordRestart]    = useState(false)
   const [orchestrationSettings, setOrchestrationSettings] = useState({
     n8n_enabled: false,
     n8n_url: '',
@@ -157,6 +162,7 @@ export default function SettingsPage({ onFeaturesChanged }) {
       fetch(`${API_BASE}/api/settings/llm${query}`, { headers }).then(r => r.json()),
       fetch(`${API_BASE}/api/settings/memory${query}`, { headers }).then(r => r.json()),
       fetch(`${API_BASE}/api/settings/voice`, { headers }).then(r => r.json()).catch(() => null),
+      fetch(`${API_BASE}/api/features`, { headers }).then(r => r.json()).catch(() => ({ ai_features: {} })),
     ]
     if (user?.role === 'admin') {
       fetches.push(
@@ -165,27 +171,34 @@ export default function SettingsPage({ onFeaturesChanged }) {
         fetch(`${API_BASE}/api/admin/family`, { headers }).then(r => r.json()).catch(() => null),
         fetch(`${API_BASE}/api/admin/family-groups`, { headers }).then(r => r.json()).catch(() => null),
         fetch(`${API_BASE}/api/settings/orchestration`, { headers }).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/api/settings/elevenlabs`, { headers }).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/api/settings/persona`, { headers }).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/api/daemon/status`, { headers }).then(r => r.json()).catch(() => null),
       )
     }
     if (user?.role === 'parent') {
       fetches.push(
-        null, null, null, null, // pad to keep indices consistent
+        null, null, null, null, null, null, null, // pad to keep indices consistent
         fetch(`${API_BASE}/api/parent/children`, { headers }).then(r => r.json()).catch(() => null),
       )
     }
 
     Promise.all(fetches)
-      .then(([modData, llmData, memData, voiceData, visData, featVisData, familyRaw, familyGroupsRaw, orchData, childrenRaw]) => {
+      .then(([modData, llmData, memData, voiceData, featData, visData, featVisData, familyRaw, familyGroupsRaw, orchData, elData, personaData, dStatus, childrenRaw]) => {
         setModels({ local: modData.local || [], cloud: modData.cloud || [] })
         setEnabledProviders(modData.enabled_providers || {})
         setLlmSettings(llmData)
         setMemSettings(memData)
         setVoiceSettings(voiceData)
+        if (featData)         setAiFeatures(featData.ai_features || {})
         if (visData)          setVisibility(visData)
         if (featVisData)      setFeatureVis(featVisData)
         if (familyRaw)        setFamilyData(familyRaw)
         if (familyGroupsRaw)  setFamilyGroups(familyGroupsRaw)
         if (orchData)         setOrchestrationSettings(orchData)
+        if (elData)           setElevenLabsSettings(elData)
+        if (personaData)      setPersonaSettings(personaData)
+        if (dStatus)          setDaemonStatus(dStatus.daemons || {})
         if (childrenRaw)      setChildrenData(childrenRaw)
         setLoading(false)
       })
@@ -277,6 +290,28 @@ export default function SettingsPage({ onFeaturesChanged }) {
     }
   }, [orchestrationSettings, token])
 
+  // ---- Save ElevenLabs settings ----
+  const saveElevenLabs = useCallback(async (patch) => {
+    const next = { ...elevenLabsSettings, ...patch }
+    setElevenLabsSettings(next)
+    setSaveStatus('saving')
+    try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const res = await fetch(`${API_BASE}/api/settings/elevenlabs`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(next)
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2500)
+    } catch {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }, [elevenLabsSettings, token])
+
   // ---- Save memory settings ----
   const saveMemory = useCallback(async (patch) => {
     const next = { ...memSettings, ...patch }
@@ -305,6 +340,82 @@ export default function SettingsPage({ onFeaturesChanged }) {
     }
   }, [memSettings, user?.id, token])
 
+  const saveAiFeature = useCallback(async (flagName, enabled) => {
+    setSaveStatus('saving')
+    if (flagName === 'WAKE_WORD_ENABLED') setWakeWordRestart(true)
+    try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const res = await fetch(`${API_BASE}/api/features/${flagName}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ enabled })
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setAiFeatures(prev => ({ ...prev, [flagName]: enabled }))
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2500)
+    } catch {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }, [token])
+
+  const savePersona = useCallback(async (prompt) => {
+    setSaveStatus('saving')
+    try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const res = await fetch(`${API_BASE}/api/settings/persona`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ system_prompt: prompt })
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setPersonaSettings({ system_prompt: prompt })
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2500)
+    } catch {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }, [token])
+
+  const resetPersona = useCallback(async () => {
+    setSaveStatus('saving')
+    try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const res = await fetch(`${API_BASE}/api/settings/persona/default`, { headers })
+      if (!res.ok) throw new Error('Fetch failed')
+      const data = await res.json()
+      setPersonaSettings(data)
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2500)
+    } catch {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }, [token])
+
+  const triggerDaemonTask = useCallback(async (daemonName, action, payload = {}) => {
+    setSaveStatus('saving')
+    try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const res = await fetch(`${API_BASE}/api/daemon/${daemonName}/task`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ action, payload })
+      })
+      if (!res.ok) throw new Error('Task failed')
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2500)
+    } catch {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }, [token])
+
   // ---- Render ----
   if (loading) {
     return (
@@ -328,7 +439,7 @@ export default function SettingsPage({ onFeaturesChanged }) {
 
   return (
     <div className="settings-page page-wrap">
-      {/* CSS for recommended strip */}
+      {/* CSS for recommended strip and persona textarea */}
       <style>{`
         .model-recommended-strip {
           display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;
@@ -336,6 +447,18 @@ export default function SettingsPage({ onFeaturesChanged }) {
           background: color-mix(in srgb, var(--md-tertiary) 6%, transparent);
           border: 1px solid color-mix(in srgb, var(--md-tertiary) 20%, transparent);
           border-radius: var(--md-shape-md);
+        }
+        .persona-textarea {
+          font-family: var(--font-mono, monospace) !important;
+          font-size: 0.85rem !important;
+          line-height: 1.5 !important;
+          letter-spacing: 0.02em;
+          background: var(--md-surface-container-lowest) !important;
+          border-color: var(--md-outline-variant) !important;
+        }
+        .persona-textarea:focus {
+          border-color: var(--md-primary) !important;
+          box-shadow: 0 0 0 1px var(--md-primary);
         }
       `}</style>
 
@@ -525,6 +648,237 @@ export default function SettingsPage({ onFeaturesChanged }) {
       </Section>
 
       {/* ================================================================ */}
+      {/* DAEMON CONTROL                                                 */}
+      {/* ================================================================ */}
+      {user?.role === 'admin' && (
+        <Section title="DAEMON CONTROL">
+          <p className="settings-hint" style={{ marginBottom: 16 }}>
+            Manage background daemon processes. These run as independent services on the server.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* WARDEN */}
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>WARDEN (Vision/Security)</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--md-outline)' }}>RTSP Camera Monitoring</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span className={`badge ${daemonStatus.warden?.alive ? 'badge--gpu' : 'badge--cost'}`} style={{ background: daemonStatus.warden?.alive ? '#00ff66' : 'var(--md-outline)', color: daemonStatus.warden?.alive ? 'black' : 'white' }}>
+                    {daemonStatus.warden?.alive ? '◉ ONLINE' : '◌ OFFLINE'}
+                  </span>
+                  <Toggle
+                    id="warden-toggle"
+                    label=""
+                    checked={!!aiFeatures.WARDEN_ENABLED}
+                    onChange={v => saveAiFeature('WARDEN_ENABLED', v)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* MECHANIC */}
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>MECHANIC (Telemetry)</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--md-outline)' }}>MAVLink / ArduRover Link</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span className={`badge ${daemonStatus.mechanic?.alive ? 'badge--gpu' : 'badge--cost'}`} style={{ background: daemonStatus.mechanic?.alive ? '#00ff66' : 'var(--md-outline)', color: daemonStatus.mechanic?.alive ? 'black' : 'white' }}>
+                    {daemonStatus.mechanic?.alive ? '◉ ONLINE' : '◌ OFFLINE'}
+                  </span>
+                  <Toggle
+                    id="mechanic-toggle"
+                    label=""
+                    checked={!!aiFeatures.MECHANIC_ENABLED}
+                    onChange={v => saveAiFeature('MECHANIC_ENABLED', v)}
+                  />
+                </div>
+              </div>
+              {daemonStatus.mechanic?.alive && (
+                <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                  <button className="btn btn--ghost btn--xs" onClick={() => triggerDaemonTask('mechanic', 'telemetry')}>GET TELEMETRY</button>
+                  <button className="btn btn--ghost btn--xs" onClick={() => triggerDaemonTask('mechanic', 'arm')}>ARM ROVER</button>
+                </div>
+              )}
+            </div>
+
+            {/* HERALD */}
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>HERALD (Casting/Lip-Sync)</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--md-outline)' }}>Google Home Hub Integration</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span className={`badge ${daemonStatus.herald?.alive ? 'badge--gpu' : 'badge--cost'}`} style={{ background: daemonStatus.herald?.alive ? '#00ff66' : 'var(--md-outline)', color: daemonStatus.herald?.alive ? 'black' : 'white' }}>
+                    {daemonStatus.herald?.alive ? '◉ ONLINE' : '◌ OFFLINE'}
+                  </span>
+                  <Toggle
+                    id="herald-toggle"
+                    label=""
+                    checked={!!aiFeatures.HERALD_ENABLED}
+                    onChange={v => saveAiFeature('HERALD_ENABLED', v)}
+                  />
+                </div>
+              </div>
+              {daemonStatus.herald?.alive && (
+                <div style={{ marginTop: 12 }}>
+                  <button className="btn btn--ghost btn--xs" onClick={() => triggerDaemonTask('herald', 'recast_now')}>RECAST KIOSK NOW</button>
+                </div>
+              )}
+            </div>
+
+            {/* SIFTER */}
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>SIFTER (RAG)</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--md-outline)' }}>Background Document Indexing</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span className={`badge ${daemonStatus.sifter?.alive ? 'badge--gpu' : 'badge--cost'}`} style={{ background: daemonStatus.sifter?.alive ? '#00ff66' : 'var(--md-outline)', color: daemonStatus.sifter?.alive ? 'black' : 'white' }}>
+                    {daemonStatus.sifter?.alive ? '◉ ONLINE' : '◌ OFFLINE'}
+                  </span>
+                  <Toggle
+                    id="sifter-toggle"
+                    label=""
+                    checked={!!aiFeatures.SIFTER_ENABLED}
+                    onChange={v => saveAiFeature('SIFTER_ENABLED', v)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </Section>
+      )}
+
+      {/* ================================================================ */}
+      {/* LOCAL AI FEATURES                                                */}
+      {/* ================================================================ */}
+      {user?.role === 'admin' && (
+        <Section title="LOCAL AI FEATURES">
+          <p className="settings-hint" style={{ marginBottom: 16 }}>
+            Toggle advanced AI capabilities. These are global settings that affect all users.
+          </p>
+          
+          <div className="settings-grid">
+            <div className="toggle-container">
+              <Toggle
+                id="feat-semantic"
+                label="Semantic Memory"
+                checked={!!aiFeatures.SEMANTIC_MEMORY_ENABLED}
+                onChange={v => saveAiFeature('SEMANTIC_MEMORY_ENABLED', v)}
+              />
+              <p className="settings-hint">Use vector search for memory recall</p>
+            </div>
+
+            <div className="toggle-container">
+              <Toggle
+                id="feat-vision"
+                label="Vision Analysis"
+                checked={!!aiFeatures.VISION_ENABLED}
+                onChange={v => saveAiFeature('VISION_ENABLED', v)}
+              />
+              <p className="settings-hint">AI photo analysis for inventory & recipes</p>
+            </div>
+
+            <div className="toggle-container">
+              <Toggle
+                id="feat-image"
+                label="Image Generation"
+                checked={!!aiFeatures.IMAGE_GENERATION_ENABLED}
+                onChange={v => saveAiFeature('IMAGE_GENERATION_ENABLED', v)}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <p className="settings-hint">Generate product/recipe images locally</p>
+                <span className="badge badge--error" style={{ background: 'var(--md-error)', color: 'white', fontSize: '0.6rem' }}>GPU REQUIRED</span>
+              </div>
+            </div>
+
+            <div className="toggle-container">
+              <Toggle
+                id="feat-rag"
+                label="RAG Documents"
+                checked={!!aiFeatures.RAG_ENABLED}
+                onChange={v => saveAiFeature('RAG_ENABLED', v)}
+              />
+              <p className="settings-hint">Answer questions from uploaded documents</p>
+            </div>
+
+            <div className="toggle-container">
+              <Toggle
+                id="feat-streaming"
+                label="LLM Streaming"
+                checked={!!aiFeatures.LLM_STREAMING_ENABLED}
+                onChange={v => saveAiFeature('LLM_STREAMING_ENABLED', v)}
+              />
+              <p className="settings-hint">Stream AI responses token by token</p>
+            </div>
+
+            <div className="toggle-container">
+              <Toggle
+                id="feat-chatterbox"
+                label="Chatterbox TTS"
+                checked={!!aiFeatures.CHATTERBOX_ENABLED}
+                onChange={v => saveAiFeature('CHATTERBOX_ENABLED', v)}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <p className="settings-hint">Use AI voice cloning for River's voice</p>
+                <span className="badge badge--error" style={{ background: 'var(--md-error)', color: 'white', fontSize: '0.6rem' }}>GPU REQUIRED</span>
+              </div>
+            </div>
+          </div>
+          
+          <div style={{ marginTop: 16, padding: '8px 12px', background: 'color-mix(in srgb, var(--md-warning) 10%, transparent)', border: '1px solid var(--md-warning)', borderRadius: 4 }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--md-warning)', fontWeight: 600 }}>
+              ⚠️ Changes to these features require a backend restart to take full effect.
+            </span>
+          </div>
+        </Section>
+      )}
+
+      {/* ================================================================ */}
+      {/* PERSONALITY                                                      */}
+      {/* ================================================================ */}
+      {user?.role === 'admin' && personaSettings && (
+        <Section title="PERSONALITY">
+          <div style={{ marginBottom: 12, padding: '10px 14px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid #ffaa00', borderRadius: 6, color: '#ffaa00', fontSize: '0.8rem' }}>
+            ⚠️ Advanced — Changing this affects River Song's entire personality. Keep "River Song" references intact or she will lose her identity.
+          </div>
+          
+          <div style={{ position: 'relative' }}>
+            <textarea
+              className="settings-input persona-textarea"
+              style={{ width: '100%', height: 300, display: 'block' }}
+              value={personaSettings.system_prompt}
+              onChange={e => setPersonaSettings({ system_prompt: e.target.value })}
+              placeholder="River Song system prompt..."
+              rows={12}
+            />
+            <div style={{ position: 'absolute', bottom: 10, right: 12, fontSize: '0.65rem', color: 'var(--md-outline)', pointerEvents: 'none' }}>
+              {personaSettings.system_prompt.length} chars
+            </div>
+          </div>
+
+          <p className="settings-hint" style={{ marginTop: 8 }}>
+            Defines her personality, speaking style, and knowledge about you. Changes take effect on the next conversation.
+          </p>
+
+          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <button className="btn btn--primary" onClick={() => savePersona(personaSettings.system_prompt)}>
+              SAVE CHANGES
+            </button>
+            <button className="btn btn--ghost" onClick={resetPersona}>
+              RESET TO DEFAULT
+            </button>
+          </div>
+        </Section>
+      )}
+
+      {/* ================================================================ */}
       {/* CLOUD FALLBACK                                                   */}
       {/* ================================================================ */}
       <Section title="CLOUD FALLBACK">
@@ -588,6 +942,9 @@ export default function SettingsPage({ onFeaturesChanged }) {
           <VoiceSection
             voiceSettings={voiceSettings}
             token={token}
+            user={user}
+            elevenLabsSettings={elevenLabsSettings}
+            onSaveElevenLabs={saveElevenLabs}
             onSwitched={() => {
               const headers = token ? { Authorization: `Bearer ${token}` } : {}
               fetch(`${API_BASE}/api/settings/voice`, { headers })
@@ -599,6 +956,37 @@ export default function SettingsPage({ onFeaturesChanged }) {
             <div className="voice-option-name">Loading voices…</div>
           </div>
         )}
+      </Section>
+
+      {/* ================================================================ */}
+      {/* WAKE WORD                                                        */}
+      {/* ================================================================ */}
+      <Section title="WAKE WORD">
+        <Toggle
+          id="wake-word-toggle"
+          label="Hey River — Always Listening"
+          checked={!!aiFeatures.WAKE_WORD_ENABLED}
+          onChange={v => saveAiFeature('WAKE_WORD_ENABLED', v)}
+        />
+        <p className="settings-hint">Enable wake word detection. Say "Hey River" to start listening without clicking. Requires openWakeWord installed.</p>
+        
+        {wakeWordRestart && (
+          <div style={{ marginTop: 12, padding: '8px 12px', background: 'color-mix(in srgb, var(--md-warning) 10%, transparent)', border: '1px solid var(--md-warning)', borderRadius: 4 }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--md-warning)', fontWeight: 600 }}>
+              ⚠️ Wake word changes require a backend restart.
+            </span>
+          </div>
+        )}
+
+        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--md-surface-container)', padding: '10px 14px', borderRadius: 8 }}>
+          <div style={{ display: 'flex', gap: 16, fontSize: '0.75rem' }}>
+            <span>Model: <strong>hey_river (built-in)</strong></span>
+            <span>Install: <code style={{ background: 'black', color: 'white', padding: '2px 4px' }}>pip install openwakeword</code></span>
+          </div>
+          <span className={`badge ${aiFeatures.WAKE_WORD_ENABLED ? 'badge--gpu' : 'badge--cost'}`} style={{ background: aiFeatures.WAKE_WORD_ENABLED ? '#00ff66' : 'var(--md-outline)', color: aiFeatures.WAKE_WORD_ENABLED ? 'black' : 'white' }}>
+            {aiFeatures.WAKE_WORD_ENABLED ? '◉ ENABLED' : '◌ DISABLED'}
+          </span>
+        </div>
       </Section>
 
       {/* ================================================================ */}
@@ -743,7 +1131,7 @@ async function playVoicePreview(voice_id, token) {
   return new Promise(resolve => { source.onended = () => { ctx.close(); resolve() } })
 }
 
-function VoiceSection({ voiceSettings, token, onSwitched }) {
+function VoiceSection({ voiceSettings, token, user, elevenLabsSettings, onSaveElevenLabs, onSwitched }) {
   const [switching, setSwitching] = useState(null)
   const [switchMsg, setSwitchMsg] = useState('')
   const [previewing, setPreviewing] = useState(null)
@@ -805,6 +1193,68 @@ function VoiceSection({ voiceSettings, token, onSwitched }) {
           </span>
         )}
       </p>
+
+      {/* ELEVENLABS SETTINGS (Admin Only) */}
+      {user?.role === 'admin' && elevenLabsSettings && (
+        <div className="elevenlabs-config" style={{
+          marginBottom: 24, padding: 16,
+          background: 'var(--md-surface-container-high)',
+          border: '1px solid var(--md-outline-variant)',
+          borderRadius: 12
+        }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--md-primary)', letterSpacing: '0.05em', marginBottom: 12 }}>
+            ELEVENLABS VOICE CONFIGURATION
+          </div>
+          
+          <label className="select-row">
+            <span className="select-label">ElevenLabs API Key</span>
+            <input
+              type="password"
+              className="settings-input"
+              value={elevenLabsSettings.api_key}
+              onChange={e => onSaveElevenLabs({ api_key: e.target.value })}
+              placeholder="••••••••"
+            />
+          </label>
+
+          <label className="select-row">
+            <span className="select-label">Voice ID</span>
+            <input
+              type="text"
+              className="settings-input"
+              value={elevenLabsSettings.voice_id}
+              onChange={e => onSaveElevenLabs({ voice_id: e.target.value })}
+            />
+          </label>
+
+          <label className="select-row">
+            <span className="select-label">Model</span>
+            <select
+              className="settings-select"
+              value={elevenLabsSettings.model_id}
+              onChange={e => onSaveElevenLabs({ model_id: e.target.value })}
+            >
+              <option value="eleven_multilingual_v2">eleven_multilingual_v2</option>
+              <option value="eleven_monolingual_v1">eleven_monolingual_v1</option>
+              <option value="eleven_turbo_v2">eleven_turbo_v2</option>
+            </select>
+          </label>
+
+          <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+             <button className="btn btn--primary" style={{ padding: '6px 14px', fontSize: '0.75rem' }} onClick={() => onSaveElevenLabs({})}>
+               SAVE KEY & ID
+             </button>
+             {voiceSettings.provider === 'elevenlabs' ? (
+               <span className="badge badge--gpu" style={{ background: '#00ff66', color: 'black' }}>◉ ACTIVE</span>
+             ) : (
+               <span style={{ fontSize: '0.7rem', color: 'var(--md-outline)' }}>To use ElevenLabs, select a River Song ElevenLabs voice below.</span>
+             )}
+          </div>
+          <div style={{ fontSize: '0.65rem', color: 'var(--md-outline)', marginTop: 8 }}>
+            ElevenLabs voices: elevenlabs.io/voice-lab
+          </div>
+        </div>
+      )}
 
       {switchMsg && (
         <p className="settings-hint" style={{

@@ -288,7 +288,66 @@ export default function MemoryPage() {
 
             {/* Rows */}
             <div className="mem-rows">
-              {items.map(item => (
+              {tab === 'PREFERENCES' ? (
+                <div style={{ padding: '0 16px' }}>
+                  {/* Learned Patterns Section */}
+                  <div className="mem-section-heading">
+                    <span>◈</span> LEARNED PATTERNS
+                  </div>
+                  {items.filter(p => p.category?.includes('habit') || p.confidence === 'high').length === 0 ? (
+                    <div className="mem-page-empty" style={{ padding: '10px 0' }}>
+                      River Song will learn your patterns as you talk to her.
+                    </div>
+                  ) : (
+                    items.filter(p => p.category?.includes('habit') || p.confidence === 'high').map(p => (
+                      <div key={p.id} className="mem-pattern-card">
+                        <span className="mem-pattern-icon">◈</span>
+                        <div className="mem-pattern-content">
+                          <div className="mem-pattern-value">{p.value}</div>
+                          <div className="mem-pattern-meta">
+                            <span 
+                              className="mem-pattern-confidence"
+                              style={{ color: CONFIDENCE_COLOR[p.confidence] }}
+                            >
+                              {p.confidence} confidence
+                            </span>
+                            <span>•</span>
+                            <span>Learned {fmtDate(p.last_updated)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+
+                  {/* Regular Preferences Section */}
+                  <div className="mem-section-heading" style={{ marginTop: 32 }}>
+                    <span>◇</span> PREFERENCES
+                  </div>
+                  {items.filter(p => !p.category?.includes('habit') && p.confidence !== 'high').length === 0 ? (
+                    <div className="mem-page-empty" style={{ padding: '10px 0' }}>
+                      No other preferences stored.
+                    </div>
+                  ) : (
+                    <div className="mem-pref-list">
+                      {items.filter(p => !p.category?.includes('habit') && p.confidence !== 'high').map(p => (
+                        <div key={p.id} className="mem-row mem-row--preferences" style={{ paddingLeft: 0, paddingRight: 0 }}>
+                          <span className="mem-col-key">{p.category}</span>
+                          <span className="mem-col-value">{p.value}</span>
+                          <span className="mem-col-badge">
+                            <span
+                              className="mem-badge"
+                              style={{ borderColor: CONFIDENCE_COLOR[p.confidence], color: CONFIDENCE_COLOR[p.confidence] }}
+                            >
+                              {p.confidence}
+                            </span>
+                          </span>
+                          <span className="mem-col-date">{fmtDate(p.last_updated)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : items.map(item => (
                 tab === 'FACTS' ? (
                   <div
                     key={item.id}
@@ -309,20 +368,6 @@ export default function MemoryPage() {
                       <span className={`mem-badge mem-badge--${item.source}`}>{item.source}</span>
                     </span>
                     <span className="mem-col-date">{fmtDate(item.updated_at)}</span>
-                  </div>
-                ) : tab === 'PREFERENCES' ? (
-                  <div key={item.id} className="mem-row mem-row--preferences">
-                    <span className="mem-col-key">{item.category}</span>
-                    <span className="mem-col-value">{item.value}</span>
-                    <span className="mem-col-badge">
-                      <span
-                        className="mem-badge"
-                        style={{ borderColor: CONFIDENCE_COLOR[item.confidence], color: CONFIDENCE_COLOR[item.confidence] }}
-                      >
-                        {item.confidence}
-                      </span>
-                    </span>
-                    <span className="mem-col-date">{fmtDate(item.last_updated)}</span>
                   </div>
                 ) : (
                   <div key={item.id} className="mem-row mem-row--summaries">

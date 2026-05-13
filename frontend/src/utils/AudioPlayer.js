@@ -22,9 +22,9 @@ export class AudioPlayer {
   }
 
   /**
-   * Add a base64 WAV chunk to the playback queue.
+   * Add a base64 audio chunk to the playback queue.
    */
-  async playBase64(b64) {
+  async playBase64(b64, format = 'wav') {
     this._init()
     const binary = atob(b64)
     const bytes = new Uint8Array(binary.length)
@@ -37,8 +37,20 @@ export class AudioPlayer {
         this._playNext()
       }
     } catch (err) {
-      console.error('[AudioPlayer] Decode failed:', err)
+      console.warn('[AudioPlayer] decodeAudioData failed, trying fallback:', err)
+      // Fallback: create an Audio element (works for MP3 even in strict environments)
+      await this._playViaAudioElement(b64, format)
     }
+  }
+
+  async _playViaAudioElement(b64, format) {
+    return new Promise(resolve => {
+      const mimeType = format === 'mp3' ? 'audio/mpeg' : 'audio/wav'
+      const audio = new Audio(`data:${mimeType};base64,${b64}`)
+      audio.onended = resolve
+      audio.onerror = resolve  // don't block queue on error
+      audio.play().catch(resolve)
+    })
   }
 
   _playNext() {

@@ -40,6 +40,20 @@ ALL_FEATURES = [
 ]
 ALL_FEATURE_KEYS = [f["key"] for f in ALL_FEATURES]
 
+# Local AI Features (Phase 1-10)
+AI_FEATURE_MAP = {
+    "SEMANTIC_MEMORY_ENABLED": "semantic_memory_enabled",
+    "VISION_ENABLED": "vision_enabled",
+    "IMAGE_GENERATION_ENABLED": "image_generation_enabled",
+    "RAG_ENABLED": "rag_enabled",
+    "LLM_STREAMING_ENABLED": "llm_streaming_enabled",
+    "CHATTERBOX_ENABLED": "chatterbox_enabled",
+    "WAKE_WORD_ENABLED": "wake_word_enabled",
+}
+
+from pydantic import BaseModel
+class FeatureUpdateBody(BaseModel):
+    enabled: bool
 
 @router.get("/features")
 async def get_features(
@@ -55,9 +69,17 @@ async def get_features(
     role    = payload.get("role", "user")
     user_id = payload.get("sub")
 
+    from config.settings import get_settings
+    settings = get_settings()
+    
+    ai_features = {
+        key: getattr(settings, attr, False)
+        for key, attr in AI_FEATURE_MAP.items()
+    }
+
     # Admin always sees everything
     if role == "admin":
-        return {"features": ALL_FEATURE_KEYS}
+        return {"features": ALL_FEATURE_KEYS, "ai_features": ai_features}
 
     store  = request.app.state.memory_manager._store
     config = await store.get_admin_config()
@@ -67,7 +89,48 @@ async def get_features(
     if role == "child":
         child_features = await store.get_child_features(user_id)
         allowed = set(globally_on) & set(child_features)
-        return {"features": [k for k in ALL_FEATURE_KEYS if k in allowed]}
+        return {"features": [k for k in ALL_FEATURE_KEYS if k in allowed], "ai_features": ai_features}
 
     # parent or user
-    return {"features": globally_on}
+    return {"features": globally_on, "ai_features": ai_features}
+
+
+@router.put("/features/{flag_name}")
+async def update_feature_flag(
+    flag_name: str,
+    body: FeatureUpdateBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Update a global AI feature flag. 
+    Requires admin role as these affect the entire server.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    payload = decode_token(authorization.removeprefix("Bearer "))
+    if not payload or payload.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can toggle global AI features.")
+
+    if flag_name not in AI_FEATURE_MAP:
+        raise HTTPException(status_code=400, detail=f"Unknown AI feature flag: {flag_name}")
+
+    attr = AI_FEATURE_MAP[flag_name]
+    from config.settings import get_settings
+    settings = get_settings()
+    
+    # Update in-memory settings
+    setattr(settings, attr, body.enabled)
+    
+    # Persist to admin_config so it survives restart
+    store = request.app.state.memory_manager._store
+    config = await store.get_admin_config()
+    ai_config = config.get("ai_features", {})
+    ai_config[flag_name] = body.enabled
+    config["ai_features"] = ai_config
+    await store.set_admin_config(config)
+    
+    import logging
+    logging.getLogger(__name__).info("Admin toggled AI feature %s to %s", flag_name, body.enabled)
+    
+    return {"flag": flag_name, "enabled": body.enabled}

@@ -1,0 +1,19 @@
+[Unit]
+Description=River Song AI Daemon - %i
+After=network.target river-song.service
+
+[Service]
+Type=simple
+User=riversong
+WorkingDirectory=/home/riversong/RiverSongAI
+ExecStart=/home/riversong/RiverSongAI/venv/bin/python -m daemons.%i
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Load .env file
+EnvironmentFile=/home/riversong/RiverSongAI/.env
+
+[Install]
+WantedBy=multi-user.target

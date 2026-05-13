@@ -25,6 +25,8 @@ const AnalyticsPage      = lazy(() => import('./pages/AnalyticsPage.jsx'))
 const InventoryPage           = lazy(() => import('./pages/InventoryPage.jsx'))
 const MaintenancePulsePage    = lazy(() => import('./pages/MaintenancePulsePage.jsx'))
 const CulinaryPage            = lazy(() => import('./pages/CulinaryPage.jsx'))
+const EnvironmentPage         = lazy(() => import('./pages/EnvironmentPage.jsx'))
+const KioskPage               = lazy(() => import('./pages/KioskPage.jsx'))
 const GoogleCallbackPage      = lazy(() => import('./pages/GoogleCallbackPage.jsx'))
 const ReadingOAuthCallbackPage = lazy(() => import('./pages/ReadingOAuthCallbackPage.jsx'))
 
@@ -40,6 +42,14 @@ function save(key, value) {
 }
 
 export default function App() {
+  if (window.location.pathname === '/kiosk') {
+    return (
+      <Suspense fallback={<div style={{ width: '100vw', height: '100vh', background: '#000' }} />}>
+        <KioskPage />
+      </Suspense>
+    )
+  }
+
   const { user, token, loading, logout, setupRequired } = useAuth()
   const [authView,      setAuthView]      = useState('login') // 'login' | 'signup'
   const [enabledFeatures, setEnabledFeatures] = useState(null) // null = not loaded yet
@@ -234,6 +244,7 @@ export default function App() {
               {currentPage === 'reading'    && <ReadingPage />}
               {currentPage === 'analytics'  && <AnalyticsPage />}
               {currentPage === 'inventory'    && <InventoryPage />}
+              {currentPage === 'environment'  && <EnvironmentPage />}
 
               {currentPage === 'maintenance' && <MaintenancePulsePage />}
               {currentPage === 'culinary'    && <CulinaryPage />}

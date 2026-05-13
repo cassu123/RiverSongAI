@@ -141,6 +141,8 @@ CREATE TABLE IF NOT EXISTS routines (
     time        TEXT,
     days        TEXT NOT NULL DEFAULT '[]',
     prompt      TEXT NOT NULL DEFAULT '',
+    type        TEXT NOT NULL DEFAULT 'simple',
+    webhook_url TEXT,
     enabled     INTEGER NOT NULL DEFAULT 1,
     last_run    TEXT,
     created_at  TEXT NOT NULL,
@@ -313,6 +315,8 @@ class SQLiteStore:
             "ALTER TABLE users ADD COLUMN google_email TEXT",
             "ALTER TABLE users ADD COLUMN theme TEXT NOT NULL DEFAULT 'halo'",
             "ALTER TABLE llm_settings ADD COLUMN voice_id TEXT NOT NULL DEFAULT 'river'",
+            "ALTER TABLE routines ADD COLUMN type TEXT NOT NULL DEFAULT 'simple'",
+            "ALTER TABLE routines ADD COLUMN webhook_url TEXT",
             "INSERT OR IGNORE INTO admin_config (key, value) VALUES ('__global__', '{}')",
         ]:
             try:
@@ -1011,17 +1015,19 @@ class SQLiteStore:
 
     def _row_to_routine(self, row) -> dict:
         return {
-            "id":         row[0],
-            "user_id":    row[1],
-            "name":       row[2],
-            "trigger":    row[3],
-            "time":       row[4],
-            "days":       json.loads(row[5] or "[]"),
-            "prompt":     row[6],
-            "enabled":    bool(row[7]),
-            "last_run":   row[8],
-            "created_at": row[9],
-            "updated_at": row[10],
+            "id":          row["id"],
+            "user_id":     row["user_id"],
+            "name":        row["name"],
+            "trigger":     row["trigger"],
+            "time":        row["time"],
+            "days":        json.loads(row["days"] or "[]"),
+            "prompt":      row["prompt"],
+            "type":        row["type"],
+            "webhook_url": row["webhook_url"],
+            "enabled":     bool(row["enabled"]),
+            "last_run":    row["last_run"],
+            "created_at":  row["created_at"],
+            "updated_at":  row["updated_at"],
         }
 
     async def list_routines(self, user_id: str) -> list:
@@ -1030,7 +1036,7 @@ class SQLiteStore:
     def _sync_list_routines(self, user_id: str) -> list:
         conn = self._get_conn()
         rows = conn.execute(
-            "SELECT id,user_id,name,trigger,time,days,prompt,enabled,last_run,created_at,updated_at FROM routines WHERE user_id=? ORDER BY created_at ASC",
+            "SELECT * FROM routines WHERE user_id=? ORDER BY created_at ASC",
             (user_id,),
         ).fetchall()
         return [self._row_to_routine(r) for r in rows]
@@ -1043,16 +1049,18 @@ class SQLiteStore:
         now = _now_str()
         rid = routine.get("id") or str(uuid.uuid4())
         conn.execute(
-            "INSERT INTO routines (id,user_id,name,trigger,time,days,prompt,enabled,last_run,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            """
+            INSERT INTO routines 
+                (id, user_id, name, trigger, time, days, prompt, type, webhook_url, enabled, created_at, updated_at) 
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
             (rid, routine["user_id"], routine["name"], routine.get("trigger","manual"),
              routine.get("time"), json.dumps(routine.get("days",[])), routine.get("prompt",""),
-             int(routine.get("enabled", True)), None, now, now),
+             routine.get("type", "simple"), routine.get("webhook_url"),
+             int(routine.get("enabled", True)), now, now),
         )
         conn.commit()
-        row = conn.execute(
-            "SELECT id,user_id,name,trigger,time,days,prompt,enabled,last_run,created_at,updated_at FROM routines WHERE id=?",
-            (rid,),
-        ).fetchone()
+        row = conn.execute("SELECT * FROM routines WHERE id=?", (rid,)).fetchone()
         return self._row_to_routine(row)
 
     async def update_routine(self, routine_id: str, user_id: str, fields: dict) -> Optional[dict]:
@@ -1060,7 +1068,7 @@ class SQLiteStore:
 
     def _sync_update_routine(self, routine_id: str, user_id: str, fields: dict) -> Optional[dict]:
         conn = self._get_conn()
-        allowed = {"name", "trigger", "time", "days", "prompt", "enabled", "last_run"}
+        allowed = {"name", "trigger", "time", "days", "prompt", "type", "webhook_url", "enabled", "last_run"}
         set_parts, vals = [], []
         for k, v in fields.items():
             if k not in allowed:
@@ -1076,16 +1084,12 @@ class SQLiteStore:
         set_parts.append("updated_at = ?")
         vals.append(_now_str())
         vals += [routine_id, user_id]
-        # Column names are safe: validated against allowlist above, never from user input
         conn.execute(
             "UPDATE routines SET " + ", ".join(set_parts) + " WHERE id=? AND user_id=?",
             vals,
         )
         conn.commit()
-        row = conn.execute(
-            "SELECT id,user_id,name,trigger,time,days,prompt,enabled,last_run,created_at,updated_at FROM routines WHERE id=? AND user_id=?",
-            (routine_id, user_id),
-        ).fetchone()
+        row = conn.execute("SELECT * FROM routines WHERE id=? AND user_id=?", (routine_id, user_id)).fetchone()
         return self._row_to_routine(row) if row else None
 
     async def delete_routine(self, routine_id: str, user_id: str) -> bool:

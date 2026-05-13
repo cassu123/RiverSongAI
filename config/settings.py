@@ -442,6 +442,10 @@ class Settings(BaseSettings):
         default=False,
         description="Enable vector-based semantic search for memory retrieval.",
     )
+    rag_enabled: bool = Field(
+        default=False,
+        description="Enable retrieval-augmented generation for local documents.",
+    )
     llm_streaming_enabled: bool = Field(
         default=False,
         description="Enable real-time token streaming over WebSocket for the conversation UI.",
@@ -643,6 +647,98 @@ class Settings(BaseSettings):
             "User ID used when looking up Google OAuth tokens. Must match the "
             "user_id passed to authorize_user() during the initial OAuth flow."
         ),
+    )
+
+    # -------------------------------------------------------------------------
+    # Daemon Infrastructure
+    # -------------------------------------------------------------------------
+    daemon_internal_secret: str = Field(
+        default="change_me_in_production",
+        description="Shared secret for daemon-to-app authentication.",
+    )
+    daemon_warden_port: int = Field(
+        default=8010,
+        description="Internal port for the Warden daemon (Vision/Security).",
+    )
+    daemon_mechanic_port: int = Field(
+        default=8011,
+        description="Internal port for the Mechanic daemon (Telemetry/MAVLink).",
+    )
+    daemon_herald_port: int = Field(
+        default=8012,
+        description="Internal port for the Herald daemon (Hub Casting/Lip-Sync).",
+    )
+    daemon_sifter_port: int = Field(
+        default=8013,
+        description="Internal port for the Sifter daemon (Document Processing).",
+    )
+    daemon_navigator_port: int = Field(
+        default=8014,
+        description="Internal port for the Navigator daemon (GPS/Pathing).",
+    )
+    daemon_chemist_port: int = Field(
+        default=8015,
+        description="Internal port for the Chemist daemon (Material Analysis).",
+    )
+
+    # Warden (Vision)
+    warden_enabled: bool = Field(
+        default=False,
+        description="Enable the Warden daemon for security and vision monitoring.",
+    )
+    warden_rtsp_cameras: str = Field(
+        default='{"living_room": "", "kitchen": ""}',
+        description="JSON string mapping room names to RTSP camera URLs.",
+    )
+    yolo_model: str = Field(
+        default="yolov8n.pt",
+        description="YOLO model weights file to use for object detection.",
+    )
+    yolo_confidence: float = Field(
+        default=0.5,
+        description="Minimum confidence threshold for YOLO detections (0.0-1.0).",
+    )
+    yolo_inference_device: str = Field(
+        default="cpu",
+        description="Device for YOLO inference: 'cpu' or 'cuda:0'.",
+    )
+
+    # Herald (Public Announcement / Casting)
+    herald_enabled: bool = Field(
+        default=False,
+        description="Enable the Herald daemon for display casting and announcements.",
+    )
+    hub_entities: str = Field(
+        default="[]",
+        description="JSON array of Home Assistant media_player entity IDs for Hub displays.",
+    )
+    kiosk_url: str = Field(
+        default="http://localhost:8000/kiosk",
+        description="The URL that Herald should cast to Hub displays.",
+    )
+
+    # Mechanic (Telemetry)
+    mechanic_enabled: bool = Field(
+        default=False,
+        description="Enable the Mechanic daemon for telemetry and ArduRover control.",
+    )
+    mavlink_serial_port: str = Field(
+        default="/dev/ttyUSB0",
+        description="Serial port for the MAVLink telemetry radio.",
+    )
+    mavlink_baud_rate: int = Field(
+        default=57600,
+        description="Baud rate for the MAVLink serial connection.",
+    )
+
+    # Sifter (Document RAG)
+    sifter_enabled: bool = Field(
+        default=False,
+        description="Enable the Sifter daemon for background document RAG indexing.",
+    )
+    waps_documents_path: str = Field(
+        default="/mnt/data/river-song/waps",
+        description="Path to the directory containing documents for Sifter to index.",
     )
 
     # -------------------------------------------------------------------------
