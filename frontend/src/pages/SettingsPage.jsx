@@ -13,7 +13,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { registerPushNotifications } from '../utils/pushNotifications'
+import { registerPushNotifications, unregisterPushNotifications, getPushSubscription } from '../utils/pushNotifications'
 
 const API_BASE = '' // same origin
 
@@ -1076,15 +1076,102 @@ export default function SettingsPage({ onFeaturesChanged }) {
       )}
 
       {/* ================================================================ */}
-      {/* ADMIN — family management (admin only)                          */}
+      {/* ADMIN — Wake Word configuration (admin only)                    */}
       {/* ================================================================ */}
-      {user?.role === 'admin' && familyData && (
-        <AdminFamilySection
-          data={familyData}
-          token={token}
-          onChanged={setFamilyData}
-        />
+      {user?.role === 'admin' && (
+        <AdminWakeWordSection token={token} />
       )}
+
+      {/* ================================================================ */}
+      {/* ADMIN — family management (admin only)                          */}
+...
+function AdminWakeWordSection({ token }) {
+  const [form, setForm] = useState({ enabled: false, phrase: 'hey_river', sensitivity: 0.5 })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [installed, setInstalled] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/settings/wake-word', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        setForm({ enabled: data.enabled, phrase: data.phrase, sensitivity: data.sensitivity })
+        setInstalled(data.installed)
+        setLoading(false)
+      })
+  }, [token])
+
+  const handleSave = async () => {
+    setSaving(true)
+    setMsg('')
+    try {
+      const res = await fetch('/api/settings/wake-word', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(form)
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setMsg('Settings saved. Refresh required for some changes.')
+    } catch (e) {
+      setMsg(`Error: ${e.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return null
+
+  return (
+    <Section title="WAKE WORD (ADMIN)">
+      {!installed && (
+        <div className="settings-hint" style={{ color: 'var(--md-error)', marginBottom: 16 }}>
+          ⚠️ <code>openWakeWord</code> is not installed in the python environment. Wake word detection will be inactive.
+        </div>
+      )}
+
+      <Toggle 
+        id="ww-admin-enabled"
+        label="Enable Wake Word Detection"
+        checked={form.enabled}
+        onChange={v => setForm({ ...form, enabled: v })}
+      />
+
+      <div style={{ marginTop: 20 }}>
+        <label className="settings-label">WAKE PHRASE</label>
+        <select 
+          className="settings-select"
+          value={form.phrase}
+          onChange={e => setForm({ ...form, phrase: e.target.value })}
+        >
+          <option value="hey_river">Hey River (Default)</option>
+          <option value="alexa">Alexa</option>
+          <option value="hey_jarvis">Hey Jarvis</option>
+          <option value="hey_mycroft">Hey Mycroft</option>
+        </select>
+        <p className="settings-hint">Select the phrase River will listen for in ambient mode.</p>
+      </div>
+
+      <div style={{ marginTop: 20 }}>
+        <label className="settings-label">SENSITIVITY: {form.sensitivity}</label>
+        <input 
+          type="range" min="0.1" max="0.95" step="0.05"
+          value={form.sensitivity}
+          onChange={e => setForm({ ...form, sensitivity: Number(e.target.value) })}
+          style={{ width: '100%', marginTop: 8 }}
+        />
+        <p className="settings-hint">Higher = more sensitive, but more false positives.</p>
+      </div>
+
+      <div className="profile-save-row" style={{ marginTop: 24 }}>
+        <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'SAVING...' : 'SAVE WAKE WORD CONFIG'}
+        </button>
+        {msg && <span className="profile-saved-msg">{msg}</span>}
+      </div>
+    </Section>
+  )
+}
 
       {/* ================================================================ */}
       {/* ADMIN — model visibility (admin only)                            */}
@@ -2118,8 +2205,18 @@ function NotificationsSection({ token }) {
   const [status, setStatus] = useState('loading')
   const [working, setWorking] = useState(false)
   const [testResult, setTestResult] = useState('')
+  const [serverEnabled, setServerEnabled] = useState(true)
 
   useEffect(() => {
+    // 1. Check server support
+    fetch(`${API_BASE}/api/push/vapid-public-key`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.public_key) setServerEnabled(false)
+      })
+      .catch(() => setServerEnabled(false))
+
+    // 2. Check current browser subscription
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setStatus('unsupported')
       return
@@ -2132,10 +2229,15 @@ function NotificationsSection({ token }) {
     })
   }, [])
 
-  const handleEnable = async () => {
+  const handleToggle = async (val) => {
     setWorking(true)
-    const res = await registerPushNotifications(API_BASE)
-    setStatus(res.status === 'subscribed' ? 'subscribed' : 'idle')
+    if (val) {
+      const res = await registerPushNotifications(API_BASE)
+      setStatus(res.status === 'subscribed' ? 'subscribed' : 'idle')
+    } else {
+      const res = await unregisterPushNotifications(API_BASE)
+      setStatus('idle')
+    }
     setWorking(false)
   }
 
@@ -2156,23 +2258,34 @@ function NotificationsSection({ token }) {
     }
   }
 
+  if (!serverEnabled) {
+    return (
+      <Section title="NOTIFICATIONS">
+        <p className="settings-hint" style={{ color: 'var(--md-error)' }}>
+          Push notifications are disabled in server config. Set <code>PUSH_NOTIFICATIONS_ENABLED=true</code> in <code>.env</code> to enable.
+        </p>
+      </Section>
+    )
+  }
+
   return (
     <Section title="NOTIFICATIONS">
-      <div className="toggle-row">
-        <span className="toggle-label">Enable Push Notifications</span>
-        <button
-          className={`btn ${status === 'subscribed' ? 'btn--secondary' : 'btn--primary'}`}
-          onClick={handleEnable}
-          disabled={working || status === 'unsupported' || status === 'subscribed'}
-          style={{ padding: '6px 16px', fontSize: '0.8rem' }}
-        >
-          {status === 'subscribed' ? 'Enabled' : working ? 'Enabling…' : 'Enable'}
-        </button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <label className="settings-label">PUSH NOTIFICATIONS</label>
+          <p className="settings-hint">Receive proactive briefings and system alerts on this device.</p>
+        </div>
+        <Toggle 
+          id="push-toggle"
+          checked={status === 'subscribed'}
+          onChange={handleToggle}
+          disabled={working || status === 'unsupported' || status === 'loading'}
+        />
       </div>
 
-      <p className="settings-hint">
-        {status === 'subscribed' && '✓ This device is subscribed to alerts.'}
-        {status === 'idle' && 'Alerts are not enabled on this device.'}
+      <p className="settings-hint" style={{ marginTop: 8 }}>
+        {status === 'subscribed' && '✓ This device is active and receiving alerts.'}
+        {status === 'idle' && 'Notifications are currently muted for this device.'}
         {status === 'unsupported' && '✗ Web Push is not supported by your browser.'}
         {status === 'loading' && 'Checking status…'}
       </p>
@@ -2180,10 +2293,9 @@ function NotificationsSection({ token }) {
       {status === 'subscribed' && (
         <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
-            className="btn btn--ghost"
+            className="btn btn--ghost btn--xs"
             onClick={handleTest}
             disabled={working}
-            style={{ padding: '4px 12px', fontSize: '0.75rem' }}
           >
             {working ? 'Sending…' : 'Test Notification'}
           </button>

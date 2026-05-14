@@ -49,6 +49,8 @@ AI_FEATURE_MAP = {
     "LLM_STREAMING_ENABLED": "llm_streaming_enabled",
     "CHATTERBOX_ENABLED": "chatterbox_enabled",
     "WAKE_WORD_ENABLED": "wake_word_enabled",
+    "WAKE_WORD_MODEL": "wake_word_model",
+    "WAKE_WORD_THRESHOLD": "wake_word_threshold",
 }
 
 from pydantic import BaseModel

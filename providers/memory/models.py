@@ -177,7 +177,7 @@ class MemorySettings:
     user_id: str
     summaries_enabled: bool = True
     default_ttl: str = TTLOption.STANDARD
-    auto_extend: bool = True
+    auto_extend: bool = False
 
 
 # =============================================================================

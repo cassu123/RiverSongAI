@@ -12,12 +12,14 @@ from typing import Optional, Dict, Any
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from config.settings import get_settings
+from core.limiter import limiter
 from providers.automation.n8n_client import build_n8n_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/webhooks/n8n", tags=["automation"])
 
 @router.post("")
+@limiter.limit(get_settings().rate_limit_webhook_n8n)
 async def n8n_webhook_receiver(
     request: Request,
     x_n8n_secret: Optional[str] = Header(None, alias="X-N8N-Secret"),

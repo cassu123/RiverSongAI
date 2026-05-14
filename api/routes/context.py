@@ -29,24 +29,28 @@ class SensorEvent(BaseModel):
     timestamp: Optional[str] = None
 
 
-def _authenticate_context_update(authorization: Optional[str]) -> bool:
+def _require_admin(authorization: Optional[str]) -> str:
+    """Validate Bearer token and return the user's sub claim if role is admin."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    payload = decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    if payload.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin privileges required.")
+    return payload["sub"]
+
+
+def _authenticate_daemon(authorization: Optional[str]) -> bool:
     """
-    Accepts either a valid user JWT or the daemon internal secret.
+    Accepts only the daemon internal secret.
     """
     if not authorization:
         return False
     
-    # Check internal secret (for daemons and HA webhooks)
     settings = get_settings()
     if authorization == f"Bearer {settings.daemon_internal_secret}":
         return True
-    
-    # Check user JWT (for manual updates)
-    if authorization.startswith("Bearer "):
-        token = authorization.removeprefix("Bearer ")
-        payload = decode_token(token)
-        if payload:
-            return True
             
     return False
 
@@ -59,8 +63,9 @@ async def receive_sensor_event(
 ):
     """
     Receives sensor updates from Warden camera detections and Home Assistant.
+    Auth: Daemon internal secret only.
     """
-    if not _authenticate_context_update(authorization):
+    if not _authenticate_daemon(authorization):
         raise HTTPException(status_code=403, detail="Unauthorized context update.")
 
     engine = getattr(request.app.state, "context_engine", None)
@@ -76,9 +81,31 @@ async def receive_sensor_event(
         if room:
             await engine.update_room(room, persons, activity)
     else:
-        # Home Assistant or manual
+        # Home Assistant
         await engine.update_from_ha_sensor(body.entity_id, body.state, body.attributes)
         room = engine._extract_room(body.entity_id, body.attributes)
+
+    return {"ok": True, "room": room}
+
+
+@router.post("/manual_override")
+async def manual_override(
+    body: SensorEvent,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Manual override from EnvironmentPage.
+    Auth: Admin user JWT.
+    """
+    _require_admin(authorization)
+
+    engine = getattr(request.app.state, "context_engine", None)
+    if not engine:
+        raise HTTPException(status_code=503, detail="Context engine not initialized.")
+
+    await engine.update_from_ha_sensor(body.entity_id, body.state, body.attributes)
+    room = engine._extract_room(body.entity_id, body.attributes)
 
     return {"ok": True, "room": room}
 

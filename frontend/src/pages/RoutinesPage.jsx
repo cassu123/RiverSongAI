@@ -30,6 +30,7 @@ export default function RoutinesPage() {
   const { token } = useAuth()
   const [routines, setRoutines] = useState([])
   const [loading,  setLoading]  = useState(true)
+  const [error,    setError]    = useState(null)
   const [adding,   setAdding]   = useState(false)
   const [editing,  setEditing]  = useState(null)
   const [form,     setForm]     = useState(BLANK)
@@ -43,11 +44,17 @@ export default function RoutinesPage() {
 
   const fetchRoutines = useCallback(async () => {
     if (!token) return
+    setLoading(true)
+    setError(null)
     try {
       const res = await safeFetch(`/api/routines`, { headers: authHeaders })
-      if (res.ok) setRoutines(await res.json())
-    } catch {}
-    setLoading(false)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      setRoutines(await res.json())
+    } catch (err) {
+      setError(err.message || 'Failed to load routines')
+    } finally {
+      setLoading(false)
+    }
   }, [token, authHeaders])
 
   useEffect(() => { fetchRoutines() }, [fetchRoutines])
@@ -336,6 +343,16 @@ export default function RoutinesPage() {
               Open n8n Editor →
             </button>
           </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="card routines-error-card animate-fade-in" style={{ borderColor: 'var(--md-error)', color: 'var(--md-error)', padding: '12px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span className="dot dot--warn" />
+            <span>{error}</span>
+          </div>
+          <button className="btn btn--ghost btn--xs" onClick={fetchRoutines}>RETRY</button>
         </div>
       )}
     

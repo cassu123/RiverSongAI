@@ -24,6 +24,7 @@ export default function ChatPage() {
 
   const [messages,          setMessages]          = useState([])
   const [streamingResponse, setStreamingResponse] = useState('')
+  const [toolEvents,        setToolEvents]        = useState([])
   const [inputText,         setInputText]         = useState('')
   const [isThinking,        setIsThinking]        = useState(false)
   const [thinkingStart,     setThinkingStart]     = useState(null)
@@ -44,6 +45,7 @@ export default function ChatPage() {
   const [showSystem, setShowSystem] = useState(false)
   const [systemPrompt, setSystemPrompt] = useState('')
   const [enhancing, setEnhancing] = useState(false)
+  const [forgetMemory, setForgetMemory] = useState(false)
 
   const modelDropRef = useRef(null)
 
@@ -58,7 +60,6 @@ export default function ChatPage() {
   useEffect(() => { userRef.current        = user },        [user])
 
   // defined below — ref populated after extractFacts is declared
-  const extractRef = useRef(null)
 
   useEffect(() => {
     fetch(`${API_BASE}/api/models`)
@@ -131,6 +132,7 @@ export default function ChatPage() {
     setIsThinking(true)
     setThinkingStart(Date.now())
     setStreamingResponse('')
+    setToolEvents([])
 
     try {
       const res = await fetch(`${API_BASE}/api/conversation/chat`, {
@@ -143,6 +145,7 @@ export default function ChatPage() {
           model_id: selectedModel?.model_id,
           web_search: webSearch,
           thinking_mode: thinkingMode,
+          forget_memory: forgetMemory,
           ...(systemPrompt.trim() ? { system_prompt: systemPrompt.trim() } : {}),
         }),
       })
@@ -154,16 +157,41 @@ export default function ChatPage() {
       const decoder = new TextDecoder()
       let full = ''
       let streamDone = false
+      let buffer = ''
+
       while (!streamDone) {
         const { done, value } = await reader.read()
         if (done) break
-        const chunk = decoder.decode(value, { stream: true })
-        for (const line of chunk.split('\n')) {
+        
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        // Keep the last partial line in the buffer
+        buffer = lines.pop()
+
+        for (const line of lines) {
           if (line.startsWith('data: ')) {
             const piece = line.slice(6)
-            if (piece === '[DONE]') { streamDone = true; break }
-            full += piece
-            setStreamingResponse(full)
+            if (piece === '[DONE]') { 
+              streamDone = true
+              break 
+            }
+            try {
+              // Now that we JSON-encode on the server, we must parse here
+              const evt = JSON.parse(piece)
+              if (evt.type === 'text') {
+                full += evt.content
+                setStreamingResponse(full)
+              } else if (evt.type === 'tool_use' || evt.type === 'tool_result') {
+                setToolEvents(prev => [...prev, evt])
+              } else if (evt.type === 'error') {
+                setError(`Server Error: ${evt.content || 'An unknown error occurred'}`)
+                streamDone = true; break
+              }
+            } catch (e) {
+              // Fallback for non-JSON or partial chunks
+              full += piece
+              setStreamingResponse(full)
+            }
           }
         }
       }
@@ -191,18 +219,7 @@ export default function ChatPage() {
     }).catch(() => {})
   }, [token])
 
-  // Keep ref current, register visibility + unmount triggers
-  useEffect(() => { extractRef.current = extractFacts }, [extractFacts])
-  useEffect(() => {
-    const handleHide = () => {
-      if (document.visibilityState === 'hidden') extractRef.current?.(messagesRef.current)
-    }
-    document.addEventListener('visibilitychange', handleHide)
-    return () => {
-      document.removeEventListener('visibilitychange', handleHide)
-      extractRef.current?.(messagesRef.current)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
 
   const handleReset = useCallback(() => {
     if (messages.length > 0 && user) {
@@ -221,6 +238,7 @@ export default function ChatPage() {
     setStreamingResponse('')
     setError(null)
     setViewingSession(null)
+    setForgetMemory(true)
   }, [messages, user, selectedModel, extractFacts])
 
   // Mic → transcribe → fill input
@@ -422,7 +440,13 @@ export default function ChatPage() {
           )}
         </div>
       ) : (
-        <ConversationPanel messages={displayMessages} streamingResponse={displayStreaming} isThinking={isThinking && !viewingSession} thinkingStart={thinkingStart} />
+        <ConversationPanel 
+          messages={displayMessages} 
+          streamingContent={displayStreaming} 
+          isThinking={isThinking && !viewingSession} 
+          thinkingStart={thinkingStart}
+          toolEvents={toolEvents}
+        />
       )}
 
       {/* Input bar */}
@@ -472,6 +496,11 @@ export default function ChatPage() {
           <button className="chat-reset-btn" onClick={handleReset} title="Save & reset">
             <ResetIcon />
           </button>
+          {forgetMemory && (
+            <div className="chat-memory-muted-badge animate-fade-in" title="Memory is not being injected into this session. Refresh to re-enable.">
+               MEMORY MUTED
+            </div>
+          )}
         </div>
 
         {inputText.length > 0 && (

@@ -31,14 +31,14 @@ function ThinkingBubble({ startTime }) {
   )
 }
 
-export default function ConversationPanel({ messages, streamingContent, isThinking, thinkingStart }) {
+export default function ConversationPanel({ messages, streamingContent, isThinking, thinkingStart, toolEvents = [] }) {
   const bottomRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamingContent, isThinking])
+  }, [messages, streamingContent, isThinking, toolEvents])
 
-  if (messages.length === 0 && !streamingContent && !isThinking) {
+  if (messages.length === 0 && !streamingContent && !isThinking && toolEvents.length === 0) {
     return (
       <div className="chat-panel chat-panel--empty">
         <div className="chat-empty-icon">
@@ -73,6 +73,29 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
                 </svg>
               </div>
             )}
+          </div>
+        ))}
+
+        {/* Tool events */}
+        {toolEvents.map((evt, idx) => (
+          <div key={`tool-${idx}`} className="chat-row chat-row--assistant chat-row--tool">
+            <div className="chat-avatar chat-avatar--rs chat-avatar--tool" aria-hidden="true">
+              <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>build</span>
+            </div>
+            <div className="chat-tool-event animate-slide-up">
+              {evt.type === 'tool_use' ? (
+                <div className="tool-call">
+                  <span className="tool-tag">TOOL CALL</span>
+                  <span className="tool-name">{evt.tool}</span>
+                  {evt.input && <pre className="tool-input">{JSON.stringify(evt.input)}</pre>}
+                </div>
+              ) : (
+                <div className="tool-result">
+                  <span className="tool-tag tool-tag--done">✓ RESULT</span>
+                  <span className="tool-name">{evt.tool}</span>
+                </div>
+              )}
+            </div>
           </div>
         ))}
 

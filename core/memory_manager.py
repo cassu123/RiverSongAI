@@ -255,6 +255,9 @@ class MemoryManager:
     # Preferences
     # =========================================================================
 
+    async def delete_preference(self, pref_id: str) -> None:
+        await self._store.delete_preference(pref_id)
+
     async def upsert_preference(
         self,
         user_id: str,
@@ -293,9 +296,27 @@ class MemoryManager:
     async def get_preferences(self, user_id: str) -> list[Preference]:
         return await self._store.get_preferences(user_id)
 
+    async def get_pending_habits(self, user_id: str) -> list[dict]:
+        return await self._store.get_pending_habits(user_id)
+
+    async def save_pending_habit(
+        self,
+        user_id: str,
+        pattern: str,
+        confidence: str = "low",
+    ) -> None:
+        """
+        Store an inferred preference for later human approval.
+        """
+        await self._store.save_pending_habit(user_id, pattern, confidence)
+        logger.debug("Pending habit recorded (user=%s).", user_id)
+
     # =========================================================================
     # Summaries
     # =========================================================================
+
+    async def delete_summary(self, summary_id: str) -> None:
+        await self._store.delete_summary(summary_id)
 
     async def record_summary(
         self,

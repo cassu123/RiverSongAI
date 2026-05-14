@@ -1,0 +1,125 @@
+.docs-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.docs-upload-card {
+  padding: 24px;
+}
+
+.docs-upload-controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.docs-file-btn {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docs-hint {
+  font-size: 0.8rem;
+  color: var(--md-on-surface-variant);
+  margin-bottom: 0;
+}
+
+.docs-success-msg {
+  margin-top: 16px;
+  font-size: 0.8rem;
+  color: var(--md-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.docs-query-bar {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 24px;
+}
+
+.docs-query-bar input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--md-on-surface);
+  font-size: 1rem;
+  outline: none;
+  padding: 8px 4px;
+}
+
+.docs-error {
+  padding: 16px 20px;
+  color: var(--md-error);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.docs-answer-card {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.docs-answer-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.docs-sources-title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--md-outline);
+  margin-bottom: 16px;
+}
+
+.docs-sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.docs-source-card {
+  padding: 16px;
+  font-size: 0.8rem;
+}
+
+.docs-source-meta {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--md-primary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.docs-source-text {
+  color: var(--md-on-surface-variant);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.docs-empty-state {
+  text-align: center;
+  padding: 100px 0;
+  color: var(--md-on-surface-variant);
+  opacity: 0.4;
+}
+
+.docs-empty-state .material-symbols-rounded {
+  font-size: 4rem;
+  margin-bottom: 16px;
+}

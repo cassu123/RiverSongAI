@@ -351,6 +351,7 @@
   border-top: 1px solid var(--border);
   background: var(--bg-panel);
   flex-shrink: 0;
+  position: relative;
 }
 
 .conv-mic-btn {
@@ -441,6 +442,26 @@
   justify-content: center;
   gap: 20px;
   padding: 16px 16px 20px;
+}
+
+/* Memory muted badge */
+.conv-memory-muted-badge {
+  font-family: var(--font-display);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: var(--md-warning);
+  background: color-mix(in srgb, var(--md-warning) 10%, transparent);
+  border: 1px solid var(--md-warning);
+  padding: 2px 8px;
+  border-radius: var(--md-shape-full);
+  white-space: nowrap;
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 /* ── Config strip — model + voice display (read-only, below state tabs) ── */

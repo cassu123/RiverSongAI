@@ -30,7 +30,12 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
 from config.settings import get_settings
+from core.limiter import limiter
 from core.kill_switch import is_kill_switch_active
 from core.memory_manager import MemoryManager
 from providers.memory.sqlite_store import SQLiteStore
@@ -103,6 +108,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await memory_manager.initialize()
     app.state.memory_manager = memory_manager
     app.state.active_connections = {} # user_id -> List[WebSocket]
+    app.state.ws_tickets = {} # ticket_uuid -> {"user_id": str, "expires_at": float, "is_kiosk": bool}
     logger.info("Memory layer ready (db=%s).", settings.db_path)
 
     # Daemon registry (Task A)
@@ -143,8 +149,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             if p_config.get("system_prompt"): settings.river_song_system_prompt = p_config["system_prompt"]
             logger.info("Applied persistent Persona system prompt.")
 
+        # Wake Word
+        ww_config = config.get("wake_word_config", {})
+        if ww_config:
+            if "enabled" in ww_config: settings.wake_word_enabled = ww_config["enabled"]
+            if ww_config.get("phrase"): settings.wake_word_model = ww_config["phrase"]
+            if "sensitivity" in ww_config: settings.wake_word_threshold = ww_config["sensitivity"]
+            logger.info("Applied persistent Wake Word settings.")
+
     except Exception as e:
         logger.warning("Failed to apply persistent settings: %s", e)
+
+    # Purge expired revoked tokens (Task 1)
+    try:
+        deleted = await store.delete_expired_tokens()
+        if deleted > 0:
+            logger.info("Purged %d expired revoked token(s).", deleted)
+    except Exception as e:
+        logger.warning("Failed to purge expired tokens: %s", e)
 
     # Start routine scheduler
     from core.routines_scheduler import start_scheduler
@@ -186,16 +208,48 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if is_dev else None,
     )
 
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
     # Reject requests from unexpected hostnames (protects against Host header attacks)
     if settings.allowed_hosts != ["*"]:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 
     # Forward real client IP from Cloudflare's CF-Connecting-IP header
+    import ipaddress
+    from datetime import datetime, timedelta
+
+    _last_warning = datetime.min
+    
+    def _is_cloudflare_ip(ip: str) -> bool:
+        if not settings.trust_cloudflare_headers:
+            return False
+        try:
+            addr = ipaddress.ip_address(ip)
+            ranges = (settings.cloudflare_ip_ranges_v4 if addr.version == 4 
+                      else settings.cloudflare_ip_ranges_v6)
+            for r in ranges:
+                if addr in ipaddress.ip_network(r):
+                    return True
+        except ValueError:
+            pass
+        return False
+
     class _CloudflareIPMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request: StarletteRequest, call_next):
             cf_ip = request.headers.get("CF-Connecting-IP")
             if cf_ip:
-                request.scope["client"] = (cf_ip, 0)
+                client_host = request.client.host if request.client else None
+                if client_host and _is_cloudflare_ip(client_host):
+                    request.scope["client"] = (cf_ip, 0)
+                else:
+                    nonlocal _last_warning
+                    if datetime.now() - _last_warning > timedelta(minutes=1):
+                        logger.warning(
+                            "Ignored CF-Connecting-IP from non-Cloudflare peer: %s", 
+                            client_host
+                        )
+                        _last_warning = datetime.now()
             return await call_next(request)
 
     # Allow the Vite dev server (and any other configured origins) to connect

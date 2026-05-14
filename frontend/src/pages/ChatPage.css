@@ -596,3 +596,17 @@
   opacity: 0.3;
   cursor: not-allowed;
 }
+
+/* Memory muted badge */
+.chat-memory-muted-badge {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: var(--md-warning);
+  background: color-mix(in srgb, var(--md-warning) 10%, transparent);
+  border: 1px solid var(--md-warning);
+  padding: 4px 8px;
+  border-radius: var(--md-shape-xs);
+  white-space: nowrap;
+}
+

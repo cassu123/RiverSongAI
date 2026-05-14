@@ -29,7 +29,7 @@ const EnvironmentPage         = lazy(() => import('./pages/EnvironmentPage.jsx')
 const GoogleCallbackPage      = lazy(() => import('./pages/GoogleCallbackPage.jsx'))
 const ReadingOAuthCallbackPage = lazy(() => import('./pages/ReadingOAuthCallbackPage.jsx'))
 
-import { ADMIN_PAGES, ALWAYS_VISIBLE } from './utils/constants.js'
+import { ADMIN_PAGES, ALWAYS_VISIBLE, USER_ITEMS, ADMIN_ITEMS } from './utils/constants.js'
 
 function load(key, fallback) {
   try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback }
@@ -172,13 +172,15 @@ export default function App() {
     if (!next && ADMIN_PAGES.has(currentPage)) setCurrentPage('speak')
   }
 
+  const pageLabel = (adminMode ? ADMIN_ITEMS : USER_ITEMS).find(i => i.key === currentPage)?.label || 'River Song'
+
   return (
     <div className="app-shell">
       {/* Mobile top bar */}
       <div className="mobile-topbar">
         <div className="mobile-topbar-brand">
           <div className="sidebar-logo">RS</div>
-          <span className="sidebar-title">RIVER SONG</span>
+          <span className="sidebar-title">{pageLabel.toUpperCase()}</span>
         </div>
         <button
           className="mobile-hamburger"

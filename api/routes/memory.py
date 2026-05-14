@@ -107,6 +107,57 @@ async def get_preferences(request: Request, authorization: Optional[str] = Heade
     ]
 
 
+@router.delete("/preferences/{pref_id}", status_code=204)
+async def delete_preference(pref_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
+    _require_user(authorization)
+    mm = _mm(request)
+    await mm.delete_preference(pref_id)
+
+
+@router.get("/pending-habits")
+async def get_pending_habits(request: Request, authorization: Optional[str] = Header(default=None)):
+    user_id = _require_user(authorization)
+    mm = _mm(request)
+    habits = await mm.get_pending_habits(user_id)
+    return habits
+
+
+@router.post("/pending-habits/{habit_id}/approve")
+async def approve_habit(habit_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
+    user_id = _require_user(authorization)
+    mm = _mm(request)
+    # Find the habit
+    habits = await mm.get_pending_habits(user_id)
+    habit = next((h for h in habits if h["id"] == habit_id), None)
+    if not habit:
+        raise HTTPException(status_code=404, detail="Pending habit not found")
+    
+    # Move to preferences
+    from providers.memory.models import Preference
+    import uuid
+    from datetime import datetime, timezone
+    pref = Preference(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        category="habit",
+        value=habit["pattern"],
+        confidence="medium", # Upgraded confidence since human approved it
+        last_updated=datetime.now(tz=timezone.utc)
+    )
+    await mm._store.upsert_preference(pref)
+    
+    # Delete from pending
+    await mm._store.delete_pending_habit(habit_id)
+    return {"status": "approved"}
+
+
+@router.delete("/pending-habits/{habit_id}", status_code=204)
+async def delete_pending_habit(habit_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
+    _require_user(authorization)
+    mm = _mm(request)
+    await mm._store.delete_pending_habit(habit_id)
+
+
 @router.get("/summaries")
 async def get_summaries(request: Request, limit: int = 50, authorization: Optional[str] = Header(default=None)):
     user_id = _require_user(authorization)
@@ -123,3 +174,10 @@ async def get_summaries(request: Request, limit: int = 50, authorization: Option
         }
         for s in summaries
     ]
+
+
+@router.delete("/summaries/{summary_id}", status_code=204)
+async def delete_summary(summary_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
+    _require_user(authorization)
+    mm = _mm(request)
+    await mm.delete_summary(summary_id)
