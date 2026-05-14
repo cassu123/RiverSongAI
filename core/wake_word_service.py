@@ -31,14 +31,18 @@ class WakeWordService:
         try:
             import openwakeword
             from openwakeword.model import Model
+            from config.settings import get_settings
             
-            # Note: hey_river model should be in the search path or provided
+            settings = get_settings()
+            self._threshold = settings.wake_word_threshold
+            
             self._model = Model(
-                wakeword_models=["hey_river"],
-                inference_framework="onnx"
+                wakeword_models=[settings.wake_word_model],
+                inference_framework=settings.wake_word_inference_framework
             )
             self._initialized = True
-            logger.info("WakeWordService initialized with 'hey_river' model.")
+            logger.info("WakeWordService initialized (model=%s, framework=%s).", 
+                        settings.wake_word_model, settings.wake_word_inference_framework)
         except ImportError:
             logger.error("openWakeWord not installed. Wake word detection disabled.")
         except Exception as exc:
@@ -60,12 +64,9 @@ class WakeWordService:
         # Convert bytes to numpy array (float32 between -1.0 and 1.0)
         audio_np = np.frombuffer(audio_chunk, dtype=np.int16).astype(np.float32) / 32768.0
         
-        # openWakeWord expects chunks of 1280 samples (80ms at 16kHz)
-        # We might need to buffer if the chunks are different sizes.
-        # For now, we assume the model handles internal buffering or the chunk is the right size.
         prediction = self._model.predict(audio_np)
         
         for wakeword, score in prediction.items():
-            if score > 0.5: # Threshold from settings ideally
+            if score > self._threshold:
                 logger.info("Wake word detected! (score: %.2f)", score)
                 self.on_wake_word()

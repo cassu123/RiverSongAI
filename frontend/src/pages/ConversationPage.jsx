@@ -5,6 +5,7 @@ import { useWebSocket }   from '../hooks/useWebSocket.js'
 import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
 import { useAuth }        from '../context/AuthContext.jsx'
 import { AudioPlayer }    from '../utils/AudioPlayer.js'
+import { STATE_TABS }     from '../utils/constants.js'
 import './ConversationPage.css'
 
 const RiverSong = lazy(() => import('../components/RiverSong.jsx'))
@@ -28,20 +29,18 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-const STATE_TABS = ['listening', 'thinking', 'speaking', 'idle']
-
 export default function ConversationPage() {
   const { token, user } = useAuth()
 
-  const wsUrl = token
-    ? `${WS_PROTOCOL}//${window.location.host}/ws/conversation?token=${token}`
-    : `${WS_PROTOCOL}//${window.location.host}/ws/conversation`
+  const wsUrl = `${WS_PROTOCOL}//${window.location.host}/ws/conversation`
 
   const [convState,         setConvState]         = useState('connecting')
   const [messages,          setMessages]          = useState([])
   const [streamingContent,  setStreamingContent]  = useState('')
   const [error,             setError]             = useState(null)
   const [ambientEnabled,    setAmbientEnabled]    = useState(false)
+  const [webSearch,         setWebSearch]         = useState(false)
+  const [memoryMuted,       setMemoryMuted]       = useState(false)
 
   const streamTimeoutRef = useRef(null)
 
@@ -159,7 +158,13 @@ export default function ConversationPage() {
     }
   }, [audioPlayer, finalizeStream])
 
-  const { sendMessage, connectionStatus } = useWebSocket(wsUrl, handleMessage)
+  const { sendMessage, connectionStatus, authError } = useWebSocket(wsUrl, handleMessage, { token })
+
+  useEffect(() => {
+    if (authError) {
+      setError('Session expired. Please log in again.')
+    }
+  }, [authError])
 
   useEffect(() => {
     if (connectionStatus === 'connected') {
@@ -207,6 +212,12 @@ export default function ConversationPage() {
     await toggleAmbient(next)
   }, [ambientEnabled, toggleAmbient, sendMessage])
 
+  const handleToggleWebSearch = useCallback(() => {
+    const next = !webSearch
+    setWebSearch(next)
+    sendMessage({ type: 'settings', web_search: next })
+  }, [webSearch, sendMessage])
+
   const handleStartListening = useCallback(async () => {
     if (!canSpeak) return
     setError(null)
@@ -245,11 +256,12 @@ export default function ConversationPage() {
       saveHistory(user.id, updated)
       setHistory(updated)
     }
-    sendMessage({ type: 'reset_history' })
+    sendMessage({ type: 'reset_history', flush_memory: true })
     setMessages([])
     setStreamingContent('')
     setError(null)
     setViewingSession(null)
+    setMemoryMuted(true)
   }, [connectionStatus, messages, sendMessage, user, activeModel])
 
   const displayMessages = viewingSession ? viewingSession.messages : messages
@@ -267,7 +279,7 @@ export default function ConversationPage() {
     if (!token) return
     fetch('/api/settings/llm', { headers: { Authorization: `Bearer ${token}` }})
       .then(r => r.json())
-      .then(d => setActiveModel({ display_name: d.model }))
+      .then(d => setActiveModel({ display_name: d.display_name || d.model }))
       .catch(() => {})
     fetch('/api/settings/voice', { headers: { Authorization: `Bearer ${token}` }})
       .then(r => r.json())
@@ -396,11 +408,27 @@ export default function ConversationPage() {
 
         <div className="conv-input-bar conv-input-bar--speak">
           <button className={`conv-ambient-btn ${ambientEnabled ? 'conv-ambient-btn--on' : ''}`} onClick={handleToggleAmbient} title="Ambient Mode"><SparkleIcon on={ambientEnabled} /></button>
+          <button className={`conv-icon-btn conv-web-btn ${webSearch ? 'conv-web-btn--on' : ''}`} onClick={handleToggleWebSearch} title="Web Search"><WebIcon on={webSearch} /></button>
           <button className={`conv-mic-btn conv-mic-btn--large ${isActive ? 'conv-mic-btn--active' : ''} ${!canSpeak ? 'conv-mic-btn--disabled' : ''}`} onClick={handleStartListening} disabled={!canSpeak}><MicIcon /></button>
           <button className="conv-reset-btn" onClick={handleReset} title="Save & reset"><ResetIcon /></button>
+          {memoryMuted && (
+            <div className="conv-memory-muted-badge animate-fade-in" title="Memory is not being injected into this session. Refresh to re-enable.">
+              MEMORY MUTED
+            </div>
+          )}
         </div>
       </div>
     </div>
+  )
+}
+
+function WebIcon({ on }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={on ? "currentColor" : "var(--md-outline)"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
   )
 }
 

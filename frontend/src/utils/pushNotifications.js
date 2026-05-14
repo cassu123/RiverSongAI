@@ -52,6 +52,48 @@ export async function registerPushNotifications(apiBase = '') {
   }
 }
 
+export async function unregisterPushNotifications(apiBase = '') {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return { status: 'unsupported' }
+  }
+
+  try {
+    const reg = await navigator.serviceWorker.getRegistration()
+    if (!reg) return { status: 'not-registered' }
+
+    const sub = await reg.pushManager.getSubscription()
+    if (!sub) return { status: 'not-subscribed' }
+
+    const endpoint = sub.endpoint
+    await sub.unsubscribe()
+
+    const token = localStorage.getItem('rs-auth-token')
+    await fetch(`${apiBase}/api/push/unsubscribe`, {
+      method: 'DELETE',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ endpoint }),
+    })
+
+    console.info('[Push] Successfully unsubscribed.')
+    return { status: 'unsubscribed' }
+  } catch (err) {
+    console.error('[Push] Unregistration failed:', err)
+    return { status: 'error', message: err.message }
+  }
+}
+
+export async function getPushSubscription() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return null
+  }
+  const reg = await navigator.serviceWorker.getRegistration()
+  if (!reg) return null
+  return await reg.pushManager.getSubscription()
+}
+
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')

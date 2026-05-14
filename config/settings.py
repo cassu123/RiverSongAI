@@ -61,7 +61,77 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
-    # STT
+    # Network / Proxy
+    # -------------------------------------------------------------------------
+    trust_cloudflare_headers: bool = Field(
+        default=True,
+        description="Only trust CF-Connecting-IP if the request comes from a Cloudflare IP.",
+    )
+    cloudflare_ip_ranges_v4: List[str] = Field(
+        default=[
+            "173.245.48.0/20", "103.21.244.0/22", "103.22.200.0/22", 
+            "103.31.4.0/22", "141.101.64.0/18", "108.162.192.0/18", 
+            "190.93.240.0/20", "188.114.96.0/20", "197.234.240.0/22", 
+            "198.41.128.0/17", "162.158.0.0/15", "104.16.0.0/13", 
+            "104.24.0.0/14", "172.64.0.0/13", "131.0.72.0/22"
+        ],
+        description="Official Cloudflare IPv4 ranges (check cloudflare.com/ips-v4).",
+    )
+    cloudflare_ip_ranges_v6: List[str] = Field(
+        default=[
+            "2400:cb00::/32", "2606:4700::/32", "2803:f800::/32", 
+            "2405:b500::/32", "2405:8100::/32", "2a06:98c0::/29", 
+            "2c0f:f248::/32"
+        ],
+        description="Official Cloudflare IPv6 ranges (check cloudflare.com/ips-v6).",
+    )
+
+    # -------------------------------------------------------------------------
+    # Rate Limiting
+    # -------------------------------------------------------------------------
+    rate_limit_chat: str = Field(
+        default="60/minute",
+        description="Rate limit for /api/conversation/chat.",
+    )
+    rate_limit_extract_facts: str = Field(
+        default="10/minute",
+        description="Rate limit for /api/conversation/extract-facts.",
+    )
+    rate_limit_image_gen: str = Field(
+        default="10/minute",
+        description="Rate limit for /api/image/generate.",
+    )
+    rate_limit_webhook_shopify: str = Field(
+        default="100/minute",
+        description="Rate limit for Shopify order webhooks.",
+    )
+    rate_limit_webhook_n8n: str = Field(
+        default="60/minute",
+        description="Rate limit for n8n webhooks.",
+    )
+    rate_limit_auth_login: str = Field(
+        default="10/minute",
+        description="Rate limit for login attempts.",
+    )
+    rate_limit_auth_signup: str = Field(
+        default="5/minute",
+        description="Rate limit for signup attempts.",
+    )
+
+    # -------------------------------------------------------------------------
+    # WebSocket Security (Task 3)
+    # -------------------------------------------------------------------------
+    legacy_ws_token_accept: bool = Field(
+        default=True,
+        description="TEMPORARY: Allow ?token= query param for WebSockets. Plan to disable.",
+    )
+    ws_ticket_lifetime_seconds: int = Field(
+        default=60,
+        description="Lifetime of a one-time WebSocket ticket.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Network / Proxy
     # -------------------------------------------------------------------------
     stt_provider: str = Field(
         default="whisper_local",
@@ -217,7 +287,7 @@ class Settings(BaseSettings):
         description="Secret key for signing JWT tokens. Must be set in .env.",
     )
     jwt_algorithm: str = Field(default="HS256", description="JWT signing algorithm.")
-    jwt_expire_minutes: int = Field(default=10080, description="JWT token lifetime in minutes (default 7 days).")
+    jwt_expire_minutes: int = Field(default=1440, description="JWT token lifetime in minutes (default 24 hours).")
 
     # -------------------------------------------------------------------------
     # Kill switch
@@ -366,7 +436,7 @@ class Settings(BaseSettings):
         description="FBA units at or below this count are flagged as low stock.",
     )
 
-    # Walmart Marketplace
+    # Amazon Marketplace
     walmart_client_id: str = Field(
         default="",
         description="Walmart Marketplace OAuth2 client ID.",
@@ -378,6 +448,10 @@ class Settings(BaseSettings):
     walmart_low_stock_threshold: int = Field(
         default=5,
         description="Walmart units at or below this count are flagged as low stock.",
+    )
+    shopify_webhook_secret: str = Field(
+        default="",
+        description="Shared secret for validating Shopify webhooks.",
     )
 
     # -------------------------------------------------------------------------
@@ -417,6 +491,10 @@ class Settings(BaseSettings):
     memory_summaries_enabled: bool = Field(
         default=True,
         description="Generate and store conversation summaries (on by default).",
+    )
+    habit_inference_enabled: bool = Field(
+        default=False,
+        description="Analyze conversations to infer user habits/patterns (off by default).",
     )
     memory_default_ttl: str = Field(
         default="standard",
@@ -537,6 +615,10 @@ class Settings(BaseSettings):
     wake_word_inference_framework: str = Field(
         default="onnx",
         description="Inference framework for openWakeWord: onnx | tflite",
+    )
+    wake_word_threshold: float = Field(
+        default=0.5,
+        description="Sensitivity threshold for wake word detection (0.0 to 1.0).",
     )
 
     # -------------------------------------------------------------------------
@@ -716,6 +798,10 @@ class Settings(BaseSettings):
         default="http://localhost:8000/kiosk",
         description="The URL that Herald should cast to Hub displays.",
     )
+    kiosk_token: str = Field(
+        default="change_me_kiosk_secret",
+        description="Secret token for unauthenticated kiosk access to WebSockets.",
+    )
 
     # Mechanic (Telemetry)
     mechanic_enabled: bool = Field(
@@ -761,6 +847,21 @@ class Settings(BaseSettings):
             raise ValueError(
                 "JWT_SECRET_KEY must be set in .env and be at least 32 characters. "
                 "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
+        return v
+
+    @field_validator("daemon_internal_secret")
+    @classmethod
+    def validate_daemon_internal_secret(cls, v: str) -> str:
+        """Refuse to start with the default or weak daemon secret."""
+        if v == "change_me_in_production":
+            raise ValueError(
+                "DAEMON_INTERNAL_SECRET must be changed in .env for production."
+            )
+        if not v or len(v) < 24:
+            raise ValueError(
+                "DAEMON_INTERNAL_SECRET must be at least 24 characters. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
             )
         return v
 

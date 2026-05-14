@@ -75,7 +75,7 @@ export default function EnvironmentPage() {
   const markRoom = async (roomKey, persons, activity) => {
     setActing(roomKey)
     try {
-      await fetch('/api/context/sensor_event', {
+      await fetch('/api/context/manual_override', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

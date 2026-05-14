@@ -54,6 +54,7 @@ from core.conversation_loop import ConversationLoop, _build_llm_provider, _build
 from core.memory_manager import MemoryManager
 from core.wake_word_service import WakeWordService
 from config.settings import get_settings
+from core.limiter import limiter
 from providers.web.search import build_search_provider
 
 
@@ -77,16 +78,48 @@ async def conversation_websocket(websocket: WebSocket) -> None:
     """
     await websocket.accept()
 
-    # Require a valid JWT token — reject unauthenticated connections
-    token: str = websocket.query_params.get("token", "")
-    payload = decode_token(token) if token else None
-    if not payload:
+    # Require a valid one-time ticket OR (legacy) a valid JWT token
+    ticket_id: str = websocket.query_params.get("ticket", "")
+    token: str     = websocket.query_params.get("token", "")
+    
+    settings = get_settings()
+    user_id: str | None = None
+    is_kiosk = False
+
+    # 1. Try one-time ticket exchange (New Pattern)
+    if ticket_id:
+        ticket = websocket.app.state.ws_tickets.pop(ticket_id, None)
+        if ticket:
+            now = datetime.now(tz=timezone.utc).timestamp()
+            if now <= ticket["expires_at"]:
+                user_id  = ticket["user_id"]
+                is_kiosk = ticket["is_kiosk"]
+                logger.info("WebSocket connection via ticket from %s (user_id=%s, kiosk=%s).", 
+                            websocket.client, user_id, is_kiosk)
+            else:
+                logger.warning("WebSocket ticket expired: %s", ticket_id)
+        else:
+            logger.warning("WebSocket ticket invalid or reused: %s", ticket_id)
+
+    # 2. Legacy: Try JWT token directly in query string (Audit H-4)
+    if not user_id and token:
+        if settings.legacy_ws_token_accept:
+            payload = await decode_token(token)
+            if payload:
+                user_id = payload["sub"]
+                logger.warning("WebSocket connection via LEGACY token query param from %s (user_id=%s).", 
+                               websocket.client, user_id)
+            elif token == settings.kiosk_token:
+                user_id = settings.default_user_id
+                is_kiosk = True
+                logger.warning("WebSocket connection via LEGACY kiosk_token query param from %s.", websocket.client)
+        else:
+            logger.warning("WebSocket connection attempted via legacy token but LEGACY_WS_TOKEN_ACCEPT is False.")
+
+    if not user_id:
         await websocket.send_json({"type": "error", "message": "Authentication required."})
         await websocket.close(code=4001)
         return
-
-    user_id: str = payload["sub"]
-    logger.info("WebSocket connection from %s (user_id=%s).", websocket.client, user_id)
 
     # Register active connection for proactive briefings
     if user_id not in websocket.app.state.active_connections:
@@ -99,6 +132,8 @@ async def conversation_websocket(websocket: WebSocket) -> None:
     llm_provider = None
     llm_model    = None
     voice_id     = None
+    fb_provider  = None
+    fb_model     = None
     if memory_manager and user_id != "default":
         try:
             store = memory_manager._store
@@ -106,9 +141,14 @@ async def conversation_websocket(websocket: WebSocket) -> None:
             llm_provider = user_settings.provider
             llm_model    = user_settings.model
             voice_id     = user_settings.voice_id or None
+            
+            if user_settings.cloud_fallback_enabled:
+                fb_provider = user_settings.cloud_fallback_provider
+                fb_model    = user_settings.cloud_fallback_model
+                
             logger.info(
-                "Using user settings: provider=%s model=%s voice=%s",
-                llm_provider, llm_model, voice_id,
+                "Using user settings: provider=%s model=%s voice=%s fallback=%s",
+                llm_provider, llm_model, voice_id, fb_provider,
             )
         except Exception as exc:
             logger.warning("Could not load user settings: %s", exc)
@@ -119,6 +159,8 @@ async def conversation_websocket(websocket: WebSocket) -> None:
         llm_provider_override=llm_provider,
         llm_model_override=llm_model,
         voice_id_override=voice_id,
+        fallback_provider=fb_provider,
+        fallback_model=fb_model,
     )
 
     await _send(websocket, {"type": "connected"})
@@ -185,6 +227,14 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                         logger.warning("Wake word chunk processing failed: %s", exc)
                 continue
 
+            elif msg_type == "settings":
+                # Live session settings
+                web_search = message.get("web_search")
+                if web_search is not None:
+                    loop._web_search_enabled = bool(web_search)
+                    logger.info("WebSocket: web_search=%s", loop._web_search_enabled)
+                continue
+
             elif msg_type == "start":
                 # Tell the browser to start recording
                 waiting_for_audio = True
@@ -239,7 +289,8 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                     await _send(websocket, {"type": "stream_done"})
 
             elif msg_type == "reset_history":
-                await loop.reset_history()
+                flush = bool(message.get("flush_memory", False))
+                await loop.reset_history(flush_memory=flush)
                 waiting_for_audio = False
                 await _send(websocket, {"type": "idle"})
 
@@ -297,9 +348,11 @@ class _ChatRequest(BaseModel):
     web_search: bool = False
     system_prompt: str | None = None
     thinking_mode: bool = False
+    forget_memory: bool = False
 
 
 @router.post("/api/conversation/chat")
+@limiter.limit(get_settings().rate_limit_chat)
 async def chat_http(
     body: _ChatRequest,
     request: Request,
@@ -319,48 +372,78 @@ async def chat_http(
     user_id: str = payload["sub"]
     memory_manager: MemoryManager | None = getattr(request.app.state, "memory_manager", None)
 
-    # Build system prompt with memory context
-    settings = get_settings()
-    system_prompt = settings.river_song_system_prompt
-    if memory_manager:
-        try:
-            system_prompt += await memory_manager.build_context_block(user_id)
-        except Exception:
-            pass
-
-    if body.system_prompt and body.system_prompt.strip():
-        system_prompt = body.system_prompt.strip() + "\n\n" + system_prompt
-
-    if body.web_search:
-        try:
-            _searcher = build_search_provider()
-            _results = await _searcher.search(body.message, count=5)
-            if _results:
-                system_prompt += f"\n\n--- WEB SEARCH RESULTS ---\n{_results}\n--- END RESULTS ---\nUse these results to inform your answer where relevant."
-        except Exception as _exc:
-            logger.warning("Web search failed: %s", _exc)
-
-    messages = [{"role": "system", "content": system_prompt}]
+    # We use ConversationLoop to get full tool support and consistent behavior
+    loop = ConversationLoop(
+        user_id=user_id,
+        memory_manager=memory_manager,
+        llm_provider_override=body.provider,
+        llm_model_override=body.model_id,
+    )
+    loop._suppress_memory = body.forget_memory
+    # Re-inject history into the loop
     for m in body.history[-20:]:
         role = m.get("role", "user")
         content = m.get("content", "")
         if role in ("user", "assistant") and content:
-            messages.append({"role": role, "content": content})
+            loop._history.append({"role": role, "content": content})
 
-    llm = _build_llm_provider(
-        provider_override=body.provider,
-        model_override=body.model_id,
-    )
+    await loop.initialize()
 
     async def _stream():
+        queue = asyncio.Queue()
+
+        async def on_event(evt: dict):
+            await queue.put(evt)
+
+        # Run in a task so we can yield from the queue
+        task = asyncio.create_task(loop.run_text(body.message, on_event))
+        
         try:
-            method = llm.stream_response_thinking if body.thinking_mode else llm.stream_response
-            async for chunk in method(messages):
-                yield f"data: {chunk}\n\n"
+            while True:
+                # Wait for event or task completion
+                done, _ = await asyncio.wait(
+                    [asyncio.create_task(queue.get()), task],
+                    return_when=asyncio.FIRST_COMPLETED
+                )
+                
+                # Check if task is done
+                if task.done() and queue.empty():
+                    break
+                
+                # Process queue items
+                while not queue.empty():
+                    evt = queue.get_nowait()
+                    if evt["type"] in ("response_chunk", "token"):
+                        text = evt.get("text") or evt.get("content", "")
+                        yield f"data: {json.dumps({'type': 'text', 'content': text})}\n\n"
+                    elif evt["type"] in ("tool_use", "tool_result"):
+                        yield f"data: {json.dumps(evt)}\n\n"
+                    elif evt["type"] == "error":
+                        yield f"data: {json.dumps({'type': 'error', 'content': evt['message']})}\n\n"
+            
             yield "data: [DONE]\n\n"
         except Exception as exc:
-            logger.error("Chat HTTP stream error: %s", exc)
-            yield f"data: [ERROR] {exc}\n\n"
+            logger.error("Chat HTTP stream error: %s", exc, exc_info=True)
+            
+            # Classify error
+            code = "internal_error"
+            msg = "An unexpected error occurred during streaming."
+            
+            err_str = str(exc).lower()
+            if "rate limit" in err_str or "429" in err_str:
+                code = "rate_limited"
+                msg = "The AI provider is currently rate-limited. Please try again in a moment."
+            elif "timeout" in err_str:
+                code = "timeout"
+                msg = "The request timed out. The model may be overloaded."
+            elif "authentication" in err_str or "api key" in err_str:
+                code = "model_unavailable"
+                msg = "The selected AI model is currently unavailable (auth failure)."
+            
+            yield f"data: {json.dumps({'type': 'error', 'code': code, 'content': msg})}\n\n"
+        finally:
+            if not task.done():
+                task.cancel()
 
     return StreamingResponse(_stream(), media_type="text/event-stream")
 
@@ -374,6 +457,7 @@ class _ExtractFactsRequest(BaseModel):
 
 
 @router.post("/api/conversation/extract-facts", status_code=202)
+@limiter.limit(get_settings().rate_limit_extract_facts)
 async def extract_facts_http(
     body: _ExtractFactsRequest,
     request: Request,
@@ -409,20 +493,16 @@ async def extract_facts_http(
     extraction_prompt = (
         "You are building a memory profile for an AI assistant. "
         "Extract ANYTHING from the USER's messages that would help the AI know them better in future conversations.\n\n"
-        "Capture broadly — do not filter:\n"
-        "- Identity: name, age, gender, location, nationality\n"
-        "- Work: job, employer, industry, role, career goals\n"
-        "- Family & relationships: spouse, kids, pets, friends mentioned\n"
-        "- Health: conditions, medications, fitness habits\n"
-        "- Interests & hobbies: sports, games, music, food, TV, books\n"
-        "- Opinions & preferences: things they like/dislike, how they prefer to communicate\n"
-        "- Current situations: projects, problems, plans, events coming up\n"
-        "- Emotions & mood if relevant: stressed, excited, tired\n\n"
-        "Output ONLY a raw JSON array — no markdown, no code fences, no explanation.\n"
-        "Each item: {\"key\": \"snake_case_key\", \"value\": \"concise plain text value\"}\n"
-        "Example output: [{\"key\": \"job_title\", \"value\": \"aircraft mechanic\"}, "
-        "{\"key\": \"employer\", \"value\": \"US Air Force\"}, "
-        "{\"key\": \"communication_preference\", \"value\": \"prefers direct answers\"}]\n"
+        "Use ONLY these canonical snake_case keys:\n"
+        "- Identity: full_name, first_name, last_name, age, gender, location, nationality\n"
+        "- Work: job_title, employer, industry, role, career_goals\n"
+        "- Family: spouse_name, child_name, pet_name, relative_name, friend_name\n"
+        "- Health: health_condition, medication, diet, fitness_habit\n"
+        "- Interests: hobby, interest, favorite_food, favorite_music, favorite_tv_show, favorite_book\n"
+        "- Style: preference, dislike, communication_style, tone_preference\n"
+        "- Context: current_project, problem, plan, upcoming_event, mood\n\n"
+        "Capture broadly but categorize into these keys. Output ONLY a raw JSON array.\n"
+        "Each item: {\"key\": \"canonical_key\", \"value\": \"concise plain text value\"}\n"
         "If the user shared nothing about themselves at all, output: []\n\n"
         f"CONVERSATION:\n{conversation_text}\n\n"
         "JSON array:"

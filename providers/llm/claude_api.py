@@ -15,14 +15,25 @@ from providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
 
+def _friendly_error(exc: Exception) -> str:
+    err_str = str(exc).lower()
+    if "rate limit" in err_str or "429" in err_str:
+        return "I'm at my message limit, try again in a moment."
+    if "authentication" in err_str or "api key" in err_str or "401" in err_str or "403" in err_str:
+        return "My connection to that model isn't working — let your admin know."
+    if "timeout" in err_str:
+        return "That took too long, try again."
+    return "I had trouble responding."
+
+
 class ClaudeAPILLM(LLMProvider):
     """
     Stream responses from Anthropic Claude via the official SDK.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, model: Optional[str] = None) -> None:
         settings = get_settings()
-        self._model: str = settings.llm_model
+        self._model: str = model or settings.llm_model
         self._max_tokens: int = settings.llm_max_tokens
         self._temperature: float = settings.llm_temperature
         self._client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
@@ -45,8 +56,8 @@ class ClaudeAPILLM(LLMProvider):
             )
             return "".join(b.text for b in response.content if b.type == "text")
         except Exception as exc:
-            logger.error("Claude API call failed: %s", exc)
-            return f"I had trouble reaching my cloud brain: {exc}"
+            logger.error("Claude API call failed: %s", exc, exc_info=True)
+            return _friendly_error(exc)
 
     async def stream_response(self, messages: List[dict]) -> AsyncGenerator[str, None]:
         """Stream response from Claude."""
@@ -67,8 +78,8 @@ class ClaudeAPILLM(LLMProvider):
                 async for text in stream.text_stream:
                     yield text
         except Exception as exc:
-            logger.error("Claude streaming failed: %s", exc)
-            yield f"\n[Claude API Error]: {exc}"
+            logger.error("Claude streaming failed: %s", exc, exc_info=True)
+            yield _friendly_error(exc)
 
     async def stream_response_thinking(self, messages: List[dict]) -> AsyncGenerator[str, None]:
         """Extended thinking mode for Claude. Temperature forced to 1, budget 5000 tokens."""
@@ -130,5 +141,5 @@ class ClaudeAPILLM(LLMProvider):
             return {"type": "text", "content": text}
 
         except Exception as exc:
-            logger.error("Claude tool use call failed: %s", exc)
-            return {"type": "text", "content": f"I had trouble reaching my cloud brain for tool use: {exc}"}
+            logger.error("Claude tool use call failed: %s", exc, exc_info=True)
+            return {"type": "text", "content": _friendly_error(exc)}

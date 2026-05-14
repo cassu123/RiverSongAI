@@ -262,6 +262,58 @@
   padding-top: 8px;
 }
 
+/* Daemon Status Widget */
+.daemon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.daemon-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.daemon-row:last-child {
+  border-bottom: none;
+}
+
+.daemon-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.daemon-name {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--md-on-surface);
+}
+
+.daemon-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.daemon-status {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--md-tertiary);
+  text-transform: uppercase;
+}
+
+.daemon-port {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--md-outline);
+}
+
 /* Responsive additions */
 @media (max-width: 480px) {
   .briefing-checks {

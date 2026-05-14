@@ -19,8 +19,10 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 const RECONNECT_DELAY_MS       = 3000
 const MAX_RECONNECT_ATTEMPTS   = 5
 
-export function useWebSocket(url, onMessage) {
+export function useWebSocket(baseUrl, onMessage, options = {}) {
+  const { token, kioskToken } = options
   const [connectionStatus, setConnectionStatus] = useState('disconnected')
+  const [authError, setAuthError] = useState(false)
 
   const wsRef              = useRef(null)
   const reconnectCountRef  = useRef(0)
@@ -28,22 +30,58 @@ export function useWebSocket(url, onMessage) {
   const isMountedRef       = useRef(true)
 
   // Wrap connect in useCallback so the useEffect dependency array is stable
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (!isMountedRef.current) return
 
+    let ticket = null
     try {
-      const parsed = new URL(url, window.location.href)
-      if (parsed.hostname !== window.location.hostname) {
-        console.error('[useWebSocket] Blocked connection to non-same-origin host:', parsed.hostname)
+      // 1. Exchange token for ticket if needed
+      if (token) {
+        const res = await fetch('/api/auth/ws-ticket', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          ticket = data.ticket
+        }
+      } else if (kioskToken) {
+        const res = await fetch('/api/auth/ws-ticket/kiosk', {
+          method: 'POST',
+          headers: { 'X-Kiosk-Token': kioskToken }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          ticket = data.ticket
+        }
+      }
+
+      // 2. Build full URL with ticket
+      const url = new URL(baseUrl, window.location.href)
+      if (ticket) {
+        url.searchParams.set('ticket', ticket)
+      } else if (!token && !kioskToken) {
+        // Fallback for anonymous connection if any exist (none today)
+      } else {
+        // We expected a ticket but didn't get one. 
+        // Fallback to legacy ?token= if configured on server (handled by server)
+        if (token) url.searchParams.set('token', token)
+        if (kioskToken) url.searchParams.set('token', kioskToken)
+      }
+
+      if (url.hostname !== window.location.hostname) {
+        console.error('[useWebSocket] Blocked connection to non-same-origin host:', url.hostname)
         setConnectionStatus('error')
         return
       }
-      const ws = new WebSocket(url)
+
+      const ws = new WebSocket(url.toString())
       wsRef.current = ws
 
       ws.onopen = () => {
         if (!isMountedRef.current) return
         reconnectCountRef.current = 0
+        setAuthError(false)
         setConnectionStatus('connected')
       }
 
@@ -69,6 +107,16 @@ export function useWebSocket(url, onMessage) {
         if (!isMountedRef.current) return
         setConnectionStatus('disconnected')
 
+        // Code 4001 is our custom "Authentication Required / Invalid" code
+        if (event.code === 4001) {
+          setAuthError(true)
+          if (token) {
+            localStorage.removeItem('rs-auth-token')
+            localStorage.removeItem('rs-auth-user')
+          }
+          return // Do not attempt to reconnect
+        }
+
         // Only reconnect on unclean closes and within attempt limit
         const shouldReconnect =
           !event.wasClean &&
@@ -91,7 +139,7 @@ export function useWebSocket(url, onMessage) {
       console.error('[useWebSocket] Failed to create WebSocket:', err)
       setConnectionStatus('error')
     }
-  }, [url, onMessage])
+  }, [baseUrl, onMessage, token, kioskToken])
 
   useEffect(() => {
     isMountedRef.current = true
@@ -117,5 +165,5 @@ export function useWebSocket(url, onMessage) {
     }
   }, [])
 
-  return { sendMessage, connectionStatus }
+  return { sendMessage, connectionStatus, authError }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import './ProfilePage.css'
 import { useAuth } from '../context/AuthContext'
+import { registerPushNotifications } from '../utils/pushNotifications'
 
 // ── tiny helpers ─────────────────────────────────────────────────────────────
 
@@ -39,10 +40,29 @@ export default function ProfilePage({ profile, onSave, theme, onThemeChange }) {
   const [loadingLinks, setLoadingLinks] = useState(false)
   const [savingLinks, setSavingLinks] = useState(false)
   const [linksMsg, setLinksMsg] = useState('')
+  const [pushMsg, setPushMsg] = useState('')
+  const [pushBusy, setPushBusy] = useState(false)
   const [integrations, setIntegrations] = useState({
     amazon_sp_api: { lwa_app_id: '', lwa_client_secret: '', lwa_refresh_token: '', aws_access_key: '', aws_secret_key: '', seller_id: '' },
     walmart_api: { client_id: '', client_secret: '' }
   })
+
+  const handlePushEnable = async () => {
+    setPushBusy(true)
+    setPushMsg('')
+    const res = await registerPushNotifications()
+    if (res.status === 'subscribed') {
+      setPushMsg('Notifications enabled.')
+    } else if (res.status === 'denied') {
+      setPushMsg('Permission denied.')
+    } else if (res.status === 'unsupported') {
+      setPushMsg('Not supported by browser.')
+    } else {
+      setPushMsg(res.message || 'Failed to enable.')
+    }
+    setPushBusy(false)
+    setTimeout(() => setPushMsg(''), 3000)
+  }
 
   const loadIntegrations = useCallback(async () => {
     setLoadingLinks(true)
@@ -298,6 +318,18 @@ export default function ProfilePage({ profile, onSave, theme, onThemeChange }) {
                   {theme === t.key && <span className="theme-card-active-dot" />}
                 </button>
               ))}
+            </div>
+          </section>
+
+          {/* Notifications */}
+          <section className="card">
+            <div className="card-title">NOTIFICATIONS</div>
+            <p className="profile-hint">Receive proactive briefings and alerts on this device.</p>
+            <div className="profile-save-row" style={{ marginTop: 12 }}>
+              <button className="btn btn--primary" onClick={handlePushEnable} disabled={pushBusy}>
+                {pushBusy ? 'ENABLING...' : 'ENABLE PUSH NOTIFICATIONS'}
+              </button>
+              {pushMsg && <span className="profile-saved-msg">{pushMsg}</span>}
             </div>
           </section>
 

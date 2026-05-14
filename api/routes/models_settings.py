@@ -175,9 +175,15 @@ async def get_llm_settings(request: Request, authorization: Optional[str] = Head
     user_id = _require_user(authorization)
     memory = request.app.state.memory_manager
     s = await memory.get_llm_settings(user_id)
+    
+    # Get display name from registry
+    entry = LLMRegistry.get(s.provider, s.model)
+    display_name = entry.display_name if entry else s.model
+    
     return {
         "provider":               s.provider,
         "model":                  s.model,
+        "display_name":           display_name,
         "cloud_fallback_enabled": s.cloud_fallback_enabled,
         "cloud_fallback_provider":s.cloud_fallback_provider,
         "cloud_fallback_model":   s.cloud_fallback_model,
@@ -534,6 +540,8 @@ async def preview_voice(
     if not wav_bytes:
         raise HTTPException(status_code=502, detail="No audio produced.")
 
+    return {"audio_b64": base64.b64encode(wav_bytes).decode("utf-8")}
+
 # =============================================================================
 # ElevenLabs & Persona settings
 # =============================================================================
@@ -604,6 +612,62 @@ async def save_elevenlabs_settings(
 
 class PersonaBody(BaseModel):
     system_prompt: str
+
+
+class WakeWordBody(BaseModel):
+    enabled: bool
+    phrase: str
+    sensitivity: float
+
+
+@router.get("/settings/wake-word")
+async def get_wake_word_settings(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    _require_admin(authorization)
+    s = get_settings()
+    
+    # Check if openWakeWord is installed
+    try:
+        import openwakeword # noqa: F401
+        installed = True
+    except ImportError:
+        installed = False
+
+    return {
+        "enabled":     s.wake_word_enabled,
+        "phrase":      s.wake_word_model,
+        "sensitivity": s.wake_word_threshold,
+        "installed":   installed,
+    }
+
+
+@router.post("/settings/wake-word")
+async def save_wake_word_settings(
+    request: Request,
+    body: WakeWordBody,
+    authorization: Optional[str] = Header(default=None),
+):
+    user_id = _require_admin(authorization)
+    
+    # Update live settings singleton
+    s = get_settings()
+    s.wake_word_enabled   = body.enabled
+    s.wake_word_model     = body.phrase
+    s.wake_word_threshold = body.sensitivity
+    
+    # Persist to admin_config
+    try:
+        store = request.app.state.memory_manager._store
+        config = await store.get_admin_config()
+        config["wake_word_config"] = body.model_dump()
+        await store.set_admin_config(config)
+    except Exception as e:
+        logger.warning("Failed to persist Wake Word settings to DB: %s", e)
+
+    logger.info("Wake Word settings saved by admin %s.", user_id)
+    return {"ok": True}
 
 
 @router.get("/settings/persona")

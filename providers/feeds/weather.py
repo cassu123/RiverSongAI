@@ -209,6 +209,24 @@ async def fetch_weather(
     }
 
 
+async def get_weather_report(lat: float, lon: float, units: str = "celsius") -> str:
+    """
+    Fetch weather and return a concise text summary for the LLM tool.
+    """
+    data = await fetch_weather(lat, lon, unit=units)
+    curr = data["current"]
+    unit_sym = curr["unit"]
+    
+    report = f"The current weather is {curr['condition'].lower()} at {curr['temperature']}{unit_sym}. "
+    report += f"Wind speed is {curr['wind_speed']} km/h."
+    
+    if data["daily"]:
+        today = data["daily"][0]
+        report += f" Expect a high of {today['temp_max']}{unit_sym} and a low of {today['temp_min']}{unit_sym} today."
+        
+    return report
+
+
 async def _reverse_geocode(lat: float, lon: float) -> str:
     """Return a short human-readable location name via Nominatim (no key needed)."""
     try:

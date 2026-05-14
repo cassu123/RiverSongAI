@@ -10,11 +10,7 @@ const PLATFORMS = [
   { key: 'facebook',  label: 'Facebook',  color: '#1877f2', metrics: ['page_likes','reach','engagements','revenue'] },
   { key: 'amazon',    label: 'Amazon',    color: '#ff9900', metrics: ['orders','revenue','units_sold','returns'] },
   { key: 'etsy',      label: 'Etsy',      color: '#f56400', metrics: ['orders','revenue','views','favorites'] },
-  { key: 'youtube',   label: 'YouTube',   color: '#ff0000', metrics: ['subscribers','views','watch_hours','revenue'] },
-  { key: 'ebay',      label: 'eBay',      color: '#0064d2', metrics: ['orders','revenue','listing_views','watchers'] },
   { key: 'shopify',   label: 'Shopify',   color: '#96bf48', metrics: ['orders','revenue','sessions','conversion_rate'] },
-  { key: 'pinterest', label: 'Pinterest', color: '#e60023', metrics: ['followers','impressions','saves','clicks'] },
-  { key: 'twitter',   label: 'X / Twitter', color: '#aaa',  metrics: ['followers','impressions','likes','retweets'] },
 ]
 
 const PLATFORM_MAP = Object.fromEntries(PLATFORMS.map(p => [p.key, p]))

@@ -105,12 +105,22 @@ export function AuthProvider({ children }) {
     return data.user
   }, [])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    if (token) {
+      try {
+        await fetch(`${API_BASE}/api/auth/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      } catch (err) {
+        console.warn('Server logout failed:', err)
+      }
+    }
     setToken(null)
     setUser(null)
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
-  }, [])
+  }, [token])
 
   return (
     <AuthContext.Provider value={{ token, user, loading, setupRequired, setupAdmin, login, signup, loginWithGoogle, logout }}>

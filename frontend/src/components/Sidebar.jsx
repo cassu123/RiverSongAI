@@ -1,42 +1,5 @@
 import React, { useState } from 'react'
-
-// ── Navigation item definitions ─────────────────────────────────────────────
-// icon: Material Symbols Rounded codepoint name
-// https://fonts.google.com/icons?icon.style=Rounded
-
-const USER_ITEMS = [
-  { key: 'speak',       label: 'Speak',       icon: 'mic' },
-  { key: 'chat',        label: 'Chat',        icon: 'chat_bubble' },
-  { key: 'memory',      label: 'Memory',      icon: 'psychology' },
-  { key: 'inventory',   label: 'Inventory',   icon: 'inventory_2' },
-  { key: 'maintenance', label: 'Maintenance', icon: 'build' },
-  { key: 'commerce',    label: 'Store',       icon: 'shopping_bag' },
-  { key: 'analytics',   label: 'Analytics',   icon: 'bar_chart' },
-  { key: 'feeds',       label: 'Feeds',       icon: 'feed' },
-  { key: 'google',      label: 'Google',      icon: 'hub',      soon: true },
-  { key: 'reading',     label: 'Reading',     icon: 'auto_stories' },
-  { key: 'culinary',    label: 'Culinary',    icon: 'restaurant_menu' },
-]
-
-const ADMIN_ITEMS = [
-  { key: 'dashboard',   label: 'Dashboard',   icon: 'dashboard' },
-  { key: 'speak',       label: 'Speak',       icon: 'mic' },
-  { key: 'chat',        label: 'Chat',        icon: 'chat_bubble' },
-  { key: 'memory',      label: 'Memory',      icon: 'psychology' },
-  { key: 'inventory',   label: 'Inventory',   icon: 'inventory_2' },
-  { key: 'maintenance', label: 'Maintenance', icon: 'build' },
-  { key: 'commerce',    label: 'Store',       icon: 'shopping_bag' },
-  { key: 'routines',    label: 'Routines',    icon: 'routine' },
-  { key: 'home',        label: 'Home Node',   icon: 'home_iot_device' },
-  { key: 'environment', label: 'Environment', icon: 'visibility' },
-  { key: 'analytics',   label: 'Analytics',   icon: 'bar_chart' },
-  { key: 'feeds',       label: 'Feeds',       icon: 'feed' },
-  { key: 'google',      label: 'Google',      icon: 'hub',        soon: true },
-  { key: 'reading',     label: 'Reading',     icon: 'auto_stories' },
-  { key: 'culinary',    label: 'Culinary',    icon: 'restaurant_menu' },
-  { key: 'users',       label: 'Users',       icon: 'group' },
-  { key: 'killswitch',  label: 'Kill Switch', icon: 'power_settings_new' },
-]
+import { USER_ITEMS, ADMIN_ITEMS } from '../utils/constants.js'
 
 // ── Material Symbol component ────────────────────────────────────────────────
 function MdIcon({ name, size = 20, style }) {

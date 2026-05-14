@@ -80,11 +80,13 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
   const [visible,    setVisible]    = useState(loadWidgets)
   const [stats,      setStats]      = useState(null)
   const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState(null)
   const [sessions,   setSessions]   = useState([])
   const [routines,   setRoutines]   = useState([])
   const [patterns,   setPatterns]   = useState([])
   const [rooms,      setRooms]      = useState({})
   const [roverStatus, setRoverStatus] = useState(null)
+  const [daemonStatus, setDaemonStatus] = useState({})
   const [briefingModal, setBriefingModal] = useState(null) // 'morning' | 'evening' | null
   const [flash,      setFlash]      = useState(null)
 
@@ -96,15 +98,18 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
 
   // Live data fetch
   const fetchStats = useCallback(async () => {
+    setLoading(true)
     try {
       const res  = await fetch(`/api/dashboard?user_id=${userId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
-      if (!res.ok) throw new Error(res.status)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setStats(data)
-    } catch {
+      setError(null)
+    } catch (err) {
       setStats(null)
+      setError(err.message || 'Failed to fetch dashboard stats')
     } finally {
       setLoading(false)
     }
@@ -141,6 +146,19 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
     } catch {}
   }, [userId, token])
 
+  const fetchDaemons = useCallback(async () => {
+    if (!isAdmin || !token) return
+    try {
+      const res = await fetch('/api/daemon/status', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setDaemonStatus(data.daemons || {})
+      }
+    } catch {}
+  }, [isAdmin, token])
+
   const fetchEnvironment = useCallback(async () => {
     if (!token) return
     try {
@@ -167,12 +185,14 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
     fetchRoutines()
     fetchPatterns()
     fetchEnvironment()
+    fetchDaemons()
     const id = setInterval(() => {
       fetchStats()
       fetchEnvironment()
-    }, 30000)
+      fetchDaemons()
+    }, 15000)
     return () => clearInterval(id)
-  }, [fetchStats, fetchRoutines, fetchPatterns, fetchEnvironment])
+  }, [fetchStats, fetchRoutines, fetchPatterns, fetchEnvironment, fetchDaemons])
 
   // Load localStorage-backed data
   useEffect(() => {
@@ -256,6 +276,12 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
       </div>
 
       {flash && <div className="dash-flash animate-fade-in">{flash}</div>}
+      {error && (
+        <div className="dash-error-banner animate-fade-in">
+          <span className="dot dot--warn" /> {error}
+          <button className="btn btn--ghost btn--xs" style={{ marginLeft: 12 }} onClick={fetchStats}>RETRY</button>
+        </div>
+      )}
 
       {/* Arrange mode banner */}
       {arrange && (
@@ -328,6 +354,36 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
                   <div className="status-cell-label">UPTIME</div>
                   <div className="status-cell-value">{uptime}</div>
                 </div>
+              </div>
+            </WidgetShell>
+          )}
+
+          {/* Daemon Status — admin only */}
+          {isAdmin && show('daemon_status') && (
+            <WidgetShell
+              label="DAEMON STATUS"
+              widgetKey="daemon_status"
+              arrange={arrange}
+              visible={visible}
+              onToggle={toggleWidget}
+            >
+              <div className="daemon-list">
+                {['herald', 'mechanic', 'sifter', 'warden'].map(name => {
+                  const d = daemonStatus[name]
+                  const active = d && (Date.now() - new Date(d.last_seen).getTime() < 60000)
+                  return (
+                    <div key={name} className="daemon-row">
+                      <div className="daemon-info">
+                        <span className={`dot ${active ? 'dot--on' : 'dot--off'}`} />
+                        <span className="daemon-name">{name.toUpperCase()}</span>
+                      </div>
+                      <div className="daemon-meta">
+                        <span className="daemon-status">{active ? (d.status || 'ACTIVE') : 'OFFLINE'}</span>
+                        {active && <span className="daemon-port">:{d.port}</span>}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </WidgetShell>
           )}

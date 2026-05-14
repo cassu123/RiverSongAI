@@ -14,6 +14,8 @@ from __future__ import annotations
 import json
 import uuid
 import logging
+import re
+import dotenv
 from pathlib import Path
 
 import bcrypt
@@ -24,6 +26,7 @@ import httpx
 
 from core.auth import create_access_token, decode_token
 from config.settings import get_settings
+from core.limiter import limiter
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -93,6 +96,7 @@ async def setup(request: Request, body: SetupBody):
 
 
 @router.post("/signup")
+@limiter.limit(get_settings().rate_limit_auth_signup)
 async def signup(request: Request, body: SignupBody):
     if len(body.password) < 12:
         raise HTTPException(status_code=400, detail="Password must be at least 12 characters.")
@@ -122,6 +126,7 @@ async def signup(request: Request, body: SignupBody):
 
 
 @router.post("/login")
+@limiter.limit(get_settings().rate_limit_auth_login)
 async def login(request: Request, body: LoginBody):
     store = _get_store(request)
     user = await store.get_user_by_email(body.email.lower())
@@ -143,13 +148,34 @@ async def login(request: Request, body: LoginBody):
     }
 
 
+@router.post("/logout", status_code=204)
+async def logout(request: Request, authorization: Optional[str] = Header(default=None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        return # Ignore if not logged in
+
+    token = authorization.removeprefix("Bearer ").strip()
+    payload = await decode_token(token)
+    if not payload:
+        return # Already invalid
+
+    jti = payload.get("jti")
+    if jti:
+        store = _get_store(request)
+        # expires_at is required for revocation record
+        exp = payload.get("exp")
+        expires_at = datetime.fromtimestamp(exp, tz=timezone.utc) if exp else datetime.now(tz=timezone.utc) + timedelta(days=1)
+        await store.revoke_token(jti, payload["sub"], expires_at)
+    
+    return
+
+
 @router.get("/me")
 async def me(request: Request, authorization: Optional[str] = Header(default=None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
 
     token = authorization.removeprefix("Bearer ")
-    payload = decode_token(token)
+    payload = await decode_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
 
@@ -166,7 +192,7 @@ async def change_password(body: ChangePasswordBody, request: Request, authorizat
         raise HTTPException(status_code=401, detail="Not authenticated.")
 
     token = authorization.removeprefix("Bearer ")
-    payload = decode_token(token)
+    payload = await decode_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
 
@@ -388,11 +414,56 @@ class ProfilePatch(BaseModel):
 VALID_THEMES = {"halo", "crimson-dark", "combat", "midnight-violet", "amber", "arctic", "cyberpunk", "dune"}
 
 
+@router.post("/ws-ticket")
+async def get_ws_ticket(request: Request, authorization: Optional[str] = Header(default=None)):
+    """
+    Exchange a long-lived JWT for a one-time 60s WebSocket ticket.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    
+    token = authorization.removeprefix("Bearer ").strip()
+    payload = await decode_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    
+    user_id = payload["sub"]
+    settings = get_settings()
+    ticket = str(uuid.uuid4())
+    
+    request.app.state.ws_tickets[ticket] = {
+        "user_id":    user_id,
+        "expires_at": datetime.now(tz=timezone.utc).timestamp() + settings.ws_ticket_lifetime_seconds,
+        "is_kiosk":   False
+    }
+    
+    return {"ticket": ticket, "expires_in": settings.ws_ticket_lifetime_seconds}
+
+
+@router.post("/ws-ticket/kiosk")
+async def get_ws_ticket_kiosk(request: Request, x_kiosk_token: Optional[str] = Header(None, alias="X-Kiosk-Token")):
+    """
+    Exchange the kiosk secret for a one-time 60s WebSocket ticket.
+    """
+    settings = get_settings()
+    if not x_kiosk_token or x_kiosk_token != settings.kiosk_token:
+        raise HTTPException(status_code=401, detail="Invalid kiosk token.")
+    
+    ticket = str(uuid.uuid4())
+    request.app.state.ws_tickets[ticket] = {
+        "user_id":    settings.default_user_id,
+        "expires_at": datetime.now(tz=timezone.utc).timestamp() + settings.ws_ticket_lifetime_seconds,
+        "is_kiosk":   True
+    }
+    
+    return {"ticket": ticket, "expires_in": settings.ws_ticket_lifetime_seconds}
+
+
 @router.get("/profile")
 async def get_profile(request: Request, authorization: Optional[str] = Header(default=None)):
-    store = request.app.state.memory_manager.store
+    store = request.app.state.memory_manager._store
     token = (authorization or "").removeprefix("Bearer ").strip()
-    payload = decode_token(token)
+    payload = await decode_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
     user = await store.get_user_by_id(payload["sub"])
@@ -403,9 +474,9 @@ async def get_profile(request: Request, authorization: Optional[str] = Header(de
 
 @router.patch("/profile")
 async def update_profile(body: ProfilePatch, request: Request, authorization: Optional[str] = Header(default=None)):
-    store = request.app.state.memory_manager.store
+    store = request.app.state.memory_manager._store
     token = (authorization or "").removeprefix("Bearer ").strip()
-    payload = decode_token(token)
+    payload = await decode_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
     user_id = payload["sub"]

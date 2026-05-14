@@ -1,1 +1,0 @@
-# This file is intentionally empty to make 'inventory' a Python package.

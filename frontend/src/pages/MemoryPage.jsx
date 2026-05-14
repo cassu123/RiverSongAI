@@ -48,23 +48,26 @@ export default function MemoryPage() {
   const [deleting,    setDeleting]    = useState(false)
   const [showAddFact, setShowAddFact] = useState(false)
   const [newKey,      setNewKey]      = useState('')
-  const [newValue,    setNewValue]    = useState('')
-  const [addingFact,  setAddingFact]  = useState(false)
-  const [addError,    setAddError]    = useState('')
-
+  const [summaries,setSummaries]= useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [error,    setError]    = useState(null)
+  const [search,   setSearch]   = useState('')
+  ...
   const fetchAll = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const headers = authHeaders()
       const [f, p, s] = await Promise.all([
-        fetch('/api/memory/facts',       { headers }).then(r => r.json()),
-        fetch('/api/memory/preferences', { headers }).then(r => r.json()),
-        fetch('/api/memory/summaries',   { headers }).then(r => r.json()),
+        fetch('/api/memory/facts',       { headers }).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+        fetch('/api/memory/preferences', { headers }).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+        fetch('/api/memory/summaries',   { headers }).then(r => r.ok ? r.json() : Promise.reject(r.status)),
       ])
       setFacts(Array.isArray(f) ? f : [])
       setPrefs(Array.isArray(p) ? p : [])
       setSummaries(Array.isArray(s) ? s : [])
-    } catch {
+    } catch (err) {
+      setError(`Failed to load memory: ${err}`)
       setFacts([]); setPrefs([]); setSummaries([])
     } finally {
       setLoading(false)
@@ -248,6 +251,11 @@ export default function MemoryPage() {
         {loading ? (
           <div className="mem-page-empty">
             <span className="dot dot--standby" /> Loading memory…
+          </div>
+        ) : error ? (
+          <div className="mem-page-empty mem-page-error">
+             <span className="dot dot--warn" /> {error}
+             <button className="btn btn--ghost btn--xs" style={{ marginLeft: 10 }} onClick={fetchAll}>RETRY</button>
           </div>
         ) : items.length === 0 ? (
           <div className="mem-page-empty">

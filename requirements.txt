@@ -144,3 +144,4 @@ requests>=2.32.0                     # CVE-2024-35195
 urllib3>=2.2.2                       # CVE-2024-37891
 certifi>=2024.7.4                    # stale certificate bundle
 cryptography>=43.0.1                 # CVE-2024-26130
+slowapi==0.1.9

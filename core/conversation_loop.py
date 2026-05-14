@@ -47,6 +47,35 @@ logger = logging.getLogger(__name__)
 EventCallback = Callable[[dict], Coroutine[Any, Any, None]]
 
 
+class FallbackLLMProvider(LLMProvider):
+    """
+    Wraps two LLM providers. If the primary provider fails during streaming,
+    it automatically falls back to the secondary provider for the remainder
+    of the request.
+    """
+    def __init__(self, primary: LLMProvider, secondary: LLMProvider):
+        self.primary = primary
+        self.secondary = secondary
+
+    async def stream_response(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+        try:
+            async for chunk in self.primary.stream_response(messages):
+                yield chunk
+        except Exception as exc:
+            logger.warning("Primary LLM failed, falling back to secondary: %s", exc)
+            async for chunk in self.secondary.stream_response(messages):
+                yield chunk
+
+    async def stream_response_thinking(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+        try:
+            async for chunk in self.primary.stream_response_thinking(messages):
+                yield chunk
+        except Exception as exc:
+            logger.warning("Primary LLM (thinking) failed, falling back to secondary: %s", exc)
+            async for chunk in self.secondary.stream_response_thinking(messages):
+                yield chunk
+
+
 # -----------------------------------------------------------------------------
 # Provider factories
 # -----------------------------------------------------------------------------
@@ -71,26 +100,9 @@ def _build_stt_provider() -> STTProvider:
     )
 
 
-def _build_llm_provider(
-    provider_override: Optional[str] = None,
-    model_override: Optional[str] = None,
-) -> LLMProvider:
-    """
-    Instantiate the LLM provider. If provider_override is given it takes
-    precedence over LLM_PROVIDER in .env; model_override is passed to
-    the provider constructor when supported.
-
-    Returns:
-        LLMProvider: Concrete provider instance ready to use.
-
-    Raises:
-        ValueError: If the configured provider key is not supported.
-        RuntimeError: If the provider fails to initialize.
-    """
+def _instantiate_llm(key: str, model: Optional[str]) -> LLMProvider:
+    """Internal helper to build a single LLM provider."""
     settings = get_settings()
-    key = provider_override or settings.llm_provider
-    model = model_override  # passed to provider constructors that support it
-
     if key == "ollama":
         from providers.llm.ollama import OllamaLLM
         return OllamaLLM(model=model) if model else OllamaLLM()
@@ -123,6 +135,32 @@ def _build_llm_provider(
         f"Unsupported LLM_PROVIDER '{key}'. "
         f"Supported values: ollama | anthropic | gemini | openai | mistral_ai"
     )
+
+
+def _build_llm_provider(
+    provider_override: Optional[str] = None,
+    model_override: Optional[str] = None,
+    fallback_provider: Optional[str] = None,
+    fallback_model: Optional[str] = None,
+) -> LLMProvider:
+    """
+    Instantiate the LLM provider. If provider_override is given it takes
+    precedence over LLM_PROVIDER in .env; model_override is passed to
+    the provider constructor when supported.
+    """
+    settings = get_settings()
+    key = provider_override or settings.llm_provider
+    
+    primary = _instantiate_llm(key, model_override)
+    
+    if fallback_provider:
+        try:
+            secondary = _instantiate_llm(fallback_provider, fallback_model)
+            return FallbackLLMProvider(primary, secondary)
+        except Exception as exc:
+            logger.warning("Failed to initialize secondary LLM fallback: %s", exc)
+            
+    return primary
 
 
 def _build_tts_provider(voice_id_override: Optional[str] = None) -> TTSProvider:
@@ -209,6 +247,8 @@ class ConversationLoop:
         llm_provider_override: Optional[str] = None,
         llm_model_override: Optional[str] = None,
         voice_id_override: Optional[str] = None,
+        fallback_provider: Optional[str] = None,
+        fallback_model: Optional[str] = None,
     ) -> None:
         settings = get_settings()
         self._settings = settings
@@ -218,12 +258,17 @@ class ConversationLoop:
         self._llm_provider_override: Optional[str] = llm_provider_override
         self._llm_model_override: Optional[str] = llm_model_override
         self._voice_id_override: Optional[str] = voice_id_override
+        self._fallback_provider: Optional[str] = fallback_provider
+        self._fallback_model: Optional[str] = fallback_model
         self._stt: Optional[STTProvider] = None
         self._llm: Optional[LLMProvider] = None
         self._tts: Optional[TTSProvider] = None
         self._history: List[dict] = []
         self._initialized: bool = False
         self._turn_transcript: str = ""
+        self._flush_memory: bool = False
+        self._web_search_enabled: bool = False
+        self._suppress_memory: bool = False
 
     async def initialize(self) -> None:
         """
@@ -246,12 +291,16 @@ class ConversationLoop:
             llm_provider_override = self._llm_provider_override
             llm_model_override    = self._llm_model_override
             voice_id_override     = self._voice_id_override
+            fallback_provider     = self._fallback_provider
+            fallback_model        = self._fallback_model
 
             def _build_all():
                 stt = _build_stt_provider()
                 llm = _build_llm_provider(
                     provider_override=llm_provider_override,
                     model_override=llm_model_override,
+                    fallback_provider=fallback_provider,
+                    fallback_model=fallback_model,
                 )
                 tts = _build_tts_provider(voice_id_override=voice_id_override)
                 return stt, llm, tts
@@ -331,7 +380,7 @@ class ConversationLoop:
     async def _rebuild_system_prompt(self) -> None:
         """Rebuild the system prompt with current memory context, then reset history."""
         memory_block = ""
-        if self._memory:
+        if self._memory and not self._flush_memory and not self._suppress_memory:
             try:
                 memory_block = await self._memory.build_context_block(self._user_id)
             except Exception as exc:
@@ -350,7 +399,13 @@ class ConversationLoop:
             logger.debug("Context injection skipped: %s", exc)
 
         full_system = self._system_prompt + memory_block + context_block
-        self._history = [{"role": "system", "content": full_system}]
+        if self._history and self._history[0].get("role") == "system":
+            self._history[0]["content"] = full_system
+        else:
+            self._history = [{"role": "system", "content": full_system}]
+
+        # Clear the flag so memory is only skipped on the next turn (session-scoped)
+        self._flush_memory = False
 
     async def _stream_sentences(self, stream: AsyncGenerator[str, None], on_token: Callable[[str], Coroutine[Any, Any, None]]) -> AsyncGenerator[str, None]:
         """Buffer LLM tokens and yield complete sentences for TTS."""
@@ -608,7 +663,7 @@ class ConversationLoop:
 
     async def _infer_habits(self, user_text: str, assistant_text: str):
         """Analyze the turn to infer new user patterns/habits."""
-        if not self._memory:
+        if not self._memory or not self._settings.habit_inference_enabled:
             return
             
         prompt = (
@@ -628,10 +683,10 @@ class ConversationLoop:
                 pattern = res.split("Pattern:")[1].strip()
                 if pattern and pattern.upper() != "NONE":
                     logger.info("Inferred new habit for %s: %s", self._user_id, pattern)
-                    await self._memory.upsert_preference(
+                    # FIX B10: Persist to pending table instead of active preferences
+                    await self._memory.save_pending_habit(
                         user_id=self._user_id,
-                        category="habit",
-                        value=pattern,
+                        pattern=pattern,
                         confidence="low"
                     )
         except Exception as exc:
@@ -710,6 +765,12 @@ class ConversationLoop:
             # Phase 3: Tool Use / Function Calling
             if self._settings.tool_use_enabled:
                 from core.tools import TOOL_SCHEMAS, execute_tool
+                
+                # Filter tools based on session settings
+                active_tools = TOOL_SCHEMAS
+                if not self._web_search_enabled:
+                    active_tools = [t for t in TOOL_SCHEMAS if t["name"] != "web_search"]
+                
                 tool_system_prompt = (
                     "You have access to tools. If the user asks for an action that matches "
                     "a tool, use the tool. If not, respond normally."
@@ -719,13 +780,18 @@ class ConversationLoop:
                     if messages_with_tools[0]["role"] == "system":
                         messages_with_tools[0]["content"] += f"\n\n{tool_system_prompt}"
                     
-                    res = await self._llm.chat_with_tools(messages_with_tools, TOOL_SCHEMAS)
+                    res = await self._llm.chat_with_tools(messages_with_tools, active_tools)
                     if res["type"] == "tool_call":
                         tool_name = res["tool_name"]
                         tool_input = res["tool_input"]
                         tool_id = res.get("tool_use_id")
                         logger.info("LLM requested tool: %s", tool_name)
+                        
+                        await on_event({"type": "tool_use", "tool": tool_name, "input": tool_input})
+                        
                         result_text = await execute_tool(tool_name, tool_input, {"user_id": self._user_id})
+                        
+                        await on_event({"type": "tool_result", "tool": tool_name, "result": result_text})
                         
                         if self._llm.__class__.__name__ == "ClaudeAPILLM":
                             self._history.append({
@@ -789,12 +855,16 @@ class ConversationLoop:
 
         await on_event({"type": "idle"})
 
-    async def reset_history(self) -> None:
+    async def reset_history(self, flush_memory: bool = False) -> None:
         """
         Clear conversation history and rebuild the system prompt with fresh memory context.
 
         Call this to start a fresh conversation without reinitializing
         all providers (which would reload the Whisper model, etc.).
         """
+        self._history = []
+        if flush_memory:
+            self._suppress_memory = True
         await self._rebuild_system_prompt()
-        logger.info("Conversation history reset (user=%s).", self._user_id)
+        self._flush_memory = flush_memory
+        logger.info("Conversation history reset (user=%s, suppress_memory=%s).", self._user_id, self._suppress_memory)

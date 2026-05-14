@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS preferences (
     value        TEXT NOT NULL,
     confidence   TEXT NOT NULL DEFAULT 'low',
     last_updated TEXT NOT NULL,
-    UNIQUE(user_id, category)
+    UNIQUE(user_id, category, value)
 );
 
 CREATE TABLE IF NOT EXISTS conversation_summaries (
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS memory_settings (
     user_id            TEXT PRIMARY KEY,
     summaries_enabled  INTEGER NOT NULL DEFAULT 1,
     default_ttl        TEXT NOT NULL DEFAULT 'standard',
-    auto_extend        INTEGER NOT NULL DEFAULT 1
+    auto_extend        INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS llm_settings (
@@ -148,6 +148,17 @@ CREATE TABLE IF NOT EXISTS routines (
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS revoked_tokens (
+    jti         TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL,
+    revoked_at  TEXT NOT NULL,
+    expires_at  TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_revoked_tokens_expiry
+    ON revoked_tokens(expires_at);
+
 
 CREATE INDEX IF NOT EXISTS idx_routines_user ON routines(user_id);
 
@@ -191,6 +202,16 @@ CREATE TABLE IF NOT EXISTS reading_shelf (
 );
 
 CREATE INDEX IF NOT EXISTS idx_reading_shelf_user ON reading_shelf(user_id);
+
+CREATE TABLE IF NOT EXISTS pending_habits (
+    id           TEXT PRIMARY KEY,
+    user_id      TEXT NOT NULL,
+    pattern      TEXT NOT NULL,
+    confidence   TEXT NOT NULL DEFAULT 'low',
+    created_at   TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_habits_user ON pending_habits(user_id);
 
 CREATE TABLE IF NOT EXISTS admin_config (
     key   TEXT PRIMARY KEY,
@@ -318,6 +339,11 @@ class SQLiteStore:
             "ALTER TABLE routines ADD COLUMN type TEXT NOT NULL DEFAULT 'simple'",
             "ALTER TABLE routines ADD COLUMN webhook_url TEXT",
             "INSERT OR IGNORE INTO admin_config (key, value) VALUES ('__global__', '{}')",
+            # FIX B11: Remove (user_id, category) uniqueness to allow multi-value preferences
+            "CREATE TABLE IF NOT EXISTS preferences_new (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, category TEXT NOT NULL, value TEXT NOT NULL, confidence TEXT NOT NULL DEFAULT 'low', last_updated TEXT NOT NULL, UNIQUE(user_id, category, value))",
+            "INSERT OR IGNORE INTO preferences_new SELECT id, user_id, category, value, confidence, last_updated FROM preferences",
+            "DROP TABLE preferences",
+            "ALTER TABLE preferences_new RENAME TO preferences",
         ]:
             try:
                 conn.execute(migration)
@@ -417,7 +443,11 @@ class SQLiteStore:
     # -------------------------------------------------------------------------
 
     async def upsert_preference(self, pref: Preference) -> None:
-        """Insert or replace a preference. UNIQUE(user_id, category) triggers replacement."""
+        """
+        Insert or update a user preference.
+        UNIQUE(user_id, category, value) triggers replacement (ON CONFLICT).
+        Multiple values per category are supported.
+        """
         await self._run(self._sync_upsert_preference, pref)
 
     def _sync_upsert_preference(self, pref: Preference) -> None:
@@ -427,8 +457,7 @@ class SQLiteStore:
             """
             INSERT INTO preferences (id, user_id, category, value, confidence, last_updated)
             VALUES (:id, :user_id, :category, :value, :confidence, :last_updated)
-            ON CONFLICT(user_id, category) DO UPDATE SET
-                value        = excluded.value,
+            ON CONFLICT(user_id, category, value) DO UPDATE SET
                 confidence   = excluded.confidence,
                 last_updated = excluded.last_updated
             """,
@@ -465,8 +494,58 @@ class SQLiteStore:
         ]
 
     # -------------------------------------------------------------------------
+    # Pending Habits
+    # -------------------------------------------------------------------------
+
+    async def save_pending_habit(self, user_id: str, pattern: str, confidence: str = "low") -> None:
+        await self._run(self._sync_save_pending_habit, user_id, pattern, confidence)
+
+    def _sync_save_pending_habit(self, user_id: str, pattern: str, confidence: str) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            "INSERT INTO pending_habits (id, user_id, pattern, confidence, created_at) VALUES (?,?,?,?,?)",
+            (str(uuid.uuid4()), user_id, pattern, confidence, _now_str()),
+        )
+        conn.commit()
+
+    async def get_pending_habits(self, user_id: str) -> List[dict]:
+        return await self._run(self._sync_get_pending_habits, user_id)
+
+    def _sync_get_pending_habits(self, user_id: str) -> List[dict]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT * FROM pending_habits WHERE user_id = ? ORDER BY created_at DESC",
+            (user_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    async def delete_pending_habit(self, habit_id: str) -> None:
+        await self._run(self._sync_delete_pending_habit, habit_id)
+
+    def _sync_delete_pending_habit(self, habit_id: str) -> None:
+        conn = self._get_conn()
+        conn.execute("DELETE FROM pending_habits WHERE id = ?", (habit_id,))
+        conn.commit()
+
+    async def delete_preference(self, pref_id: str) -> None:
+        await self._run(self._sync_delete_preference, pref_id)
+
+    def _sync_delete_preference(self, pref_id: str) -> None:
+        conn = self._get_conn()
+        conn.execute("DELETE FROM preferences WHERE id = ?", (pref_id,))
+        conn.commit()
+
+    # -------------------------------------------------------------------------
     # Conversation summaries
     # -------------------------------------------------------------------------
+
+    async def delete_summary(self, summary_id: str) -> None:
+        await self._run(self._sync_delete_summary, summary_id)
+
+    def _sync_delete_summary(self, summary_id: str) -> None:
+        conn = self._get_conn()
+        conn.execute("DELETE FROM conversation_summaries WHERE id = ?", (summary_id,))
+        conn.commit()
 
     async def save_summary(self, summary: ConversationSummary) -> None:
         """Insert a new conversation summary. Generates expires_at from ttl_setting."""
@@ -704,6 +783,38 @@ class SQLiteStore:
             },
         )
         conn.commit()
+
+    # -------------------------------------------------------------------------
+    # JWT Revocation
+    # -------------------------------------------------------------------------
+
+    async def revoke_token(self, jti: str, user_id: str, expires_at: datetime) -> None:
+        await self._run(self._sync_revoke_token, jti, user_id, expires_at)
+
+    def _sync_revoke_token(self, jti: str, user_id: str, expires_at: datetime) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            "INSERT INTO revoked_tokens (jti, user_id, revoked_at, expires_at) VALUES (?,?,?,?)",
+            (jti, user_id, _now_str(), _dt_to_str(expires_at)),
+        )
+        conn.commit()
+
+    async def is_token_revoked(self, jti: str) -> bool:
+        return await self._run(self._sync_is_token_revoked, jti)
+
+    def _sync_is_token_revoked(self, jti: str) -> bool:
+        conn = self._get_conn()
+        row = conn.execute("SELECT 1 FROM revoked_tokens WHERE jti=?", (jti,)).fetchone()
+        return row is not None
+
+    async def delete_expired_tokens(self) -> int:
+        return await self._run(self._sync_delete_expired_tokens)
+
+    def _sync_delete_expired_tokens(self) -> int:
+        conn = self._get_conn()
+        res = conn.execute("DELETE FROM revoked_tokens WHERE expires_at < ?", (_now_str(),))
+        conn.commit()
+        return res.rowcount
 
     # =========================================================================
     # User auth methods

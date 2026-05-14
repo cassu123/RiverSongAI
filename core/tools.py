@@ -771,7 +771,7 @@ async def _exec_search_emails(args: dict, user_id: str) -> str:
 async def _exec_get_weather(args: dict, user_id: str) -> str:
     try:
         from providers.google.maps import build_maps_provider
-        from providers.web.weather import build_weather_provider
+        from providers.feeds.weather import get_weather_report
         
         location = args["location"]
         units = args.get("units", "celsius")
@@ -787,8 +787,7 @@ async def _exec_get_weather(args: dict, user_id: str) -> str:
         addr = geo.get("formatted_address", location)
         
         # 2. Fetch weather
-        weather = build_weather_provider()
-        report = await weather.get_forecast(lat, lon, units)
+        report = await get_weather_report(lat, lon, units)
         
         return f"Weather for {addr}:\n{report}"
         
