@@ -115,7 +115,7 @@ def get_current_biz_user(request: Request, db: Session = Depends(get_db)) -> Biz
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
-    payload = decode_token(auth.removeprefix("Bearer ").strip())
+    payload = await decode_token(auth.removeprefix("Bearer ").strip())
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 

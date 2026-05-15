@@ -21,10 +21,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/push", tags=["push"])
 
 
-def _require_user(authorization: Optional[str]) -> str:
+async def _require_user(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     return payload["sub"]
@@ -61,7 +61,7 @@ async def subscribe(
     authorization: Optional[str] = Header(default=None),
 ):
     """Save a new push subscription for the current user."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     store = _store(request)
     
     await store.save_push_subscription(user_id, json.dumps(body.subscription))
@@ -75,7 +75,7 @@ async def unsubscribe(
     authorization: Optional[str] = Header(default=None),
 ):
     """Remove a push subscription by endpoint."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     store = _store(request)
     
     await store.delete_push_subscription(user_id, body.endpoint)
@@ -88,7 +88,7 @@ async def test_push(
     authorization: Optional[str] = Header(default=None),
 ):
     """Send a test push notification to all of the user's subscriptions."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     store = _store(request)
     
     subscriptions = await store.get_push_subscriptions(user_id)

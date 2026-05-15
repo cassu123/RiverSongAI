@@ -34,11 +34,11 @@ def _mm(request: Request):
     return mm
 
 
-def _require_user(authorization: Optional[str]) -> str:
+async def _require_user(authorization: Optional[str]) -> str:
     """Validate Bearer token and return the user's sub claim."""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     return payload["sub"]
@@ -46,7 +46,7 @@ def _require_user(authorization: Optional[str]) -> str:
 
 @router.get("/facts")
 async def get_facts(request: Request, authorization: Optional[str] = Header(default=None)):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     mm = _mm(request)
     facts = await mm.get_facts(user_id)
     return [
@@ -64,7 +64,7 @@ async def get_facts(request: Request, authorization: Optional[str] = Header(defa
 
 @router.post("/facts", status_code=201)
 async def create_fact(body: FactCreate, request: Request, authorization: Optional[str] = Header(default=None)):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     if not body.key.strip() or not body.value.strip():
         raise HTTPException(status_code=422, detail="key and value are required")
     mm = _mm(request)
@@ -85,14 +85,16 @@ async def create_fact(body: FactCreate, request: Request, authorization: Optiona
 
 @router.delete("/facts/{fact_id}", status_code=204)
 async def delete_fact(fact_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
-    _require_user(authorization)
+    user_id = await _require_user(authorization)
     mm = _mm(request)
-    await mm.delete_fact(fact_id)
+    ok = await mm.delete_fact(fact_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Fact not found")
 
 
 @router.get("/preferences")
 async def get_preferences(request: Request, authorization: Optional[str] = Header(default=None)):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     mm = _mm(request)
     prefs = await mm.get_preferences(user_id)
     return [
@@ -109,14 +111,16 @@ async def get_preferences(request: Request, authorization: Optional[str] = Heade
 
 @router.delete("/preferences/{pref_id}", status_code=204)
 async def delete_preference(pref_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
-    _require_user(authorization)
+    user_id = await _require_user(authorization)
     mm = _mm(request)
-    await mm.delete_preference(pref_id)
+    ok = await mm.delete_preference(pref_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Preference not found")
 
 
 @router.get("/pending-habits")
 async def get_pending_habits(request: Request, authorization: Optional[str] = Header(default=None)):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     mm = _mm(request)
     habits = await mm.get_pending_habits(user_id)
     return habits
@@ -124,7 +128,7 @@ async def get_pending_habits(request: Request, authorization: Optional[str] = He
 
 @router.post("/pending-habits/{habit_id}/approve")
 async def approve_habit(habit_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     mm = _mm(request)
     # Find the habit
     habits = await mm.get_pending_habits(user_id)
@@ -147,20 +151,22 @@ async def approve_habit(habit_id: str, request: Request, authorization: Optional
     await mm._store.upsert_preference(pref)
     
     # Delete from pending
-    await mm._store.delete_pending_habit(habit_id)
+    await mm.delete_pending_habit(habit_id, user_id)
     return {"status": "approved"}
 
 
 @router.delete("/pending-habits/{habit_id}", status_code=204)
 async def delete_pending_habit(habit_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
-    _require_user(authorization)
+    user_id = await _require_user(authorization)
     mm = _mm(request)
-    await mm._store.delete_pending_habit(habit_id)
+    ok = await mm.delete_pending_habit(habit_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Pending habit not found")
 
 
 @router.get("/summaries")
 async def get_summaries(request: Request, limit: int = 50, authorization: Optional[str] = Header(default=None)):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     mm = _mm(request)
     summaries = await mm._store.get_recent_summaries(user_id, limit=limit)
     return [
@@ -178,6 +184,8 @@ async def get_summaries(request: Request, limit: int = 50, authorization: Option
 
 @router.delete("/summaries/{summary_id}", status_code=204)
 async def delete_summary(summary_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
-    _require_user(authorization)
+    user_id = await _require_user(authorization)
     mm = _mm(request)
-    await mm.delete_summary(summary_id)
+    ok = await mm.delete_summary(summary_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Summary not found")

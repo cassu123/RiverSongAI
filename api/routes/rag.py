@@ -18,10 +18,10 @@ from core.auth import decode_token
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/rag", tags=["rag"])
 
-def _require_user(authorization: Optional[str]) -> str:
+async def _require_user(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     return payload["sub"]
@@ -37,7 +37,7 @@ async def ingest_document(
     file: UploadFile = File(...),
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     from providers.rag.rag_provider import RAGProvider
     
     content = await file.read()
@@ -66,7 +66,7 @@ async def query_rag(
     body: QueryBody,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     from providers.rag.rag_provider import RAGProvider
     
     rag = RAGProvider()

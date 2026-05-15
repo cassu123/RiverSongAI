@@ -80,6 +80,12 @@ chmod +x setup.sh
 
 # 4. Start
 sudo systemctl start river-song
+
+## Security Hooks
+To prevent accidental commits of sensitive data, install the pre-commit hook:
+```bash
+cp scripts/pre-commit.sh .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
 ```
 
 ---

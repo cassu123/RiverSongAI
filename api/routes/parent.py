@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/parent", tags=["parent"])
 async def _require_parent(authorization: Optional[str]) -> dict:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     if payload.get("role") not in ("parent", "admin"):

@@ -26,12 +26,12 @@ router = APIRouter(prefix="/api/routines", tags=["routines"])
 _bearer = HTTPBearer(auto_error=False)
 
 
-def _require_user(
+async def _require_user(
     creds: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
 ) -> str:
     if not creds:
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(creds.credentials)
+    payload = await decode_token(creds.credentials)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token.")
     return payload["sub"]

@@ -364,7 +364,7 @@ async def chat_http(
     """
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
-    payload = decode_token(token) if token else None
+    payload = await decode_token(token) if token else None
     if not payload:
         from fastapi import HTTPException
         raise HTTPException(status_code=401, detail="Authentication required.")
@@ -471,7 +471,7 @@ async def extract_facts_http(
 
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
-    payload = decode_token(token) if token else None
+    payload = await decode_token(token) if token else None
     if not payload:
         from fastapi import HTTPException
         raise HTTPException(status_code=401, detail="Authentication required.")
@@ -634,7 +634,7 @@ async def enhance_prompt_http(
     """
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
-    payload = decode_token(token) if token else None
+    payload = await decode_token(token) if token else None
     if not payload:
         from fastapi import HTTPException
         raise HTTPException(status_code=401, detail="Authentication required.")
@@ -681,7 +681,7 @@ async def transcribe_http(
     """Transcribe a base64 WAV blob and return the text."""
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
-    payload = decode_token(token) if token else None
+    payload = await decode_token(token) if token else None
     if not payload:
         from fastapi import HTTPException
         raise HTTPException(status_code=401, detail="Authentication required.")

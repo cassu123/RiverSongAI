@@ -37,11 +37,11 @@ class ResetBody(BaseModel):
     password: str
 
 
-def _require_admin(authorization: Optional[str]) -> None:
+async def _require_admin(authorization: Optional[str]) -> None:
     if not authorization or not authorization.startswith("Bearer "):
         from fastapi import HTTPException
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload or payload.get("role") != "admin":
         from fastapi import HTTPException
         raise HTTPException(status_code=403, detail="Admin access required.")
@@ -49,13 +49,13 @@ def _require_admin(authorization: Optional[str]) -> None:
 
 @router.get("")
 async def get_status(authorization: Optional[str] = Header(default=None)):
-    _require_admin(authorization)
+    await _require_admin(authorization)
     return {"active": is_kill_switch_active()}
 
 
 @router.post("/activate")
 async def activate(body: ActivateBody, authorization: Optional[str] = Header(default=None)):
-    _require_admin(authorization)
+    await _require_admin(authorization)
     activate_global_kill_switch(origin=body.origin)
     safe_origin = body.origin.replace("\r", "").replace("\n", "").replace("\t", "")
     logger.critical("Kill switch activated via API (origin=%s).", safe_origin)
@@ -64,7 +64,7 @@ async def activate(body: ActivateBody, authorization: Optional[str] = Header(def
 
 @router.post("/reset")
 async def reset(body: ResetBody, authorization: Optional[str] = Header(default=None)):
-    _require_admin(authorization)
+    await _require_admin(authorization)
     success = reset_global_kill_switch(body.password)
     if success:
         return {"success": True, "message": "Kill switch reset. Restart the server to resume."}

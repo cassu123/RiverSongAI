@@ -38,7 +38,7 @@ def _uptime_str() -> str:
 async def get_dashboard(request: Request, authorization: Optional[str] = Header(default=None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     user_id = payload["sub"]

@@ -28,10 +28,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
 
-def _require_user(authorization: Optional[str]) -> str:
+async def _require_user(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     return payload["sub"]
@@ -75,7 +75,7 @@ async def get_business_report(
     Generate an AI-driven business report.
     This reuses the logic from the LLM tool but exposes it as a clean API.
     """
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     from core.tools import _exec_generate_business_report
     
     try:
@@ -90,7 +90,7 @@ async def list_platforms(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     store = _store(request)
     platforms = await store.get_analytics_platforms(user_id)
     for p in platforms:
@@ -106,7 +106,7 @@ async def upsert_platform(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     store = _store(request)
     await store.upsert_analytics_platform(
         user_id, platform.lower(), body.enabled,
@@ -121,7 +121,7 @@ async def delete_platform(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     store = _store(request)
     await store.delete_analytics_platform(user_id, platform.lower())
     return {"ok": True}
@@ -145,7 +145,7 @@ async def get_platform_summary(
             detail=f"Platform '{platform}' not supported for AI summary. Use one of: {', '.join(allowed_platforms)}"
         )
 
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     store = _store(request)
     
     # 1. Fetch recent metrics
@@ -196,7 +196,7 @@ async def list_snapshots(
     days: int = Query(default=90, ge=1, le=365),
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     store = _store(request)
     snapshots = await store.get_analytics_snapshots(user_id, platform, days)
     return snapshots
@@ -208,7 +208,7 @@ async def add_snapshot(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     store = _store(request)
     snap_id = await store.upsert_analytics_snapshot(
         user_id, body.platform.lower(), body.date, body.metrics,
@@ -222,7 +222,7 @@ async def delete_snapshot(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     store = _store(request)
     await store.delete_analytics_snapshot(snap_id, user_id)
     return {"ok": True}

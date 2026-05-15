@@ -243,8 +243,8 @@ class MemoryManager:
                 metadata={"type": "fact", "user_id": user_id}
             )
 
-    async def delete_fact(self, fact_id: str) -> None:
-        await self._store.delete_fact(fact_id)
+    async def delete_fact(self, fact_id: str, user_id: str) -> bool:
+        return await self._store.delete_fact(fact_id, user_id)
         # Note: In a full implementation, we should also delete from Chroma.
         # But instructions only specify upsert.
 
@@ -255,8 +255,8 @@ class MemoryManager:
     # Preferences
     # =========================================================================
 
-    async def delete_preference(self, pref_id: str) -> None:
-        await self._store.delete_preference(pref_id)
+    async def delete_preference(self, pref_id: str, user_id: str) -> bool:
+        return await self._store.delete_preference(pref_id, user_id)
 
     async def upsert_preference(
         self,
@@ -299,6 +299,9 @@ class MemoryManager:
     async def get_pending_habits(self, user_id: str) -> list[dict]:
         return await self._store.get_pending_habits(user_id)
 
+    async def delete_pending_habit(self, habit_id: str, user_id: str) -> bool:
+        return await self._store.delete_pending_habit(habit_id, user_id)
+
     async def save_pending_habit(
         self,
         user_id: str,
@@ -315,8 +318,8 @@ class MemoryManager:
     # Summaries
     # =========================================================================
 
-    async def delete_summary(self, summary_id: str) -> None:
-        await self._store.delete_summary(summary_id)
+    async def delete_summary(self, summary_id: str, user_id: str) -> bool:
+        return await self._store.delete_summary(summary_id, user_id)
 
     async def record_summary(
         self,

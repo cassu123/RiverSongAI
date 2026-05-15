@@ -64,10 +64,10 @@ def _get_libby():
 # Auth helper
 # ---------------------------------------------------------------------------
 
-def _require_user(authorization: Optional[str]) -> str:
+async def _require_user(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     return payload["sub"]
@@ -125,7 +125,7 @@ async def list_shelf(
     status: Optional[str] = Query(default=None),
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
 
     if service and service not in VALID_SERVICES:
         raise HTTPException(status_code=422, detail=f"Invalid service filter.")
@@ -143,7 +143,7 @@ async def shelf_stats(
     authorization: Optional[str] = Header(default=None),
 ):
     """Return per-status and per-service counts without sending all book data."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     store = _store(request)
     books = await store.list_shelf(user_id)
 
@@ -171,7 +171,7 @@ async def add_book(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
 
     if body.service not in VALID_SERVICES:
         raise HTTPException(
@@ -207,7 +207,7 @@ async def update_book(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
 
     fields = body.model_dump(exclude_unset=True)
 
@@ -236,7 +236,7 @@ async def delete_book(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     store = _store(request)
     deleted = await store.delete_book(book_id, user_id)
     if not deleted:
@@ -251,7 +251,7 @@ async def delete_book(
 async def libby_loans(
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     try:
         provider = _get_libby()
         loans = await provider.get_loans(user_id)
@@ -283,7 +283,7 @@ async def libby_loans(
 async def libby_holds(
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     try:
         provider = _get_libby()
         holds = await provider.get_holds(user_id)
@@ -330,7 +330,7 @@ async def get_connections(
     authorization: Optional[str] = Header(default=None),
 ):
     """Return which services are linked for this user."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     audible_connected = os.path.exists(_audible_auth_path(user_id))
 
     google_play_connected = False
@@ -374,7 +374,7 @@ async def libby_connect_start(
     and returns it alongside pairing instructions.  The chip is stored in memory
     until /complete is called.
     """
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(f"{_SENTRY_BASE}/chip", headers=_LIBBY_HEADERS, json={})
@@ -413,7 +413,7 @@ async def libby_connect_complete(
     authorization: Optional[str] = Header(default=None),
 ):
     """Step 2: clone the pending chip using the 8-digit code from the Libby app."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     chip = _pending_chips.get(user_id)
     if not chip:
         raise HTTPException(
@@ -463,7 +463,7 @@ async def libby_disconnect(
     authorization: Optional[str] = Header(default=None),
 ):
     """Remove the stored Libby chip for this user."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     path = _libby_chip_path(user_id)
     if os.path.exists(path):
         os.remove(path)
@@ -486,7 +486,7 @@ async def audible_connect(
     authorization: Optional[str] = Header(default=None),
 ):
     """Register River Song as an Audible device using the user's Amazon credentials."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
 
     try:
         import audible  # noqa: PLC0415
@@ -537,7 +537,7 @@ async def audible_disconnect(
     authorization: Optional[str] = Header(default=None),
 ):
     """Remove the stored Audible auth for this user."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     path = _audible_auth_path(user_id)
     if os.path.exists(path):
         os.remove(path)
@@ -567,7 +567,7 @@ async def google_play_authorize(
     authorization: Optional[str] = Header(default=None),
 ):
     """Return the Google OAuth URL that requests the Books scope."""
-    _require_user(authorization)
+    await _require_user(authorization)
     try:
         client = _load_google_client()
     except HTTPException:
@@ -599,7 +599,7 @@ async def google_play_callback(
     authorization: Optional[str] = Header(default=None),
 ):
     """Exchange the OAuth code for tokens and save them for this user."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     try:
         client = _load_google_client()
     except HTTPException:
@@ -634,7 +634,7 @@ async def google_play_disconnect(
     authorization: Optional[str] = Header(default=None),
 ):
     """Remove the stored Google Play Books token for this user."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     try:
         from providers.google.books import get_books_provider
         get_books_provider().disconnect(user_id)
@@ -666,7 +666,7 @@ async def sync_kindle(
     Fetch the user's Kindle library and upsert books into the shelf.
     Returns counts of added vs already-present books.
     """
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     try:
         provider = _get_kindle()
         books = await provider.get_library(user_id, limit=100)
@@ -723,7 +723,7 @@ async def sync_google_play(
     Fetch the user's Google Play Books library and upsert into the shelf.
     Merges by volume_id (stored in launch_url) to avoid duplicates across syncs.
     """
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
 
     try:
         from providers.google.books import get_books_provider
@@ -895,7 +895,7 @@ async def import_csv(
     Import books from a CSV export (Goodreads, Google Play Takeout, or generic).
     Duplicate titles (already on the shelf for this service) are skipped.
     """
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     mapped_service = service if service in VALID_SERVICES else "other"
 
     raw = await file.read()

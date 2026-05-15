@@ -177,7 +177,7 @@ def _get_user_id(request: Request) -> str:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
-    payload = decode_token(auth.removeprefix("Bearer ").strip())
+    payload = await decode_token(auth.removeprefix("Bearer ").strip())
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     uid = str(payload.get("sub", ""))
@@ -1142,7 +1142,7 @@ _ws_manager = _WSManager()
 
 @router.websocket("/ws")
 async def culinary_ws(websocket: WebSocket, token: str = ""):
-    payload = decode_token(token) if token else None
+    payload = await decode_token(token) if token else None
     if not payload:
         await websocket.close(code=4001)
         return

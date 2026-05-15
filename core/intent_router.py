@@ -170,12 +170,11 @@ def _parse_smart_home_command(transcript: str) -> Dict[str, Any]:
 async def _handle_smart_home(transcript: str, user_id: str) -> str:
     """
     Parse a smart home command and execute it via Home Assistant.
-
-    Resolves the device name through the DeviceRegistry, then dispatches
-    the action to the HomeAssistantClient.
-
-    Returns a spoken confirmation or error message.
     """
+    from core.family import is_feature_enabled_for
+    if not await is_feature_enabled_for(user_id, "home"):
+        return "I'm sorry, home automation controls are not enabled for your account."
+
     try:
         from providers.smart_home.home_assistant import build_ha_client
         from providers.smart_home.device_registry import get_device_registry
@@ -463,13 +462,11 @@ async def _handle_sports(transcript: str, user_id: str) -> str:
 async def _handle_commerce(transcript: str, user_id: str) -> str:
     """
     Handle commerce queries: inventory, low stock, and order status.
-
-    Sub-intent detection:
-      - "low stock", "running low", "out of stock"  -> low stock report (both platforms)
-      - "orders", "pending", "ship", "unshipped"    -> pending orders
-      - "walmart" present                            -> Walmart-specific query
-      - "amazon" present or default                 -> Amazon-specific query
     """
+    from core.family import is_feature_enabled_for
+    if not await is_feature_enabled_for(user_id, "commerce"):
+        return "I'm sorry, access to commerce data is not enabled for your account."
+
     try:
         lower = transcript.lower()
         want_walmart = "walmart" in lower

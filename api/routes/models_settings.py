@@ -108,17 +108,38 @@ def _get_enabled_providers() -> dict:
     }
 
 
+async def _require_user(authorization: Optional[str]) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    payload = await decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    return payload["sub"]
+
+async def _require_admin(authorization: Optional[str]) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    payload = await decode_token(authorization.removeprefix("Bearer "))
+    if not payload or payload.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required.")
+    return payload["sub"]
+
+
 # =============================================================================
 # GET /api/models
 # =============================================================================
 
 @router.get("/models")
-async def list_models(request: Request):
+async def list_models(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
     """
     Return the LLM model catalog split into local and cloud sections.
     Local models include an `available` flag based on what Ollama has pulled.
     Cloud models include an `available` flag based on configured API keys.
     """
+    await _require_user(authorization)
     installed = _get_ollama_installed_models()
     enabled   = _get_enabled_providers()
 
@@ -160,19 +181,10 @@ class LLMSettingsBody(BaseModel):
     cloud_fallback_model: Optional[str] = None
 
 
-def _require_user(authorization: Optional[str]) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
-    return payload["sub"]
-
-
 @router.get("/settings/llm")
 async def get_llm_settings(request: Request, authorization: Optional[str] = Header(default=None)):
     """Return the current LLM provider + model selection for a user."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     memory = request.app.state.memory_manager
     s = await memory.get_llm_settings(user_id)
     
@@ -196,7 +208,7 @@ async def save_llm_settings(
     body: LLMSettingsBody,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     entry = LLMRegistry.get(body.provider, body.model_id)
     if not entry:
         raise HTTPException(
@@ -242,7 +254,7 @@ class MemorySettingsBody(BaseModel):
 @router.get("/settings/memory")
 async def get_memory_settings(request: Request, authorization: Optional[str] = Header(default=None)):
     """Return the current memory settings for a user."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     memory = request.app.state.memory_manager
     s = await memory.get_memory_settings(user_id)
     return {
@@ -259,7 +271,7 @@ async def save_memory_settings(
     body: MemorySettingsBody,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     if not TTLOption.is_valid(body.default_ttl):
         raise HTTPException(
             status_code=400,
@@ -291,7 +303,7 @@ async def get_voice_settings(
     Return the active TTS provider, the full voice registry, and which voices
     are installed on disk. Active voice is read from per-user SQLite settings.
     """
-    user_id  = _require_user(authorization)
+    user_id  = await _require_user(authorization)
     settings = get_settings()
     provider   = settings.tts_provider
     model_path = settings.piper_model_path
@@ -394,7 +406,7 @@ async def set_active_voice(
     Switch the active voice — saved to SQLite per user, takes effect on
     the next conversation (new WebSocket connection). No restart required.
     """
-    user_id  = _require_user(authorization)
+    user_id  = await _require_user(authorization)
     settings = get_settings()
 
     from providers.tts.voice_registry import VoiceRegistry
@@ -449,7 +461,7 @@ class OrchestrationSettingsBody(BaseModel):
 @router.get("/settings/orchestration")
 async def get_orchestration_settings(request: Request, authorization: Optional[str] = Header(default=None)):
     """Return the current n8n orchestration settings."""
-    _require_user(authorization)
+    await _require_user(authorization)
     s = get_settings()
     return {
         "n8n_enabled":        s.n8n_enabled,
@@ -465,10 +477,10 @@ async def save_orchestration_settings(
     body: OrchestrationSettingsBody,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     # Note: These are global server settings (Phase 9/10), 
     # but we restrict saving to admins only for security.
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if payload.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Only admins can modify orchestration settings.")
 
@@ -493,7 +505,7 @@ async def preview_voice(
     base64-encoded WAV audio. The frontend plays this directly in the browser.
     Works for both Piper (if installed) and Kokoro voices.
     """
-    _require_user(authorization)
+    await _require_user(authorization)
 
     from providers.tts.voice_registry import VoiceRegistry
     import base64
@@ -546,15 +558,6 @@ async def preview_voice(
 # ElevenLabs & Persona settings
 # =============================================================================
 
-def _require_admin(authorization: Optional[str]) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
-    if not payload or payload.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin role required.")
-    return payload["sub"]
-
-
 class ElevenLabsBody(BaseModel):
     api_key: str
     voice_id: str = "21m00Tcm4TlvDq8ikWAM"
@@ -566,7 +569,7 @@ async def get_elevenlabs_settings(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    _require_admin(authorization)
+    await _require_admin(authorization)
     s = get_settings()
     
     key = s.elevenlabs_api_key
@@ -587,7 +590,7 @@ async def save_elevenlabs_settings(
     body: ElevenLabsBody,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_admin(authorization)
+    user_id = await _require_admin(authorization)
     
     # Update live settings singleton
     s = get_settings()
@@ -625,7 +628,7 @@ async def get_wake_word_settings(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    _require_admin(authorization)
+    await _require_admin(authorization)
     s = get_settings()
     
     # Check if openWakeWord is installed
@@ -649,7 +652,7 @@ async def save_wake_word_settings(
     body: WakeWordBody,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_admin(authorization)
+    user_id = await _require_admin(authorization)
     
     # Update live settings singleton
     s = get_settings()
@@ -675,7 +678,7 @@ async def get_persona(
     request: Request,
     authorization: Optional[str] = Header(default=None)
 ):
-    _require_admin(authorization)
+    await _require_admin(authorization)
     return {"system_prompt": get_settings().river_song_system_prompt}
 
 
@@ -684,7 +687,7 @@ async def get_persona_default(
     request: Request,
     authorization: Optional[str] = Header(default=None)
 ):
-    _require_admin(authorization)
+    await _require_admin(authorization)
     # Extract the default value from the Pydantic Field
     from config.settings import Settings
     default_prompt = Settings.model_fields['river_song_system_prompt'].default
@@ -697,7 +700,7 @@ async def save_persona(
     body: PersonaBody, 
     authorization: Optional[str] = Header(default=None)
 ):
-    user_id = _require_admin(authorization)
+    user_id = await _require_admin(authorization)
     
     # Update live settings
     s = get_settings()

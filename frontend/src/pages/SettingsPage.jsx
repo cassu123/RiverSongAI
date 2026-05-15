@@ -1083,8 +1083,20 @@ export default function SettingsPage({ onFeaturesChanged }) {
       )}
 
       {/* ================================================================ */}
-      {/* ADMIN — family management (admin only)                          */}
-...
+      {/* ADMIN — model visibility (admin only)                            */}
+      {/* ================================================================ */}
+      {user?.role === 'admin' && visibility && (
+        <AdminVisibilitySection
+          visibility={visibility}
+          token={token}
+          onChanged={updated => setVisibility(updated)}
+        />
+      )}
+
+    </div>
+  )
+}
+
 function AdminWakeWordSection({ token }) {
   const [form, setForm] = useState({ enabled: false, phrase: 'hey_river', sensitivity: 0.5 })
   const [loading, setLoading] = useState(true)
@@ -1170,21 +1182,6 @@ function AdminWakeWordSection({ token }) {
         {msg && <span className="profile-saved-msg">{msg}</span>}
       </div>
     </Section>
-  )
-}
-
-      {/* ================================================================ */}
-      {/* ADMIN — model visibility (admin only)                            */}
-      {/* ================================================================ */}
-      {user?.role === 'admin' && visibility && (
-        <AdminVisibilitySection
-          visibility={visibility}
-          token={token}
-          onChanged={updated => setVisibility(updated)}
-        />
-      )}
-
-    </div>
   )
 }
 

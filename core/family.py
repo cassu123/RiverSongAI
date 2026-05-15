@@ -53,3 +53,44 @@ def resolve_module_owner(user_id: str, module: str) -> str:
     except Exception as exc:
         logger.debug("Family resolution failed for user %s: %s", user_id, exc)
     return user_id
+
+
+async def is_feature_enabled_for(user_id: str, feature_key: str) -> bool:
+    """
+    Central permission check for the feature cascade.
+    Admin always enabled.
+    Parent/User blocked if globally hidden.
+    Child blocked if globally hidden OR not explicitly approved.
+    """
+    from main import get_app
+    app = get_app()
+    if not app:
+        return True
+
+    try:
+        mm = getattr(app.state, "memory_manager", None)
+        if not mm:
+            return True
+        store = mm._store
+
+        user = await store.get_user_by_id(user_id)
+        if not user:
+            return False
+
+        role = user.get("role", "user")
+        if role == "admin":
+            return True
+
+        config = await store.get_admin_config()
+        hidden = set(config.get("hidden_features", []))
+        if feature_key in hidden:
+            return False
+
+        if role == "child":
+            child_features = await store.get_child_features(user_id)
+            return feature_key in child_features
+
+        return True
+    except Exception as exc:
+        logger.error("Feature check failed for user %s, key %s: %s", user_id, feature_key, exc)
+        return False

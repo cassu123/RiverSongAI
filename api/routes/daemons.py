@@ -21,13 +21,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/daemon", tags=["daemons"])
 
 
-def _require_admin(authorization: Optional[str] = Header(default=None)) -> str:
+async def _require_admin(authorization: Optional[str] = Header(default=None)) -> str:
     """Validate Bearer token and ensure the user has the 'admin' role."""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
     
     token = authorization.removeprefix("Bearer ")
-    payload = decode_token(token)
+    payload = await decode_token(token)
     
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")

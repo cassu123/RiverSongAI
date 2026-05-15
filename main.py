@@ -157,6 +157,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             if "sensitivity" in ww_config: settings.wake_word_threshold = ww_config["sensitivity"]
             logger.info("Applied persistent Wake Word settings.")
 
+        # Integrations (Task 7)
+        integrations = config.get("integrations", {})
+        if integrations:
+            for k, v in integrations.items():
+                if v: os.environ[k] = str(v)
+            logger.info("Injected %d persistent integrations into environment.", len(integrations))
+
     except Exception as e:
         logger.warning("Failed to apply persistent settings: %s", e)
 

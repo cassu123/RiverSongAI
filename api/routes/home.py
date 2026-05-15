@@ -25,10 +25,10 @@ router = APIRouter(prefix="/api/home", tags=["home"])
 VISIBLE_DOMAINS = {"light", "switch", "fan", "cover", "lock", "climate", "scene", "script", "input_boolean"}
 
 
-def _require_user(authorization: Optional[str]) -> str:
+async def _require_user(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     return payload["sub"]
@@ -47,7 +47,7 @@ def _is_configured() -> bool:
 
 @router.get("/status")
 async def get_status(authorization: Optional[str] = Header(default=None)):
-    _require_user(authorization)
+    await _require_user(authorization)
     if not _is_configured():
         return {"configured": False, "reachable": False}
     try:
@@ -62,7 +62,7 @@ async def get_status(authorization: Optional[str] = Header(default=None)):
 
 @router.get("/devices")
 async def get_devices(authorization: Optional[str] = Header(default=None)):
-    _require_user(authorization)
+    await _require_user(authorization)
     if not _is_configured():
         return []
     try:
@@ -99,7 +99,7 @@ class ActionBody(BaseModel):
 
 @router.post("/action")
 async def call_action(body: ActionBody, authorization: Optional[str] = Header(default=None)):
-    _require_user(authorization)
+    await _require_user(authorization)
     if not _is_configured():
         return {"ok": False, "detail": "Home Assistant not configured."}
     try:

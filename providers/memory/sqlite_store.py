@@ -430,13 +430,14 @@ class SQLiteStore:
             for r in rows
         ]
 
-    async def delete_fact(self, fact_id: str) -> None:
-        await self._run(self._sync_delete_fact, fact_id)
+    async def delete_fact(self, fact_id: str, user_id: str) -> bool:
+        return await self._run(self._sync_delete_fact, fact_id, user_id)
 
-    def _sync_delete_fact(self, fact_id: str) -> None:
+    def _sync_delete_fact(self, fact_id: str, user_id: str) -> bool:
         conn = self._get_conn()
-        conn.execute("DELETE FROM facts WHERE id = ?", (fact_id,))
+        res = conn.execute("DELETE FROM facts WHERE id = ? AND user_id = ?", (fact_id, user_id))
         conn.commit()
+        return res.rowcount > 0
 
     # -------------------------------------------------------------------------
     # Preferences
@@ -519,33 +520,36 @@ class SQLiteStore:
         ).fetchall()
         return [dict(r) for r in rows]
 
-    async def delete_pending_habit(self, habit_id: str) -> None:
-        await self._run(self._sync_delete_pending_habit, habit_id)
+    async def delete_pending_habit(self, habit_id: str, user_id: str) -> bool:
+        return await self._run(self._sync_delete_pending_habit, habit_id, user_id)
 
-    def _sync_delete_pending_habit(self, habit_id: str) -> None:
+    def _sync_delete_pending_habit(self, habit_id: str, user_id: str) -> bool:
         conn = self._get_conn()
-        conn.execute("DELETE FROM pending_habits WHERE id = ?", (habit_id,))
+        res = conn.execute("DELETE FROM pending_habits WHERE id = ? AND user_id = ?", (habit_id, user_id))
         conn.commit()
+        return res.rowcount > 0
 
-    async def delete_preference(self, pref_id: str) -> None:
-        await self._run(self._sync_delete_preference, pref_id)
+    async def delete_preference(self, pref_id: str, user_id: str) -> bool:
+        return await self._run(self._sync_delete_preference, pref_id, user_id)
 
-    def _sync_delete_preference(self, pref_id: str) -> None:
+    def _sync_delete_preference(self, pref_id: str, user_id: str) -> bool:
         conn = self._get_conn()
-        conn.execute("DELETE FROM preferences WHERE id = ?", (pref_id,))
+        res = conn.execute("DELETE FROM preferences WHERE id = ? AND user_id = ?", (pref_id, user_id))
         conn.commit()
+        return res.rowcount > 0
 
     # -------------------------------------------------------------------------
     # Conversation summaries
     # -------------------------------------------------------------------------
 
-    async def delete_summary(self, summary_id: str) -> None:
-        await self._run(self._sync_delete_summary, summary_id)
+    async def delete_summary(self, summary_id: str, user_id: str) -> bool:
+        return await self._run(self._sync_delete_summary, summary_id, user_id)
 
-    def _sync_delete_summary(self, summary_id: str) -> None:
+    def _sync_delete_summary(self, summary_id: str, user_id: str) -> bool:
         conn = self._get_conn()
-        conn.execute("DELETE FROM conversation_summaries WHERE id = ?", (summary_id,))
+        res = conn.execute("DELETE FROM conversation_summaries WHERE id = ? AND user_id = ?", (summary_id, user_id))
         conn.commit()
+        return res.rowcount > 0
 
     async def save_summary(self, summary: ConversationSummary) -> None:
         """Insert a new conversation summary. Generates expires_at from ttl_setting."""
@@ -815,6 +819,15 @@ class SQLiteStore:
         res = conn.execute("DELETE FROM revoked_tokens WHERE expires_at < ?", (_now_str(),))
         conn.commit()
         return res.rowcount
+
+    async def get_integrations(self) -> dict:
+        config = await self.get_admin_config()
+        return config.get("integrations", {})
+
+    async def set_integrations(self, integrations: dict) -> None:
+        config = await self.get_admin_config()
+        config["integrations"] = integrations
+        await self.set_admin_config(config)
 
     # =========================================================================
     # User auth methods

@@ -27,10 +27,10 @@ router = APIRouter(prefix="/api/google", tags=["google"])
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _require_user(authorization: Optional[str]) -> str:
+async def _require_user(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     return payload["sub"]
@@ -57,7 +57,7 @@ async def get_auth_url(
     Generate the Google OAuth authorization URL for the web flow.
     We pass the user_id in the 'state' parameter to correlate the callback.
     """
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     auth = _get_google_auth()
     # We use state to pass the user_id securely through the flow
     auth_url = auth.get_authorization_url(redirect_uri=redirect_uri, state=user_id)
@@ -92,7 +92,7 @@ async def get_status(
     """
     Check if the user has a valid Google token stored.
     """
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     auth = _get_google_auth()
     try:
         creds = auth.get_credentials(user_id)
@@ -115,7 +115,7 @@ async def get_calendar_upcoming(
     max_results: int = 10,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     from providers.google.calendar import GoogleCalendarProvider
     auth = _get_google_auth()
     provider = GoogleCalendarProvider(auth, user_id)
@@ -136,7 +136,7 @@ async def get_gmail_unread(
     max_results: int = 5,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     from providers.google.gmail import GmailProvider
     auth = _get_google_auth()
     provider = GmailProvider(auth, user_id)

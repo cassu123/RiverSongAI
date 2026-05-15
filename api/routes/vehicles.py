@@ -160,7 +160,7 @@ def get_current_user_id(request: Request) -> str:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
-    payload = decode_token(auth.removeprefix("Bearer ").strip())
+    payload = await decode_token(auth.removeprefix("Bearer ").strip())
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     user_id = str(payload.get("sub", ""))
@@ -173,7 +173,7 @@ def get_current_user_role(request: Request) -> str:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         return "user"
-    payload = decode_token(auth.removeprefix("Bearer ").strip())
+    payload = await decode_token(auth.removeprefix("Bearer ").strip())
     if not payload:
         return "user"
     return payload.get("role", "user")

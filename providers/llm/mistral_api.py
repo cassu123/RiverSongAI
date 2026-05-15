@@ -39,6 +39,16 @@ _CLOUD_DELAY_WARNING = (
     "Response time depends on network and API load."
 )
 
+def _friendly_error(exc: Exception) -> str:
+    err_str = str(exc).lower()
+    if "rate limit" in err_str or "429" in err_str:
+        return "I'm at my message limit, try again in a moment."
+    if "authentication" in err_str or "api key" in err_str or "unauthorized" in err_str or "401" in err_str or "403" in err_str:
+        return "My connection to that model isn't working — let your admin know."
+    if "timeout" in err_str:
+        return "That took too long, try again."
+    return "I had trouble responding."
+
 
 class MistralAILLM(LLMProvider):
     """
@@ -99,20 +109,6 @@ class MistralAILLM(LLMProvider):
                     if text:
                         yield text
 
-        except SDKError as exc:
-            status = getattr(exc, "status_code", None)
-            if status in (401, 403):
-                raise RuntimeError(
-                    "Mistral AI authentication failed. Check MISTRAL_API_KEY in .env."
-                ) from exc
-            if status == 429:
-                raise RuntimeError(
-                    "Mistral AI rate limit exceeded. Try again shortly."
-                ) from exc
-            raise RuntimeError(
-                f"Mistral AI API error (model={self._model}): {exc}"
-            ) from exc
         except Exception as exc:
-            raise RuntimeError(
-                f"Unexpected error communicating with Mistral AI API: {exc}"
-            ) from exc
+            logger.error("Mistral AI API call failed: %s", exc, exc_info=True)
+            yield _friendly_error(exc)

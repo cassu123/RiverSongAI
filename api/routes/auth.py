@@ -219,17 +219,29 @@ class IntegrationsUpdate(BaseModel):
     walmart_api:   Optional[dict] = None
 
 
-@router.get("/integrations")
-async def get_integrations(request: Request, authorization: Optional[str] = Header(default=None)):
+async def _require_admin(request: Request, authorization: Optional[str]) -> dict:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid token.")
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    if payload.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    return payload
+
+
+@router.get("/integrations")
+async def get_integrations(request: Request, authorization: Optional[str] = Header(default=None)):
+    await _require_admin(request, authorization)
+    store = _get_store(request)
+    integrations = await store.get_integrations()
 
     # Helper to get and mask
-    def _val(env_key: str, is_secret: bool = False) -> str:
-        v = os.environ.get(env_key, "")
+    def _val(key: str, is_secret: bool = False) -> str:
+        v = integrations.get(key, "")
+        if not v:
+            # Fallback to env for initial migration/compatibility
+            v = os.environ.get(key, "")
         if v and is_secret:
             return "__SET__"
         return v
@@ -252,47 +264,29 @@ async def get_integrations(request: Request, authorization: Optional[str] = Head
 
 @router.put("/integrations")
 async def save_integrations(body: IntegrationsUpdate, request: Request, authorization: Optional[str] = Header(default=None)):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid token.")
+    await _require_admin(request, authorization)
+    store = _get_store(request)
+    integrations = await store.get_integrations()
 
-    env_path = Path(".env")
-    if not env_path.exists():
-        # Fallback to creating one if it doesn't exist, though it should
-        env_path.touch()
-
-    content = env_path.read_text(encoding="utf-8")
-
-    updates = []
     if body.amazon_sp_api:
         a = body.amazon_sp_api
-        if a.get("lwa_app_id") is not None:         updates.append(("AMAZON_SP_LWA_APP_ID", a["lwa_app_id"]))
-        if a.get("lwa_client_secret") not in [None, "__SET__"]: updates.append(("AMAZON_SP_LWA_CLIENT_SECRET", a["lwa_client_secret"]))
-        if a.get("lwa_refresh_token") not in [None, "__SET__"]: updates.append(("AMAZON_SP_REFRESH_TOKEN", a["lwa_refresh_token"]))
-        if a.get("aws_access_key") is not None:     updates.append(("AMAZON_AWS_ACCESS_KEY", a["aws_access_key"]))
-        if a.get("aws_secret_key") not in [None, "__SET__"]: updates.append(("AMAZON_AWS_SECRET_KEY", a["aws_secret_key"]))
-        if a.get("seller_id") is not None:          updates.append(("AMAZON_SELLER_ID", a["seller_id"]))
+        if a.get("lwa_app_id") is not None:         integrations["AMAZON_SP_LWA_APP_ID"] = a["lwa_app_id"]
+        if a.get("lwa_client_secret") not in [None, "__SET__"]: integrations["AMAZON_SP_LWA_CLIENT_SECRET"] = a["lwa_client_secret"]
+        if a.get("lwa_refresh_token") not in [None, "__SET__"]: integrations["AMAZON_SP_REFRESH_TOKEN"] = a["lwa_refresh_token"]
+        if a.get("aws_access_key") is not None:     integrations["AMAZON_AWS_ACCESS_KEY"] = a["aws_access_key"]
+        if a.get("aws_secret_key") not in [None, "__SET__"]: integrations["AMAZON_AWS_SECRET_KEY"] = a["aws_secret_key"]
+        if a.get("seller_id") is not None:          integrations["AMAZON_SELLER_ID"] = a["seller_id"]
 
     if body.walmart_api:
         w = body.walmart_api
-        if w.get("client_id") is not None:          updates.append(("WALMART_CLIENT_ID", w["client_id"]))
-        if w.get("client_secret") not in [None, "__SET__"]: updates.append(("WALMART_CLIENT_SECRET", w["client_secret"]))
+        if w.get("client_id") is not None:          integrations["WALMART_ID"] = w["client_id"]
+        if w.get("client_secret") not in [None, "__SET__"]: integrations["WALMART_CLIENT_SECRET"] = w["client_secret"]
 
-    for key, val in updates:
-        pattern = re.compile(rf"^{key}=.*$", re.MULTILINE)
-        new_line = f"{key}={val}"
-        if pattern.search(content):
-            content = pattern.sub(new_line, content)
-        else:
-            # Append if not found
-            if content and not content.endswith("\n"):
-                content += "\n"
-            content += new_line + "\n"
-
-    env_path.write_text(content, encoding="utf-8")
-    dotenv.load_dotenv(override=True)
+    await store.set_integrations(integrations)
+    
+    # Inject into live os.environ so providers see it immediately
+    for k, v in integrations.items():
+        if v: os.environ[k] = str(v)
 
     return {"ok": True}
 

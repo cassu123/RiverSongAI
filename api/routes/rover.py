@@ -20,18 +20,18 @@ from daemons.registry import call_daemon
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/rover", tags=["rover"])
 
-def _require_user(authorization: Optional[str] = Header(default=None)) -> str:
+async def _require_user(authorization: Optional[str] = Header(default=None)) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     return payload["sub"]
 
-def _require_admin(authorization: Optional[str] = Header(default=None)) -> str:
+async def _require_admin(authorization: Optional[str] = Header(default=None)) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload or payload.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required.")
     return payload["sub"]

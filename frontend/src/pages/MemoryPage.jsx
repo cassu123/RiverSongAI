@@ -48,11 +48,7 @@ export default function MemoryPage() {
   const [deleting,    setDeleting]    = useState(false)
   const [showAddFact, setShowAddFact] = useState(false)
   const [newKey,      setNewKey]      = useState('')
-  const [summaries,setSummaries]= useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [error,    setError]    = useState(null)
-  const [search,   setSearch]   = useState('')
-  ...
+  const [error,       setError]       = useState(null)
   const fetchAll = useCallback(async () => {
     setLoading(true)
     setError(null)

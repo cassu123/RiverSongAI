@@ -68,6 +68,32 @@ River Song AI is **live in production** at `https://riversongai.com`.
 
 ---
 
+## Audit Remediation In Flight (2026-05 cycle)
+
+Full architecture/trash/security audit produced three reports in repo root: `RIVER_SONG_AUDIT.md`, `RIVER_SONG_TRASH.md`, `RIVER_SONG_SECURITY.md`. Gemini executes; Claude verifies each round against actual code before accepting "done."
+
+- **Round 1 (32 fixes)** — ✅ committed `a81933a`, pushed to `origin/main`.
+- **Round 2 (9 gap-closure tasks)** — ✅ same commit.
+- **Round 3 (security sweep, 10 tasks)** — prompt staged at `~/.claude/plans/i-mchronos-chronological-heuristic-recor-majestic-pizza.md`. Scope: JWT revocation, daemon-secret boot validator, WebSocket ticket auth, LLM error scrub, auth gaps on `/api/models` + n8n + integrations, `.gitignore data/*.db`, voice cascade for child role, memory DELETE ownership filter. Not yet sent.
+- **Deferred:** C-1 (Google OAuth secret in git history) — needs Cloud Console rotation + `git filter-repo`, handled out-of-band.
+- **CHRONOS** (Obsidian-style local vault, page name = CHRONOS, daemon = Scribe) — design locked, build paused until Round 3 ships. Full intent + phasing captured in Claude memory.
+
+Detailed state for any new Claude session lives in `~/.claude/projects/-home-riversong-RiverSongAI/memory/` — see `project_audit_cycle.md`, `project_chronos_parked.md`, `reference_git_ssh_origin.md`.
+
+---
+
+## Origin Remote (Git SSH)
+
+The default `git@github.com:` SSH route on this host uses a deploy key scoped to the **Android** repo, not the main one. Origin for `cassu123/RiverSongAI` must use the SSH alias:
+
+```
+git remote set-url origin git@github-riversongai:cassu123/RiverSongAI.git
+```
+
+That alias is defined in `~/.ssh/config` and uses `~/.ssh/id_ed25519`. Verify with `ssh -T -i ~/.ssh/id_ed25519 git@github.com` → expects `Hi cassu123/RiverSongAI!`.
+
+---
+
 ## Known Fixes Applied
 - **Global Responsive Overhaul**: Standardized all modules for tablets and mobile.
   - Unified 1024px (Tablet) and 768px (Mobile) breakpoints.

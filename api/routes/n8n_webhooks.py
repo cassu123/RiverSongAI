@@ -10,13 +10,23 @@ from __future__ import annotations
 import logging
 from typing import Optional, Dict, Any
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from config.settings import get_settings
 from core.limiter import limiter
+from core.auth import decode_token
 from providers.automation.n8n_client import build_n8n_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/webhooks/n8n", tags=["automation"])
+
+
+async def _require_admin(authorization: Optional[str] = Header(default=None)) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    payload = await decode_token(authorization.removeprefix("Bearer "))
+    if not payload or payload.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    return payload["sub"]
 
 @router.post("")
 @limiter.limit(get_settings().rate_limit_webhook_n8n)
@@ -46,7 +56,7 @@ async def n8n_webhook_receiver(
     return {"ok": True, "message": "Webhook received"}
 
 @router.get("/status")
-async def n8n_status():
+async def n8n_status(admin_id: str = Depends(_require_admin)):
     """Returns the availability and URL of the n8n instance."""
     client = build_n8n_client()
     available = await client.is_available()
@@ -57,7 +67,7 @@ async def n8n_status():
     }
 
 @router.get("/workflows")
-async def n8n_workflows():
+async def n8n_workflows(admin_id: str = Depends(_require_admin)):
     """Lists available n8n workflows."""
     client = build_n8n_client()
     workflows = await client.list_workflows()

@@ -39,6 +39,16 @@ _CLOUD_DELAY_WARNING = (
     "Response time depends on network and API load."
 )
 
+def _friendly_error(exc: Exception) -> str:
+    err_str = str(exc).lower()
+    if "rate limit" in err_str or "429" in err_str or "quota" in err_str:
+        return "I'm at my message limit, try again in a moment."
+    if "authentication" in err_str or "api_key" in err_str or "unauthorized" in err_str or "403" in err_str:
+        return "My connection to that model isn't working — let your admin know."
+    if "timeout" in err_str:
+        return "That took too long, try again."
+    return "I had trouble responding."
+
 
 class GeminiLLM(LLMProvider):
     """
@@ -107,34 +117,22 @@ class GeminiLLM(LLMProvider):
         config = genai_types.GenerateContentConfig(
             max_output_tokens=self._max_tokens,
             temperature=self._temperature,
-            logger = logging.getLogger(__name__)
+            system_instruction=system_instruction,
+        )
 
-            def _friendly_error(exc: Exception) -> str:
-                err_str = str(exc).lower()
-                if "rate limit" in err_str or "429" in err_str or "quota" in err_str:
-                    return "I'm at my message limit, try again in a moment."
-                if "authentication" in err_str or "api_key" in err_str or "unauthorized" in err_str or "403" in err_str:
-                    return "My connection to that model isn't working — let your admin know."
-                if "timeout" in err_str:
-                    return "That took too long, try again."
-                return "I had trouble responding."
+        try:
+            async for chunk in await self._client.aio.models.generate_content_stream(
+                model=self._model,
+                contents=chat_messages,
+                config=config,
+            ):
+                text = chunk.text
+                if text:
+                    yield text
 
-
-            _CLOUD_DELAY_WARNING = (
-            ...
-                    try:
-                        async for chunk in await self._client.aio.models.generate_content_stream(
-                            model=self._model,
-                            contents=chat_messages,
-                            config=config,
-                        ):
-                            text = chunk.text
-                            if text:
-                                yield text
-
-                    except Exception as exc:
-                        logger.error("Gemini API call failed: %s", exc, exc_info=True)
-                        yield _friendly_error(exc)
+        except Exception as exc:
+            logger.error("Gemini API call failed: %s", exc, exc_info=True)
+            yield _friendly_error(exc)
 
     async def stream_response_thinking(self, messages: List[dict]) -> AsyncGenerator[str, None]:
         """Thinking mode for Gemini 2.5 models. Falls back for 2.0 and older."""

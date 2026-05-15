@@ -28,10 +28,10 @@ router = APIRouter(prefix="/api/feeds", tags=["feeds"])
 # Auth helper
 # ---------------------------------------------------------------------------
 
-def _require_user(authorization: Optional[str]) -> str:
+async def _require_user(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     return payload["sub"]
@@ -67,7 +67,7 @@ async def get_preferences(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     return await FeedService.get_preferences(_store(request), user_id)
 
 
@@ -77,7 +77,7 @@ async def save_preferences(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     await FeedService.save_preferences(_store(request), user_id, body.model_dump())
     return {"ok": True}
 
@@ -103,7 +103,7 @@ async def get_news(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     return await FeedService.get_news(_store(request), user_id)
 
 
@@ -116,7 +116,7 @@ async def get_weather(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     return await FeedService.get_weather(_store(request), user_id)
 
 
@@ -125,7 +125,7 @@ async def get_weather_alerts(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     return await FeedService.get_weather_alerts(_store(request), user_id)
 
 
@@ -175,7 +175,7 @@ async def get_sports_news(
     authorization: Optional[str] = Header(default=None),
 ):
     """Fetch sports headline articles from RSS feeds for the Sports tab."""
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     return await FeedService.get_sports_news(_store(request), user_id, SPORTS_RSS_SOURCES)
 
 
@@ -202,7 +202,7 @@ async def get_sports(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     return await FeedService.get_sports_feed(_store(request), user_id)
 
 
@@ -231,5 +231,5 @@ async def get_stocks(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    user_id = _require_user(authorization)
+    user_id = await _require_user(authorization)
     return await FeedService.get_stocks(_store(request), user_id)

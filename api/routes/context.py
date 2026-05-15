@@ -29,11 +29,11 @@ class SensorEvent(BaseModel):
     timestamp: Optional[str] = None
 
 
-def _require_admin(authorization: Optional[str]) -> str:
+async def _require_admin(authorization: Optional[str]) -> str:
     """Validate Bearer token and return the user's sub claim if role is admin."""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     if payload.get("role") != "admin":
@@ -98,7 +98,7 @@ async def manual_override(
     Manual override from EnvironmentPage.
     Auth: Admin user JWT.
     """
-    _require_admin(authorization)
+    await _require_admin(authorization)
 
     engine = getattr(request.app.state, "context_engine", None)
     if not engine:
@@ -124,7 +124,7 @@ async def get_room_states(
          raise HTTPException(status_code=401, detail="Not authenticated.")
     
     token = authorization.removeprefix("Bearer ")
-    if not decode_token(token):
+    if not await decode_token(token):
         raise HTTPException(status_code=401, detail="Invalid token.")
 
     engine = getattr(request.app.state, "context_engine", None)

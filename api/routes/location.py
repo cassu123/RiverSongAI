@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/location", tags=["location"])
 
 
-def _require_user(authorization: Optional[str]) -> str:
+async def _require_user(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     return payload["sub"]
@@ -38,7 +38,7 @@ async def get_city(
     Retrieve the user's current city based on their IP address.
     Uses ip-api.com (free for non-commercial use, 45 req/min).
     """
-    _require_user(authorization)
+    await _require_user(authorization)
     
     # In many production setups, request.client.host is the load balancer IP.
     # main.py includes _CloudflareIPMiddleware which sets request.scope["client"]
