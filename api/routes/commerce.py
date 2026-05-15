@@ -111,7 +111,7 @@ def get_db() -> Generator[Session, None, None]:
 # Auth
 # ---------------------------------------------------------------------------
 
-def get_current_biz_user(request: Request, db: Session = Depends(get_db)) -> BizUser:
+async def get_current_biz_user(request: Request, db: Session = Depends(get_db)) -> BizUser:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")

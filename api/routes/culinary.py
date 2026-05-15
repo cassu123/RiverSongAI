@@ -173,7 +173,7 @@ def get_db() -> Generator[Session, None, None]:
 # Auth helpers
 # ---------------------------------------------------------------------------
 
-def _get_user_id(request: Request) -> str:
+async def _get_user_id(request: Request) -> str:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
@@ -1166,8 +1166,8 @@ async def culinary_ws(websocket: WebSocket, token: str = ""):
 # ---------------------------------------------------------------------------
 
 @router.get("/household")
-def get_household(request: Request, db: Session = Depends(get_db)):
-    uid = _get_user_id(request)
+async def get_household(request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
     return _household_out(_get_household(db, uid))
 
 
@@ -1177,7 +1177,7 @@ async def update_household(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     for field, value in body.model_dump(exclude_none=True).items():
         # Equipment fields are prefixed has_ in the model
@@ -1196,8 +1196,8 @@ async def update_household(
 # ---------------------------------------------------------------------------
 
 @router.get("/household/banned")
-def list_banned_ingredients(request: Request, db: Session = Depends(get_db)):
-    uid = _get_user_id(request)
+async def list_banned_ingredients(request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     return [_banned_out(bi) for bi in hh.banned_ingredients]
 
@@ -1208,7 +1208,7 @@ async def add_banned_ingredient(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     bi = BannedIngredient(
         household_id=hh.id,
@@ -1229,7 +1229,7 @@ async def update_banned_ingredient(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     bi = db.query(BannedIngredient).filter_by(id=bi_id, household_id=hh.id).first()
     if not bi:
@@ -1252,7 +1252,7 @@ async def delete_banned_ingredient(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     bi = db.query(BannedIngredient).filter_by(id=bi_id, household_id=hh.id).first()
     if not bi:
@@ -1265,7 +1265,7 @@ async def delete_banned_ingredient(
 @router.post("/household/banned/recommend")
 async def recommend_substitutes(body: SubstituteRecommendRequest, request: Request):
     """Ask AI for substitute recommendations for a given ingredient."""
-    _get_user_id(request)  # auth check
+    await _get_user_id(request)  # auth check
     prompt = _SUBSTITUTE_RECOMMEND_PROMPT.format(ingredient=body.ingredient)
     try:
         raw = await _call_ollama(prompt)
@@ -1283,8 +1283,8 @@ async def recommend_substitutes(body: SubstituteRecommendRequest, request: Reque
 # ---------------------------------------------------------------------------
 
 @router.get("/household/equipment")
-def list_equipment(request: Request, db: Session = Depends(get_db)):
-    uid = _get_user_id(request)
+async def list_equipment(request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     return [_equipment_out(e) for e in hh.equipment_items]
 
@@ -1292,7 +1292,7 @@ def list_equipment(request: Request, db: Session = Depends(get_db)):
 @router.post("/household/equipment/identify")
 async def identify_equipment(body: EquipmentIdentifyRequest, request: Request):
     """Classify a device by brand + model without saving — returns {label, types}."""
-    _get_user_id(request)  # auth check
+    await _get_user_id(request)  # auth check
     result = await _identify_equipment(body.make.strip(), body.model.strip())
     return result
 
@@ -1303,7 +1303,7 @@ async def add_equipment(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     identified = await _identify_equipment(body.make.strip(), body.model.strip())
     types = identified["types"]
@@ -1334,7 +1334,7 @@ async def update_equipment(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     eq = db.query(KitchenEquipment).filter_by(id=eq_id, household_id=hh.id).first()
     if not eq:
@@ -1396,7 +1396,7 @@ async def delete_equipment(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     eq = db.query(KitchenEquipment).filter_by(id=eq_id, household_id=hh.id).first()
     if not eq:
@@ -1433,16 +1433,16 @@ async def delete_equipment(
 # ---------------------------------------------------------------------------
 
 @router.get("/recipes")
-def list_recipes(request: Request, db: Session = Depends(get_db)):
-    uid = _get_user_id(request)
+async def list_recipes(request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     return [_recipe_out(r) for r in hh.recipes]
 
 
 @router.get("/recipes/duplicates")
-def list_duplicate_recipes(request: Request, db: Session = Depends(get_db)):
+async def list_duplicate_recipes(request: Request, db: Session = Depends(get_db)):
     """Group recipes by normalized title and return groups with >1 item."""
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     
     from collections import defaultdict
@@ -1461,7 +1461,7 @@ async def create_recipe(
     db: Session = Depends(get_db),
     force: bool = False,
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
 
     # Duplicate check
@@ -1497,8 +1497,8 @@ async def create_recipe(
 
 
 @router.get("/recipes/{recipe_id}")
-def get_recipe(recipe_id: str, request: Request, db: Session = Depends(get_db)):
-    uid = _get_user_id(request)
+async def get_recipe(recipe_id: str, request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
@@ -1513,7 +1513,7 @@ async def update_recipe(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
@@ -1543,7 +1543,7 @@ async def update_recipe(
 
 @router.delete("/recipes/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_recipe(recipe_id: str, request: Request, db: Session = Depends(get_db)):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
@@ -1560,7 +1560,7 @@ async def rate_recipe(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
@@ -1591,8 +1591,8 @@ def _active_proposals(db: Session, household_id: str) -> list[DinnerProposal]:
 
 
 @router.get("/dinner")
-def get_dinner_proposals(request: Request, db: Session = Depends(get_db)):
-    uid = _get_user_id(request)
+async def get_dinner_proposals(request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
     hh  = _get_household(db, uid)
     return [_proposal_out(p) for p in _active_proposals(db, hh.id)]
 
@@ -1603,7 +1603,7 @@ async def suggest_dinner(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh  = _get_household(db, uid)
     recipe = db.query(Recipe).filter_by(id=body.recipe_id, household_id=hh.id).first()
     if not recipe:
@@ -1624,7 +1624,7 @@ async def vote_dinner(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh  = _get_household(db, uid)
     p   = db.query(DinnerProposal).filter_by(id=proposal_id, household_id=hh.id).first()
     if not p:
@@ -1658,7 +1658,7 @@ async def dismiss_dinner(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh  = _get_household(db, uid)
     p   = db.query(DinnerProposal).filter_by(id=proposal_id, household_id=hh.id).first()
     if not p:
@@ -1676,7 +1676,7 @@ async def cook_now(
     db: Session = Depends(get_db),
 ):
     """Scale the proposed recipe to 4 servings and return a single-use shopping list."""
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh  = _get_household(db, uid)
     p   = db.query(DinnerProposal).filter_by(id=proposal_id, household_id=hh.id).first()
     if not p:
@@ -1722,7 +1722,7 @@ async def ingest_recipe(
     file: Optional[UploadFile] = File(default=None),
     force: bool = False,
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
 
     src_type   = SourceType.MANUAL
@@ -1936,13 +1936,13 @@ async def ingest_recipe(
 # ---------------------------------------------------------------------------
 
 @router.post("/recipes/{recipe_id}/scale")
-def scale_recipe(
+async def scale_recipe(
     recipe_id: str,
     body: ScaleRequest,
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
@@ -1999,7 +1999,7 @@ async def translate_equipment(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
@@ -2031,8 +2031,8 @@ async def translate_equipment(
 # ---------------------------------------------------------------------------
 
 @router.get("/stockroom")
-def list_stockroom(request: Request, db: Session = Depends(get_db)):
-    uid = _get_user_id(request)
+async def list_stockroom(request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     items = db.query(StockroomItem).filter_by(household_id=hh.id).all()
     return [_stock_out(i) for i in items]
@@ -2044,7 +2044,7 @@ async def add_stockroom_item(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     try:
         state = StockState(body.state)
@@ -2065,8 +2065,8 @@ async def add_stockroom_item(
 
 
 @router.get("/stockroom/{item_id}")
-def get_stockroom_item(item_id: str, request: Request, db: Session = Depends(get_db)):
-    uid = _get_user_id(request)
+async def get_stockroom_item(item_id: str, request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     item = db.query(StockroomItem).filter_by(id=item_id, household_id=hh.id).first()
     if not item:
@@ -2081,7 +2081,7 @@ async def update_stockroom_item(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     item = db.query(StockroomItem).filter_by(id=item_id, household_id=hh.id).first()
     if not item:
@@ -2103,7 +2103,7 @@ async def update_stockroom_item(
 
 @router.delete("/stockroom/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_stockroom_item(item_id: str, request: Request, db: Session = Depends(get_db)):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     item = db.query(StockroomItem).filter_by(id=item_id, household_id=hh.id).first()
     if not item:
@@ -2120,7 +2120,7 @@ async def scan_barcode(
     db: Session = Depends(get_db),
 ):
     """Scan a barcode: look up Open Food Facts, set state to Good, upsert."""
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
 
     product = await _lookup_barcode(body.barcode)
@@ -2162,7 +2162,7 @@ async def deplete_item(
     db: Session = Depends(get_db),
 ):
     """Trash-can scan: mark item Low → auto-injects into grocery list."""
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
 
     item = db.query(StockroomItem).filter_by(
@@ -2195,8 +2195,8 @@ async def deplete_item(
 # ---------------------------------------------------------------------------
 
 @router.get("/prep")
-def get_active_prep(request: Request, db: Session = Depends(get_db)):
-    uid = _get_user_id(request)
+async def get_active_prep(request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(household_id=hh.id, is_active=True).first()
     if not session:
@@ -2210,7 +2210,7 @@ async def create_prep_session(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     # Deactivate any existing active session
     old = db.query(PrepSession).filter_by(household_id=hh.id, is_active=True).first()
@@ -2237,7 +2237,7 @@ async def add_recipe_to_prep(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
     if not session:
@@ -2266,7 +2266,7 @@ async def update_prep_recipe_scale(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
     if not session:
@@ -2293,7 +2293,7 @@ async def remove_recipe_from_prep(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     entry = db.query(PrepSessionRecipe).filter_by(id=entry_id, session_id=session_id).first()
     if not entry:
@@ -2306,12 +2306,12 @@ async def remove_recipe_from_prep(
 
 
 @router.get("/prep/{session_id}/shopping-list")
-def get_shopping_list(session_id: str, request: Request, db: Session = Depends(get_db)):
+async def get_shopping_list(session_id: str, request: Request, db: Session = Depends(get_db)):
     """
     Master Shopping List: aggregate + deduplicate all ingredients across staged recipes.
     Cross-reference Stockroom — anything marked Good is omitted.
     """
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
     if not session:
@@ -2365,9 +2365,9 @@ def get_shopping_list(session_id: str, request: Request, db: Session = Depends(g
 
 
 @router.get("/prep/{session_id}/staging")
-def get_staging_area(session_id: str, request: Request, db: Session = Depends(get_db)):
+async def get_staging_area(session_id: str, request: Request, db: Session = Depends(get_db)):
     """Staging Area: shopping list split back into per-recipe piles."""
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
     if not session:
@@ -2403,7 +2403,7 @@ async def complete_prep_session(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
     if not session:
@@ -2420,8 +2420,8 @@ async def complete_prep_session(
 # ---------------------------------------------------------------------------
 
 @router.get("/walmart/mappings")
-def list_walmart_mappings(request: Request, db: Session = Depends(get_db)):
-    uid = _get_user_id(request)
+async def list_walmart_mappings(request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     mappings = db.query(WalmartMapping).filter_by(household_id=hh.id).all()
     return [
@@ -2431,12 +2431,12 @@ def list_walmart_mappings(request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/walmart/mappings", status_code=status.HTTP_201_CREATED)
-def create_walmart_mapping(
+async def create_walmart_mapping(
     body: WalmartMappingCreate,
     request: Request,
     db: Session = Depends(get_db),
 ):
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     name_norm = body.ingredient_name.lower().strip()
     item_id   = body.walmart_item_id.strip()
@@ -2470,8 +2470,8 @@ def create_walmart_mapping(
 
 
 @router.delete("/walmart/mappings/{mapping_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_walmart_mapping(mapping_id: str, request: Request, db: Session = Depends(get_db)):
-    uid = _get_user_id(request)
+async def delete_walmart_mapping(mapping_id: str, request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     m = db.query(WalmartMapping).filter_by(id=mapping_id, household_id=hh.id).first()
     if not m:
@@ -2481,7 +2481,7 @@ def delete_walmart_mapping(mapping_id: str, request: Request, db: Session = Depe
 
 
 @router.post("/walmart/export")
-def walmart_export(
+async def walmart_export(
     request: Request,
     db: Session = Depends(get_db),
     session_id: Optional[str] = None,
@@ -2490,7 +2490,7 @@ def walmart_export(
     Generate a Walmart Add-To-Cart URL from the active (or specified) prep session's shopping list.
     Returns mapped items as a URL and unmapped items as an alert list.
     """
-    uid = _get_user_id(request)
+    uid = await _get_user_id(request)
     hh = _get_household(db, uid)
 
     if session_id:

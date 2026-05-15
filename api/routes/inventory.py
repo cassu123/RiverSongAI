@@ -108,7 +108,7 @@ def get_db() -> Generator[Session, None, None]:
 # Auth — pull user from JWT, bootstrap InvUser row
 # ---------------------------------------------------------------------------
 
-def get_current_inv_user(request: Request, db: Session = Depends(get_db)) -> InvUser:
+async def get_current_inv_user(request: Request, db: Session = Depends(get_db)) -> InvUser:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")

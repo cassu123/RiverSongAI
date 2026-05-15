@@ -5,7 +5,7 @@ API endpoints for local image generation via Stable Diffusion.
 """
 
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Response, Header, Depends
+from fastapi import APIRouter, HTTPException, Response, Header, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from providers.image.sd_provider import SDProvider
@@ -37,6 +37,7 @@ async def _require_user(
 @router.post("/generate")
 @limiter.limit(get_settings().rate_limit_image_gen)
 async def generate_image(
+    request: Request,
     body: ImageGenerateBody,
     user_id: str = Depends(_require_user)
 ):

@@ -156,7 +156,7 @@ def get_db() -> Generator[Session, None, None]:
 # Auth
 # ---------------------------------------------------------------------------
 
-def get_current_user_id(request: Request) -> str:
+async def get_current_user_id(request: Request) -> str:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
@@ -169,7 +169,7 @@ def get_current_user_id(request: Request) -> str:
     return resolve_module_owner(user_id, "maintenance")
 
 
-def get_current_user_role(request: Request) -> str:
+async def get_current_user_role(request: Request) -> str:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         return "user"
