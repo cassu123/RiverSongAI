@@ -55,5 +55,5 @@ cd ..
 step "Restarting service"
 sudo systemctl restart river-song
 
-step "Done — River Song is live at http://localhost:8000"
+step "Done — River Song is live at https://riversongai.com (tunnel → :8000)"
 sudo systemctl status river-song --no-pager -l
