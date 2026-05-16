@@ -11,8 +11,9 @@
 // All settings are persisted via REST calls to the backend (/api/settings/*).
 // =============================================================================
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useAudioRecorder } from '../hooks/useAudioRecorder'
 import { registerPushNotifications, unregisterPushNotifications, getPushSubscription } from '../utils/pushNotifications'
 
 const API_BASE = '' // same origin
@@ -989,6 +990,11 @@ export default function SettingsPage({
           </span>
         </div>
       </Section>
+
+      {/* ================================================================ */}
+      {/* VOICE ID                                                         */}
+      {/* ================================================================ */}
+      <VoiceIDSection token={token} />
 
       {/* ================================================================ */}
       {/* MEMORY                                                           */}
@@ -2304,3 +2310,140 @@ function NotificationsSection({ token }) {
   )
 }
 
+
+function VoiceIDSection({ token }) {
+  const [status, setStatus] = useState(null)
+  const [recording, setRecording] = useState(false)
+  const [countdown, setCountdown] = useState(0)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  const refreshStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/voice-id/me', { headers: { Authorization: `Bearer ${token}` } })
+      if (res.ok) setStatus(await res.json())
+    } catch (e) {
+      console.error('Failed to fetch Voice ID status:', e)
+    }
+  }, [token])
+
+  useEffect(() => { refreshStatus() }, [refreshStatus])
+
+  const onComplete = useCallback(async (wavB64) => {
+    setRecording(false)
+    setCountdown(0)
+    setError('')
+    setSuccess('')
+    
+    try {
+      // Convert base64 to blob
+      const binary = atob(wavB64)
+      const array = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i)
+      const blob = new Blob([array], { type: 'audio/wav' })
+
+      const formData = new FormData()
+      formData.append('file', blob, 'sample.wav')
+      
+      const res = await fetch('/api/voice-id/enroll', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      
+      if (!res.ok) {
+        const txt = await res.text()
+        setError('Enrollment failed: ' + txt)
+        return
+      }
+      
+      const result = await res.json()
+      setSuccess(`Sample added. You now have ${result.sample_count} samples.`)
+      await refreshStatus()
+    } catch (e) {
+      setError('Enrollment error: ' + e.message)
+    }
+  }, [token, refreshStatus])
+
+  const recorder = useAudioRecorder({ onComplete })
+
+  const startEnroll = async () => {
+    setError('')
+    setSuccess('')
+    const ok = await recorder.startRecording()
+    if (!ok) {
+      setError('Could not start microphone.')
+      return
+    }
+
+    setRecording(true)
+    let left = 5
+    setCountdown(left)
+    const interval = setInterval(() => {
+      left -= 1
+      setCountdown(left)
+      if (left <= 0) {
+        clearInterval(interval)
+        recorder.stopRecording()
+      }
+    }, 1000)
+  }
+
+  const deleteEnrollment = async () => {
+    if (!confirm('Delete your voice prints from this server? River Song will no longer recognize your voice. You can re-enroll any time.')) return
+    try {
+      await fetch('/api/voice-id/me', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      await refreshStatus()
+      setSuccess('Enrollment deleted.')
+    } catch (e) {
+      setError('Delete failed: ' + e.message)
+    }
+  }
+
+  if (!status) return null
+
+  return (
+    <Section title="VOICE ID">
+      <div style={{ marginBottom: 16 }}>
+        {status.enrolled ? (
+          <div style={{ color: '#00ff66', fontSize: '0.875rem', fontWeight: 500 }}>
+            ✓ Enrolled — {status.sample_count} samples
+            <div style={{ color: 'var(--md-outline)', fontSize: '0.75rem', marginTop: 4 }}>
+              Last updated: {new Date(status.last_updated).toLocaleString()}
+            </div>
+          </div>
+        ) : (
+          <p className="settings-hint" style={{ marginTop: 0 }}>
+            River Song doesn't recognize your voice yet. Record 3–5 samples to enable speaker recognition on kiosks.
+          </p>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <button 
+          className="btn btn--primary" 
+          onClick={startEnroll} 
+          disabled={recording || recorder.isRecording}
+        >
+          {recording ? `Recording... ${countdown}s` : 'Record sample'}
+        </button>
+
+        {status.sample_count > 0 && !recording && (
+          <button className="btn btn--ghost btn--danger" onClick={deleteEnrollment}>
+            Delete enrollment
+          </button>
+        )}
+      </div>
+
+      {error && <div style={{ color: 'var(--md-error)', fontSize: '0.75rem', marginTop: 12 }}>{error}</div>}
+      {success && <div style={{ color: 'var(--md-primary)', fontSize: '0.75rem', marginTop: 12 }}>{success}</div>}
+
+      <p className="settings-hint">
+        Recommended: at least 3 samples. Each sample should be about 5 seconds of clear speech.
+      </p>
+    </Section>
+  )
+}

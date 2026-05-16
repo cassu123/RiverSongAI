@@ -402,19 +402,54 @@ async def google_callback(request: Request, body: GoogleCallbackBody):
 
 
 class ProfilePatch(BaseModel):
+    # New three-axis: universe -> environment -> mood
+    universe: Optional[str] = None
+    environment: Optional[str] = None
+    mood: Optional[str] = None
+    display_name: Optional[str] = None
+    # Legacy fields kept for backward compatibility with older clients.
+    # New clients should ignore these. Writes still accepted and translated below.
     theme: Optional[str] = None
     palette: Optional[str] = None
-    environment: Optional[str] = None
-    display_name: Optional[str] = None
 
-VALID_THEMES = {"halo", "crimson-dark", "combat", "midnight-violet", "amber", "arctic", "cyberpunk", "dune"}
-VALID_PALETTES     = {"spice", "halo"}
-VALID_ENVIRONMENTS = {"atreides", "harkonnen", "forerunner", "unsc"}
+VALID_UNIVERSES = {"dune", "halo", "mv", "nightcity"}
+VALID_ENVIRONMENTS = {
+    "atreides", "harkonnen",       # dune
+    "forerunner", "unsc",          # halo
+    "spires", "garden",            # monument valley
+    "corpo", "pacifica",           # night city
+}
 
-# Cross-validation: which environments are legal under which palette
-PALETTE_ENV_PAIRS = {
-    "spice": {"atreides", "harkonnen"},
-    "halo":  {"forerunner", "unsc"},
+# Which environments are legal under which universe
+UNIVERSE_ENV_PAIRS = {
+    "dune":      {"atreides", "harkonnen"},
+    "halo":      {"forerunner", "unsc"},
+    "mv":        {"spires", "garden"},
+    "nightcity": {"corpo", "pacifica"},
+}
+
+# Which moods are legal under which environment
+ENV_MOOD_PAIRS = {
+    "atreides":   {"caladan", "spice-hall"},
+    "harkonnen":  {"giedi", "bloodlight"},
+    "forerunner": {"hard-light", "ceramic-veil"},
+    "unsc":       {"combat-steel", "night-vision"},
+    "spires":     {"sacred", "daybreak-temple", "twilight-spires"},
+    "garden":     {"pastel-day", "dusk-pavilion"},
+    "corpo":      {"chrome", "executive"},
+    "pacifica":   {"glitch-street", "smoke"},
+}
+
+# Legacy theme/palette -> new (universe, environment, mood) for one-time client migrations
+LEGACY_THEME_MAP = {
+    "halo":            ("halo",      "forerunner", "hard-light"),
+    "crimson-dark":    ("dune",      "harkonnen",  "bloodlight"),
+    "combat":          ("halo",      "unsc",       "night-vision"),
+    "midnight-violet": ("mv",        "spires",     "twilight-spires"),
+    "amber":           ("mv",        "garden",     "dusk-pavilion"),
+    "arctic":          ("mv",        "spires",     "daybreak-temple"),
+    "cyberpunk":       ("nightcity", "pacifica",   "glitch-street"),
+    "dune":            ("dune",      "atreides",   "spice-hall"),
 }
 
 
@@ -478,9 +513,12 @@ async def get_profile(request: Request, authorization: Optional[str] = Header(de
         "email": user["email"],
         "display_name": user["display_name"],
         "role": user["role"],
+        "universe": user.get("universe", "dune"),
+        "environment": user.get("environment", "atreides"),
+        "mood": user.get("mood", "caladan"),
+        # Legacy fields, kept readable so older clients don't crash. Newer clients ignore.
         "theme": user.get("theme", "halo"),
         "palette": user.get("palette", "spice"),
-        "environment": user.get("environment", "atreides"),
     }
 
 
@@ -493,25 +531,36 @@ async def update_profile(body: ProfilePatch, request: Request, authorization: Op
         raise HTTPException(status_code=401, detail="Invalid token")
     user_id = payload["sub"]
 
-    if body.theme is not None:
-        if body.theme not in VALID_THEMES:
-            raise HTTPException(status_code=400, detail=f"Invalid theme. Valid: {', '.join(VALID_THEMES)}")
-        await store.update_user_theme(user_id, body.theme)
+    # Legacy translation: if a client still sends `theme`, map it to the new triple
+    if body.theme is not None and body.theme in LEGACY_THEME_MAP:
+        u, e, m = LEGACY_THEME_MAP[body.theme]
+        if body.universe is None:    body.universe    = u
+        if body.environment is None: body.environment = e
+        if body.mood is None:        body.mood        = m
+    # Legacy palette -> universe rename
+    if body.palette is not None and body.universe is None:
+        body.universe = "halo" if body.palette == "halo" else "dune"
 
-    if body.palette is not None:
-        if body.palette not in VALID_PALETTES:
-            raise HTTPException(status_code=400, detail=f"Invalid palette. Valid: {', '.join(VALID_PALETTES)}")
-        await store.update_user_palette(user_id, body.palette)
+    if body.universe is not None:
+        if body.universe not in VALID_UNIVERSES:
+            raise HTTPException(status_code=400, detail=f"Invalid universe. Valid: {', '.join(sorted(VALID_UNIVERSES))}")
+        await store.update_user_universe(user_id, body.universe)
 
     if body.environment is not None:
         if body.environment not in VALID_ENVIRONMENTS:
-            raise HTTPException(status_code=400, detail=f"Invalid environment. Valid: {', '.join(VALID_ENVIRONMENTS)}")
-        # Cross-validation: enforce pairing
+            raise HTTPException(status_code=400, detail=f"Invalid environment. Valid: {', '.join(sorted(VALID_ENVIRONMENTS))}")
         user_record = await store.get_user_by_id(user_id)
-        current_palette = body.palette or user_record.get("palette", "spice")
-        if body.environment not in PALETTE_ENV_PAIRS.get(current_palette, set()):
-            raise HTTPException(status_code=400, detail=f"environment '{body.environment}' is not valid under palette '{current_palette}'")
+        current_universe = body.universe or user_record.get("universe", "dune")
+        if body.environment not in UNIVERSE_ENV_PAIRS.get(current_universe, set()):
+            raise HTTPException(status_code=400, detail=f"environment '{body.environment}' is not valid under universe '{current_universe}'")
         await store.update_user_environment(user_id, body.environment)
+
+    if body.mood is not None:
+        user_record = await store.get_user_by_id(user_id)
+        current_env = body.environment or user_record.get("environment", "atreides")
+        if body.mood not in ENV_MOOD_PAIRS.get(current_env, set()):
+            raise HTTPException(status_code=400, detail=f"mood '{body.mood}' is not valid under environment '{current_env}'")
+        await store.update_user_mood(user_id, body.mood)
 
     user = await store.get_user_by_id(user_id)
     return {
@@ -519,7 +568,9 @@ async def update_profile(body: ProfilePatch, request: Request, authorization: Op
         "email": user["email"],
         "display_name": user["display_name"],
         "role": user["role"],
+        "universe": user.get("universe", "dune"),
+        "environment": user.get("environment", "atreides"),
+        "mood": user.get("mood", "caladan"),
         "theme": user.get("theme", "halo"),
         "palette": user.get("palette", "spice"),
-        "environment": user.get("environment", "atreides"),
     }

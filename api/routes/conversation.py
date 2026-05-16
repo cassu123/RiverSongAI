@@ -161,6 +161,7 @@ async def conversation_websocket(websocket: WebSocket) -> None:
         voice_id_override=voice_id,
         fallback_provider=fb_provider,
         fallback_model=fb_model,
+        is_kiosk=is_kiosk,
     )
 
     await _send(websocket, {"type": "connected"})
@@ -378,6 +379,7 @@ async def chat_http(
         memory_manager=memory_manager,
         llm_provider_override=body.provider,
         llm_model_override=body.model_id,
+        is_kiosk=False,
     )
     loop._suppress_memory = body.forget_memory
     # Re-inject history into the loop

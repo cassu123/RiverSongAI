@@ -1,576 +1,44 @@
 /* ============================================================
-   River Song AI — Theme Palettes
-   Each theme sets:
-     1. Legacy aliases (--primary, --bg, --text-dim, etc.)
-        used by all existing page CSS files
-     2. M3 token overrides (--md-*) so the Navigation Drawer
-        and M3 components also pick up the theme colors
+   River Song AI — Three-Axis Presence System
+   ────────────────────────────────────────────────────────────
+   Three orthogonal axes drive every pixel of the room:
+
+     [data-universe="dune|halo|mv|nightcity"]
+         Typographic mood + universe-wide motion temperament
+
+     [data-env="atreides|harkonnen|forerunner|unsc
+                |spires|garden|corpo|pacifica"]
+         Layout density, card material grammar, backdrop "room"
+
+     [data-mood="<color-key>"]
+         Color palette only (--primary, --secondary, --accent,
+         --bg-base, --fg, --line)
+
+   They compose. Universe X Env X Mood = a specific look.
+   Nothing in this file should set color and density together —
+   that coupling is what made the legacy 8-theme system feel
+   like a costume change instead of a room change.
    ============================================================ */
 
-/* ── Halo Blue — holographic cyan, UNSC steel navy ─────────── */
-[data-theme="halo"] {
-  /* Legacy */
-  --bg:           #050c14;
-  --bg-panel:     #08121f;
-  --bg-card:      #0c1a2d;
-  --bg-card-sel:  #10223a;
-  --primary:      #00e5ff;
-  --secondary:    #0099ff;
-  --accent:       #1967d2;
-  --error:        #e54b4b;
-  --warn:         #f5b841;
-  --text:         #e6f7ff;
-  --text-dim:     #80b3ff;
-  --text-muted:   #4073bf;
-  --border:       #13315c;
-  --border-bright:#1d4a8a;
-  --glow-sm:      0 0 8px  rgba(0,229,255,0.4);
-  --glow-md:      0 0 18px rgba(0,229,255,0.6);
-  --glow-teal:    0 0 10px rgba(0,153,255,0.5);
-  /* M3 tokens */
-  --md-primary:                #00e5ff;
-  --md-on-primary:             #003340;
-  --md-primary-container:      #004d66;
-  --md-on-primary-container:   #b3f4ff;
-  --md-secondary:              #0099ff;
-  --md-on-secondary:           #001d33;
-  --md-secondary-container:    #0a2a4a;
-  --md-on-secondary-container: #80d4ff;
-  --md-tertiary:               #33ccff;
-  --md-on-tertiary:            #002633;
-  --md-tertiary-container:     #003d52;
-  --md-on-tertiary-container:  #b3eeff;
-  --md-error:                  #e54b4b;
-  --md-on-error:               #4a0000;
-  --md-error-container:        #6e0000;
-  --md-on-error-container:     #ffdad4;
-  --md-background:             #050c14;
-  --md-on-background:          #e6f7ff;
-  --md-surface:                #050c14;
-  --md-on-surface:             #e6f7ff;
-  --md-surface-variant:        #13315c;
-  --md-on-surface-variant:     #80b3ff;
-  --md-surface-container-lowest:  #030810;
-  --md-surface-container-low:     #08121f;
-  --md-surface-container:         #0c1a2d;
-  --md-surface-container-high:    #10223a;
-  --md-surface-container-highest: #162c4d;
-  --md-outline:         #4073bf;
-  --md-outline-variant: #1d4a8a;
-  --md-inverse-surface:     #e6f7ff;
-  --md-inverse-on-surface:  #050c14;
-  --md-inverse-primary:     #004d66;
-  --md-scrim: rgba(0,0,0,0.72);
-}
-
-/* ── Crimson Dark — warm brick red, deep brown-black ─────────── */
-[data-theme="crimson-dark"] {
-  /* Legacy */
-  --bg:           #140c0b;
-  --bg-panel:     #1c1110;
-  --bg-card:      #241514;
-  --bg-card-sel:  #2e1b1a;
-  --primary:      #c53a1f;
-  --secondary:    #a02b15;
-  --accent:       #8b2211;
-  --error:        #ef4444;
-  --warn:         #f59e0b;
-  --text:         #f2e8e6;
-  --text-dim:     #bda6a1;
-  --text-muted:   #8c7671;
-  --border:       #3e2422;
-  --border-bright:#54312d;
-  --glow-sm:      0 0 8px  rgba(197,58,31,0.25);
-  --glow-md:      0 0 18px rgba(197,58,31,0.40);
-  --glow-teal:    0 0 10px rgba(160,43,21,0.35);
-  /* M3 tokens */
-  --md-primary:                #ff8c76;
-  --md-on-primary:             #4a0800;
-  --md-primary-container:      #6e1500;
-  --md-on-primary-container:   #ffdad2;
-  --md-secondary:              #e0a99d;
-  --md-on-secondary:           #3e1a14;
-  --md-secondary-container:    #3e1a14;
-  --md-on-secondary-container: #ffdad2;
-  --md-tertiary:               #e8c48a;
-  --md-on-tertiary:            #3e2800;
-  --md-tertiary-container:     #5c3b00;
-  --md-on-tertiary-container:  #ffe0b0;
-  --md-error:                  #ef4444;
-  --md-on-error:               #4a0000;
-  --md-error-container:        #6e0000;
-  --md-on-error-container:     #ffdad4;
-  --md-background:             #140c0b;
-  --md-on-background:          #f2e8e6;
-  --md-surface:                #140c0b;
-  --md-on-surface:             #f2e8e6;
-  --md-surface-variant:        #3e2422;
-  --md-on-surface-variant:     #bda6a1;
-  --md-surface-container-lowest:  #100908;
-  --md-surface-container-low:     #1c1110;
-  --md-surface-container:         #241514;
-  --md-surface-container-high:    #2e1b1a;
-  --md-surface-container-highest: #3a2220;
-  --md-outline:         #8c7671;
-  --md-outline-variant: #54312d;
-  --md-inverse-surface:     #f2e8e6;
-  --md-inverse-on-surface:  #140c0b;
-  --md-inverse-primary:     #6e1500;
-  --md-scrim: rgba(0,0,0,0.72);
-}
-
-/* ── Combat — terminal green, night-vision ──────────────────── */
-[data-theme="combat"] {
-  /* Legacy */
-  --bg:           #050805;
-  --bg-panel:     #091209;
-  --bg-card:      #0e1a0e;
-  --bg-card-sel:  #122412;
-  --primary:      #3dcc79;
-  --secondary:    #68d999;
-  --accent:       #2a8e54;
-  --error:        #ff4d4d;
-  --warn:         #ffcc00;
-  --text:         #d9ead3;
-  --text-dim:     #5c8368;
-  --text-muted:   #385240;
-  --border:       #1a331a;
-  --border-bright:#264d26;
-  --glow-sm:      0 0 8px  rgba(61,204,121,0.4);
-  --glow-md:      0 0 18px rgba(61,204,121,0.6);
-  --glow-teal:    0 0 10px rgba(104,217,153,0.5);
-  /* M3 tokens */
-  --md-primary:                #3dcc79;
-  --md-on-primary:             #003318;
-  --md-primary-container:      #004d26;
-  --md-on-primary-container:   #b3f5cc;
-  --md-secondary:              #68d999;
-  --md-on-secondary:           #003319;
-  --md-secondary-container:    #0e2412;
-  --md-on-secondary-container: #b3f5cc;
-  --md-tertiary:               #4dffb3;
-  --md-on-tertiary:            #003322;
-  --md-tertiary-container:     #004d33;
-  --md-on-tertiary-container:  #b3ffe6;
-  --md-error:                  #ff4d4d;
-  --md-on-error:               #4a0000;
-  --md-error-container:        #6e0000;
-  --md-on-error-container:     #ffdad4;
-  --md-background:             #050805;
-  --md-on-background:          #d9ead3;
-  --md-surface:                #050805;
-  --md-on-surface:             #d9ead3;
-  --md-surface-variant:        #1a331a;
-  --md-on-surface-variant:     #5c8368;
-  --md-surface-container-lowest:  #030603;
-  --md-surface-container-low:     #091209;
-  --md-surface-container:         #0e1a0e;
-  --md-surface-container-high:    #122412;
-  --md-surface-container-highest: #172e17;
-  --md-outline:         #385240;
-  --md-outline-variant: #264d26;
-  --md-inverse-surface:     #d9ead3;
-  --md-inverse-on-surface:  #050805;
-  --md-inverse-primary:     #004d26;
-  --md-scrim: rgba(0,0,0,0.72);
-}
-
-/* ── Midnight Violet — velvet, twilight, soft plum ──────────── */
-[data-theme="midnight-violet"] {
-  /* Legacy */
-  --bg:           #1a1025;
-  --bg-panel:     #140b1c;
-  --bg-card:      #1f142c;
-  --bg-card-sel:  #261a33;
-  --primary:      #9b6b9e;
-  --secondary:    #b38fbf;
-  --accent:       #c4a3d1;
-  --error:        #c96b6b;
-  --warn:         #c4a75a;
-  --text:         #f0eaf5;
-  --text-dim:     #b9a6cc;
-  --text-muted:   #7a6690;
-  --border:       #8b5e8f;
-  --border-bright:#a77bb8;
-  --glow-sm:      0 0 8px  rgba(155,107,158,0.25);
-  --glow-md:      0 0 18px rgba(155,107,158,0.40);
-  --glow-teal:    0 0 10px rgba(91,138,122,0.35);
-  /* M3 tokens */
-  --md-primary:                #d9a8dd;
-  --md-on-primary:             #3e1a42;
-  --md-primary-container:      #5a2660;
-  --md-on-primary-container:   #f5d8f9;
-  --md-secondary:              #b38fbf;
-  --md-on-secondary:           #2a1a30;
-  --md-secondary-container:    #261a33;
-  --md-on-secondary-container: #e8d0f0;
-  --md-tertiary:               #9bc4b8;
-  --md-on-tertiary:            #1a3330;
-  --md-tertiary-container:     #254d47;
-  --md-on-tertiary-container:  #c8e8e0;
-  --md-error:                  #c96b6b;
-  --md-on-error:               #4a0000;
-  --md-error-container:        #6e1a1a;
-  --md-on-error-container:     #ffdad4;
-  --md-background:             #1a1025;
-  --md-on-background:          #f0eaf5;
-  --md-surface:                #1a1025;
-  --md-on-surface:             #f0eaf5;
-  --md-surface-variant:        #3d2a45;
-  --md-on-surface-variant:     #b9a6cc;
-  --md-surface-container-lowest:  #140b1c;
-  --md-surface-container-low:     #1c1226;
-  --md-surface-container:         #1f142c;
-  --md-surface-container-high:    #261a33;
-  --md-surface-container-highest: #2e2040;
-  --md-outline:         #7a6690;
-  --md-outline-variant: #a77bb8;
-  --md-inverse-surface:     #f0eaf5;
-  --md-inverse-on-surface:  #1a1025;
-  --md-inverse-primary:     #5a2660;
-  --md-scrim: rgba(0,0,0,0.72);
-}
-
-/* ── Peach Dream — creamy pastel warm neutral ───────────────── */
-[data-theme="amber"] {
-  /* Legacy */
-  --bg:           #FEE7D9;
-  --bg-panel:     #F6E7D8;
-  --bg-card:      #FBD5C0;
-  --bg-card-sel:  #FDC9AD;
-  --primary:      #D66C59;
-  --secondary:    #69A855;
-  --accent:       #E08573;
-  --error:        #E06B5E;
-  --warn:         #D4A373;
-  --text:         #111827;
-  --text-dim:     #4A383A;
-  --text-muted:   #9C6246;
-  --border:       #FDC9AD;
-  --border-bright:#FEBCA6;
-  --glow-sm:      0 1px 4px rgba(214,108,89,0.20);
-  --glow-md:      0 2px 8px rgba(214,108,89,0.30);
-  --glow-teal:    0 1px 4px rgba(105,168,85,0.25);
-  /* M3 tokens (light surface — special case) */
-  --md-primary:                #A63D2F;
-  --md-on-primary:             #ffffff;
-  --md-primary-container:      #FFCCBC;
-  --md-on-primary-container:   #3E0D05;
-  --md-secondary:              #3F7A30;
-  --md-on-secondary:           #ffffff;
-  --md-secondary-container:    #C2EDAE;
-  --md-on-secondary-container: #082000;
-  --md-tertiary:               #7B5800;
-  --md-on-tertiary:            #ffffff;
-  --md-tertiary-container:     #FFDEA0;
-  --md-on-tertiary-container:  #271900;
-  --md-error:                  #B3261E;
-  --md-on-error:               #ffffff;
-  --md-error-container:        #F9DEDC;
-  --md-on-error-container:     #410E0B;
-  --md-background:             #FEE7D9;
-  --md-on-background:          #111827;
-  --md-surface:                #FEE7D9;
-  --md-on-surface:             #111827;
-  --md-surface-variant:        #F5D0BC;
-  --md-on-surface-variant:     #4A383A;
-  --md-surface-container-lowest:  #ffffff;
-  --md-surface-container-low:     #F6E7D8;
-  --md-surface-container:         #FBD5C0;
-  --md-surface-container-high:    #FDC9AD;
-  --md-surface-container-highest: #FEBCA6;
-  --md-outline:         #9C6246;
-  --md-outline-variant: #FEBCA6;
-  --md-inverse-surface:     #111827;
-  --md-inverse-on-surface:  #FEE7D9;
-  --md-inverse-primary:     #FFB4A0;
-  --md-scrim: rgba(0,0,0,0.45);
-}
-
-/* ── Arctic — daylight, accessibility, blue-steel light ────── */
-[data-theme="arctic"] {
-  /* Legacy */
-  --bg:           #eef3f8;
-  --bg-panel:     #e4ecf4;
-  --bg-card:      #dce6f0;
-  --bg-card-sel:  #cddae8;
-  --primary:      #4A7AA8;
-  --secondary:    #558C96;
-  --accent:       #31577A;
-  --error:        #cc2211;
-  --warn:         #cc7700;
-  --text:         #1a2a3a;
-  --text-dim:     #4a6880;
-  --text-muted:   #8aaabf;
-  --border:       #b8ccdd;
-  --border-bright:#9ab8cf;
-  --glow-sm:      0 1px 4px rgba(74,122,168,0.20);
-  --glow-md:      0 2px 8px rgba(74,122,168,0.30);
-  --glow-teal:    0 1px 4px rgba(85,140,150,0.25);
-  /* M3 tokens (light surface) */
-  --md-primary:                #1F5F8A;
-  --md-on-primary:             #ffffff;
-  --md-primary-container:      #CAE4FF;
-  --md-on-primary-container:   #001D34;
-  --md-secondary:              #2A6B78;
-  --md-on-secondary:           #ffffff;
-  --md-secondary-container:    #B3E8F4;
-  --md-on-secondary-container: #001F27;
-  --md-tertiary:               #384E6A;
-  --md-on-tertiary:            #ffffff;
-  --md-tertiary-container:     #C8DEFF;
-  --md-on-tertiary-container:  #001435;
-  --md-error:                  #B3261E;
-  --md-on-error:               #ffffff;
-  --md-error-container:        #F9DEDC;
-  --md-on-error-container:     #410E0B;
-  --md-background:             #eef3f8;
-  --md-on-background:          #1a2a3a;
-  --md-surface:                #eef3f8;
-  --md-on-surface:             #1a2a3a;
-  --md-surface-variant:        #d0dde8;
-  --md-on-surface-variant:     #4a6880;
-  --md-surface-container-lowest:  #ffffff;
-  --md-surface-container-low:     #e4ecf4;
-  --md-surface-container:         #dce6f0;
-  --md-surface-container-high:    #cddae8;
-  --md-surface-container-highest: #bfcfdd;
-  --md-outline:         #8aaabf;
-  --md-outline-variant: #9ab8cf;
-  --md-inverse-surface:     #1a2a3a;
-  --md-inverse-on-surface:  #eef3f8;
-  --md-inverse-primary:     #96CBFF;
-  --md-scrim: rgba(0,0,0,0.45);
-}
-
-/* ── Cyberpunk — neon yellow-green, magenta, pitch black ───── */
-[data-theme="cyberpunk"] {
-  /* Legacy */
-  --bg:           #050505;
-  --bg-panel:     #0a0a0a;
-  --bg-card:      #101010;
-  --bg-card-sel:  #181818;
-  --primary:      #e8ff00;
-  --secondary:    #ff00ff;
-  --accent:       #ccff00;
-  --error:        #ff003c;
-  --warn:         #ff8c00;
-  --text:         #fdffe6;
-  --text-dim:     #a1a38a;
-  --text-muted:   #4f5242;
-  --border:       #222222;
-  --border-bright:#3a3a3a;
-  --glow-sm:      0 0 10px rgba(232,255,0,0.7);
-  --glow-md:      0 0 25px rgba(232,255,0,0.9);
-  --glow-teal:    0 0 15px rgba(255,0,255,0.8);
-  /* M3 tokens */
-  --md-primary:                #e8ff00;
-  --md-on-primary:             #1a1c00;
-  --md-primary-container:      #2e3300;
-  --md-on-primary-container:   #f5ffb3;
-  --md-secondary:              #ff00ff;
-  --md-on-secondary:           #1a001a;
-  --md-secondary-container:    #181818;
-  --md-on-secondary-container: #ff99ff;
-  --md-tertiary:               #ccff00;
-  --md-on-tertiary:            #1a1a00;
-  --md-tertiary-container:     #2e3300;
-  --md-on-tertiary-container:  #f0ffb3;
-  --md-error:                  #ff003c;
-  --md-on-error:               #1a0009;
-  --md-error-container:        #330012;
-  --md-on-error-container:     #ffb3c6;
-  --md-background:             #050505;
-  --md-on-background:          #fdffe6;
-  --md-surface:                #050505;
-  --md-on-surface:             #fdffe6;
-  --md-surface-variant:        #222222;
-  --md-on-surface-variant:     #a1a38a;
-  --md-surface-container-lowest:  #030303;
-  --md-surface-container-low:     #0a0a0a;
-  --md-surface-container:         #101010;
-  --md-surface-container-high:    #181818;
-  --md-surface-container-highest: #222222;
-  --md-outline:         #4f5242;
-  --md-outline-variant: #3a3a3a;
-  --md-inverse-surface:     #fdffe6;
-  --md-inverse-on-surface:  #050505;
-  --md-inverse-primary:     #2e3300;
-  --md-scrim: rgba(0,0,0,0.85);
-}
-
-/* ── Dune — near-black, sandy gold, warm desert glow ────────── */
-[data-theme="dune"] {
-  /* Legacy */
-  --bg:           #0b0805;
-  --bg-panel:     #120d08;
-  --bg-card:      #1a120a;
-  --bg-card-sel:  #24190e;
-  --primary:      #deb651;
-  --secondary:    #de6d33;
-  --accent:       #c29a3e;
-  --error:        #b83321;
-  --warn:         #e89f2e;
-  --text:         #fff4e0;
-  --text-dim:     #c4b396;
-  --text-muted:   #877660;
-  --border:       #422f1c;
-  --border-bright:#5e4429;
-  --glow-sm:      0 0 8px  rgba(222,182,81,0.35);
-  --glow-md:      0 0 18px rgba(222,182,81,0.55);
-  --glow-teal:    0 0 10px rgba(222,109,51,0.45);
-  /* M3 tokens */
-  --md-primary:                #deb651;
-  --md-on-primary:             #261a00;
-  --md-primary-container:      #3d2c00;
-  --md-on-primary-container:   #ffe6a0;
-  --md-secondary:              #de6d33;
-  --md-on-secondary:           #261200;
-  --md-secondary-container:    #3d2000;
-  --md-on-secondary-container: #ffd9b3;
-  --md-tertiary:               #c29a3e;
-  --md-on-tertiary:            #261600;
-  --md-tertiary-container:     #3d2600;
-  --md-on-tertiary-container:  #ffe0b3;
-  --md-error:                  #b83321;
-  --md-on-error:               #260600;
-  --md-error-container:        #3d0d00;
-  --md-on-error-container:     #ffdad4;
-  --md-background:             #0b0805;
-  --md-on-background:          #fff4e0;
-  --md-surface:                #0b0805;
-  --md-on-surface:             #fff4e0;
-  --md-surface-variant:        #3d2e1a;
-  --md-on-surface-variant:     #c4b396;
-  --md-surface-container-lowest:  #070503;
-  --md-surface-container-low:     #120d08;
-  --md-surface-container:         #1a120a;
-  --md-surface-container-high:    #24190e;
-  --md-surface-container-highest: #2e2012;
-  --md-outline:         #877660;
-  --md-outline-variant: #5e4429;
-  --md-inverse-surface:     #fff4e0;
-  --md-inverse-on-surface:  #0b0805;
-  --md-inverse-primary:     #3d2c00;
-  --md-scrim: rgba(0,0,0,0.72);
-}
 
 /* ============================================================
-   Light theme structural overrides (amber & arctic)
+   AXIS 1 — UNIVERSE (typographic + motion temperament)
    ============================================================ */
 
-[data-theme="arctic"] .sidebar,
-[data-theme="amber"]  .sidebar      { background: var(--md-surface-container-low); }
+[data-universe="dune"]      { --font-mood: "Ibarra Real Nova", "Georgia", serif; }
+[data-universe="halo"]      { --font-mood: "Outfit", "Lexend", system-ui, sans-serif; }
+[data-universe="mv"]        { --font-mood: "Lexend", "Outfit", system-ui, sans-serif; }
+[data-universe="nightcity"] { --font-mood: "JetBrains Mono", "Inter", monospace; }
 
-[data-theme="arctic"] .navbar,
-[data-theme="amber"]  .navbar       { background: var(--md-surface-container); border-bottom-color: var(--md-outline-variant); }
-
-[data-theme="arctic"] .card,
-[data-theme="amber"]  .card         { background: var(--md-surface-container); }
-
-[data-theme="arctic"] .conv-text-input,
-[data-theme="amber"]  .conv-text-input {
-  background: #ffffff;
-  color: var(--md-on-surface);
-}
-
-[data-theme="arctic"] .conv-text-input::placeholder,
-[data-theme="amber"]  .conv-text-input::placeholder {
-  color: var(--md-outline);
-}
 
 /* ============================================================
-   Theme-specific card effects
+   AXIS 2 — ENVIRONMENT (density + material grammar + backdrop)
+   ────────────────────────────────────────────────────────────
+   Base density tokens live in global.css :root.
+   Each env overrides them to feel like a distinct room.
    ============================================================ */
 
-[data-theme="halo"] .card {
-  box-shadow: 0 0 8px rgba(0,229,255,0.12), inset 0 0 10px rgba(0,229,255,0.04);
-}
-
-[data-theme="combat"] .card {
-  box-shadow: 0 0 8px rgba(61,204,121,0.12), inset 0 0 10px rgba(61,204,121,0.04);
-}
-
-[data-theme="cyberpunk"] .card {
-  box-shadow: 0 0 0 1px rgba(232,255,0,0.35);
-}
-
-[data-theme="cyberpunk"] body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent, transparent 2px,
-    rgba(255,255,255,0.02) 2px, rgba(255,255,255,0.02) 4px
-  );
-}
-
-[data-theme="dune"] .card {
-  box-shadow: inset 0 0 15px rgba(200,168,75,0.08);
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
-   Palette × Environment — the new presence theme system.
-   Hex values mirror prototypes/presence-orb.html PALETTES{} object.
-   ────────────────────────────────────────────────────────────────────────── */
-
-[data-palette="spice"] {
-  --primary:        #d4a040;   /* dusty amber */
-  --secondary:      #8a5a28;   /* bronze etching */
-  --accent:         #ffd28a;   /* bright spice */
-  --silhouette:     #e8c878;   /* sand-gold figure */
-  --vortex-deep:    #6e3a16;   /* burnt copper */
-  --error:          #c84030;
-  --bg-base:        #0d0805;
-  --fg:             #d9c4a0;
-  --line:           rgba(212, 168, 100, .22);
-  --panel-bg:       rgba(12, 8, 4, .58);
-}
-
-[data-palette="halo"] {
-  --primary:        #78c8e6;
-  --secondary:      #3a7090;
-  --accent:         #e6f6ff;
-  --silhouette:     #b0e0f0;
-  --vortex-deep:    #1a3a52;
-  --error:          #c84030;
-  --bg-base:        #060a0f;
-  --fg:             #d4e6f0;
-  --line:           rgba(120, 200, 230, .22);
-  --panel-bg:       rgba(4, 8, 14, .58);
-}
-
-body {
-  background: var(--bg-base);
-  color: var(--fg);
-  transition: background 1.0s ease, color 1.0s ease;
-}
-
-/* ─ Density / chrome tokens — overridden per environment ──────────────────── */
-:root {
-  --layout-pad:           20px;
-  --layout-gap:           14px;
-  --card-radius:          2px;
-  --card-border-width:    1px;
-  --card-border-style:    solid;
-  --card-shadow:          none;
-  --divider-style:        solid;
-  --type-tracking:        0.08em;
-  --type-case:            uppercase;
-  --sidebar-width:        260px;
-  --sidebar-bg-alpha:     0.88;
-
-  /* material grammar extensions */
-  --font-mood:            'Roboto', system-ui, sans-serif;
-  --card-texture:         none;
-  --btn-actuation:        translateY(0);
-  --btn-shadow:           none;
-}
-
-/* Atreides — noble, sparse, calm, raking light. Polished wood & brass. */
+/* ── Dune · Atreides — noble, sparse, raking sunset light ─── */
 body[data-env="atreides"] {
   --layout-pad:           28px;
   --layout-gap:           20px;
@@ -581,30 +49,28 @@ body[data-env="atreides"] {
   --type-tracking:        0.18em;
   --type-case:            uppercase;
   --sidebar-bg-alpha:     0.82;
-  --font-mood:            "Ibarra Real Nova", "Georgia", serif;
-  --card-texture:         linear-gradient(135deg, rgba(212,160,64,0.03) 0%, transparent 100%);
+  --card-texture:         linear-gradient(135deg, rgba(212,160,64,0.04) 0%, transparent 60%);
   --btn-actuation:        scale(0.98) translateY(1px);
   --btn-shadow:           inset 0 2px 4px rgba(0,0,0,0.3);
 }
 
-/* Harkonnen — dense, industrial, oppressive. Oil-slick iron & obsidian. */
+/* ── Dune · Harkonnen — dense, industrial, oppressive ─────── */
 body[data-env="harkonnen"] {
   --layout-pad:           12px;
   --layout-gap:           6px;
   --card-radius:          0px;
   --card-border-width:    1px;
-  --card-shadow:          inset 0 0 0 1px rgba(255,40,20,.12);
+  --card-shadow:          inset 0 0 0 1px rgba(255,40,20,.14);
   --divider-style:        solid;
   --type-tracking:        -0.02em;
   --type-case:            uppercase;
   --sidebar-bg-alpha:     0.95;
-  --font-mood:            "Inter", "Impact", sans-serif;
-  --card-texture:         repeating-linear-gradient(45deg, rgba(0,0,0,0.1) 0, rgba(0,0,0,0.1) 2px, transparent 2px, transparent 4px);
+  --card-texture:         repeating-linear-gradient(45deg, rgba(0,0,0,0.12) 0 2px, transparent 2px 4px);
   --btn-actuation:        translateY(2px);
   --btn-shadow:           0 0 0 2px var(--error);
 }
 
-/* Forerunner — pristine, hex-architectural, godlike. Ceramic & Hard-light. */
+/* ── Halo · Forerunner — pristine, hex-architectural ──────── */
 body[data-env="forerunner"] {
   --layout-pad:           24px;
   --layout-gap:           18px;
@@ -615,13 +81,12 @@ body[data-env="forerunner"] {
   --type-tracking:        0.12em;
   --type-case:            none;
   --sidebar-bg-alpha:     0.78;
-  --font-mood:            "Outfit", "Lexend", sans-serif;
   --card-texture:         radial-gradient(circle at 50% 50%, rgba(120,200,230,0.05) 0%, transparent 100%);
   --btn-actuation:        translateY(-1px);
   --btn-shadow:           0 0 15px var(--accent);
 }
 
-/* UNSC — tactical, hard-edged, functional. Olive steel & amber phosphor. */
+/* ── Halo · UNSC — tactical, hard-edged, military hangar ──── */
 body[data-env="unsc"] {
   --layout-pad:           14px;
   --layout-gap:           8px;
@@ -632,81 +97,433 @@ body[data-env="unsc"] {
   --type-tracking:        0.06em;
   --type-case:            uppercase;
   --sidebar-bg-alpha:     0.92;
-  --font-mood:            "JetBrains Mono", "Courier New", monospace;
-  --card-texture:         linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 50%), repeating-linear-gradient(0deg, rgba(240,140,50,0.02) 0 1px, transparent 1px 2px);
+  --card-texture:
+    linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 50%),
+    repeating-linear-gradient(0deg, rgba(240,140,50,0.02) 0 1px, transparent 1px 2px);
   --btn-actuation:        translateY(1px);
   --btn-shadow:           2px 2px 0 var(--accent);
 }
 
-/* ─ Environment backdrops — each is a clearly different ROOM ──────────── */
+/* ── MV · Sacred Spires — Escher impossibility, vertical ──── */
+body[data-env="spires"] {
+  --layout-pad:           26px;
+  --layout-gap:           20px;
+  --card-radius:          8px;
+  --card-border-width:    1px;
+  --card-shadow:          0 0 30px rgba(200,180,220,.16);
+  --divider-style:        dotted;
+  --type-tracking:        0.04em;
+  --type-case:            none;
+  --sidebar-bg-alpha:     0.74;
+  --card-texture:
+    linear-gradient(60deg,  rgba(200,180,220,0.06) 0%, transparent 70%),
+    linear-gradient(-60deg, rgba(160,160,200,0.04) 0%, transparent 70%);
+  --btn-actuation:        scale(0.97);
+  --btn-shadow:           0 0 12px rgba(200,180,220,.45);
+}
+
+/* ── MV · Garden Pavilion — horizontal organic, warm low light */
+body[data-env="garden"] {
+  --layout-pad:           22px;
+  --layout-gap:           16px;
+  --card-radius:          16px;
+  --card-border-width:    0px;
+  --card-shadow:          0 8px 24px rgba(180,90,30,.22);
+  --divider-style:        solid;
+  --type-tracking:        0.06em;
+  --type-case:            none;
+  --sidebar-bg-alpha:     0.84;
+  --card-texture:         radial-gradient(ellipse at 30% 80%, rgba(255,180,120,0.08) 0%, transparent 65%);
+  --btn-actuation:        translateY(1px) scale(0.99);
+  --btn-shadow:           0 4px 12px rgba(180,90,30,.35);
+}
+
+/* ── Night City · Corpo Plaza — clean brutalist, chrome ───── */
+body[data-env="corpo"] {
+  --layout-pad:           16px;
+  --layout-gap:           10px;
+  --card-radius:          1px;
+  --card-border-width:    1px;
+  --card-shadow:          0 0 0 1px rgba(200,200,220,.20), 0 4px 24px rgba(255,60,140,.10);
+  --divider-style:        solid;
+  --type-tracking:        0.20em;
+  --type-case:            uppercase;
+  --sidebar-bg-alpha:     0.96;
+  --card-texture:         linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 30%);
+  --btn-actuation:        translateY(1px);
+  --btn-shadow:           0 0 12px rgba(255,60,140,.55);
+}
+
+/* ── Night City · Pacifica Street — decayed neon, scanline ── */
+body[data-env="pacifica"] {
+  --layout-pad:           10px;
+  --layout-gap:           6px;
+  --card-radius:          0px;
+  --card-border-width:    1px;
+  --card-shadow:          4px 4px 0 rgba(220,180,40,.30);
+  --divider-style:        dashed;
+  --type-tracking:        0.02em;
+  --type-case:            uppercase;
+  --sidebar-bg-alpha:     0.92;
+  --card-texture:
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(220,200,80,.04) 2px 3px),
+    linear-gradient(135deg, rgba(255,0,255,0.04) 0%, transparent 60%);
+  --btn-actuation:        translateY(2px) skewX(-1deg);
+  --btn-shadow:           2px 2px 0 var(--primary);
+}
+
+
+/* ============================================================
+   AXIS 2 (cont.) — ENVIRONMENT BACKDROPS
+   Each backdrop should read as a different ROOM.
+   Painted on body::before at z-index 0.
+   ============================================================ */
+
 body::before {
-  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
   opacity: 1.0;
   transition: background 1.2s ease, opacity 1.2s ease;
 }
 
-/* ── Spice · Atreides — sandstone palace, golden hour ─────────────────── */
+/* Atreides — sandstone palace, golden hour, stone block courses */
 body[data-env="atreides"]::before {
   background:
-    /* DOMINANT directional sunset wash from upper-right */
     linear-gradient(225deg, rgba(255,180,90,.42) 0%, rgba(255,180,90,.08) 28%, transparent 50%),
-    /* Floor-line horizon — warm ground glow */
-    linear-gradient(0deg, rgba(180,90,30,.20) 0%, transparent 30%),
-    /* Chunky stone block courses — visible mortar between */
+    linear-gradient(0deg,   rgba(180,90,30,.20) 0%, transparent 30%),
     repeating-linear-gradient(0deg,  rgba(40,22,10,.78) 0 5px, transparent 5px 110px),
     repeating-linear-gradient(90deg, rgba(40,22,10,.62) 0 5px, transparent 5px 220px),
-    /* Base wash — warm umber, lighter than Harkonnen */
     linear-gradient(180deg, rgba(60,32,14,.55) 0%, rgba(18,8,4,.78) 100%);
 }
 
-/* ── Spice · Harkonnen — industrial dreadnought, oppressive crimson ───── */
+/* Harkonnen — dreadnought, oil-black + crimson underlight, ribs */
 body[data-env="harkonnen"]::before {
   background:
-    /* Strong crimson underlight */
     radial-gradient(ellipse 110% 35% at 50% 102%, rgba(220,40,20,.40) 0%, transparent 55%),
-    /* Cold pale flicker from above */
-    radial-gradient(ellipse 60% 30% at 50% -5%, rgba(120,140,160,.10) 0%, transparent 60%),
-    /* Tight vertical ribs — dense brutalist pattern */
+    radial-gradient(ellipse 60%  30% at 50% -5%,  rgba(120,140,160,.10) 0%, transparent 60%),
     repeating-linear-gradient(90deg, rgba(0,0,0,.92) 0 6px, transparent 6px 36px),
-    /* Faint horizontal banding for industrial seam-line feel */
-    repeating-linear-gradient(0deg, transparent 0 220px, rgba(30,15,8,.40) 220px 224px),
-    /* Pitch-black base */
+    repeating-linear-gradient(0deg,  transparent 0 220px, rgba(30,15,8,.40) 220px 224px),
     linear-gradient(180deg, rgba(3,5,8,.65) 0%, rgba(0,0,0,.96) 100%);
 }
 
-/* ── Halo · Forerunner — pale ceramic hard-light cathedral ────────────── */
+/* Forerunner — pale ceramic cathedral, celestial top-light, hex pattern */
 body[data-env="forerunner"]::before {
   background:
-    /* Bright celestial top-light, like a skylight */
     radial-gradient(ellipse 70% 75% at 50% -10%, rgba(190,235,255,.55) 0%, rgba(120,200,230,.18) 25%, transparent 55%),
-    /* Vertical light shafts — like sun through structural slots */
     repeating-linear-gradient(90deg, transparent 0 280px, rgba(180,230,250,.16) 280px 286px),
-    /* Hex pattern - LARGE and crisp */
     repeating-linear-gradient(60deg,  transparent 0 130px, rgba(130,200,230,.32) 130px 134px),
     repeating-linear-gradient(-60deg, transparent 0 130px, rgba(130,200,230,.32) 130px 134px),
-    /* Cool ceramic-pale base */
     linear-gradient(180deg, rgba(28,72,98,.50) 0%, rgba(3,10,20,.85) 100%);
 }
 
-/* ── Halo · UNSC — military hangar, harsh tactical amber on steel ─────── */
+/* UNSC — military hangar, amber tactical corners, steel deck plates */
 body[data-env="unsc"]::before {
   background:
-    /* Large tactical amber corner floodlights */
-    radial-gradient(circle 280px at 6% 88%, rgba(255,140,40,.55) 0%, transparent 65%),
+    radial-gradient(circle 280px at 6%  88%, rgba(255,140,40,.55) 0%, transparent 65%),
     radial-gradient(circle 280px at 94% 88%, rgba(255,140,40,.55) 0%, transparent 65%),
-    /* Horizontal amber tactical strip lower-third */
     linear-gradient(0deg, rgba(240,140,50,.18) 0 80px, transparent 100px),
-    /* Cool overhead bay light */
     radial-gradient(ellipse 80% 25% at 50% -5%, rgba(140,170,200,.20) 0%, transparent 55%),
-    /* Steel deck plating — LARGE square plates */
     repeating-linear-gradient(0deg,  rgba(60,65,72,.82) 0 6px, transparent 6px 92px),
     repeating-linear-gradient(90deg, rgba(60,65,72,.65) 0 6px, transparent 6px 92px),
-    /* Dark steel base */
     linear-gradient(180deg, rgba(12,16,22,.60) 0%, rgba(0,0,0,.92) 100%);
 }
 
-/* Vignette — concentrates attention on the content, lets the room breathe at edges */
+/* Sacred Spires — Escher isometric, pastel cool, impossible stairs */
+body[data-env="spires"]::before {
+  background:
+    radial-gradient(ellipse 70% 55% at 50% -20%, rgba(200,180,220,.35) 0%, transparent 55%),
+    repeating-linear-gradient(90deg, transparent 0 200px, rgba(180,160,200,.10) 200px 208px),
+    repeating-linear-gradient(60deg,  transparent 0 80px, rgba(120,100,160,.20) 80px 84px),
+    repeating-linear-gradient(-60deg, transparent 0 80px, rgba(120,100,160,.20) 80px 84px),
+    linear-gradient(180deg, rgba(48,32,72,.55) 0%, rgba(12,8,24,.85) 100%);
+}
+
+/* Garden Pavilion — horizontal terraces, low warm sun, organic */
+body[data-env="garden"]::before {
+  background:
+    radial-gradient(ellipse 80% 30% at 50% 70%, rgba(255,180,120,.32) 0%, transparent 60%),
+    repeating-linear-gradient(0deg, rgba(80,40,20,.32) 0 4px, transparent 4px 70px),
+    repeating-linear-gradient(30deg, transparent 0 140px, rgba(200,120,80,.10) 140px 144px),
+    linear-gradient(180deg, rgba(60,30,18,.45) 0%, rgba(14,8,5,.80) 100%);
+}
+
+/* Corpo Plaza — clean brutalist, chrome verticals, magenta+cyan neon */
+body[data-env="corpo"]::before {
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 65%, rgba(255,60,140,.28) 0%, transparent 60%),
+    linear-gradient(0deg, rgba(0,200,255,.18) 0 50px, transparent 80px),
+    repeating-linear-gradient(90deg, rgba(180,180,200,.22) 0 2px, transparent 2px 140px),
+    repeating-linear-gradient(0deg,  transparent 0 320px, rgba(220,80,150,.10) 320px 322px),
+    linear-gradient(180deg, rgba(8,8,18,.65) 0%, rgba(2,2,8,.95) 100%);
+}
+
+/* Pacifica Street — decayed neon, scanlines, yellow flicker, soot */
+body[data-env="pacifica"]::before {
+  background:
+    radial-gradient(circle 320px at 18% 22%, rgba(220,180,40,.30) 0%, transparent 65%),
+    radial-gradient(circle 240px at 82% 78%, rgba(180,40,180,.22) 0%, transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(220,200,80,.04) 2px 4px),
+    repeating-linear-gradient(90deg, transparent 0 180px, rgba(80,60,40,.15) 180px 184px, transparent 184px 360px),
+    linear-gradient(180deg, rgba(20,18,10,.55) 0%, rgba(4,4,2,.95) 100%);
+}
+
+/* Vignette — concentrates attention on content, lets room breathe at edges */
 body::after {
-  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
   background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,.45) 100%);
+}
+
+
+/* ============================================================
+   AXIS 3 — MOOD (color palette only)
+   ────────────────────────────────────────────────────────────
+   Each mood sets exactly:
+     --bg-base   — body base color
+     --fg        — primary text
+     --primary   — interactive primary
+     --secondary — interactive secondary
+     --accent    — highlight
+     --line      — borders, dividers
+     --error     — destructive
+     --panel-bg  — translucent panel fill (used by some legacy CSS)
+     --silhouette, --vortex-deep — used by the presence-orb prototype
+   No density, no font, no backdrop. Color only.
+   ============================================================ */
+
+/* ── Dune · Atreides ─────────────────────────────────────── */
+[data-mood="caladan"] {
+  --bg-base:     #1a1209;
+  --fg:          #f4e6c8;
+  --primary:     #deb651;
+  --secondary:   #8a5a28;
+  --accent:      #ffd28a;
+  --line:        rgba(212,168,100,.22);
+  --error:       #c84030;
+  --panel-bg:    rgba(20,12,6,.58);
+  --silhouette:  #e8c878;
+  --vortex-deep: #6e3a16;
+}
+[data-mood="spice-hall"] {
+  --bg-base:     #0b0805;
+  --fg:          #fff4e0;
+  --primary:     #deb651;
+  --secondary:   #de6d33;
+  --accent:      #c29a3e;
+  --line:        rgba(222,182,81,.26);
+  --error:       #b83321;
+  --panel-bg:    rgba(12,8,4,.62);
+  --silhouette:  #f3d896;
+  --vortex-deep: #6e3a16;
+}
+
+/* ── Dune · Harkonnen ────────────────────────────────────── */
+[data-mood="giedi"] {
+  --bg-base:     #050505;
+  --fg:          #bcc0c4;
+  --primary:     #7a8390;
+  --secondary:   #3a4048;
+  --accent:      #aab0b8;
+  --line:        rgba(140,150,160,.20);
+  --error:       #c84030;
+  --panel-bg:    rgba(0,0,0,.78);
+  --silhouette:  #9ca3ad;
+  --vortex-deep: #1a1c20;
+}
+[data-mood="bloodlight"] {
+  --bg-base:     #140c0b;
+  --fg:          #f2e8e6;
+  --primary:     #c53a1f;
+  --secondary:   #a02b15;
+  --accent:      #8b2211;
+  --line:        rgba(197,58,31,.28);
+  --error:       #ef4444;
+  --panel-bg:    rgba(20,12,11,.66);
+  --silhouette:  #d96a4a;
+  --vortex-deep: #3e1810;
+}
+
+/* ── Halo · Forerunner ───────────────────────────────────── */
+[data-mood="hard-light"] {
+  --bg-base:     #050c14;
+  --fg:          #e6f7ff;
+  --primary:     #00e5ff;
+  --secondary:   #0099ff;
+  --accent:      #33ccff;
+  --line:        rgba(0,229,255,.22);
+  --error:       #e54b4b;
+  --panel-bg:    rgba(8,18,31,.62);
+  --silhouette:  #b0e0f0;
+  --vortex-deep: #1a3a52;
+}
+[data-mood="ceramic-veil"] {
+  --bg-base:     #0a1820;
+  --fg:          #e8f4f8;
+  --primary:     #a8e0ff;
+  --secondary:   #5a9fc0;
+  --accent:      #d0eaff;
+  --line:        rgba(168,224,255,.20);
+  --error:       #e07868;
+  --panel-bg:    rgba(10,24,32,.60);
+  --silhouette:  #c8e8f8;
+  --vortex-deep: #1a4060;
+}
+
+/* ── Halo · UNSC ─────────────────────────────────────────── */
+[data-mood="combat-steel"] {
+  --bg-base:     #0c1116;
+  --fg:          #cdd6df;
+  --primary:     #f08c32;
+  --secondary:   #586878;
+  --accent:      #ffa850;
+  --line:        rgba(240,140,50,.24);
+  --error:       #d04030;
+  --panel-bg:    rgba(12,17,22,.66);
+  --silhouette:  #b8c0c8;
+  --vortex-deep: #2a3038;
+}
+[data-mood="night-vision"] {
+  --bg-base:     #050805;
+  --fg:          #d9ead3;
+  --primary:     #3dcc79;
+  --secondary:   #68d999;
+  --accent:      #2a8e54;
+  --line:        rgba(61,204,121,.24);
+  --error:       #ff4d4d;
+  --panel-bg:    rgba(5,10,5,.66);
+  --silhouette:  #80e0a0;
+  --vortex-deep: #102a18;
+}
+
+/* ── Monument Valley · Sacred Spires ─────────────────────── */
+[data-mood="sacred"] {
+  --bg-base:     #1a1a2e;
+  --fg:          #e8e8f0;
+  --primary:     #a0a8c0;
+  --secondary:   #7080a0;
+  --accent:      #c0d0e0;
+  --line:        rgba(180,180,210,.22);
+  --error:       #c87878;
+  --panel-bg:    rgba(26,26,46,.62);
+  --silhouette:  #c8c8e0;
+  --vortex-deep: #3a3a60;
+}
+[data-mood="daybreak-temple"] {
+  --bg-base:     #1c2a3a;
+  --fg:          #dcecfc;
+  --primary:     #7aa4cc;
+  --secondary:   #6890a4;
+  --accent:      #9fc4e0;
+  --line:        rgba(122,164,204,.22);
+  --error:       #cc6868;
+  --panel-bg:    rgba(28,42,58,.62);
+  --silhouette:  #b8d0e8;
+  --vortex-deep: #2a4a6a;
+}
+[data-mood="twilight-spires"] {
+  --bg-base:     #1a1025;
+  --fg:          #f0eaf5;
+  --primary:     #b88abf;
+  --secondary:   #8a6090;
+  --accent:      #c8a3d1;
+  --line:        rgba(184,138,191,.22);
+  --error:       #c96b6b;
+  --panel-bg:    rgba(26,16,37,.62);
+  --silhouette:  #d8b0e0;
+  --vortex-deep: #3a1a45;
+}
+
+/* ── Monument Valley · Garden Pavilion ───────────────────── */
+[data-mood="pastel-day"] {
+  --bg-base:     #1f1812;
+  --fg:          #f4e8d8;
+  --primary:     #d8a878;
+  --secondary:   #a87850;
+  --accent:      #e8c898;
+  --line:        rgba(216,168,120,.22);
+  --error:       #c86848;
+  --panel-bg:    rgba(31,24,18,.62);
+  --silhouette:  #e8c898;
+  --vortex-deep: #4a2c1a;
+}
+[data-mood="dusk-pavilion"] {
+  --bg-base:     #241510;
+  --fg:          #f5d8c8;
+  --primary:     #d66c59;
+  --secondary:   #e08573;
+  --accent:      #febca6;
+  --line:        rgba(214,108,89,.24);
+  --error:       #d04030;
+  --panel-bg:    rgba(36,21,16,.62);
+  --silhouette:  #f0a890;
+  --vortex-deep: #582818;
+}
+
+/* ── Night City · Corpo Plaza ────────────────────────────── */
+[data-mood="chrome"] {
+  --bg-base:     #0e0e14;
+  --fg:          #e0e0ec;
+  --primary:     #c8c8d4;
+  --secondary:   #ff3c8c;
+  --accent:      #80e0ff;
+  --line:        rgba(200,200,220,.22);
+  --error:       #ff4060;
+  --panel-bg:    rgba(14,14,20,.70);
+  --silhouette:  #d8d8e4;
+  --vortex-deep: #1c1c2c;
+}
+[data-mood="executive"] {
+  --bg-base:     #101010;
+  --fg:          #e0d8c0;
+  --primary:     #d4b478;
+  --secondary:   #7c6a44;
+  --accent:      #f0d088;
+  --line:        rgba(212,180,120,.22);
+  --error:       #c84040;
+  --panel-bg:    rgba(16,16,16,.70);
+  --silhouette:  #e8c890;
+  --vortex-deep: #2c2418;
+}
+
+/* ── Night City · Pacifica Street ────────────────────────── */
+[data-mood="glitch-street"] {
+  --bg-base:     #0a0a05;
+  --fg:          #fdffe6;
+  --primary:     #e8ff00;
+  --secondary:   #ff00ff;
+  --accent:      #ccff00;
+  --line:        rgba(232,255,0,.30);
+  --error:       #ff003c;
+  --panel-bg:    rgba(10,10,5,.78);
+  --silhouette:  #f0ff80;
+  --vortex-deep: #2c2c00;
+}
+[data-mood="smoke"] {
+  --bg-base:     #0c0c08;
+  --fg:          #d0cc94;
+  --primary:     #bcaa45;
+  --secondary:   #6c6850;
+  --accent:      #dcc060;
+  --line:        rgba(188,170,69,.22);
+  --error:       #c84030;
+  --panel-bg:    rgba(12,12,8,.72);
+  --silhouette:  #e8d878;
+  --vortex-deep: #2c2818;
+}
+
+
+/* ============================================================
+   BODY APPLICATION — picks up bg-base + fg from active mood
+   ============================================================ */
+
+body {
+  background: var(--bg-base);
+  color: var(--fg);
+  transition: background 1.0s ease, color 1.0s ease;
 }

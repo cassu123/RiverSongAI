@@ -30,6 +30,7 @@ from .broadcast import router as broadcast_router
 from .rover import router as rover_router
 from .vault import router as vault_router
 from .pulse import router as pulse_router
+from .voice_id import router as voice_id_router
 from . import n8n_webhooks
 from .legal import router as legal_router
 
@@ -66,6 +67,7 @@ __all__ = [
     "rover_router",
     "vault_router",
     "pulse_router",
+    "voice_id_router",
     "n8n_webhooks",
     "legal_router",
 ]

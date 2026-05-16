@@ -14,6 +14,45 @@ River Song AI is **live in production** at `https://riversongai.com`.
 
 ---
 
+## In Flight (2026-05-16) — read this first
+
+Two parallel tracks are open. Do not start new work until you've read both.
+
+### Track A — Phase 2 build (Voice ID + camera barcode)
+
+Plan file: `RIVER_SONG_BUILD_PLAN_2.md`. Sections **A and B only** are in scope for now; C (UPC bulk) and D (Walmart API) are gated until the user green-lights them.
+
+- Brief was handed to **Gemini** to do the heavy lifting. Gemini's working tree shows:
+  - New: `api/routes/voice_id.py`, `providers/voice_id/`, `frontend/src/components/BarcodeScanner.{jsx,css}`
+  - Modified: `api/routes/__init__.py`, `core/conversation_loop.py`, `main.py`, `requirements.txt`, `frontend/package.json`, `frontend/src/pages/CulinaryPage.jsx`, `frontend/src/pages/InventoryPage.jsx`, `frontend/src/pages/SettingsPage.jsx`
+  - `voice_id_events` table added to `sqlite_store.py`
+- **Not yet committed.** Before committing, walk the §A.10 + §B.6 acceptance checks in the build plan.
+- Resemblyzer is the speaker-ID library; `@zxing/browser` + `@zxing/library` for barcode. User is on Python 3.14 — pip resolution may need attention.
+
+### Track B — UI three-axis system (built, but chrome rework still open)
+
+The presence theming was refactored from a single legacy theme picker into three orthogonal axes:
+
+- **Universe** (`dune` | `halo` | `mv` | `nightcity`) — drives `--font-mood` + which envs are valid
+- **Environment** (8 total: `atreides`, `harkonnen`, `forerunner`, `unsc`, `spires`, `garden`, `corpo`, `pacifica`) — drives density tokens, card material grammar, backdrop, logo morph
+- **Mood** (~16 color palettes) — color only; subsumes the legacy 8-theme picker (`halo`/`crimson-dark`/`combat`/`midnight-violet`/`amber`/`arctic`/`cyberpunk`/`dune` are now distributed across envs as moods)
+
+**Shipped, not committed:**
+- `providers/memory/sqlite_store.py` — new `universe`, `mood` columns + one-time idempotent migration that maps legacy `theme`+`palette` → `(universe, environment, mood)` triple
+- `api/routes/auth.py` — `ProfilePatch` accepts the new triple; `UNIVERSE_ENV_PAIRS` + `ENV_MOOD_PAIRS` validators; legacy `theme`/`palette` fields still accepted and translated
+- `frontend/src/styles/themes.css` — complete rewrite. 8 environments × 2+ moods, 8 distinct backdrops, density+material tokens per env. Legacy `[data-theme="*"]` blocks deleted.
+- `frontend/src/styles/global.css` — alias chain (`--bg-card`, `--bg-panel`, `--md-surface*`) now translucent so every page's backdrop bleeds through without per-page edits
+- `frontend/src/App.jsx` — state collapsed to `{universe, environment, mood}` with cascading setters + legacy-theme client-side migration
+- `frontend/src/pages/ProfilePage.jsx` — three-step nested picker (UNIVERSE → ENVIRONMENT → MOOD). Legacy "INTERFACE SKIN" 8-theme grid removed.
+- `frontend/src/components/RsMark.{jsx,css}` — morphing logo component; 8 CSS-only env treatments. Sidebar + mobile topbar swapped from text "RS" to `<RsMark mark="mono">`.
+- `frontend/src/components/RiverSong.jsx` — orb reads `data-universe` (with `data-palette` fallback); knows all 4 universes
+
+**Backend on `:8000` likely needs a restart** to pick up the new validators + columns. Frontend HMR has the rest live.
+
+**Still open — the chrome rework.** User feedback: the three-axis system changed colors/materials/fonts/density but the *chrome itself* (sidebar + main + card grid) is still a SaaS dashboard. They want a layout that doesn't look like a website — Kimi-clean, futuristic without cluttered fake-JARVIS charts/graphs, with the chrome physically *rearranging per environment* (nav position, presence orb position, page frame shape) so each room embodies its universe. Sidebar should die. **This conversation has moved to the Claude/Gemini chat app** for faster visual iteration with screenshots and references. See the prompt at `RIVER_SONG_UI_BRAINSTORM.md` (top-level).
+
+---
+
 ## Machines
 
 ### Chromebook (dev)

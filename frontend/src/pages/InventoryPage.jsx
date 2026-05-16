@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
+import BarcodeScanner from '../components/BarcodeScanner'
 import './InventoryPage.css'
 
 function safeFetch(path, opts = {}) {
@@ -448,13 +449,14 @@ function ItemDetail({ item, onEdit, onDelete, onClose, token }) {
 // ─── EIN scan bar ────────────────────────────────────────────────────────────
 
 function ScanBar({ onResult }) {
-  const [ein,      setEin]      = useState('')
-  const [scanning, setScanning] = useState(false)
-  const [error,    setError]    = useState('')
+  const [ein,        setEin]      = useState('')
+  const [scanning,   setScanning] = useState(false)
+  const [showCamera, setShowCamera] = useState(false)
+  const [error,      setError]    = useState('')
   const { token } = useAuth()
 
   const scan = async (e) => {
-    e.preventDefault()
+    if (e) e.preventDefault()
     if (!ein.trim()) return
     setScanning(true); setError('')
     try {
@@ -472,19 +474,62 @@ function ScanBar({ onResult }) {
     }
   }
 
+  // Effect to auto-trigger scan when ein is populated from camera
+  useEffect(() => {
+    if (ein.trim() && !scanning) {
+      scan()
+    }
+  }, [ein]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
-    <form className="inv-scan-bar" onSubmit={scan}>
-      <input
-        className="inv-input inv-scan-input"
-        placeholder="Scan or type EIN…"
-        value={ein}
-        onChange={e => setEin(e.target.value)}
-      />
-      <button className="inv-btn" type="submit" disabled={scanning}>
-        {scanning ? '…' : <IconScan />}
-      </button>
-      {error && <span className="inv-scan-error">{error}</span>}
-    </form>
+    <>
+      {showCamera && (
+        <BarcodeScanner
+          onDetected={(val) => {
+            setEin(val)
+            setShowCamera(false)
+          }}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
+      <form className="inv-scan-bar" onSubmit={scan}>
+        <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
+          <input
+            className="inv-input inv-scan-input"
+            placeholder="Scan or type EIN…"
+            value={ein}
+            onChange={e => setEin(e.target.value)}
+            style={{ paddingRight: 44 }}
+          />
+          <button
+            type="button"
+            className="inv-btn-cam"
+            onClick={() => setShowCamera(true)}
+            title="Scan with camera"
+            style={{
+              position: 'absolute',
+              right: 2,
+              top: 2,
+              bottom: 2,
+              width: 40,
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--md-outline)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer'
+            }}
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 20 }}>photo_camera</span>
+          </button>
+        </div>
+        <button className="inv-btn" type="submit" disabled={scanning}>
+          {scanning ? '…' : <IconScan />}
+        </button>
+        {error && <span className="inv-scan-error">{error}</span>}
+      </form>
+    </>
   )
 }
 

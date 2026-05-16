@@ -198,3 +198,6 @@ NOTES/
 
 # Ignore Claude config
 CLAUDE.md
+
+# Voice biometric data — local only, never sync
+data/voice_prints/

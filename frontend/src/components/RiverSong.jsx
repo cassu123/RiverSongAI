@@ -5,23 +5,36 @@ import * as THREE from 'three'
 
 // ─ Constants pulled verbatim from prototypes/presence-orb.html ─────────────
 const PALETTES = {
+  // Legacy "spice" still resolves to the Dune amber for backward compatibility
   spice: {
-    warm:       0xd4a040,  // dusty amber
-    deep:       0x6e3a16,  // burnt copper
-    silhouette: 0xe8c878,  // soft sand-gold
-    accent:     0xffd28a,  // bright spice
-    glyph:      0x8a5a28,  // bronze etching
-    bloom:      0.55,
-    glyphStyleSeed: 1.0,
+    warm:       0xd4a040, deep: 0x6e3a16, silhouette: 0xe8c878,
+    accent:     0xffd28a, glyph: 0x8a5a28, bloom: 0.55, glyphStyleSeed: 1.0,
+  },
+  dune: {
+    warm:       0xd4a040, deep: 0x6e3a16, silhouette: 0xe8c878,
+    accent:     0xffd28a, glyph: 0x8a5a28, bloom: 0.55, glyphStyleSeed: 1.0,
   },
   halo: {
-    warm:       0x78c8e6,  // pale cyan
-    deep:       0x1a3a52,  // navy
-    silhouette: 0xb0e0f0,  // soft cyan
-    accent:     0xe6f6ff,  // bright platinum
-    glyph:      0x3a7090,  // muted teal
-    bloom:      0.50,
-    glyphStyleSeed: 0.0,
+    warm:       0x78c8e6, deep: 0x1a3a52, silhouette: 0xb0e0f0,
+    accent:     0xe6f6ff, glyph: 0x3a7090, bloom: 0.50, glyphStyleSeed: 0.0,
+  },
+  mv: {
+    warm:       0xb0a0c8,  // pastel violet-grey
+    deep:       0x3a2a55,  // deep indigo
+    silhouette: 0xd0c0e0,  // pale lilac
+    accent:     0xeae0f0,  // chalk pastel
+    glyph:      0x7a6090,  // muted plum
+    bloom:      0.45,
+    glyphStyleSeed: 0.5,
+  },
+  nightcity: {
+    warm:       0xff3c8c,  // hot magenta
+    deep:       0x0a0a16,  // pitch
+    silhouette: 0xc8c8d4,  // chrome
+    accent:     0x80e0ff,  // cyan signage
+    glyph:      0xe8ff00,  // glitch yellow
+    bloom:      0.65,
+    glyphStyleSeed: 0.25,
   },
 };
 
@@ -187,15 +200,21 @@ function useSilhouettePositions() {
   }, [])
 }
 
-// ─ Read CSS var for palette/env (data-palette on documentElement) ──────────
+// ─ Read CSS var for palette/env (data-universe on documentElement) ─────────
+// Three-axis system uses data-universe; falls back to legacy data-palette
+// so the orb keeps rendering during the cutover.
 function useCurrentPalette() {
-  const [palette, setPalette] = useState(() =>
-    document.documentElement.dataset.palette || 'spice')
+  const pickKey = () =>
+    document.documentElement.dataset.universe
+    || document.documentElement.dataset.palette
+    || 'dune'
+  const [palette, setPalette] = useState(pickKey)
   useEffect(() => {
-    const obs = new MutationObserver(() => {
-      setPalette(document.documentElement.dataset.palette || 'spice')
+    const obs = new MutationObserver(() => setPalette(pickKey()))
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-universe', 'data-palette'],
     })
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-palette'] })
     return () => obs.disconnect()
   }, [])
   return palette

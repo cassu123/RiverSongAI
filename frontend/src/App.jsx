@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react'
 import { useAuth }        from './context/AuthContext.jsx'
 import Sidebar            from './components/Sidebar.jsx'
 import ErrorBoundary      from './components/ErrorBoundary.jsx'
+import RsMark             from './components/RsMark.jsx'
 
 // Lazy load pages
 const LoginPage          = lazy(() => import('./pages/LoginPage.jsx'))
@@ -41,6 +42,37 @@ function save(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)) } catch {}
 }
 
+// ── Three-axis presence system ──────────────────────────────────────────────
+// universe -> environment -> mood. Each pair below is the canonical default
+// when an axis up the chain changes. Also used to validate persisted state.
+const UNIVERSE_ENVS = {
+  dune:      ['atreides',   'harkonnen'],
+  halo:      ['forerunner', 'unsc'],
+  mv:        ['spires',     'garden'],
+  nightcity: ['corpo',      'pacifica'],
+}
+const ENV_MOODS = {
+  atreides:   ['caladan', 'spice-hall'],
+  harkonnen:  ['giedi', 'bloodlight'],
+  forerunner: ['hard-light', 'ceramic-veil'],
+  unsc:       ['combat-steel', 'night-vision'],
+  spires:     ['sacred', 'daybreak-temple', 'twilight-spires'],
+  garden:     ['pastel-day', 'dusk-pavilion'],
+  corpo:      ['chrome', 'executive'],
+  pacifica:   ['glitch-street', 'smoke'],
+}
+// Legacy theme key -> {universe, environment, mood} for one-time client-side migration.
+const LEGACY_THEME_MAP = {
+  'halo':            { universe: 'halo',      environment: 'forerunner', mood: 'hard-light' },
+  'crimson-dark':    { universe: 'dune',      environment: 'harkonnen',  mood: 'bloodlight' },
+  'combat':          { universe: 'halo',      environment: 'unsc',       mood: 'night-vision' },
+  'midnight-violet': { universe: 'mv',        environment: 'spires',     mood: 'twilight-spires' },
+  'amber':           { universe: 'mv',        environment: 'garden',     mood: 'dusk-pavilion' },
+  'arctic':          { universe: 'mv',        environment: 'spires',     mood: 'daybreak-temple' },
+  'cyberpunk':       { universe: 'nightcity', environment: 'pacifica',   mood: 'glitch-street' },
+  'dune':            { universe: 'dune',      environment: 'atreides',   mood: 'spice-hall' },
+}
+
 export default function App() {
   const { user, token, loading, logout, setupRequired } = useAuth()
   const [authView,      setAuthView]      = useState('login') // 'login' | 'signup'
@@ -48,12 +80,12 @@ export default function App() {
   const [currentPage,   setCurrentPage]   = useState(() => load('rs-page', 'speak'))
   const [adminMode,     setAdminMode]     = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const themeKey = user ? `rs-theme:${user.id}` : 'rs-theme'
-  const [theme,       setTheme]       = useState(() => load(user ? `rs-theme:${user.id}` : 'rs-theme', 'halo'))
-  const paletteKey = user ? `rs-palette:${user.id}` : 'rs-palette'
-  const envKey     = user ? `rs-env:${user.id}`     : 'rs-env'
-  const [palette,     setPalette]     = useState(() => load(paletteKey, 'spice'))
+  const universeKey   = user ? `rs-universe:${user.id}`   : 'rs-universe'
+  const envKey        = user ? `rs-env:${user.id}`        : 'rs-env'
+  const moodKey       = user ? `rs-mood:${user.id}`       : 'rs-mood'
+  const [universe,    setUniverse]    = useState(() => load(universeKey, 'dune'))
   const [environment, setEnvironment] = useState(() => load(envKey, 'atreides'))
+  const [mood,        setMood]        = useState(() => load(moodKey, 'caladan'))
 
   const [profile,     setProfile]     = useState(() => {
     if (user) return { displayName: user.display_name, username: user.email, birthday: '' }
@@ -63,36 +95,21 @@ export default function App() {
   useEffect(() => { save('rs-page',    currentPage) }, [currentPage])
   useEffect(() => { save('rs-admin',   adminMode)   }, [adminMode])
   useEffect(() => { save('rs-profile', profile)     }, [profile])
-  useEffect(() => {
-    save(themeKey, theme)
-    document.documentElement.setAttribute('data-theme', theme)
-    // Push theme to server so Android app and other devices stay in sync
-    if (user) {
-      const token = load('rs-auth-token', null)
-      if (token) {
-        fetch('/api/auth/profile', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ theme }),
-        }).catch(() => {}) // silent — local is already applied
-      }
-    }
-  }, [theme]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    save(paletteKey, palette)
-    document.documentElement.setAttribute('data-palette', palette)
+    save(universeKey, universe)
+    document.documentElement.setAttribute('data-universe', universe)
     if (user) {
       const token = load('rs-auth-token', null)
       if (token) {
         fetch('/api/auth/profile', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ palette }),
+          body: JSON.stringify({ universe }),
         }).catch(() => {})
       }
     }
-  }, [palette]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [universe]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     save(envKey, environment)
@@ -110,13 +127,28 @@ export default function App() {
   }, [environment]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    document.documentElement.setAttribute('data-palette', palette)
+    save(moodKey, mood)
+    document.documentElement.setAttribute('data-mood', mood)
+    if (user) {
+      const token = load('rs-auth-token', null)
+      if (token) {
+        fetch('/api/auth/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ mood }),
+        }).catch(() => {})
+      }
+    }
+  }, [mood]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-universe', universe)
     document.documentElement.setAttribute('data-env', environment)
+    document.documentElement.setAttribute('data-mood', mood)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync display name and theme when user changes (login/logout)
-  // On login: pull theme from server so it matches across all devices
+  // Sync display name and presence (universe/env/mood) when user changes.
+  // On login: pull from server so it matches across all devices.
   useEffect(() => {
     if (user) {
       setProfile(p => ({ ...p, displayName: user.display_name, username: user.email }))
@@ -124,55 +156,60 @@ export default function App() {
       fetch('/api/auth/profile', { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.ok ? r.json() : null)
         .then(data => {
-          const serverTheme = data?.theme
-          const localTheme = load(`rs-theme:${user.id}`, null)
-          // Server wins if it has a theme; otherwise fall back to local, then default
-          const resolved = serverTheme || localTheme || 'halo'
-          save(`rs-theme:${user.id}`, resolved)
-          setTheme(resolved)
-          document.documentElement.setAttribute('data-theme', resolved)
+          // Three-axis values from server take priority; otherwise migrate from legacy
+          // theme/palette fields if those are all we have; otherwise local; otherwise defaults.
+          let u = data?.universe || load(`rs-universe:${user.id}`, null)
+          let e = data?.environment || load(`rs-env:${user.id}`, null)
+          let m = data?.mood || load(`rs-mood:${user.id}`, null)
 
-          const serverPalette = data?.palette
-          const localPalette  = load(`rs-palette:${user.id}`, null)
-          const resolvedP = serverPalette || localPalette || 'spice'
-          save(`rs-palette:${user.id}`, resolvedP)
-          setPalette(resolvedP)
-          document.documentElement.setAttribute('data-palette', resolvedP)
+          if (!u || !m) {
+            // Legacy migration: a legacy `theme` value alone is enough to derive all three
+            const legacy = data?.theme && LEGACY_THEME_MAP[data.theme]
+            if (legacy) {
+              u = u || legacy.universe
+              e = e || legacy.environment
+              m = m || legacy.mood
+            }
+          }
+          u = u || 'dune'
+          e = e || (UNIVERSE_ENVS[u] || ['atreides'])[0]
+          m = m || (ENV_MOODS[e] || ['caladan'])[0]
 
-          const serverEnv = data?.environment
-          const localEnv  = load(`rs-env:${user.id}`, null)
-          const resolvedE = serverEnv || localEnv || 'atreides'
-          save(`rs-env:${user.id}`, resolvedE)
-          setEnvironment(resolvedE)
-          document.documentElement.setAttribute('data-env', resolvedE)
+          save(`rs-universe:${user.id}`, u)
+          save(`rs-env:${user.id}`, e)
+          save(`rs-mood:${user.id}`, m)
+          setUniverse(u); setEnvironment(e); setMood(m)
+          document.documentElement.setAttribute('data-universe', u)
+          document.documentElement.setAttribute('data-env', e)
+          document.documentElement.setAttribute('data-mood', m)
         })
         .catch(() => {
-          const saved = load(`rs-theme:${user.id}`, 'halo')
-          setTheme(saved)
-          document.documentElement.setAttribute('data-theme', saved)
-
-          const savedP = load(`rs-palette:${user.id}`, 'spice')
-          setPalette(savedP)
-          document.documentElement.setAttribute('data-palette', savedP)
-
-          const savedE = load(`rs-env:${user.id}`, 'atreides')
-          setEnvironment(savedE)
-          document.documentElement.setAttribute('data-env', savedE)
+          const u = load(`rs-universe:${user.id}`, 'dune')
+          const e = load(`rs-env:${user.id}`, 'atreides')
+          const m = load(`rs-mood:${user.id}`, 'caladan')
+          setUniverse(u); setEnvironment(e); setMood(m)
+          document.documentElement.setAttribute('data-universe', u)
+          document.documentElement.setAttribute('data-env', e)
+          document.documentElement.setAttribute('data-mood', m)
         })
     }
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const PAL_ENV_PAIRS = {
-    spice: ['atreides',   'harkonnen'],
-    halo:  ['forerunner', 'unsc'],
-  }
-
-  const setPaletteSafe = (p) => {
-    setPalette(p)
-    const valid = PAL_ENV_PAIRS[p]
-    if (!valid.includes(environment)) {
-      setEnvironment(valid[0])  // jump to first env of the new palette
+  // Cascading setters — picking up the chain resets stale dependents to a valid default.
+  const setUniverseSafe = (u) => {
+    setUniverse(u)
+    const validEnvs = UNIVERSE_ENVS[u] || []
+    if (!validEnvs.includes(environment)) {
+      const nextEnv = validEnvs[0]
+      setEnvironment(nextEnv)
+      const validMoods = ENV_MOODS[nextEnv] || []
+      if (!validMoods.includes(mood)) setMood(validMoods[0])
     }
+  }
+  const setEnvironmentSafe = (e) => {
+    setEnvironment(e)
+    const validMoods = ENV_MOODS[e] || []
+    if (!validMoods.includes(mood)) setMood(validMoods[0])
   }
 
   // True if the logged-in user has the admin role
@@ -252,7 +289,7 @@ export default function App() {
       {/* Mobile top bar */}
       <div className="mobile-topbar">
         <div className="mobile-topbar-brand">
-          <div className="sidebar-logo">RS</div>
+          <RsMark mark="mono" size={32} />
           <span className="sidebar-title">{pageLabel.toUpperCase()}</span>
         </div>
         <button
@@ -299,12 +336,12 @@ export default function App() {
                 <ProfilePage
                   profile={profile}
                   onSave={setProfile}
-                  theme={theme}
-                  onThemeChange={setTheme}
-                  palette={palette}
+                  universe={universe}
                   environment={environment}
-                  onPaletteChange={setPaletteSafe}
-                  onEnvironmentChange={setEnvironment}
+                  mood={mood}
+                  onUniverseChange={setUniverseSafe}
+                  onEnvironmentChange={setEnvironmentSafe}
+                  onMoodChange={setMood}
                 />
               )}
               {currentPage === 'settings'   && (

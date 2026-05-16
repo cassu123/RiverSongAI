@@ -201,6 +201,20 @@ CREATE INDEX IF NOT EXISTS idx_revoked_tokens_expiry
     ON revoked_tokens(expires_at);
 
 
+CREATE TABLE IF NOT EXISTS voice_id_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL,
+    identified_user_id TEXT,
+    score REAL,
+    runner_up_user_id TEXT,
+    runner_up_score REAL,
+    audio_duration_ms INTEGER,
+    session_kind TEXT NOT NULL  -- 'kiosk' or 'authenticated'
+);
+
+CREATE INDEX IF NOT EXISTS ix_voice_id_events_ts ON voice_id_events(ts DESC);
+
+
 CREATE INDEX IF NOT EXISTS idx_routines_user ON routines(user_id);
 
 CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -378,6 +392,19 @@ class SQLiteStore:
             "ALTER TABLE users ADD COLUMN theme TEXT NOT NULL DEFAULT 'halo'",
             "ALTER TABLE users ADD COLUMN palette TEXT NOT NULL DEFAULT 'spice'",
             "ALTER TABLE users ADD COLUMN environment TEXT NOT NULL DEFAULT 'atreides'",
+            "ALTER TABLE users ADD COLUMN universe TEXT NOT NULL DEFAULT 'dune'",
+            "ALTER TABLE users ADD COLUMN mood TEXT NOT NULL DEFAULT 'caladan'",
+            # One-time mapping: legacy palette -> universe (idempotent via default-gate)
+            "UPDATE users SET universe='halo' WHERE palette='halo' AND universe='dune'",
+            # One-time mapping: legacy theme -> mood (idempotent — only rewrites rows still at default)
+            "UPDATE users SET mood='hard-light',     environment='forerunner' WHERE theme='halo'          AND mood='caladan'",
+            "UPDATE users SET mood='bloodlight',     environment='harkonnen'  WHERE theme='crimson-dark'  AND mood='caladan'",
+            "UPDATE users SET mood='night-vision',   environment='unsc'       WHERE theme='combat'        AND mood='caladan'",
+            "UPDATE users SET mood='twilight-spires',environment='spires',  universe='mv'        WHERE theme='midnight-violet' AND mood='caladan'",
+            "UPDATE users SET mood='dusk-pavilion',  environment='garden',  universe='mv'        WHERE theme='amber'           AND mood='caladan'",
+            "UPDATE users SET mood='daybreak-temple',environment='spires',  universe='mv'        WHERE theme='arctic'          AND mood='caladan'",
+            "UPDATE users SET mood='glitch-street',  environment='pacifica',universe='nightcity' WHERE theme='cyberpunk'       AND mood='caladan'",
+            "UPDATE users SET mood='spice-hall'                                                 WHERE theme='dune'            AND mood='caladan'",
             "ALTER TABLE llm_settings ADD COLUMN voice_id TEXT NOT NULL DEFAULT 'river'",
             "ALTER TABLE routines ADD COLUMN type TEXT NOT NULL DEFAULT 'simple'",
             "ALTER TABLE routines ADD COLUMN webhook_url TEXT",
@@ -391,6 +418,7 @@ class SQLiteStore:
             "CREATE TABLE IF NOT EXISTS vault_links (id INTEGER PRIMARY KEY AUTOINCREMENT, src_note_id INTEGER NOT NULL, target_title TEXT NOT NULL, FOREIGN KEY(src_note_id) REFERENCES vault_notes(id) ON DELETE CASCADE)",
             "CREATE TABLE IF NOT EXISTS vault_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, action TEXT NOT NULL, virtual_path TEXT NOT NULL, ts REAL NOT NULL)",
             "CREATE TABLE IF NOT EXISTS pulse_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT NOT NULL, data_json TEXT NOT NULL, ts REAL NOT NULL)",
+            "CREATE TABLE IF NOT EXISTS voice_id_events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, identified_user_id TEXT, score REAL, runner_up_user_id TEXT, runner_up_score REAL, audio_duration_ms INTEGER, session_kind TEXT NOT NULL)",
         ]:
             try:
                 conn.execute(migration)
@@ -1039,6 +1067,67 @@ class SQLiteStore:
         conn.commit()
         return res.rowcount
 
+    # -------------------------------------------------------------------------
+    # Voice ID Events
+    # -------------------------------------------------------------------------
+
+    async def log_voice_id_event(
+        self,
+        ts: float,
+        identified_user_id: Optional[str],
+        score: Optional[float],
+        runner_up_user_id: Optional[str],
+        runner_up_score: Optional[float],
+        audio_duration_ms: int,
+        session_kind: str,
+    ) -> None:
+        await self._run(
+            self._sync_log_voice_id_event,
+            ts,
+            identified_user_id,
+            score,
+            runner_up_user_id,
+            runner_up_score,
+            audio_duration_ms,
+            session_kind,
+        )
+
+    def _sync_log_voice_id_event(
+        self,
+        ts: float,
+        identified_user_id: Optional[str],
+        score: Optional[float],
+        runner_up_user_id: Optional[str],
+        runner_up_score: Optional[float],
+        audio_duration_ms: int,
+        session_kind: str,
+    ) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            """
+            INSERT INTO voice_id_events (
+                ts, identified_user_id, score, runner_up_user_id, runner_up_score, 
+                audio_duration_ms, session_kind
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                ts, identified_user_id, score, runner_up_user_id, runner_up_score,
+                audio_duration_ms, session_kind
+            )
+        )
+        conn.commit()
+
+    async def get_recent_voice_id_events(self, limit: int = 50) -> list[dict]:
+        return await self._run(self._sync_get_recent_voice_id_events, limit)
+
+    def _sync_get_recent_voice_id_events(self, limit: int) -> list[dict]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT * FROM voice_id_events ORDER BY ts DESC LIMIT ?",
+            (limit,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
     async def get_integrations(self) -> dict:
         config = await self.get_admin_config()
         return config.get("integrations", {})
@@ -1083,7 +1172,7 @@ class SQLiteStore:
     def _sync_get_user_by_id(self, user_id: str) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT id, email, display_name, role, is_approved, created_at, password_hash, theme, palette, environment FROM users WHERE id=?",
+            "SELECT id, email, display_name, role, is_approved, created_at, password_hash, theme, palette, environment, universe, mood FROM users WHERE id=?",
             (user_id,),
         ).fetchone()
         if row is None:
@@ -1099,6 +1188,8 @@ class SQLiteStore:
             "theme": row[7] or "halo",
             "palette": row[8] or "spice",
             "environment": row[9] or "atreides",
+            "universe": row[10] or "dune",
+            "mood": row[11] or "caladan",
         }
 
     async def update_user_theme(self, user_id: str, theme: str) -> None:
@@ -1123,6 +1214,22 @@ class SQLiteStore:
     def _sync_update_user_environment(self, user_id: str, environment: str) -> None:
         conn = self._get_conn()
         conn.execute("UPDATE users SET environment=?, updated_at=? WHERE id=?", (environment, _now_str(), user_id))
+        conn.commit()
+
+    async def update_user_universe(self, user_id: str, universe: str) -> None:
+        await self._run(self._sync_update_user_universe, user_id, universe)
+
+    def _sync_update_user_universe(self, user_id: str, universe: str) -> None:
+        conn = self._get_conn()
+        conn.execute("UPDATE users SET universe=?, updated_at=? WHERE id=?", (universe, _now_str(), user_id))
+        conn.commit()
+
+    async def update_user_mood(self, user_id: str, mood: str) -> None:
+        await self._run(self._sync_update_user_mood, user_id, mood)
+
+    def _sync_update_user_mood(self, user_id: str, mood: str) -> None:
+        conn = self._get_conn()
+        conn.execute("UPDATE users SET mood=?, updated_at=? WHERE id=?", (mood, _now_str(), user_id))
         conn.commit()
 
     async def email_exists(self, email: str) -> bool:

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { USER_ITEMS, ADMIN_ITEMS } from '../utils/constants.js'
+import RsMark from './RsMark.jsx'
 
 // ── Material Symbol component ────────────────────────────────────────────────
 function MdIcon({ name, size = 20, style }) {
@@ -55,23 +56,9 @@ export default function Sidebar({
         flexShrink: 0,
         borderBottom: '1px solid var(--md-outline-variant)',
       }}>
-        {/* Logo mark */}
-        <div style={{
-          width: 36,
-          height: 36,
-          borderRadius: 'var(--md-shape-sm)',
-          background: 'var(--md-primary-container)',
-          color: 'var(--md-on-primary-container)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '0.8125rem',
-          fontWeight: 700,
-          flexShrink: 0,
-          letterSpacing: '0.05em',
-        }}>
-          RS
-        </div>
+        {/* Logo mark — morphs per environment */}
+        <RsMark mark="mono" size={36} />
+
 
         {!collapsed && (
           <span style={{

@@ -249,6 +249,7 @@ class ConversationLoop:
         voice_id_override: Optional[str] = None,
         fallback_provider: Optional[str] = None,
         fallback_model: Optional[str] = None,
+        is_kiosk: bool = False,
     ) -> None:
         settings = get_settings()
         self._settings = settings
@@ -260,6 +261,7 @@ class ConversationLoop:
         self._voice_id_override: Optional[str] = voice_id_override
         self._fallback_provider: Optional[str] = fallback_provider
         self._fallback_model: Optional[str] = fallback_model
+        self._is_kiosk: bool = is_kiosk
         self._stt: Optional[STTProvider] = None
         self._llm: Optional[LLMProvider] = None
         self._tts: Optional[TTSProvider] = None
@@ -543,6 +545,43 @@ class ConversationLoop:
             await on_event({"type": "error", "message": f"Transcription error: {exc}"})
             await on_event({"type": "idle"})
             return
+
+        # Voice ID — only override when session is anonymous kiosk
+        if self._is_kiosk and audio_bytes:
+            from providers.voice_id.voice_id_provider import VoiceIDProvider
+            from config.settings import get_settings
+            if get_settings().voice_id_enabled:
+                try:
+                    from providers.voice_id import _SINGLETON
+                    vid = _SINGLETON
+                except ImportError:
+                    vid = VoiceIDProvider()
+                try:
+                    ident = await vid.identify(audio_bytes, threshold=get_settings().voice_id_threshold)
+                    if ident and ident.get("user_id"):
+                        # Override anonymous kiosk identity with identified user
+                        self._user_id = ident["user_id"]
+                        logger.info(f"Voice ID: identified as {ident['user_id']} score={ident['score']:.3f}")
+                        # Log event
+                        if self._memory and hasattr(self._memory, "_store"):
+                            import time
+                            await self._memory._store.log_voice_id_event(
+                                ts=time.time(),
+                                identified_user_id=ident["user_id"],
+                                score=ident["score"],
+                                runner_up_user_id=ident.get("runner_up_user_id"),
+                                runner_up_score=ident.get("runner_up_score"),
+                                audio_duration_ms=int(len(audio_bytes) * 1000 / 32000),  # rough estimate
+                                session_kind="kiosk",
+                            )
+                        
+                        # Since user_id changed, we MUST rebuild the system prompt to pick up the new user's context
+                        if self._memory:
+                            await self._rebuild_system_prompt()
+                    else:
+                        logger.debug("Voice ID: no enrolled speaker matched")
+                except Exception as e:
+                    logger.warning(f"Voice ID failed (non-fatal): {e}")
 
         if not transcript.strip():
             logger.info("Empty transcript -- skipping LLM call.")

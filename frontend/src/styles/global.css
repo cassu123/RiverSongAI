@@ -39,20 +39,21 @@
   --md-error-container:        #93000A;
   --md-on-error-container:     #FFDAD6;
 
-  /* Surface & background — redefined as translucent in §1 of layout-rework */
-  --md-background:             #0F1316;
-  --md-on-background:          #DEE4E9;
-  --md-surface:                color-mix(in srgb, var(--md-background) 88%, transparent);
-  --md-on-surface:             #DEE4E9;
-  --md-surface-variant:        #40484E;
-  --md-on-surface-variant:     #BFC8CE;
+  /* Surface & background — derived from active mood's --bg-base, translucent
+     so the environment backdrop on body::before shows through every panel. */
+  --md-background:             var(--bg-base, #0F1316);
+  --md-on-background:          var(--fg, #DEE4E9);
+  --md-surface:                color-mix(in srgb, var(--bg-base, #0F1316) 70%, transparent);
+  --md-on-surface:             var(--fg, #DEE4E9);
+  --md-surface-variant:        color-mix(in srgb, var(--bg-base, #0F1316) 50%, transparent);
+  --md-on-surface-variant:     color-mix(in srgb, var(--fg, #BFC8CE) 80%, transparent);
 
-  /* Surface container hierarchy (low → high = darker → lighter) */
-  --md-surface-container-lowest:  #091114;
-  --md-surface-container-low:     color-mix(in srgb, var(--md-background) 76%, transparent);
-  --md-surface-container:         color-mix(in srgb, var(--md-background) 82%, transparent);
-  --md-surface-container-high:    color-mix(in srgb, var(--md-background) 92%, transparent);
-  --md-surface-container-highest: #313538;
+  /* Surface container hierarchy (low → high = backdrop bleeds more → less) */
+  --md-surface-container-lowest:  color-mix(in srgb, var(--bg-base, #0F1316) 55%, transparent);
+  --md-surface-container-low:     color-mix(in srgb, var(--bg-base, #0F1316) 65%, transparent);
+  --md-surface-container:         color-mix(in srgb, var(--bg-base, #0F1316) 75%, transparent);
+  --md-surface-container-high:    color-mix(in srgb, var(--bg-base, #0F1316) 85%, transparent);
+  --md-surface-container-highest: color-mix(in srgb, var(--bg-base, #0F1316) 92%, transparent);
 
   /* Outline */
   --md-outline:         #899398;
@@ -90,11 +91,15 @@
   --md-elevation-4: 0px 6px 10px 4px rgba(0,0,0,.15), 0px 2px 3px rgba(0,0,0,.3);
   --md-elevation-5: 0px 8px 12px 6px rgba(0,0,0,.15), 0px 4px 4px rgba(0,0,0,.3);
 
-  /* ── Legacy aliases (keep existing component CSS working) ─── */
-  --bg:            var(--md-background);
+  /* ── Legacy aliases — translucent so backdrop bleeds through every page ──
+     Pages predating the 3-axis system reference --bg-card, --bg-panel, etc.
+     Routing those through translucent --md-surface* makes the entire app
+     environment-aware without touching individual page CSS files. */
+  --bg:            transparent;
   --bg-panel:      var(--md-surface-container-low);
   --bg-card:       var(--md-surface-container);
   --bg-card-sel:   var(--md-surface-container-high);
+  /* Color tokens follow the active mood, with M3 fallbacks for unset states */
   --primary:       var(--md-primary);
   --secondary:     var(--md-tertiary);
   --accent:        var(--md-primary-container);
@@ -103,7 +108,7 @@
   --text:          var(--md-on-surface);
   --text-dim:      var(--md-on-surface-variant);
   --text-muted:    var(--md-outline);
-  --border:        var(--md-outline-variant);
+  --border:        var(--line, var(--md-outline-variant));
   --border-bright: var(--md-surface-variant);
   --font-display:  var(--font-mood);
   --font-body:     var(--font-mood);

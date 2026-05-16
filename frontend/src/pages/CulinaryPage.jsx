@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useWebSocket } from '../hooks/useWebSocket.js'
+import BarcodeScanner from '../components/BarcodeScanner.jsx'
 import './CulinaryPage.css'
 
 // ── tiny helpers ─────────────────────────────────────────────────────────────
@@ -1368,6 +1369,7 @@ function StockroomTab({ api }) {
   const [filter, setFilter]     = useState('all')
   const [manualName, setManualName] = useState('')
   const [manualState, setManualState] = useState('Good')
+  const [showScanner, setShowScanner] = useState(false)
   const barcodeRef = useRef(null)
 
   const load = useCallback(() => {
@@ -1408,19 +1410,39 @@ function StockroomTab({ api }) {
 
   return (
     <div>
+      {showScanner && (
+        <BarcodeScanner
+          onDetected={(val) => {
+            setBarcode(val)
+            setShowScanner(false)
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
+
       {/* Barcode scanner */}
       <div className="cul-card">
         <div className="cul-card-title"><Icon name="qr_code_scanner" size={18} /> Barcode Scanner</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input
-            ref={barcodeRef}
-            className="cul-input"
-            style={{ maxWidth: 240 }}
-            placeholder="Scan or type UPC..."
-            value={barcode}
-            onChange={e => setBarcode(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && scan(false)}
-          />
+          <div style={{ position: 'relative', maxWidth: 240, flex: 1 }}>
+            <input
+              ref={barcodeRef}
+              className="cul-input"
+              style={{ width: '100%', paddingRight: 40 }}
+              placeholder="Scan or type UPC..."
+              value={barcode}
+              onChange={e => setBarcode(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && scan(false)}
+            />
+            <button
+              className="cul-btn cul-btn-ghost"
+              style={{ position: 'absolute', right: 4, top: 4, height: 32, width: 32, padding: 0 }}
+              onClick={() => setShowScanner(true)}
+              title="Scan with camera"
+            >
+              <Icon name="photo_camera" size={18} />
+            </button>
+          </div>
           <button className="cul-btn cul-btn-primary" onClick={() => scan(false)}>
             <Icon name="add_box" size={15} /> Stock In (Good)
           </button>

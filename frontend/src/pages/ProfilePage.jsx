@@ -16,21 +16,53 @@ function Icon({ name, size = 18, className = '', style = {} }) {
   )
 }
 
-const THEMES = [
-  { key: 'halo',          label: 'Halo Blue',     primary: '#35a7ff', bg: '#080c13' },
-  { key: 'crimson-dark',  label: 'Crimson Dark',  primary: '#c53a1f', bg: '#140c0b' },
-  { key: 'combat',        label: 'Combat',        primary: '#3dcc79', bg: '#0a100a' },
-  { key: 'midnight-violet', label: 'Midnight Violet', primary: '#9b6b9e', bg: '#1a1025' },
-  { key: 'amber',     label: 'Peach Dream', primary: '#D66C59', bg: '#FEE7D9' },
-  { key: 'arctic',    label: 'Arctic',    primary: '#4A7AA8', bg: '#dce6f0' },
-  { key: 'cyberpunk', label: 'Cyberpunk', primary: '#e8ff00', bg: '#050505' },
-  { key: 'dune',      label: 'Dune',      primary: '#deb651', bg: '#0a0804' },
+// ── Three-axis presence catalog (kept in sync with App.jsx + auth.py) ──────
+const UNIVERSES = [
+  { key: 'dune',      label: 'DUNE',            primary: '#deb651', bg: '#1a1209',
+    hint: 'Desert empire. Noble warfare and oppressive industry.' },
+  { key: 'halo',      label: 'HALO',            primary: '#78c8e6', bg: '#050c14',
+    hint: 'Forerunner mystics and UNSC steel under a shattered ring.' },
+  { key: 'mv',        label: 'MONUMENT VALLEY', primary: '#b8a8d4', bg: '#1a1a2e',
+    hint: 'Pastel sacred geometry. Impossible Escher architecture.' },
+  { key: 'nightcity', label: 'NIGHT CITY',      primary: '#ff3c8c', bg: '#0e0e14',
+    hint: 'Neon dystopia. Corporate chrome and Pacifica decay.' },
 ]
 
-export default function ProfilePage({ 
-  profile, onSave, 
-  theme, onThemeChange,
-  palette, environment, onPaletteChange, onEnvironmentChange
+const ENVIRONMENTS = {
+  dune:      [{ key: 'atreides',   label: 'ATREIDES',   primary: '#deb651', bg: '#1a1209' },
+              { key: 'harkonnen',  label: 'HARKONNEN',  primary: '#c53a1f', bg: '#0a0606' }],
+  halo:      [{ key: 'forerunner', label: 'FORERUNNER', primary: '#00e5ff', bg: '#050c14' },
+              { key: 'unsc',       label: 'UNSC',       primary: '#f08c32', bg: '#0c1116' }],
+  mv:        [{ key: 'spires',     label: 'SACRED SPIRES',    primary: '#a0a8c0', bg: '#1a1a2e' },
+              { key: 'garden',     label: 'GARDEN PAVILION',  primary: '#d8a878', bg: '#1f1812' }],
+  nightcity: [{ key: 'corpo',      label: 'CORPO PLAZA',      primary: '#c8c8d4', bg: '#0e0e14' },
+              { key: 'pacifica',   label: 'PACIFICA STREET',  primary: '#e8ff00', bg: '#0a0a05' }],
+}
+
+const MOODS = {
+  atreides:   [{ key: 'caladan',          label: 'CALADAN',          primary: '#deb651', bg: '#1a1209' },
+               { key: 'spice-hall',       label: 'SPICE HALL',       primary: '#deb651', bg: '#0b0805' }],
+  harkonnen:  [{ key: 'giedi',            label: 'GIEDI PRIME',      primary: '#7a8390', bg: '#050505' },
+               { key: 'bloodlight',       label: 'BLOODLIGHT',       primary: '#c53a1f', bg: '#140c0b' }],
+  forerunner: [{ key: 'hard-light',       label: 'HARD-LIGHT',       primary: '#00e5ff', bg: '#050c14' },
+               { key: 'ceramic-veil',     label: 'CERAMIC VEIL',     primary: '#a8e0ff', bg: '#0a1820' }],
+  unsc:       [{ key: 'combat-steel',     label: 'COMBAT STEEL',     primary: '#f08c32', bg: '#0c1116' },
+               { key: 'night-vision',     label: 'NIGHT VISION',     primary: '#3dcc79', bg: '#050805' }],
+  spires:     [{ key: 'sacred',           label: 'SACRED',           primary: '#a0a8c0', bg: '#1a1a2e' },
+               { key: 'daybreak-temple',  label: 'DAYBREAK TEMPLE',  primary: '#7aa4cc', bg: '#1c2a3a' },
+               { key: 'twilight-spires',  label: 'TWILIGHT SPIRES',  primary: '#b88abf', bg: '#1a1025' }],
+  garden:     [{ key: 'pastel-day',       label: 'PASTEL DAY',       primary: '#d8a878', bg: '#1f1812' },
+               { key: 'dusk-pavilion',    label: 'DUSK PAVILION',    primary: '#d66c59', bg: '#241510' }],
+  corpo:      [{ key: 'chrome',           label: 'CHROME',           primary: '#c8c8d4', bg: '#0e0e14' },
+               { key: 'executive',        label: 'EXECUTIVE',        primary: '#d4b478', bg: '#101010' }],
+  pacifica:   [{ key: 'glitch-street',    label: 'GLITCH STREET',    primary: '#e8ff00', bg: '#0a0a05' },
+               { key: 'smoke',            label: 'SMOKE',            primary: '#bcaa45', bg: '#0c0c08' }],
+}
+
+export default function ProfilePage({
+  profile, onSave,
+  universe, environment, mood,
+  onUniverseChange, onEnvironmentChange, onMoodChange,
 }) {
   const { token } = useAuth()
   const [form,    setForm]    = useState({ ...profile })
@@ -299,76 +331,71 @@ export default function ProfilePage({
           </section>
         </div>
 
-        {/* RIGHT: appearance */}
+        {/* RIGHT: presence (universe → environment → mood) */}
         <div className="profile-col">
           <section className="card">
-            <div className="card-title">INTERFACE SKIN</div>
-            <p className="profile-hint">Choose how River's interface looks. Your selection is saved to your profile.</p>
-
+            <div className="card-title">UNIVERSE</div>
+            <p className="profile-hint">
+              {UNIVERSES.find(u => u.key === universe)?.hint
+                || 'Pick the fictional world River inhabits.'}
+            </p>
             <div className="theme-grid">
-              {THEMES.map(t => (
+              {UNIVERSES.map(u => (
                 <button
-                  key={t.key}
-                  className={`theme-card ${theme === t.key ? 'theme-card--active' : ''}`}
-                  onClick={() => onThemeChange(t.key)}
-                  style={{ '--tc-primary': t.primary, '--tc-bg': t.bg }}
-                  aria-pressed={theme === t.key}
+                  key={u.key}
+                  className={`theme-card ${universe === u.key ? 'theme-card--active' : ''}`}
+                  onClick={() => onUniverseChange(u.key)}
+                  style={{ '--tc-primary': u.primary, '--tc-bg': u.bg }}
+                  aria-pressed={universe === u.key}
                 >
                   <div className="theme-card-preview">
                     <div className="theme-card-ring" />
                     <div className="theme-card-bar" />
                   </div>
-                  <span className="theme-card-label">{t.label.toUpperCase()}</span>
-                  {theme === t.key && <span className="theme-card-active-dot" />}
-                </button>
-              ))}
-            </div>
-
-            <div className="card-title" style={{ marginTop: 32 }}>UNIVERSE</div>
-            <p className="profile-hint">Fundamental color palette and glyph style of River's core.</p>
-            <div className="theme-grid">
-              {['spice', 'halo'].map(p => (
-                <button
-                  key={p}
-                  className={`theme-card ${palette === p ? 'theme-card--active' : ''}`}
-                  onClick={() => onPaletteChange(p)}
-                  style={{ 
-                    '--tc-primary': p === 'spice' ? '#d4a040' : '#78c8e6',
-                    '--tc-bg':      p === 'spice' ? '#0d0805' : '#060a0f'
-                  }}
-                >
-                  <div className="theme-card-preview">
-                    <div className="theme-card-ring" />
-                    <div className="theme-card-bar" />
-                  </div>
-                  <span className="theme-card-label">{p === 'spice' ? 'SPICE · DUNE' : 'HALO'}</span>
-                  {palette === p && <span className="theme-card-active-dot" />}
+                  <span className="theme-card-label">{u.label}</span>
+                  {universe === u.key && <span className="theme-card-active-dot" />}
                 </button>
               ))}
             </div>
 
             <div className="card-title" style={{ marginTop: 32 }}>ENVIRONMENT</div>
-            <p className="profile-hint">The physical space River inhabits. Each universe has two unique rooms.</p>
+            <p className="profile-hint">The room within {UNIVERSES.find(u => u.key === universe)?.label || 'this universe'}.</p>
             <div className="theme-grid">
-              {(palette === 'spice'
-                ? [['atreides', 'ATREIDES'], ['harkonnen', 'HARKONNEN']]
-                : [['forerunner', 'FORERUNNER'], ['unsc', 'UNSC']]
-              ).map(([key, label]) => (
+              {(ENVIRONMENTS[universe] || []).map(e => (
                 <button
-                  key={key}
-                  className={`theme-card ${environment === key ? 'theme-card--active' : ''}`}
-                  onClick={() => onEnvironmentChange(key)}
-                  style={{ 
-                    '--tc-primary': palette === 'spice' ? '#d4a040' : '#78c8e6',
-                    '--tc-bg':      '#1a1a1a'
-                  }}
+                  key={e.key}
+                  className={`theme-card ${environment === e.key ? 'theme-card--active' : ''}`}
+                  onClick={() => onEnvironmentChange(e.key)}
+                  style={{ '--tc-primary': e.primary, '--tc-bg': e.bg }}
+                  aria-pressed={environment === e.key}
                 >
                   <div className="theme-card-preview">
                     <div className="theme-card-ring" />
                     <div className="theme-card-bar" />
                   </div>
-                  <span className="theme-card-label">{label}</span>
-                  {environment === key && <span className="theme-card-active-dot" />}
+                  <span className="theme-card-label">{e.label}</span>
+                  {environment === e.key && <span className="theme-card-active-dot" />}
+                </button>
+              ))}
+            </div>
+
+            <div className="card-title" style={{ marginTop: 32 }}>MOOD</div>
+            <p className="profile-hint">Color finish within this room.</p>
+            <div className="theme-grid">
+              {(MOODS[environment] || []).map(m => (
+                <button
+                  key={m.key}
+                  className={`theme-card ${mood === m.key ? 'theme-card--active' : ''}`}
+                  onClick={() => onMoodChange(m.key)}
+                  style={{ '--tc-primary': m.primary, '--tc-bg': m.bg }}
+                  aria-pressed={mood === m.key}
+                >
+                  <div className="theme-card-preview">
+                    <div className="theme-card-ring" />
+                    <div className="theme-card-bar" />
+                  </div>
+                  <span className="theme-card-label">{m.label}</span>
+                  {mood === m.key && <span className="theme-card-active-dot" />}
                 </button>
               ))}
             </div>

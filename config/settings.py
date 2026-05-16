@@ -873,6 +873,24 @@ class Settings(BaseSettings):
         description="Path to the directory containing documents for Sifter to index.",
     )
 
+    # Voice ID
+    voice_id_enabled: bool = Field(
+        default=True,
+        description="Enable speaker recognition (biometric Voice ID).",
+    )
+    voice_id_threshold: float = Field(
+        default=0.75,
+        description="Cosine similarity threshold for Voice ID (0.0-1.0).",
+    )
+    voice_id_min_audio_seconds: float = Field(
+        default=1.0,
+        description="Minimum audio duration for Voice ID processing.",
+    )
+    voice_id_max_audio_seconds: float = Field(
+        default=30.0,
+        description="Maximum audio duration for Voice ID processing.",
+    )
+
     # -------------------------------------------------------------------------
     # Validators
     # -------------------------------------------------------------------------

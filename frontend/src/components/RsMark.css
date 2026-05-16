@@ -1,0 +1,254 @@
+/* ============================================================
+   RsMark — the morphing River Song logo
+   ────────────────────────────────────────────────────────────
+   One markup shape; eight CSS treatments. All variation is
+   driven by [data-env] on <html>, so a single attribute swap
+   morphs every <RsMark> in the tree.
+   ============================================================ */
+
+.rs-mark {
+  --rs-mark-size: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: var(--rs-mark-size);
+  height: var(--rs-mark-size);
+  color: var(--primary, currentColor);
+  font-family: var(--font-mood, system-ui);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  user-select: none;
+  transition: color 1.0s ease, background 1.0s ease, transform 0.3s ease, border-radius 0.6s ease;
+  box-sizing: border-box;
+}
+
+.rs-mark--full {
+  width: auto;
+  gap: 10px;
+  padding: 4px 12px;
+}
+
+.rs-mark-glyph {
+  display: inline-block;
+  font-size: calc(var(--rs-mark-size) * 0.55);
+  line-height: 1;
+  transition: transform 0.4s ease, text-shadow 0.6s ease;
+}
+
+.rs-mark--full .rs-mark-glyph {
+  font-size: calc(var(--rs-mark-size) * 0.7);
+}
+
+.rs-mark-divider {
+  width: 1px;
+  height: calc(var(--rs-mark-size) * 0.6);
+  background: var(--line, currentColor);
+  opacity: 0.5;
+  margin: 0 2px;
+}
+
+.rs-mark-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: calc(var(--rs-mark-size) * 0.32);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--fg, currentColor);
+  opacity: 0.92;
+}
+
+.rs-mark-dot { opacity: 0.5; }
+
+
+/* ============================================================
+   Per-environment morphs
+   ============================================================ */
+
+/* ── Atreides — serif RS, gold raked top, mortar baseline ── */
+html[data-env="atreides"] .rs-mark {
+  font-family: "Ibarra Real Nova", "Georgia", serif;
+  letter-spacing: 0;
+  color: var(--primary);
+  text-shadow: 0 1px 0 rgba(255,210,138,0.4);
+}
+html[data-env="atreides"] .rs-mark::before {
+  content: "";
+  position: absolute;
+  top: 14%;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent) 50%, transparent);
+  opacity: 0.7;
+}
+html[data-env="atreides"] .rs-mark::after {
+  content: "";
+  position: absolute;
+  bottom: 14%;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent) 50%, transparent);
+  opacity: 0.45;
+}
+
+/* ── Harkonnen — blocky inverted, crimson scar diagonal ──── */
+html[data-env="harkonnen"] .rs-mark {
+  font-family: "Impact", "Inter", sans-serif;
+  letter-spacing: -0.06em;
+  color: var(--fg);
+  background: var(--primary);
+  width: var(--rs-mark-size);
+  height: var(--rs-mark-size);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+}
+html[data-env="harkonnen"] .rs-mark--mono { padding: 0 4px; width: auto; }
+html[data-env="harkonnen"] .rs-mark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 45%, var(--error) 47%, var(--error) 50%, transparent 52%);
+  pointer-events: none;
+  opacity: 0.85;
+}
+html[data-env="harkonnen"] .rs-mark .rs-mark-glyph { color: #0a0a0a; }
+
+/* ── Forerunner — RS inside hex glyph ring, cyan halo ────── */
+html[data-env="forerunner"] .rs-mark {
+  font-family: "Outfit", sans-serif;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--line), 0 0 16px rgba(0,229,255,.35);
+}
+html[data-env="forerunner"] .rs-mark::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border: 1px dotted var(--primary);
+  border-radius: 8px;
+  opacity: 0.6;
+  clip-path: polygon(15% 0%, 85% 0%, 100% 50%, 85% 100%, 15% 100%, 0% 50%);
+}
+
+/* ── UNSC — stencil-cut RS, amber bottom stripe ──────────── */
+html[data-env="unsc"] .rs-mark {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  letter-spacing: 0.06em;
+  color: var(--fg);
+  background:
+    linear-gradient(180deg, transparent 0%, transparent 78%, var(--accent) 78%, var(--accent) 88%, transparent 88%);
+  border-left: 2px solid var(--primary);
+  border-right: 2px solid var(--primary);
+}
+html[data-env="unsc"] .rs-mark--mono { width: auto; padding: 0 6px; }
+html[data-env="unsc"] .rs-mark .rs-mark-glyph {
+  text-transform: uppercase;
+}
+
+/* ── Sacred Spires — vertical stack, pastel isometric tilt ── */
+html[data-env="spires"] .rs-mark {
+  font-family: "Lexend", "Outfit", sans-serif;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  color: var(--primary);
+  transform: skewY(-2deg);
+}
+html[data-env="spires"] .rs-mark::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.35;
+  transform: rotate(-30deg);
+}
+html[data-env="spires"] .rs-mark::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.35;
+  transform: rotate(30deg);
+}
+
+/* ── Garden Pavilion — rounded warm, organic underline curve  */
+html[data-env="garden"] .rs-mark {
+  font-family: "Lexend", sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--bg-base) 50%, transparent);
+  border-radius: 50%;
+  width: var(--rs-mark-size);
+  height: var(--rs-mark-size);
+}
+html[data-env="garden"] .rs-mark--mono { padding: 0; }
+html[data-env="garden"] .rs-mark::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 18%;
+  right: 18%;
+  height: calc(var(--rs-mark-size) * 0.18);
+  border-bottom: 1.5px solid var(--accent);
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  opacity: 0.7;
+}
+
+/* ── Corpo Plaza — chrome RS with magenta+cyan split shadow ─ */
+html[data-env="corpo"] .rs-mark {
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+  text-shadow:
+    -1px 0 0 var(--secondary),
+    1px 0 0 var(--accent);
+}
+html[data-env="corpo"] .rs-mark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-left: 1px solid var(--secondary);
+  border-right: 1px solid var(--accent);
+  pointer-events: none;
+}
+
+/* ── Pacifica Street — glitched RS, scanline cut, flicker ── */
+html[data-env="pacifica"] .rs-mark {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--primary);
+  text-shadow: 1px 0 0 var(--secondary);
+  animation: rs-mark-flicker 4s infinite;
+}
+html[data-env="pacifica"] .rs-mark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,0.25) 2px 3px);
+  pointer-events: none;
+}
+@keyframes rs-mark-flicker {
+  0%, 92%, 96%, 100% { opacity: 1; }
+  94% { opacity: 0.75; transform: translateX(0.5px); }
+  98% { opacity: 0.85; transform: translateX(-0.5px); }
+}
+
+
+/* ============================================================
+   Accessibility — reduced motion drops the flicker only
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  html[data-env="pacifica"] .rs-mark { animation: none; }
+}
