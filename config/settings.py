@@ -335,6 +335,14 @@ class Settings(BaseSettings):
             "Format: 'City,CountryCode' e.g. 'Chicago,US'."
         ),
     )
+    location_lat: Optional[float] = Field(
+        default=None,
+        description="Decimal latitude for precise calculations (e.g. flight tracking).",
+    )
+    location_lon: Optional[float] = Field(
+        default=None,
+        description="Decimal longitude for precise calculations.",
+    )
     weather_units: str = Field(
         default="imperial",
         description="Temperature units for weather output: 'imperial' (F) or 'metric' (C).",
@@ -761,6 +769,22 @@ class Settings(BaseSettings):
     daemon_chemist_port: int = Field(
         default=8015,
         description="Internal port for the Chemist daemon (Material Analysis).",
+    )
+    daemon_pulse_port: int = Field(
+        default=8016,
+        description="Pulse daemon internal port",
+    )
+    daemon_pulse_enabled: bool = Field(
+        default=True,
+        description="Enable Pulse daemon",
+    )
+    pulse_tick_seconds: int = Field(
+        default=300,
+        description="Pulse fetch interval (seconds)",
+    )
+    pulse_ticker_symbol: str = Field(
+        default="^GSPC",
+        description="Default ticker symbol for Pulse markets panel",
     )
 
     # Warden (Vision)

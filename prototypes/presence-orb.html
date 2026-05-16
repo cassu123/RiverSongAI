@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>River Song — Presence (v3)</title>
+<style>
+  :root {
+    --bg-spice: #0d0805;
+    --bg-halo:  #060a0f;
+    --fg:       #d9c4a0;
+    --line:     rgba(212, 168, 100, .22);
+    --panel:    rgba(12, 8, 4, .58);
+    --accent:   #ffd28a;
+  }
+  body.palette-halo {
+    --fg:     #d4e6f0;
+    --line:   rgba(120, 200, 230, .22);
+    --panel:  rgba(4, 8, 14, .58);
+    --accent: #e6f6ff;
+  }
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    background: var(--bg-spice); color: var(--fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", sans-serif;
+    transition: background 1.4s ease, color 1.2s ease;
+  }
+  body.palette-halo { background: var(--bg-halo); }
+
+  /* ─ Environment backdrops — each is a clearly different ROOM ──────────── */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    opacity: 1.0;
+    transition: background 1.2s ease, opacity 1.2s ease;
+  }
+
+  /* ── Spice · Atreides — sandstone palace, golden hour ─────────────────── */
+  body.env-atreides::before {
+    background:
+      /* DOMINANT directional sunset wash from upper-right */
+      linear-gradient(225deg, rgba(255,180,90,.42) 0%, rgba(255,180,90,.08) 28%, transparent 50%),
+      /* Floor-line horizon — warm ground glow */
+      linear-gradient(0deg, rgba(180,90,30,.20) 0%, transparent 30%),
+      /* Chunky stone block courses — visible mortar between */
+      repeating-linear-gradient(0deg,  rgba(40,22,10,.78) 0 5px, transparent 5px 110px),
+      repeating-linear-gradient(90deg, rgba(40,22,10,.62) 0 5px, transparent 5px 220px),
+      /* Base wash — warm umber, lighter than Harkonnen */
+      linear-gradient(180deg, rgba(60,32,14,.55) 0%, rgba(18,8,4,.78) 100%);
+  }
+
+  /* ── Spice · Harkonnen — industrial dreadnought, oppressive crimson ───── */
+  body.env-harkonnen::before {
+    background:
+      /* Strong crimson underlight */
+      radial-gradient(ellipse 110% 35% at 50% 102%, rgba(220,40,20,.40) 0%, transparent 55%),
+      /* Cold pale flicker from above */
+      radial-gradient(ellipse 60% 30% at 50% -5%, rgba(120,140,160,.10) 0%, transparent 60%),
+      /* Tight vertical ribs — dense brutalist pattern */
+      repeating-linear-gradient(90deg, rgba(0,0,0,.92) 0 6px, transparent 6px 36px),
+      /* Faint horizontal banding for industrial seam-line feel */
+      repeating-linear-gradient(0deg, transparent 0 220px, rgba(30,15,8,.40) 220px 224px),
+      /* Pitch-black base */
+      linear-gradient(180deg, rgba(3,5,8,.65) 0%, rgba(0,0,0,.96) 100%);
+  }
+
+  /* ── Halo · Forerunner — pale ceramic hard-light cathedral ────────────── */
+  body.env-forerunner::before {
+    background:
+      /* Bright celestial top-light, like a skylight */
+      radial-gradient(ellipse 70% 75% at 50% -10%, rgba(190,235,255,.55) 0%, rgba(120,200,230,.18) 25%, transparent 55%),
+      /* Vertical light shafts — like sun through structural slots */
+      repeating-linear-gradient(90deg, transparent 0 280px, rgba(180,230,250,.16) 280px 286px),
+      /* Hex pattern - LARGE and crisp */
+      repeating-linear-gradient(60deg,  transparent 0 130px, rgba(130,200,230,.32) 130px 134px),
+      repeating-linear-gradient(-60deg, transparent 0 130px, rgba(130,200,230,.32) 130px 134px),
+      /* Cool ceramic-pale base */
+      linear-gradient(180deg, rgba(28,72,98,.50) 0%, rgba(3,10,20,.85) 100%);
+  }
+
+  /* ── Halo · UNSC — military hangar, harsh tactical amber on steel ─────── */
+  body.env-unsc::before {
+    background:
+      /* Large tactical amber corner floodlights */
+      radial-gradient(circle 280px at 6% 88%, rgba(255,140,40,.55) 0%, transparent 65%),
+      radial-gradient(circle 280px at 94% 88%, rgba(255,140,40,.55) 0%, transparent 65%),
+      /* Horizontal amber tactical strip lower-third */
+      linear-gradient(0deg, rgba(240,140,50,.18) 0 80px, transparent 100px),
+      /* Cool overhead bay light */
+      radial-gradient(ellipse 80% 25% at 50% -5%, rgba(140,170,200,.20) 0%, transparent 55%),
+      /* Steel deck plating — LARGE square plates */
+      repeating-linear-gradient(0deg,  rgba(60,65,72,.82) 0 6px, transparent 6px 92px),
+      repeating-linear-gradient(90deg, rgba(60,65,72,.65) 0 6px, transparent 6px 92px),
+      /* Dark steel base */
+      linear-gradient(180deg, rgba(12,16,22,.60) 0%, rgba(0,0,0,.92) 100%);
+  }
+
+  /* Holo grid — barely visible plane behind the orb */
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    opacity: 0.04;
+    background-image:
+      linear-gradient(transparent 0%, rgba(212,168,100,.5) 50%, transparent 100%),
+      repeating-linear-gradient(0deg,  transparent 0 40px, rgba(212,168,100,.6) 40px 41px),
+      repeating-linear-gradient(90deg, transparent 0 40px, rgba(212,168,100,.6) 40px 41px);
+    background-blend-mode: multiply;
+    mask-image: radial-gradient(ellipse at center, black 0%, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 0%, transparent 70%);
+    transition: background-image 1.4s ease;
+  }
+  body.palette-halo::after {
+    background-image:
+      linear-gradient(transparent 0%, rgba(120,200,230,.5) 50%, transparent 100%),
+      repeating-linear-gradient(0deg,  transparent 0 40px, rgba(120,200,230,.6) 40px 41px),
+      repeating-linear-gradient(90deg, transparent 0 40px, rgba(120,200,230,.6) 40px 41px);
+  }
+
+  #stage { position: fixed; inset: 0; z-index: 1; }
+
+  /* ─ Controls panel ─────────────────────────────────────────────────────── */
+  #panel {
+    position: fixed; top: 18px; left: 18px; z-index: 10;
+    padding: 16px 18px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    min-width: 300px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  #panel h1 {
+    margin: 0 0 4px;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    opacity: 0.55;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+  #panel .profile-line {
+    margin: 0 0 14px;
+    font-size: 8.5px; letter-spacing: 0.34em;
+    text-transform: uppercase; opacity: 0.42;
+    border-bottom: 1px solid var(--line); padding-bottom: 10px;
+  }
+  .group { margin-bottom: 14px; }
+  .group:last-child { margin-bottom: 0; }
+  .group-label {
+    font-size: 9px; letter-spacing: 0.28em;
+    text-transform: uppercase; opacity: 0.45;
+    margin-bottom: 6px;
+  }
+  .row { display: flex; gap: 4px; flex-wrap: wrap; }
+  button {
+    background: transparent; color: inherit;
+    border: 1px solid var(--line);
+    padding: 7px 11px;
+    font-size: 10px; font-family: inherit;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    cursor: pointer; border-radius: 2px;
+    transition: all .25s ease;
+  }
+  button:hover { border-color: currentColor; background: rgba(255,255,255,.04); }
+  button.active {
+    background: rgba(212,168,100,.14);
+    border-color: currentColor; color: #fff;
+    box-shadow: inset 0 0 24px rgba(212,168,100,.10);
+  }
+  body.palette-halo button.active {
+    background: rgba(120,200,230,.14);
+    box-shadow: inset 0 0 24px rgba(120,200,230,.12);
+  }
+  #status {
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 9px; opacity: 0.45;
+    letter-spacing: 0.22em; text-transform: uppercase;
+  }
+
+  /* ─ HUD corner ─────────────────────────────────────────────────────────── */
+  #hud-corner {
+    position: fixed; top: 22px; right: 22px; z-index: 10;
+    width: 88px; height: 88px;
+    border: 1px solid var(--line); border-radius: 50%;
+    background: var(--panel);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  #hud-corner-canvas { width: 76px; height: 76px; }
+  #hud-label {
+    position: fixed; top: 116px; right: 22px;
+    font-size: 8px; letter-spacing: 0.36em;
+    text-transform: uppercase; opacity: 0.4;
+    text-align: center; width: 88px;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+
+  #activity {
+    position: fixed; bottom: 36px; left: 50%; z-index: 10;
+    transform: translateX(-50%);
+    padding: 12px 28px;
+    border: 1px solid var(--line); border-radius: 1px;
+    background: var(--panel);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    font-size: 10px; letter-spacing: 0.28em;
+    text-transform: uppercase; opacity: 0.88;
+    transition: opacity .4s, color .6s;
+    white-space: nowrap;
+  }
+  #activity::before { content: "▸"; margin-right: 10px; opacity: 0.5; }
+
+  /* ─ Orbital data panels ────────────────────────────────────────────────── */
+  .data-panel {
+    position: fixed;
+    left: 50%; top: 50%;
+    padding: 9px 14px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--accent);
+    border-radius: 2px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    pointer-events: none;
+    z-index: 5;
+    min-width: 140px;
+    will-change: transform, opacity;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    transition: opacity .8s ease;
+  }
+  .data-panel .dp-label {
+    font-size: 8.5px; letter-spacing: 0.32em;
+    text-transform: uppercase; opacity: 0.55;
+    margin-bottom: 4px;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+  .data-panel .dp-value {
+    font-size: 12.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; opacity: 0.95;
+    font-weight: 500;
+  }
+  .data-panel .dp-corner {
+    position: absolute; width: 6px; height: 6px;
+    border: 1px solid var(--accent);
+    opacity: 0.7;
+  }
+  .data-panel .dp-corner.tl { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+  .data-panel .dp-corner.tr { top: -1px; right: -1px; border-left: none; border-bottom: none; }
+  .data-panel .dp-corner.bl { bottom: -1px; left: -1px; border-right: none; border-top: none; }
+  .data-panel .dp-corner.br { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+  #help {
+    position: fixed; bottom: 14px; right: 18px; z-index: 10;
+    font-size: 9px; opacity: 0.28;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    font-family: ui-monospace, monospace;
+  }
+
+  #grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 50;
+    opacity: 0.05; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");
+  }
+</style>
+</head>
+<body class="palette-spice env-atreides">
+
+<div id="stage"></div>
+<div id="grain"></div>
+
+<div id="hud-corner"><canvas id="hud-corner-canvas"></canvas></div>
+<div id="hud-label">River Song</div>
+
+<div id="panel">
+  <h1>River Song · Presence v3</h1>
+  <div class="profile-line">Profile · Cheryl · saved to account</div>
+
+  <div class="group">
+    <div class="group-label">State</div>
+    <div class="row" id="state-row">
+      <button data-state="idle"      class="active">Idle</button>
+      <button data-state="listening">Listen</button>
+      <button data-state="thinking">Think</button>
+      <button data-state="speaking">Speak</button>
+      <button data-state="acting">Act</button>
+      <button data-state="error">Error</button>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-label">Palette · Universe</div>
+    <div class="row" id="palette-row">
+      <button data-palette="spice" class="active">Spice (Dune)</button>
+      <button data-palette="halo">Halo</button>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-label">Environment</div>
+    <div class="row" id="env-row"><!-- populated by JS based on palette --></div>
+  </div>
+
+  <div id="status">State · Idle</div>
+</div>
+
+<!-- Four orbital panels — content populated by JS per palette -->
+<div class="data-panel" id="panel-1">
+  <span class="dp-corner tl"></span><span class="dp-corner tr"></span>
+  <span class="dp-corner bl"></span><span class="dp-corner br"></span>
+  <div class="dp-label" data-label-key="0"></div>
+  <div class="dp-value" data-value-key="0"></div>
+</div>
+<div class="data-panel" id="panel-2">
+  <span class="dp-corner tl"></span><span class="dp-corner tr"></span>
+  <span class="dp-corner bl"></span><span class="dp-corner br"></span>
+  <div class="dp-label" data-label-key="1"></div>
+  <div class="dp-value" data-value-key="1"></div>
+</div>
+<div class="data-panel" id="panel-3">
+  <span class="dp-corner tl"></span><span class="dp-corner tr"></span>
+  <span class="dp-corner bl"></span><span class="dp-corner br"></span>
+  <div class="dp-label" data-label-key="2"></div>
+  <div class="dp-value" data-value-key="2"></div>
+</div>
+<div class="data-panel" id="panel-4">
+  <span class="dp-corner tl"></span><span class="dp-corner tr"></span>
+  <span class="dp-corner bl"></span><span class="dp-corner br"></span>
+  <div class="dp-label" data-label-key="3"></div>
+  <div class="dp-value" data-value-key="3"></div>
+</div>
+
+<div id="activity">She's here.</div>
+<div id="help">1-6 state · Q palette · W environment</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+// ════════════════════════════════════════════════════════════════════════════
+// PALETTE / ENVIRONMENT / DATA — palette swap changes EVERYTHING (orb colors,
+// ring glyph style, floating panel content, environment options).
+// ════════════════════════════════════════════════════════════════════════════
+const PALETTES = {
+  spice: {
+    warm:       0xd4a040,  // dusty amber
+    deep:       0x6e3a16,  // burnt copper
+    silhouette: 0xe8c878,  // soft sand-gold
+    accent:     0xffd28a,  // bright spice
+    glyph:      0x8a5a28,  // bronze etching
+    bloom:      0.55,
+    // Glyph style: irregular, organic (Dune ancient script)
+    glyphStyleSeed: 1.0,
+  },
+  halo: {
+    warm:       0x78c8e6,  // pale cyan
+    deep:       0x1a3a52,  // navy
+    silhouette: 0xb0e0f0,  // soft cyan
+    accent:     0xe6f6ff,  // bright platinum
+    glyph:      0x3a7090,  // muted teal
+    bloom:      0.50,
+    // Glyph style: clean, geometric (Forerunner symbols)
+    glyphStyleSeed: 0.0,
+  },
+};
+
+const ENVIRONMENTS = {
+  spice: [
+    { key: 'atreides',   label: 'Atreides' },
+    { key: 'harkonnen',  label: 'Harkonnen' },
+  ],
+  halo: [
+    { key: 'forerunner', label: 'Forerunner' },
+    { key: 'unsc',       label: 'UNSC' },
+  ],
+};
+
+// Floating panel content per palette — replaces all four panels on palette swap
+const PANEL_DATA = {
+  spice: [
+    { label: 'Sandworm',    value: 'Monitoring' },
+    { label: 'Spice Flow',  value: 'Stable' },
+    { label: 'Arrakis',     value: '04:18 Local' },
+    { label: 'Weather',     value: 'Calm · 41°C' },
+  ],
+  halo: [
+    { label: 'Sensor Array', value: 'Nominal' },
+    { label: 'Perimeter',    value: 'Clear' },
+    { label: 'Atmosphere',   value: '0.98 ATM' },
+    { label: 'Time',         value: '04:18 Local' },
+  ],
+};
+
+const STATE_TINT = {
+  idle:      { warmShift: 0.0,  bloomBump: 0.00, speed: 1.0 },
+  listening: { warmShift: 0.05, bloomBump: 0.18, speed: 1.6 },
+  thinking:  { warmShift: 0.25, bloomBump: 0.12, speed: 2.2 },
+  speaking:  { warmShift: 0.15, bloomBump: 0.28, speed: 1.3 },
+  acting:    { warmShift: 0.4,  bloomBump: 0.22, speed: 1.4 },
+  error:     { warmShift: 0.0,  bloomBump: 0.06, speed: 0.6, errorTint: true },
+};
+
+const MESSAGES = {
+  idle:      "She's here.",
+  listening: "Listening · go ahead",
+  thinking:  "Considering …",
+  speaking:  "Speaking",
+  acting:    "Added to calendar",
+  error:     "Connection lost",
+};
+
+let currentState   = 'idle';
+let currentPalette = 'spice';
+let currentEnv     = 'atreides';
+let actingFlash    = 0;
+
+// ════════════════════════════════════════════════════════════════════════════
+// SHADERS
+// ════════════════════════════════════════════════════════════════════════════
+const VORTEX_VERT = /* glsl */`
+  varying vec3 vNormal; varying vec3 vWorldPos; varying vec2 vUv;
+  uniform float uTime, uPulse;
+  void main(){
+    vNormal = normalize(normalMatrix * normal);
+    vec3 p = position;
+    float breath = sin(uTime * 0.8 + position.y * 2.0) * 0.012 + uPulse * 0.04;
+    p += normal * breath;
+    vec4 wp = modelMatrix * vec4(p, 1.0);
+    vWorldPos = wp.xyz; vUv = uv;
+    gl_Position = projectionMatrix * viewMatrix * wp;
+  }
+`;
+const VORTEX_FRAG = /* glsl */`
+  varying vec3 vNormal; varying vec3 vWorldPos;
+  uniform float uTime, uAudio, uPulse, uSpeed, uStyleSeed;
+  uniform vec3  uWarm, uDeep, uAccent, uCamPos;
+
+  float hash(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,45.164))) * 43758.5453); }
+  float noise(vec3 p){
+    vec3 i=floor(p); vec3 f=fract(p); f=f*f*(3.0-2.0*f);
+    return mix(
+      mix(mix(hash(i),                hash(i+vec3(1,0,0)), f.x),
+          mix(hash(i+vec3(0,1,0)),    hash(i+vec3(1,1,0)), f.x), f.y),
+      mix(mix(hash(i+vec3(0,0,1)),    hash(i+vec3(1,0,1)), f.x),
+          mix(hash(i+vec3(0,1,1)),    hash(i+vec3(1,1,1)), f.x), f.y),
+      f.z);
+  }
+  float fbm(vec3 p){ float s=0.0,a=0.5; for(int i=0;i<5;i++){ s+=a*noise(p); p*=2.07; a*=0.5; } return s; }
+
+  void main(){
+    vec3 n  = normalize(vNormal);
+    float lat = n.y;
+    float lon = atan(n.x, n.z);
+    float t = uTime * 0.18 * uSpeed;
+
+    vec3 q1 = vec3(sin(lon*1.5 + t*1.6) + lat*2.0,
+                   lat*4.0 + t*0.9,
+                   cos(lon*1.5 + t*1.6) - lat*2.0);
+    float swirl1 = fbm(q1 * 1.4);
+    float swirl2 = fbm(q1 * 2.6 + vec3(0.0, t*0.6, 0.0));
+    float flow = mix(swirl1, swirl2, 0.5);
+
+    // Sandworm bands (Spice) vs hex-tile facets (Halo) — mix on uStyleSeed
+    float bands = sin(lat * 22.0 + flow * 4.0 + t * 0.4);
+    bands = smoothstep(0.30, 0.85, bands);
+    float facets = smoothstep(0.55, 0.85, sin(lon * 8.0 + flow * 3.0) * sin(lat * 12.0 + t * 0.3));
+    float surfaceMod = mix(facets, bands, uStyleSeed);
+    float surfaceMask = mix(0.78, 1.0, surfaceMod);
+
+    // Rim fresnel
+    vec3 viewDir = normalize(uCamPos - vWorldPos);
+    float fres = 1.0 - max(dot(n, viewDir), 0.0);
+    fres = pow(fres, 1.7);
+
+    // Body color — significantly darker than v3.2 so rings can read in front.
+    vec3 base = mix(uDeep * 0.55, uWarm * 0.62, flow * 0.7 + 0.3);
+    base *= surfaceMask;
+    // Rim glow concentrated only at the edge — body stays dark
+    base += fres * uAccent * (0.42 + uAudio * 0.45);
+    base += uPulse * uAccent * 0.22;
+
+    // Lower body alpha; rim stays prominent so the orb still reads as a sphere
+    float alpha = fres * 0.78 + flow * 0.10 + 0.06;
+    alpha = clamp(alpha, 0.08, 0.85);
+    gl_FragColor = vec4(base, alpha);
+  }
+`;
+
+// Ring shader — Spice gets irregular script-like ticks, Halo gets geometric blocks.
+const RING_FRAG = /* glsl */`
+  varying vec2 vUv;
+  uniform float uTime, uIntensity, uOffset, uStyleSeed, uDensity;
+  uniform vec3  uGlyph, uAccent;
+  float hash11(float n){ return fract(sin(n) * 43758.5453); }
+  void main(){
+    float u = vUv.x;
+    float v = vUv.y;
+
+    // Halo: clean geometric teeth on a regular spacing.
+    float halo_a = step(0.78, fract(u * 36.0 * uDensity + uOffset));
+    float halo_b = step(0.92, fract(u * 90.0 * uDensity - uTime * 0.04 + uOffset));
+    float halo_mark = max(halo_a * 0.75, halo_b * 0.85);
+
+    // Spice: irregular script — randomized per-segment lengths
+    float seg = floor(u * 24.0 * uDensity);
+    float jitter = hash11(seg * 17.0 + uOffset * 11.0);
+    float segStart = jitter * 0.55;
+    float spice_a = step(segStart, fract(u * 24.0 * uDensity + uOffset)) *
+                    step(fract(u * 24.0 * uDensity + uOffset), segStart + 0.18 + jitter * 0.12);
+    float spice_b = step(0.85, fract(u * 70.0 * uDensity + uOffset));
+    float spice_mark = max(spice_a * 0.85, spice_b * 0.5);
+
+    float mark = mix(halo_mark, spice_mark, uStyleSeed);
+    float micro = step(0.5, sin(u * 600.0)) * step(0.42, abs(v - 0.5)) * 0.25;
+    mark = max(mark, micro);
+    float edge = smoothstep(0.0, 0.15, v) * smoothstep(1.0, 0.85, v);
+
+    // Ring body is always faintly visible — silhouettes the torus against
+    // a bright vortex. Marks pop on top.
+    float bodyAlpha = edge * 0.32 * uIntensity;
+    float markAlpha = mark * edge * uIntensity;
+    float alpha = max(bodyAlpha, markAlpha);
+
+    // Body uses darker glyph color; marks push toward bright accent for contrast
+    vec3 col = mix(uGlyph * 0.72, uAccent * 1.25, mark);
+    gl_FragColor = vec4(col, clamp(alpha, 0.0, 0.96));
+  }
+`;
+
+// ════════════════════════════════════════════════════════════════════════════
+// HUMANOID TORSO SILHOUETTE — sample-rejection into a procedural envelope.
+// ════════════════════════════════════════════════════════════════════════════
+function insideTorso(x, y, z) {
+  const r = Math.sqrt(x*x + z*z);
+  if (y > 0.55 && y < 0.95) {
+    const cy = 0.75, dy = y - cy;
+    const maxR = Math.sqrt(Math.max(0, 0.045 - dy*dy)) * 1.05;
+    return r < maxR && Math.abs(z) < 0.22;
+  }
+  if (y > 0.42 && y <= 0.55) return r < 0.13 && Math.abs(z) < 0.13;
+  if (y > 0.10 && y <= 0.42) {
+    const t = (0.42 - y) / 0.32;
+    const maxX = 0.62 - t * 0.30, maxZ = 0.26 - t * 0.08;
+    return Math.abs(x) < maxX && Math.abs(z) < maxZ && r < (0.62 - t * 0.25);
+  }
+  if (y > -0.6 && y <= 0.10) {
+    const t = (0.10 - y) / 0.7;
+    const maxX = 0.32 - t * 0.10, maxZ = 0.20 - t * 0.04;
+    return Math.abs(x) < maxX && Math.abs(z) < maxZ;
+  }
+  return false;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ORB BUILDER — denser version: vortex + dim core + silhouette + 4 rings +
+// orbital track + glyph dots.
+// ════════════════════════════════════════════════════════════════════════════
+function buildOrb(scale) {
+  const group = new THREE.Group();
+  group.scale.setScalar(scale);
+
+  // Outer vortex shell
+  const vortexMat = new THREE.ShaderMaterial({
+    vertexShader: VORTEX_VERT, fragmentShader: VORTEX_FRAG,
+    transparent: true, side: THREE.DoubleSide, depthWrite: false,
+    uniforms: {
+      uTime:      { value: 0 },
+      uAudio:     { value: 0 },
+      uPulse:     { value: 0 },
+      uWarm:      { value: new THREE.Color(0xd4a040) },
+      uDeep:      { value: new THREE.Color(0x6e3a16) },
+      uAccent:    { value: new THREE.Color(0xffd28a) },
+      uCamPos:    { value: new THREE.Vector3(0, 0, 6) },
+      uSpeed:     { value: 1.0 },
+      uStyleSeed: { value: 1.0 },
+    },
+  });
+  const vortex = new THREE.Mesh(new THREE.IcosahedronGeometry(1.45, 32), vortexMat);
+  group.add(vortex);
+
+  // Dim solid core (so silhouette particles read against substance)
+  const coreMat = new THREE.MeshBasicMaterial({ color: 0x1a0e06, transparent: true, opacity: 0.55 });
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.95, 2), coreMat);
+  group.add(core);
+
+  // ─ Particle silhouette ───────────────────────────────────────────────────
+  const N = 2600;
+  const homePos = new Float32Array(N * 3);
+  const curPos  = new Float32Array(N * 3);
+  let i = 0;
+  while (i < N) {
+    const x = (Math.random() - 0.5) * 1.4;
+    const y = (Math.random() * 1.9) - 0.9;
+    const z = (Math.random() - 0.5) * 0.7;
+    if (insideTorso(x, y, z)) {
+      homePos[i*3    ] = x * 0.74;
+      homePos[i*3 + 1] = y * 0.62 - 0.05;
+      homePos[i*3 + 2] = z * 0.74;
+      curPos[i*3    ] = homePos[i*3];
+      curPos[i*3 + 1] = homePos[i*3 + 1];
+      curPos[i*3 + 2] = homePos[i*3 + 2];
+      i++;
+    }
+  }
+  const silhouetteGeom = new THREE.BufferGeometry();
+  silhouetteGeom.setAttribute('position', new THREE.BufferAttribute(curPos, 3));
+  const silhouetteMat = new THREE.PointsMaterial({
+    color: 0xe8c878, size: 0.024,
+    transparent: true, opacity: 0.85,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+    sizeAttenuation: true,
+  });
+  const silhouette = new THREE.Points(silhouetteGeom, silhouetteMat);
+  group.add(silhouette);
+
+  // ─ Four etched glyph rings ───────────────────────────────────────────────
+  const rings = [];
+  const ringSpecs = [
+    { radius: 1.85, tube: 0.045, rx: Math.PI / 2,     ry: 0,            rz: 0,    density: 1.0, intensity: 0.9 },
+    { radius: 2.05, tube: 0.030, rx: Math.PI / 2.3,   ry: 0.45,         rz: 0.4,  density: 1.4, intensity: 0.75 },
+    { radius: 2.30, tube: 0.018, rx: Math.PI / 1.9,   ry: -0.6,         rz: 0.9,  density: 2.1, intensity: 0.55 },
+    { radius: 1.65, tube: 0.022, rx: Math.PI / 2.5,   ry: Math.PI / 4,  rz: -0.3, density: 0.8, intensity: 0.7 },
+  ];
+  for (let idx = 0; idx < ringSpecs.length; idx++) {
+    const spec = ringSpecs[idx];
+    const ringMat = new THREE.ShaderMaterial({
+      vertexShader: `
+        varying vec2 vUv;
+        void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+      `,
+      fragmentShader: RING_FRAG,
+      transparent: true, side: THREE.DoubleSide, depthWrite: false,
+      uniforms: {
+        uTime:      { value: 0 },
+        uGlyph:     { value: new THREE.Color(0x8a5a28) },
+        uAccent:    { value: new THREE.Color(0xffd28a) },
+        uIntensity: { value: spec.intensity },
+        uOffset:    { value: idx * 1.7 },
+        uStyleSeed: { value: 1.0 },
+        uDensity:   { value: spec.density },
+      },
+    });
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(spec.radius, spec.tube, 12, 320),
+      ringMat
+    );
+    ring.rotation.x = spec.rx;
+    ring.rotation.y = spec.ry;
+    ring.rotation.z = spec.rz;
+    ring._spec = spec;
+    group.add(ring);
+    rings.push(ring);
+  }
+
+  // ─ Glyph dots: small luminous markers on a slow orbit ────────────────────
+  const dotN = 36;
+  const dotPos = new Float32Array(dotN * 3);
+  for (let k = 0; k < dotN; k++) {
+    const ang = (k / dotN) * Math.PI * 2;
+    const radius = 2.55;
+    dotPos[k*3    ] = Math.cos(ang) * radius;
+    dotPos[k*3 + 1] = Math.sin(ang * 2.0) * 0.08;
+    dotPos[k*3 + 2] = Math.sin(ang) * radius;
+  }
+  const dotGeom = new THREE.BufferGeometry();
+  dotGeom.setAttribute('position', new THREE.BufferAttribute(dotPos, 3));
+  const dotMat = new THREE.PointsMaterial({
+    color: 0xffd28a, size: 0.06,
+    transparent: true, opacity: 0.55,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const dots = new THREE.Points(dotGeom, dotMat);
+  group.add(dots);
+
+  // ─ Faint orbital track — barely visible ellipse ──────────────────────────
+  const trackGeom = new THREE.TorusGeometry(2.55, 0.004, 4, 256);
+  const trackMat = new THREE.MeshBasicMaterial({
+    color: 0xd4a040, transparent: true, opacity: 0.15,
+  });
+  const track = new THREE.Mesh(trackGeom, trackMat);
+  track.rotation.x = Math.PI / 2;
+  group.add(track);
+
+  return {
+    group, vortex, vortexMat, core, coreMat,
+    silhouette, silhouetteMat, homePos, particleCount: N,
+    rings, dots, dotMat, track, trackMat,
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MAIN STAGE
+// ════════════════════════════════════════════════════════════════════════════
+const scene = new THREE.Scene();
+scene.background = null;
+
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(0, 0.05, 7.2);   // closer — ripple/pulse motion readable
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9;   // dim — not blinding, not muted
+document.getElementById('stage').appendChild(renderer.domElement);
+
+const main = buildOrb(1.0);
+scene.add(main.group);
+
+// Background dust
+const dustGeom = new THREE.BufferGeometry();
+const DUST_N = 800;
+const dustPos = new Float32Array(DUST_N * 3);
+for (let i = 0; i < DUST_N; i++) {
+  dustPos[i*3    ] = (Math.random() - 0.5) * 26;
+  dustPos[i*3 + 1] = (Math.random() - 0.5) * 16;
+  dustPos[i*3 + 2] = -4 - Math.random() * 14;
+}
+dustGeom.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+const dustMat = new THREE.PointsMaterial({
+  color: 0x6e4a26, size: 0.028,
+  transparent: true, opacity: 0.5,
+  blending: THREE.AdditiveBlending, depthWrite: false,
+});
+const dust = new THREE.Points(dustGeom, dustMat);
+scene.add(dust);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.62, 0.78, 0.18);
+composer.addPass(bloom);
+
+// HUD corner replica
+const hudCanvas   = document.getElementById('hud-corner-canvas');
+const hudRenderer = new THREE.WebGLRenderer({ canvas: hudCanvas, antialias: true, alpha: true });
+hudRenderer.setSize(76, 76, false);
+hudRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+hudRenderer.outputColorSpace = THREE.SRGBColorSpace;
+hudRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+hudRenderer.toneMappingExposure = 1.15;
+const hudScene = new THREE.Scene();
+const hudCam   = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+hudCam.position.set(0, 0, 6.0);
+const hud = buildOrb(0.95);
+hudScene.add(hud.group);
+
+// ════════════════════════════════════════════════════════════════════════════
+// UI
+// ════════════════════════════════════════════════════════════════════════════
+const stateBtns   = document.querySelectorAll('button[data-state]');
+const paletteBtns = document.querySelectorAll('button[data-palette]');
+const envRow      = document.getElementById('env-row');
+const statusEl    = document.getElementById('status');
+const activityEl  = document.getElementById('activity');
+
+function renderEnvButtons() {
+  envRow.innerHTML = '';
+  const envs = ENVIRONMENTS[currentPalette];
+  for (const e of envs) {
+    const b = document.createElement('button');
+    b.dataset.env = e.key;
+    b.textContent = e.label;
+    if (e.key === currentEnv) b.classList.add('active');
+    b.addEventListener('click', () => setEnv(e.key));
+    envRow.appendChild(b);
+  }
+}
+
+function applyPanelData() {
+  const data = PANEL_DATA[currentPalette];
+  for (let i = 0; i < 4; i++) {
+    document.querySelector(`.dp-label[data-label-key="${i}"]`).textContent = data[i].label;
+    document.querySelector(`.dp-value[data-value-key="${i}"]`).textContent = data[i].value;
+  }
+}
+
+function setState(s) {
+  if (!STATE_TINT[s]) return;
+  currentState = s;
+  stateBtns.forEach(b => b.classList.toggle('active', b.dataset.state === s));
+  statusEl.textContent = `State · ${s.charAt(0).toUpperCase()}${s.slice(1)}`;
+  activityEl.textContent = MESSAGES[s];
+  activityEl.style.color = '#' + PALETTES[currentPalette].accent.toString(16).padStart(6, '0');
+  if (s === 'acting') actingFlash = 1.0;
+}
+
+function setPalette(p) {
+  if (!PALETTES[p]) return;
+  currentPalette = p;
+  paletteBtns.forEach(b => b.classList.toggle('active', b.dataset.palette === p));
+  document.body.classList.toggle('palette-spice', p === 'spice');
+  document.body.classList.toggle('palette-halo',  p === 'halo');
+  // When palette flips, jump to its first environment (Atreides for Spice, Forerunner for Halo)
+  const firstEnv = ENVIRONMENTS[p][0].key;
+  setEnv(firstEnv);
+  renderEnvButtons();
+  applyPanelData();
+  const accentHex = '#' + PALETTES[p].accent.toString(16).padStart(6, '0');
+  activityEl.style.color = accentHex;
+  document.documentElement.style.setProperty('--accent', accentHex);
+}
+
+function setEnv(e) {
+  currentEnv = e;
+  document.body.classList.remove('env-atreides', 'env-harkonnen', 'env-forerunner', 'env-unsc');
+  document.body.classList.add('env-' + e);
+  // Update active button (rendered dynamically — find within envRow)
+  envRow.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.env === e));
+}
+
+stateBtns.forEach(b   => b.addEventListener('click', () => setState(b.dataset.state)));
+paletteBtns.forEach(b => b.addEventListener('click', () => setPalette(b.dataset.palette)));
+
+// Keyboard shortcuts
+const KEY_STATE = { '1':'idle','2':'listening','3':'thinking','4':'speaking','5':'acting','6':'error' };
+window.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (KEY_STATE[k]) setState(KEY_STATE[k]);
+  else if (k === 'q') setPalette(currentPalette === 'spice' ? 'halo' : 'spice');
+  else if (k === 'w') {
+    const envs = ENVIRONMENTS[currentPalette].map(x => x.key);
+    const idx = envs.indexOf(currentEnv);
+    setEnv(envs[(idx + 1) % envs.length]);
+  }
+});
+
+// Initial render
+renderEnvButtons();
+applyPanelData();
+
+// ════════════════════════════════════════════════════════════════════════════
+// ORBITAL DATA PANELS — orbit the orb in a slow elliptical path; depth-fade.
+// ════════════════════════════════════════════════════════════════════════════
+const panelEls = [
+  document.getElementById('panel-1'),
+  document.getElementById('panel-2'),
+  document.getElementById('panel-3'),
+  document.getElementById('panel-4'),
+];
+function positionPanels(t) {
+  const cx = innerWidth / 2;
+  const cy = innerHeight / 2;
+  // Radii adjust to viewport
+  const rx = Math.min(innerWidth * 0.36, 520);
+  const ry = Math.min(innerHeight * 0.30, 260);
+  const baseRot = t * 0.06;
+  for (let i = 0; i < 4; i++) {
+    const phase = (i / 4) * Math.PI * 2;
+    const angle = baseRot + phase;
+    const x = cx + Math.cos(angle) * rx;
+    const y = cy + Math.sin(angle) * ry;
+    // Pseudo-depth from y-component → scale + opacity
+    const depthN = (Math.sin(angle) + 1) / 2;
+    const scale = 0.85 + depthN * 0.20;
+    const opacity = 0.45 + depthN * 0.55;
+    const el = panelEls[i];
+    el.style.transform = `translate(calc(${x}px - 50%), calc(${y}px - 50%)) scale(${scale.toFixed(3)})`;
+    el.style.opacity = opacity.toFixed(3);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PER-FRAME UPDATE
+// ════════════════════════════════════════════════════════════════════════════
+const clock = new THREE.Clock();
+let audioSim = 0;
+const _tmpWarm = new THREE.Color(), _tmpDeep = new THREE.Color();
+const _tmpAccent = new THREE.Color(), _tmpGlyph = new THREE.Color(), _tmpSil = new THREE.Color();
+
+function applyPaletteTo(orb, palette, errorTint) {
+  _tmpWarm.setHex(palette.warm);
+  _tmpDeep.setHex(palette.deep);
+  _tmpAccent.setHex(palette.accent);
+  _tmpGlyph.setHex(palette.glyph);
+  _tmpSil.setHex(palette.silhouette);
+  if (errorTint) {
+    const err = new THREE.Color(0x9a2030);
+    _tmpWarm.lerp(err, 0.55);
+    _tmpAccent.lerp(new THREE.Color(0xff5060), 0.5);
+    _tmpSil.lerp(err, 0.4);
+  }
+  orb.vortexMat.uniforms.uWarm.value.lerp(_tmpWarm, 0.06);
+  orb.vortexMat.uniforms.uDeep.value.lerp(_tmpDeep, 0.06);
+  orb.vortexMat.uniforms.uAccent.value.lerp(_tmpAccent, 0.06);
+  orb.vortexMat.uniforms.uStyleSeed.value += (palette.glyphStyleSeed - orb.vortexMat.uniforms.uStyleSeed.value) * 0.05;
+  orb.silhouetteMat.color.lerp(_tmpSil, 0.06);
+  orb.dotMat.color.lerp(_tmpAccent, 0.06);
+  orb.trackMat.color.lerp(_tmpAccent, 0.04);
+  orb.rings.forEach(r => {
+    r.material.uniforms.uGlyph.value.lerp(_tmpGlyph, 0.06);
+    r.material.uniforms.uAccent.value.lerp(_tmpAccent, 0.06);
+    r.material.uniforms.uStyleSeed.value += (palette.glyphStyleSeed - r.material.uniforms.uStyleSeed.value) * 0.05;
+  });
+}
+
+function updateOrb(orb, t, tint) {
+  orb.vortexMat.uniforms.uTime.value  = t;
+  orb.vortexMat.uniforms.uAudio.value = audioSim;
+  orb.vortexMat.uniforms.uSpeed.value = tint.speed;
+  let pulse = 0;
+  if (currentState === 'idle')          pulse = Math.sin(t * 1.3) * 0.04;
+  else if (currentState === 'thinking') pulse = Math.sin(t * 3.5) * 0.12;
+  else if (currentState === 'acting')   pulse = actingFlash;
+  else if (currentState === 'error')    pulse = Math.sin(t * 14) * 0.05;
+  orb.vortexMat.uniforms.uPulse.value = pulse;
+  orb.coreMat.opacity = 0.5 + audioSim * 0.15;
+
+  // Rings — each rotates with its own personality
+  orb.rings.forEach((r, i) => {
+    const dir = (i % 2 === 0) ? 1 : -1;
+    r.rotation.z += 0.0025 * tint.speed * dir * (1 + i * 0.15);
+    r.rotation.y += 0.0014 * tint.speed * dir;
+    r.material.uniforms.uTime.value = t;
+    const baseI = currentState === 'idle' ? 0.55 : 0.85;
+    r.material.uniforms.uIntensity.value = (baseI + audioSim * 0.4 + pulse * 0.5) * r._spec.intensity;
+  });
+
+  // Glyph dots
+  orb.dots.rotation.y += 0.0028 * tint.speed;
+  orb.dots.rotation.x = Math.sin(t * 0.3) * 0.08;
+  orb.dotMat.opacity = 0.4 + audioSim * 0.4 + (currentState === 'thinking' ? 0.2 : 0);
+  orb.dotMat.size = 0.05 + audioSim * 0.03 + pulse * 0.04;
+
+  // Track gently spins
+  orb.track.rotation.z += 0.0006;
+
+  // Silhouette particles
+  const positions = orb.silhouette.geometry.attributes.position;
+  const arr = positions.array;
+  const home = orb.homePos;
+  const N = orb.particleCount;
+  const dispScale = currentState === 'idle'      ? 0.012
+                  : currentState === 'listening' ? 0.018 + audioSim * 0.04
+                  : currentState === 'thinking'  ? 0.06  + Math.sin(t * 2.0) * 0.02
+                  : currentState === 'speaking'  ? 0.020 + audioSim * 0.06
+                  : currentState === 'acting'    ? 0.05 * (1 - actingFlash) + 0.015
+                  : 0.025;
+  for (let i = 0; i < N; i++) {
+    const hx = home[i*3], hy = home[i*3+1], hz = home[i*3+2];
+    const seed = i * 0.137;
+    const dx = Math.sin(t * 0.7 + seed * 11.0 + hy * 4.0) * dispScale;
+    const dy = Math.sin(t * 0.9 + seed * 13.0 + hx * 5.0) * dispScale * 1.2;
+    const dz = Math.sin(t * 0.6 + seed * 17.0 + hz * 3.0) * dispScale;
+    let ox = 0, oz = 0;
+    if (currentState === 'thinking') {
+      const ang = t * 0.6 + seed * 6.28;
+      ox = Math.cos(ang) * 0.025;
+      oz = Math.sin(ang) * 0.025;
+    }
+    arr[i*3    ] = hx + dx + ox;
+    arr[i*3 + 1] = hy + dy;
+    arr[i*3 + 2] = hz + dz + oz;
+  }
+  positions.needsUpdate = true;
+  const baseSize = currentState === 'speaking' ? 0.030
+                 : currentState === 'thinking' ? 0.026
+                 : 0.022;
+  orb.silhouetteMat.size = baseSize + audioSim * 0.018 + pulse * 0.01;
+  orb.silhouetteMat.opacity = 0.75 + audioSim * 0.2 + (currentState === 'idle' ? -0.1 : 0.05);
+
+  orb.group.rotation.y += 0.0008 * tint.speed;
+}
+
+function animate() {
+  const t  = clock.getElapsedTime();
+  const palette = PALETTES[currentPalette];
+  const tint    = STATE_TINT[currentState];
+
+  let target = 0;
+  if (currentState === 'listening')     target = 0.30 + Math.sin(t * 6.0) * 0.18 + Math.random() * 0.10;
+  else if (currentState === 'speaking') target = 0.42 + Math.sin(t * 10.0) * 0.22 + Math.sin(t * 6.0) * 0.14;
+  else if (currentState === 'thinking') target = 0.08 + Math.sin(t * 3.5) * 0.05;
+  else if (currentState === 'acting')   target = 0.20 * actingFlash;
+  audioSim += (target - audioSim) * 0.22;
+  actingFlash *= 0.94;
+
+  main.vortexMat.uniforms.uCamPos.value.copy(camera.position);
+  hud.vortexMat.uniforms.uCamPos.value.copy(hudCam.position);
+
+  applyPaletteTo(main, palette, tint.errorTint);
+  applyPaletteTo(hud,  palette, tint.errorTint);
+  updateOrb(main, t, tint);
+  updateOrb(hud,  t, tint);
+
+  // Camera drift
+  camera.position.x = Math.sin(t * 0.13) * 0.10;
+  camera.position.y = 0.05 + Math.cos(t * 0.10) * 0.06;
+  camera.lookAt(0, 0, 0);
+
+  const targetBloom = palette.bloom + tint.bloomBump;
+  bloom.strength += (targetBloom - bloom.strength) * 0.04;
+
+  dust.rotation.y += 0.0003;
+  dust.rotation.x += 0.0001;
+  const dustHex = currentPalette === 'halo' ? 0x365a78 : 0x6e4a26;
+  dustMat.color.lerp(new THREE.Color(dustHex), 0.02);
+
+  // Update orbital data panels in screen space
+  positionPanels(t);
+
+  composer.render();
+  hudRenderer.render(hudScene, hudCam);
+
+  requestAnimationFrame(animate);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  bloom.setSize(innerWidth, innerHeight);
+});
+</script>
+
+</body>
+</html>

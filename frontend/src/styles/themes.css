@@ -511,3 +511,107 @@
 [data-theme="dune"] .card {
   box-shadow: inset 0 0 15px rgba(200,168,75,0.08);
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Palette × Environment — the new presence theme system.
+   Hex values mirror prototypes/presence-orb.html PALETTES{} object.
+   ────────────────────────────────────────────────────────────────────────── */
+
+[data-palette="spice"] {
+  --primary:        #d4a040;   /* dusty amber */
+  --secondary:      #8a5a28;   /* bronze etching */
+  --accent:         #ffd28a;   /* bright spice */
+  --silhouette:     #e8c878;   /* sand-gold figure */
+  --vortex-deep:    #6e3a16;   /* burnt copper */
+  --error:          #c84030;
+  --bg-base:        #0d0805;
+  --fg:             #d9c4a0;
+  --line:           rgba(212, 168, 100, .22);
+  --panel-bg:       rgba(12, 8, 4, .58);
+}
+
+[data-palette="halo"] {
+  --primary:        #78c8e6;
+  --secondary:      #3a7090;
+  --accent:         #e6f6ff;
+  --silhouette:     #b0e0f0;
+  --vortex-deep:    #1a3a52;
+  --error:          #c84030;
+  --bg-base:        #060a0f;
+  --fg:             #d4e6f0;
+  --line:           rgba(120, 200, 230, .22);
+  --panel-bg:       rgba(4, 8, 14, .58);
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--fg);
+  transition: background 1.0s ease, color 1.0s ease;
+}
+
+/* ─ Environment backdrops — each is a clearly different ROOM ──────────── */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  opacity: 1.0;
+  transition: background 1.2s ease, opacity 1.2s ease;
+}
+
+/* ── Spice · Atreides — sandstone palace, golden hour ─────────────────── */
+body[data-env="atreides"]::before {
+  background:
+    /* DOMINANT directional sunset wash from upper-right */
+    linear-gradient(225deg, rgba(255,180,90,.42) 0%, rgba(255,180,90,.08) 28%, transparent 50%),
+    /* Floor-line horizon — warm ground glow */
+    linear-gradient(0deg, rgba(180,90,30,.20) 0%, transparent 30%),
+    /* Chunky stone block courses — visible mortar between */
+    repeating-linear-gradient(0deg,  rgba(40,22,10,.78) 0 5px, transparent 5px 110px),
+    repeating-linear-gradient(90deg, rgba(40,22,10,.62) 0 5px, transparent 5px 220px),
+    /* Base wash — warm umber, lighter than Harkonnen */
+    linear-gradient(180deg, rgba(60,32,14,.55) 0%, rgba(18,8,4,.78) 100%);
+}
+
+/* ── Spice · Harkonnen — industrial dreadnought, oppressive crimson ───── */
+body[data-env="harkonnen"]::before {
+  background:
+    /* Strong crimson underlight */
+    radial-gradient(ellipse 110% 35% at 50% 102%, rgba(220,40,20,.40) 0%, transparent 55%),
+    /* Cold pale flicker from above */
+    radial-gradient(ellipse 60% 30% at 50% -5%, rgba(120,140,160,.10) 0%, transparent 60%),
+    /* Tight vertical ribs — dense brutalist pattern */
+    repeating-linear-gradient(90deg, rgba(0,0,0,.92) 0 6px, transparent 6px 36px),
+    /* Faint horizontal banding for industrial seam-line feel */
+    repeating-linear-gradient(0deg, transparent 0 220px, rgba(30,15,8,.40) 220px 224px),
+    /* Pitch-black base */
+    linear-gradient(180deg, rgba(3,5,8,.65) 0%, rgba(0,0,0,.96) 100%);
+}
+
+/* ── Halo · Forerunner — pale ceramic hard-light cathedral ────────────── */
+body[data-env="forerunner"]::before {
+  background:
+    /* Bright celestial top-light, like a skylight */
+    radial-gradient(ellipse 70% 75% at 50% -10%, rgba(190,235,255,.55) 0%, rgba(120,200,230,.18) 25%, transparent 55%),
+    /* Vertical light shafts — like sun through structural slots */
+    repeating-linear-gradient(90deg, transparent 0 280px, rgba(180,230,250,.16) 280px 286px),
+    /* Hex pattern - LARGE and crisp */
+    repeating-linear-gradient(60deg,  transparent 0 130px, rgba(130,200,230,.32) 130px 134px),
+    repeating-linear-gradient(-60deg, transparent 0 130px, rgba(130,200,230,.32) 130px 134px),
+    /* Cool ceramic-pale base */
+    linear-gradient(180deg, rgba(28,72,98,.50) 0%, rgba(3,10,20,.85) 100%);
+}
+
+/* ── Halo · UNSC — military hangar, harsh tactical amber on steel ─────── */
+body[data-env="unsc"]::before {
+  background:
+    /* Large tactical amber corner floodlights */
+    radial-gradient(circle 280px at 6% 88%, rgba(255,140,40,.55) 0%, transparent 65%),
+    radial-gradient(circle 280px at 94% 88%, rgba(255,140,40,.55) 0%, transparent 65%),
+    /* Horizontal amber tactical strip lower-third */
+    linear-gradient(0deg, rgba(240,140,50,.18) 0 80px, transparent 100px),
+    /* Cool overhead bay light */
+    radial-gradient(ellipse 80% 25% at 50% -5%, rgba(140,170,200,.20) 0%, transparent 55%),
+    /* Steel deck plating — LARGE square plates */
+    repeating-linear-gradient(0deg,  rgba(60,65,72,.82) 0 6px, transparent 6px 92px),
+    repeating-linear-gradient(90deg, rgba(60,65,72,.65) 0 6px, transparent 6px 92px),
+    /* Dark steel base */
+    linear-gradient(180deg, rgba(12,16,22,.60) 0%, rgba(0,0,0,.92) 100%);
+}

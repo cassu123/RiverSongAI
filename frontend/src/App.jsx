@@ -23,6 +23,7 @@ const CommercePage       = lazy(() => import('./pages/CommercePage.jsx'))
 const ReadingPage        = lazy(() => import('./pages/ReadingPage.jsx'))
 const AnalyticsPage      = lazy(() => import('./pages/AnalyticsPage.jsx'))
 const InventoryPage           = lazy(() => import('./pages/InventoryPage.jsx'))
+const ChronosPage             = lazy(() => import('./pages/ChronosPage.jsx'))
 const MaintenancePulsePage    = lazy(() => import('./pages/MaintenancePulsePage.jsx'))
 const CulinaryPage            = lazy(() => import('./pages/CulinaryPage.jsx'))
 const EnvironmentPage         = lazy(() => import('./pages/EnvironmentPage.jsx'))
@@ -49,6 +50,11 @@ export default function App() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const themeKey = user ? `rs-theme:${user.id}` : 'rs-theme'
   const [theme,       setTheme]       = useState(() => load(user ? `rs-theme:${user.id}` : 'rs-theme', 'halo'))
+  const paletteKey = user ? `rs-palette:${user.id}` : 'rs-palette'
+  const envKey     = user ? `rs-env:${user.id}`     : 'rs-env'
+  const [palette,     setPalette]     = useState(() => load(paletteKey, 'spice'))
+  const [environment, setEnvironment] = useState(() => load(envKey, 'atreides'))
+
   const [profile,     setProfile]     = useState(() => {
     if (user) return { displayName: user.display_name, username: user.email, birthday: '' }
     return load('rs-profile', { displayName: 'User', username: '', birthday: '' })
@@ -74,7 +80,39 @@ export default function App() {
   }, [theme]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    save(paletteKey, palette)
+    document.documentElement.setAttribute('data-palette', palette)
+    if (user) {
+      const token = load('rs-auth-token', null)
+      if (token) {
+        fetch('/api/auth/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ palette }),
+        }).catch(() => {})
+      }
+    }
+  }, [palette]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    save(envKey, environment)
+    document.documentElement.setAttribute('data-env', environment)
+    if (user) {
+      const token = load('rs-auth-token', null)
+      if (token) {
+        fetch('/api/auth/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ environment }),
+        }).catch(() => {})
+      }
+    }
+  }, [environment]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
+    document.documentElement.setAttribute('data-palette', palette)
+    document.documentElement.setAttribute('data-env', environment)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync display name and theme when user changes (login/logout)
@@ -93,14 +131,49 @@ export default function App() {
           save(`rs-theme:${user.id}`, resolved)
           setTheme(resolved)
           document.documentElement.setAttribute('data-theme', resolved)
+
+          const serverPalette = data?.palette
+          const localPalette  = load(`rs-palette:${user.id}`, null)
+          const resolvedP = serverPalette || localPalette || 'spice'
+          save(`rs-palette:${user.id}`, resolvedP)
+          setPalette(resolvedP)
+          document.documentElement.setAttribute('data-palette', resolvedP)
+
+          const serverEnv = data?.environment
+          const localEnv  = load(`rs-env:${user.id}`, null)
+          const resolvedE = serverEnv || localEnv || 'atreides'
+          save(`rs-env:${user.id}`, resolvedE)
+          setEnvironment(resolvedE)
+          document.documentElement.setAttribute('data-env', resolvedE)
         })
         .catch(() => {
           const saved = load(`rs-theme:${user.id}`, 'halo')
           setTheme(saved)
           document.documentElement.setAttribute('data-theme', saved)
+
+          const savedP = load(`rs-palette:${user.id}`, 'spice')
+          setPalette(savedP)
+          document.documentElement.setAttribute('data-palette', savedP)
+
+          const savedE = load(`rs-env:${user.id}`, 'atreides')
+          setEnvironment(savedE)
+          document.documentElement.setAttribute('data-env', savedE)
         })
     }
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const PAL_ENV_PAIRS = {
+    spice: ['atreides',   'harkonnen'],
+    halo:  ['forerunner', 'unsc'],
+  }
+
+  const setPaletteSafe = (p) => {
+    setPalette(p)
+    const valid = PAL_ENV_PAIRS[p]
+    if (!valid.includes(environment)) {
+      setEnvironment(valid[0])  // jump to first env of the new palette
+    }
+  }
 
   // True if the logged-in user has the admin role
   const userIsAdmin = user?.role === 'admin'
@@ -230,13 +303,22 @@ export default function App() {
                   onThemeChange={setTheme}
                 />
               )}
-              {currentPage === 'settings'   && <SettingsPage onFeaturesChanged={refreshFeatures} />}
+              {currentPage === 'settings'   && (
+                <SettingsPage 
+                  onFeaturesChanged={refreshFeatures}
+                  palette={palette}
+                  environment={environment}
+                  onPaletteChange={setPaletteSafe}
+                  onEnvironmentChange={setEnvironment}
+                />
+              )}
               {currentPage === 'feeds'      && <FeedsPage />}
               {currentPage === 'google'     && <GooglePage />}
               {currentPage === 'commerce'   && <CommercePage />}
               {currentPage === 'reading'    && <ReadingPage />}
               {currentPage === 'analytics'  && <AnalyticsPage />}
               {currentPage === 'inventory'    && <InventoryPage />}
+              {currentPage === 'chronos'      && <ChronosPage />}
               {currentPage === 'environment'  && <EnvironmentPage />}
 
               {currentPage === 'maintenance' && <MaintenancePulsePage />}

@@ -66,7 +66,7 @@ class BaseDaemon(ABC):
                         "Authorization": f"Bearer {self.settings.daemon_internal_secret}"
                     }
                     # POST to main app's daemon heartbeat endpoint
-                    url = f"http://127.0.0.1:{self.settings.app_port}/api/daemon/heartbeat"
+                    url = f"http://localhost:{self.settings.app_port}/api/daemon/heartbeat"
                     await client.post(url, json=payload, headers=headers, timeout=5.0)
             except Exception as e:
                 # Silently swallow all heartbeat exceptions

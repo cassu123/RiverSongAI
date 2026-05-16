@@ -403,9 +403,19 @@ async def google_callback(request: Request, body: GoogleCallbackBody):
 
 class ProfilePatch(BaseModel):
     theme: Optional[str] = None
+    palette: Optional[str] = None
+    environment: Optional[str] = None
     display_name: Optional[str] = None
 
 VALID_THEMES = {"halo", "crimson-dark", "combat", "midnight-violet", "amber", "arctic", "cyberpunk", "dune"}
+VALID_PALETTES     = {"spice", "halo"}
+VALID_ENVIRONMENTS = {"atreides", "harkonnen", "forerunner", "unsc"}
+
+# Cross-validation: which environments are legal under which palette
+PALETTE_ENV_PAIRS = {
+    "spice": {"atreides", "harkonnen"},
+    "halo":  {"forerunner", "unsc"},
+}
 
 
 @router.post("/ws-ticket")
@@ -463,7 +473,15 @@ async def get_profile(request: Request, authorization: Optional[str] = Header(de
     user = await store.get_user_by_id(payload["sub"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return {"id": user["id"], "email": user["email"], "display_name": user["display_name"], "role": user["role"], "theme": user.get("theme", "halo")}
+    return {
+        "id": user["id"],
+        "email": user["email"],
+        "display_name": user["display_name"],
+        "role": user["role"],
+        "theme": user.get("theme", "halo"),
+        "palette": user.get("palette", "spice"),
+        "environment": user.get("environment", "atreides"),
+    }
 
 
 @router.patch("/profile")
@@ -474,9 +492,34 @@ async def update_profile(body: ProfilePatch, request: Request, authorization: Op
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
     user_id = payload["sub"]
+
     if body.theme is not None:
         if body.theme not in VALID_THEMES:
             raise HTTPException(status_code=400, detail=f"Invalid theme. Valid: {', '.join(VALID_THEMES)}")
         await store.update_user_theme(user_id, body.theme)
+
+    if body.palette is not None:
+        if body.palette not in VALID_PALETTES:
+            raise HTTPException(status_code=400, detail=f"Invalid palette. Valid: {', '.join(VALID_PALETTES)}")
+        await store.update_user_palette(user_id, body.palette)
+
+    if body.environment is not None:
+        if body.environment not in VALID_ENVIRONMENTS:
+            raise HTTPException(status_code=400, detail=f"Invalid environment. Valid: {', '.join(VALID_ENVIRONMENTS)}")
+        # Cross-validation: enforce pairing
+        user_record = await store.get_user_by_id(user_id)
+        current_palette = body.palette or user_record.get("palette", "spice")
+        if body.environment not in PALETTE_ENV_PAIRS.get(current_palette, set()):
+            raise HTTPException(status_code=400, detail=f"environment '{body.environment}' is not valid under palette '{current_palette}'")
+        await store.update_user_environment(user_id, body.environment)
+
     user = await store.get_user_by_id(user_id)
-    return {"id": user["id"], "email": user["email"], "display_name": user["display_name"], "role": user["role"], "theme": user.get("theme", "halo")}
+    return {
+        "id": user["id"],
+        "email": user["email"],
+        "display_name": user["display_name"],
+        "role": user["role"],
+        "theme": user.get("theme", "halo"),
+        "palette": user.get("palette", "spice"),
+        "environment": user.get("environment", "atreides"),
+    }

@@ -40,6 +40,8 @@ from core.kill_switch import is_kill_switch_active
 from core.memory_manager import MemoryManager
 from providers.memory.sqlite_store import SQLiteStore
 
+logger = logging.getLogger(__name__)
+
 # Module-level variable to store the app instance for circular dependency resolution.
 _app_instance: FastAPI | None = None
 
@@ -83,7 +85,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     _main_module._app_instance = app
 
     settings = get_settings()
-    logger = logging.getLogger(__name__)
 
     logger.info("River Song AI starting up.")
     logger.info(
@@ -179,7 +180,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from core.routines_scheduler import start_scheduler
     scheduler_task = asyncio.create_task(start_scheduler(app))
 
+    # CHRONOS: Start vault watcher
+    from providers.vault.vault_provider import start_vault_watcher
+    start_vault_watcher(app)
+
     yield  # Application runs here
+
+    # CHRONOS: Stop vault watcher
+    from providers.vault.vault_provider import stop_vault_watcher
+    stop_vault_watcher()
 
     scheduler_task.cancel()
     try:
@@ -277,7 +286,7 @@ def create_app() -> FastAPI:
         admin_router, routines_router, inventory_router, commerce_router,
         vehicles_router, feeds_router, reading_router, features_router,
         parent_router, analytics_router, culinary_router, location_router, google_router,
-        vision_router, n8n_webhooks, shopify_webhooks_router, image_router, push_router,
+        vision_router, vault_router, pulse_router, n8n_webhooks, shopify_webhooks_router, image_router, push_router,
         legal_router, rag_router, daemons_router, context_router, broadcast_router, rover_router
     )
 
@@ -303,6 +312,8 @@ def create_app() -> FastAPI:
     app.include_router(location_router)
     app.include_router(google_router)
     app.include_router(vision_router)
+    app.include_router(vault_router)
+    app.include_router(pulse_router)
     app.include_router(shopify_webhooks_router)
     app.include_router(image_router)
     app.include_router(push_router)

@@ -181,6 +181,40 @@ Current family members: Cheryl (admin), husband, sister's family.
 - Production docs (`/docs`, `/redoc`) disabled
 - `.env` never committed — secrets stay on the server
 
+## MCP server — expose tools to external clients
+
+River Song's tools are also reachable via the [Model Context Protocol](https://modelcontextprotocol.io). Useful for driving River Song from Claude Desktop, the Claude phone app, or any future MCP-aware agent.
+
+### Run alongside the main API
+
+```bash
+./scripts/mcp-server.sh                   # SSE on 127.0.0.1:9090
+./scripts/mcp-server.sh --stdio           # stdio (embedded clients)
+./scripts/mcp-server.sh --list-tools      # print exposed tools and exit
+```
+
+### Connect from Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or the equivalent path on your platform:
+
+```json
+{
+  "mcpServers": {
+    "river-song": {
+      "command": "/absolute/path/to/RiverSongAI/scripts/mcp-server.sh",
+      "args": ["--stdio"],
+      "env": {
+        "RS_TOKEN": "<a River Song JWT — issue one via POST /api/auth/login>"
+      }
+    }
+  }
+}
+```
+
+### Exposed tools
+
+12 tools. Excluded for safety: `control_device`, `create_commerce_sale`, `trigger_n8n`. See `mcp_server.py::EXPOSED_TOOL_NAMES` for the current list.
+
 ---
 
 *Private project — not affiliated with any IP holder.*

@@ -7,13 +7,14 @@
 
 export const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch'])
 
-export const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings', 'image'])
+export const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings', 'image', 'chronos'])
 
 export const STATE_TABS = ['idle', 'listening', 'thinking', 'speaking']
 
 export const USER_ITEMS = [
   { key: 'speak',       label: 'Speak',       icon: 'mic' },
   { key: 'chat',        label: 'Chat',        icon: 'chat_bubble' },
+  { key: 'chronos',     label: 'CHRONOS',     icon: 'history' },
   { key: 'image',       label: 'Dreamscape',  icon: 'auto_awesome' },
   { key: 'memory',      label: 'Memory',      icon: 'psychology' },
   { key: 'inventory',   label: 'Inventory',   icon: 'inventory_2' },
@@ -32,6 +33,7 @@ export const ADMIN_ITEMS = [
   { key: 'dashboard',   label: 'Dashboard',   icon: 'dashboard' },
   { key: 'speak',       label: 'Speak',       icon: 'mic' },
   { key: 'chat',        label: 'Chat',        icon: 'chat_bubble' },
+  { key: 'chronos',     label: 'CHRONOS',     icon: 'history' },
   { key: 'image',       label: 'Dreamscape',  icon: 'auto_awesome' },
   { key: 'memory',      label: 'Memory',      icon: 'psychology' },
   { key: 'inventory',   label: 'Inventory',   icon: 'inventory_2' },

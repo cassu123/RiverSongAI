@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import RiverStatusBox from '../components/RiverStatusBox.jsx'
 import HealthCard from '../components/HealthCard.jsx'
+import PulseWidget from '../components/PulseWidget.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import './DashboardPage.css'
 
@@ -15,6 +16,7 @@ const ALL_WIDGETS = [
   { key: 'learned_patterns', label: 'Learned Patterns', col: 'left' },
   { key: 'environment',     label: 'Environment',      col: 'left' },
   { key: 'river_status',    label: 'River Status',     col: 'right' },
+  { key: 'pulse',           label: 'Pulse',           col: 'right' },
   { key: 'quick_actions',   label: 'Quick Actions',    col: 'right' },
   { key: 'rover',           label: 'Rover Status',     col: 'right' },
   { key: 'active_routines', label: 'Active Routines',  col: 'right' },
@@ -516,6 +518,19 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
               noPad
             >
               <RiverStatusBox state="idle" />
+            </WidgetShell>
+          )}
+
+          {/* Pulse — ambient feeds */}
+          {show('pulse') && (
+            <WidgetShell
+              label="PULSE"
+              widgetKey="pulse"
+              arrange={arrange}
+              visible={visible}
+              onToggle={toggleWidget}
+            >
+              <PulseWidget token={token} />
             </WidgetShell>
           )}
 

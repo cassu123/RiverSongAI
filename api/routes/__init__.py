@@ -28,6 +28,8 @@ from .daemons import router as daemons_router
 from .context import router as context_router
 from .broadcast import router as broadcast_router
 from .rover import router as rover_router
+from .vault import router as vault_router
+from .pulse import router as pulse_router
 from . import n8n_webhooks
 from .legal import router as legal_router
 
@@ -62,6 +64,8 @@ __all__ = [
     "context_router",
     "broadcast_router",
     "rover_router",
+    "vault_router",
+    "pulse_router",
     "n8n_webhooks",
     "legal_router",
 ]

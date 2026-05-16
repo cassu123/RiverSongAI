@@ -99,9 +99,9 @@ async def health_check(request: Request) -> HealthResponse:
     # 2. Providers
     providers = ProviderHealth(
         stt="whisper_local",  # Fixed for now
-        stt_model=settings.whisper_model,
+        stt_model=settings.whisper_model_size,
         tts=settings.tts_provider,
-        active_voice=settings.tts_voice_id,
+        active_voice=settings.active_voice_id,
         llm="ollama", # Primary
         llm_model=settings.llm_model
     )
