@@ -301,15 +301,15 @@ export default function App() {
                   onSave={setProfile}
                   theme={theme}
                   onThemeChange={setTheme}
+                  palette={palette}
+                  environment={environment}
+                  onPaletteChange={setPaletteSafe}
+                  onEnvironmentChange={setEnvironment}
                 />
               )}
               {currentPage === 'settings'   && (
                 <SettingsPage 
                   onFeaturesChanged={refreshFeatures}
-                  palette={palette}
-                  environment={environment}
-                  onPaletteChange={setPaletteSafe}
-                  onEnvironmentChange={setEnvironment}
                 />
               )}
               {currentPage === 'feeds'      && <FeedsPage />}

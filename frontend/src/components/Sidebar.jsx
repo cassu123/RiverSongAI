@@ -34,11 +34,11 @@ export default function Sidebar({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        width: collapsed ? '72px' : '260px',
+        width: collapsed ? '72px' : 'var(--sidebar-width)',
         flexShrink: 0,
-        background: 'var(--md-surface-container-low)',
-        borderRight: '1px solid var(--md-outline-variant)',
-        transition: 'width 250ms cubic-bezier(0.2, 0, 0, 1), transform 250ms cubic-bezier(0.2, 0, 0, 1)',
+        background: 'color-mix(in srgb, var(--bg-base) calc(var(--sidebar-bg-alpha) * 100%), transparent)',
+        borderRight: 'var(--card-border-width) solid var(--md-outline-variant)',
+        transition: 'width 250ms cubic-bezier(0.2, 0, 0, 1), transform 250ms cubic-bezier(0.2, 0, 0, 1), background 1.0s ease',
         zIndex: 50,
         overflow: 'hidden',
       }}

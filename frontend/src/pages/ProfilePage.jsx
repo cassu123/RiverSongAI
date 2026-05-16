@@ -27,7 +27,11 @@ const THEMES = [
   { key: 'dune',      label: 'Dune',      primary: '#deb651', bg: '#0a0804' },
 ]
 
-export default function ProfilePage({ profile, onSave, theme, onThemeChange }) {
+export default function ProfilePage({ 
+  profile, onSave, 
+  theme, onThemeChange,
+  palette, environment, onPaletteChange, onEnvironmentChange
+}) {
   const { token } = useAuth()
   const [form,    setForm]    = useState({ ...profile })
   const [pwForm,  setPwForm]  = useState({ current: '', next: '', confirm: '' })
@@ -316,6 +320,55 @@ export default function ProfilePage({ profile, onSave, theme, onThemeChange }) {
                   </div>
                   <span className="theme-card-label">{t.label.toUpperCase()}</span>
                   {theme === t.key && <span className="theme-card-active-dot" />}
+                </button>
+              ))}
+            </div>
+
+            <div className="card-title" style={{ marginTop: 32 }}>UNIVERSE</div>
+            <p className="profile-hint">Fundamental color palette and glyph style of River's core.</p>
+            <div className="theme-grid">
+              {['spice', 'halo'].map(p => (
+                <button
+                  key={p}
+                  className={`theme-card ${palette === p ? 'theme-card--active' : ''}`}
+                  onClick={() => onPaletteChange(p)}
+                  style={{ 
+                    '--tc-primary': p === 'spice' ? '#d4a040' : '#78c8e6',
+                    '--tc-bg':      p === 'spice' ? '#0d0805' : '#060a0f'
+                  }}
+                >
+                  <div className="theme-card-preview">
+                    <div className="theme-card-ring" />
+                    <div className="theme-card-bar" />
+                  </div>
+                  <span className="theme-card-label">{p === 'spice' ? 'SPICE · DUNE' : 'HALO'}</span>
+                  {palette === p && <span className="theme-card-active-dot" />}
+                </button>
+              ))}
+            </div>
+
+            <div className="card-title" style={{ marginTop: 32 }}>ENVIRONMENT</div>
+            <p className="profile-hint">The physical space River inhabits. Each universe has two unique rooms.</p>
+            <div className="theme-grid">
+              {(palette === 'spice'
+                ? [['atreides', 'ATREIDES'], ['harkonnen', 'HARKONNEN']]
+                : [['forerunner', 'FORERUNNER'], ['unsc', 'UNSC']]
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  className={`theme-card ${environment === key ? 'theme-card--active' : ''}`}
+                  onClick={() => onEnvironmentChange(key)}
+                  style={{ 
+                    '--tc-primary': palette === 'spice' ? '#d4a040' : '#78c8e6',
+                    '--tc-bg':      '#1a1a1a'
+                  }}
+                >
+                  <div className="theme-card-preview">
+                    <div className="theme-card-ring" />
+                    <div className="theme-card-bar" />
+                  </div>
+                  <span className="theme-card-label">{label}</span>
+                  {environment === key && <span className="theme-card-active-dot" />}
                 </button>
               ))}
             </div>

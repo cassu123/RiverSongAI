@@ -125,11 +125,7 @@ const PROVIDER_NAMES = {
 }
 
 export default function SettingsPage({ 
-  onFeaturesChanged,
-  palette,
-  environment,
-  onPaletteChange,
-  onEnvironmentChange
+  onFeaturesChanged
 }) {
   const { user, token } = useAuth()
 
@@ -466,8 +462,6 @@ export default function SettingsPage({
           border-color: var(--md-primary) !important;
           box-shadow: 0 0 0 1px var(--md-primary);
         }
-        .settings-presence-group { margin-bottom: 16px; }
-        .settings-hint { font-size: 11px; opacity: 0.55; margin-top: 12px; letter-spacing: 0.02em; }
       `}</style>
 
       <div className="page-breadcrumb">
@@ -533,50 +527,6 @@ export default function SettingsPage({
         </Section>
       )}
     
-      {/* ================================================================ */}
-      {/* PRESENCE — Palette × Environment */}
-      <Section title="PRESENCE">
-        <div className="settings-presence-group">
-          <div className="settings-label">Universe</div>
-          <div className="settings-button-row">
-            <button
-              className={`settings-button ${palette === 'spice' ? 'settings-button--active' : ''}`}
-              onClick={() => onPaletteChange('spice')}
-            >
-              Spice (Dune)
-            </button>
-            <button
-              className={`settings-button ${palette === 'halo' ? 'settings-button--active' : ''}`}
-              onClick={() => onPaletteChange('halo')}
-            >
-              Halo
-            </button>
-          </div>
-        </div>
-
-        <div className="settings-presence-group">
-          <div className="settings-label">Environment</div>
-          <div className="settings-button-row">
-            {(palette === 'spice'
-              ? [['atreides', 'Atreides'], ['harkonnen', 'Harkonnen']]
-              : [['forerunner', 'Forerunner'], ['unsc', 'UNSC']]
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                className={`settings-button ${environment === key ? 'settings-button--active' : ''}`}
-                onClick={() => onEnvironmentChange(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <p className="settings-hint">
-          Saved to your account. Other family members keep their own.
-        </p>
-      </Section>
-
       {/* AI MODEL                                                         */}
       {/* ================================================================ */}
       <Section title="AI MODEL">

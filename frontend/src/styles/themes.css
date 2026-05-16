@@ -549,6 +549,95 @@ body {
   transition: background 1.0s ease, color 1.0s ease;
 }
 
+/* ─ Density / chrome tokens — overridden per environment ──────────────────── */
+:root {
+  --layout-pad:           20px;
+  --layout-gap:           14px;
+  --card-radius:          2px;
+  --card-border-width:    1px;
+  --card-border-style:    solid;
+  --card-shadow:          none;
+  --divider-style:        solid;
+  --type-tracking:        0.08em;
+  --type-case:            uppercase;
+  --sidebar-width:        260px;
+  --sidebar-bg-alpha:     0.88;
+
+  /* material grammar extensions */
+  --font-mood:            'Roboto', system-ui, sans-serif;
+  --card-texture:         none;
+  --btn-actuation:        translateY(0);
+  --btn-shadow:           none;
+}
+
+/* Atreides — noble, sparse, calm, raking light. Polished wood & brass. */
+body[data-env="atreides"] {
+  --layout-pad:           28px;
+  --layout-gap:           20px;
+  --card-radius:          1px;
+  --card-border-width:    1px;
+  --card-shadow:          0 12px 40px rgba(0,0,0,0.45);
+  --divider-style:        solid;
+  --type-tracking:        0.18em;
+  --type-case:            uppercase;
+  --sidebar-bg-alpha:     0.82;
+  --font-mood:            "Ibarra Real Nova", "Georgia", serif;
+  --card-texture:         linear-gradient(135deg, rgba(212,160,64,0.03) 0%, transparent 100%);
+  --btn-actuation:        scale(0.98) translateY(1px);
+  --btn-shadow:           inset 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Harkonnen — dense, industrial, oppressive. Oil-slick iron & obsidian. */
+body[data-env="harkonnen"] {
+  --layout-pad:           12px;
+  --layout-gap:           6px;
+  --card-radius:          0px;
+  --card-border-width:    1px;
+  --card-shadow:          inset 0 0 0 1px rgba(255,40,20,.12);
+  --divider-style:        solid;
+  --type-tracking:        -0.02em;
+  --type-case:            uppercase;
+  --sidebar-bg-alpha:     0.95;
+  --font-mood:            "Inter", "Impact", sans-serif;
+  --card-texture:         repeating-linear-gradient(45deg, rgba(0,0,0,0.1) 0, rgba(0,0,0,0.1) 2px, transparent 2px, transparent 4px);
+  --btn-actuation:        translateY(2px);
+  --btn-shadow:           0 0 0 2px var(--error);
+}
+
+/* Forerunner — pristine, hex-architectural, godlike. Ceramic & Hard-light. */
+body[data-env="forerunner"] {
+  --layout-pad:           24px;
+  --layout-gap:           18px;
+  --card-radius:          4px;
+  --card-border-width:    1px;
+  --card-shadow:          0 0 30px rgba(120,200,230,.15);
+  --divider-style:        dotted;
+  --type-tracking:        0.12em;
+  --type-case:            none;
+  --sidebar-bg-alpha:     0.78;
+  --font-mood:            "Outfit", "Lexend", sans-serif;
+  --card-texture:         radial-gradient(circle at 50% 50%, rgba(120,200,230,0.05) 0%, transparent 100%);
+  --btn-actuation:        translateY(-1px);
+  --btn-shadow:           0 0 15px var(--accent);
+}
+
+/* UNSC — tactical, hard-edged, functional. Olive steel & amber phosphor. */
+body[data-env="unsc"] {
+  --layout-pad:           14px;
+  --layout-gap:           8px;
+  --card-radius:          0px;
+  --card-border-width:    2px;
+  --card-shadow:          0 4px 0 rgba(240,140,50,.18);
+  --divider-style:        solid;
+  --type-tracking:        0.06em;
+  --type-case:            uppercase;
+  --sidebar-bg-alpha:     0.92;
+  --font-mood:            "JetBrains Mono", "Courier New", monospace;
+  --card-texture:         linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 50%), repeating-linear-gradient(0deg, rgba(240,140,50,0.02) 0 1px, transparent 1px 2px);
+  --btn-actuation:        translateY(1px);
+  --btn-shadow:           2px 2px 0 var(--accent);
+}
+
 /* ─ Environment backdrops — each is a clearly different ROOM ──────────── */
 body::before {
   content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
@@ -614,4 +703,10 @@ body[data-env="unsc"]::before {
     repeating-linear-gradient(90deg, rgba(60,65,72,.65) 0 6px, transparent 6px 92px),
     /* Dark steel base */
     linear-gradient(180deg, rgba(12,16,22,.60) 0%, rgba(0,0,0,.92) 100%);
+}
+
+/* Vignette — concentrates attention on the content, lets the room breathe at edges */
+body::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,.45) 100%);
 }

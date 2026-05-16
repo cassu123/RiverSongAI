@@ -4,6 +4,8 @@
    Theme: Dark · Scheme: Dynamic Tonal Palette
    ============================================================ */
 
+@import url('https://fonts.googleapis.com/css2?family=Ibarra+Real+Nova:wght@400;600&family=JetBrains+Mono:wght@400;700&family=Lexend:wght@300;400;600&family=Outfit:wght@300;400;600&family=Inter:wght@400;700;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -37,19 +39,19 @@
   --md-error-container:        #93000A;
   --md-on-error-container:     #FFDAD6;
 
-  /* Surface & background */
+  /* Surface & background — redefined as translucent in §1 of layout-rework */
   --md-background:             #0F1316;
   --md-on-background:          #DEE4E9;
-  --md-surface:                #0F1316;
+  --md-surface:                color-mix(in srgb, var(--md-background) 88%, transparent);
   --md-on-surface:             #DEE4E9;
   --md-surface-variant:        #40484E;
   --md-on-surface-variant:     #BFC8CE;
 
   /* Surface container hierarchy (low → high = darker → lighter) */
   --md-surface-container-lowest:  #091114;
-  --md-surface-container-low:     #171C1F;
-  --md-surface-container:         #1B2023;
-  --md-surface-container-high:    #262B2E;
+  --md-surface-container-low:     color-mix(in srgb, var(--md-background) 76%, transparent);
+  --md-surface-container:         color-mix(in srgb, var(--md-background) 82%, transparent);
+  --md-surface-container-high:    color-mix(in srgb, var(--md-background) 92%, transparent);
   --md-surface-container-highest: #313538;
 
   /* Outline */
@@ -103,8 +105,8 @@
   --text-muted:    var(--md-outline);
   --border:        var(--md-outline-variant);
   --border-bright: var(--md-surface-variant);
-  --font-display:  'Roboto', system-ui, sans-serif;
-  --font-body:     'Roboto', system-ui, sans-serif;
+  --font-display:  var(--font-mood);
+  --font-body:     var(--font-mood);
   /* Glow effects removed in M3 — kept as no-ops for compat */
   --glow-sm:   none;
   --glow-md:   none;
@@ -123,14 +125,15 @@
   html, body, #root {
     height: 100%;
     width: 100%;
-    background-color: var(--md-background);
+    background-color: transparent;
     color: var(--md-on-surface);
-    font-family: 'Roboto', system-ui, sans-serif;
+    font-family: var(--font-mood);
     font-size: 16px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow: hidden;
+    transition: font-family 1.0s ease;
   }
 
   button {
@@ -154,7 +157,7 @@
 
   ::-webkit-scrollbar       { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: var(--card-radius); }
 
   /* Material Symbols base setup */
   .material-symbols-rounded {
@@ -177,7 +180,7 @@
   flex-direction: row;
   height: 100%;
   width: 100%;
-  background: var(--md-background);
+  background: transparent;
 }
 
 .app-main {
@@ -212,7 +215,12 @@
 .page-wrap {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 28px 40px;
+  padding: var(--layout-pad);
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: var(--layout-gap);
+  transition: padding 0.6s ease, gap 0.6s ease;
 }
 
 .page-breadcrumb {
@@ -286,9 +294,15 @@
 
 /* Filled card */
 .card {
-  background: var(--md-surface-container);
-  border-radius: var(--md-shape-md);
-  padding: 16px;
+  background: var(--md-surface);
+  background-image: var(--card-texture);
+  border: var(--card-border-width) var(--card-border-style) var(--md-outline-variant);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  padding: var(--layout-pad);
+  transition: padding 0.6s ease, border-radius 0.6s ease, box-shadow 0.6s ease, background 0.6s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 /* Elevated card */
@@ -310,12 +324,12 @@
 .card-title {
   font-size: 0.75rem;
   font-weight: 500;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--type-tracking);
   color: var(--md-primary);
   margin-bottom: 12px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--md-outline-variant);
-  text-transform: uppercase;
+  text-transform: var(--type-case);
 }
 
 /* ============================================================
@@ -326,13 +340,16 @@
   /* Filled button (highest emphasis) */
   .btn {
     @apply inline-flex items-center justify-center gap-2;
-    @apply font-medium text-label-lg tracking-wide;
-    @apply h-10 px-6 rounded-full;
+    @apply font-medium text-label-lg;
+    letter-spacing: var(--type-tracking);
+    text-transform: var(--type-case);
+    @apply h-10 px-6;
+    border-radius: var(--card-radius);
     @apply transition-all duration-short4 ease-standard;
     @apply relative overflow-hidden;
     background: var(--md-surface-container-high);
     color: var(--md-on-surface);
-    border: none;
+    border: var(--card-border-width) solid transparent;
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
@@ -349,7 +366,10 @@
 
   .btn:hover::before  { opacity: 0.08; }
   .btn:focus::before  { opacity: 0.12; }
-  .btn:active::before { opacity: 0.12; }
+  .btn:active {
+    transform: var(--btn-actuation);
+    box-shadow: var(--btn-shadow);
+  }
 
   /* Filled (primary) */
   .btn--primary {
@@ -1053,12 +1073,12 @@
 .panel-title {
   font-size: 0.75rem;
   font-weight: 500;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--type-tracking);
   color: var(--md-on-surface-variant);
   padding: 12px 16px;
   border-bottom: 1px solid var(--md-outline-variant);
   flex-shrink: 0;
-  text-transform: uppercase;
+  text-transform: var(--type-case);
 }
 
 .messages {
@@ -1166,12 +1186,12 @@
 .settings-section-title {
   font-size: 0.75rem;
   font-weight: 500;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--type-tracking);
   color: var(--md-primary);
   margin-bottom: 16px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--md-outline-variant);
-  text-transform: uppercase;
+  text-transform: var(--type-case);
 }
 
 .settings-section-body {
@@ -1678,6 +1698,7 @@
     overflow: auto;
     height: auto;
     min-height: 100%;
+    background-color: transparent;
   }
 
   .app-shell {
@@ -1754,4 +1775,100 @@
 @media (max-width: 640px) {
   .page-wrap { padding: 12px 12px 24px; }
   .btn, .qa-btn { min-height: 44px; }
+}
+
+/* ============================================================
+   Shared UI Elements — Thematic Transitions
+   ============================================================ */
+
+/* The Signet / The Ring — Loading states */
+.loading-indicator {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--md-primary);
+  animation: theme-ring-rotate 1.2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Forerunner variant — silent, smooth */
+[data-env="forerunner"] .loading-indicator {
+  border: 1px solid color-mix(in srgb, var(--md-primary) 20%, transparent);
+  border-top-color: var(--md-primary);
+  box-shadow: 0 0 15px var(--md-primary);
+  animation: theme-ring-rotate 2.0s infinite linear;
+}
+
+/* UNSC variant — fragmented, clacky */
+[data-env="unsc"] .loading-indicator {
+  border: 2px dashed var(--accent);
+  border-radius: 0;
+  animation: theme-ring-snap 0.8s infinite steps(4);
+}
+
+/* Atreides variant — ripple */
+[data-env="atreides"] .loading-indicator {
+  border: 1px solid var(--md-primary);
+  animation: theme-ripple 1.5s infinite ease-out;
+}
+
+/* Harkonnen variant — strobe */
+[data-env="harkonnen"] .loading-indicator {
+  background: var(--md-primary);
+  border: none;
+  border-radius: 0;
+  animation: theme-strobe 0.4s infinite alternate;
+}
+
+@keyframes theme-ring-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes theme-ring-snap {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(90deg) scale(1.1); }
+  100% { transform: rotate(180deg) scale(1); }
+}
+
+@keyframes theme-ripple {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes theme-strobe {
+  0% { opacity: 0.2; transform: scale(1); }
+  100% { opacity: 0.9; transform: scale(1.05); }
+}
+
+/* Success / Confirmation state (The Signet) */
+.confirmation-effect {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+[data-env="atreides"] .confirmation-effect::after {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+  animation: atreides-signet 0.6s ease-out forwards;
+}
+
+[data-env="harkonnen"] .confirmation-effect::after {
+  content: ""; position: absolute; inset: 0;
+  background: var(--error);
+  mix-blend-mode: color-dodge;
+  animation: harkonnen-sear 0.4s steps(3) forwards;
+}
+
+@keyframes atreides-signet {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1.2); opacity: 0; }
+}
+
+@keyframes harkonnen-sear {
+  0% { opacity: 0; clip-path: inset(50% 50%); }
+  50% { opacity: 1; clip-path: inset(0 0); }
+  100% { opacity: 0; }
 }
