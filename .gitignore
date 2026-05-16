@@ -3,6 +3,9 @@
 # Covers: Python backend, React/Vite frontend, AI models, credentials, OS/IDE
 # =============================================================================
 
+# Local deploy state
+.venv_requirements.sha256
+
 
 # -----------------------------------------------------------------------------
 # Environment and secrets -- NEVER commit these
