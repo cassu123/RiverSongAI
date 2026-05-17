@@ -26,7 +26,7 @@ ALL_FEATURES = [
     {"key": "chat",        "label": "Chat"},
     {"key": "memory",      "label": "Memory"},
     {"key": "inventory",   "label": "Inventory"},
-    {"key": "maintenance", "label": "Maintenance Pulse"},
+    {"key": "vehicles",    "label": "Garage"},
     {"key": "commerce",    "label": "Store"},
     {"key": "culinary",    "label": "Culinary"},
     {"key": "feeds",       "label": "Feeds"},

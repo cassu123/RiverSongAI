@@ -800,6 +800,14 @@ class Settings(BaseSettings):
         default=True,
         description="Enable Pulse daemon",
     )
+    daemon_scribe_port: int = Field(
+        default=8017,
+        description="Internal port for the Scribe daemon (Chronos heuristic).",
+    )
+    daemon_scribe_enabled: bool = Field(
+        default=True,
+        description="Enable the Scribe daemon.",
+    )
     pulse_tick_seconds: int = Field(
         default=300,
         description="Pulse fetch interval (seconds)",

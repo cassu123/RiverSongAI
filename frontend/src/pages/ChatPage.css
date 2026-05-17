@@ -592,6 +592,33 @@
   cursor: not-allowed;
 }
 
+/* Image Gen button */
+.chat-image-gen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--md-shape-full);
+  border: 1px solid var(--md-outline-variant);
+  color: var(--md-on-surface-variant);
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin: 4px;
+  transition: all 150ms;
+}
+
+.chat-image-gen-btn:hover:not(:disabled) {
+  color: #ff9de2; /* Pink-ish for dreamscape */
+  border-color: #ff9de2;
+}
+
+.chat-image-gen-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .chat-enhance-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;

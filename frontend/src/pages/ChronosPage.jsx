@@ -41,6 +41,7 @@ export default function ChronosPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showQuickSwitcher, setShowQuickSwitcher] = useState(false)
+  const [isSummarizing, setIsSummarizing] = useState(false)
   
   const saveTimeoutRef = useRef(null)
 
@@ -87,6 +88,82 @@ export default function ChronosPage() {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const createNote = async () => {
+    const name = window.prompt('Note name (e.g. "My Ideas.md"):')
+    if (!name) return
+    const path = `${activeRoot}/${name.endsWith('.md') ? name : name + '.md'}`
+    try {
+      await fetch('/api/vault/note', {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ path, content: '# ' + name.replace('.md', '') + '\n\n' })
+      })
+      await fetchTree(activeRoot)
+      loadNote(path)
+    } catch (err) {
+      setError('Failed to create note.')
+    }
+  }
+
+  const deleteNote = async () => {
+    if (!activeNote) return
+    if (!window.confirm(`Delete "${activeNote.path}"?`)) return
+    try {
+      const res = await fetch(`/api/vault/note?path=${encodeURIComponent(activeNote.path)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!res.ok) throw new Error()
+      setActiveNote(null)
+      fetchTree(activeRoot)
+    } catch (err) {
+      setError('Failed to delete note.')
+    }
+  }
+
+  const renameNote = async () => {
+    if (!activeNote) return
+    const newName = window.prompt('New name (including .md):', activeNote.path.split('/').pop())
+    if (!newName) return
+    const newPath = activeNote.path.split('/').slice(0, -1).concat(newName).join('/')
+    try {
+      const res = await fetch('/api/vault/note/rename', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ old: activeNote.path, new: newPath })
+      })
+      if (!res.ok) throw new Error()
+      fetchTree(activeRoot)
+      loadNote(newPath)
+    } catch (err) {
+      setError('Failed to rename note.')
+    }
+  }
+
+  const summarizeNote = async () => {
+    if (!activeNote) return
+    setIsSummarizing(true)
+    try {
+      const res = await fetch(`/api/vault/note/summarize?path=${encodeURIComponent(activeNote.path)}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!res.ok) throw new Error()
+      const { summary } = await res.json()
+      window.alert(`AI SUMMARY:\n\n${summary}`)
+    } catch (err) {
+      setError('Failed to summarize note.')
+    } finally {
+      setIsSummarizing(false)
     }
   }
 
@@ -205,6 +282,9 @@ export default function ChronosPage() {
         <div className="chronos-root-selector">
           <button className={activeRoot === 'personal' ? 'active' : ''} onClick={() => setActiveRoot('personal')}>PERSONAL</button>
           <button className={activeRoot === 'household' ? 'active' : ''} onClick={() => setActiveRoot('household')}>HOUSEHOLD</button>
+          <button className="chronos-new-btn" onClick={createNote} title="New Note">
+            <MdIcon name="add" size={18} />
+          </button>
         </div>
         <div className="chronos-tree">
           <TreeList items={fileTree} onSelect={loadNote} activePath={activeNote?.path} />
@@ -226,9 +306,20 @@ export default function ChronosPage() {
           </div>
           <div style={{ flex: 1 }} />
           {activeNote && (
-            <button className={`btn btn--ghost btn--xs ${editMode ? 'btn--primary' : ''}`} onClick={() => setEditMode(!editMode)}>
-              {editMode ? 'FINISH' : 'EDIT'}
-            </button>
+            <div className="chronos-topbar-actions">
+              <button 
+                className={`btn btn--ghost btn--xs ${isSummarizing ? 'loading' : ''}`} 
+                onClick={summarizeNote} 
+                disabled={isSummarizing}
+              >
+                {isSummarizing ? 'THINKING...' : 'AI SUMMARY'}
+              </button>
+              <button className="btn btn--ghost btn--xs" onClick={renameNote}>RENAME</button>
+              <button className="btn btn--ghost btn--xs color-error" onClick={deleteNote}>DELETE</button>
+              <button className={`btn btn--ghost btn--xs ${editMode ? 'btn--primary' : ''}`} onClick={() => setEditMode(!editMode)}>
+                {editMode ? 'FINISH' : 'EDIT'}
+              </button>
+            </div>
           )}
         </div>
 
@@ -273,7 +364,26 @@ export default function ChronosPage() {
                                   headers: { Authorization: `Bearer ${token}` }
                                 }).then(r => r.json()).then(data => {
                                   setSearchResults(data)
-                                  if (data.length === 1) loadNote(data[0].virtual_path)
+                                  if (data.length === 1) {
+                                    loadNote(data[0].virtual_path)
+                                  } else if (data.length === 0) {
+                                    if (window.confirm(`Note "${title}" does not exist. Create it?`)) {
+                                      const path = `${activeRoot}/${title}.md`
+                                      fetch('/api/vault/note', {
+                                        method: 'PUT',
+                                        headers: { 
+                                          'Authorization': `Bearer ${token}`,
+                                          'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({ path, content: '# ' + title + '\n\n' })
+                                      }).then(res => {
+                                        if (res.ok) {
+                                          fetchTree(activeRoot)
+                                          loadNote(path)
+                                        }
+                                      })
+                                    }
+                                  }
                                 })
                               }}
                             >

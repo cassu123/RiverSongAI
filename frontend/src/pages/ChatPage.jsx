@@ -297,6 +297,34 @@ export default function ChatPage() {
     } catch {} finally { setEnhancing(false) }
   }, [inputText, enhancing, token])
 
+  const handleGenerateImage = useCallback(async () => {
+    const t = inputText.trim()
+    if (!t || isThinking) return
+    setInputText('')
+    setError(null)
+    setMessages(p => [...p, { role: 'user', text: `Dreamscape: ${t}` }])
+    setIsThinking(true)
+    setThinkingStart(Date.now())
+    
+    try {
+      const res = await fetch(`${API_BASE}/api/image/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ prompt: t }),
+      })
+      if (!res.ok) throw new Error('Generation failed')
+      
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      setMessages(p => [...p, { role: 'assistant', text: `Generated dream for: "${t}"`, image: url }])
+    } catch (err) {
+      setError('Image generation failed.')
+    } finally {
+      setIsThinking(false)
+      setThinkingStart(null)
+    }
+  }, [inputText, isThinking, token])
+
   const displayMessages = viewingSession ? viewingSession.messages : messages
   const displayStreaming = viewingSession ? '' : streamingResponse
 
@@ -483,6 +511,15 @@ export default function ChatPage() {
               <SparkleIcon />
             </button>
 
+            <button 
+              className="chat-image-gen-btn"
+              onClick={handleGenerateImage}
+              disabled={!inputText.trim() || isThinking || !!viewingSession}
+              title="Generate image (Dreamscape)"
+            >
+              <ImageIcon />
+            </button>
+
             <button
               className="chat-send-btn"
               onClick={handleSend}
@@ -563,6 +600,16 @@ function SparkleIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
       <path d="M8 2C8 2 8.5 6 12 8C8.5 10 8 14 8 14C8 14 7.5 10 4 8C7.5 6 8 2 8 2Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function ImageIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+      <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+      <circle cx="5.5" cy="5.5" r="1.5" fill="currentColor"/>
+      <path d="M2 11L5 8L8 11L11 7L14 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }

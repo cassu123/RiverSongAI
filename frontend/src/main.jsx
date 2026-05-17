@@ -14,6 +14,7 @@ import './styles/global.css'
 import './styles/themes.css'
 
 const KioskPage = lazy(() => import('./pages/KioskPage.jsx'))
+const PreviewApp = lazy(() => import('./preview/PreviewApp.jsx'))
 
 const rootElement = document.getElementById('root')
 const root = ReactDOM.createRoot(rootElement)
@@ -24,6 +25,15 @@ if (window.location.pathname === '/kiosk') {
     <React.StrictMode>
       <Suspense fallback={<div style={{ width: '100vw', height: '100vh', background: '#000' }} />}>
         <KioskPage />
+      </Suspense>
+    </React.StrictMode>
+  )
+} else if (window.location.pathname === '/preview') {
+  // Chrome design prototype — no auth, no live API. See RIVER_SONG_CHROME_PLAN.md.
+  root.render(
+    <React.StrictMode>
+      <Suspense fallback={<div style={{ width: '100vw', height: '100vh', background: '#000' }} />}>
+        <PreviewApp />
       </Suspense>
     </React.StrictMode>
   )

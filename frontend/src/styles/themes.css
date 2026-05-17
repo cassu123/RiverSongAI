@@ -179,7 +179,10 @@ body[data-env="pacifica"] {
    Painted on body::before at z-index 0.
    ============================================================ */
 
-body::before {
+/* Legacy flat backdrop. Suppressed when the photographic Stage engine is
+   mounted (body.rs-stage-active). Kept as a fallback for any context that
+   doesn't mount the Stage (auth screens, kiosk, OAuth callbacks). */
+body:not(.rs-stage-active)::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -190,7 +193,7 @@ body::before {
 }
 
 /* Atreides — sandstone palace, golden hour, stone block courses */
-body[data-env="atreides"]::before {
+body:not(.rs-stage-active)[data-env="atreides"]::before {
   background:
     linear-gradient(225deg, rgba(255,180,90,.42) 0%, rgba(255,180,90,.08) 28%, transparent 50%),
     linear-gradient(0deg,   rgba(180,90,30,.20) 0%, transparent 30%),
@@ -200,7 +203,7 @@ body[data-env="atreides"]::before {
 }
 
 /* Harkonnen — dreadnought, oil-black + crimson underlight, ribs */
-body[data-env="harkonnen"]::before {
+body:not(.rs-stage-active)[data-env="harkonnen"]::before {
   background:
     radial-gradient(ellipse 110% 35% at 50% 102%, rgba(220,40,20,.40) 0%, transparent 55%),
     radial-gradient(ellipse 60%  30% at 50% -5%,  rgba(120,140,160,.10) 0%, transparent 60%),
@@ -210,7 +213,7 @@ body[data-env="harkonnen"]::before {
 }
 
 /* Forerunner — pale ceramic cathedral, celestial top-light, hex pattern */
-body[data-env="forerunner"]::before {
+body:not(.rs-stage-active)[data-env="forerunner"]::before {
   background:
     radial-gradient(ellipse 70% 75% at 50% -10%, rgba(190,235,255,.55) 0%, rgba(120,200,230,.18) 25%, transparent 55%),
     repeating-linear-gradient(90deg, transparent 0 280px, rgba(180,230,250,.16) 280px 286px),
@@ -220,7 +223,7 @@ body[data-env="forerunner"]::before {
 }
 
 /* UNSC — military hangar, amber tactical corners, steel deck plates */
-body[data-env="unsc"]::before {
+body:not(.rs-stage-active)[data-env="unsc"]::before {
   background:
     radial-gradient(circle 280px at 6%  88%, rgba(255,140,40,.55) 0%, transparent 65%),
     radial-gradient(circle 280px at 94% 88%, rgba(255,140,40,.55) 0%, transparent 65%),
@@ -232,7 +235,7 @@ body[data-env="unsc"]::before {
 }
 
 /* Sacred Spires — Escher isometric, pastel cool, impossible stairs */
-body[data-env="spires"]::before {
+body:not(.rs-stage-active)[data-env="spires"]::before {
   background:
     radial-gradient(ellipse 70% 55% at 50% -20%, rgba(200,180,220,.35) 0%, transparent 55%),
     repeating-linear-gradient(90deg, transparent 0 200px, rgba(180,160,200,.10) 200px 208px),
@@ -242,7 +245,7 @@ body[data-env="spires"]::before {
 }
 
 /* Garden Pavilion — horizontal terraces, low warm sun, organic */
-body[data-env="garden"]::before {
+body:not(.rs-stage-active)[data-env="garden"]::before {
   background:
     radial-gradient(ellipse 80% 30% at 50% 70%, rgba(255,180,120,.32) 0%, transparent 60%),
     repeating-linear-gradient(0deg, rgba(80,40,20,.32) 0 4px, transparent 4px 70px),
@@ -251,7 +254,7 @@ body[data-env="garden"]::before {
 }
 
 /* Corpo Plaza — clean brutalist, chrome verticals, magenta+cyan neon */
-body[data-env="corpo"]::before {
+body:not(.rs-stage-active)[data-env="corpo"]::before {
   background:
     radial-gradient(ellipse 80% 40% at 50% 65%, rgba(255,60,140,.28) 0%, transparent 60%),
     linear-gradient(0deg, rgba(0,200,255,.18) 0 50px, transparent 80px),
@@ -261,7 +264,7 @@ body[data-env="corpo"]::before {
 }
 
 /* Pacifica Street — decayed neon, scanlines, yellow flicker, soot */
-body[data-env="pacifica"]::before {
+body:not(.rs-stage-active)[data-env="pacifica"]::before {
   background:
     radial-gradient(circle 320px at 18% 22%, rgba(220,180,40,.30) 0%, transparent 65%),
     radial-gradient(circle 240px at 82% 78%, rgba(180,40,180,.22) 0%, transparent 60%),
@@ -270,8 +273,9 @@ body[data-env="pacifica"]::before {
     linear-gradient(180deg, rgba(20,18,10,.55) 0%, rgba(4,4,2,.95) 100%);
 }
 
-/* Vignette — concentrates attention on content, lets room breathe at edges */
-body::after {
+/* Vignette — concentrates attention on content, lets room breathe at edges.
+   Suppressed when Stage engine is mounted (Grade owns the vignette layer). */
+body:not(.rs-stage-active)::after {
   content: "";
   position: fixed;
   inset: 0;

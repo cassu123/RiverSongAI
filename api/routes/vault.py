@@ -122,6 +122,38 @@ async def rename_note(
         logger.error("Failed to rename note: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/note/summarize")
+async def summarize_note(
+    request: Request,
+    path: str = Query(...),
+    authorization: Optional[str] = Header(default=None)
+):
+    user_id = await _require_user(authorization)
+    provider = _get_provider(request)
+    try:
+        content = await provider.read_note(user_id, path)
+        
+        from core.conversation_loop import _build_llm_provider
+        llm = _build_llm_provider()
+        
+        prompt = (
+            "Summarize the following markdown note in 2-3 concise sentences. "
+            "Focus on the core intent and key points. Plain text only.\n\n"
+            f"--- NOTE CONTENT ---\n{content}\n--- END ---"
+        )
+        
+        summary = ""
+        async for chunk in llm.stream_response([
+            {"role": "system", "content": "You are a concise summarizer."},
+            {"role": "user", "content": prompt}
+        ]):
+            summary += chunk
+            
+        return {"summary": summary.strip()}
+    except Exception as e:
+        logger.error("Failed to summarize note: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/search")
 async def search_vault(
     request: Request,

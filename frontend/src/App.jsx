@@ -3,6 +3,8 @@ import { useAuth }        from './context/AuthContext.jsx'
 import Sidebar            from './components/Sidebar.jsx'
 import ErrorBoundary      from './components/ErrorBoundary.jsx'
 import RsMark             from './components/RsMark.jsx'
+import Stage              from './chrome/Stage.jsx'
+import './styles/chrome-stage.css'
 
 // Lazy load pages
 const LoginPage          = lazy(() => import('./pages/LoginPage.jsx'))
@@ -25,7 +27,7 @@ const ReadingPage        = lazy(() => import('./pages/ReadingPage.jsx'))
 const AnalyticsPage      = lazy(() => import('./pages/AnalyticsPage.jsx'))
 const InventoryPage           = lazy(() => import('./pages/InventoryPage.jsx'))
 const ChronosPage             = lazy(() => import('./pages/ChronosPage.jsx'))
-const MaintenancePulsePage    = lazy(() => import('./pages/MaintenancePulsePage.jsx'))
+const VehiclePage             = lazy(() => import('./pages/VehiclePage.jsx'))
 const CulinaryPage            = lazy(() => import('./pages/CulinaryPage.jsx'))
 const EnvironmentPage         = lazy(() => import('./pages/EnvironmentPage.jsx'))
 const GoogleCallbackPage      = lazy(() => import('./pages/GoogleCallbackPage.jsx'))
@@ -146,6 +148,15 @@ export default function App() {
     document.documentElement.setAttribute('data-env', environment)
     document.documentElement.setAttribute('data-mood', mood)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Photographic Stage activates only inside the authed shell. Auth flow
+  // (Login/Signup/Setup) keeps the legacy flat backdrop from themes.css.
+  useEffect(() => {
+    if (user) {
+      document.body.classList.add('rs-stage-active')
+      return () => document.body.classList.remove('rs-stage-active')
+    }
+  }, [user])
 
   // Sync display name and presence (universe/env/mood) when user changes.
   // On login: pull from server so it matches across all devices.
@@ -286,6 +297,9 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {/* Photographic backdrop — fixed full-viewport behind everything */}
+      <Stage environment={environment} />
+
       {/* Mobile top bar */}
       <div className="mobile-topbar">
         <div className="mobile-topbar-brand">
@@ -356,9 +370,9 @@ export default function App() {
               {currentPage === 'analytics'  && <AnalyticsPage />}
               {currentPage === 'inventory'    && <InventoryPage />}
               {currentPage === 'chronos'      && <ChronosPage />}
+              {currentPage === 'vehicles'     && <VehiclePage onNavigate={handleNavigate} />}
               {currentPage === 'environment'  && <EnvironmentPage />}
 
-              {currentPage === 'maintenance' && <MaintenancePulsePage />}
               {currentPage === 'culinary'    && <CulinaryPage />}
             </div>
           </Suspense>

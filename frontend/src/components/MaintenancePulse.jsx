@@ -964,16 +964,16 @@ function VehicleRAG({ token, vehicleId }) {
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function MaintenancePulse() {
+export default function MaintenancePulse({ preselectedId, onBack }) {
   const { token } = useAuth();
 
   const [vehicles, setVehicles]     = useState([]);
   const [people, setPeople]         = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState(preselectedId && preselectedId !== 'NEW' ? preselectedId : null);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
 
-  const [formMode, setFormMode]     = useState('none'); // 'none' | 'add' | 'edit'
+  const [formMode, setFormMode]     = useState(preselectedId === 'NEW' ? 'add' : 'none'); // 'none' | 'add' | 'edit'
   const [view, setView]             = useState('log');  // 'log' | 'specs' | 'history' | 'settings'
 
   // log form state
@@ -1219,7 +1219,14 @@ export default function MaintenancePulse() {
   return (
     <div className="pulse-container glass-panel">
       <div className="pulse-header">
-        <h2 className="pulse-title">MAINTENANCE PULSE</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {onBack && (
+            <button className="cyber-btn btn-xs" onClick={onBack} title="Back to Garage">
+              BACK
+            </button>
+          )}
+          <h2 className="pulse-title">MAINTENANCE PULSE</h2>
+        </div>
         <div className="pulse-header-actions">
           {formMode === 'none' && (
             <button className="cyber-btn btn-xs" onClick={() => setFormMode('add')}>+ VEHICLE</button>

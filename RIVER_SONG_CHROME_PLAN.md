@@ -531,22 +531,60 @@ One style across the entire app:
 
 ---
 
-## 12. ENVIRONMENT-SPECIFIC CHROME SHIFTS
+## 12. THE SKIN — 3-AXIS VISUAL TRANSFORMATION
 
-The bones above are constant. Per environment, the following shift:
+The bones (§3–§11) **do not move** per environment. RsMark stays top-left. Orb stays top-right. Zones stay in their slots. What changes is the **skin**: backdrop, symbols, glyphs, ornament, and motion — driven entirely by the existing 3-axis system (Universe × Environment × Mood).
 
-| Environment | Logo position | Orb position | Nav dominant motion | Content alignment |
-|---|---|---|---|---|
-| **Atreides** | Top-left | Top-right | Vertical (rises) | Centered, wide margins |
-| **Harkonnen** | Top-left | Embedded in header | Horizontal (slides) | Left-weighted, inset |
-| **Forerunner** | Top-center | Top-center (with logo) | Radial | Edge-to-edge |
-| **UNSC** | Top-left | Top-right | Horizontal | Left-aligned |
-| **Sacred Spires** | Top-right | Bottom-center | Impossible/Z-axis | Layered depth |
-| **Garden Pavilion** | Top-right | Top-center | Vertical (floats) | Centered, soft |
-| **Corpo Plaza** | Top-center | Bottom-right | Precise/mechanical | Centered, max-width |
-| **Pacifica Street** | Top-left (flicker) | Bottom-left | Chaotic/assemble | Full-bleed |
+### 12.1 The Three Skin Axes
 
-**Implementation note:** These shifts are CSS-only via environment class on `<body>`. No layout logic in JS.
+| Axis | What it drives | Lives on |
+|---|---|---|
+| **Universe** (`dune` · `halo` · `mv` · `nightcity`) | Backdrop scene, ambient motion, RsMark morph family | `<body data-universe>` |
+| **Environment** (Atreides, Harkonnen, Forerunner, UNSC, Sacred Spires, Garden Pavilion, Corpo Plaza, Pacifica Street) | Symbol set (icons, glyphs, ornament), card frame language, enter/exit motion curve | `<body data-env>` |
+| **Mood** (~16 per env) | Color tokens only — surfaces, accents, text, borders | `<body data-mood>` |
+
+A skin change never touches HTML structure or component code. It only changes the cascade.
+
+### 12.2 The Skin Layers (what actually swaps)
+
+1. **Backdrop** — `body::before` scene per Universe (already shipped).
+2. **Symbol set** — one SVG sprite per Environment. Icons, drawer glyphs, divider characters, ornament marks. Components reference symbols by semantic name (`<Icon name="memory" />`); the sprite mapping changes per env.
+3. **RsMark** — CSS-morphed glyph, already per-environment.
+4. **Ornament** — card edge style, drawer trim, button corner, divider character. Tokens: `--ornament-card-edge`, `--ornament-divider`, `--ornament-corner`.
+5. **Motion** — enter/exit curve, axis, duration. Tokens: `--motion-enter-curve`, `--motion-enter-axis`, `--motion-duration`. Atreides rises; Harkonnen slides; Sacred Spires layers in Z; Pacifica assembles from fragments.
+6. **Color** (Mood layer) — `--surface`, `--surface-elev`, `--accent`, `--text-primary`, `--text-muted`, `--border`, `--ring`. Everything else derives via `color-mix()`.
+
+### 12.3 CSS Architecture (the "best type of CSS")
+
+**One cascade. No CSS-in-JS. No styled-components. No runtime style computation.**
+
+- **Cascade layers** (`@layer reset, tokens, bones, skin, components, utilities`) — predictable specificity, no `!important`.
+- **Custom properties** scoped to `<body data-universe data-env data-mood>` — the single source of skin truth.
+- **Logical properties** everywhere (`padding-inline`, `margin-block`, `border-inline-start`) — RTL-ready, future-proof.
+- **`color-mix()`** for derived tints — one accent token yields hover/active/ring states without extra variables.
+- **`clamp()`** for fluid type and spacing — no per-breakpoint font-size rules.
+- **Container queries** (`@container`) for component-level responsiveness — a card adapts to *its slot*, not the viewport. This is what makes the same component look right in a drawer, a sheet, and a full-page grid without code branches.
+- **`:has()`** for context-aware styling — e.g. header densifies when content is scrolled (`body:has(main.scrolled) header`).
+- **Native CSS nesting** — flatter source, no preprocessor needed.
+- **View Transitions API** — Foyer ↔ Workshop, sheet open/close, card expand are declarative cross-document or same-document transitions, not JS animation libraries.
+- **`prefers-reduced-motion`** — every motion token has a reduced fallback.
+- **No Tailwind arbitrary values** for skin concerns. Skin lives in tokens; Tailwind references tokens (`bg-[var(--surface)]`). Components stay env-agnostic.
+
+### 12.4 Responsive Discipline (mobile · tablet · desktop)
+
+The bones are the same everywhere. Density and slot count change.
+
+- **Fluid sizing first.** `clamp(min, preferred, max)` on type, spacing, card padding. The shell stops needing breakpoints for most things.
+- **Container queries for components.** A `<GlassCard>` in a 320px drawer slot uses dense layout; the same card in a 720px grid slot uses spacious layout. Same component, no props.
+- **Three viewport modes only** (§11): mobile < 768px, tablet 768–1199px, desktop ≥ 1200px. These switch *slot count* (drawer vs rail; bottom sheet vs popover) — not component internals.
+- **`dvh` / `svh` / `lvh`** for mobile heights — keyboard-up doesn't break the input bar.
+- **Safe-area insets** (`env(safe-area-inset-*)`) on the bottom action bar always.
+- **Pointer media queries** (`@media (pointer: fine)`) for desktop-only hover. Mobile gets press states, not phantom hovers.
+- **Input row 2 collapses** when the on-screen keyboard is open (uses `:focus-within` + container query on the input bar slot).
+
+### 12.5 The One Rule
+
+Components are skin-agnostic. They consume tokens. If a component file has the word `dune`, `halo`, `atreides`, or any hex color in it, that is a bug.
 
 ---
 

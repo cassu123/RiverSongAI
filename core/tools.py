@@ -230,6 +230,18 @@ TOOL_SCHEMAS = [
             },
             "required": ["location"]
         }
+    },
+    {
+        "name": "generate_image",
+        "description": "Generate an AI image using Stable Diffusion based on a descriptive prompt.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "prompt": {"type": "string", "description": "A detailed description of the image to generate."},
+                "negative_prompt": {"type": "string", "description": "Things to exclude from the image (e.g., 'blurry', 'low quality')."},
+            },
+            "required": ["prompt"]
+        }
     }
 ]
 
@@ -303,6 +315,9 @@ async def execute_tool(tool_name: str, tool_input: Dict[str, Any], context: Dict
 
         elif tool_name == "get_weather":
             return await _exec_get_weather(tool_input, user_id)
+
+        elif tool_name == "generate_image":
+            return await _exec_generate_image(tool_input, user_id)
 
         else:
             return f"Unknown tool '{tool_name}' requested."
@@ -794,6 +809,27 @@ async def _exec_get_weather(args: dict, user_id: str) -> str:
     except Exception as exc:
         logger.error("Weather tool failed: %s", exc)
         return f"I tried to check the weather for '{args['location']}', but encountered an issue: {str(exc)}"
+
+
+async def _exec_generate_image(args: dict, user_id: str) -> str:
+    """Generate an image via SDProvider and return base64 data."""
+    try:
+        from providers.image.sd_provider import SDProvider
+        import base64
+        
+        provider = SDProvider()
+        img_bytes = await provider.generate(
+            prompt=args["prompt"],
+            negative_prompt=args.get("negative_prompt", "low quality, blurry, distorted"),
+        )
+        
+        b64 = base64.b64encode(img_bytes).decode("utf-8")
+        # Prefix so the frontend can easily identify it
+        return f"IMAGE_GEN_SUCCESS:data:image/png;base64,{b64}"
+        
+    except Exception as exc:
+        logger.error("Image generation tool failed: %s", exc)
+        return f"I tried to generate the image, but encountered an issue: {str(exc)}"
 
 
 async def get_upcoming_events(user_id: str, hours_ahead: int = 8) -> list[dict]:

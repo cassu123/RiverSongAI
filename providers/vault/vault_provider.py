@@ -257,8 +257,7 @@ class VaultWatcher(FileSystemEventHandler):
             logger.warning("No store available for indexing")
             return
         
-        # We need to determine the virtual path regardless of existence
-        # data/vault/users/{uid}/... or data/vault/households/{fid}/...
+        # Determine virtual path and ownership
         parts = p.parts
         vault_idx = -1
         for i, part in enumerate(parts):
@@ -288,28 +287,6 @@ class VaultWatcher(FileSystemEventHandler):
             links = self._extract_links(content)
             stat = p.stat()
             
-            # Determine owner_kind and owner_id from path
-            # data/vault/users/{uid}/... or data/vault/households/{fid}/...
-            parts = p.parts
-            vault_idx = -1
-            for i, part in enumerate(parts):
-                if part == "vault":
-                    vault_idx = i
-                    break
-            
-            if vault_idx == -1 or len(parts) <= vault_idx + 2:
-                return
-
-            kind_dir = parts[vault_idx+1] # "users" or "households"
-            owner_id = parts[vault_idx+2]
-            owner_kind = "user" if kind_dir == "users" else "household"
-            
-            # Resolve virtual path
-            # We'll just build it manually for the indexer
-            rel_parts = parts[vault_idx+3:]
-            v_prefix = VROOT_PERSONAL if owner_kind == "user" else VROOT_HOUSEHOLD
-            virtual_path = "/".join([v_prefix] + list(rel_parts))
-
             await self.provider.store.upsert_vault_note(
                 owner_kind=owner_kind,
                 owner_id=owner_id,
@@ -319,6 +296,26 @@ class VaultWatcher(FileSystemEventHandler):
                 mtime=stat.st_mtime,
                 links=links
             )
+
+            # Semantic indexing (A.2.2)
+            settings = get_settings()
+            if settings.semantic_memory_enabled:
+                from providers.memory.vector_store import VectorStore
+                vstore = VectorStore()
+                # We use the virtual path as the ID for note segments
+                # For now, we embed the whole note if it's small, or just the title + snippet
+                # Actually, Chroma handles documents fine.
+                await vstore.upsert(
+                    id=f"note:{virtual_path}",
+                    text=f"Note: {title}\n\n{content}",
+                    metadata={
+                        "type": "note",
+                        "user_id": owner_id if owner_kind == "user" else "household",
+                        "path": virtual_path,
+                        "title": title
+                    }
+                )
+
         except Exception as e:
             logger.error("Failed to index file %s: %s", p, e)
 

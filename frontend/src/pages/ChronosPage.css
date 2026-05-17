@@ -42,6 +42,26 @@
   border-color: var(--md-primary);
 }
 
+.chronos-new-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--md-shape-xs);
+  border: 1px solid var(--border);
+  background: var(--md-surface-container-high);
+  color: var(--md-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.chronos-new-btn:hover {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  border-color: var(--md-primary);
+}
+
 .chronos-tree {
   flex: 1;
   overflow-y: auto;
@@ -109,6 +129,27 @@
   align-items: center;
   padding: 0 20px;
   flex-shrink: 0;
+  gap: 16px;
+}
+
+.chronos-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chronos-topbar-actions .btn.loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.chronos-topbar-actions .btn.color-error {
+  color: var(--md-error);
+}
+
+.chronos-topbar-actions .btn.color-error:hover {
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
 }
 
 .chronos-search-wrap {

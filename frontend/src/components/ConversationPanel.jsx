@@ -63,7 +63,15 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
               <div className="chat-avatar chat-avatar--rs" aria-hidden="true">RS</div>
             )}
             <div className={`chat-bubble chat-bubble--${msg.role}`}>
-              <p className="chat-bubble-text">{msg.text}</p>
+              {msg.text && <p className="chat-bubble-text">{msg.text}</p>}
+              {msg.image && (
+                <div className="chat-image-wrap">
+                  <img src={msg.image} alt="Generated" className="chat-bubble-image" />
+                  <a href={msg.image} download={`river-song-${Date.now()}.png`} className="chat-image-download">
+                    <span className="material-symbols-rounded">download</span>
+                  </a>
+                </div>
+              )}
             </div>
             {msg.role === 'user' && (
               <div className="chat-avatar chat-avatar--user" aria-hidden="true">
