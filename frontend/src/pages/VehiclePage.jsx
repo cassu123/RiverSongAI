@@ -43,6 +43,29 @@ export default function VehiclePage() {
     }
   }
 
+  const [uploadingDoc, setUploadingDoc] = useState(false)
+
+  const handleManualUpload = async (e, vehicleId) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingDoc(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch(`/api/rag/ingest?doc_id=vehicle_${vehicleId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd
+      })
+      if (!res.ok) throw new Error('Upload failed')
+      alert('Manual uploaded and indexed!')
+    } catch (err) {
+      alert('Failed to upload manual.')
+    } finally {
+      setUploadingDoc(false)
+    }
+  }
+
   if (selectedVehicleId) {
     return (
       <div className="page-wrap vehicle-page">
@@ -120,8 +143,26 @@ export default function VehiclePage() {
               </div>
 
               <div className="vh-footer">
-                <button className="btn btn--ghost btn--xs">VIEW SPECS</button>
-                <button className="btn btn--primary btn--xs">LOG SERVICE</button>
+                <button className="btn btn--ghost btn--xs" onClick={(e) => { e.stopPropagation(); setSelectedVehicleId(v.id); }}>VIEW SPECS</button>
+                <label className="btn btn--ghost btn--xs" style={{ cursor: uploadingDoc ? 'wait' : 'pointer' }}>
+                  {uploadingDoc ? '...' : 'MANUAL'}
+                  <input type="file" accept=".pdf,.txt" style={{ display: 'none' }} onChange={(e) => handleManualUpload(e, v.id)} onClick={e => e.stopPropagation()} />
+                </label>
+                <button 
+                  className="btn btn--primary btn--xs" 
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    const msg = `What are the maintenance intervals for my ${v.year} ${v.make} ${v.model}?`;
+                    // Use localStorage to pass context to ChatPage
+                    localStorage.setItem('rs-chat-intent', JSON.stringify({ 
+                      text: msg, 
+                      docId: `vehicle_${v.id}` 
+                    }));
+                    window.dispatchEvent(new Event('rs-navigate-chat'));
+                  }}
+                >
+                  ASK ASSISTANT
+                </button>
               </div>
             </div>
           ))}

@@ -22,7 +22,6 @@ export const USER_ITEMS = [
   { key: 'analytics',   label: 'Analytics',   icon: 'bar_chart' },
   { key: 'feeds',       label: 'Feeds',       icon: 'feed' },
   { key: 'google',      label: 'Google',      icon: 'hub' },
-  { key: 'documents',   label: 'Sifter',      icon: 'find_in_page' },
   { key: 'reading',     label: 'Reading',     icon: 'auto_stories' },
   { key: 'culinary',    label: 'Culinary',    icon: 'restaurant_menu' },
 ]
@@ -42,7 +41,6 @@ export const ADMIN_ITEMS = [
   { key: 'analytics',   label: 'Analytics',   icon: 'bar_chart' },
   { key: 'feeds',       label: 'Feeds',       icon: 'feed' },
   { key: 'google',      label: 'Google',      icon: 'hub' },
-  { key: 'documents',   label: 'Sifter',      icon: 'find_in_page' },
   { key: 'reading',     label: 'Reading',     icon: 'auto_stories' },
   { key: 'culinary',    label: 'Culinary',    icon: 'restaurant_menu' },
   { key: 'users',       label: 'Users',       icon: 'group' },

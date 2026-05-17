@@ -47,6 +47,28 @@ export default function ChatPage() {
   const [enhancing, setEnhancing] = useState(false)
   const [forgetMemory, setForgetMemory] = useState(false)
 
+  const handleIntent = useCallback((intent) => {
+    if (!intent) return
+    const { text, docId } = intent
+    if (docId) setActiveDocId(docId)
+    if (text) {
+      setInputText(text)
+      // We can't easily trigger handleSend immediately here because
+      // messages might not be updated yet. We'll just populate the input.
+    }
+  }, [])
+
+  useEffect(() => {
+    const raw = localStorage.getItem('rs-chat-intent')
+    if (raw) {
+      try {
+        const intent = JSON.parse(raw)
+        handleIntent(intent)
+        localStorage.removeItem('rs-chat-intent')
+      } catch {}
+    }
+  }, [handleIntent])
+
   const modelDropRef = useRef(null)
 
   // Mic-to-text: transcribe then inject into input
@@ -122,6 +144,35 @@ export default function ChatPage() {
     setSavingModel(false)
   }
 
+  const [isUploading, setIsUploading] = useState(false)
+  const [activeDocId, setActiveDocId] = useState(null)
+
+  const handleUploadDoc = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIsUploading(true)
+    const docId = `doc_${Date.now()}`
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch(`${API_BASE}/api/rag/ingest?doc_id=${docId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      })
+      if (res.ok) {
+        setActiveDocId(docId)
+        setMessages(p => [...p, { role: 'system', text: `Document "${file.name}" uploaded and indexed. You can now ask questions about it.` }])
+      } else {
+        throw new Error('Upload failed')
+      }
+    } catch (err) {
+      setError('Document upload failed.')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
   const handleSend = useCallback(async () => {
     const t = inputText.trim()
     if (!t || isThinking) return
@@ -135,25 +186,40 @@ export default function ChatPage() {
     setToolEvents([])
 
     try {
-      const res = await fetch(`${API_BASE}/api/conversation/chat`, {
+      let endpoint = `${API_BASE}/api/conversation/chat`
+      let body = {
+        message: t,
+        history: next.slice(-20).map(m => ({ role: m.role, content: m.text })),
+        provider: selectedModel?.provider,
+        model_id: selectedModel?.model_id,
+        web_search: webSearch,
+        thinking_mode: thinkingMode,
+        forget_memory: forgetMemory,
+        ...(systemPrompt.trim() ? { system_prompt: systemPrompt.trim() } : {}),
+      }
+
+      if (activeDocId) {
+        endpoint = `${API_BASE}/api/rag/query`
+        body = { doc_id: activeDocId, question: t }
+      }
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          message: t,
-          history: next.slice(-20).map(m => ({ role: m.role, content: m.text })),
-          provider: selectedModel?.provider,
-          model_id: selectedModel?.model_id,
-          web_search: webSearch,
-          thinking_mode: thinkingMode,
-          forget_memory: forgetMemory,
-          ...(systemPrompt.trim() ? { system_prompt: systemPrompt.trim() } : {}),
-        }),
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
-      // Stream the response
-      const reader = res.body.getReader()
+      if (activeDocId) {
+        const data = await res.json()
+        setMessages(p => [...p, { role: 'assistant', text: data.answer }])
+        // Keep activeDocId for now? Or clear it? 
+        // Let's keep it until reset.
+      } else {
+        // Stream the response
+        const reader = res.body.getReader()
+        // ... rest of streaming logic ...
       const decoder = new TextDecoder()
       let full = ''
       let streamDone = false
@@ -239,6 +305,7 @@ export default function ChatPage() {
     setError(null)
     setViewingSession(null)
     setForgetMemory(true)
+    setActiveDocId(null)
   }, [messages, user, selectedModel, extractFacts])
 
   // Mic → transcribe → fill input
@@ -520,6 +587,11 @@ export default function ChatPage() {
               <ImageIcon />
             </button>
 
+            <label className={`chat-doc-upload-btn ${isUploading ? 'chat-doc-upload-btn--busy' : ''} ${activeDocId ? 'chat-doc-upload-btn--active' : ''}`} title="Upload document for RAG">
+              <DocIcon />
+              <input type="file" accept=".pdf,.txt" style={{ display: 'none' }} onChange={handleUploadDoc} disabled={isUploading || !!viewingSession} />
+            </label>
+
             <button
               className="chat-send-btn"
               onClick={handleSend}
@@ -610,6 +682,15 @@ function ImageIcon() {
       <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3"/>
       <circle cx="5.5" cy="5.5" r="1.5" fill="currentColor"/>
       <path d="M2 11L5 8L8 11L11 7L14 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function DocIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+      <path d="M3 1.5H9.5L13 5V14.5C13 15.05 12.55 15.5 12 15.5H3C2.45 15.5 2 15.05 2 14.5V2.5C2 1.95 2.45 1.5 3 1.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+      <path d="M9.5 1.5V5H13" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
     </svg>
   )
 }

@@ -619,6 +619,39 @@
   cursor: not-allowed;
 }
 
+/* Doc Upload button */
+.chat-doc-upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--md-shape-full);
+  border: 1px solid var(--md-outline-variant);
+  color: var(--md-on-surface-variant);
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin: 4px;
+  transition: all 150ms;
+}
+
+.chat-doc-upload-btn:hover:not(.chat-doc-upload-btn--busy) {
+  color: var(--md-secondary);
+  border-color: var(--md-secondary);
+}
+
+.chat-doc-upload-btn--busy {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.chat-doc-upload-btn--active {
+  color: var(--md-secondary);
+  border-color: var(--md-secondary);
+  background: color-mix(in srgb, var(--md-secondary) 10%, transparent);
+}
+
 .chat-enhance-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;

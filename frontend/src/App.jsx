@@ -281,11 +281,18 @@ export default function App() {
     return enabledFeatures.has(page)
   }
 
+  useEffect(() => {
+    const handleNavChat = () => { setCurrentPage('chat'); window.scrollTo(0, 0); }
+    window.addEventListener('rs-navigate-chat', handleNavChat)
+    return () => window.removeEventListener('rs-navigate-chat', handleNavChat)
+  }, [])
+
   const handleNavigate = (page) => {
     if (ADMIN_PAGES.has(page) && !adminMode) return
     if (!featureEnabled(page)) return
     setCurrentPage(page)
     window.scrollTo(0, 0)
+    setMobileNavOpen(false)
   }
 
   const handleAdminToggle = (next) => {
