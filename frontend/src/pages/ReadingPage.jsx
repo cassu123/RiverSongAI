@@ -156,7 +156,7 @@ async function apiFetch(path, opts = {}) {
 // Main page
 // ---------------------------------------------------------------------------
 
-export default function ReadingPage() {
+export default function ReadingPage({ setAction }) {
   const userId = getUserId()
 
   const [selectedServiceKeys, setSelectedServiceKeys] = useState(() => loadSelectedServices(userId))
@@ -180,6 +180,36 @@ export default function ReadingPage() {
   const [connectModal, setConnectModal] = useState(null)
   const [importTarget, setImportTarget] = useState(null)
   const [syncingService, setSyncingService] = useState(null)
+
+  // -- Bottom Action Slot --
+  const ActionSlot = useMemo(() => (
+    <div className="rs-input-bar">
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div className="rs-card" style={{ flex: 1, padding: '8px 16px', display: 'flex', gap: 12, alignItems: 'center', background: 'var(--md-surface-container-low)' }}>
+          <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
+          <input
+            style={{ all: 'unset', flex: 1, fontSize: '0.95rem' }}
+            placeholder="Search title or author…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button className="rs-pill" style={{ padding: '4px' }} onClick={() => setSearch('')}>
+              <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>close</span>
+            </button>
+          )}
+        </div>
+        <button className="rs-btn-primary" style={{ padding: '10px 20px' }} onClick={() => { setEditBook(null); setShowModal(true) }}>
+          <span className="material-symbols-rounded">add</span>
+          BOOK
+        </button>
+      </div>
+    </div>
+  ), [search])
+
+  useEffect(() => {
+    if (setAction) setAction(ActionSlot)
+  }, [ActionSlot, setAction])
 
   // Services the user has selected, resolved to objects
   const activeServices = selectedServiceKeys
@@ -282,12 +312,14 @@ export default function ReadingPage() {
   // Show first-run picker if no services chosen yet
   if (selectedServiceKeys === null || showServicePicker) {
     return (
-      <div className="page-wrap">
-        <div className="page-breadcrumb">
-          <span>◢</span><span>INTEGRATIONS</span>
-          <span className="page-breadcrumb-sep">/</span>
-          <span>READING</span>
-        </div>
+      <div className="rs-foyer animate-fade-in">
+        <header className="rs-foyer-head">
+          <div className="rs-card-label" style={{ marginBottom: 8 }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>auto_stories</span>
+            INTEGRATIONS / READING
+          </div>
+          <h1 className="rs-greeting">Reading Services</h1>
+        </header>
         <ServicePickerPage
           current={selectedServiceKeys || []}
           onSave={handleSaveServices}
@@ -299,85 +331,84 @@ export default function ReadingPage() {
   }
 
   return (
-    <div className="page-wrap">
-      <div className="page-breadcrumb">
-        <span>◢</span><span>INTEGRATIONS</span>
-        <span className="page-breadcrumb-sep">/</span>
-        <span>READING</span>
-      </div>
-
-      <div className="page-header-row">
-        <div>
-          <h1 className="page-title">Reading</h1>
-          <p className="page-subtitle">All your books in one place. Track progress, launch apps, browse Libby.</p>
+    <div className="rs-foyer animate-fade-in">
+      <header className="rs-foyer-head">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+           <div>
+              <div className="rs-card-label" style={{ marginBottom: 8 }}>
+                <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>auto_stories</span>
+                INTEGRATIONS / READING
+              </div>
+              <h1 className="rs-greeting">Reading</h1>
+              <div className="rs-greeting-sub">Track progress and browse your digital library.</div>
+           </div>
+           <button className="rs-pill" onClick={() => setShowServicePicker(true)}>
+             <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>settings</span>
+             SERVICES
+           </button>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn reading-manage-btn" onClick={() => setShowServicePicker(true)}>
-            <IconServices /> Manage Services
-          </button>
-          <button className="btn btn--primary" onClick={openAdd}>+ Add Book</button>
-        </div>
-      </div>
+      </header>
 
-      {error && <div className="reading-error">{error}<button className="reading-error-close" onClick={() => setError('')}>✕</button></div>}
+      {error && (
+        <div className="rs-pill is-active" style={{ background: 'var(--md-error)', color: 'white', marginBottom: 24, width: 'fit-content' }}>
+          {error}
+          <button style={{ all: 'unset', marginLeft: 12, cursor: 'pointer' }} onClick={() => setError('')}>✕</button>
+        </div>
+      )}
 
       {/* My services panel */}
       {activeServices.length > 0 && (
-        <MyServicesPanel
-          services={activeServices}
-          connections={connections}
-          shelf={shelf}
-          onConnect={svc => setConnectModal(svc)}
-          onDisconnect={async (svc) => {
-            await apiFetch(`/connect/${svc}`, { method: 'DELETE' })
-            loadConnections()
-          }}
-          onSync={async (svc) => {
-            const result = await apiFetch(`/sync/${svc}`, { method: 'POST' })
-            loadShelf()
-            return result
-          }}
-          onImport={svc => setImportTarget(svc)}
-        />
+        <div style={{ marginBottom: 24 }}>
+          <MyServicesPanel
+            services={activeServices}
+            connections={connections}
+            shelf={shelf}
+            onConnect={svc => setConnectModal(svc)}
+            onDisconnect={async (svc) => {
+              await apiFetch(`/connect/${svc}`, { method: 'DELETE' })
+              loadConnections()
+            }}
+            onSync={async (svc) => {
+              const result = await apiFetch(`/sync/${svc}`, { method: 'POST' })
+              loadShelf()
+              return result
+            }}
+            onImport={svc => setImportTarget(svc)}
+          />
+        </div>
       )}
 
       {/* Stats bar */}
       {!loading && shelf.length > 0 && (
-        <div className="reading-stats-bar">
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
           <StatPill label="Reading"      count={stats.reading}      color="var(--primary)"    onClick={() => setActiveStatus('reading')}      active={activeStatus === 'reading'} />
           <StatPill label="Finished"     count={stats.finished}     color="var(--secondary)"  onClick={() => setActiveStatus('finished')}     active={activeStatus === 'finished'} />
           <StatPill label="Want to Read" count={stats.want_to_read} color="var(--warn)"       onClick={() => setActiveStatus('want_to_read')} active={activeStatus === 'want_to_read'} />
           <StatPill label="DNF"          count={stats.dnf}          color="var(--text-muted)" onClick={() => setActiveStatus('dnf')}          active={activeStatus === 'dnf'} />
-          <button
-            className="reading-stat-clear"
-            style={{ visibility: activeStatus !== 'all' ? 'visible' : 'hidden' }}
-            onClick={() => setActiveStatus('all')}
-          >
-            ✕ Clear filter
-          </button>
+          {activeStatus !== 'all' && (
+            <button className="rs-pill" onClick={() => setActiveStatus('all')}>
+              <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>close</span>
+              CLEAR
+            </button>
+          )}
         </div>
       )}
 
       {/* Service tabs */}
-      <div className="reading-service-tabs">
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
         {tabs.map(s => (
           <button
             key={s.key}
-            className={`reading-service-tab${activeService === s.key ? ' reading-service-tab--active' : ''}`}
-            style={activeService === s.key ? { '--tab-color': s.color, '--tab-bg': s.bg } : {}}
+            className={`rs-pill ${activeService === s.key ? 'is-active' : ''}`}
             onClick={() => setActiveService(s.key)}
           >
-            <span className="reading-service-dot" style={{ background: s.color }} />
-            {s.label}
-            {s.key !== 'all' && counts[s.key] > 0 && (
-              <span className="reading-service-count" style={activeService === s.key ? { background: s.color, color: '#000' } : {}}>
-                {counts[s.key]}
-              </span>
+            <span className="rs-status-dot" style={{ width: 6, height: 6, background: s.color, boxShadow: `0 0 8px ${s.color}` }} />
+            {s.label.toUpperCase()}
+            {counts[s.key] > 0 && (
+              <span style={{ opacity: 0.5, marginLeft: 4 }}>({counts[s.key]})</span>
             )}
             {s.key === 'all' && shelf.length > 0 && (
-              <span className="reading-service-count" style={activeService === s.key ? { background: s.color, color: '#000' } : {}}>
-                {shelf.length}
-              </span>
+              <span style={{ opacity: 0.5, marginLeft: 4 }}>({shelf.length})</span>
             )}
           </button>
         ))}
@@ -385,83 +416,67 @@ export default function ReadingPage() {
 
       {/* Libby live section */}
       {activeService === 'libby' && (
-        <div className="reading-libby-live">
-          <div className="reading-libby-header">
-            <span className="reading-libby-title">LIVE LIBRARY DATA</span>
-            <div className="reading-libby-tabs">
+        <div className="rs-card is-wide" style={{ marginBottom: 24 }}>
+          <div className="rs-card-head">
+            <span className="rs-card-label">LIVE LIBRARY DATA</span>
+            <div style={{ display: 'flex', gap: 8 }}>
               {['loans', 'holds'].map(t => (
                 <button
                   key={t}
-                  className={`reading-libby-tab${libbyTab === t ? ' reading-libby-tab--active' : ''}`}
+                  className={`rs-pill ${libbyTab === t ? 'is-active' : ''}`}
                   onClick={() => setLibbyTab(t)}
+                  style={{ fontSize: '0.7rem' }}
                 >
-                  {t === 'loans' ? 'Current Loans' : 'Holds Queue'}
+                  {t === 'loans' ? 'LOANS' : 'HOLDS'}
                 </button>
               ))}
+              <button className="rs-pill" onClick={() => loadLibby(libbyTab)} style={{ fontSize: '0.7rem' }}>
+                <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>refresh</span>
+              </button>
             </div>
-            <button className="reading-libby-refresh" onClick={() => loadLibby(libbyTab)}>↻ Refresh</button>
           </div>
 
-          {libbyLoading && <div className="reading-loading">Fetching from Libby…</div>}
+          {libbyLoading && <div className="rs-card-meta">Fetching from Libby…</div>}
           {libbyError && (
-            <div className="reading-libby-error">
+            <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>
               {libbyError.includes('not set up')
-                ? <>Libby not connected. Click <strong>Connect Libby</strong> in the services panel above.</>
+                ? <>Libby not connected. Click <strong>Connect Libby</strong> above.</>
                 : libbyError}
             </div>
           )}
 
-          {!libbyLoading && !libbyError && libbyTab === 'loans' && libbyLoans && (
-            libbyLoans.length === 0
-              ? <div className="reading-empty">No active loans right now.</div>
-              : <div className="reading-cover-grid reading-cover-grid--libby">
-                  {libbyLoans.map((loan, i) => <LibbyLoanCard key={i} loan={loan} />)}
-                </div>
-          )}
-
-          {!libbyLoading && !libbyError && libbyTab === 'holds' && libbyHolds && (
-            libbyHolds.length === 0
-              ? <div className="reading-empty">No holds in queue.</div>
-              : <div className="reading-cover-grid reading-cover-grid--libby">
-                  {libbyHolds.map((hold, i) => <LibbyHoldCard key={i} hold={hold} />)}
-                </div>
+          {!libbyLoading && !libbyError && (
+             <div className="rs-card-flow" style={{ marginTop: 16 }}>
+                {libbyTab === 'loans' ? (
+                  libbyLoans?.length === 0 
+                    ? <div className="rs-card-meta">No active loans.</div>
+                    : libbyLoans?.map((loan, i) => <LibbyLoanCard key={i} loan={loan} />)
+                ) : (
+                  libbyHolds?.length === 0
+                    ? <div className="rs-card-meta">No holds in queue.</div>
+                    : libbyHolds?.map((hold, i) => <LibbyHoldCard key={i} hold={hold} />)
+                )}
+             </div>
           )}
         </div>
       )}
-
-      {/* Search bar */}
-      <div className="reading-toolbar">
-        <div className="reading-search-wrap">
-          <IconSearch />
-          <input
-            className="reading-search"
-            placeholder="Search title or author…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          {search && (
-            <button className="reading-search-clear" onClick={() => setSearch('')}>✕</button>
-          )}
-        </div>
-        <span className="reading-result-count">
-          {filtered.length} {filtered.length === 1 ? 'book' : 'books'}
-        </span>
-      </div>
 
       {/* Shelf */}
-      {loading && <div className="reading-loading">Loading shelf…</div>}
-
-      {!loading && filtered.length === 0 && (
-        <div className="reading-empty">
-          {shelf.length === 0
-            ? <>Your shelf is empty.<br /><button className="reading-empty-add" onClick={openAdd}>+ Add your first book</button></>
-            : 'No books match this filter.'
-          }
+      {loading ? (
+        <div className="rs-card-meta">Loading shelf…</div>
+      ) : filtered.length === 0 ? (
+        <div className="rs-card is-wide" style={{ textAlign: 'center', padding: '64px 24px' }}>
+          <span className="material-symbols-rounded" style={{ fontSize: '3rem', opacity: 0.2, marginBottom: 16 }}>auto_stories</span>
+          <div className="rs-card-value">Shelf empty</div>
+          <div className="rs-card-meta">
+            {shelf.length === 0
+              ? 'Add your first book to get started.'
+              : 'No books match your filter.'
+            }
+          </div>
         </div>
-      )}
-
-      {!loading && filtered.length > 0 && (
-        <div className="reading-cover-grid">
+      ) : (
+        <div className="rs-card-flow">
           {filtered.map(book => (
             <BookCard
               key={book.id}
@@ -472,6 +487,57 @@ export default function ReadingPage() {
           ))}
         </div>
       )}
+
+      {/* Modals */}
+      {showModal && (
+        <BookModal
+          book={editBook}
+          defaultService={activeService !== 'all' && activeService !== 'libby' ? activeService : (activeServices[0]?.key || 'kindle')}
+          availableServices={activeServices.length > 0 ? activeServices : ALL_SERVICES}
+          onSave={handleSave}
+          onClose={() => { setShowModal(false); setEditBook(null) }}
+        />
+      )}
+
+      {deleteTarget && (
+        <DeleteConfirm
+          book={deleteTarget}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {connectModal === 'libby' && (
+        <LibbyConnectModal
+          onDone={() => { setConnectModal(null); loadConnections() }}
+          onClose={() => setConnectModal(null)}
+        />
+      )}
+
+      {connectModal === 'audible' && (
+        <AudibleConnectModal
+          onDone={() => { setConnectModal(null); loadConnections() }}
+          onClose={() => setConnectModal(null)}
+        />
+      )}
+
+      {connectModal === 'google_play' && (
+        <GooglePlayConnectModal
+          onDone={() => { setConnectModal(null); loadConnections() }}
+          onClose={() => setConnectModal(null)}
+        />
+      )}
+
+      {importTarget && (
+        <CsvImportModal
+          svc={importTarget}
+          onDone={() => { setImportTarget(null); loadShelf() }}
+          onClose={() => setImportTarget(null)}
+        />
+      )}
+    </div>
+  )
+}
 
       {/* Modals */}
       {showModal && (
@@ -636,31 +702,27 @@ function MyServicesPanel({ services, connections, shelf, onConnect, onDisconnect
   )
 
   return (
-    <div className="reading-mysvc">
-      <button className="reading-mysvc-toggle" onClick={() => setOpen(o => !o)}>
-        <span className="reading-mysvc-toggle-label">
-          <IconServices size={12} /> MY SERVICES
+    <div className="rs-card is-wide">
+      <div className="rs-card-head" onClick={() => setOpen(o => !o)} style={{ cursor: 'pointer' }}>
+        <span className="rs-card-label">
+          <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>account_tree</span>
+          MY SERVICES
         </span>
-        <span className="reading-mysvc-toggle-pills">
-          {services.map(s => {
-            const connected = s.type === 'manual' || s.type === 'import' || connections[s.key]
-            return (
-              <span
-                key={s.key}
-                className={`reading-mysvc-pill${connected ? ' reading-mysvc-pill--on' : ''}`}
-                style={{ '--svc-color': s.color }}
-              >
-                <span style={{ background: connected ? s.color : 'var(--text-muted)', width: 6, height: 6, borderRadius: '50%', display: 'inline-block', marginRight: 5 }} />
-                {s.label}
-              </span>
-            )
-          })}
-        </span>
-        <span className="reading-integrations-caret">{open ? '▲' : '▼'}</span>
-      </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {services.map(s => {
+              const connected = s.type === 'manual' || s.type === 'import' || connections[s.key]
+              return (
+                <span key={s.key} className="rs-status-dot" style={{ width: 6, height: 6, background: connected ? s.color : 'var(--md-outline)', opacity: connected ? 1 : 0.3 }} />
+              )
+            })}
+          </div>
+          <span className="material-symbols-rounded rs-card-chevron" style={{ transform: open ? 'rotate(90deg)' : 'none' }}>chevron_right</span>
+        </div>
+      </div>
 
       {open && (
-        <div className="reading-mysvc-body">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginTop: 16 }}>
           {services.map(svc => {
             const connected = connections[svc.key]
             const blockedBy = svc.requires && !connections[svc.requires]
@@ -678,104 +740,64 @@ function MyServicesPanel({ services, connections, shelf, onConnect, onDisconnect
             return (
               <div
                 key={svc.key}
-                className={`reading-mysvc-card${effectiveConnected ? ' reading-mysvc-card--on' : ' reading-mysvc-card--off'}`}
-                style={{ '--svc-color': svc.color }}
+                className={`rs-card ${effectiveConnected ? 'is-elev' : ''}`}
+                style={{ background: 'var(--md-surface-container-low)', padding: 16 }}
               >
-                {/* Header row */}
-                <div className="reading-mysvc-card-head">
-                  <span className="reading-mysvc-dot" style={{ background: svc.color }} />
-                  <span className="reading-mysvc-name">{svc.label}</span>
-                  <span className={`reading-svc-type-pill reading-svc-type-pill--${svc.type}`}>
-                    {svc.type === 'live' ? 'LIVE' : svc.type === 'sync' ? 'SYNC' : svc.type === 'import' ? 'IMPORT' : 'MANUAL'}
-                  </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                       <span className="rs-status-dot" style={{ width: 6, height: 6, background: svc.color, boxShadow: `0 0 8px ${svc.color}` }} />
+                       <span style={{ fontWeight: 600 }}>{svc.label}</span>
+                    </div>
+                    <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>{svc.type.toUpperCase()}</div>
+                  </div>
                   {bookCount > 0 && (
-                    <span className="reading-mysvc-count">{bookCount} {bookCount === 1 ? 'book' : 'books'}</span>
-                  )}
-                  {(isLive || isSync) && connected && (
-                    <span className="reading-mysvc-badge reading-mysvc-badge--on">LINKED</span>
-                  )}
-                  {(isLive || isSync) && !connected && !blockedBy && (
-                    <span className="reading-mysvc-badge reading-mysvc-badge--off">NOT LINKED</span>
+                    <span className="rs-pill" style={{ fontSize: '0.65rem' }}>{bookCount} BOOKS</span>
                   )}
                 </div>
 
-                {/* Body */}
-                <div className="reading-mysvc-card-body">
-                  <p className="reading-svc-syncs">{svc.syncs}</p>
-
-                  {blockedBy && (
-                    <p className="reading-svc-caveat">⚠ {svc.requiresLabel}</p>
-                  )}
-
-                  {res && !res.error && (
-                    <p className="reading-svc-result">✓ {res.added} added · {res.skipped} already on shelf</p>
-                  )}
-                  {res?.error && <p className="reading-svc-caveat">✗ {res.error}</p>}
+                <div className="rs-card-meta" style={{ fontSize: '0.75rem', marginBottom: 16 }}>
+                  {svc.syncs}
+                  {blockedBy && <div style={{ color: 'var(--md-error)', marginTop: 4 }}>⚠ {svc.requiresLabel}</div>}
+                  {res && !res.error && <div style={{ color: '#4ade80', marginTop: 4 }}>✓ {res.added} added</div>}
+                  {res?.error && <div style={{ color: 'var(--md-error)', marginTop: 4 }}>✗ {res.error}</div>}
                 </div>
 
-                {/* Actions */}
-                <div className="reading-mysvc-actions">
+                <div style={{ display: 'flex', gap: 8 }}>
                   {isLive && !connected && (
-                    <button
-                      className="reading-svc-btn reading-svc-btn--connect"
-                      style={{ '--svc-color': svc.color }}
-                      onClick={() => onConnect(svc.key)}
-                    >
-                      Connect {svc.label}
+                    <button className="rs-pill is-active" onClick={() => onConnect(svc.key)} style={{ width: '100%', background: svc.color, color: 'black' }}>
+                      CONNECT
                     </button>
                   )}
 
                   {isLive && connected && (
-                    <div className="reading-svc-action-row">
-                      {/* Services that have a /sync endpoint show a sync button */}
+                    <>
                       {svc.hasSync && (
-                        <button
-                          className="reading-svc-btn reading-svc-btn--connect"
-                          style={{ '--svc-color': svc.color }}
-                          onClick={() => handleSync(svc.key)}
-                          disabled={syncing === svc.key}
-                        >
-                          {syncing === svc.key ? 'Syncing…' : '↻ Sync Library'}
+                        <button className="rs-pill is-active" onClick={() => handleSync(svc.key)} disabled={syncing === svc.key} style={{ flex: 1 }}>
+                          {syncing === svc.key ? '…' : 'SYNC'}
                         </button>
                       )}
-                      <button
-                        className="reading-svc-btn reading-svc-btn--disconnect"
-                        onClick={() => handleDisconnect(svc.key)}
-                        disabled={disconnecting === svc.key}
-                      >
-                        {disconnecting === svc.key ? 'Disconnecting…' : 'Disconnect'}
+                      <button className="rs-pill" onClick={() => handleDisconnect(svc.key)} disabled={disconnecting === svc.key}>
+                        DISCONNECT
                       </button>
-                    </div>
+                    </>
                   )}
 
                   {isSync && !blockedBy && (
-                    <button
-                      className="reading-svc-btn reading-svc-btn--connect"
-                      style={{ '--svc-color': svc.color }}
-                      onClick={() => handleSync(svc.key)}
-                      disabled={syncing === svc.key}
-                    >
-                      {syncing === svc.key ? 'Syncing…' : '↻ Sync Library'}
+                    <button className="rs-pill is-active" onClick={() => handleSync(svc.key)} disabled={syncing === svc.key} style={{ width: '100%' }}>
+                      {syncing === svc.key ? 'SYNCING…' : 'SYNC LIBRARY'}
                     </button>
                   )}
 
                   {isSync && blockedBy && (
-                    <button
-                      className="reading-svc-btn reading-svc-btn--connect"
-                      style={{ '--svc-color': '#f58220' }}
-                      onClick={() => onConnect('audible')}
-                    >
-                      Connect Audible First
+                    <button className="rs-pill is-active" onClick={() => onConnect('audible')} style={{ width: '100%', background: '#f58220', color: 'black' }}>
+                      CONNECT AUDIBLE FIRST
                     </button>
                   )}
 
                   {isImport && (
-                    <button
-                      className="reading-svc-btn reading-svc-btn--connect"
-                      style={{ '--svc-color': svc.color }}
-                      onClick={() => onImport(svc)}
-                    >
-                      {bookCount > 0 ? '↻ Re-import' : `Import from ${svc.label}`}
+                    <button className="rs-pill is-active" onClick={() => onImport(svc)} style={{ width: '100%' }}>
+                      {bookCount > 0 ? 'RE-IMPORT' : 'IMPORT CSV'}
                     </button>
                   )}
                 </div>
@@ -795,12 +817,12 @@ function MyServicesPanel({ services, connections, shelf, onConnect, onDisconnect
 function StatPill({ label, count, color, onClick, active }) {
   return (
     <button
-      className={`reading-stat-pill${active ? ' reading-stat-pill--active' : ''}`}
-      style={{ '--pill-color': color }}
+      className={`rs-pill ${active ? 'is-active' : ''}`}
       onClick={onClick}
+      style={active ? { background: color, color: 'black' } : {}}
     >
-      <span className="reading-stat-num">{count}</span>
-      <span className="reading-stat-label">{label}</span>
+      <span style={{ fontWeight: 700 }}>{count}</span>
+      <span style={{ opacity: 0.7 }}>{label.toUpperCase()}</span>
     </button>
   )
 }
@@ -815,53 +837,56 @@ function BookCard({ book, onEdit, onDelete }) {
   const statusObj = STATUSES.find(s => s.key === book.status)
 
   return (
-    <div className="reading-book-card">
-      <div className="reading-book-cover">
-        {book.cover_url
-          ? <img src={book.cover_url} alt={book.title} className="reading-book-cover-img" />
-          : <div className="reading-book-cover-placeholder">
-              <IconBook />
-              <span className="reading-book-cover-placeholder-title">{book.title}</span>
-            </div>
-        }
-        <div className={`reading-cover-status reading-cover-status--${book.status}`}>
-          {statusObj?.label || book.status}
-        </div>
-        <div className="reading-cover-service" style={{ background: svc?.color || '#8888aa' }}>
-          {svc?.label || book.service}
-        </div>
-        {book.status === 'reading' && (
-          <div className="reading-cover-progress">
-            <div className="reading-cover-progress-fill" style={{ width: `${book.progress_pct}%`, background: svc?.color || '#8888aa' }} />
+    <div className="rs-card" style={{ flex: '1 1 180px', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'relative', aspectRatio: '2/3', background: 'var(--md-surface-container-highest)' }}>
+        {book.cover_url ? (
+          <img src={book.cover_url} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16, textAlign: 'center' }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, marginBottom: 8 }}>book</span>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, opacity: 0.5 }}>{book.title}</div>
           </div>
         )}
-        <div className="reading-book-overlay">
-          <div className="reading-overlay-actions">
+        
+        {/* Overlays */}
+        <div style={{ position: 'absolute', top: 8, left: 8, right: 8, display: 'flex', justifyContent: 'space-between', pointerEvents: 'none' }}>
+           <span className="rs-pill is-active" style={{ fontSize: '0.6rem', padding: '2px 8px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', color: 'white', border: 'none' }}>
+             {statusObj?.label.toUpperCase() || book.status.toUpperCase()}
+           </span>
+           <span className="rs-status-dot" style={{ width: 8, height: 8, background: svc?.color || '#8888aa', boxShadow: `0 0 8px ${svc?.color}` }} />
+        </div>
+
+        {book.status === 'reading' && (
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(255,255,255,0.2)' }}>
+            <div style={{ height: '100%', width: `${book.progress_pct}%`, background: svc?.color || 'var(--primary)', transition: 'width 0.5s' }} />
+          </div>
+        )}
+
+        <div className="reading-book-overlay" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', padding: 16 }}>
             {launchUrl && (
-              <a href={launchUrl} target="_blank" rel="noopener noreferrer" className="reading-overlay-btn reading-overlay-btn--launch">
-                Open ↗
+              <a href={launchUrl} target="_blank" rel="noopener noreferrer" className="rs-btn-primary" style={{ padding: '8px', fontSize: '0.8rem', textAlign: 'center', textDecoration: 'none' }}>
+                OPEN ↗
               </a>
             )}
-            <button className="reading-overlay-btn" onClick={onEdit}>Edit</button>
-            <button className="reading-overlay-btn reading-overlay-btn--delete" onClick={onDelete}>Delete</button>
+            <button className="rs-pill is-active" onClick={onEdit} style={{ fontSize: '0.8rem' }}>EDIT</button>
+            <button className="rs-pill" onClick={onDelete} style={{ fontSize: '0.8rem', color: 'var(--md-error)' }}>DELETE</button>
           </div>
         </div>
       </div>
 
-      <div className="reading-book-meta">
-        <div className="reading-book-title">{book.title}</div>
-        {book.author && <div className="reading-book-author">{book.author}</div>}
-        {book.rating && (
-          <div className="reading-book-rating">
-            {'★'.repeat(book.rating)}<span className="reading-book-rating-empty">{'★'.repeat(5 - book.rating)}</span>
-          </div>
-        )}
-        {book.status === 'reading' && (
-          <div className="reading-book-pct">{Math.round(book.progress_pct)}%</div>
-        )}
-        {book.notes && (
-          <div className="reading-book-notes">{book.notes}</div>
-        )}
+      <div style={{ padding: 12, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{book.title}</div>
+        <div style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: 8 }}>{book.author || 'Unknown Author'}</div>
+        
+        <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+           {book.rating ? (
+             <div style={{ color: 'var(--warn)', fontSize: '0.8rem' }}>{'★'.repeat(book.rating)}</div>
+           ) : <div />}
+           {book.status === 'reading' && (
+             <div className="rs-card-label" style={{ fontSize: '0.65rem' }}>{Math.round(book.progress_pct)}%</div>
+           )}
+        </div>
       </div>
     </div>
   )
@@ -872,35 +897,34 @@ function BookCard({ book, onEdit, onDelete }) {
 // =============================================================================
 
 function LibbyLoanCard({ loan }) {
+  const urgent = loan.days_remaining >= 0 && loan.days_remaining <= 3
   return (
-    <div className="reading-book-card">
-      <div className="reading-book-cover">
-        {loan.cover_url
-          ? <img src={loan.cover_url} alt={loan.title} className="reading-book-cover-img" />
-          : <div className="reading-book-cover-placeholder"><IconBook /></div>
-        }
-        <div className={`reading-cover-status reading-cover-status--reading${loan.days_remaining >= 0 && loan.days_remaining <= 3 ? ' reading-cover-status--urgent' : ''}`}>
-          {loan.days_remaining >= 0 ? `${loan.days_remaining}d left` : 'Active'}
+    <div className="rs-card" style={{ flex: '1 1 160px', padding: 0, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', aspectRatio: '2/3' }}>
+        {loan.cover_url ? (
+          <img src={loan.cover_url} alt={loan.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: 'var(--md-surface-container-highest)' }} />
+        )}
+        <div style={{ position: 'absolute', top: 8, left: 8 }}>
+           <span className={`rs-pill is-active`} style={{ fontSize: '0.6rem', padding: '2px 8px', background: urgent ? 'var(--md-error)' : 'rgba(0,0,0,0.6)', border: 'none', color: 'white' }}>
+             {loan.days_remaining >= 0 ? `${loan.days_remaining}D LEFT` : 'ACTIVE'}
+           </span>
         </div>
         {loan.percent_complete >= 0 && (
-          <div className="reading-cover-progress">
-            <div className="reading-cover-progress-fill" style={{ width: `${loan.percent_complete}%`, background: '#00aaff' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(255,255,255,0.2)' }}>
+            <div style={{ height: '100%', width: `${loan.percent_complete}%`, background: '#00aaff' }} />
           </div>
         )}
-        <div className="reading-book-overlay">
-          <div className="reading-overlay-actions">
-            <a href="https://libbyapp.com" target="_blank" rel="noopener noreferrer" className="reading-overlay-btn reading-overlay-btn--launch">
-              Open Libby ↗
-            </a>
-          </div>
+        <div className="reading-book-overlay" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
+          <a href="https://libbyapp.com" target="_blank" rel="noopener noreferrer" className="rs-btn-primary" style={{ padding: '8px 16px', fontSize: '0.8rem', textDecoration: 'none' }}>
+            OPEN LIBBY ↗
+          </a>
         </div>
       </div>
-      <div className="reading-book-meta">
-        <div className="reading-book-title">{loan.title}</div>
-        <div className="reading-book-author">{loan.author}</div>
-        {loan.percent_complete >= 0 && (
-          <div className="reading-book-pct">{Math.round(loan.percent_complete)}% read</div>
-        )}
+      <div style={{ padding: 10 }}>
+        <div style={{ fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{loan.title}</div>
+        <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{loan.author}</div>
       </div>
     </div>
   )
@@ -908,25 +932,24 @@ function LibbyLoanCard({ loan }) {
 
 function LibbyHoldCard({ hold }) {
   return (
-    <div className="reading-book-card">
-      <div className="reading-book-cover">
-        {hold.cover_url
-          ? <img src={hold.cover_url} alt={hold.title} className="reading-book-cover-img" />
-          : <div className="reading-book-cover-placeholder"><IconBook /></div>
-        }
-        <div className="reading-cover-status reading-cover-status--want_to_read">
-          {hold.queue_position > 0 ? `#${hold.queue_position}` : 'Hold'}
+    <div className="rs-card" style={{ flex: '1 1 160px', padding: 0, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', aspectRatio: '2/3' }}>
+        {hold.cover_url ? (
+          <img src={hold.cover_url} alt={hold.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: 'var(--md-surface-container-highest)' }} />
+        )}
+        <div style={{ position: 'absolute', top: 8, left: 8 }}>
+           <span className="rs-pill is-active" style={{ fontSize: '0.6rem', padding: '2px 8px', background: 'var(--warn)', color: 'black', border: 'none' }}>
+             {hold.queue_position > 0 ? `#${hold.queue_position}` : 'HOLD'}
+           </span>
         </div>
       </div>
-      <div className="reading-book-meta">
-        <div className="reading-book-title">{hold.title}</div>
-        <div className="reading-book-author">{hold.author}</div>
-        {hold.queue_position > 0 && (
-          <div className="reading-book-pct">#{hold.queue_position} of {hold.queue_size}</div>
-        )}
-        {hold.estimated_wait_days >= 0 && (
-          <div className="reading-book-author">~{hold.estimated_wait_days}d wait</div>
-        )}
+      <div style={{ padding: 10 }}>
+        <div style={{ fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hold.title}</div>
+        <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>
+          {hold.estimated_wait_days >= 0 ? `~${hold.estimated_wait_days}d wait` : hold.author}
+        </div>
       </div>
     </div>
   )

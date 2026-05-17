@@ -3,12 +3,12 @@ import './RiverStatusBox.css'
 
 const STATE_META = {
   idle:         { label: 'STANDBY',     color: 'var(--primary)',   pulse: 'slow' },
-  connecting:   { label: 'CONNECTING',  color: 'var(--text-dim)',  pulse: 'slow' },
-  listening:    { label: 'LISTENING',   color: 'var(--secondary)', pulse: 'fast' },
+  connecting:   { label: 'CONNECTING',  color: 'var(--md-on-surface-variant)',  pulse: 'slow' },
+  listening:    { label: 'LISTENING',   color: '#00ffcc', pulse: 'fast' },
   transcribing: { label: 'PROCESSING',  color: 'var(--primary)',   pulse: 'fast' },
   thinking:     { label: 'THINKING',    color: '#9955ff',          pulse: 'fast' },
-  speaking:     { label: 'SPEAKING',    color: 'var(--secondary)', pulse: 'fast' },
-  error:        { label: 'ERROR',       color: 'var(--error)',     pulse: 'slow' },
+  speaking:     { label: 'SPEAKING',    color: '#00aaff', pulse: 'fast' },
+  error:        { label: 'ERROR',       color: 'var(--md-error)',  pulse: 'slow' },
 }
 
 const DOT_COLORS_THINKING = ['#9955ff', '#00aaff', '#00ffcc', '#ff55aa', '#ffaa00']
@@ -22,16 +22,7 @@ export default function RiverStatusBox({ state = 'idle', streamingText = '' }) {
 
   return (
     <div className="rsb" style={{ '--rsb-color': meta.color }}>
-      {/* Top label strip */}
-      <div className="rsb-header">
-        <span className="rsb-name">RIVER SONG</span>
-        <div className="rsb-state-chip">
-          <PulseDot speed={meta.pulse} color={meta.color} />
-          <span className="rsb-state-label">{meta.label}</span>
-        </div>
-      </div>
-
-      {/* Main indicator area */}
+      {/* Indicator area */}
       <div className="rsb-body">
         {isThinking && <ThinkingDots colors={DOT_COLORS_THINKING} />}
         {isSpeaking && <WaveformBars />}
@@ -40,19 +31,21 @@ export default function RiverStatusBox({ state = 'idle', streamingText = '' }) {
       </div>
 
       {/* Streaming text or last state hint */}
-      {streamingText ? (
-        <div className="rsb-stream">
-          {streamingText}
-          <span className="rsb-cursor" aria-hidden="true">|</span>
-        </div>
-      ) : (
-        <div className="rsb-hint">
-          {state === 'idle'      && 'Standing by.'}
-          {state === 'thinking'  && 'Processing your request\u2026'}
-          {state === 'speaking'  && 'River is speaking.'}
-          {state === 'listening' && 'Listening\u2026'}
-        </div>
-      )}
+      <div className="rsb-text-zone">
+        {streamingText ? (
+          <div className="rsb-stream">
+            {streamingText}
+            <span className="rsb-cursor" aria-hidden="true">|</span>
+          </div>
+        ) : (
+          <div className="rsb-hint">
+            {state === 'idle'      && 'RIVER SONG STANDING BY'}
+            {state === 'thinking'  && 'PROCESS IN PROGRESS...'}
+            {state === 'speaking'  && 'TRANSMITTING RESPONSE'}
+            {state === 'listening' && 'AWAITING INPUT...'}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -95,14 +88,14 @@ function ThinkingDots({ colors }) {
 }
 
 function WaveformBars() {
-  const BARS = 12
+  const BARS = 16
   return (
     <div className="rsb-wave">
       {Array.from({ length: BARS }).map((_, i) => (
         <span
           key={i}
           className="rsb-wave-bar"
-          style={{ animationDelay: `${i * 0.07}s` }}
+          style={{ animationDelay: `${i * 0.05}s` }}
         />
       ))}
     </div>

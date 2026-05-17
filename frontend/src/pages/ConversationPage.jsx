@@ -5,12 +5,9 @@ import { useWebSocket }   from '../hooks/useWebSocket.js'
 import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
 import { useAuth }        from '../context/AuthContext.jsx'
 import { AudioPlayer }    from '../utils/AudioPlayer.js'
-import { STATE_TABS }     from '../utils/constants.js'
-import './ConversationPage.css'
 
 const RiverSong = lazy(() => import('../components/RiverSong.jsx'))
 
-const API_BASE    = import.meta.env.VITE_API_URL || ''
 const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const MAX_HISTORY_SESSIONS = 30
 
@@ -29,9 +26,8 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-export default function ConversationPage() {
+export default function ConversationPage({ setAction }) {
   const { token, user } = useAuth()
-
   const wsUrl = `${WS_PROTOCOL}//${window.location.host}/ws/conversation`
 
   const [convState,         setConvState]         = useState('connecting')
@@ -79,10 +75,8 @@ export default function ConversationPage() {
     if (user) localStorage.setItem(`rs-transcript:${user.id}`, String(next))
   }
 
-  // Read-only: active model + voice from settings (display only — change in Settings)
   const [activeModel, setActiveModel] = useState(null)
   const [activeVoice, setActiveVoice] = useState(null)
-
   const [history,        setHistory]        = useState([])
   const [showHistory,    setShowHistory]    = useState(false)
   const [viewingSession, setViewingSession] = useState(null)
@@ -98,22 +92,11 @@ export default function ConversationPage() {
       case 'transcribing':    setConvState('transcribing'); break
       case 'transcript':      if (text) setMessages(p => [...p, { role: 'user', text }]); break
       case 'thinking':        setConvState('thinking');   setStreamingContent(''); break
-      case 'proactive_briefing_start':
-        console.log('Proactive briefing starting:', text || 'Routine')
-        if (text) setMessages(p => [...p, { role: 'assistant', text }])
-        setConvState('thinking')
-        setStreamingContent('')
-        setError(null)
-        break
       case 'response_chunk':  setStreamingContent(p => p + (text || '')); break
       case 'token':
         setStreamingContent(p => p + (content || ''))
-        // Reset 30s timeout on every token
         if (streamTimeoutRef.current) clearTimeout(streamTimeoutRef.current)
-        streamTimeoutRef.current = setTimeout(() => {
-          console.warn('Streaming timed out after 30s, finalizing.')
-          finalizeStream()
-        }, 30000)
+        streamTimeoutRef.current = setTimeout(finalizeStream, 30000)
         break
       case 'stream_done':
         finalizeStream()
@@ -136,23 +119,14 @@ export default function ConversationPage() {
         if (data) {
           isPlayingRef.current = true
           setConvState('speaking')
-          const fmt = event.format || 'wav'
-          audioPlayer.playBase64(data, fmt).then(() => {
+          audioPlayer.playBase64(data, event.format || 'wav').then(() => {
             isPlayingRef.current = false
-            // Note: with streaming audio, "idle" should only fire after the full queue is done
-            // But for now, we rely on the backend sending "idle" at the end of the turn
           })
         }
-        break
-      case 'wake_word_detected':
-        // Automatically switch from ambient to active listening
-        console.log('Wake word detected!')
-        setConvState('listening_trigger') // Temporary state to trigger transition
         break
       case 'idle':    
         if (!isPlayingRef.current) setConvState('idle')
         break
-      case 'routing': setConvState('routing'); break
       case 'error':   setError(message || 'An unknown error occurred.'); break
       default: break
     }
@@ -161,9 +135,7 @@ export default function ConversationPage() {
   const { sendMessage, connectionStatus, authError } = useWebSocket(wsUrl, handleMessage, { token })
 
   useEffect(() => {
-    if (authError) {
-      setError('Session expired. Please log in again.')
-    }
+    if (authError) setError('Session expired.')
   }, [authError])
 
   useEffect(() => {
@@ -174,32 +146,11 @@ export default function ConversationPage() {
     }
   }, [connectionStatus])
 
-  const handleAudioComplete = useCallback(wavB64 => {
-    sendMessage({ type: 'audio_data', data: wavB64 })
-  }, [sendMessage])
-
-  const handleNoSpeech = useCallback(() => {
-    setConvState(s => (s === 'listening' ? 'idle' : s))
-  }, [])
-
-  const handleAmbientChunk = useCallback(b64 => {
-    sendMessage({ type: 'ambient_audio', data: b64 })
-  }, [sendMessage])
-
   const { startRecording, stopRecording, audioLevel, toggleAmbient, isAmbient } = useAudioRecorder({
-    onComplete: handleAudioComplete,
-    onNoSpeech: handleNoSpeech,
-    onAmbientChunk: handleAmbientChunk,
+    onComplete: wavB64 => sendMessage({ type: 'audio_data', data: wavB64 }),
+    onNoSpeech: () => setConvState(s => (s === 'listening' ? 'idle' : s)),
+    onAmbientChunk: b64 => sendMessage({ type: 'ambient_audio', data: b64 }),
   })
-
-  useEffect(() => {
-    if (convState === 'listening' && isAmbient) {
-      console.log('Transitioning from ambient to listening turn...')
-      toggleAmbient(false).then(() => {
-        sendMessage({ type: 'start' })
-      })
-    }
-  }, [convState, isAmbient, toggleAmbient, sendMessage])
 
   const canSpeak  = convState === 'idle' && connectionStatus === 'connected'
   const isActive  = convState !== 'idle' && convState !== 'connecting'
@@ -221,27 +172,15 @@ export default function ConversationPage() {
   const handleStartListening = useCallback(async () => {
     if (!canSpeak) return
     setError(null)
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setError('Microphone not available. Use https://riversongai.com — mic requires HTTPS.')
-      return
-    }
     setConvState('listening')
     const granted = await startRecording()
     if (granted) {
       sendMessage({ type: 'start' })
     } else {
       setConvState('idle')
-      setError('Microphone access denied. Click the lock icon in your browser address bar and allow the microphone.')
+      setError('Microphone access denied.')
     }
   }, [canSpeak, startRecording, sendMessage])
-
-  useEffect(() => {
-    if (convState === 'listening_trigger') {
-      handleToggleAmbient().then(() => {
-        handleStartListening()
-      })
-    }
-  }, [convState, handleToggleAmbient, handleStartListening])
 
   const handleReset = useCallback(() => {
     if (connectionStatus !== 'connected') return
@@ -264,242 +203,172 @@ export default function ConversationPage() {
     setMemoryMuted(true)
   }, [connectionStatus, messages, sendMessage, user, activeModel])
 
-  const displayMessages = viewingSession ? viewingSession.messages : messages
-  const displayStreaming = viewingSession ? '' : streamingContent
-
-  // Load history on mount
   useEffect(() => {
-    if (user) {
-      setHistory(loadHistory(user.id))
-    }
+    if (user) setHistory(loadHistory(user.id))
   }, [user])
 
-  // Load current model/voice display
   useEffect(() => {
     if (!token) return
     fetch('/api/settings/llm', { headers: { Authorization: `Bearer ${token}` }})
       .then(r => r.json())
       .then(d => setActiveModel({ display_name: d.display_name || d.model }))
-      .catch(() => {})
     fetch('/api/settings/voice', { headers: { Authorization: `Bearer ${token}` }})
       .then(r => r.json())
       .then(d => setActiveVoice({ active_voice: d.active_voice }))
-      .catch(() => {})
   }, [token])
 
+  useEffect(() => {
+    setAction(
+      <div style={{ display: 'flex', gap: 24, alignItems: 'center', justifyContent: 'center', width: '100%', padding: '0 20px' }}>
+        <button 
+          className={ambientEnabled ? 'rs-pill is-active' : 'rs-pill'} 
+          onClick={handleToggleAmbient}
+          title="Ambient Mode"
+        >
+          <span className="material-symbols-rounded">auto_awesome</span>
+        </button>
+        
+        <button 
+          className={webSearch ? 'rs-pill is-active' : 'rs-pill'} 
+          onClick={handleToggleWebSearch}
+          title="Web Search"
+        >
+          <span className="material-symbols-rounded">public</span>
+        </button>
+
+        <button 
+          className="rs-btn-primary" 
+          style={{ 
+            width: 72, height: 72, borderRadius: '50%', padding: 0,
+            boxShadow: isActive ? '0 0 24px var(--primary)' : undefined,
+            background: isActive ? 'var(--primary)' : undefined,
+            color: isActive ? '#000' : undefined,
+            opacity: !canSpeak ? 0.5 : 1
+          }}
+          onClick={handleStartListening}
+          disabled={!canSpeak}
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: '2.5rem' }}>mic</span>
+        </button>
+
+        <button className="rs-pill" onClick={handleReset} title="Save & reset">
+          <span className="material-symbols-rounded">history_edu</span>
+        </button>
+      </div>
+    )
+  }, [canSpeak, isActive, ambientEnabled, webSearch, handleToggleAmbient, handleToggleWebSearch, handleStartListening, handleReset, setAction])
+
+  const displayMessages = viewingSession ? viewingSession.messages : messages
+  const displayStreaming = viewingSession ? '' : streamingContent
+
   return (
-    <div className="conv-page">
+    <div className="rs-foyer animate-fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden', gap: 24 }}>
+        
+        {/* Left: Avatar & State */}
+        {showAvatar && (
+          <div style={{ flex: '1 1 40%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, padding: '24px 0' }}>
+            <div className="rs-card" style={{ width: '100%', maxWidth: 360, aspectRayo: '1/1', padding: 0, borderRadius: '50%', overflow: 'hidden', position: 'relative' }}>
+              <Suspense fallback={<div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.05)' }} />}>
+                <RiverSong state={convState} audioLevel={visualLvl} />
+              </Suspense>
+              {convState === 'speaking' && (
+                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                  <AudioVisualizer audioLevel={visualLvl} />
+                </div>
+              )}
+            </div>
 
-      {/* Avatar zone */}
-      {showAvatar && (
-        <div className="conv-portrait-zone">
-          <div className="conv-avatar-container">
-            <Suspense fallback={<div className="conv-avatar-loading" />}>
-              <RiverSong state={convState} audioLevel={visualLvl} />
-            </Suspense>
-            {convState === 'speaking' && (
-              <div className="conv-visualizer-overlay">
-                <AudioVisualizer audioLevel={visualLvl} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              <div className="rs-status-strip">
+                <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#6b7280', animation: isActive ? undefined : 'none' }} />
+                <span style={{ fontWeight: 600 }}>{convState.toUpperCase()}</span>
               </div>
-            )}
-          </div>
-
-          {/* Ambient indicator */}
-          <div className="conv-ambient-indicator">
-            <span className={`conv-ambient-dot ${ambientEnabled ? 'conv-ambient-dot--on' : ''}`} />
-            <span className="conv-ambient-label">
-              {ambientEnabled ? 'AMBIENT — always listening' : 'PUSH TO TALK'}
-            </span>
-          </div>
-
-          {/* State pill */}
-          <div className="conv-state-pill-wrap">
-            <div className={`conv-state-pill conv-state-pill--${convState}`}>
-              {convState === 'listening' && "◉ LISTENING"}
-              {convState === 'thinking' && "◌ THINKING..."}
-              {convState === 'speaking' && "◈ SPEAKING"}
-              {convState === 'idle' && "◌ IDLE"}
-              {['connecting', 'transcribing', 'routing'].includes(convState) && convState.toUpperCase()}
+              
+              <div style={{ display: 'flex', gap: 8 }}>
+                {activeModel && (
+                  <span className="rs-pill" style={{ fontSize: '0.65rem' }}>
+                    <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4 }}>memory</span>
+                    {activeModel.display_name}
+                  </span>
+                )}
+                {activeVoice && (
+                  <span className="rs-pill" style={{ fontSize: '0.65rem' }}>
+                    <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4 }}>settings_voice</span>
+                    {activeVoice.active_voice}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
+        )}
 
-          {/* State tabs (Legacy but kept for layout) */}
-          <div className="conv-state-bar">
-            {STATE_TABS.map(s => (
-              <div key={s} className={`conv-state-tab ${convState === s ? 'conv-state-tab--active' : ''}`}>
-                <span className={`conv-state-tab-dot ${convState === s ? 'conv-state-tab-dot--active' : ''}`} />
-                {s.toUpperCase()}
-              </div>
-            ))}
-          </div>
-
-          {/* Active config strip */}
-          <div className="conv-config-strip">
-            {activeModel ? (
-              <span className="conv-config-chip">
-                <GpuIcon />
-                {activeModel.display_name}
-              </span>
-            ) : (
-              <span className="conv-config-chip conv-config-chip--dim">No model selected</span>
-            )}
-            <span className="conv-config-sep">·</span>
-            <span className="conv-config-chip">
-              <VoiceIcon />
-              {activeVoice?.active_voice || 'No voice'}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Chat zone */}
-      <div className="conv-chat-zone">
-        <div className="conv-top-bar">
-          <div className="conv-top-left">
-            <button className={`conv-icon-btn ${showAvatar ? 'conv-icon-btn--on' : ''}`} onClick={toggleAvatar} title={showAvatar ? 'Hide avatar' : 'Show avatar'}><AvatarIcon /></button>
-            <button className={`conv-icon-btn ${showTranscript ? 'conv-icon-btn--on' : ''}`} onClick={toggleTranscript} title={showTranscript ? 'Hide transcript' : 'Show transcript'}><TranscriptIcon /></button>
-          </div>
-
-          <div className="conv-top-right">
-            {!showAvatar && (
-              <div className="conv-ambient-indicator conv-ambient-indicator--compact">
-                <span className={`conv-ambient-dot ${ambientEnabled ? 'conv-ambient-dot--on' : ''}`} />
-              </div>
-            )}
-            <button className={`conv-icon-btn ${showHistory ? 'conv-icon-btn--on' : ''}`} onClick={() => { setShowHistory(h => !h); setViewingSession(null) }} title="Conversation history">
-              <HistoryIcon />
-              {history.length > 0 && <span className="conv-history-count">{history.length}</span>}
+        {/* Right: Transcript / History */}
+        <div style={{ flex: '1 1 60%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className={showAvatar ? 'rs-pill is-active' : 'rs-pill'} onClick={toggleAvatar}>
+                <span className="material-symbols-rounded">person</span>
+              </button>
+              <button className={showTranscript ? 'rs-pill is-active' : 'rs-pill'} onClick={toggleTranscript}>
+                <span className="material-symbols-rounded">notes</span>
+              </button>
+            </div>
+            <button className={showHistory ? 'rs-pill is-active' : 'rs-pill'} onClick={() => { setShowHistory(!showHistory); setViewingSession(null) }}>
+              <span className="material-symbols-rounded">history</span>
+              {history.length > 0 && <span style={{ marginLeft: 6, opacity: 0.6 }}>{history.length}</span>}
             </button>
           </div>
-        </div>
 
-        {showHistory ? (
-          <div className="conv-history-panel">
-            {viewingSession ? (
-              <>
-                <div className="conv-history-session-header">
-                  <button className="conv-history-back" onClick={() => setViewingSession(null)}>← Back</button>
-                  <span className="conv-history-session-meta">{fmtDate(viewingSession.date)}</span>
-                </div>
-                <ConversationPanel messages={viewingSession.messages} />
-              </>
+          <div className="rs-card" style={{ flex: 1, overflow: 'hidden', padding: 0, display: 'flex', flexDirection: 'column' }}>
+            {showHistory ? (
+              <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+                {viewingSession ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--md-outline-variant)', pb: 12 }}>
+                      <button className="rs-pill" onClick={() => setViewingSession(null)}>BACK</button>
+                      <span className="rs-card-meta">{fmtDate(viewingSession.date)}</span>
+                    </div>
+                    <ConversationPanel messages={viewingSession.messages} />
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {[...history].reverse().map(s => (
+                      <button key={s.id} className="rs-card is-tappable" style={{ padding: 12, display: 'flex', justifyContent: 'space-between' }} onClick={() => setViewingSession(s)}>
+                        <span className="rs-card-label">{fmtDate(s.date)}</span>
+                        <span className="rs-card-meta">{s.messages.length} msg</span>
+                      </button>
+                    ))}
+                    {history.length === 0 && <div className="rs-card-meta" style={{ textAlign: 'center', padding: 40 }}>No history recorded.</div>}
+                  </div>
+                )}
+              </div>
+            ) : showTranscript ? (
+              <div style={{ flex: 1, overflowY: 'auto' }}>
+                <ConversationPanel messages={displayMessages} streamingContent={displayStreaming} />
+              </div>
             ) : (
-              <div className="conv-history-list">
-                {[...history].reverse().map(s => (
-                  <button key={s.id} className="conv-history-item" onClick={() => setViewingSession(s)}>
-                    <span className="conv-history-item-date">{fmtDate(s.date)}</span>
-                    <span className="conv-history-item-count">{s.messages.length} msg</span>
-                  </button>
-                ))}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span className="rs-card-meta">Transcript hidden</span>
               </div>
             )}
           </div>
-        ) : showTranscript ? (
-          <ConversationPanel messages={displayMessages} streamingContent={displayStreaming} />
-        ) : (
-          <div className="conv-transcript-off">Transcript hidden</div>
-        )}
 
-        {(error || convState === 'connecting') && (
-          <div className="conv-status-strip">
-            {error ? <span className="conv-status-error">{error}</span> : <span className="conv-status-waiting">Connecting...</span>}
-          </div>
-        )}
-
-        <div className="conv-input-bar conv-input-bar--speak">
-          <button className={`conv-ambient-btn ${ambientEnabled ? 'conv-ambient-btn--on' : ''}`} onClick={handleToggleAmbient} title="Ambient Mode"><SparkleIcon on={ambientEnabled} /></button>
-          <button className={`conv-icon-btn conv-web-btn ${webSearch ? 'conv-web-btn--on' : ''}`} onClick={handleToggleWebSearch} title="Web Search"><WebIcon on={webSearch} /></button>
-          <button className={`conv-mic-btn conv-mic-btn--large ${isActive ? 'conv-mic-btn--active' : ''} ${!canSpeak ? 'conv-mic-btn--disabled' : ''}`} onClick={handleStartListening} disabled={!canSpeak}><MicIcon /></button>
-          <button className="conv-reset-btn" onClick={handleReset} title="Save & reset"><ResetIcon /></button>
-          {memoryMuted && (
-            <div className="conv-memory-muted-badge animate-fade-in" title="Memory is not being injected into this session. Refresh to re-enable.">
-              MEMORY MUTED
+          {(error || convState === 'connecting') && (
+            <div style={{ padding: '8px 12px', textAlign: 'center' }}>
+              {error ? <span style={{ color: '#f87171', fontSize: '0.8rem' }}>{error}</span> : <span className="rs-card-meta">Connecting...</span>}
             </div>
           )}
         </div>
+
       </div>
+
+      {memoryMuted && (
+        <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)' }} className="rs-pill">
+          <span style={{ color: '#facc15', fontSize: '0.7rem', fontWeight: 700 }}>MEMORY MUTED</span>
+        </div>
+      )}
     </div>
-  )
-}
-
-function WebIcon({ on }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={on ? "currentColor" : "var(--md-outline)"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="2" y1="12" x2="22" y2="12" />
-      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-    </svg>
-  )
-}
-
-function SparkleIcon({ on }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 16 16" fill={on ? "currentColor" : "none"}>
-      <path d="M8 1L9.5 5.5L14 7L9.5 8.5L8 13L6.5 8.5L2 7L6.5 5.5L8 1Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M12 11L12.5 12.5L14 13L12.5 13.5L12 15L11.5 13.5L10 13L11.5 12.5L12 11Z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  )
-}
-
-function GpuIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
-      <rect x="1" y="3" width="14" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
-      <rect x="4" y="5.5" width="5" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.1"/>
-    </svg>
-  )
-}
-
-function VoiceIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
-      <path d="M8 1v14M4 3v10M12 3v10M1 6v4M15 6v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
-function MicIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 18 18" fill="none">
-      <rect x="6" y="1" width="6" height="10" rx="3" stroke="currentColor" strokeWidth="1.4"/>
-      <path d="M3 9a6 6 0 0 0 12 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-      <line x1="9" y1="15" x2="9" y2="17" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
-function ResetIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-      <path d="M2 8a6 6 0 1 0 1.5-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-      <polyline points="2,4 2,8 6,8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  )
-}
-
-function TranscriptIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
-      <line x1="4.5" y1="5.5" x2="11.5" y2="5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
-function AvatarIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="6" r="3" stroke="currentColor" strokeWidth="1.3"/>
-      <path d="M2 14c0-2.5 2.7-4 6-4s6 1.5 6 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
-function HistoryIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.3"/>
-      <polyline points="8,4 8,8 11,10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
   )
 }

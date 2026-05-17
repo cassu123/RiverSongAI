@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import './KillSwitchPage.css'
 
 export default function KillSwitchPage() {
   const [active,    setActive]    = useState(null)   // null = loading
@@ -68,39 +67,51 @@ export default function KillSwitchPage() {
   }
 
   return (
-    <div className="page-wrap ks-wrap">
-      {/* Header */}
-      <div className="page-header-row">
-        <div>
-          <div className="page-breadcrumb">
-            <span>◢</span><span>ADMIN</span>
-            <span className="page-breadcrumb-sep">/</span>
-            <span>SECTION 9</span>
-          </div>
-          <h1 className="page-title ks-page-title">Emergency Protocol</h1>
-          <div className="page-subtitle">
-            <span className="page-subtitle-dot" style={{ background: active ? 'var(--ks-red)' : undefined }} />
-            Global kill switch — admin clearance required.
-          </div>
+    <div className="rs-foyer animate-fade-in">
+      <header className="rs-foyer-head">
+        <div className="rs-card-label">ADMIN / SECTION 9</div>
+        <h1 className="rs-greeting">Emergency Protocol</h1>
+        <div className="rs-status-strip">
+          <span className="rs-status-dot" style={{ background: active ? '#ff3322' : undefined }} />
+          <span>GLOBAL KILL SWITCH — ADMIN CLEARANCE REQUIRED</span>
         </div>
-      </div>
+      </header>
 
-      <div className="ks-layout">
+      <div className="rs-card-flow" style={{ maxWidth: 640 }}>
 
         {/* Status card */}
-        <div className={`card ks-status-card ${active ? 'ks-status-card--active' : ''}`}>
-          <div className="ks-status-label">SYSTEM STATE</div>
-          <div className={`ks-status-value ${active ? 'ks-status-value--active' : 'ks-status-value--nominal'}`}>
+        <div className="rs-card is-wide" style={{ 
+          backdropFilter: 'var(--glass-blur)',
+          border: active ? '1px solid rgba(255, 51, 34, 0.5)' : undefined,
+          background: active ? 'color-mix(in srgb, #ff3322 5%, var(--rs-card-bg))' : undefined
+        }}>
+          <div className="rs-card-head">
+             <span className="rs-card-label">SYSTEM STATE</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '1.4rem', fontWeight: 600, letterSpacing: '0.1em' }}>
             {loading ? (
-              <><span className="dot dot--standby" /> LOADING</>
+              <><span className="rs-status-dot" /> LOADING</>
             ) : active ? (
-              <><span className="ks-pulse" />KILL ACTIVE</>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: '#ff3322' }}>
+                <span style={{ 
+                  display: 'inline-block', 
+                  width: 12, 
+                  height: 12, 
+                  borderRadius: '50%', 
+                  background: '#ff3322', 
+                  boxShadow: '0 0 15px #ff3322' 
+                }} />
+                KILL ACTIVE
+              </div>
             ) : (
-              <><span className="dot dot--on" />NOMINAL</>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: 'var(--secondary)' }}>
+                <span className="rs-status-dot" style={{ background: 'var(--secondary)' }} />
+                NOMINAL
+              </div>
             )}
           </div>
           {active && (
-            <p className="ks-status-note">
+            <p className="rs-card-meta" style={{ marginTop: 12, borderTop: '1px solid rgba(255, 51, 34, 0.15)', paddingTop: 12 }}>
               All conversation processing is blocked. Reset the kill switch and
               restart the server to resume normal operation.
             </p>
@@ -109,26 +120,29 @@ export default function KillSwitchPage() {
 
         {/* Activate card — only shown when NOT active */}
         {!active && !loading && (
-          <div className="card ks-action-card">
-            <div className="card-title">ACTIVATE KILL SWITCH</div>
-            <p className="ks-action-desc">
+          <div className="rs-card is-wide" style={{ backdropFilter: 'var(--glass-blur)' }}>
+            <div className="rs-card-head">
+               <span className="rs-card-label">ACTIVATE KILL SWITCH</span>
+            </div>
+            <p className="rs-card-meta" style={{ marginBottom: 16 }}>
               Immediately blocks all AI conversation processing. The system will
               continue running but reject every request until manually reset.
             </p>
             {confirm ? (
-              <div className="ks-confirm-row">
-                <span className="ks-confirm-text">Are you sure? This cannot be undone remotely.</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span style={{ flex: '1 1 100%', marginBottom: 8, color: 'var(--warn)', fontSize: '0.85rem', fontWeight: 600 }}>Are you sure? This cannot be undone remotely.</span>
                 <button
-                  className="btn ks-confirm-yes"
+                  className="rs-btn-primary"
+                  style={{ background: '#ff3322', color: 'white' }}
                   onClick={handleActivate}
                   disabled={activating}
                 >
                   {activating ? 'ACTIVATING…' : '● CONFIRM ACTIVATE'}
                 </button>
-                <button className="btn" onClick={() => setConfirm(false)}>CANCEL</button>
+                <button className="rs-pill" onClick={() => setConfirm(false)}>CANCEL</button>
               </div>
             ) : (
-              <button className="btn ks-activate-btn" onClick={handleActivate}>
+              <button className="rs-pill" style={{ color: '#ff3322', borderColor: '#ff3322' }} onClick={handleActivate}>
                 ◼ ACTIVATE KILL SWITCH
               </button>
             )}
@@ -137,15 +151,25 @@ export default function KillSwitchPage() {
 
         {/* Reset card — only shown when ACTIVE */}
         {active && !loading && (
-          <div className="card ks-action-card">
-            <div className="card-title">RESET KILL SWITCH</div>
-            <p className="ks-action-desc">
+          <div className="rs-card is-wide" style={{ backdropFilter: 'var(--glass-blur)' }}>
+            <div className="rs-card-head">
+               <span className="rs-card-label">RESET KILL SWITCH</span>
+            </div>
+            <p className="rs-card-meta" style={{ marginBottom: 16 }}>
               Enter the admin password to reset the kill switch. After a successful
               reset you must restart the server to resume normal operation.
             </p>
-            <form className="ks-reset-form" onSubmit={handleReset}>
+            <form style={{ display: 'flex', gap: 12 }} onSubmit={handleReset}>
               <input
-                className="ks-password-input"
+                style={{ 
+                  flex: 1, 
+                  background: 'rgba(255, 255, 255, 0.05)', 
+                  border: '1px solid rgba(255, 51, 34, 0.3)', 
+                  borderRadius: 'var(--md-shape-xl)',
+                  color: 'white',
+                  padding: '8px 16px',
+                  outline: 'none'
+                }}
                 type="password"
                 placeholder="Admin password"
                 value={password}
@@ -153,7 +177,7 @@ export default function KillSwitchPage() {
                 autoComplete="current-password"
               />
               <button
-                className="btn ks-reset-btn"
+                className="rs-btn-primary"
                 type="submit"
                 disabled={resetting || !password}
               >
@@ -161,7 +185,15 @@ export default function KillSwitchPage() {
               </button>
             </form>
             {resetMsg && (
-              <div className={`ks-reset-msg ${resetMsg.includes('denied') || resetMsg.includes('failed') ? 'ks-reset-msg--err' : 'ks-reset-msg--ok'}`}>
+              <div style={{ 
+                marginTop: 12, 
+                padding: '8px 16px', 
+                borderRadius: 'var(--md-shape-xl)', 
+                border: '1px solid',
+                borderColor: resetMsg.includes('denied') || resetMsg.includes('failed') ? 'rgba(255,51,34,0.3)' : 'rgba(0,255,204,0.3)',
+                color: resetMsg.includes('denied') || resetMsg.includes('failed') ? '#ff6655' : 'var(--secondary)',
+                fontSize: '0.85rem'
+              }}>
                 {resetMsg}
               </div>
             )}
@@ -169,25 +201,22 @@ export default function KillSwitchPage() {
         )}
 
         {/* Info card */}
-        <div className="card ks-info-card">
-          <div className="card-title">HOW IT WORKS</div>
-          <div className="ks-info-list">
-            <div className="ks-info-row">
-              <span className="ks-info-num">01</span>
-              <span>Activation immediately writes state to disk — persists across restarts.</span>
-            </div>
-            <div className="ks-info-row">
-              <span className="ks-info-num">02</span>
-              <span>All WebSocket conversation turns are rejected while the switch is active.</span>
-            </div>
-            <div className="ks-info-row">
-              <span className="ks-info-num">03</span>
-              <span>Reset requires the bcrypt password hash set in <code>KILL_SWITCH_PASSWORD_HASH</code> in your .env file.</span>
-            </div>
-            <div className="ks-info-row">
-              <span className="ks-info-num">04</span>
-              <span>After reset, restart the server process to resume conversation handling.</span>
-            </div>
+        <div className="rs-card is-wide" style={{ backdropFilter: 'var(--glass-blur-sm)' }}>
+          <div className="rs-card-head">
+             <span className="rs-card-label">HOW IT WORKS</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[
+              "Activation immediately writes state to disk — persists across restarts.",
+              "All WebSocket conversation turns are rejected while the switch is active.",
+              "Reset requires the bcrypt password hash set in KILL_SWITCH_PASSWORD_HASH in your .env file.",
+              "After reset, restart the server process to resume conversation handling."
+            ].map((text, i) => (
+              <div key={i} style={{ display: 'flex', gap: 12, fontSize: '0.85rem' }}>
+                <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>0{i+1}</span>
+                <span className="rs-card-meta" style={{ color: 'inherit', opacity: 0.8 }}>{text}</span>
+              </div>
+            ))}
           </div>
         </div>
 

@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
-import './EnvironmentPage.css'
 
 function authHeaders(token) {
   return { Authorization: `Bearer ${token}` }
@@ -32,7 +31,7 @@ function timeAgo(dateStr) {
   return `${Math.floor(diff / 60)}m ago`
 }
 
-export default function EnvironmentPage() {
+export default function EnvironmentPage({ setAction }) {
   const { token, user } = useAuth()
   const [rooms, setRooms] = useState({})
   const [rover, setRover] = useState(null)
@@ -71,6 +70,22 @@ export default function EnvironmentPage() {
       clearInterval(roverInt)
     }
   }, [fetchData, token])
+
+  const ActionSlot = useMemo(() => (
+    <div className="rs-input-bar">
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', width: '100%' }}>
+         <button className="rs-pill" onClick={() => fetchData()}>
+           <span className="material-symbols-rounded">refresh</span>
+           REFRESH
+         </button>
+      </div>
+    </div>
+  ), [fetchData])
+
+  useEffect(() => {
+    if (setAction) setAction(ActionSlot)
+    return () => { if (setAction) setAction(null) }
+  }, [ActionSlot, setAction])
 
   const markRoom = async (roomKey, persons, activity) => {
     setActing(roomKey)
@@ -118,74 +133,91 @@ export default function EnvironmentPage() {
   const isRoverActive = rover && rover.lat !== null && rover.lon !== null
 
   return (
-    <div className="page-wrap env-wrap">
-      <div className="page-header-row">
-        <div>
-          <div className="page-breadcrumb">
-            <span>◢</span><span>COMMAND</span>
-            <span className="page-breadcrumb-sep">/</span>
-            <span>ENVIRONMENT</span>
-          </div>
-          <h1 className="page-title">Environment</h1>
-          <div className="page-subtitle">
-            <span className="page-subtitle-dot" style={{ background: loading ? undefined : 'var(--secondary)' }} />
-            {loading ? 'Polling sensors…' : `${roomEntries.length} rooms tracked`}
-          </div>
+    <div className="rs-foyer animate-fade-in">
+      <header className="rs-foyer-head">
+        <div className="rs-card-label">COMMAND / ENVIRONMENT</div>
+        <h1 className="rs-greeting">Environment</h1>
+        <div className="rs-status-strip">
+          <span className="rs-status-dot" style={{ background: loading ? undefined : 'var(--secondary)' }} />
+          <span>{loading ? 'POLLING SENSORS…' : `${roomEntries.length} ROOMS TRACKED`}</span>
         </div>
-        <button className="btn" onClick={() => fetchData()}>↺ REFRESH</button>
-      </div>
+      </header>
 
-      {flash && <div className="env-flash animate-fade-in">{flash}</div>}
+      {flash && (
+        <div className="rs-card" style={{ 
+          background: 'var(--md-primary-container)', 
+          color: 'var(--md-on-primary-container)',
+          marginBottom: 16,
+          padding: '12px 20px',
+          borderRadius: 'var(--md-shape-xl)'
+        }}>
+          {flash}
+        </div>
+      )}
 
-      <div className="env-section">
-        <div className="env-section-title">◉ ROOM PRESENCE</div>
+      <div className="rs-card-flow">
+        <div className="rs-card-label" style={{ marginBottom: -12, marginLeft: 12 }}>◉ ROOM PRESENCE</div>
         
         {roomEntries.length === 0 ? (
-          <div className="card env-setup-msg">
-            <div className="card-title">SENSORS NOT DETECTED</div>
-            <p>Configure RTSP cameras in Settings or send events from Home Assistant to <code>/api/context/sensor_event</code> to see room occupancy here.</p>
+          <div className="rs-card">
+            <div className="rs-card-head">
+              <span className="rs-card-label">SENSORS NOT DETECTED</span>
+            </div>
+            <p className="rs-card-meta">Configure RTSP cameras in Settings or send events from Home Assistant to <code>/api/context/sensor_event</code> to see room occupancy here.</p>
           </div>
         ) : (
-          <div className="env-room-grid">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, width: '100%' }}>
             {roomEntries.map(([key, r]) => {
               const act = ACTIVITY_MAP[r.activity] || ACTIVITY_MAP.empty
               return (
                 <div 
                   key={key} 
-                  className={`card env-room-card ${r.persons > 0 ? 'env-room-card--occupied' : ''} ${r.stale ? 'env-room-card--stale' : ''}`}
+                  className="rs-card"
+                  style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    position: 'relative',
+                    opacity: r.stale ? 0.6 : 1,
+                    border: r.persons > 0 ? '1px solid color-mix(in srgb, var(--md-tertiary) 40%, transparent)' : undefined,
+                    boxShadow: r.persons > 0 ? '0 0 15px color-mix(in srgb, var(--md-tertiary) 10%, transparent)' : undefined,
+                    backdropFilter: 'var(--glass-blur)'
+                  }}
                 >
-                  {r.stale && <div className="env-stale-badge">⚠ STALE</div>}
-                  <div className="env-room-name">{key.replace('_', ' ').toUpperCase()}</div>
+                  {r.stale && <div className="rs-pill" style={{ position: 'absolute', top: 12, right: 12, fontSize: '0.6rem', background: 'var(--warn)', color: 'black' }}>STALE</div>}
+                  <div className="rs-card-label">{key.replace('_', ' ').toUpperCase()}</div>
                   
-                  <div className="env-occupancy-num">{r.persons}</div>
+                  <div style={{ fontSize: '4rem', fontWeight: 300, lineHeight: 1, margin: '12px 0' }}>{r.persons}</div>
                   
-                  <div className="env-activity-label" style={{ color: act.color }}>
+                  <div style={{ color: act.color, fontSize: '0.75rem', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                     {act.icon} {act.label}
                   </div>
 
-                  <div className="env-room-meta">
+                  <div style={{ marginTop: 20, width: '100%', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', opacity: 0.7 }}>
                     <span>{r.temperature ? `${r.temperature}°F` : '--°F'}</span>
-                    <span className={r.lights_on ? 'lights-on' : 'lights-off'}>
+                    <span style={{ color: r.lights_on ? 'var(--warn)' : 'inherit' }}>
                       {r.lights_on ? '◉ LIGHTS ON' : '◌ LIGHTS OFF'}
                     </span>
                   </div>
 
-                  <div className="env-last-seen">Seen {timeAgo(r.last_updated)}</div>
+                  <div className="rs-card-meta" style={{ marginTop: 8 }}>Seen {timeAgo(r.last_updated)}</div>
 
-                  <div className="env-room-actions">
+                  <div style={{ marginTop: 20, display: 'flex', gap: 8, width: '100%' }}>
                     <button 
-                      className="btn btn--ghost btn--xs" 
+                      className="rs-pill" 
+                      style={{ flex: 1 }}
                       onClick={() => markRoom(key, 1, 'present')}
                       disabled={acting === key}
                     >
-                      MARK OCCUPIED
+                      OCCUPIED
                     </button>
                     <button 
-                      className="btn btn--ghost btn--xs" 
+                      className="rs-pill" 
+                      style={{ flex: 1 }}
                       onClick={() => markRoom(key, 0, 'empty')}
                       disabled={acting === key}
                     >
-                      MARK EMPTY
+                      EMPTY
                     </button>
                   </div>
                 </div>
@@ -193,76 +225,73 @@ export default function EnvironmentPage() {
             })}
           </div>
         )}
-      </div>
 
-      {isRoverActive && (
-        <div className="env-section">
-          <div className="env-section-title">◈ ROVER — ARDU MOWER</div>
-          <div className="env-rover-grid">
-            <div className="card env-rover-card">
-              <div className="env-rover-top">
-                <div className="env-mode-badge" style={{ background: ROVER_MODE_COLOR[rover.mode] || ROVER_MODE_COLOR.MANUAL }}>
-                  {rover.mode}
+        {isRoverActive && (
+          <>
+            <div className="rs-card-label" style={{ marginBottom: -12, marginLeft: 12, marginTop: 24 }}>◈ ROVER — ARDU MOWER</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, width: '100%', alignItems: 'start' }}>
+              <div className="rs-card" style={{ flex: 1, backdropFilter: 'var(--glass-blur)' }}>
+                <div className="rs-card-head">
+                  <div className="rs-pill" style={{ background: ROVER_MODE_COLOR[rover.mode] || ROVER_MODE_COLOR.MANUAL, color: 'black', fontWeight: 600 }}>
+                    {rover.mode}
+                  </div>
+                  <div className="rs-card-label" style={{ color: rover.armed ? 'var(--md-error)' : 'inherit' }}>
+                    {rover.armed ? '◉ ARMED' : '◌ DISARMED'}
+                  </div>
                 </div>
-                <div className={`env-armed-status ${rover.armed ? 'armed' : ''}`}>
-                  {rover.armed ? '◉ ARMED' : '◌ DISARMED'}
+
+                <div style={{ margin: '20px 0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginBottom: 6, opacity: 0.7 }}>
+                    <span>BATTERY</span>
+                    <span>{rover.battery_pct}% ({rover.battery_v}V)</span>
+                  </div>
+                  <div style={{ height: 4, width: '100%', background: 'var(--md-surface-container-high)', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${rover.battery_pct}%`, background: 'var(--md-primary)' }} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 16 }}>
+                  <div>
+                    <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>SPEED</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>{rover.speed_ms} m/s</div>
+                  </div>
+                  <div>
+                    <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>HEADING</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>{rover.heading}°</div>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
+                  <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>MISSION STATUS</div>
+                  <div style={{ fontSize: '0.85rem' }}>
+                    {rover.mission_total > 0 
+                      ? `Waypoint ${rover.mission_current} of ${rover.mission_total}`
+                      : 'No active mission'}
+                  </div>
+                </div>
+
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', opacity: 0.5 }}>
+                  ◈ GPS: {rover.lat.toFixed(6)}, {rover.lon.toFixed(6)}
                 </div>
               </div>
 
-              <div className="env-rover-battery">
-                <div className="env-battery-meta">
-                  <span>BATTERY</span>
-                  <span>{rover.battery_pct}% ({rover.battery_v}V)</span>
+              {user.role === 'admin' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <button className="rs-btn-primary" style={{ minWidth: 120 }} onClick={() => sendRoverCommand('set_mode', {mode: 'HOLD'})} disabled={acting === 'rover'}>HOLD</button>
+                  <button className="rs-btn-primary" style={{ minWidth: 120 }} onClick={() => sendRoverCommand('set_mode', {mode: 'AUTO'})} disabled={acting === 'rover'}>AUTO</button>
+                  <button className="rs-btn-primary" style={{ minWidth: 120 }} onClick={() => sendRoverCommand('set_mode', {mode: 'RTL'})} disabled={acting === 'rover'}>RTL</button>
+                  <button className="rs-pill" style={{ minWidth: 120, color: 'var(--md-error)' }} onClick={() => sendRoverCommand('disarm')} disabled={acting === 'rover'}>DISARM</button>
                 </div>
-                <input 
-                  type="range" 
-                  className="env-battery-bar" 
-                  value={rover.battery_pct || 0} 
-                  readOnly 
-                />
-              </div>
-
-              <div className="env-rover-stats">
-                <div className="env-stat-cell">
-                  <span className="env-stat-label">SPEED</span>
-                  <span className="env-stat-val">{rover.speed_ms} m/s</span>
-                </div>
-                <div className="env-stat-cell">
-                  <span className="env-stat-label">HEADING</span>
-                  <span className="env-stat-val">{rover.heading}°</span>
-                </div>
-              </div>
-
-              <div className="env-rover-mission">
-                <span className="env-stat-label">MISSION STATUS</span>
-                <span className="env-stat-val">
-                  {rover.mission_total > 0 
-                    ? `Waypoint ${rover.mission_current} of ${rover.mission_total}`
-                    : 'No active mission'}
-                </span>
-              </div>
-
-              <div className="env-rover-gps">
-                ◈ GPS: {rover.lat.toFixed(6)}, {rover.lon.toFixed(6)}
-              </div>
+              )}
             </div>
 
-            {user.role === 'admin' && (
-              <div className="env-rover-cmds">
-                <button className="btn btn--primary" onClick={() => sendRoverCommand('set_mode', {mode: 'HOLD'})} disabled={acting === 'rover'}>HOLD</button>
-                <button className="btn btn--primary" onClick={() => sendRoverCommand('set_mode', {mode: 'AUTO'})} disabled={acting === 'rover'}>AUTO</button>
-                <button className="btn btn--primary" onClick={() => sendRoverCommand('set_mode', {mode: 'RTL'})} disabled={acting === 'rover'}>RTL</button>
-                <button className="btn btn--danger" onClick={() => sendRoverCommand('disarm')} disabled={acting === 'rover'}>DISARM</button>
-              </div>
-            )}
-          </div>
-
-          <div className="card env-gps-placeholder">
-            <div className="env-gps-text">◈ GPS: {rover.lat}, {rover.lon}</div>
-            <div className="env-gps-note">Full real-time map integration is planned for Phase 14.</div>
-          </div>
-        </div>
-      )}
+            <div className="rs-card" style={{ borderStyle: 'dashed', background: 'transparent', backdropFilter: 'var(--glass-blur-sm)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--primary)' }}>◈ GPS: {rover.lat}, {rover.lon}</div>
+              <div className="rs-card-meta" style={{ marginTop: 4 }}>Full real-time map integration is planned for Phase 14.</div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
-import './GooglePage.css'
 
 const API_BASE = '/api/google'
 
@@ -105,98 +104,142 @@ export default function GooglePage() {
   }
 
   return (
-    <div className="page-wrap">
-      <div className="page-breadcrumb">
-        <span>◢</span><span>INTEGRATIONS</span>
-        <span className="page-breadcrumb-sep">/</span>
-        <span>GOOGLE</span>
-      </div>
-      <h1 className="page-title">Google</h1>
-      <p className="page-subtitle">
-        Connect your Google account to bring Calendar, Gmail, Maps, and Music into conversation.
-      </p>
+    <div className="rs-foyer animate-fade-in">
+      <header className="rs-foyer-head">
+        <div className="rs-card-label">INTEGRATIONS / GOOGLE</div>
+        <h1 className="rs-greeting">Google</h1>
+        <div className="rs-greeting-sub">
+          Connect your Google account to bring Calendar, Gmail, Maps, and Music into conversation.
+        </div>
+      </header>
 
-      {error && <div className="google-error-banner">{error}</div>}
+      {error && (
+        <div className="rs-card" style={{ 
+          background: 'var(--md-error-container)', 
+          color: 'var(--md-on-error-container)',
+          marginBottom: 24,
+          borderLeft: '4px solid var(--md-error)'
+        }}>
+          {error}
+        </div>
+      )}
 
-      <div className="google-status-section">
-        {status.loading ? (
-          <div className="google-status-card google-status-card--loading">CHECKING CONNECTION...</div>
-        ) : status.connected ? (
-          <div className="google-status-card google-status-card--connected">
-            <div className="google-status-info">
-              <div className="google-status-dot" />
-              <div className="google-status-text">CONNECTED AS {status.email || 'GOOGLE USER'}</div>
-            </div>
-            <button className="google-btn google-btn--outline" onClick={handleConnect}>RECONNECT</button>
+      <div className="rs-card-flow">
+        
+        {/* Status Card */}
+        <div className="rs-card is-wide" style={{ 
+          backdropFilter: 'var(--glass-blur)',
+          border: status.connected ? '1px solid var(--md-tertiary)' : undefined,
+          background: status.connected ? 'color-mix(in srgb, var(--md-tertiary) 5%, var(--rs-card-bg))' : undefined
+        }}>
+          <div className="rs-card-head">
+             <span className="rs-card-label">CONNECTION STATUS</span>
+             {status.connected && <span className="rs-card-label" style={{ color: 'var(--md-tertiary)' }}>ACTIVE</span>}
           </div>
-        ) : (
-          <div className="google-status-card google-status-card--disconnected">
-            <div className="google-status-text">NOT CONNECTED</div>
-            <button className="google-btn google-btn--primary" onClick={handleConnect}>CONNECT GOOGLE ACCOUNT</button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span className="rs-status-dot" style={{ background: status.loading ? 'var(--text-muted)' : (status.connected ? 'var(--md-tertiary)' : 'var(--md-outline)') }} />
+                <span style={{ fontSize: '0.9rem', fontWeight: 500, letterSpacing: '0.05em' }}>
+                   {status.loading ? 'CHECKING CONNECTION...' : (status.connected ? `CONNECTED AS ${status.email?.toUpperCase() || 'GOOGLE USER'}` : 'NOT CONNECTED')}
+                </span>
+             </div>
+             <button 
+               className={status.connected ? 'rs-pill' : 'rs-btn-primary'} 
+               onClick={handleConnect}
+               disabled={status.loading}
+             >
+                {status.connected ? 'RECONNECT' : 'CONNECT GOOGLE ACCOUNT'}
+             </button>
           </div>
-        )}
-      </div>
+        </div>
 
-      <div className="google-data-grid">
-        {/* Calendar Preview */}
-        <div className={`google-data-card ${!status.connected ? 'google-data-card--locked' : ''}`}>
-          <div className="google-data-header">
-            <IconCalendar />
-            <h3>UPCOMING EVENTS</h3>
-          </div>
-          {status.connected ? (
-            calendar.loading ? <div className="google-data-loading">Loading events...</div> :
-            calendar.events.length > 0 ? (
-              <div className="google-event-list">
-                {calendar.events.slice(0, 3).map(ev => (
-                  <div key={ev.id} className="google-event-item">
-                    <div className="google-event-time">
-                      {ev.start.dateTime ? new Date(ev.start.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'All Day'}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, width: '100%' }}>
+           {/* Calendar Preview */}
+           <div className="rs-card" style={{ 
+             opacity: !status.connected ? 0.6 : 1, 
+             backdropFilter: 'var(--glass-blur)',
+             display: 'flex',
+             flexDirection: 'column'
+           }}>
+              <div className="rs-card-head">
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <IconCalendar />
+                    <span className="rs-card-label">UPCOMING EVENTS</span>
+                 </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                {status.connected ? (
+                  calendar.loading ? <div className="rs-card-meta">Loading events...</div> :
+                  calendar.events.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {calendar.events.slice(0, 3).map(ev => (
+                        <div key={ev.id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none' }}>
+                          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--md-tertiary)', marginBottom: 2 }}>
+                            {ev.start.dateTime ? new Date(ev.start.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'All Day'}
+                          </div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>{ev.summary}</div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="google-event-title">{ev.summary}</div>
-                  </div>
-                ))}
+                  ) : <div className="rs-card-meta">No upcoming events.</div>
+                ) : <div className="rs-card-meta">Connect account to see events</div>}
               </div>
-            ) : <div className="google-data-empty">No upcoming events.</div>
-          ) : <div className="google-data-locked-msg">Connect account to see events</div>}
+           </div>
+
+           {/* Gmail Preview */}
+           <div className="rs-card" style={{ 
+             opacity: !status.connected ? 0.6 : 1, 
+             backdropFilter: 'var(--glass-blur)',
+             display: 'flex',
+             flexDirection: 'column'
+           }}>
+              <div className="rs-card-head">
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <IconMail />
+                    <span className="rs-card-label">UNREAD MESSAGES</span>
+                 </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                {status.connected ? (
+                  gmail.loading ? <div className="rs-card-meta">Loading messages...</div> :
+                  gmail.messages.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {gmail.messages.slice(0, 3).map(msg => (
+                        <div key={msg.id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none' }}>
+                          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--md-secondary)', marginBottom: 2 }}>{msg.from.split('<')[0].trim()}</div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{msg.subject}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <div className="rs-card-meta">No unread messages.</div>
+                ) : <div className="rs-card-meta">Connect account to see emails</div>}
+              </div>
+           </div>
         </div>
 
-        {/* Gmail Preview */}
-        <div className={`google-data-card ${!status.connected ? 'google-data-card--locked' : ''}`}>
-          <div className="google-data-header">
-            <IconMail />
-            <h3>UNREAD MESSAGES</h3>
-          </div>
-          {status.connected ? (
-            gmail.loading ? <div className="google-data-loading">Loading messages...</div> :
-            gmail.messages.length > 0 ? (
-              <div className="google-mail-list">
-                {gmail.messages.slice(0, 3).map(msg => (
-                  <div key={msg.id} className="google-mail-item">
-                    <div className="google-mail-from">{msg.from.split('<')[0].trim()}</div>
-                    <div className="google-mail-subj">{msg.subject}</div>
-                  </div>
-                ))}
+        {/* Features Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, width: '100%', marginTop: 24 }}>
+          {GOOGLE_FEATURES.map(({ key, icon: Icon, title, desc, tags }) => (
+            <div key={key} className="rs-card" style={{ 
+              opacity: !status.connected ? 0.6 : 1,
+              backdropFilter: 'var(--glass-blur-sm)',
+              borderRadius: 'var(--md-shape-xl)'
+            }}>
+              <div className="rs-card-head">
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ color: 'var(--md-primary)' }}><Icon /></div>
+                    <span className="rs-card-label">{title}</span>
+                 </div>
+                 {status.connected && <span className="rs-pill" style={{ fontSize: '0.6rem', background: 'var(--md-tertiary-container)', color: 'var(--md-on-tertiary-container)' }}>ACTIVE</span>}
               </div>
-            ) : <div className="google-data-empty">No unread messages.</div>
-          ) : <div className="google-data-locked-msg">Connect account to see emails</div>}
+              <p className="rs-card-meta" style={{ fontSize: '0.9rem', color: 'inherit', opacity: 0.8, margin: '12px 0' }}>{desc}</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {tags.map(t => <span key={t} className="rs-pill" style={{ fontSize: '0.65rem', opacity: 0.7 }}>{t}</span>)}
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
 
-      <div className="feature-card-grid" style={{ marginTop: '2rem' }}>
-        {GOOGLE_FEATURES.map(({ key, icon: Icon, title, desc, tags }) => (
-          <div key={key} className={`feature-card ${!status.connected ? 'feature-card--locked' : ''}`}>
-            <div className="feature-card-header">
-              <div className="feature-card-icon"><Icon /></div>
-              <div className="feature-card-title">{title}</div>
-              {status.connected && <div className="feature-card-badge feature-card-badge--active">ACTIVE</div>}
-            </div>
-            <p className="feature-card-desc">{desc}</p>
-            <div className="feature-card-tags">
-              {tags.map(t => <span key={t} className="feature-tag">{t}</span>)}
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   )

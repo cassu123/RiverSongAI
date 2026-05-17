@@ -1,395 +1,82 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
-import './MemoryPage.css'
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
 
-const TABS = ['FACTS', 'PREFERENCES', 'SUMMARIES']
+/**
+ * MemoryPage — Phase 3 Rewrite
+ * -----------------------------------------------------------------------------
+ * Browse the long-term semantic memory of River Song.
+ */
 
-const CONFIDENCE_COLOR = {
-  high:   'var(--secondary)',
-  medium: 'var(--warn)',
-  low:    'var(--text-muted)',
-}
-
-const TTL_LABEL = {
-  short:    '7d',
-  standard: '30d',
-  long:     '90d',
-  forever:  '∞',
-}
-
-function fmtDate(iso) {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function fmtExpiry(iso) {
-  if (!iso) return 'never'
-  const d = new Date(iso)
-  const diff = Math.ceil((d - Date.now()) / 86400000)
-  if (diff < 0)  return 'expired'
-  if (diff === 0) return 'today'
-  return `${diff}d`
-}
-
-export default function MemoryPage() {
+export default function MemoryPage({ setAction }) {
   const { token } = useAuth()
-  const authHeaders = useCallback(() => ({
-    Authorization: `Bearer ${token}`,
-  }), [token])
+  const [memories, setMemories] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState('')
 
-  const [tab,      setTab]      = useState('FACTS')
-  const [facts,    setFacts]    = useState([])
-  const [prefs,    setPrefs]    = useState([])
-  const [summaries,setSummaries]= useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [search,   setSearch]   = useState('')
-  const [selected,    setSelected]    = useState(new Set())
-  const [deleting,    setDeleting]    = useState(false)
-  const [showAddFact, setShowAddFact] = useState(false)
-  const [newKey,      setNewKey]      = useState('')
-  const [error,       setError]       = useState(null)
-  const fetchAll = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const headers = authHeaders()
-      const [f, p, s] = await Promise.all([
-        fetch('/api/memory/facts',       { headers }).then(r => r.ok ? r.json() : Promise.reject(r.status)),
-        fetch('/api/memory/preferences', { headers }).then(r => r.ok ? r.json() : Promise.reject(r.status)),
-        fetch('/api/memory/summaries',   { headers }).then(r => r.ok ? r.json() : Promise.reject(r.status)),
-      ])
-      setFacts(Array.isArray(f) ? f : [])
-      setPrefs(Array.isArray(p) ? p : [])
-      setSummaries(Array.isArray(s) ? s : [])
-    } catch (err) {
-      setError(`Failed to load memory: ${err}`)
-      setFacts([]); setPrefs([]); setSummaries([])
-    } finally {
-      setLoading(false)
-    }
-  }, [authHeaders])
-
-  useEffect(() => { fetchAll() }, [fetchAll])
-
-  // Clear selection when tab changes
-  useEffect(() => { setSelected(new Set()); setSearch('') }, [tab])
-
-  const toggleSelect = (id) => {
-    setSelected(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
+  useEffect(() => {
+    fetch('/api/memory/browse', {
+      headers: { Authorization: `Bearer ${token}` }
     })
-  }
-
-  const selectAll = () => {
-    const ids = filtered().map(x => x.id)
-    setSelected(prev => {
-      const allSelected = ids.every(id => prev.has(id))
-      return allSelected ? new Set() : new Set(ids)
-    })
-  }
-
-  const deleteFacts = async () => {
-    if (!selected.size || tab !== 'FACTS') return
-    setDeleting(true)
-    try {
-      await Promise.all(
-        [...selected].map(id =>
-          fetch(`/api/memory/facts/${id}`, { method: 'DELETE', headers: authHeaders() })
-        )
-      )
-      setFacts(prev => prev.filter(f => !selected.has(f.id)))
-      setSelected(new Set())
-    } finally {
-      setDeleting(false)
-    }
-  }
-
-  const addFact = async (e) => {
-    e.preventDefault()
-    if (!newKey.trim() || !newValue.trim()) return
-    setAddingFact(true)
-    setAddError('')
-    try {
-      const res = await fetch('/api/memory/facts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ key: newKey.trim(), value: newValue.trim() }),
+      .then(r => r.json())
+      .then(data => {
+        setMemories(data)
+        setLoading(false)
       })
-      if (!res.ok) throw new Error('Failed')
-      const created = await res.json()
-      if (created?.id) setFacts(prev => [...prev, created])
-      else await fetchAll()
-      setNewKey('')
-      setNewValue('')
-      setShowAddFact(false)
-    } catch {
-      setAddError('Failed to save fact. Try again.')
-    } finally {
-      setAddingFact(false)
-    }
-  }
+  }, [token])
 
-  const q = search.toLowerCase()
+  const filtered = memories.filter(m => 
+    m.text.toLowerCase().includes(filter.toLowerCase()) || 
+    m.type.toLowerCase().includes(filter.toLowerCase())
+  )
 
-  const filtered = () => {
-    if (tab === 'FACTS')       return facts.filter(f => !q || f.key.includes(q) || f.value.toLowerCase().includes(q))
-    if (tab === 'PREFERENCES') return prefs.filter(p => !q || p.category.includes(q) || p.value.toLowerCase().includes(q))
-    return summaries.filter(s => !q || s.summary.toLowerCase().includes(q))
-  }
-
-  const items = filtered()
-  const allSelected = items.length > 0 && items.every(x => selected.has(x.id))
+  useEffect(() => {
+    setAction(
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div className="rs-card" style={{ flex: 1, padding: '8px 16px', background: 'var(--md-surface-container-low)' }}>
+          <input 
+            type="text" 
+            style={{ all: 'unset', width: '100%', fontSize: '0.9rem' }} 
+            placeholder="FILTER ARCHIVES..." 
+            value={filter} 
+            onChange={e => setFilter(e.target.value)} 
+          />
+        </div>
+        <button className="rs-pill" onClick={() => setFilter('')}>CLEAR</button>
+      </div>
+    )
+  }, [filter, setAction])
 
   return (
-    <div className="page-wrap memory-page-wrap">
-      {/* Header */}
-      <div className="page-header-row">
-        <div>
-          <div className="page-breadcrumb">
-            <span>◢</span><span>EPISODIC STORE</span>
-            <span className="page-breadcrumb-sep">/</span>
-            <span>READABLE</span>
-          </div>
-          <h1 className="page-title">Memory</h1>
-          <div className="page-subtitle">
-            <span className="page-subtitle-dot" />
-            River remembers what matters.
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="mem-page-stats">
-          <div className="mem-page-stat">
-            <span className="mem-page-stat-val">{facts.length}</span>
-            <span className="mem-page-stat-label">FACTS</span>
-          </div>
-          <div className="mem-page-stat">
-            <span className="mem-page-stat-val">{prefs.length}</span>
-            <span className="mem-page-stat-label">PREFS</span>
-          </div>
-          <div className="mem-page-stat">
-            <span className="mem-page-stat-val">{summaries.length}</span>
-            <span className="mem-page-stat-label">SESSIONS</span>
-          </div>
-        </div>
+    <div className="rs-foyer animate-fade-in">
+      <div className="rs-foyer-head">
+        <h1 className="rs-greeting">Semantic Archives</h1>
+        <div className="rs-greeting-sub">Every fact, preference, and summary River Song has retained.</div>
       </div>
 
-      {/* Tabs + search row */}
-      <div className="mem-page-toolbar">
-        <div className="mem-page-tabs">
-          {TABS.map(t => (
-            <button
-              key={t}
-              className={`mem-page-tab ${tab === t ? 'mem-page-tab--on' : ''}`}
-              onClick={() => setTab(t)}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-
-        <div className="mem-page-search-row">
-          <input
-            className="mem-page-search"
-            placeholder="search..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          {tab === 'FACTS' && (
-            <button
-              className="btn mem-page-add-btn"
-              onClick={() => { setShowAddFact(v => !v); setAddError('') }}
-            >
-              {showAddFact ? 'CANCEL' : '+ ADD FACT'}
-            </button>
-          )}
-          {tab === 'FACTS' && selected.size > 0 && (
-            <button
-              className="btn mem-page-forget-btn"
-              disabled={deleting}
-              onClick={deleteFacts}
-            >
-              {deleting ? 'REMOVING...' : `FORGET (${selected.size})`}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Add Fact inline form */}
-      {tab === 'FACTS' && showAddFact && (
-        <form className="mem-add-fact-form" onSubmit={addFact}>
-          <input
-            className="mem-add-fact-input"
-            placeholder="key  (e.g. job, city, favourite_food)"
-            value={newKey}
-            onChange={e => setNewKey(e.target.value)}
-            required
-          />
-          <input
-            className="mem-add-fact-input mem-add-fact-input--wide"
-            placeholder="value"
-            value={newValue}
-            onChange={e => setNewValue(e.target.value)}
-            required
-          />
-          <button className="btn mem-add-fact-submit" type="submit" disabled={addingFact}>
-            {addingFact ? 'SAVING…' : 'SAVE'}
-          </button>
-          {addError && <span className="mem-add-fact-error">{addError}</span>}
-        </form>
-      )}
-
-      {/* Table */}
-      <div className="card mem-page-card">
+      <div className="rs-card-flow">
         {loading ? (
-          <div className="mem-page-empty">
-            <span className="dot dot--standby" /> Loading memory…
-          </div>
-        ) : error ? (
-          <div className="mem-page-empty mem-page-error">
-             <span className="dot dot--warn" /> {error}
-             <button className="btn btn--ghost btn--xs" style={{ marginLeft: 10 }} onClick={fetchAll}>RETRY</button>
-          </div>
-        ) : items.length === 0 ? (
-          <div className="mem-page-empty">
-            {search ? 'No matches.' : 'Nothing stored yet.'}
-          </div>
+          <div className="rs-card-meta">SCANNING NEURAL PATHWAYS...</div>
+        ) : filtered.length === 0 ? (
+          <div className="rs-card-meta">No matching memories found.</div>
         ) : (
-          <>
-            {/* Column header */}
-            <div className={`mem-row mem-row--header mem-row--${tab.toLowerCase()}`}>
-              {tab === 'FACTS' && (
-                <>
-                  <span className="mem-col-check">
-                    <input type="checkbox" checked={allSelected} onChange={selectAll} />
-                  </span>
-                  <span className="mem-col-key">KEY</span>
-                  <span className="mem-col-value">VALUE</span>
-                  <span className="mem-col-badge">SOURCE</span>
-                  <span className="mem-col-date">UPDATED</span>
-                </>
-              )}
-              {tab === 'PREFERENCES' && (
-                <>
-                  <span className="mem-col-key">CATEGORY</span>
-                  <span className="mem-col-value">VALUE</span>
-                  <span className="mem-col-badge">CONFIDENCE</span>
-                  <span className="mem-col-date">UPDATED</span>
-                </>
-              )}
-              {tab === 'SUMMARIES' && (
-                <>
-                  <span className="mem-col-date">DATE</span>
-                  <span className="mem-col-summary">SUMMARY</span>
-                  <span className="mem-col-badge">TTL</span>
-                  <span className="mem-col-badge">EXPIRES</span>
-                </>
-              )}
-            </div>
-
-            {/* Rows */}
-            <div className="mem-rows">
-              {tab === 'PREFERENCES' ? (
-                <div style={{ padding: '0 16px' }}>
-                  {/* Learned Patterns Section */}
-                  <div className="mem-section-heading">
-                    <span>◈</span> LEARNED PATTERNS
-                  </div>
-                  {items.filter(p => p.category?.includes('habit') || p.confidence === 'high').length === 0 ? (
-                    <div className="mem-page-empty" style={{ padding: '10px 0' }}>
-                      River Song will learn your patterns as you talk to her.
-                    </div>
-                  ) : (
-                    items.filter(p => p.category?.includes('habit') || p.confidence === 'high').map(p => (
-                      <div key={p.id} className="mem-pattern-card">
-                        <span className="mem-pattern-icon">◈</span>
-                        <div className="mem-pattern-content">
-                          <div className="mem-pattern-value">{p.value}</div>
-                          <div className="mem-pattern-meta">
-                            <span 
-                              className="mem-pattern-confidence"
-                              style={{ color: CONFIDENCE_COLOR[p.confidence] }}
-                            >
-                              {p.confidence} confidence
-                            </span>
-                            <span>•</span>
-                            <span>Learned {fmtDate(p.last_updated)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-
-                  {/* Regular Preferences Section */}
-                  <div className="mem-section-heading" style={{ marginTop: 32 }}>
-                    <span>◇</span> PREFERENCES
-                  </div>
-                  {items.filter(p => !p.category?.includes('habit') && p.confidence !== 'high').length === 0 ? (
-                    <div className="mem-page-empty" style={{ padding: '10px 0' }}>
-                      No other preferences stored.
-                    </div>
-                  ) : (
-                    <div className="mem-pref-list">
-                      {items.filter(p => !p.category?.includes('habit') && p.confidence !== 'high').map(p => (
-                        <div key={p.id} className="mem-row mem-row--preferences" style={{ paddingLeft: 0, paddingRight: 0 }}>
-                          <span className="mem-col-key">{p.category}</span>
-                          <span className="mem-col-value">{p.value}</span>
-                          <span className="mem-col-badge">
-                            <span
-                              className="mem-badge"
-                              style={{ borderColor: CONFIDENCE_COLOR[p.confidence], color: CONFIDENCE_COLOR[p.confidence] }}
-                            >
-                              {p.confidence}
-                            </span>
-                          </span>
-                          <span className="mem-col-date">{fmtDate(p.last_updated)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+          filtered.map((m, i) => (
+            <div key={i} className="rs-card is-wide">
+              <div className="rs-card-head">
+                <span className="rs-card-label">{m.type}</span>
+                <span className="rs-card-label" style={{ opacity: 0.4 }}>{new Date(m.timestamp).toLocaleDateString()}</span>
+              </div>
+              <div className="rs-card-value" style={{ fontSize: '1rem', lineHeight: 1.5 }}>{m.text}</div>
+              {m.metadata && (
+                <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {Object.entries(m.metadata).map(([k, v]) => (
+                    <span key={k} className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>
+                      {k.toUpperCase()}: {String(v).toUpperCase()}
+                    </span>
+                  ))}
                 </div>
-              ) : items.map(item => (
-                tab === 'FACTS' ? (
-                  <div
-                    key={item.id}
-                    className={`mem-row mem-row--facts ${selected.has(item.id) ? 'mem-row--selected' : ''}`}
-                    onClick={() => toggleSelect(item.id)}
-                  >
-                    <span className="mem-col-check">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(item.id)}
-                        onChange={() => toggleSelect(item.id)}
-                        onClick={e => e.stopPropagation()}
-                      />
-                    </span>
-                    <span className="mem-col-key">{item.key}</span>
-                    <span className="mem-col-value">{item.value}</span>
-                    <span className="mem-col-badge">
-                      <span className={`mem-badge mem-badge--${item.source}`}>{item.source}</span>
-                    </span>
-                    <span className="mem-col-date">{fmtDate(item.updated_at)}</span>
-                  </div>
-                ) : (
-                  <div key={item.id} className="mem-row mem-row--summaries">
-                    <span className="mem-col-date">{fmtDate(item.created_at)}</span>
-                    <span className="mem-col-summary">{item.summary}</span>
-                    <span className="mem-col-badge">
-                      <span className="mem-badge">{TTL_LABEL[item.ttl_setting] || item.ttl_setting}</span>
-                    </span>
-                    <span className="mem-col-badge">
-                      <span className={`mem-badge ${fmtExpiry(item.expires_at) === 'expired' ? 'mem-badge--expired' : ''}`}>
-                        {fmtExpiry(item.expires_at)}
-                      </span>
-                    </span>
-                  </div>
-                )
-              ))}
+              )}
             </div>
-          </>
+          ))
         )}
       </div>
     </div>

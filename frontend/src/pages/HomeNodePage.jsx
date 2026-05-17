@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
-import './HomeNodePage.css'
 
 const DOMAIN_ICON = {
   light:         '◎',
@@ -34,7 +33,7 @@ function groupByDomain(devices) {
   return groups
 }
 
-export default function HomeNodePage() {
+export default function HomeNodePage({ setAction }) {
   const { token } = useAuth()
   const [status,  setStatus]  = useState(null)   // { configured, reachable, url }
   const [devices, setDevices] = useState([])
@@ -112,139 +111,163 @@ export default function HomeNodePage() {
     : devices.filter(d => d.domain === filter)
   const groups = groupByDomain(filteredDevices)
 
+  const ActionSlot = useMemo(() => (
+    <div className="rs-input-bar">
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, width: '100%', alignItems: 'center' }}>
+        <button 
+          className={`rs-pill ${filter === 'all' ? 'is-active' : ''}`}
+          onClick={() => setFilter('all')}
+        >
+          ALL
+        </button>
+        {domains.map(d => (
+          <button
+            key={d}
+            className={`rs-pill ${filter === d ? 'is-active' : ''}`}
+            onClick={() => setFilter(d)}
+          >
+            {(DOMAIN_LABEL[d] || d).toUpperCase()}S
+          </button>
+        ))}
+        <div style={{ flex: 1 }} />
+        <button className="rs-pill" onClick={() => fetchAll()}>
+          <span className="material-symbols-rounded">refresh</span>
+        </button>
+      </div>
+    </div>
+  ), [domains, filter, fetchAll])
+
+  useEffect(() => {
+    if (setAction && status?.reachable) setAction(ActionSlot)
+    return () => { if (setAction) setAction(null) }
+  }, [ActionSlot, setAction, status?.reachable])
+
   return (
-    <div className="page-wrap home-wrap">
-      {/* Header */}
-      <div className="page-header-row">
-        <div>
-          <div className="page-breadcrumb">
-            <span>◢</span><span>HOME</span>
-            <span className="page-breadcrumb-sep">/</span>
-            <span>NODE CONTROL</span>
-          </div>
-          <h1 className="page-title">Home Node</h1>
-          <div className="page-subtitle">
-            <span
-              className="page-subtitle-dot"
-              style={{ background: loading ? undefined : status?.reachable ? 'var(--secondary)' : 'var(--warn)' }}
-            />
-            {loading ? 'Connecting…' : status?.reachable ? `${devices.length} entities · Home Assistant` : 'Home Assistant not reachable'}
-          </div>
+    <div className="rs-foyer animate-fade-in">
+      <header className="rs-foyer-head">
+        <div className="rs-card-label">HOME / NODE CONTROL</div>
+        <h1 className="rs-greeting">Home Node</h1>
+        <div className="rs-status-strip">
+          <span
+            className="rs-status-dot"
+            style={{ background: loading ? undefined : status?.reachable ? 'var(--secondary)' : 'var(--warn)' }}
+          />
+          <span>{loading ? 'CONNECTING…' : status?.reachable ? `${devices.length} ENTITIES · HOME ASSISTANT` : 'HOME ASSISTANT NOT REACHABLE'}</span>
         </div>
-        {status?.reachable && (
-          <div className="page-header-actions">
-            <button className="btn" onClick={() => fetchAll()}>↺ REFRESH</button>
+      </header>
+
+      <div className="rs-card-flow">
+        {/* Not configured state */}
+        {!loading && !status?.configured && (
+          <div className="rs-card is-wide" style={{ backdropFilter: 'var(--glass-blur)' }}>
+            <div className="rs-card-head">
+               <span className="rs-card-label">HOME ASSISTANT NOT CONFIGURED</span>
+            </div>
+            <p className="rs-card-meta">
+              Add your Home Assistant URL and long-lived access token to <code>.env</code> to enable device control.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
+              <div style={{ display: 'flex', gap: 12, fontSize: '0.85rem' }}>
+                <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>01</span>
+                <span>Open Home Assistant → Profile → Security → Long-lived access tokens → Create token</span>
+              </div>
+              <div style={{ display: 'flex', gap: 12, fontSize: '0.85rem' }}>
+                <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>02</span>
+                <span>Add to your <code>.env</code>:</span>
+              </div>
+              <div style={{ 
+                padding: '12px 16px', 
+                background: 'rgba(0,0,0,0.2)', 
+                borderRadius: 'var(--md-shape-xl)', 
+                fontFamily: 'var(--font-mono)', 
+                fontSize: '0.75rem',
+                color: 'var(--secondary)'
+              }}>
+                <div>HOME_ASSISTANT_URL=http://homeassistant.local:8123</div>
+                <div>HOME_ASSISTANT_TOKEN=your_token_here</div>
+              </div>
+              <div style={{ display: 'flex', gap: 12, fontSize: '0.85rem' }}>
+                <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>03</span>
+                <span>Restart the server and return to this page.</span>
+              </div>
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Not configured state */}
-      {!loading && !status?.configured && (
-        <div className="card home-setup-card">
-          <div className="card-title">HOME ASSISTANT NOT CONFIGURED</div>
-          <p className="home-setup-desc">
-            Add your Home Assistant URL and long-lived access token to <code>.env</code> to enable device control.
-          </p>
-          <div className="home-setup-steps">
-            <div className="home-setup-step">
-              <span className="home-setup-num">01</span>
-              <span>Open Home Assistant → Profile → Security → Long-lived access tokens → Create token</span>
+        {/* Configured but not reachable */}
+        {!loading && status?.configured && !status?.reachable && (
+          <div className="rs-card is-wide" style={{ backdropFilter: 'var(--glass-blur)' }}>
+            <div className="rs-card-head">
+               <span className="rs-card-label">UNREACHABLE</span>
             </div>
-            <div className="home-setup-step">
-              <span className="home-setup-num">02</span>
-              <span>Add to your <code>.env</code>:</span>
-            </div>
-            <div className="home-setup-code">
-              <code>HOME_ASSISTANT_URL=http://homeassistant.local:8123</code>
-              <code>HOME_ASSISTANT_TOKEN=your_token_here</code>
-            </div>
-            <div className="home-setup-step">
-              <span className="home-setup-num">03</span>
-              <span>Restart the server and return to this page.</span>
-            </div>
+            <p className="rs-card-meta">
+              Home Assistant is configured at <code>{status.url}</code> but is not responding.
+              Make sure HA is running and the URL is correct, then refresh.
+            </p>
+            <button className="rs-btn-primary" style={{ marginTop: 16 }} onClick={() => fetchAll()}>↺ RETRY</button>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Configured but not reachable */}
-      {!loading && status?.configured && !status?.reachable && (
-        <div className="card home-unreachable-card">
-          <div className="card-title">UNREACHABLE</div>
-          <p className="home-setup-desc">
-            Home Assistant is configured at <code>{status.url}</code> but is not responding.
-            Make sure HA is running and the URL is correct, then refresh.
-          </p>
-          <button className="btn" onClick={() => fetchAll()}>↺ RETRY</button>
-        </div>
-      )}
-
-      {/* Connected — device grid */}
-      {!loading && status?.reachable && (
-        <>
-          {/* Scenes quick-launch strip */}
-          {scenes.length > 0 && (
-            <div className="home-scenes-strip">
-              {scenes.map(s => (
-                <button 
-                  key={s.entity_id} 
-                  className={`home-scene-pill ${acting === s.entity_id ? 'home-scene-pill--busy' : ''}`}
-                  onClick={() => callAction(s.entity_id, 'turn_on')}
-                  disabled={acting === s.entity_id}
-                >
-                  {DOMAIN_ICON[s.domain]} {s.name}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Domain filter */}
-          {domains.length > 1 && (
-            <div className="home-filter-row">
-              <button
-                className={`home-filter-btn ${filter === 'all' ? 'home-filter-btn--on' : ''}`}
-                onClick={() => setFilter('all')}
-              >
-                ALL
-              </button>
-              {domains.map(d => (
-                <button
-                  key={d}
-                  className={`home-filter-btn ${filter === d ? 'home-filter-btn--on' : ''}`}
-                  onClick={() => setFilter(d)}
-                >
-                  {(DOMAIN_LABEL[d] || d).toUpperCase()}S
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Groups */}
-          {Object.entries(groups).map(([domain, devs]) => (
-            <div key={domain} className="home-group">
-              <div className="home-group-title">
-                <span className="home-group-icon">{DOMAIN_ICON[domain] || '◦'}</span>
-                {(DOMAIN_LABEL[domain] || domain).toUpperCase()}S
-              </div>
-              <div className="home-device-grid">
-                {devs.map(d => (
-                  <DeviceCard
-                    key={d.entity_id}
-                    device={d}
-                    busy={acting === d.entity_id}
-                    onAction={callAction}
-                  />
+        {/* Connected — device grid */}
+        {!loading && status?.reachable && (
+          <>
+            {/* Scenes quick-launch strip */}
+            {scenes.length > 0 && (
+              <div style={{ 
+                display: 'flex', 
+                gap: 8, 
+                overflowX: 'auto', 
+                paddingBottom: 8, 
+                width: '100%',
+                scrollbarWidth: 'none'
+              }}>
+                {scenes.map(s => (
+                  <button 
+                    key={s.entity_id} 
+                    className={`rs-pill ${acting === s.entity_id ? 'is-active' : ''}`}
+                    style={{ whiteSpace: 'nowrap' }}
+                    onClick={() => callAction(s.entity_id, 'turn_on')}
+                    disabled={acting === s.entity_id}
+                  >
+                    {DOMAIN_ICON[s.domain]} {s.name.toUpperCase()}
+                  </button>
                 ))}
               </div>
-            </div>
-          ))}
+            )}
 
-          {filteredDevices.length === 0 && (
-            <div className="card home-empty">
-              <span className="home-empty-text">No devices in this category.</span>
-            </div>
-          )}
-        </>
-      )}
+            {/* Groups */}
+            {Object.entries(groups).map(([domain, devs]) => (
+              <div key={domain} style={{ width: '100%' }}>
+                <div className="rs-card-label" style={{ marginBottom: 12, marginLeft: 12 }}>
+                  <span style={{ marginRight: 8 }}>{DOMAIN_ICON[domain] || '◦'}</span>
+                  {(DOMAIN_LABEL[domain] || domain).toUpperCase()}S
+                </div>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', 
+                  gap: 12,
+                  width: '100%'
+                }}>
+                  {devs.map(d => (
+                    <DeviceCard
+                      key={d.entity_id}
+                      device={d}
+                      busy={acting === d.entity_id}
+                      onAction={callAction}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {filteredDevices.length === 0 && (
+              <div className="rs-card is-wide" style={{ textAlign: 'center', opacity: 0.5 }}>
+                <span className="rs-card-meta">No devices in this category.</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -291,20 +314,57 @@ function DeviceCard({ device, busy, onAction }) {
   }
 
   return (
-    <div className={`card home-device-card ${on ? 'home-device-card--on' : ''} ${busy ? 'home-device-card--busy' : ''}`}>
-      <div className="home-device-icon">{DOMAIN_ICON[device.domain] || '◦'}</div>
-      <div className="home-device-name">{device.name}</div>
+    <div 
+      className="rs-card" 
+      style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        gap: 8, 
+        textAlign: 'center',
+        opacity: busy ? 0.6 : 1,
+        border: on ? '1px solid color-mix(in srgb, var(--secondary) 30%, transparent)' : undefined,
+        background: on ? 'color-mix(in srgb, var(--secondary) 5%, var(--rs-card-bg))' : undefined,
+        backdropFilter: 'var(--glass-blur)',
+        padding: '16px 12px'
+      }}
+    >
+      <div style={{ fontSize: '1.4rem', color: on ? 'var(--secondary)' : 'var(--text-muted)', lineHeight: 1 }}>
+        {DOMAIN_ICON[device.domain] || '◦'}
+      </div>
+      <div style={{ fontSize: '0.85rem', fontWeight: 500, lineHeight: 1.3 }}>{device.name}</div>
       
       {isClimate && (
-        <div className="home-climate-row">
-          <div className="home-climate-info">
+        <div style={{ 
+          width: '100%', 
+          marginTop: 4, 
+          padding: 8, 
+          background: 'rgba(0, 0, 0, 0.2)', 
+          borderRadius: 'var(--md-shape-xl)',
+          fontSize: '0.75rem'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.7, marginBottom: 8 }}>
             <span>{device.current_temp != null ? `${device.current_temp}°` : '--'}</span>
             <span>Target: {device.temperature != null ? `${device.temperature}°` : '--'}</span>
           </div>
-          <div className="home-climate-target">
-            <div className="home-climate-btns">
-              <button className="home-climate-btn" onClick={() => handleTempAdjust(-0.5)} disabled={busy}>−</button>
-              <button className="home-climate-btn" onClick={() => handleTempAdjust(0.5)} disabled={busy}>+</button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button 
+                className="rs-pill" 
+                style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }} 
+                onClick={() => handleTempAdjust(-0.5)} 
+                disabled={busy}
+              >
+                −
+              </button>
+              <button 
+                className="rs-pill" 
+                style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }} 
+                onClick={() => handleTempAdjust(0.5)} 
+                disabled={busy}
+              >
+                +
+              </button>
             </div>
             <span style={{ fontSize: '0.65rem', color: 'var(--md-primary)', fontWeight: 600 }}>{device.state.toUpperCase()}</span>
           </div>
@@ -312,27 +372,28 @@ function DeviceCard({ device, busy, onAction }) {
       )}
 
       {isLight && on && (
-        <div className="home-brightness-row">
+        <div style={{ width: '100%', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
           <input 
             type="range" 
-            className="home-brightness-slider" 
+            style={{ flex: 1, height: 4, accentColor: 'var(--md-primary)' }} 
             min="1" max="100" 
             value={localBrightness} 
             onChange={handleBrightnessChange}
             disabled={busy}
           />
-          <span className="home-brightness-label">{localBrightness}%</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', opacity: 0.7 }}>{localBrightness}%</span>
         </div>
       )}
 
       {!isClimate && !isLight && (
-        <div className="home-device-meta">
+        <div className="rs-card-meta" style={{ fontSize: '0.7rem' }}>
           {on ? device.state.toUpperCase() : 'OFF'}
         </div>
       )}
 
       <button
-        className={`home-device-btn ${on ? 'home-device-btn--on' : ''}`}
+        className={on ? 'rs-pill is-active' : 'rs-pill'}
+        style={{ marginTop: 8, width: '100%', justifyContent: 'center' }}
         onClick={handleToggle}
         disabled={busy}
       >

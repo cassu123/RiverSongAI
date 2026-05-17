@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
-import './AnalyticsPage.css'
 
 // ─── Platform catalogue ──────────────────────────────────────────────────────
 
@@ -67,7 +66,9 @@ function metricLabel(key) {
 
 function LineChart({ data, color, height = 80 }) {
   if (!data || data.length < 2) return (
-    <div className="an-chart-empty">Not enough data</div>
+    <div style={{ fontSize: '0.7rem', opacity: 0.5, fontStyle: 'italic', height, display: 'flex', alignItems: 'center' }}>
+      Not enough data
+    </div>
   )
   const values = data.map(d => d.value)
   const minVal = Math.min(...values)
@@ -92,8 +93,8 @@ function LineChart({ data, color, height = 80 }) {
   const last  = data[data.length - 1].date.slice(5)
 
   return (
-    <div className="an-chart-wrap">
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="an-chart-svg">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: '100%', height, display: 'block', overflow: 'visible' }}>
         <defs>
           <linearGradient id={`grad-${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity="0.25" />
@@ -106,7 +107,7 @@ function LineChart({ data, color, height = 80 }) {
           <circle key={i} cx={p[0]} cy={p[1]} r="2" fill={color} opacity="0.7" />
         ))}
       </svg>
-      <div className="an-chart-axis">
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', opacity: 0.4, letterSpacing: '0.05em' }}>
         <span>{first}</span>
         <span>{last}</span>
       </div>
@@ -134,36 +135,49 @@ function PlatformTile({ platform, snapshots, connected, onSelect, selected }) {
 
   return (
     <div
-      className={`an-tile ${selected ? 'an-tile--selected' : ''} ${!connected ? 'an-tile--inactive' : ''}`}
-      style={{ '--tile-color': p.color }}
+      className={`rs-card is-tappable ${selected ? 'is-elev' : ''}`}
+      style={{ 
+        flex: '1 1 240px',
+        opacity: connected ? 1 : 0.6,
+        borderLeft: selected ? `4px solid ${p.color}` : undefined,
+        padding: '16px'
+      }}
       onClick={() => onSelect(platform)}
     >
-      <div className="an-tile-header">
-        <span className="an-tile-name">{p.label}</span>
-        {connected
-          ? <span className="an-tile-dot an-tile-dot--on" title="Connected" />
-          : <span className="an-tile-dot an-tile-dot--off" title="No data" />
-        }
+      <div className="rs-card-head" style={{ marginBottom: 12 }}>
+        <span className="rs-card-label" style={{ color: p.color }}>{p.label}</span>
+        <div className="rs-status-dot" style={{ 
+          background: connected ? '#4ade80' : '#6b7280',
+          boxShadow: connected ? '0 0 8px #4ade80' : 'none',
+          animation: connected ? undefined : 'none',
+          width: 6, height: 6
+        }} />
       </div>
 
       {connected && latest ? (
-        <>
-          <div className="an-tile-primary">
-            <span className="an-tile-val">{fmtMetric(primary, primaryVal)}</span>
-            <span className="an-tile-metric-label">{metricLabel(primary)}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span className="rs-card-value" style={{ fontSize: '1.4rem' }}>{fmtMetric(primary, primaryVal)}</span>
+            <span className="rs-card-meta" style={{ fontSize: '0.65rem', margin: 0 }}>{metricLabel(primary)}</span>
             {delta != null && (
-              <span className={`an-tile-delta ${delta >= 0 ? 'an-tile-delta--up' : 'an-tile-delta--down'}`}>
+              <span style={{ 
+                fontSize: '0.7rem', 
+                marginLeft: 'auto',
+                color: delta >= 0 ? '#4ade80' : '#f87171' 
+              }}>
                 {delta >= 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}%
               </span>
             )}
           </div>
           {revenue != null && primary !== 'revenue' && (
-            <div className="an-tile-revenue">{fmtMoney(revenue)} revenue</div>
+            <div className="rs-card-meta" style={{ marginTop: -8 }}>{fmtMoney(revenue)} revenue</div>
           )}
-          <LineChart data={chartData} color={p.color} height={60} />
-        </>
+          <LineChart data={chartData} color={p.color} height={50} />
+        </div>
       ) : (
-        <div className="an-tile-empty">No data yet — add a snapshot to get started.</div>
+        <div className="rs-card-meta" style={{ fontStyle: 'italic', minHeight: 80, display: 'flex', alignItems: 'center' }}>
+          No data yet.
+        </div>
       )}
     </div>
   )
@@ -179,45 +193,61 @@ function PlatformDetail({
   const SUPPORTED_FOR_INSIGHTS = ['tiktok', 'instagram', 'amazon', 'etsy', 'facebook']
 
   if (!snapshots.length) return (
-    <div className="an-detail">
-      <div className="an-detail-header">
-        <h2 className="an-detail-title" style={{ color: p.color }}>{p.label}</h2>
-        <button className="btn" onClick={onAddData}>+ Add Data</button>
+    <div className="rs-card is-wide animate-fade-in" style={{ marginTop: 24 }}>
+      <div className="rs-card-head">
+        <h2 className="rs-card-label" style={{ color: p.color, fontSize: '1rem' }}>{p.label}</h2>
+        <button className="rs-btn-primary" onClick={onAddData}>
+          <span className="material-symbols-rounded">add</span>
+          DATA
+        </button>
       </div>
-      <div className="an-detail-empty">No snapshots yet. Add your first data point.</div>
+      <div className="rs-card-meta">No snapshots yet. Add your first data point.</div>
     </div>
   )
 
   const metrics = p.metrics.length ? p.metrics : Object.keys(snapshots[0]?.metrics || {})
 
   return (
-    <div className="an-detail">
-      <div className="an-detail-header">
-        <h2 className="an-detail-title" style={{ color: p.color }}>{p.label}</h2>
-        <div style={{ display: 'flex', gap: 8 }}>
+    <div className="rs-card is-wide animate-fade-in" style={{ marginTop: 24 }}>
+      <div className="rs-card-head">
+        <h2 className="rs-card-label" style={{ color: p.color, fontSize: '1rem' }}>{p.label}</h2>
+        <div style={{ display: 'flex', gap: 12 }}>
           {SUPPORTED_FOR_INSIGHTS.includes(platform) && (
             <button 
-              className="btn btn--secondary" 
+              className="rs-pill" 
               onClick={onFetchInsights}
               disabled={loading}
             >
-              {loading ? 'Analyzing...' : insights ? '↺ Refresh Insights' : '✨ AI Insights'}
+              <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>
+                {loading ? 'sync' : insights ? 'refresh' : 'auto_awesome'}
+              </span>
+              {loading ? 'ANALYZING...' : insights ? 'REFRESH' : 'AI INSIGHTS'}
             </button>
           )}
-          <button className="btn" onClick={onAddData}>+ Add Data</button>
+          <button className="rs-btn-primary" onClick={onAddData}>
+            <span className="material-symbols-rounded">add</span>
+            DATA
+          </button>
         </div>
       </div>
 
-      {loading && <div className="an-loading-insights">River is analysing your data...</div>}
-      {error && <div className="an-insights-error">{error}</div>}
+      {loading && <div className="rs-card-meta" style={{ fontStyle: 'italic' }}>River is analysing your data...</div>}
+      {error && <div style={{ color: '#f87171', fontSize: '0.8rem', marginBottom: 16 }}>{error}</div>}
+      
       {insights && !loading && (
-        <div className="an-insights-box">
-          <h3>AI Insights</h3>
-          <div className="an-insights-content">{insights}</div>
+        <div style={{ 
+          background: 'rgba(255,255,255,0.05)', 
+          padding: 16, 
+          borderRadius: 'var(--md-shape-lg)',
+          marginBottom: 24,
+          border: '1px solid var(--md-outline-variant)'
+        }}>
+          <div className="rs-card-label" style={{ marginBottom: 10, color: 'var(--primary)' }}>AI INSIGHTS</div>
+          <div style={{ fontSize: '0.9rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{insights}</div>
         </div>
       )}
 
-      <div className="an-detail-charts">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 24, marginBottom: 32 }}>
         {metrics.map(metric => {
           const chartData = snapshots
             .filter(s => s.metrics?.[metric] != null)
@@ -225,39 +255,40 @@ function PlatformDetail({
           if (!chartData.length) return null
           const latest = chartData[chartData.length - 1]?.value
           return (
-            <div key={metric} className="an-metric-block">
-              <div className="an-metric-header">
-                <span className="an-metric-name">{metricLabel(metric)}</span>
-                <span className="an-metric-latest">{fmtMetric(metric, latest)}</span>
+            <div key={metric} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span className="rs-card-label" style={{ fontSize: '0.65rem' }}>{metricLabel(metric)}</span>
+                <span className="rs-card-value" style={{ fontSize: '1.1rem' }}>{fmtMetric(metric, latest)}</span>
               </div>
-              <LineChart data={chartData} color={p.color} height={90} />
+              <LineChart data={chartData} color={p.color} height={80} />
             </div>
           )
         })}
       </div>
 
-      <div className="an-detail-table-wrap">
-        <table className="an-table">
+      <div style={{ overflowX: 'auto', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
           <thead>
-            <tr>
-              <th>Date</th>
-              {metrics.map(m => <th key={m}>{metricLabel(m)}</th>)}
-              <th></th>
+            <tr style={{ borderBottom: '1px solid var(--md-outline-variant)', background: 'rgba(255,255,255,0.02)' }}>
+              <th style={{ padding: '12px', textAlign: 'left' }} className="rs-card-label">Date</th>
+              {metrics.map(m => <th key={m} style={{ padding: '12px', textAlign: 'left' }} className="rs-card-label">{metricLabel(m)}</th>)}
+              <th style={{ padding: '12px' }}></th>
             </tr>
           </thead>
           <tbody>
             {[...snapshots].reverse().map(s => (
-              <tr key={s.id}>
-                <td>{s.date}</td>
+              <tr key={s.id} style={{ borderBottom: '1px solid var(--md-outline-variant)' }}>
+                <td style={{ padding: '10px 12px' }}>{s.date}</td>
                 {metrics.map(m => (
-                  <td key={m}>{fmtMetric(m, s.metrics?.[m])}</td>
+                  <td key={m} style={{ padding: '10px 12px' }}>{fmtMetric(m, s.metrics?.[m])}</td>
                 ))}
-                <td>
+                <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                   <button
-                    className="an-del-btn"
+                    style={{ background: 'none', border: 'none', color: 'var(--md-on-surface-variant)', cursor: 'pointer', padding: 4 }}
                     onClick={() => onDeleteSnapshot(s.id)}
-                    title="Delete"
-                  >✕</button>
+                  >
+                    <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>delete</span>
+                  </button>
                 </td>
               </tr>
             ))}
@@ -297,117 +328,50 @@ function AddDataModal({ platform, onClose, onSave }) {
   }
 
   return (
-    <div className="an-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="an-modal-box">
-        <div className="an-modal-header">
-          <span className="an-modal-title">Add {p.label} Data</span>
-          <button className="an-modal-close" onClick={onClose}>✕</button>
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+      backdropFilter: 'blur(10px)', zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="rs-card animate-scale-in" style={{ width: '100%', maxWidth: 400, padding: 24 }}>
+        <div className="rs-card-head">
+          <span className="rs-card-label" style={{ color: p.color }}>ADD {p.label} DATA</span>
+          <button style={{ background: 'none', border: 'none', color: 'var(--fg)', cursor: 'pointer' }} onClick={onClose}>
+            <span className="material-symbols-rounded">close</span>
+          </button>
         </div>
-        <div className="an-modal-body">
-          <div className="an-modal-row">
-            <label className="an-modal-label">Date</label>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label className="rs-card-label" style={{ fontSize: '0.6rem' }}>Date</label>
             <input
               type="date"
-              className="an-modal-input"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: '10px', color: 'var(--fg)' }}
               value={date}
               onChange={e => setDate(e.target.value)}
             />
           </div>
           {p.metrics.map(m => (
-            <div key={m} className="an-modal-row">
-              <label className="an-modal-label">{metricLabel(m)}</label>
+            <div key={m} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label className="rs-card-label" style={{ fontSize: '0.6rem' }}>{metricLabel(m)}</label>
               <input
                 type="number"
-                className="an-modal-input"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: '10px', color: 'var(--fg)' }}
                 placeholder="—"
                 value={vals[m]}
                 onChange={e => setVals(v => ({ ...v, [m]: e.target.value }))}
               />
             </div>
           ))}
-          {err && <div className="an-modal-err">{err}</div>}
+          {err && <div style={{ color: '#f87171', fontSize: '0.8rem' }}>{err}</div>}
         </div>
-        <div className="an-modal-footer">
-          <button className="btn" onClick={onClose}>Cancel</button>
-          <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+          <button className="rs-pill" onClick={onClose}>CANCEL</button>
+          <button className="rs-btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? 'SAVING…' : 'SAVE DATA'}
           </button>
         </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Summary bar ─────────────────────────────────────────────────────────────
-
-function SummaryBar({ snapshots }) {
-  let totalRevenue = 0
-  let totalOrders  = 0
-  let totalFollowers = 0
-  const platformsWithData = new Set()
-
-  for (const s of snapshots) {
-    platformsWithData.add(s.platform)
-    if (s.metrics?.revenue != null) totalRevenue += s.metrics.revenue
-    if (s.metrics?.orders  != null) totalOrders  += s.metrics.orders
-    if (s.metrics?.followers    != null) totalFollowers = Math.max(totalFollowers, s.metrics.followers)
-    if (s.metrics?.subscribers  != null) totalFollowers = Math.max(totalFollowers, s.metrics.subscribers)
-    if (s.metrics?.page_likes   != null) totalFollowers = Math.max(totalFollowers, s.metrics.page_likes)
-  }
-
-  const stats = [
-    { label: 'Platforms Tracked', value: platformsWithData.size },
-    { label: 'Total Revenue',     value: fmtMoney(totalRevenue || null) },
-    { label: 'Total Orders',      value: fmtNum(totalOrders || null) },
-    { label: 'Max Audience',      value: fmtNum(totalFollowers || null) },
-  ]
-
-  return (
-    <div className="an-summary-bar">
-      {stats.map(s => (
-        <div key={s.label} className="an-summary-stat">
-          <span className="an-summary-val">{s.value || '—'}</span>
-          <span className="an-summary-label">{s.label}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ─── Platform settings panel ────────────────────────────────────────────────
-
-function PlatformSettings({ visible, onChange }) {
-  return (
-    <div className="an-settings-panel">
-      <div className="an-settings-heading">Platforms</div>
-      <p className="an-settings-hint">Choose which platforms appear on your dashboard.</p>
-      <div className="an-settings-grid">
-        {PLATFORMS.map(p => {
-          const on = visible.has(p.key)
-          return (
-            <label key={p.key} className={`an-settings-chip ${on ? 'an-settings-chip--on' : ''}`}>
-              <input
-                type="checkbox"
-                checked={on}
-                onChange={() => {
-                  const next = new Set(visible)
-                  on ? next.delete(p.key) : next.add(p.key)
-                  onChange(next)
-                }}
-              />
-              <span className="an-settings-dot" style={{ background: p.color }} />
-              {p.label}
-            </label>
-          )
-        })}
-      </div>
-      <div className="an-settings-actions">
-        <button className="an-settings-link" onClick={() => onChange(new Set(PLATFORMS.map(p => p.key)))}>
-          Select all
-        </button>
-        <button className="an-settings-link" onClick={() => onChange(new Set())}>
-          Clear all
-        </button>
       </div>
     </div>
   )
@@ -450,7 +414,6 @@ export default function AnalyticsPage() {
   function handleVisibleChange(next) {
     setVisiblePlatforms(next)
     saveVisible(userId, next)
-    // deselect if current selection is now hidden
     if (selectedPlatform && !next.has(selectedPlatform)) setSelectedPlatform(null)
   }
 
@@ -530,8 +493,6 @@ export default function AnalyticsPage() {
   }
 
   const connected = connectedPlatforms()
-
-  // Filter to only user-selected platforms, sorted: data first
   const sortedPlatforms = [...PLATFORMS]
     .filter(p => visiblePlatforms.has(p.key))
     .sort((a, b) => {
@@ -547,121 +508,191 @@ export default function AnalyticsPage() {
     return s === forPlatform[forPlatform.length - 1]
   })
 
+  // Summary logic
+  let totalRevenue = 0
+  let totalOrders  = 0
+  let totalFollowers = 0
+  const platformsWithData = new Set()
+  for (const s of latestSnapshots) {
+    platformsWithData.add(s.platform)
+    if (s.metrics?.revenue != null) totalRevenue += s.metrics.revenue
+    if (s.metrics?.orders  != null) totalOrders  += s.metrics.orders
+    if (s.metrics?.followers    != null) totalFollowers = Math.max(totalFollowers, s.metrics.followers)
+    if (s.metrics?.subscribers  != null) totalFollowers = Math.max(totalFollowers, s.metrics.subscribers)
+    if (s.metrics?.page_likes   != null) totalFollowers = Math.max(totalFollowers, s.metrics.page_likes)
+  }
+
   return (
-    <div className="page-wrap">
-      <div className="page-breadcrumb">
-        <span>◢</span><span>SYSTEM</span>
-        <span className="page-breadcrumb-sep">/</span>
-        <span>ANALYTICS</span>
-      </div>
-      <h1 className="page-title">Analytics</h1>
-      <p className="page-subtitle">
-        Sales growth and audience trends across your platforms.
-      </p>
-
-      <div className="an-controls">
-        <div className="an-range-btns">
-          {RANGE_OPTIONS.map(o => (
-            <button
-              key={o.days}
-              className={`an-range-btn ${days === o.days ? 'an-range-btn--active' : ''}`}
-              onClick={() => setDays(o.days)}
-            >
-              {o.label}
-            </button>
-          ))}
+    <div className="rs-foyer animate-fade-in">
+      <header className="rs-foyer-head">
+        <div className="rs-status-strip" style={{ marginBottom: 16 }}>
+          <span className="rs-status-dot" />
+          <span>SYSTEM / ANALYTICS</span>
         </div>
-        <button className="btn" onClick={loadData} disabled={loading}>
-          {loading ? 'Loading…' : '↺ Refresh'}
-        </button>
-        <button
-          className={`an-settings-toggle ${showSettings ? 'an-settings-toggle--active' : ''}`}
-          onClick={() => setShowSettings(s => !s)}
-          title="Platform settings"
-        >
-          ⚙ Platforms
-          {visiblePlatforms.size < PLATFORMS.length && (
-            <span className="an-settings-badge">{visiblePlatforms.size}/{PLATFORMS.length}</span>
-          )}
-        </button>
-      </div>
+        <h1 className="rs-greeting">Analytics</h1>
+        <div className="rs-greeting-sub">Sales growth and audience trends across your platforms.</div>
+      </header>
 
-      {showSettings && (
-        <PlatformSettings visible={visiblePlatforms} onChange={handleVisibleChange} />
-      )}
-
-      {err && <div className="an-error">{err}</div>}
-
-      {snapshots.length > 0 && <SummaryBar snapshots={latestSnapshots} />}
-      
-      {/* AI Business Report Section */}
-      <div className="card analytics-report-card" style={{ marginBottom: 24, padding: 20, border: "1px solid var(--md-outline-variant)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.05em", color: "var(--md-primary)" }}>
-            AI BUSINESS STRATEGIST
+      <div className="rs-card-flow" style={{ marginTop: 24 }}>
+        
+        {/* Controls Card */}
+        <div className="rs-card is-wide" style={{ padding: '12px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {RANGE_OPTIONS.map(o => (
+                <button
+                  key={o.days}
+                  className={days === o.days ? 'rs-pill is-active' : 'rs-pill'}
+                  onClick={() => setDays(o.days)}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="rs-pill" onClick={loadData} disabled={loading}>
+                <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>{loading ? 'sync' : 'refresh'}</span>
+                {loading ? 'LOADING...' : 'REFRESH'}
+              </button>
+              <button
+                className={showSettings ? 'rs-pill is-active' : 'rs-pill'}
+                onClick={() => setShowSettings(s => !s)}
+              >
+                <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>settings</span>
+                PLATFORMS
+                {visiblePlatforms.size < PLATFORMS.length && (
+                  <span style={{ marginLeft: 6, background: 'var(--primary)', color: '#000', borderRadius: 4, padding: '0 4px', fontSize: '0.6rem', fontWeight: 'bold' }}>
+                    {visiblePlatforms.size}/{PLATFORMS.length}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
-          <button 
-            className="btn btn--cta" 
-            onClick={handleGenerateReport} 
-            disabled={generatingReport}
-          >
-            {generatingReport ? "ANALYZING..." : "GENERATE AI REPORT"}
-          </button>
         </div>
-        {businessReport ? (
-          <div style={{ 
-            whiteSpace: "pre-wrap", 
-            fontSize: "0.85rem", 
-            lineHeight: 1.6, 
-            color: "var(--md-on-surface)",
-            background: "var(--md-surface-container-highest)",
-            padding: 16,
-            borderRadius: 8
-          }}>
-            {businessReport}
-          </div>
-        ) : (
-          <div style={{ fontSize: "0.75rem", color: "var(--md-outline)" }}>
-            Click the button to generate a natural-language summary of your recent sales, revenue, and product performance.
+
+        {showSettings && (
+          <div className="rs-card is-wide animate-fade-in" style={{ background: 'rgba(255,255,255,0.03)' }}>
+            <div className="rs-card-label" style={{ marginBottom: 12 }}>PLATFORM VISIBILITY</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {PLATFORMS.map(p => {
+                const on = visiblePlatforms.has(p.key)
+                return (
+                  <label key={p.key} className={on ? 'rs-pill is-active' : 'rs-pill'} style={{ cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      style={{ display: 'none' }}
+                      checked={on}
+                      onChange={() => {
+                        const next = new Set(visiblePlatforms)
+                        on ? next.delete(p.key) : next.add(p.key)
+                        handleVisibleChange(next)
+                      }}
+                    />
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, marginRight: 8 }} />
+                    {p.label}
+                  </label>
+                )
+              })}
+            </div>
+            <div style={{ display: 'flex', gap: 16 }}>
+              <button className="rs-card-label" style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleVisibleChange(new Set(PLATFORMS.map(p => p.key)))}>SELECT ALL</button>
+              <button className="rs-card-label" style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleVisibleChange(new Set())}>CLEAR ALL</button>
+            </div>
           </div>
         )}
-      </div>
-    
 
-      <div className="an-platform-grid">
-        {sortedPlatforms.map(p => (
-          <PlatformTile
-            key={p.key}
-            platform={p.key}
-            snapshots={snapshotsFor(p.key)}
-            connected={connected.has(p.key)}
-            selected={selectedPlatform === p.key}
-            onSelect={key => {
-              setSelectedPlatform(prev => prev === key ? null : key)
-              setAddModalFor(null)
-            }}
-          />
-        ))}
-      </div>
+        {err && <div className="rs-card is-wide" style={{ color: '#f87171', borderColor: '#f87171' }}>{err}</div>}
 
-      {selectedPlatform && (
-        <PlatformDetail
-          platform={selectedPlatform}
-          snapshots={snapshotsFor(selectedPlatform)}
-          onAddData={() => setAddModalFor(selectedPlatform)}
-          onDeleteSnapshot={handleDeleteSnapshot}
-          insights={platformInsights[selectedPlatform]}
-          loading={insightsLoading[selectedPlatform]}
-          error={insightsError[selectedPlatform]}
-          onFetchInsights={() => fetchInsights(selectedPlatform)}
-        />
-      )}
+        {/* Summary Stats */}
+        {snapshots.length > 0 && (
+          <>
+            <div className="rs-card">
+              <span className="rs-card-label">REVENUE</span>
+              <div className="rs-card-value">{fmtMoney(totalRevenue)}</div>
+              <div className="rs-card-meta">Total across {platformsWithData.size} channels</div>
+            </div>
+            <div className="rs-card">
+              <span className="rs-card-label">ORDERS</span>
+              <div className="rs-card-value">{fmtNum(totalOrders)}</div>
+              <div className="rs-card-meta">Successfully processed</div>
+            </div>
+            <div className="rs-card">
+              <span className="rs-card-label">AUDIENCE</span>
+              <div className="rs-card-value">{fmtNum(totalFollowers)}</div>
+              <div className="rs-card-meta">Peak reach</div>
+            </div>
+          </>
+        )}
 
-      {!selectedPlatform && snapshots.length === 0 && !loading && (
-        <div className="an-getting-started">
-          <p>Click any platform tile above to add your first data snapshot.</p>
+        {/* AI Business Report Card */}
+        <div className="rs-card is-wide is-elev">
+          <div className="rs-card-head">
+            <span className="rs-card-label" style={{ color: 'var(--primary)' }}>AI BUSINESS STRATEGIST</span>
+            <button 
+              className="rs-btn-primary" 
+              onClick={handleGenerateReport} 
+              disabled={generatingReport}
+            >
+              <span className="material-symbols-rounded">auto_awesome</span>
+              {generatingReport ? "ANALYZING..." : "GENERATE AI REPORT"}
+            </button>
+          </div>
+          {businessReport ? (
+            <div style={{ 
+              whiteSpace: "pre-wrap", 
+              fontSize: "0.92rem", 
+              lineHeight: 1.6, 
+              background: "rgba(255,255,255,0.03)",
+              padding: 20,
+              borderRadius: 'var(--md-shape-lg)',
+              border: '1px solid var(--md-outline-variant)'
+            }}>
+              {businessReport}
+            </div>
+          ) : (
+            <div className="rs-card-meta">
+              Request a natural-language summary of your recent sales, revenue, and product performance across all active platforms.
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Platform Grid */}
+        <div style={{ width: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+          {sortedPlatforms.map(p => (
+            <PlatformTile
+              key={p.key}
+              platform={p.key}
+              snapshots={snapshotsFor(p.key)}
+              connected={connected.has(p.key)}
+              selected={selectedPlatform === p.key}
+              onSelect={key => {
+                setSelectedPlatform(prev => prev === key ? null : key)
+                setAddModalFor(null)
+              }}
+            />
+          ))}
+        </div>
+
+        {selectedPlatform && (
+          <PlatformDetail
+            platform={selectedPlatform}
+            snapshots={snapshotsFor(selectedPlatform)}
+            onAddData={() => setAddModalFor(selectedPlatform)}
+            onDeleteSnapshot={handleDeleteSnapshot}
+            insights={platformInsights[selectedPlatform]}
+            loading={insightsLoading[selectedPlatform]}
+            error={insightsError[selectedPlatform]}
+            onFetchInsights={() => fetchInsights(selectedPlatform)}
+          />
+        )}
+
+        {!selectedPlatform && snapshots.length === 0 && !loading && (
+          <div className="rs-card is-wide" style={{ textAlign: 'center', padding: 48, borderStyle: 'dashed' }}>
+            <div className="rs-card-meta">Click any platform tile above to add your first data snapshot.</div>
+          </div>
+        )}
+
+      </div>
 
       {addModalFor && (
         <AddDataModal

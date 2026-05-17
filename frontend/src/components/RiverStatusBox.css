@@ -1,201 +1,147 @@
 /* ============================================================
-   RiverStatusBox — text-based AI state indicator
-   Used on all pages except Speak/Conversation
+   RiverStatusBox — Glass Round Grammar
+   ------------------------------------------------------------
+   The breathing heart of the AI. Blends into the card.
    ============================================================ */
 
 .rsb {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border-bright);
-  border-radius: 3px;
+  background: transparent;
+  border: none;
   overflow: hidden;
-  min-height: 160px;
 }
 
-.rsb-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-}
-
-.rsb-name {
-  font-family: var(--font-display);
-  font-size: 0.55rem;
-  letter-spacing: 0.22em;
-  color: var(--rsb-color, var(--primary));
-  text-shadow: 0 0 8px var(--rsb-color, var(--primary));
-}
-
-.rsb-state-chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-display);
-  font-size: 0.48rem;
-  letter-spacing: 0.16em;
-  color: var(--rsb-color, var(--primary));
-  padding: 3px 8px;
-  border: 1px solid var(--rsb-color, var(--primary));
-  border-radius: 2px;
-  opacity: 0.8;
-}
-
-.rsb-pulse-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-}
-
-.rsb-pulse-dot--slow {
-  animation: rsb-pulse 2.2s ease-in-out infinite;
-}
-
-.rsb-pulse-dot--fast {
-  animation: rsb-pulse 0.9s ease-in-out infinite;
-}
-
-@keyframes rsb-pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.2; }
-}
-
-/* ---- Body ---- */
-
+/* ---- Body Indicator ---- */
 .rsb-body {
-  flex: 1;
+  height: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
-  min-height: 90px;
+  padding: 0;
+  position: relative;
 }
 
-/* Idle ring */
-
+/* Idle ring — geometric orbit */
 .rsb-idle-ring {
-  width: 56px;
-  height: 56px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
-  border: 1px solid var(--rsb-color, var(--primary));
-  opacity: 0.35;
+  border: 1px solid color-mix(in srgb, var(--rsb-color) 30%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: rsb-idle-rotate 6s linear infinite;
+  animation: rsb-orbit 12s linear infinite;
 }
 
 .rsb-idle-ring-inner {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  border: 1px solid var(--rsb-color, var(--primary));
-  opacity: 0.6;
-  animation: rsb-idle-rotate 3s linear infinite reverse;
+  border: 1px dashed color-mix(in srgb, var(--rsb-color) 60%, transparent);
+  animation: rsb-orbit 6s linear infinite reverse;
 }
 
-@keyframes rsb-idle-rotate {
+@keyframes rsb-orbit {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
 
-/* Thinking dots (Gemini-style) */
-
+/* Thinking dots — ethereal cluster */
 .rsb-think-dots {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .rsb-think-dot {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  display: inline-block;
-  animation: rsb-think-bounce 0.9s ease-in-out infinite;
+  animation: rsb-ghost 1.2s ease-in-out infinite;
 }
 
-@keyframes rsb-think-bounce {
-  0%, 80%, 100% { transform: translateY(0) scale(1);    opacity: 0.5; }
-  40%           { transform: translateY(-10px) scale(1.2); opacity: 1; }
+@keyframes rsb-ghost {
+  0%, 100% { transform: scale(0.8); opacity: 0.3; filter: blur(2px); }
+  50%      { transform: scale(1.4); opacity: 0.9; filter: blur(0px); }
 }
 
-/* Speaking waveform bars */
-
+/* Speaking waveform — fluid columns */
 .rsb-wave {
   display: flex;
   align-items: center;
-  gap: 3px;
-  height: 36px;
+  gap: 4px;
+  height: 48px;
 }
 
 .rsb-wave-bar {
-  display: inline-block;
-  width: 4px;
-  border-radius: 2px;
-  background: var(--rsb-color, var(--secondary));
-  box-shadow: 0 0 4px var(--rsb-color, var(--secondary));
-  animation: rsb-wave-scale 0.7s ease-in-out infinite alternate;
+  width: 3px;
+  border-radius: 4px;
+  background: var(--rsb-color);
+  box-shadow: 0 0 12px var(--rsb-color);
+  animation: rsb-wave-fluid 0.8s ease-in-out infinite alternate;
 }
 
-@keyframes rsb-wave-scale {
-  from { height: 4px;  opacity: 0.5; }
-  to   { height: 32px; opacity: 1;   }
+@keyframes rsb-wave-fluid {
+  from { height: 6px;  opacity: 0.4; }
+  to   { height: 48px; opacity: 1;   }
 }
 
-/* Listening rings */
-
+/* Listening rings — expansive sonar */
 .rsb-listen-rings {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 80px;
+  height: 80px;
 }
 
 .rsb-listen-ring {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 1.5px solid var(--rsb-color, var(--secondary));
-  animation: rsb-listen-expand 1.4s ease-out infinite;
+  border: 1px solid var(--rsb-color);
+  animation: rsb-sonar 1.8s cubic-bezier(0, 0.2, 0.8, 1) infinite;
   opacity: 0;
 }
 
-@keyframes rsb-listen-expand {
-  0%   { transform: scale(0.3); opacity: 0.9; }
-  100% { transform: scale(1.6); opacity: 0; }
+@keyframes rsb-sonar {
+  0%   { transform: scale(0.1); opacity: 1; }
+  100% { transform: scale(2);   opacity: 0; }
 }
 
-/* ---- Footer text ---- */
+/* ---- Text Zone ---- */
+.rsb-text-zone {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8px 16px;
+}
 
-.rsb-hint,
-.rsb-stream {
-  padding: 8px 14px 12px;
-  font-size: 0.82rem;
-  color: var(--text-dim);
-  border-top: 1px solid var(--border);
-  min-height: 36px;
-  line-height: 1.5;
+.rsb-hint {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: var(--md-on-surface-variant);
+  opacity: 0.6;
+  text-transform: uppercase;
 }
 
 .rsb-stream {
-  color: var(--text);
+  font-size: 0.95rem;
+  color: var(--fg);
+  line-height: 1.4;
   word-break: break-word;
 }
 
 .rsb-cursor {
-  color: var(--rsb-color, var(--primary));
-  animation: rsb-blink 0.75s step-end infinite;
-}
-
-@media (max-width: 1024px) {
-  .rsb { min-height: 140px; }
-  .rsb-body { padding: 16px 12px; }
-  .rsb-hint, .rsb-stream { padding: 6px 12px 10px; font-size: 0.78rem; }
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: var(--rsb-color);
+  margin-left: 4px;
+  vertical-align: middle;
+  animation: rsb-blink 0.8s step-end infinite;
 }
 
 @keyframes rsb-blink {

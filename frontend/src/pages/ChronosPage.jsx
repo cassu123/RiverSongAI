@@ -5,34 +5,19 @@ import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { autocompletion } from '@codemirror/autocomplete'
 import { useAuth } from '../context/AuthContext.jsx'
-import './ChronosPage.css'
 
-// ── Material Symbol component ────────────────────────────────────────────────
-function MdIcon({ name, size = 20, style }) {
-  return (
-    <span
-      className="material-symbols-rounded"
-      style={{
-        fontSize: size,
-        width: size,
-        height: size,
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...style,
-      }}
-    >
-      {name}
-    </span>
-  )
-}
+/**
+ * ChronosPage — Phase 3 Rewrite
+ * -----------------------------------------------------------------------------
+ * Obsidian-style vault with a futuristic glass layout.
+ */
 
-export default function ChronosPage() {
-  const { token, user } = useAuth()
+export default function ChronosPage({ setAction }) {
+  const { token } = useAuth()
   
   const [activeRoot, setActiveRoot] = useState('personal')
   const [fileTree, setFileTree] = useState([])
-  const [activeNote, setActiveNote] = useState(null) // { path, content }
+  const [activeNote, setActiveNote] = useState(null)
   const [editMode, setEditMode] = useState(false)
   const [editorContent, setEditorContent] = useState('')
   const [backlinks, setBacklinks] = useState([])
@@ -50,11 +35,8 @@ export default function ChronosPage() {
       const res = await fetch(`/api/vault/tree?root=${root}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      if (!res.ok) throw new Error('Failed to fetch tree')
-      const data = await res.json()
-      setFileTree(data)
+      if (res.ok) setFileTree(await res.json())
     } catch (err) {
-      console.error(err)
       setError(err.message)
     }
   }, [token])
@@ -70,19 +52,16 @@ export default function ChronosPage() {
       const res = await fetch(`/api/vault/note?path=${encodeURIComponent(path)}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      if (!res.ok) throw new Error('Failed to load note')
-      const { content } = await res.json()
-      setActiveNote({ path, content })
-      setEditorContent(content)
-      setEditMode(false)
-      
-      // Load backlinks
-      const blRes = await fetch(`/api/vault/backlinks?path=${encodeURIComponent(path)}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (blRes.ok) {
-        const blData = await blRes.json()
-        setBacklinks(blData)
+      if (res.ok) {
+        const { content } = await res.json()
+        setActiveNote({ path, content })
+        setEditorContent(content)
+        setEditMode(false)
+        
+        const blRes = await fetch(`/api/vault/backlinks?path=${encodeURIComponent(path)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (blRes.ok) setBacklinks(await blRes.json())
       }
     } catch (err) {
       setError(err.message)
@@ -92,60 +71,55 @@ export default function ChronosPage() {
   }
 
   const createNote = async () => {
-    const name = window.prompt('Note name (e.g. "My Ideas.md"):')
+    const name = window.prompt('NOTE NAME:')
     if (!name) return
     const path = `${activeRoot}/${name.endsWith('.md') ? name : name + '.md'}`
     try {
       await fetch('/api/vault/note', {
         method: 'PUT',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ path, content: '# ' + name.replace('.md', '') + '\n\n' })
       })
       await fetchTree(activeRoot)
       loadNote(path)
-    } catch (err) {
-      setError('Failed to create note.')
+    } catch {
+      setError('Failed to create.')
     }
   }
 
   const deleteNote = async () => {
-    if (!activeNote) return
-    if (!window.confirm(`Delete "${activeNote.path}"?`)) return
+    if (!activeNote || !window.confirm(`Purge "${activeNote.path}"?`)) return
     try {
       const res = await fetch(`/api/vault/note?path=${encodeURIComponent(activeNote.path)}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       })
-      if (!res.ok) throw new Error()
-      setActiveNote(null)
-      fetchTree(activeRoot)
-    } catch (err) {
-      setError('Failed to delete note.')
+      if (res.ok) {
+        setActiveNote(null)
+        fetchTree(activeRoot)
+      }
+    } catch {
+      setError('Failed to delete.')
     }
   }
 
   const renameNote = async () => {
     if (!activeNote) return
-    const newName = window.prompt('New name (including .md):', activeNote.path.split('/').pop())
+    const newName = window.prompt('NEW NAME:', activeNote.path.split('/').pop())
     if (!newName) return
     const newPath = activeNote.path.split('/').slice(0, -1).concat(newName).join('/')
     try {
       const res = await fetch('/api/vault/note/rename', {
         method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ old: activeNote.path, new: newPath })
       })
-      if (!res.ok) throw new Error()
-      fetchTree(activeRoot)
-      loadNote(newPath)
-    } catch (err) {
-      setError('Failed to rename note.')
+      if (res.ok) {
+        fetchTree(activeRoot)
+        loadNote(newPath)
+      }
+    } catch {
+      setError('Failed to rename.')
     }
   }
 
@@ -157,11 +131,12 @@ export default function ChronosPage() {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       })
-      if (!res.ok) throw new Error()
-      const { summary } = await res.json()
-      window.alert(`AI SUMMARY:\n\n${summary}`)
-    } catch (err) {
-      setError('Failed to summarize note.')
+      if (res.ok) {
+        const { summary } = await res.json()
+        window.alert(`SCRIBE SUMMARY:\n\n${summary}`)
+      }
+    } catch {
+      setError('Failed to summarize.')
     } finally {
       setIsSummarizing(false)
     }
@@ -172,16 +147,11 @@ export default function ChronosPage() {
     try {
       await fetch('/api/vault/note', {
         method: 'PUT',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: activeNote.path, content })
       })
       setActiveNote(prev => ({ ...prev, content }))
-    } catch (err) {
-      console.error('Save failed:', err)
-    }
+    } catch {}
   }, [activeNote, token])
 
   const onEditorChange = useCallback((value) => {
@@ -190,253 +160,149 @@ export default function ChronosPage() {
     saveTimeoutRef.current = setTimeout(() => saveNote(value), 1000)
   }, [saveNote])
 
-  const completionSource = useCallback(async (context) => {
-    const word = context.matchBefore(/\[\[[^\]]*$/)
-    if (!word) return null
-    
-    const query = word.text.slice(2)
-    if (query.length < 2) return null
-
-    try {
-      const res = await fetch(`/api/vault/search?q=${encodeURIComponent(query)}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (res.ok) {
-        const data = await res.json()
-        return {
-          from: word.from + 2,
-          options: data.map(r => ({ label: r.title, type: "variable" })),
-          filter: false
-        }
-      }
-    } catch (err) {
-      console.error(err)
-    }
-    return null
-  }, [token])
-
   const handleSearch = async (e) => {
     const q = e.target.value
     setSearchQuery(q)
-    if (q.length < 2) {
-      setSearchResults([])
-      return
-    }
+    if (q.length < 2) { setSearchResults([]); return }
     try {
       const res = await fetch(`/api/vault/search?q=${encodeURIComponent(q)}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      if (res.ok) {
-        const data = await res.json()
-        setSearchResults(data)
-      }
-    } catch (err) {
-      console.error(err)
-    }
+      if (res.ok) setSearchResults(await res.json())
+    } catch {}
   }
 
-  // Quick Switcher hotkey
+  // Hotkey support
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setShowQuickSwitcher(true)
-      }
-      if (e.key === 'Escape') {
-        setShowQuickSwitcher(false)
-      }
+    const handleKD = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setShowQuickSwitcher(true) }
+      if (e.key === 'Escape') setShowQuickSwitcher(false)
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKD)
+    return () => window.removeEventListener('keydown', handleKD)
   }, [])
 
   return (
-    <div className="chronos-page">
+    <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr 260px', height: '100%', gap: 16 }}>
+      
+      {/* Search Modal */}
       {showQuickSwitcher && (
-        <div className="chronos-modal-overlay" onClick={() => setShowQuickSwitcher(false)}>
-          <div className="chronos-quick-switcher card" onClick={e => e.stopPropagation()}>
-            <div className="qs-header">
-              <MdIcon name="search" size={18} />
-              <input 
-                autoFocus 
-                type="text" 
-                placeholder="Find note..." 
-                onChange={handleSearch}
-              />
+        <div style={{ position: 'fixed', inset: 0, z-index: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }} onClick={() => setShowQuickSwitcher(false)}>
+          <div className="rs-card is-elev" style={{ width: '100%', maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 12 }}>
+               <span className="material-symbols-rounded">search</span>
+               <input autoFocus type="text" style={{ all: 'unset', flex: 1 }} placeholder="JUMP TO NOTE..." onChange={handleSearch} />
             </div>
-            <div className="qs-results">
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {searchResults.map(r => (
-                <div key={r.virtual_path} className="qs-item" onClick={() => { loadNote(r.virtual_path); setShowQuickSwitcher(false); setSearchResults([]) }}>
-                  <MdIcon name="description" size={16} />
-                  <span>{r.title}</span>
-                </div>
+                <button key={r.virtual_path} className="rs-pill" style={{ justifyContent: 'flex-start' }} onClick={() => { loadNote(r.virtual_path); setShowQuickSwitcher(false) }}>
+                  {r.title}
+                </button>
               ))}
-              {searchResults.length === 0 && searchQuery && <div className="qs-empty">No notes found.</div>}
             </div>
           </div>
         </div>
       )}
 
-      {/* Sidebar: Tree */}
-      <div className="chronos-sidebar">
-        <div className="chronos-root-selector">
-          <button className={activeRoot === 'personal' ? 'active' : ''} onClick={() => setActiveRoot('personal')}>PERSONAL</button>
-          <button className={activeRoot === 'household' ? 'active' : ''} onClick={() => setActiveRoot('household')}>HOUSEHOLD</button>
-          <button className="chronos-new-btn" onClick={createNote} title="New Note">
-            <MdIcon name="add" size={18} />
+      {/* Left Rail: File Tree */}
+      <div className="rs-card" style={{ display: 'flex', flexDirection: 'column', padding: 12 }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+          <button className={`rs-pill ${activeRoot === 'personal' ? 'is-active' : ''}`} style={{ flex: 1 }} onClick={() => setActiveRoot('personal')}>PERS</button>
+          <button className={`rs-pill ${activeRoot === 'household' ? 'is-active' : ''}`} style={{ flex: 1 }} onClick={() => setActiveRoot('household')}>HSE</button>
+          <button className="rs-pill" onClick={createNote} title="New Note">
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>add</span>
           </button>
         </div>
-        <div className="chronos-tree">
+        <div style={{ flex: 1, overflowY: 'auto' }}>
           <TreeList items={fileTree} onSelect={loadNote} activePath={activeNote?.path} />
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="chronos-main">
-        <div className="chronos-topbar">
-          <div className="chronos-search-wrap">
-            <MdIcon name="search" size={18} style={{ color: 'var(--md-outline)' }} />
-            <input 
-              type="text" 
-              placeholder="Search vault (Ctrl+K)..." 
-              value={searchQuery}
-              onChange={handleSearch}
-              onFocus={() => setShowQuickSwitcher(true)}
-            />
+      {/* Center: Editor/Viewer */}
+      <div className="rs-card" style={{ display: 'flex', flexDirection: 'column', padding: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: '1px solid var(--md-outline-variant)' }}>
+          <div className="rs-card-label" style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {activeNote?.path || 'CHRONOS VAULT'}
           </div>
-          <div style={{ flex: 1 }} />
           {activeNote && (
-            <div className="chronos-topbar-actions">
-              <button 
-                className={`btn btn--ghost btn--xs ${isSummarizing ? 'loading' : ''}`} 
-                onClick={summarizeNote} 
-                disabled={isSummarizing}
-              >
-                {isSummarizing ? 'THINKING...' : 'AI SUMMARY'}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="rs-pill" onClick={summarizeNote} disabled={isSummarizing}>
+                {isSummarizing ? 'SCRIBING...' : 'AI SUM'}
               </button>
-              <button className="btn btn--ghost btn--xs" onClick={renameNote}>RENAME</button>
-              <button className="btn btn--ghost btn--xs color-error" onClick={deleteNote}>DELETE</button>
-              <button className={`btn btn--ghost btn--xs ${editMode ? 'btn--primary' : ''}`} onClick={() => setEditMode(!editMode)}>
+              <button className="rs-pill" onClick={renameNote}>RENAME</button>
+              <button className="rs-pill" onClick={deleteNote} style={{ color: 'var(--md-error)' }}>DELETE</button>
+              <button className={`rs-pill ${editMode ? 'is-active' : ''}`} onClick={() => setEditMode(!editMode)}>
                 {editMode ? 'FINISH' : 'EDIT'}
               </button>
             </div>
           )}
         </div>
 
-        <div className="chronos-content-wrap">
-          {activeNote ? (
-            <div className="chronos-viewer animate-fade-in">
-              <div className="chronos-note-header">
-                <div className="chronos-note-path">{activeNote.path}</div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+          {loading ? (
+            <div className="rs-card-meta">RETRIEVING DATA...</div>
+          ) : activeNote ? (
+            editMode ? (
+              <div style={{ height: '100%' }}>
+                <CodeMirror
+                  value={editorContent}
+                  height="100%"
+                  theme="dark"
+                  extensions={[markdown(), autocompletion()]}
+                  onChange={onEditorChange}
+                  basicSetup={{ lineNumbers: false, foldGutter: false }}
+                />
               </div>
-              
-              {editMode ? (
-                <div className="chronos-editor">
-                  <CodeMirror
-                    value={editorContent}
-                    height="100%"
-                    theme="dark"
-                    extensions={[
-                      markdown(),
-                      autocompletion({ override: [completionSource] })
-                    ]}
-                    onChange={onEditorChange}
-                    basicSetup={{
-                      lineNumbers: false,
-                      foldGutter: false,
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="chronos-markdown">
-                  <ReactMarkdown 
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      a: ({ node, href, children, ...props }) => {
-                        if (href?.startsWith('wikilink:')) {
-                          const title = href.replace('wikilink:', '')
-                          return (
-                            <button 
-                              className="chronos-wikilink" 
-                              onClick={() => {
-                                setSearchQuery(title)
-                                fetch(`/api/vault/search?q=${encodeURIComponent(title)}`, {
-                                  headers: { Authorization: `Bearer ${token}` }
-                                }).then(r => r.json()).then(data => {
-                                  setSearchResults(data)
-                                  if (data.length === 1) {
-                                    loadNote(data[0].virtual_path)
-                                  } else if (data.length === 0) {
-                                    if (window.confirm(`Note "${title}" does not exist. Create it?`)) {
-                                      const path = `${activeRoot}/${title}.md`
-                                      fetch('/api/vault/note', {
-                                        method: 'PUT',
-                                        headers: { 
-                                          'Authorization': `Bearer ${token}`,
-                                          'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({ path, content: '# ' + title + '\n\n' })
-                                      }).then(res => {
-                                        if (res.ok) {
-                                          fetchTree(activeRoot)
-                                          loadNote(path)
-                                        }
-                                      })
-                                    }
-                                  }
-                                })
-                              }}
-                            >
-                              {children}
-                            </button>
-                          )
-                        }
-                        return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>
+            ) : (
+              <div className="rs-markdown">
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    a: ({ node, href, children, ...props }) => {
+                      if (href?.startsWith('wikilink:')) {
+                        const title = href.replace('wikilink:', '')
+                        return <button className="rs-pill" onClick={() => loadNote(`${activeRoot}/${title}.md`)}>{children}</button>
                       }
-                    }}
-                  >
-                    {activeNote.content.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (match, title, alias) => {
-                      return `[${alias || title}](wikilink:${title})`
-                    })}
-                  </ReactMarkdown>
-                </div>
-              )}
-            </div>
+                      return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>
+                    }
+                  }}
+                >
+                  {activeNote.content.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (match, title, alias) => {
+                    return `[${alias || title}](wikilink:${title})`
+                  })}
+                </ReactMarkdown>
+              </div>
+            )
           ) : (
-            <div className="chronos-empty">
-              <MdIcon name="history" size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
-              <p>Select a note to read or start searching.</p>
-            </div>
+             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}>
+               <span className="material-symbols-rounded" style={{ fontSize: '80px' }}>history</span>
+             </div>
           )}
         </div>
       </div>
 
-      {/* Right Panel: Backlinks */}
-      <div className="chronos-right">
-        <div className="chronos-panel-title">BACKLINKS</div>
-        <div className="chronos-backlinks">
-          {backlinks.length > 0 ? (
-            backlinks.map(b => (
-              <div key={b.virtual_path} className="chronos-backlink-item card" onClick={() => loadNote(b.virtual_path)}>
-                {b.title}
-              </div>
-            ))
-          ) : (
-            <div className="chronos-panel-empty">No backlinks found.</div>
-          )}
+      {/* Right Rail: Backlinks */}
+      <div className="rs-card" style={{ padding: 12 }}>
+        <div className="rs-card-label" style={{ marginBottom: 12 }}>BACKLINKS</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {backlinks.map(b => (
+            <div key={b.virtual_path} className="rs-card is-tappable" style={{ padding: 12 }} onClick={() => loadNote(b.virtual_path)}>
+              <div className="rs-card-label" style={{ fontSize: '0.65rem' }}>{b.title}</div>
+            </div>
+          ))}
+          {backlinks.length === 0 && <div className="rs-card-meta">No references.</div>}
         </div>
       </div>
+
     </div>
   )
 }
 
 function TreeList({ items, onSelect, activePath }) {
   return (
-    <ul className="tree-list">
-      {items.map(item => (
-        <TreeItem key={item.path} item={item} onSelect={onSelect} activePath={activePath} />
-      ))}
-    </ul>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {items.map(item => <TreeItem key={item.path} item={item} onSelect={onSelect} activePath={activePath} />)}
+    </div>
   )
 }
 
@@ -446,21 +312,20 @@ function TreeItem({ item, onSelect, activePath }) {
 
   if (item.is_dir) {
     return (
-      <li className="tree-node">
-        <div className="tree-label" onClick={() => setExpanded(!expanded)}>
-          <MdIcon name={expanded ? 'expand_more' : 'chevron_right'} size={18} />
-          <MdIcon name="folder" size={18} style={{ marginRight: 6, color: 'var(--md-primary)' }} />
-          {item.name}
-        </div>
-        {expanded && <TreeList items={item.children} onSelect={onSelect} activePath={activePath} />}
-      </li>
+      <div>
+        <button className="rs-drawer-item rs-drawer-item--compact" style={{ width: '100%' }} onClick={() => setExpanded(!expanded)}>
+          <span className="material-symbols-rounded">{expanded ? 'expand_more' : 'chevron_right'}</span>
+          <span style={{ flex: 1, textAlign: 'left' }}>{item.name}</span>
+        </button>
+        {expanded && <div style={{ paddingLeft: 12 }}><TreeList items={item.children} onSelect={onSelect} activePath={activePath} /></div>}
+      </div>
     )
   }
 
   return (
-    <li className={`tree-leaf ${isSelected ? 'selected' : ''}`} onClick={() => onSelect(item.path)}>
-      <MdIcon name="description" size={18} style={{ marginRight: 6, opacity: 0.6 }} />
-      {item.name.replace(/\.md$/, '')}
-    </li>
+    <button className={`rs-drawer-item rs-drawer-item--compact ${isSelected ? 'is-active' : ''}`} style={{ width: '100%' }} onClick={() => onSelect(item.path)}>
+      <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>description</span>
+      <span style={{ flex: 1, textAlign: 'left' }}>{item.name.replace(/\.md$/, '')}</span>
+    </button>
   )
 }

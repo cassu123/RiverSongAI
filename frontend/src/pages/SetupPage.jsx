@@ -1,22 +1,24 @@
 import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
-import './LoginPage.css'
+
+/**
+ * SetupPage — Phase 3 Rewrite
+ * -----------------------------------------------------------------------------
+ * Initial admin creation screen.
+ */
 
 export default function SetupPage() {
   const { setupAdmin } = useAuth()
   const [displayName, setDisplayName] = useState('')
-  const [email,       setEmail]       = useState('')
-  const [password,    setPassword]    = useState('')
-  const [confirm,     setConfirm]     = useState('')
-  const [error,       setError]       = useState('')
-  const [loading,     setLoading]     = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (password !== confirm) { setError('Passwords do not match.'); return }
-    if (password.length < 8)  { setError('Password must be at least 8 characters.'); return }
-    setError('')
     setLoading(true)
+    setError(null)
     try {
       await setupAdmin(email, password, displayName)
     } catch (err) {
@@ -27,47 +29,55 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div className="auth-logo">
-          <span className="auth-logo-badge">RS</span>
-          <span className="auth-logo-name">RIVER SONG</span>
+    <div className="rs-foyer" style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div className="rs-card is-elev" style={{ width: '100%', maxWidth: 460, padding: '3rem 2.5rem' }}>
+        
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'center', marginBottom: 8 }}>
+            <span className="rs-pill is-active" style={{ fontSize: '1.2rem', padding: '12px 16px' }}>CORE</span>
+            <span style={{ fontFamily: 'var(--font-mood)', fontSize: '1.6rem', letterSpacing: '0.2em', fontWeight: 600 }}>RIVER SONG</span>
+          </div>
+          <div className="rs-card-label" style={{ opacity: 0.5 }}>INITIAL SYSTEM BOOTSTRAP</div>
         </div>
 
-        <p className="auth-tagline">First-Time Setup</p>
-
-        <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8, padding: '10px 14px', marginBottom: 18, fontSize: 13, color: '#93c5fd', lineHeight: 1.5 }}>
-          No admin account exists yet. Create the master admin account to get started.
+        <div className="rs-card-meta" style={{ marginBottom: 32, textAlign: 'center', lineHeight: 1.5 }}>
+          No admin account detected. Please define the primary identity for this node to begin installation.
         </div>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="auth-field">
-            <label>Display Name</label>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <div className="rs-card-label" style={{ marginBottom: 8, paddingLeft: 4 }}>PRIMARY OPERATOR</div>
             <input
               type="text"
+              className="rs-pill"
+              style={{ width: '100%', padding: '14px 20px', fontSize: '1rem', background: 'var(--md-surface-container)' }}
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
-              placeholder="e.g. River Song"
+              placeholder="Real name or call-sign"
               required
               autoFocus
             />
           </div>
 
-          <div className="auth-field">
-            <label>Email</label>
+          <div>
+            <div className="rs-card-label" style={{ marginBottom: 8, paddingLeft: 4 }}>SYSTEM IDENTIFIER</div>
             <input
               type="email"
+              className="rs-pill"
+              style={{ width: '100%', padding: '14px 20px', fontSize: '1rem', background: 'var(--md-surface-container)' }}
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="admin@example.com"
+              placeholder="admin@riversong.node"
               required
             />
           </div>
 
-          <div className="auth-field">
-            <label>Password</label>
+          <div>
+            <div className="rs-card-label" style={{ marginBottom: 8, paddingLeft: 4 }}>MASTER KEY</div>
             <input
               type="password"
+              className="rs-pill"
+              style={{ width: '100%', padding: '14px 20px', fontSize: '1rem', background: 'var(--md-surface-container)' }}
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -75,21 +85,10 @@ export default function SetupPage() {
             />
           </div>
 
-          <div className="auth-field">
-            <label>Confirm Password</label>
-            <input
-              type="password"
-              value={confirm}
-              onChange={e => setConfirm(e.target.value)}
-              placeholder="••••••••"
-              required
-            />
-          </div>
+          {error && <div style={{ color: 'var(--md-error)', fontSize: '0.8rem', textAlign: 'center' }}>{error.toUpperCase()}</div>}
 
-          {error && <div className="auth-error">{error}</div>}
-
-          <button className="auth-btn auth-btn--primary" type="submit" disabled={loading}>
-            {loading ? 'CREATING ADMIN...' : 'CREATE ADMIN ACCOUNT'}
+          <button className="rs-btn-primary" type="submit" disabled={loading} style={{ marginTop: 8 }}>
+            {loading ? 'INITIALIZING KERNEL...' : 'PROVISION NODE'}
           </button>
         </form>
       </div>

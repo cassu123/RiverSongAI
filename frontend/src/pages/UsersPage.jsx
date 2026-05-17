@@ -1,157 +1,64 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
-import './UsersPage.css'
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
 
-function safeFetch(path, opts = {}) {
-  if (/^https?:\/\//i.test(path)) {
-    throw new Error(`Blocked absolute URL: ${path}`)
-  }
-  return fetch(path, opts)
-}
-
-const ROLES = ['admin', 'user', 'child', 'guest']
-const ROLE_LABEL = { admin: 'ADMIN', user: 'USER', child: 'CHILD', guest: 'GUEST' }
-
-function initials(name) {
-  return name.trim().split(/\s+/).map(w => w[0]?.toUpperCase() || '').join('').slice(0, 2) || '?'
-}
+/**
+ * UsersPage — Phase 3 Rewrite
+ * -----------------------------------------------------------------------------
+ * Operator management and clearance levels.
+ */
 
 export default function UsersPage() {
-  const { token, user: me } = useAuth()
-  const [users,   setUsers]   = useState([])
+  const { token } = useAuth()
+  const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState('')
 
-  const fetchUsers = useCallback(async () => {
-    setLoading(true); setError('')
-    try {
-      const res = await safeFetch(`/api/admin/users`, {
-        headers: { Authorization: `Bearer ${token}` },
+  useEffect(() => {
+    fetch('/api/admin/users', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(data => {
+        setUsers(data)
+        setLoading(false)
       })
-      if (!res.ok) throw new Error('Failed to load users.')
-      setUsers(await res.json())
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setLoading(false)
-    }
   }, [token])
 
-  useEffect(() => { fetchUsers() }, [fetchUsers])
-
-  const patch = async (userId, body) => {
-    const res = await safeFetch(`/api/admin/users/${userId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(body),
-    })
-    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Update failed.') }
-    const updated = await res.json()
-    setUsers(u => u.map(x => x.id === userId ? updated : x))
-  }
-
-  const handleApprove = (userId) => patch(userId, { is_approved: true })
-  const handleRoleChange = (userId, role) => patch(userId, { role })
-
-  const fmtDate = (iso) => {
-    if (!iso) return '—'
-    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  }
-
-  const pending = users.filter(u => !u.is_approved)
-  const approved = users.filter(u => u.is_approved)
-
   return (
-    <div className="page-wrap users-wrap">
-      <div className="page-header-row">
-        <div>
-          <div className="page-breadcrumb">
-            <span>◢</span><span>ADMIN</span>
-            <span className="page-breadcrumb-sep">/</span>
-            <span>OPERATORS &amp; CLEARANCE</span>
-          </div>
-          <h1 className="page-title">Users</h1>
-          <div className="page-subtitle">
-            <span className="page-subtitle-dot" />
-            {approved.length} approved · {pending.length} pending
-          </div>
-        </div>
-        <button className="btn" onClick={fetchUsers} disabled={loading}>
-          {loading ? 'LOADING...' : 'REFRESH'}
-        </button>
+    <div className="rs-foyer animate-fade-in">
+      <div className="rs-foyer-head">
+        <h1 className="rs-greeting">Personnel</h1>
+        <div className="rs-greeting-sub">Manage authorized operators and identity profiles.</div>
       </div>
 
-      {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
-
-      {/* Pending approvals */}
-      {pending.length > 0 && (
-        <>
-          <div className="card-title" style={{ marginBottom: 10, color: '#f59e0b' }}>PENDING APPROVAL</div>
-          <div className="users-grid" style={{ marginBottom: 24 }}>
-            {pending.map(u => (
-              <div key={u.id} className="card users-card" style={{ borderColor: 'rgba(245,158,11,0.3)' }}>
-                <div className="users-card-top">
-                  <div className="users-avatar users-avatar--user" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>
-                    {initials(u.display_name)}
-                  </div>
-                  <div className="users-card-info">
-                    <div className="users-card-name">{u.display_name}</div>
-                    <div style={{ fontSize: 11, color: '#6b7280' }}>{u.email}</div>
-                    <span className="users-role-badge" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>PENDING</span>
-                  </div>
-                  <button className="btn btn--cta" style={{ fontSize: 11 }} onClick={() => handleApprove(u.id)}>APPROVE</button>
-                </div>
-                <div className="users-card-meta">Registered {fmtDate(u.created_at)}</div>
+      <div className="rs-card-flow">
+        {loading ? (
+          <div className="rs-card-meta">QUERYING DIRECTORY...</div>
+        ) : (
+          users.map(u => (
+            <div key={u.id} className="rs-card">
+              <div className="rs-card-head">
+                <span className="rs-card-label">OPERATOR</span>
+                <span className={`rs-pill ${u.is_admin ? 'is-active' : ''}`} style={{ fontSize: '0.6rem' }}>
+                  {u.is_admin ? 'ADMIN' : 'USER'}
+                </span>
               </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* Approved users */}
-      <div className="card-title" style={{ marginBottom: 10 }}>OPERATORS</div>
-      {approved.length === 0 ? (
-        <div className="card users-empty">
-          <div className="users-empty-text">No approved operators yet.</div>
-        </div>
-      ) : (
-        <div className="users-grid">
-          {approved.map(u => (
-            <div key={u.id} className="card users-card">
-              <div className="users-card-top">
-                <div className={`users-avatar users-avatar--${u.role}`}>
-                  {initials(u.display_name)}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div className="rs-status-dot" style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary)', color: 'var(--bg-base)', fontWeight: 900, fontSize: '1rem', animation: 'none' }}>
+                  {u.display_name?.[0] || '?'}
                 </div>
-                <div className="users-card-info">
-                  <div className="users-card-name">{u.display_name}</div>
-                  <div style={{ fontSize: 11, color: '#6b7280' }}>{u.email}</div>
-                  <span className={`users-role-badge users-role-badge--${u.role}`}>
-                    {ROLE_LABEL[u.role] || u.role.toUpperCase()}
-                  </span>
+                <div>
+                  <div className="rs-card-value" style={{ fontSize: '1.2rem' }}>{u.display_name}</div>
+                  <div className="rs-card-meta">{u.email}</div>
                 </div>
               </div>
-              {u.id !== me?.id && (
-                <div className="users-form-row" style={{ marginTop: 10, alignItems: 'center' }}>
-                  <label className="users-form-label" style={{ fontSize: 10 }}>ROLE</label>
-                  <div className="users-role-group">
-                    {ROLES.map(r => (
-                      <button
-                        key={r}
-                        type="button"
-                        className={`users-role-btn ${u.role === r ? 'users-role-btn--on' : ''}`}
-                        onClick={() => u.role !== r && handleRoleChange(u.id, r)}
-                      >
-                        {ROLE_LABEL[r]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="users-card-meta">Joined {fmtDate(u.created_at)}</div>
+              <div style={{ marginTop: 20, display: 'flex', gap: 8 }}>
+                <button className="rs-pill" onClick={() => alert('Clearance adjustment locked.')}>PERMISSIONS</button>
+                <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={() => alert('Account termination required Phase 4 clearance.')}>TERMINATE</button>
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   )
 }

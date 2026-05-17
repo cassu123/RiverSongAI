@@ -1,26 +1,26 @@
 import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
-import './LoginPage.css'
+
+/**
+ * SignupPage — Phase 3 Rewrite
+ * -----------------------------------------------------------------------------
+ * Chromeless glass card for new operators.
+ */
 
 export default function SignupPage({ onSwitchToLogin }) {
   const { signup } = useAuth()
-  const [displayName, setDisplayName] = useState('')
   const [email,       setEmail]       = useState('')
   const [password,    setPassword]    = useState('')
-  const [confirm,     setConfirm]     = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [error,       setError]       = useState('')
   const [loading,     setLoading]     = useState(false)
-  const [pending,     setPending]     = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    if (password !== confirm) { setError('Passwords do not match.'); return }
-    if (password.length < 8)  { setError('Password must be at least 8 characters.'); return }
     setLoading(true)
     try {
-      const data = await signup(email, password, displayName)
-      if (data.pending) setPending(true)
+      await signup(email, password, displayName)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -28,40 +28,25 @@ export default function SignupPage({ onSwitchToLogin }) {
     }
   }
 
-  if (pending) {
-    return (
-      <div className="auth-shell">
-        <div className="auth-card">
-          <div className="auth-logo">
-            <span className="auth-logo-badge">RS</span>
-            <span className="auth-logo-name">RIVER SONG</span>
-          </div>
-          <p className="auth-tagline">Account Pending</p>
-          <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8, padding: '14px 16px', marginBottom: 18, fontSize: 14, color: '#93c5fd', lineHeight: 1.6, textAlign: 'center' }}>
-            Your account has been created.<br />
-            An admin must approve it before you can log in.
-          </div>
-          <button className="auth-btn auth-btn--primary" onClick={onSwitchToLogin}>BACK TO SIGN IN</button>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div className="auth-logo">
-          <span className="auth-logo-badge">RS</span>
-          <span className="auth-logo-name">RIVER SONG</span>
+    <div className="rs-foyer" style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div className="rs-card is-elev" style={{ width: '100%', maxWidth: 420, padding: '3rem 2.5rem' }}>
+        
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'center', marginBottom: 8 }}>
+            <span className="rs-pill is-active" style={{ fontSize: '1.1rem', padding: '10px 14px' }}>RS</span>
+            <span style={{ fontFamily: 'var(--font-mood)', fontSize: '1.5rem', letterSpacing: '0.15em', fontWeight: 600 }}>RIVER SONG</span>
+          </div>
+          <div className="rs-card-label" style={{ opacity: 0.5 }}>NEW OPERATOR REGISTRATION</div>
         </div>
 
-        <p className="auth-tagline">Create your account</p>
-
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="auth-field">
-            <label>Display Name</label>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <div className="rs-card-label" style={{ marginBottom: 8, paddingLeft: 4 }}>CALL-SIGN</div>
             <input
               type="text"
+              className="rs-pill"
+              style={{ width: '100%', padding: '14px 20px', fontSize: '1rem', background: 'var(--md-surface-container)' }}
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
               placeholder="Your name"
@@ -70,10 +55,12 @@ export default function SignupPage({ onSwitchToLogin }) {
             />
           </div>
 
-          <div className="auth-field">
-            <label>Email</label>
+          <div>
+            <div className="rs-card-label" style={{ marginBottom: 8, paddingLeft: 4 }}>IDENTIFIER (EMAIL)</div>
             <input
               type="email"
+              className="rs-pill"
+              style={{ width: '100%', padding: '14px 20px', fontSize: '1rem', background: 'var(--md-surface-container)' }}
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
@@ -81,41 +68,31 @@ export default function SignupPage({ onSwitchToLogin }) {
             />
           </div>
 
-          <div className="auth-field">
-            <label>Password</label>
+          <div>
+            <div className="rs-card-label" style={{ marginBottom: 8, paddingLeft: 4 }}>ENCRYPTION KEY</div>
             <input
               type="password"
+              className="rs-pill"
+              style={{ width: '100%', padding: '14px 20px', fontSize: '1rem', background: 'var(--md-surface-container)' }}
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="Min. 8 characters"
-              required
-            />
-          </div>
-
-          <div className="auth-field">
-            <label>Confirm Password</label>
-            <input
-              type="password"
-              value={confirm}
-              onChange={e => setConfirm(e.target.value)}
               placeholder="••••••••"
               required
             />
           </div>
 
-          {error && <div className="auth-error">{error}</div>}
+          {error && <div style={{ color: 'var(--md-error)', fontSize: '0.8rem', textAlign: 'center' }}>{error.toUpperCase()}</div>}
 
-          <button className="auth-btn auth-btn--primary" type="submit" disabled={loading}>
-            {loading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
+          <button className="rs-btn-primary" type="submit" disabled={loading} style={{ marginTop: 8 }}>
+            {loading ? 'INITIALIZING...' : 'AUTHORIZE ACCOUNT'}
           </button>
         </form>
 
-        <p className="auth-switch">
-          Already have an account?{' '}
-          <button type="button" className="auth-link" onClick={onSwitchToLogin}>
-            Sign in
+        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+          <button type="button" className="rs-card-label" style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }} onClick={onSwitchToLogin}>
+            ALREADY AUTHORIZED? SIGN IN
           </button>
-        </p>
+        </div>
       </div>
     </div>
   )

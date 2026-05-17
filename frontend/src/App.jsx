@@ -98,6 +98,8 @@ export default function App() {
     return load('rs-profile', { displayName: 'User', username: '', birthday: '' })
   })
 
+  const [pageAction, setPageAction] = useState(null)
+
   useEffect(() => {
     document.body.classList.add('rs-stage-active')
     return () => document.body.classList.remove('rs-stage-active')
@@ -106,6 +108,10 @@ export default function App() {
   useEffect(() => { save('rs-page',    currentPage) }, [currentPage])
   useEffect(() => { save('rs-admin',   adminMode)   }, [adminMode])
   useEffect(() => { save('rs-profile', profile)     }, [profile])
+
+  useEffect(() => {
+    setPageAction(null)
+  }, [currentPage])
 
   useEffect(() => {
     save(universeKey, universe)
@@ -332,18 +338,19 @@ export default function App() {
         onOpenDrawer={() => setDrawerOpen(true)}
         onOpenSpeak={() => handleNavigate('speak')}
         onHome={() => handleNavigate('dashboard')}
+        action={pageAction}
       >
         <ErrorBoundary key={currentPage}>
           <Suspense fallback={<div className="loading-screen">INITIALIZING...</div>}>
             <div className="page-enter">
-              {currentPage === 'dashboard'  && <DashboardPage  onNavigate={handleNavigate} isAdmin={adminMode} />}
-              {currentPage === 'speak'      && <ConversationPage />}
-              {currentPage === 'chat'       && <ChatPage />}
-              {currentPage === 'memory'     && <MemoryPage />}
-              {currentPage === 'routines'   && <RoutinesPage />}
-              {currentPage === 'home'       && <HomeNodePage />}
-              {currentPage === 'users'      && <UsersPage />}
-              {currentPage === 'killswitch' && <KillSwitchPage />}
+              {currentPage === 'dashboard'  && <DashboardPage  onNavigate={handleNavigate} isAdmin={adminMode} setAction={setPageAction} />}
+              {currentPage === 'speak'      && <ConversationPage setAction={setPageAction} />}
+              {currentPage === 'chat'       && <ChatPage setAction={setPageAction} />}
+              {currentPage === 'memory'     && <MemoryPage setAction={setPageAction} />}
+              {currentPage === 'routines'   && <RoutinesPage setAction={setPageAction} />}
+              {currentPage === 'home'       && <HomeNodePage setAction={setPageAction} />}
+              {currentPage === 'users'      && <UsersPage setAction={setPageAction} />}
+              {currentPage === 'killswitch' && <KillSwitchPage setAction={setPageAction} />}
               {currentPage === 'profile'    && (
                 <ProfilePage
                   profile={profile}
@@ -354,24 +361,26 @@ export default function App() {
                   onUniverseChange={setUniverseSafe}
                   onEnvironmentChange={setEnvironmentSafe}
                   onMoodChange={setMood}
+                  setAction={setPageAction}
                 />
               )}
               {currentPage === 'settings'   && (
                 <SettingsPage 
                   onFeaturesChanged={refreshFeatures}
+                  setAction={setPageAction}
                 />
               )}
-              {currentPage === 'feeds'      && <FeedsPage />}
-              {currentPage === 'google'     && <GooglePage />}
-              {currentPage === 'commerce'   && <CommercePage />}
-              {currentPage === 'reading'    && <ReadingPage />}
-              {currentPage === 'analytics'  && <AnalyticsPage />}
-              {currentPage === 'inventory'    && <InventoryPage />}
-              {currentPage === 'chronos'      && <ChronosPage />}
-              {currentPage === 'vehicles'     && <VehiclePage onNavigate={handleNavigate} />}
-              {currentPage === 'environment'  && <EnvironmentPage />}
+              {currentPage === 'feeds'      && <FeedsPage setAction={setPageAction} />}
+              {currentPage === 'google'     && <GooglePage setAction={setPageAction} />}
+              {currentPage === 'commerce'   && <CommercePage setAction={setPageAction} />}
+              {currentPage === 'reading'    && <ReadingPage setAction={setPageAction} />}
+              {currentPage === 'analytics'  && <AnalyticsPage setAction={setPageAction} />}
+              {currentPage === 'inventory'    && <InventoryPage setAction={setPageAction} />}
+              {currentPage === 'chronos'      && <ChronosPage setAction={setPageAction} />}
+              {currentPage === 'vehicles'     && <VehiclePage onNavigate={handleNavigate} setAction={setPageAction} />}
+              {currentPage === 'environment'  && <EnvironmentPage setAction={setPageAction} />}
 
-              {currentPage === 'culinary'    && <CulinaryPage />}
+              {currentPage === 'culinary'    && <CulinaryPage setAction={setPageAction} />}
             </div>
           </Suspense>
         </ErrorBoundary>

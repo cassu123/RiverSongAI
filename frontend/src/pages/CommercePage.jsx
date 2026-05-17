@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
-import './CommercePage.css'
 
 // ---------------------------------------------------------------------------
 // Constants & Helpers
@@ -30,9 +29,9 @@ async function apiFetch(path, token, opts = {}) {
 }
 
 function StockBadge({ qty, threshold }) {
-  if (qty === 0) return <span className="iv-badge iv-badge--out">OUT</span>;
-  if (qty <= threshold) return <span className="iv-badge iv-badge--low">LOW</span>;
-  return <span className="iv-badge iv-badge--ok">IN STOCK</span>;
+  if (qty === 0) return <span className="rs-pill" style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171', borderColor: '#f87171' }}>OUT</span>;
+  if (qty <= threshold) return <span className="rs-pill" style={{ background: 'rgba(250,204,21,0.1)', color: '#facc15', borderColor: '#facc15' }}>LOW</span>;
+  return <span className="rs-pill" style={{ background: 'rgba(74,222,128,0.1)', color: '#4ade80', borderColor: '#4ade80' }}>IN STOCK</span>;
 }
 
 // ---------------------------------------------------------------------------
@@ -45,7 +44,6 @@ function ListingBuilder({ product }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    // Auto-generate listing text based on product
     const title = `${platform} Listing: ${product.name}`;
     const desc = `${product.description || 'No description available.'}\n\nCategory: ${product.category}\nSKU: ${product.sku}`;
     setListing({ title, description: desc });
@@ -58,19 +56,32 @@ function ListingBuilder({ product }) {
   };
 
   return (
-    <div className="iv-listing-builder">
-      <div className="iv-listing-title">LIST ON PLATFORM</div>
-      <div className="iv-form-row">
-        <select className="iv-input" value={platform} onChange={(e) => setPlatform(e.target.value)}>
+    <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--md-outline-variant)' }}>
+      <div className="rs-card-label" style={{ marginBottom: 12, color: 'var(--primary)' }}>LIST ON PLATFORM</div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <select 
+          className="rs-pill" 
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', color: 'var(--fg)', padding: '0 12px' }}
+          value={platform} 
+          onChange={(e) => setPlatform(e.target.value)}
+        >
           {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
-        <button className="iv-btn iv-btn--ghost iv-btn--sm" onClick={handleCopy}>
+        <button className="rs-pill" onClick={handleCopy}>
           {copied ? 'COPIED!' : 'COPY TO CLIPBOARD'}
         </button>
       </div>
-      <div className="iv-listing-preview">
-        <strong>{listing.title}</strong>
-        <p>{listing.description}</p>
+      <div style={{ 
+        padding: 12, 
+        background: 'rgba(0,0,0,0.2)', 
+        borderRadius: 8, 
+        fontSize: '0.8rem', 
+        maxHeight: 150, 
+        overflowY: 'auto',
+        border: '1px solid var(--md-outline-variant)'
+      }}>
+        <strong style={{ color: 'var(--primary)' }}>{listing.title}</strong>
+        <p style={{ whiteSpace: 'pre-wrap', marginTop: 4, opacity: 0.8 }}>{listing.description}</p>
       </div>
     </div>
   );
@@ -100,44 +111,25 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
 
   const handleGenerateImage = async () => {
     if (!form.name.trim()) { setError('Product name is required for generation.'); return; }
-    
     setGenerating(true);
     setError('');
-    
-    // Prompt as requested in Task 1B
     const prompt = `${form.name} product photography, white background, professional`;
-    
     try {
       const res = await fetch('/api/image/generate', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify({
-          prompt,
-          style: "product",
-          context: form.description,
-          width: 512,
-          height: 512,
-          steps: 20
-        }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ prompt, style: "product", context: form.description, width: 512, height: 512, steps: 20 }),
         signal: AbortSignal.timeout(90000)
       });
-      
-      if (res.status === 403) throw new Error("Image generation disabled in settings.");
-      if (res.status === 503) throw new Error("Image generation service unavailable.");
-      if (!res.ok) throw new Error("Image generation failed.");
-      
+      if (res.status === 403) throw new Error("Image generation disabled.");
+      if (!res.ok) throw new Error("Generation failed.");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       setImagePreview(url);
-      
       const file = new File([blob], `${form.name.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
       setImageFile(file);
-      
     } catch (err) {
-      setError(err.name === 'AbortError' ? 'Generation timed out (90s).' : err.message);
+      setError(err.message);
     } finally {
       setGenerating(false);
     }
@@ -146,25 +138,19 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
   const handleAnalyzePhoto = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setAnalyzing(true);
     setError('');
     try {
       const fd = new FormData();
       fd.append('file', file);
-      // prompt as requested in Task 1A
       fd.append('prompt', "Analyze this product image. Return JSON with: title (string), description (string), category (string), suggested_price (number), tags (array of strings)");
-
       const res = await fetch('/api/vision/analyze', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: fd
       });
-      if (!res.ok) throw new Error(res.status === 503 ? 'Vision model not enabled.' : 'Analysis failed.');
+      if (!res.ok) throw new Error('Analysis failed.');
       const data = await res.json();
-
-      // The backend /analyze might return just description string if not using listing endpoint,
-      // but the prompt asked for structured data. We try to parse if it's a string.
       let structured = data;
       if (typeof data.description === 'string' && data.description.includes('{')) {
         try {
@@ -172,18 +158,14 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
           if (match) structured = JSON.parse(match[0]);
         } catch (e) {}
       }
-
       if (structured.title) setForm(f => ({ ...f, name: structured.title }));
       if (structured.description) setForm(f => ({ ...f, description: structured.description }));
       if (structured.category) setForm(f => ({ ...f, category: structured.category }));
       if (structured.suggested_price) setForm(f => ({ ...f, unit_price: structured.suggested_price }));
-      
-      // Update preview if we just uploaded a file
       const reader = new FileReader();
       reader.onload = (ev) => setImagePreview(ev.target.result);
       reader.readAsDataURL(file);
       setImageFile(file);
-
     } catch (err) {
       setError(err.message);
     } finally {
@@ -213,8 +195,7 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
         unit_price: form.unit_price !== '' ? Number(form.unit_price) : null,
         cost_price: form.cost_price !== '' ? Number(form.cost_price) : null,
       };
-      const saved = await onSave(payload, imageFile);
-      return saved;
+      await onSave(payload, imageFile);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -223,76 +204,87 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
   };
 
   return (
-    <div className="iv-form-panel">
-      {error && <div className="iv-error">{error}</div>}
-      <div className="iv-form-body">
-        <div className="iv-form-image-col">
-          <div className="iv-form-image-drop" onClick={() => fileRef.current.click()} title="Click to upload image">
+    <div className="rs-card is-wide animate-fade-in" style={{ marginBottom: 32, border: '1px solid var(--primary)' }}>
+      {error && <div style={{ color: '#f87171', marginBottom: 16, fontSize: '0.85rem' }}>{error}</div>}
+      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+        <div style={{ width: 160 }}>
+          <div 
+            style={{ 
+              width: 160, height: 160, 
+              border: '2px dashed var(--md-outline-variant)', 
+              borderRadius: 'var(--md-shape-lg)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', 
+              cursor: 'pointer', overflow: 'hidden'
+            }} 
+            onClick={() => fileRef.current.click()}
+          >
             {imagePreview
-              ? <img src={imagePreview} alt="preview" className="iv-form-image-preview" />
-              : <span className="iv-form-image-hint">+ IMAGE</span>
+              ? <img src={imagePreview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <span className="rs-card-label">+ IMAGE</span>
             }
           </div>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-            <label className="iv-btn iv-btn--ghost iv-btn--sm" style={{ cursor: analyzing ? 'default' : 'pointer', opacity: analyzing ? 0.7 : 1 }}>
-              {analyzing ? 'Analyzing...' : 'Analyze Photo'}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+            <label className="rs-pill" style={{ cursor: analyzing ? 'default' : 'pointer', justifyContent: 'center' }}>
+              <span className="material-symbols-rounded">visibility</span>
+              {analyzing ? '...' : 'ANALYZE'}
               <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAnalyzePhoto} disabled={analyzing} />
             </label>
-            <button className="iv-btn iv-btn--ghost iv-btn--sm" onClick={handleGenerateImage} disabled={generating}>
-              {generating ? 'Generating...' : '✨ Generate Image'}
+            <button className="rs-pill" onClick={handleGenerateImage} disabled={generating} style={{ justifyContent: 'center' }}>
+              <span className="material-symbols-rounded">auto_awesome</span>
+              {generating ? '...' : 'GENERATE'}
             </button>
           </div>
         </div>
 
-        <div className="iv-form-fields">
-          <div className="iv-form-row">
-            <div className="iv-field">
-              <label className="iv-label">PRODUCT NAME *</label>
-              <input className="iv-input" value={form.name} onChange={set('name')} placeholder="e.g. Midnight Bloom" />
+        <div style={{ flex: 1, minWidth: 280, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1 }}>
+              <label className="rs-card-label">PRODUCT NAME *</label>
+              <input style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} value={form.name} onChange={set('name')} placeholder="e.g. Midnight Bloom" />
             </div>
-            <div className="iv-field">
-              <label className="iv-label">SKU *</label>
-              <input className="iv-input" value={form.sku} onChange={set('sku')} placeholder="e.g. HBH-MB-001" />
+            <div style={{ flex: 1 }}>
+              <label className="rs-card-label">SKU *</label>
+              <input style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} value={form.sku} onChange={set('sku')} placeholder="e.g. HBH-MB-001" />
             </div>
           </div>
-          <div className="iv-form-row">
-            <div className="iv-field">
-              <label className="iv-label">CATEGORY</label>
-              <select className="iv-input" value={form.category} onChange={set('category')}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1 }}>
+              <label className="rs-card-label">CATEGORY</label>
+              <select style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} value={form.category} onChange={set('category')}>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <div className="iv-field">
-              <label className="iv-label">STOCK QTY</label>
-              <input className="iv-input" type="number" min="0" value={form.stock_qty} onChange={set('stock_qty')} />
+            <div style={{ flex: 1 }}>
+              <label className="rs-card-label">STOCK QTY</label>
+              <input style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} type="number" min="0" value={form.stock_qty} onChange={set('stock_qty')} />
             </div>
-            <div className="iv-field">
-              <label className="iv-label">LOW STOCK THRESHOLD</label>
-              <input className="iv-input" type="number" min="0" value={form.threshold} onChange={set('threshold')} />
-            </div>
-          </div>
-          <div className="iv-form-row">
-            <div className="iv-field">
-              <label className="iv-label">SALE PRICE ($)</label>
-              <input className="iv-input" type="number" min="0" step="0.01" value={form.unit_price} onChange={set('unit_price')} placeholder="0.00" />
-            </div>
-            <div className="iv-field">
-              <label className="iv-label">COST PRICE ($)</label>
-              <input className="iv-input" type="number" min="0" step="0.01" value={form.cost_price} onChange={set('cost_price')} placeholder="0.00" />
+            <div style={{ flex: 1 }}>
+              <label className="rs-card-label">THRESHOLD</label>
+              <input style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} type="number" min="0" value={form.threshold} onChange={set('threshold')} />
             </div>
           </div>
-          <div className="iv-field">
-            <label className="iv-label">DESCRIPTION</label>
-            <textarea className="iv-input iv-textarea" value={form.description} onChange={set('description')} rows={2} placeholder="Optional notes..." />
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1 }}>
+              <label className="rs-card-label">SALE PRICE ($)</label>
+              <input style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} type="number" min="0" step="0.01" value={form.unit_price} onChange={set('unit_price')} placeholder="0.00" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className="rs-card-label">COST PRICE ($)</label>
+              <input style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} type="number" min="0" step="0.01" value={form.cost_price} onChange={set('cost_price')} placeholder="0.00" />
+            </div>
+          </div>
+          <div>
+            <label className="rs-card-label">DESCRIPTION</label>
+            <textarea style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)', resize: 'vertical' }} value={form.description} onChange={set('description')} rows={2} placeholder="Optional notes..." />
           </div>
         </div>
       </div>
 
-      <div className="iv-form-footer">
-        <button className="iv-btn iv-btn--ghost" onClick={onCancel} disabled={saving}>CANCEL</button>
-        <button className="iv-btn iv-btn--primary" onClick={handleSubmit} disabled={saving}>
-          {saving ? 'SAVING...' : (saveLabel || '>> SAVE')}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+        <button className="rs-pill" onClick={onCancel} disabled={saving}>CANCEL</button>
+        <button className="rs-btn-primary" onClick={handleSubmit} disabled={saving}>
+          {saving ? 'SAVING...' : (saveLabel || 'SAVE')}
         </button>
       </div>
     </div>
@@ -303,7 +295,7 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
 // Product Card Component
 // ---------------------------------------------------------------------------
 
-function ProductCard({ product, onEdit, onDelete, onGenerateImage, token }) {
+function ProductCard({ product, onEdit, onDelete, onGenerateImage }) {
   const [showListing, setShowListing] = useState(false);
   const [generating, setGenerating] = useState(false);
 
@@ -314,64 +306,38 @@ function ProductCard({ product, onEdit, onDelete, onGenerateImage, token }) {
   };
 
   return (
-    <div className={`iv-card ${product.stock_qty === 0 ? 'iv-card--out' : product.stock_qty <= product.threshold ? 'iv-card--low' : ''}`}>
-      <div className="iv-card-img-wrap">
+    <div className="rs-card animate-fade-in" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'relative', height: 180, background: 'rgba(0,0,0,0.2)' }}>
         {product.image_data
-          ? <img src={product.image_data} alt={product.name} className="iv-card-img" />
-          : <div className="iv-card-img-placeholder"><span>{product.category?.slice(0,3).toUpperCase() || 'IMG'}</span></div>
+          ? <img src={product.image_data} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.3, fontSize: '2rem' }}>
+              {product.category?.slice(0,3).toUpperCase() || 'IMG'}
+            </div>
         }
-        <StockBadge qty={product.stock_qty} threshold={product.threshold} />
+        <div style={{ position: 'absolute', top: 12, right: 12 }}>
+          <StockBadge qty={product.stock_qty} threshold={product.threshold} />
+        </div>
       </div>
-      <div className="iv-card-body">
-        <div className="iv-card-sku">{product.sku}</div>
-        <div className="iv-card-name">{product.name}</div>
-        <div className="iv-card-meta">
-          <span className="iv-card-category">{product.category}</span>
-          {product.unit_price != null && <span className="iv-card-price">${Number(product.unit_price).toFixed(2)}</span>}
+      <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>{product.sku}</div>
+        <div className="rs-card-value" style={{ fontSize: '1.1rem', marginBottom: 8 }}>{product.name}</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <span className="rs-card-meta" style={{ margin: 0 }}>{product.category}</span>
+          {product.unit_price != null && <span style={{ color: 'var(--primary)', fontWeight: 600 }}>${Number(product.unit_price).toFixed(2)}</span>}
         </div>
-        <div className="iv-card-actions">
-          <button className="iv-btn iv-btn--ghost iv-btn--sm" onClick={() => onEdit(product)}>Edit</button>
-          <button className="iv-btn iv-btn--ghost iv-btn--sm" onClick={handleGen} disabled={generating}>
-            {generating ? '...' : '✨ Gen'}
+        
+        <div style={{ marginTop: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={() => onEdit(product)}>EDIT</button>
+          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={handleGen} disabled={generating}>
+            {generating ? '...' : 'GEN'}
           </button>
-          <button className="iv-btn iv-btn--ghost iv-btn--sm" onClick={() => setShowListing(!showListing)}>
-            {showListing ? 'Hide List' : 'List...'}
+          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={() => setShowListing(!showListing)}>
+            {showListing ? 'HIDE' : 'LIST'}
           </button>
-          <button className="iv-btn iv-btn--danger iv-btn--sm" onClick={() => onDelete(product.id)}>Del</button>
+          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem', color: '#f87171', borderColor: '#f87171' }} onClick={() => onDelete(product.id)}>DEL</button>
         </div>
+
         {showListing && <ListingBuilder product={product} />}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Product Row Component
-// ---------------------------------------------------------------------------
-
-function ProductRow({ product, onEdit, onDelete }) {
-  return (
-    <div className={`iv-row ${product.stock_qty === 0 ? 'iv-row--out' : product.stock_qty <= product.threshold ? 'iv-row--low' : ''}`}>
-      <div className="iv-row-img">
-        {product.image_data
-          ? <img src={product.image_data} alt={product.name} className="iv-row-thumb" />
-          : <div className="iv-row-thumb-placeholder">{product.category?.slice(0,3).toUpperCase() || '—'}</div>
-        }
-      </div>
-      <div className="iv-row-main">
-        <div className="iv-row-name">{product.name}</div>
-        <div className="iv-row-sku">{product.sku} · {product.category}</div>
-      </div>
-      <div className="iv-row-stock">
-        <StockBadge qty={product.stock_qty} threshold={product.threshold} />
-        <span className="iv-row-qty">{product.stock_qty} units</span>
-      </div>
-      <div className="iv-row-price">
-        {product.unit_price != null ? `$${Number(product.unit_price).toFixed(2)}` : '—'}
-      </div>
-      <div className="iv-row-actions">
-        <button className="iv-btn iv-btn--ghost iv-btn--sm" onClick={() => onEdit(product)}>Edit</button>
-        <button className="iv-btn iv-btn--danger iv-btn--sm" onClick={() => onDelete(product.id)}>Del</button>
       </div>
     </div>
   );
@@ -381,14 +347,13 @@ function ProductRow({ product, onEdit, onDelete }) {
 // Main Page Component
 // ---------------------------------------------------------------------------
 
-export default function CommercePage() {
+export default function CommercePage({ setAction }) {
   const { token } = useAuth()
   const [workspace, setWorkspace] = useState(null)
   const [wsLoading, setWsLoading] = useState(true)
   const [wsError, setWsError]     = useState('')
   const [products, setProducts]     = useState([]);
   const [loading, setLoading]       = useState(false);
-  const [view, setView]             = useState('grid');
   const [search, setSearch]         = useState('');
   const [filterCat, setFilterCat]   = useState('ALL');
   const [formMode, setFormMode]     = useState('none');
@@ -421,6 +386,36 @@ export default function CommercePage() {
 
   useEffect(() => { fetchWorkspace() }, [fetchWorkspace]);
   useEffect(() => { fetchProducts() }, [fetchProducts]);
+
+  useEffect(() => {
+    if (!workspace) {
+      setAction(null)
+      return
+    }
+
+    setAction(
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', width: '100%', maxWidth: 800, margin: '0 auto' }}>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <span className="material-symbols-rounded" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>search</span>
+          <input 
+            style={{ 
+              width: '100%', background: 'rgba(255,255,255,0.08)', 
+              border: '1px solid var(--md-outline-variant)', 
+              borderRadius: 30, padding: '10px 12px 10px 40px', color: 'var(--fg)',
+              fontSize: '0.92rem'
+            }} 
+            placeholder="Search products..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+          />
+        </div>
+        <button className="rs-btn-primary" onClick={() => { setFormMode('add'); window.scrollTo(0,0); }}>
+          <span className="material-symbols-rounded">add</span>
+          PRODUCT
+        </button>
+      </div>
+    )
+  }, [workspace, search, setAction])
 
   const uploadImage = async (productId, file) => {
     if (!file) return;
@@ -483,52 +478,58 @@ export default function CommercePage() {
     return matchSearch && matchCat;
   });
 
-  if (wsLoading) return <div className="page-wrap"><div className="cp-state">Loading...</div></div>;
-  if (wsError) return <div className="page-wrap"><div className="cp-state cp-state--error">Error: {wsError}</div></div>;
+  if (wsLoading) return <div className="rs-foyer"><div className="rs-card-meta">Initializing...</div></div>;
+  if (wsError) return <div className="rs-foyer"><div className="rs-card" style={{ color: '#f87171' }}>{wsError}</div></div>;
 
   return (
-    <div className="commerce-page page-wrap">
-      <div className="page-breadcrumb"><span>◢</span><span>TOOLS</span><span className="page-breadcrumb-sep">/</span><span>INVENTORY</span></div>
-      <h1 className="page-title">Inventory {workspace && <span className="cp-ws-badge">{workspace.name}</span>}</h1>
+    <div className="rs-foyer animate-fade-in">
+      <header className="rs-foyer-head">
+        <div className="rs-status-strip" style={{ marginBottom: 16 }}>
+          <span className="rs-status-dot" />
+          <span>TOOLS / COMMERCE</span>
+        </div>
+        <h1 className="rs-greeting">Inventory</h1>
+        {workspace && <div className="rs-greeting-sub">Managing {workspace.name}.</div>}
+      </header>
 
       {!workspace ? (
-        <CreateWorkspaceForm token={token} onCreate={setWorkspace} />
+        <div className="rs-card-flow">
+          <CreateWorkspaceForm token={token} onCreate={setWorkspace} />
+        </div>
       ) : (
-        <div className="iv-vault">
-          <div className="iv-toolbar">
-            <div className="iv-toolbar-left">
-              <input className="iv-input iv-search" placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <div className="iv-toolbar-right">
-              <button className="iv-btn iv-btn--primary" onClick={() => setFormMode('add')}>+ ADD PRODUCT</button>
-            </div>
-          </div>
-
+        <div className="rs-card-flow">
           {formMode !== 'none' && (
-            <div className="iv-form-section">
-              <ProductForm
-                initial={editProduct}
-                workspaceId={workspace.id}
-                token={token}
-                onSave={formMode === 'add' ? handleAdd : handleEdit}
-                onCancel={() => { setFormMode('none'); setEditProduct(null); }}
-                saveLabel={formMode === 'add' ? ">> ADD PRODUCT" : ">> SAVE CHANGES"}
-              />
-            </div>
+            <ProductForm
+              initial={editProduct}
+              workspaceId={workspace.id}
+              token={token}
+              onSave={formMode === 'add' ? handleAdd : handleEdit}
+              onCancel={() => { setFormMode('none'); setEditProduct(null); }}
+              saveLabel={formMode === 'add' ? "ADD PRODUCT" : "SAVE CHANGES"}
+            />
           )}
 
-          {loading ? <div className="iv-state">Loading products...</div> : (
-            <div className={view === 'grid' ? 'iv-grid' : 'iv-list'}>
+          {loading ? (
+            <div className="rs-card is-wide" style={{ textAlign: 'center' }}>
+              <span className="rs-card-meta">Syncing inventory data...</span>
+            </div>
+          ) : (
+            <div style={{ width: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
               {filtered.map(p => (
                 <ProductCard 
                   key={p.id} 
                   product={p} 
-                  onEdit={(p) => { setEditProduct(p); setFormMode('edit'); }} 
+                  onEdit={(p) => { setEditProduct(p); setFormMode('edit'); window.scrollTo(0,0); }} 
                   onDelete={handleDelete}
                   onGenerateImage={handleGenerateProductImage}
-                  token={token}
                 />
               ))}
+            </div>
+          )}
+          
+          {filtered.length === 0 && !loading && (
+            <div className="rs-card is-wide" style={{ textAlign: 'center', padding: 48, borderStyle: 'dashed' }}>
+              <div className="rs-card-meta">No products found matching your criteria.</div>
             </div>
           )}
         </div>
@@ -554,12 +555,18 @@ function CreateWorkspaceForm({ token, onCreate }) {
   }
 
   return (
-    <div className="cp-create-ws">
-      <div className="cp-create-ws-title">CREATE YOUR FIRST WORKSPACE</div>
-      {error && <div className="cp-flash cp-flash--err">{error}</div>}
-      <div className="cp-form-row">
-        <input className="cp-input" placeholder="e.g. My Boutique" value={name} onChange={e => setName(e.target.value)} />
-        <button className="cp-btn cp-btn--primary" onClick={handleCreate} disabled={busy}>{busy ? '...' : '>> CREATE'}</button>
+    <div className="rs-card animate-fade-in" style={{ maxWidth: 500 }}>
+      <span className="rs-card-label" style={{ color: 'var(--primary)' }}>CREATE YOUR FIRST WORKSPACE</span>
+      <p className="rs-card-meta" style={{ marginBottom: 20 }}>Workspaces organize your products, stock, and listings.</p>
+      {error && <div style={{ color: '#f87171', marginBottom: 12, fontSize: '0.8rem' }}>{error}</div>}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <input 
+          style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }}
+          placeholder="e.g. My Boutique" 
+          value={name} 
+          onChange={e => setName(e.target.value)} 
+        />
+        <button className="rs-btn-primary" onClick={handleCreate} disabled={busy}>{busy ? '...' : 'CREATE'}</button>
       </div>
     </div>
   )

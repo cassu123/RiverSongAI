@@ -39,10 +39,14 @@ const TTL_LABELS = {
 // ---------------------------------------------------------------------------
 function Section({ title, children }) {
   return (
-    <section className="settings-section">
-      <h2 className="settings-section-title">{title}</h2>
-      <div className="settings-section-body">{children}</div>
-    </section>
+    <div className="rs-card is-wide">
+      <div className="rs-card-head">
+        <span className="rs-card-label">{title}</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {children}
+      </div>
+    </div>
   )
 }
 
@@ -54,42 +58,48 @@ function ModelCard({ model, isSelected, isDisabled, onSelect }) {
   const outputCost = fmtCost(model.cost_per_1k_output_usd)
 
   return (
-    <button
-      className={`model-card ${isSelected ? 'model-card--selected' : ''} ${isDisabled ? 'model-card--disabled' : ''}`}
+    <div
+      className={`rs-card is-tappable ${isSelected ? 'is-elev' : ''} ${isDisabled ? 'is-disabled' : ''}`}
       onClick={() => !isDisabled && onSelect(model)}
-      disabled={isDisabled}
-      aria-pressed={isSelected}
-      title={model.notes || undefined}
+      style={{ 
+        flex: '1 1 200px', 
+        padding: '16px',
+        borderColor: isSelected ? 'var(--primary)' : undefined,
+        opacity: isDisabled ? 0.5 : 1
+      }}
     >
-      <div className="model-card-name">{model.display_name}</div>
+      <div className="rs-card-value" style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 8 }}>{model.display_name}</div>
 
-      {model.vram_gb != null && (
-        <div className="model-card-meta">
-          {model.vram_gb <= 4
-            ? <span className="badge badge--gpu">⚡ GPU {model.vram_gb}GB</span>
-            : <span className="badge badge--cpu">RAM {model.vram_gb}GB</span>
-          }
-          {model.vram_gb <= 4 && (
-            <span className="badge badge--speak" title="Fits in GPU VRAM — works for Speak">SPEAK</span>
-          )}
-        </div>
-      )}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        {model.vram_gb != null && (
+          <>
+            <span className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>
+              {model.vram_gb <= 4 ? '⚡ GPU' : 'RAM'} {model.vram_gb}GB
+            </span>
+            {model.vram_gb <= 4 && (
+              <span className="rs-pill is-active" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>SPEAK</span>
+            )}
+          </>
+        )}
 
-      {model.is_cloud && (
-        <div className="model-card-meta">
-          {inputCost && <span className="badge badge--cost">in {inputCost}</span>}
-          {outputCost && <span className="badge badge--cost">out {outputCost}</span>}
-        </div>
-      )}
+        {model.is_cloud && (
+          <>
+            {inputCost && <span className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>IN {inputCost}</span>}
+            {outputCost && <span className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>OUT {outputCost}</span>}
+          </>
+        )}
+      </div>
 
       {model.is_cloud && isDisabled && (
-        <div className="model-card-locked">KEY REQUIRED</div>
+        <div className="rs-card-meta" style={{ color: 'var(--md-error)', fontWeight: 700 }}>KEY REQUIRED</div>
       )}
-
+      
       {isSelected && (
-        <div className="model-card-active-dot" aria-label="Active" />
+        <div style={{ position: 'absolute', top: 12, right: 12 }}>
+          <span className="material-symbols-rounded" style={{ color: 'var(--primary)', fontSize: '1.2rem' }}>check_circle</span>
+        </div>
       )}
-    </button>
+    </div>
   )
 }
 
@@ -98,19 +108,17 @@ function ModelCard({ model, isSelected, isDisabled, onSelect }) {
 // ---------------------------------------------------------------------------
 function Toggle({ checked, onChange, label, id }) {
   return (
-    <label className="toggle-row" htmlFor={id}>
-      <span className="toggle-label">{label}</span>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+      {label && <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{label}</span>}
       <button
         id={id}
-        role="switch"
-        aria-checked={checked}
-        className={`toggle-switch ${checked ? 'toggle-switch--on' : ''}`}
+        className={`rs-pill ${checked ? 'is-active' : ''}`}
         onClick={() => onChange(!checked)}
+        style={{ minWidth: 80, justifyContent: 'center' }}
       >
-        <span className="toggle-knob" />
+        {checked ? 'ENABLED' : 'DISABLED'}
       </button>
-      <span className="toggle-value">{checked ? 'ON' : 'OFF'}</span>
-    </label>
+    </div>
   )
 }
 
@@ -441,7 +449,7 @@ export default function SettingsPage({
   })
 
   return (
-    <div className="settings-page page-wrap">
+    <div className="rs-foyer animate-fade-in">
       {/* CSS for recommended strip and persona textarea */}
       <style>{`
         .model-recommended-strip {
@@ -465,22 +473,34 @@ export default function SettingsPage({
         }
       `}</style>
 
-      <div className="page-breadcrumb">
-        <span>◢</span><span>SYSTEM</span>
-        <span className="page-breadcrumb-sep">/</span>
-        <span>CONFIGURATION</span>
-      </div>
-      <h1 className="page-title" style={{ marginBottom: 22 }}>Settings</h1>
+      <header className="rs-foyer-head">
+        <div className="rs-card-label" style={{ marginBottom: 8 }}>
+          <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>settings</span>
+          SYSTEM / CONFIGURATION
+        </div>
+        <h1 className="rs-greeting">Settings</h1>
+        <div className="rs-greeting-sub">Adjust River Song's core parameters and available features.</div>
+      </header>
 
       {/* Save status toast */}
       {saveStatus && (
-        <div className={`save-toast save-toast--${saveStatus}`} aria-live="polite">
+        <div 
+          className="rs-pill is-active" 
+          style={{ 
+            position: 'fixed', bottom: 32, right: 32, zIndex: 1000,
+            background: saveStatus === 'error' ? 'var(--md-error)' : 'var(--primary)',
+            color: saveStatus === 'error' ? 'white' : 'black',
+            boxShadow: 'var(--md-elevation-3)'
+          }}
+          aria-live="polite"
+        >
           {saveStatus === 'saving' && '● SAVING…'}
           {saveStatus === 'saved'  && '✓ SAVED'}
           {saveStatus === 'error'  && '✗ ERROR — CHECK CONSOLE'}
         </div>
       )}
 
+      <div className="rs-card-flow">
       
       {/* ================================================================ */}
       {/* ORCHESTRATION                                                   */}
@@ -493,35 +513,40 @@ export default function SettingsPage({
             checked={orchestrationSettings.n8n_enabled}
             onChange={v => saveOrchestration({ n8n_enabled: v })}
           />
-          <label className="select-row">
-            <span className="select-label">n8n URL</span>
-            <input
-              type="text"
-              className="settings-input"
-              value={orchestrationSettings.n8n_url}
-              onChange={e => saveOrchestration({ n8n_url: e.target.value })}
-            />
-          </label>
-          <label className="select-row">
-            <span className="select-label">n8n API Key</span>
-            <input
-              type="password"
-              className="settings-input"
-              value={orchestrationSettings.n8n_api_key}
-              placeholder="••••••••"
-              onChange={e => saveOrchestration({ n8n_api_key: e.target.value })}
-            />
-          </label>
-          <label className="select-row">
-            <span className="select-label">n8n Webhook Secret</span>
-            <input
-              type="text"
-              className="settings-input"
-              value={orchestrationSettings.n8n_webhook_secret}
-              onChange={e => saveOrchestration({ n8n_webhook_secret: e.target.value })}
-            />
-          </label>
-          <p className="settings-hint">
+          <div style={{ display: 'grid', gap: 12 }}>
+            <label className="rs-card-meta">
+              <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>n8n URL</span>
+              <input
+                type="text"
+                className="rs-pill"
+                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px', borderRadius: 'var(--md-shape-sm)' }}
+                value={orchestrationSettings.n8n_url}
+                onChange={e => saveOrchestration({ n8n_url: e.target.value })}
+              />
+            </label>
+            <label className="rs-card-meta">
+              <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>n8n API Key</span>
+              <input
+                type="password"
+                className="rs-pill"
+                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px', borderRadius: 'var(--md-shape-sm)' }}
+                value={orchestrationSettings.n8n_api_key}
+                placeholder="••••••••"
+                onChange={e => saveOrchestration({ n8n_api_key: e.target.value })}
+              />
+            </label>
+            <label className="rs-card-meta">
+              <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>n8n Webhook Secret</span>
+              <input
+                type="text"
+                className="rs-pill"
+                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px', borderRadius: 'var(--md-shape-sm)' }}
+                value={orchestrationSettings.n8n_webhook_secret}
+                onChange={e => saveOrchestration({ n8n_webhook_secret: e.target.value })}
+              />
+            </label>
+          </div>
+          <p className="rs-card-meta">
             n8n handles complex multi-step routines. The webhook secret is required
             to validate incoming requests from n8n to River Song.
           </p>
@@ -531,7 +556,7 @@ export default function SettingsPage({
       {/* AI MODEL                                                         */}
       {/* ================================================================ */}
       <Section title="AI MODEL">
-        <p className="settings-hint" style={{ marginBottom: 16 }}>
+        <p className="rs-card-meta" style={{ marginBottom: 16 }}>
           The selected model is used for both Chat and Speak. For Speak, choose a model
           tagged <strong>⚡ GPU / SPEAK</strong> — these fit in your GPU's VRAM and respond
           faster for real-time voice conversation.
@@ -540,10 +565,10 @@ export default function SettingsPage({
         {/* RECOMMENDED STRIP */}
         {recommendedModels.length > 0 && (
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: '0.6875rem', fontWeight: 500, letterSpacing: '0.08em', color: 'var(--md-tertiary)', marginBottom: 8, textTransform: 'uppercase' }}>
+            <div className="rs-card-label" style={{ color: 'var(--md-tertiary)', marginBottom: 12 }}>
               ⚡ RECOMMENDED FOR SPEAK
             </div>
-            <div className="model-recommended-strip">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               {recommendedModels.map(m => (
                 <ModelCard
                   key={`rec/${m.provider}/${m.model_id}`}
@@ -558,36 +583,26 @@ export default function SettingsPage({
         )}
 
         {/* Local models */}
-        <div className="model-group">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {/* QUICK FILTER BAR */}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             {['ALL', 'GPU', 'RAM', 'SPEAK'].map(f => (
               <button
                 key={f}
                 onClick={() => setModelFilter(f)}
-                style={{
-                  padding: '3px 12px',
-                  borderRadius: 'var(--md-shape-full)',
-                  fontSize: '0.6875rem',
-                  fontWeight: 500,
-                  letterSpacing: '0.06em',
-                  cursor: 'pointer',
-                  border: modelFilter === f ? 'none' : '1px solid var(--md-outline-variant)',
-                  background: modelFilter === f ? 'var(--md-primary-container)' : 'transparent',
-                  color: modelFilter === f ? 'var(--md-on-primary-container)' : 'var(--md-on-surface-variant)',
-                  marginRight: 4
-                }}
+                className={`rs-pill ${modelFilter === f ? 'is-active' : ''}`}
+                style={{ fontSize: '0.7rem' }}
               >
                 {f}
               </button>
             ))}
           </div>
 
-          <h3 className="model-group-title">
-            <span className="model-group-badge model-group-badge--local">LOCAL</span>
+          <div className="rs-card-label" style={{ marginBottom: 8 }}>
+            <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px', background: 'var(--primary)', color: 'black' }}>LOCAL</span>
             Ollama — runs on your machine
-          </h3>
-          <div className="model-grid">
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {filteredLocalModels.map(m => (
               <ModelCard
                 key={`${m.provider}/${m.model_id}`}
@@ -601,11 +616,11 @@ export default function SettingsPage({
         </div>
 
         {/* Cloud models */}
-        <div className="model-group">
-          <h3 className="model-group-title">
-            <span className="model-group-badge model-group-badge--cloud">CLOUD</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 24 }}>
+          <div className="rs-card-label">
+            <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px', background: 'var(--md-tertiary)', color: 'black' }}>CLOUD</span>
             API providers — costs per token · requires API key in .env
-          </h3>
+          </div>
 
           {['anthropic', 'gemini', 'openai', 'mistral_ai'].map(providerKey => {
             const provModels = models.cloud.filter(m => m.provider === providerKey)
@@ -620,19 +635,17 @@ export default function SettingsPage({
             }
 
             return (
-              <div key={providerKey} className={`cloud-provider-group ${!enabled ? 'cloud-provider-group--locked' : ''}`}>
-                <div className="cloud-provider-header">
-                  <span className="cloud-provider-name">{providerNames[providerKey]}</span>
+              <div key={providerKey} style={{ opacity: enabled ? 1 : 0.6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{providerNames[providerKey]}</span>
                   {!enabled && (
-                    <span className="cloud-provider-status">
-                      Set {providerKey.toUpperCase()}_ENABLED=true + API key in .env to unlock
-                    </span>
+                    <span className="rs-card-label" style={{ fontSize: '0.6rem', color: 'var(--md-error)' }}>LOCKED</span>
                   )}
                   {enabled && (
-                    <span className="cloud-provider-status cloud-provider-status--on">ENABLED</span>
+                    <span className="rs-card-label" style={{ fontSize: '0.6rem', color: '#4ade80' }}>ENABLED</span>
                   )}
                 </div>
-                <div className="model-grid">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                   {provModels.map(m => (
                     <ModelCard
                       key={`${m.provider}/${m.model_id}`}
@@ -654,21 +667,21 @@ export default function SettingsPage({
       {/* ================================================================ */}
       {user?.role === 'admin' && (
         <Section title="DAEMON CONTROL">
-          <p className="settings-hint" style={{ marginBottom: 16 }}>
+          <p className="rs-card-meta" style={{ marginBottom: 16 }}>
             Manage background daemon processes. These run as independent services on the server.
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* WARDEN */}
-            <div className="card" style={{ padding: 16 }}>
+            <div className="rs-card" style={{ padding: 16, background: 'var(--md-surface-container-low)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>WARDEN (Vision/Security)</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--md-outline)' }}>RTSP Camera Monitoring</div>
+                  <div className="rs-card-meta" style={{ margin: 0 }}>RTSP Camera Monitoring</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span className={`badge ${daemonStatus.warden?.alive ? 'badge--gpu' : 'badge--cost'}`} style={{ background: daemonStatus.warden?.alive ? '#00ff66' : 'var(--md-outline)', color: daemonStatus.warden?.alive ? 'black' : 'white' }}>
-                    {daemonStatus.warden?.alive ? '◉ ONLINE' : '◌ OFFLINE'}
+                  <span className="rs-card-label" style={{ color: daemonStatus.warden?.alive ? '#4ade80' : 'var(--md-outline)' }}>
+                    {daemonStatus.warden?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
                   <Toggle
                     id="warden-toggle"
@@ -681,15 +694,15 @@ export default function SettingsPage({
             </div>
 
             {/* MECHANIC */}
-            <div className="card" style={{ padding: 16 }}>
+            <div className="rs-card" style={{ padding: 16, background: 'var(--md-surface-container-low)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>MECHANIC (Telemetry)</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--md-outline)' }}>MAVLink / ArduRover Link</div>
+                  <div className="rs-card-meta" style={{ margin: 0 }}>MAVLink / ArduRover Link</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span className={`badge ${daemonStatus.mechanic?.alive ? 'badge--gpu' : 'badge--cost'}`} style={{ background: daemonStatus.mechanic?.alive ? '#00ff66' : 'var(--md-outline)', color: daemonStatus.mechanic?.alive ? 'black' : 'white' }}>
-                    {daemonStatus.mechanic?.alive ? '◉ ONLINE' : '◌ OFFLINE'}
+                  <span className="rs-card-label" style={{ color: daemonStatus.mechanic?.alive ? '#4ade80' : 'var(--md-outline)' }}>
+                    {daemonStatus.mechanic?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
                   <Toggle
                     id="mechanic-toggle"
@@ -701,22 +714,22 @@ export default function SettingsPage({
               </div>
               {daemonStatus.mechanic?.alive && (
                 <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                  <button className="btn btn--ghost btn--xs" onClick={() => triggerDaemonTask('mechanic', 'telemetry')}>GET TELEMETRY</button>
-                  <button className="btn btn--ghost btn--xs" onClick={() => triggerDaemonTask('mechanic', 'arm')}>ARM ROVER</button>
+                  <button className="rs-pill" onClick={() => triggerDaemonTask('mechanic', 'telemetry')}>TELEMETRY</button>
+                  <button className="rs-pill" onClick={() => triggerDaemonTask('mechanic', 'arm')}>ARM ROVER</button>
                 </div>
               )}
             </div>
 
             {/* HERALD */}
-            <div className="card" style={{ padding: 16 }}>
+            <div className="rs-card" style={{ padding: 16, background: 'var(--md-surface-container-low)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>HERALD (Casting/Lip-Sync)</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--md-outline)' }}>Google Home Hub Integration</div>
+                  <div className="rs-card-meta" style={{ margin: 0 }}>Google Home Hub Integration</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span className={`badge ${daemonStatus.herald?.alive ? 'badge--gpu' : 'badge--cost'}`} style={{ background: daemonStatus.herald?.alive ? '#00ff66' : 'var(--md-outline)', color: daemonStatus.herald?.alive ? 'black' : 'white' }}>
-                    {daemonStatus.herald?.alive ? '◉ ONLINE' : '◌ OFFLINE'}
+                  <span className="rs-card-label" style={{ color: daemonStatus.herald?.alive ? '#4ade80' : 'var(--md-outline)' }}>
+                    {daemonStatus.herald?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
                   <Toggle
                     id="herald-toggle"
@@ -728,21 +741,21 @@ export default function SettingsPage({
               </div>
               {daemonStatus.herald?.alive && (
                 <div style={{ marginTop: 12 }}>
-                  <button className="btn btn--ghost btn--xs" onClick={() => triggerDaemonTask('herald', 'recast_now')}>RECAST KIOSK NOW</button>
+                  <button className="rs-pill" onClick={() => triggerDaemonTask('herald', 'recast_now')}>RECAST KIOSK</button>
                 </div>
               )}
             </div>
 
             {/* SIFTER */}
-            <div className="card" style={{ padding: 16 }}>
+            <div className="rs-card" style={{ padding: 16, background: 'var(--md-surface-container-low)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>SIFTER (RAG)</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--md-outline)' }}>Background Document Indexing</div>
+                  <div className="rs-card-meta" style={{ margin: 0 }}>Background Document Indexing</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span className={`badge ${daemonStatus.sifter?.alive ? 'badge--gpu' : 'badge--cost'}`} style={{ background: daemonStatus.sifter?.alive ? '#00ff66' : 'var(--md-outline)', color: daemonStatus.sifter?.alive ? 'black' : 'white' }}>
-                    {daemonStatus.sifter?.alive ? '◉ ONLINE' : '◌ OFFLINE'}
+                  <span className="rs-card-label" style={{ color: daemonStatus.sifter?.alive ? '#4ade80' : 'var(--md-outline)' }}>
+                    {daemonStatus.sifter?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
                   <Toggle
                     id="sifter-toggle"
@@ -762,81 +775,81 @@ export default function SettingsPage({
       {/* ================================================================ */}
       {user?.role === 'admin' && (
         <Section title="LOCAL AI FEATURES">
-          <p className="settings-hint" style={{ marginBottom: 16 }}>
+          <p className="rs-card-meta" style={{ marginBottom: 16 }}>
             Toggle advanced AI capabilities. These are global settings that affect all users.
           </p>
           
-          <div className="settings-grid">
-            <div className="toggle-container">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+            <div className="rs-card" style={{ background: 'var(--md-surface-container-low)' }}>
               <Toggle
                 id="feat-semantic"
                 label="Semantic Memory"
                 checked={!!aiFeatures.SEMANTIC_MEMORY_ENABLED}
                 onChange={v => saveAiFeature('SEMANTIC_MEMORY_ENABLED', v)}
               />
-              <p className="settings-hint">Use vector search for memory recall</p>
+              <p className="rs-card-meta">Use vector search for memory recall</p>
             </div>
 
-            <div className="toggle-container">
+            <div className="rs-card" style={{ background: 'var(--md-surface-container-low)' }}>
               <Toggle
                 id="feat-vision"
                 label="Vision Analysis"
                 checked={!!aiFeatures.VISION_ENABLED}
                 onChange={v => saveAiFeature('VISION_ENABLED', v)}
               />
-              <p className="settings-hint">AI photo analysis for inventory & recipes</p>
+              <p className="rs-card-meta">AI photo analysis for inventory & recipes</p>
             </div>
 
-            <div className="toggle-container">
+            <div className="rs-card" style={{ background: 'var(--md-surface-container-low)' }}>
               <Toggle
                 id="feat-image"
                 label="Image Generation"
                 checked={!!aiFeatures.IMAGE_GENERATION_ENABLED}
                 onChange={v => saveAiFeature('IMAGE_GENERATION_ENABLED', v)}
               />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <p className="settings-hint">Generate product/recipe images locally</p>
-                <span className="badge badge--error" style={{ background: 'var(--md-error)', color: 'white', fontSize: '0.6rem' }}>GPU REQUIRED</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                <p className="rs-card-meta" style={{ margin: 0 }}>Local product/recipe visuals</p>
+                <span className="rs-card-label" style={{ color: 'var(--md-error)', fontSize: '0.6rem' }}>GPU REQ</span>
               </div>
             </div>
 
-            <div className="toggle-container">
+            <div className="rs-card" style={{ background: 'var(--md-surface-container-low)' }}>
               <Toggle
                 id="feat-rag"
                 label="RAG Documents"
                 checked={!!aiFeatures.RAG_ENABLED}
                 onChange={v => saveAiFeature('RAG_ENABLED', v)}
               />
-              <p className="settings-hint">Answer questions from uploaded documents</p>
+              <p className="rs-card-meta">Answer questions from documents</p>
             </div>
 
-            <div className="toggle-container">
+            <div className="rs-card" style={{ background: 'var(--md-surface-container-low)' }}>
               <Toggle
                 id="feat-streaming"
                 label="LLM Streaming"
                 checked={!!aiFeatures.LLM_STREAMING_ENABLED}
                 onChange={v => saveAiFeature('LLM_STREAMING_ENABLED', v)}
               />
-              <p className="settings-hint">Stream AI responses token by token</p>
+              <p className="rs-card-meta">Stream AI responses token by token</p>
             </div>
 
-            <div className="toggle-container">
+            <div className="rs-card" style={{ background: 'var(--md-surface-container-low)' }}>
               <Toggle
                 id="feat-chatterbox"
                 label="Chatterbox TTS"
                 checked={!!aiFeatures.CHATTERBOX_ENABLED}
                 onChange={v => saveAiFeature('CHATTERBOX_ENABLED', v)}
               />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <p className="settings-hint">Use AI voice cloning for River's voice</p>
-                <span className="badge badge--error" style={{ background: 'var(--md-error)', color: 'white', fontSize: '0.6rem' }}>GPU REQUIRED</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                <p className="rs-card-meta" style={{ margin: 0 }}>AI voice cloning for River</p>
+                <span className="rs-card-label" style={{ color: 'var(--md-error)', fontSize: '0.6rem' }}>GPU REQ</span>
               </div>
             </div>
           </div>
           
-          <div style={{ marginTop: 16, padding: '8px 12px', background: 'color-mix(in srgb, var(--md-warning) 10%, transparent)', border: '1px solid var(--md-warning)', borderRadius: 4 }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--md-warning)', fontWeight: 600 }}>
-              ⚠️ Changes to these features require a backend restart to take full effect.
+          <div style={{ marginTop: 16, padding: '12px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid #ffaa00', borderRadius: 'var(--md-shape-sm)' }}>
+            <span style={{ fontSize: '0.8rem', color: '#ffaa00', fontWeight: 600 }}>
+              ⚠️ Backend restart required for changes to take effect.
             </span>
           </div>
         </Section>
@@ -847,33 +860,33 @@ export default function SettingsPage({
       {/* ================================================================ */}
       {user?.role === 'admin' && personaSettings && (
         <Section title="PERSONALITY">
-          <div style={{ marginBottom: 12, padding: '10px 14px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid #ffaa00', borderRadius: 6, color: '#ffaa00', fontSize: '0.8rem' }}>
-            ⚠️ Advanced — Changing this affects River Song's entire personality. Keep "River Song" references intact or she will lose her identity.
+          <div style={{ marginBottom: 12, padding: '12px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid #ffaa00', borderRadius: 'var(--md-shape-sm)', color: '#ffaa00', fontSize: '0.8rem' }}>
+            ⚠️ Advanced — Keep "River Song" references intact or she will lose her identity.
           </div>
           
           <div style={{ position: 'relative' }}>
             <textarea
-              className="settings-input persona-textarea"
-              style={{ width: '100%', height: 300, display: 'block' }}
+              className="persona-textarea rs-card"
+              style={{ width: '100%', minHeight: 300, background: 'var(--md-surface-container-low)' }}
               value={personaSettings.system_prompt}
               onChange={e => setPersonaSettings({ system_prompt: e.target.value })}
               placeholder="River Song system prompt..."
               rows={12}
             />
-            <div style={{ position: 'absolute', bottom: 10, right: 12, fontSize: '0.65rem', color: 'var(--md-outline)', pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', bottom: 12, right: 16, fontSize: '0.65rem', opacity: 0.5, pointerEvents: 'none' }}>
               {personaSettings.system_prompt.length} chars
             </div>
           </div>
 
-          <p className="settings-hint" style={{ marginTop: 8 }}>
-            Defines her personality, speaking style, and knowledge about you. Changes take effect on the next conversation.
+          <p className="rs-card-meta">
+            Defines her personality and knowledge. Changes take effect on the next session.
           </p>
 
           <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-            <button className="btn btn--primary" onClick={() => savePersona(personaSettings.system_prompt)}>
+            <button className="rs-btn-primary" onClick={() => savePersona(personaSettings.system_prompt)}>
               SAVE CHANGES
             </button>
-            <button className="btn btn--ghost" onClick={resetPersona}>
+            <button className="rs-pill" onClick={resetPersona}>
               RESET TO DEFAULT
             </button>
           </div>
@@ -884,9 +897,8 @@ export default function SettingsPage({
       {/* CLOUD FALLBACK                                                   */}
       {/* ================================================================ */}
       <Section title="CLOUD FALLBACK">
-        <p className="settings-hint" style={{ marginBottom: 12 }}>
-          When the primary model is unavailable or overloaded, River can automatically
-          fall back to a cloud provider. Requires the provider's API key in <code>.env</code>.
+        <p className="rs-card-meta" style={{ marginBottom: 12 }}>
+          When local models are unavailable, River can fall back to cloud providers.
         </p>
 
         <Toggle
@@ -897,11 +909,12 @@ export default function SettingsPage({
         />
 
         {llmSettings?.cloud_fallback_enabled && (
-          <div className="fallback-config">
-            <label className="select-row">
-              <span className="select-label">Fallback provider</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+            <div className="rs-card-meta">
+              <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>Provider</span>
               <select
-                className="settings-select"
+                className="rs-pill"
+                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px' }}
                 value={llmSettings?.cloud_fallback_provider || ''}
                 onChange={e => saveFallback({ cloud_fallback_provider: e.target.value, cloud_fallback_model: '' })}
               >
@@ -912,13 +925,14 @@ export default function SettingsPage({
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
 
             {llmSettings?.cloud_fallback_provider && (
-              <label className="select-row">
-                <span className="select-label">Fallback model</span>
+              <div className="rs-card-meta">
+                <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>Model</span>
                 <select
-                  className="settings-select"
+                  className="rs-pill"
+                  style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px' }}
                   value={llmSettings?.cloud_fallback_model || ''}
                   onChange={e => saveFallback({ cloud_fallback_model: e.target.value })}
                 >
@@ -930,7 +944,7 @@ export default function SettingsPage({
                     ))
                   }
                 </select>
-              </label>
+              </div>
             )}
           </div>
         )}
@@ -954,9 +968,7 @@ export default function SettingsPage({
             }}
           />
         ) : (
-          <div className="voice-option">
-            <div className="voice-option-name">Loading voices…</div>
-          </div>
+          <div className="rs-card-meta">Loading voices…</div>
         )}
       </Section>
 
@@ -970,23 +982,23 @@ export default function SettingsPage({
           checked={!!aiFeatures.WAKE_WORD_ENABLED}
           onChange={v => saveAiFeature('WAKE_WORD_ENABLED', v)}
         />
-        <p className="settings-hint">Enable wake word detection. Say "Hey River" to start listening without clicking. Requires openWakeWord installed.</p>
+        <p className="rs-card-meta">Enable ambient detection. Requires openWakeWord.</p>
         
         {wakeWordRestart && (
-          <div style={{ marginTop: 12, padding: '8px 12px', background: 'color-mix(in srgb, var(--md-warning) 10%, transparent)', border: '1px solid var(--md-warning)', borderRadius: 4 }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--md-warning)', fontWeight: 600 }}>
-              ⚠️ Wake word changes require a backend restart.
+          <div style={{ marginTop: 12, padding: '12px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid #ffaa00', borderRadius: 'var(--md-shape-sm)' }}>
+            <span style={{ fontSize: '0.8rem', color: '#ffaa00', fontWeight: 600 }}>
+              ⚠️ Wake word changes require backend restart.
             </span>
           </div>
         )}
 
-        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--md-surface-container)', padding: '10px 14px', borderRadius: 8 }}>
+        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--md-surface-container-low)', padding: '12px 16px', borderRadius: 'var(--md-shape-sm)' }}>
           <div style={{ display: 'flex', gap: 16, fontSize: '0.75rem' }}>
-            <span>Model: <strong>hey_river (built-in)</strong></span>
-            <span>Install: <code style={{ background: 'black', color: 'white', padding: '2px 4px' }}>pip install openwakeword</code></span>
+            <span>Model: <strong>hey_river</strong></span>
+            <code style={{ background: 'black', color: '#4ade80', padding: '4px 8px', borderRadius: 4 }}>pip install openwakeword</code>
           </div>
-          <span className={`badge ${aiFeatures.WAKE_WORD_ENABLED ? 'badge--gpu' : 'badge--cost'}`} style={{ background: aiFeatures.WAKE_WORD_ENABLED ? '#00ff66' : 'var(--md-outline)', color: aiFeatures.WAKE_WORD_ENABLED ? 'black' : 'white' }}>
-            {aiFeatures.WAKE_WORD_ENABLED ? '◉ ENABLED' : '◌ DISABLED'}
+          <span className="rs-card-label" style={{ color: aiFeatures.WAKE_WORD_ENABLED ? '#4ade80' : 'var(--md-outline)' }}>
+            {aiFeatures.WAKE_WORD_ENABLED ? 'ACTIVE' : 'OFF'}
           </span>
         </div>
       </Section>
@@ -1020,10 +1032,11 @@ export default function SettingsPage({
             onChange={v => saveMemory({ auto_extend: v })}
           />
 
-          <label className="select-row">
-            <span className="select-label">Default retention period</span>
+          <div className="rs-card-meta">
+            <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>Retention Period</span>
             <select
-              className="settings-select"
+              className="rs-pill"
+              style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px' }}
               value={memSettings.default_ttl}
               onChange={e => saveMemory({ default_ttl: e.target.value })}
             >
@@ -1033,12 +1046,10 @@ export default function SettingsPage({
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <p className="settings-hint">
-            Summaries are 2–3 sentence records of each conversation, injected into context
-            at session start. Auto-extend resets the expiry each time a summary is referenced,
-            keeping frequently-relevant memories alive naturally.
+          <p className="rs-card-meta">
+            Summaries are records injected into context at session start. Auto-extend resets expiry each time a summary is referenced.
           </p>
         </Section>
       )}
@@ -1105,6 +1116,7 @@ export default function SettingsPage({
         />
       )}
 
+      </div>
     </div>
   )
 }
@@ -1236,7 +1248,7 @@ function VoiceSection({ voiceSettings, token, user, elevenLabsSettings, onSaveEl
 
   if (voiceSettings.provider === 'none') {
     return (
-      <p className="settings-hint" style={{ color: 'var(--md-error)' }}>
+      <p className="rs-card-meta" style={{ color: 'var(--md-error)' }}>
         TTS is disabled. Set <code>TTS_PROVIDER=piper</code> in <code>.env</code> to enable speech.
       </p>
     )
@@ -1269,7 +1281,7 @@ function VoiceSection({ voiceSettings, token, user, elevenLabsSettings, onSaveEl
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Switch failed')
-      setSwitchMsg(`✓ Switched to ${data.display_name}. Active on your next conversation.`)
+      setSwitchMsg(`✓ Switched to ${data.display_name}.`)
       onSwitched()
     } catch (e) {
       setSwitchMsg(`✗ ${e.message}`)
@@ -1280,110 +1292,93 @@ function VoiceSection({ voiceSettings, token, user, elevenLabsSettings, onSaveEl
 
   return (
     <>
-      <p className="settings-hint" style={{ marginBottom: 16 }}>
+      <p className="rs-card-meta" style={{ marginBottom: 16 }}>
         <strong>{voiceSettings.provider_label}</strong> · Active:{' '}
-        <strong>{voiceSettings.active_voice}</strong>
-        {voiceSettings.active_voice_id && (
-          <span style={{ color: 'var(--md-outline)', fontSize: '0.8rem', marginLeft: 8 }}>
-            ({voiceSettings.active_voice_id})
-          </span>
-        )}
+        <span className="rs-pill is-active" style={{ fontSize: '0.75rem' }}>{voiceSettings.active_voice}</span>
       </p>
 
       {/* ELEVENLABS SETTINGS (Admin Only) */}
       {user?.role === 'admin' && elevenLabsSettings && (
-        <div className="elevenlabs-config" style={{
+        <div className="rs-card" style={{
           marginBottom: 24, padding: 16,
           background: 'var(--md-surface-container-high)',
-          border: '1px solid var(--md-outline-variant)',
-          borderRadius: 12
         }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--md-primary)', letterSpacing: '0.05em', marginBottom: 12 }}>
+          <div className="rs-card-label" style={{ color: 'var(--md-primary)', marginBottom: 12 }}>
             ELEVENLABS VOICE CONFIGURATION
           </div>
           
-          <label className="select-row">
-            <span className="select-label">ElevenLabs API Key</span>
-            <input
-              type="password"
-              className="settings-input"
-              value={elevenLabsSettings.api_key}
-              onChange={e => onSaveElevenLabs({ api_key: e.target.value })}
-              placeholder="••••••••"
-            />
-          </label>
+          <div style={{ display: 'grid', gap: 12 }}>
+            <label className="rs-card-meta">
+              <span className="rs-card-label" style={{ fontSize: '0.6rem', marginBottom: 4 }}>API Key</span>
+              <input
+                type="password"
+                className="rs-pill"
+                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px' }}
+                value={elevenLabsSettings.api_key}
+                onChange={e => onSaveElevenLabs({ api_key: e.target.value })}
+                placeholder="••••••••"
+              />
+            </label>
 
-          <label className="select-row">
-            <span className="select-label">Voice ID</span>
-            <input
-              type="text"
-              className="settings-input"
-              value={elevenLabsSettings.voice_id}
-              onChange={e => onSaveElevenLabs({ voice_id: e.target.value })}
-            />
-          </label>
+            <label className="rs-card-meta">
+              <span className="rs-card-label" style={{ fontSize: '0.6rem', marginBottom: 4 }}>Voice ID</span>
+              <input
+                type="text"
+                className="rs-pill"
+                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px' }}
+                value={elevenLabsSettings.voice_id}
+                onChange={e => onSaveElevenLabs({ voice_id: e.target.value })}
+              />
+            </label>
 
-          <label className="select-row">
-            <span className="select-label">Model</span>
-            <select
-              className="settings-select"
-              value={elevenLabsSettings.model_id}
-              onChange={e => onSaveElevenLabs({ model_id: e.target.value })}
-            >
-              <option value="eleven_multilingual_v2">eleven_multilingual_v2</option>
-              <option value="eleven_monolingual_v1">eleven_monolingual_v1</option>
-              <option value="eleven_turbo_v2">eleven_turbo_v2</option>
-            </select>
-          </label>
+            <label className="rs-card-meta">
+              <span className="rs-card-label" style={{ fontSize: '0.6rem', marginBottom: 4 }}>Model</span>
+              <select
+                className="rs-pill"
+                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px' }}
+                value={elevenLabsSettings.model_id}
+                onChange={e => onSaveElevenLabs({ model_id: e.target.value })}
+              >
+                <option value="eleven_multilingual_v2">eleven_multilingual_v2</option>
+                <option value="eleven_monolingual_v1">eleven_monolingual_v1</option>
+                <option value="eleven_turbo_v2">eleven_turbo_v2</option>
+              </select>
+            </label>
+          </div>
 
           <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-             <button className="btn btn--primary" style={{ padding: '6px 14px', fontSize: '0.75rem' }} onClick={() => onSaveElevenLabs({})}>
-               SAVE KEY & ID
+             <button className="rs-btn-primary" style={{ padding: '8px 16px' }} onClick={() => onSaveElevenLabs({})}>
+               SAVE CONFIG
              </button>
              {voiceSettings.provider === 'elevenlabs' ? (
-               <span className="badge badge--gpu" style={{ background: '#00ff66', color: 'black' }}>◉ ACTIVE</span>
+               <span className="rs-card-label" style={{ color: '#4ade80' }}>● ACTIVE</span>
              ) : (
-               <span style={{ fontSize: '0.7rem', color: 'var(--md-outline)' }}>To use ElevenLabs, select a River Song ElevenLabs voice below.</span>
+               <span className="rs-card-meta" style={{ fontSize: '0.7rem' }}>Select an ElevenLabs voice below.</span>
              )}
-          </div>
-          <div style={{ fontSize: '0.65rem', color: 'var(--md-outline)', marginTop: 8 }}>
-            ElevenLabs voices: elevenlabs.io/voice-lab
           </div>
         </div>
       )}
 
       {switchMsg && (
-        <p className="settings-hint" style={{
-          marginBottom: 8,
-          color: switchMsg.startsWith('✓') ? 'var(--md-tertiary)' : 'var(--md-error)',
-        }}>
+        <p className="rs-card-meta" style={{ color: switchMsg.startsWith('✓') ? '#4ade80' : 'var(--md-error)' }}>
           {switchMsg}
         </p>
       )}
 
       {previewErr && (
-        <p className="settings-hint" style={{ marginBottom: 8, color: 'var(--md-error)' }}>
+        <p className="rs-card-meta" style={{ color: 'var(--md-error)' }}>
           {previewErr}
         </p>
       )}
 
       {/* ACCENT FILTER TABS */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16, overflowX: 'auto' }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         {['ALL', ...accents].map(accent => (
           <button
             key={accent}
             onClick={() => setAccentFilter(accent)}
-            style={{
-              padding: '4px 14px',
-              borderRadius: 'var(--md-shape-full)',
-              fontSize: '0.6875rem',
-              fontWeight: 500,
-              letterSpacing: '0.06em',
-              cursor: 'pointer',
-              border: accentFilter === accent ? 'none' : '1px solid var(--md-outline-variant)',
-              background: accentFilter === accent ? 'var(--md-secondary-container)' : 'transparent',
-              color: accentFilter === accent ? 'var(--md-on-secondary-container)' : 'var(--md-on-surface-variant)',
-            }}
+            className={`rs-pill ${accentFilter === accent ? 'is-active' : ''}`}
+            style={{ fontSize: '0.7rem' }}
           >
             {accent}
           </button>
@@ -1396,96 +1391,61 @@ function VoiceSection({ voiceSettings, token, user, elevenLabsSettings, onSaveEl
         const males   = av.filter(v => v.gender === 'male')
 
         return (
-          <div key={accent} className="model-group" style={{ marginBottom: 20 }}>
-            <h3 className="model-group-title">{accent}</h3>
+          <div key={accent} style={{ marginBottom: 24 }}>
+            <div className="rs-card-label" style={{ marginBottom: 12 }}>{accent}</div>
 
             {[{ label: 'Female', list: females, color: 'var(--md-tertiary)' },
               { label: 'Male',   list: males,   color: 'var(--md-primary)'  }]
               .filter(g => g.list.length > 0)
               .map(({ label, list, color }) => (
-                <div key={label} style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: '0.6875rem', fontWeight: 500, letterSpacing: '0.06em',
-                    color, textTransform: 'uppercase', marginBottom: 6 }}>
+                <div key={label} style={{ marginBottom: 16 }}>
+                  <div className="rs-card-label" style={{ fontSize: '0.65rem', color, marginBottom: 8 }}>
                     {label}
                   </div>
-                  <div className="model-grid">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
                     {list.map(v => (
-                      <button
+                      <div
                         key={v.voice_id}
-                        className={`model-card${v.active ? ' model-card--selected' : ''}${!v.installed ? ' model-card--disabled' : ''}`}
+                        className={`rs-card is-tappable ${v.active ? 'is-elev' : ''} ${!v.installed ? 'is-disabled' : ''}`}
                         onClick={() => v.installed && !v.active && handleSelect(v.voice_id)}
-                        disabled={!v.installed || switching === v.voice_id}
-                        style={{
-                          ...(v.active ? { outline: '2px solid var(--md-primary)', outlineOffset: '2px' } : {})
-                        }}
-                        title={!v.installed
-                          ? `Not installed. Run: python scripts/download_voices.py ${v.voice_id}`
-                          : v.description}
+                        style={{ opacity: v.installed ? 1 : 0.5, borderColor: v.active ? 'var(--primary)' : undefined }}
                       >
-                        <div className="model-card-name" style={{ color: v.active ? 'var(--md-primary)' : undefined }}>
+                        <div className="rs-card-value" style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 8 }}>
                           {v.display_name}
-                          {v.default && !v.active && (
-                            <span style={{ fontSize: '0.6rem', color: 'var(--md-outline)', marginLeft: 6 }}>default</span>
-                          )}
                         </div>
 
-                        <div className="model-card-meta">
-                          <span className={`badge badge--${v.quality === 'high' ? 'cost' : v.quality === 'fast' ? 'cpu' : 'gpu'}`}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                          <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>
                             {QUALITY_LABELS[v.quality] || v.quality}
                           </span>
-                          <span className="badge" style={{
-                            background: 'color-mix(in srgb,' + ENGINE_COLORS[v.engine] + ' 14%, transparent)',
-                            color: ENGINE_COLORS[v.engine],
-                          }}>
+                          <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>
                             {ENGINE_LABELS[v.engine] || v.engine}
                           </span>
-                          {v.engine === 'piper' && v.size_mb > 0 && (
-                            <span className="badge" style={{ background: 'var(--md-surface-container-highest)', color: 'var(--md-on-surface-variant)' }}>
-                              {v.size_mb.toFixed(0)} MB
-                            </span>
-                          )}
                         </div>
 
-                        <div style={{ fontSize: '0.72rem', color: 'var(--md-on-surface-variant)', lineHeight: 1.4 }}>
+                        <div className="rs-card-meta" style={{ fontSize: '0.75rem', lineHeight: 1.4 }}>
                           {v.description}
                         </div>
 
-                        {/* Preview button */}
                         {v.installed && (
                           <button
                             onClick={e => { e.stopPropagation(); handlePreview(v.voice_id) }}
                             disabled={previewing === v.voice_id}
-                            style={{
-                              marginTop: 4,
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 5,
-                              fontSize: '0.6875rem',
-                              fontWeight: 500,
-                              color: previewing === v.voice_id ? 'var(--md-primary)' : 'var(--md-on-surface-variant)',
-                              background: 'var(--md-surface-container-highest)',
-                              border: '1px solid var(--md-outline-variant)',
-                              borderRadius: 'var(--md-shape-full)',
-                              padding: '3px 10px',
-                              cursor: previewing === v.voice_id ? 'default' : 'pointer',
-                              transition: 'color 150ms, border-color 150ms',
-                              alignSelf: 'flex-start',
-                            }}
+                            className="rs-pill"
+                            style={{ marginTop: 12, fontSize: '0.7rem' }}
                           >
-                            {previewing === v.voice_id ? '◉ Playing…' : '▶ Preview'}
+                            <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>{previewing === v.voice_id ? 'volume_up' : 'play_arrow'}</span>
+                            {previewing === v.voice_id ? 'PLAYING…' : 'PREVIEW'}
                           </button>
                         )}
 
-                        {!v.installed && <div className="model-card-locked">NOT INSTALLED</div>}
-                        {switching === v.voice_id && <div className="model-card-locked" style={{ color: 'var(--md-primary)' }}>SWITCHING…</div>}
+                        {!v.installed && <div className="rs-card-meta" style={{ color: 'var(--md-error)', fontWeight: 700 }}>NOT INSTALLED</div>}
                         {v.active && (
-                          <span style={{
-                            fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em',
-                            color: 'var(--md-primary)', textTransform: 'uppercase', marginTop: 2
-                          }}>ACTIVE</span>
+                          <div style={{ position: 'absolute', top: 12, right: 12 }}>
+                             <span className="material-symbols-rounded" style={{ color: 'var(--primary)', fontSize: '1.2rem' }}>check_circle</span>
+                          </div>
                         )}
-                        {v.active && <div className="model-card-active-dot" />}
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -1493,7 +1453,128 @@ function VoiceSection({ voiceSettings, token, user, elevenLabsSettings, onSaveEl
           </div>
         )
       })}
+    </>
+  )
+}
 
+function ParentChildrenSection({ data, token, onChanged }) {
+  const [saving, setSaving] = useState(null)
+
+  const toggle = async (child, featureKey) => {
+    const current  = child.enabled_features || []
+    const updated  = current.includes(featureKey)
+      ? current.filter(k => k !== featureKey)
+      : [...current, featureKey]
+
+    const newChildren = data.children.map(c =>
+      c.id === child.id ? { ...c, enabled_features: updated } : c
+    )
+    onChanged({ ...data, children: newChildren })
+    setSaving(child.id)
+
+    try {
+      await fetch(`/api/parent/children/${child.id}/features`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ enabled_features: updated }),
+      })
+    } catch (e) {
+      onChanged(data)
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const globallyOn = new Set(data.globally_on || [])
+
+  return (
+    <Section title="MY CHILDREN">
+      <p className="rs-card-meta" style={{ marginBottom: 16 }}>
+        Enable features for each child.
+      </p>
+      {(data.children || []).length === 0 && (
+        <p className="rs-card-meta">No children linked yet.</p>
+      )}
+      {(data.children || []).map(child => (
+        <div key={child.id} className="rs-card" style={{ background: 'var(--md-surface-container-low)', marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontWeight: 600 }}>{child.display_name}</div>
+            {saving === child.id && <span className="rs-card-label" style={{ color: 'var(--primary)' }}>SAVING…</span>}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+            {(data.globally_on || []).map(key => {
+              const enabled  = (child.enabled_features || []).includes(key)
+              const locked   = !globallyOn.has(key)
+              return (
+                <div key={key} style={{ opacity: locked ? 0.4 : 1 }}>
+                  <Toggle
+                    id={`child-${child.id}-${key}`}
+                    label={key.replace('_', ' ').toLowerCase()}
+                    checked={enabled}
+                    onChange={() => !locked && toggle(child, key)}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </Section>
+  )
+}
+
+function AdminFeatureSection({ featureVis, token, onChanged }) {
+  const [saving, setSaving] = useState(false)
+
+  const toggle = async (key) => {
+    const current = featureVis.hidden_features || []
+    const updated = current.includes(key)
+      ? current.filter(k => k !== key)
+      : [...current, key]
+
+    const next = {
+      ...featureVis,
+      hidden_features: updated,
+      all_features: featureVis.all_features.map(f =>
+        f.key === key ? { ...f, hidden: !f.hidden } : f
+      ),
+    }
+    onChanged(next)
+    setSaving(true)
+    try {
+      await fetch('/api/admin/feature-visibility', {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ hidden_features: updated }),
+      })
+    } catch (e) {
+      onChanged(featureVis)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Section title="ADMIN — FEATURE VISIBILITY">
+      <p className="rs-card-meta" style={{ marginBottom: 16 }}>
+        Hide features globally. Admin always sees everything.
+        {saving && <span style={{ marginLeft: 8, color: 'var(--primary)' }}>SAVING…</span>}
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+        {(featureVis.all_features || []).map(f => (
+          <div key={f.key} className="rs-card" style={{ background: 'var(--md-surface-container-low)', padding: 12 }}>
+            <Toggle
+              id={`feat-vis-${f.key}`}
+              label={f.label}
+              checked={!f.hidden}
+              onChange={() => toggle(f.key)}
+            />
+          </div>
+        ))}
+      </div>
+    </Section>
+  )
+}
       <p className="settings-hint" style={{ marginTop: 4 }}>
         Voice changes take effect on your next conversation — no restart needed.
         To install more voices: <code>python scripts/download_voices.py atlas aria</code> on the server,
@@ -2270,8 +2351,8 @@ function NotificationsSection({ token }) {
   if (!serverEnabled) {
     return (
       <Section title="NOTIFICATIONS">
-        <p className="settings-hint" style={{ color: 'var(--md-error)' }}>
-          Push notifications are disabled in server config. Set <code>PUSH_NOTIFICATIONS_ENABLED=true</code> in <code>.env</code> to enable.
+        <p className="rs-card-meta" style={{ color: 'var(--md-error)' }}>
+          Push notifications are disabled in server config. Set <code>PUSH_NOTIFICATIONS_ENABLED=true</code> in <code>.env</code>.
         </p>
       </Section>
     )
@@ -2281,8 +2362,8 @@ function NotificationsSection({ token }) {
     <Section title="NOTIFICATIONS">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <label className="settings-label">PUSH NOTIFICATIONS</label>
-          <p className="settings-hint">Receive proactive briefings and system alerts on this device.</p>
+          <div style={{ fontWeight: 600 }}>PUSH NOTIFICATIONS</div>
+          <p className="rs-card-meta">Receive proactive briefings and system alerts.</p>
         </div>
         <Toggle 
           id="push-toggle"
@@ -2292,7 +2373,7 @@ function NotificationsSection({ token }) {
         />
       </div>
 
-      <p className="settings-hint" style={{ marginTop: 8 }}>
+      <p className="rs-card-meta" style={{ marginTop: 8 }}>
         {status === 'subscribed' && '✓ This device is active and receiving alerts.'}
         {status === 'idle' && 'Notifications are currently muted for this device.'}
         {status === 'unsupported' && '✗ Web Push is not supported by your browser.'}
@@ -2302,13 +2383,13 @@ function NotificationsSection({ token }) {
       {status === 'subscribed' && (
         <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
-            className="btn btn--ghost btn--xs"
+            className="rs-pill"
             onClick={handleTest}
             disabled={working}
           >
-            {working ? 'Sending…' : 'Test Notification'}
+            {working ? 'SENDING…' : 'TEST NOTIFICATION'}
           </button>
-          {testResult && <span style={{ fontSize: '0.75rem', color: 'var(--md-tertiary)' }}>{testResult}</span>}
+          {testResult && <span className="rs-card-label" style={{ color: '#4ade80' }}>{testResult}</span>}
         </div>
       )}
     </Section>
@@ -2337,7 +2418,7 @@ function TokenUsageSection({ token }) {
   }
 
   function fmtCostUsd(n) {
-    if (n === 0) return 'free'
+    if (n === 0) return 'FREE'
     if (n < 0.01) return `$${n.toFixed(4)}`
     return `$${n.toFixed(2)}`
   }
@@ -2345,71 +2426,71 @@ function TokenUsageSection({ token }) {
   return (
     <Section title="TOKEN USAGE">
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
-        <label className="settings-label" style={{ margin: 0 }}>PERIOD</label>
-        {[7, 30, 90].map(d => (
-          <button
-            key={d}
-            className={`btn btn--ghost${days === d ? ' btn--selected' : ''}`}
-            style={{ padding: '4px 12px', fontSize: '0.75rem', opacity: days === d ? 1 : 0.6 }}
-            onClick={() => setDays(d)}
-          >{d}d</button>
-        ))}
+        <span className="rs-card-label">PERIOD</span>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[7, 30, 90].map(d => (
+            <button
+              key={d}
+              className={`rs-pill ${days === d ? 'is-active' : ''}`}
+              style={{ fontSize: '0.7rem' }}
+              onClick={() => setDays(d)}
+            >{d}D</button>
+          ))}
+        </div>
       </div>
 
-      {loading && <p className="settings-hint">Loading…</p>}
+      {loading && <p className="rs-card-meta">Loading usage statistics…</p>}
 
       {!loading && data && (
         <>
-          <div style={{ display: 'flex', gap: 24, marginBottom: 20, flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 24, marginBottom: 24 }}>
             <div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--md-outline)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Input</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--md-on-surface)' }}>{fmtTokens(data.total_input)}</div>
+              <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>INPUT</div>
+              <div className="rs-card-value">{fmtTokens(data.total_input)}</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--md-outline)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Output</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--md-on-surface)' }}>{fmtTokens(data.total_output)}</div>
+              <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>OUTPUT</div>
+              <div className="rs-card-value">{fmtTokens(data.total_output)}</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--md-outline)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Est. Cost</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 600, color: data.estimated_cost_usd > 0 ? 'var(--md-primary)' : '#00ff66' }}>
+              <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>EST. COST</div>
+              <div className="rs-card-value" style={{ color: data.estimated_cost_usd > 0 ? 'var(--primary)' : '#4ade80' }}>
                 {fmtCostUsd(data.estimated_cost_usd)}
               </div>
             </div>
           </div>
 
           {data.by_model.length === 0 ? (
-            <p className="settings-hint">No usage recorded yet. Token tracking starts from the next conversation.</p>
+            <p className="rs-card-meta">No usage recorded yet.</p>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-              <thead>
-                <tr style={{ color: 'var(--md-outline)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.06em' }}>
-                  <th style={{ textAlign: 'left', paddingBottom: 6 }}>Model</th>
-                  <th style={{ textAlign: 'right', paddingBottom: 6 }}>Calls</th>
-                  <th style={{ textAlign: 'right', paddingBottom: 6 }}>Input</th>
-                  <th style={{ textAlign: 'right', paddingBottom: 6 }}>Output</th>
-                  <th style={{ textAlign: 'right', paddingBottom: 6 }}>Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.by_model.map((row, i) => (
-                  <tr key={i} style={{ borderTop: '1px solid var(--md-outline-variant)', color: 'var(--md-on-surface)' }}>
-                    <td style={{ padding: '6px 0' }}>
-                      <span style={{ opacity: 0.5, fontSize: '0.7rem', marginRight: 6 }}>{row.provider}</span>
-                      {row.model}
-                    </td>
-                    <td style={{ textAlign: 'right', padding: '6px 0' }}>{row.calls}</td>
-                    <td style={{ textAlign: 'right', padding: '6px 0' }}>{fmtTokens(row.input_tokens)}</td>
-                    <td style={{ textAlign: 'right', padding: '6px 0' }}>{fmtTokens(row.output_tokens)}</td>
-                    <td style={{ textAlign: 'right', padding: '6px 0', color: row.estimated_cost_usd > 0 ? 'var(--md-primary)' : '#00ff66' }}>
-                      {fmtCostUsd(row.estimated_cost_usd)}
-                    </td>
+            <div className="rs-card" style={{ padding: 0, overflow: 'hidden', background: 'var(--md-surface-container-low)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ background: 'var(--md-surface-container-high)' }}>
+                    <th style={{ textAlign: 'left', padding: '12px 16px' }} className="rs-card-label">MODEL</th>
+                    <th style={{ textAlign: 'right', padding: '12px 16px' }} className="rs-card-label">CALLS</th>
+                    <th style={{ textAlign: 'right', padding: '12px 16px' }} className="rs-card-label">COST</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.by_model.map((row, i) => (
+                    <tr key={i} style={{ borderTop: '1px solid var(--md-outline-variant)' }}>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ fontWeight: 600 }}>{row.model}</div>
+                        <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>{row.provider.toUpperCase()}</div>
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '12px 16px', fontVariantNumeric: 'tabular-nums' }}>{row.calls}</td>
+                      <td style={{ textAlign: 'right', padding: '12px 16px', color: row.estimated_cost_usd > 0 ? 'var(--primary)' : '#4ade80', fontWeight: 600 }}>
+                        {fmtCostUsd(row.estimated_cost_usd)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
-          <p className="settings-hint" style={{ marginTop: 12 }}>
+          <p className="rs-card-meta" style={{ marginTop: 12 }}>
             Cost estimates use public list prices. Ollama (local) is always free.
           </p>
         </>
@@ -2444,7 +2525,6 @@ function VoiceIDSection({ token }) {
     setSuccess('')
     
     try {
-      // Convert base64 to blob
       const binary = atob(wavB64)
       const array = new Uint8Array(binary.length)
       for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i)
@@ -2498,7 +2578,7 @@ function VoiceIDSection({ token }) {
   }
 
   const deleteEnrollment = async () => {
-    if (!confirm('Delete your voice prints from this server? River Song will no longer recognize your voice. You can re-enroll any time.')) return
+    if (!confirm('Delete your voice prints? River Song will no longer recognize your voice.')) return
     try {
       await fetch('/api/voice-id/me', {
         method: 'DELETE',
@@ -2517,14 +2597,14 @@ function VoiceIDSection({ token }) {
     <Section title="VOICE ID">
       <div style={{ marginBottom: 16 }}>
         {status.enrolled ? (
-          <div style={{ color: '#00ff66', fontSize: '0.875rem', fontWeight: 500 }}>
-            ✓ Enrolled — {status.sample_count} samples
-            <div style={{ color: 'var(--md-outline)', fontSize: '0.75rem', marginTop: 4 }}>
+          <div style={{ color: '#4ade80', fontSize: '0.875rem', fontWeight: 600 }}>
+            ✓ ENROLLED — {status.sample_count} SAMPLES
+            <div className="rs-card-meta">
               Last updated: {new Date(status.last_updated).toLocaleString()}
             </div>
           </div>
         ) : (
-          <p className="settings-hint" style={{ marginTop: 0 }}>
+          <p className="rs-card-meta">
             River Song doesn't recognize your voice yet. Record 3–5 samples to enable speaker recognition on kiosks.
           </p>
         )}
@@ -2532,25 +2612,27 @@ function VoiceIDSection({ token }) {
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         <button 
-          className="btn btn--primary" 
+          className="rs-btn-primary" 
           onClick={startEnroll} 
           disabled={recording || recorder.isRecording}
+          style={{ padding: '10px 20px' }}
         >
-          {recording ? `Recording... ${countdown}s` : 'Record sample'}
+          <span className="material-symbols-rounded">{recording ? 'radio_button_checked' : 'mic'}</span>
+          {recording ? `RECORDING... ${countdown}S` : 'RECORD SAMPLE'}
         </button>
 
         {status.sample_count > 0 && !recording && (
-          <button className="btn btn--ghost btn--danger" onClick={deleteEnrollment}>
-            Delete enrollment
+          <button className="rs-pill" onClick={deleteEnrollment} style={{ color: 'var(--md-error)' }}>
+            DELETE ENROLLMENT
           </button>
         )}
       </div>
 
-      {error && <div style={{ color: 'var(--md-error)', fontSize: '0.75rem', marginTop: 12 }}>{error}</div>}
-      {success && <div style={{ color: 'var(--md-primary)', fontSize: '0.75rem', marginTop: 12 }}>{success}</div>}
+      {error && <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>{error}</div>}
+      {success && <div className="rs-card-meta" style={{ color: '#4ade80' }}>{success}</div>}
 
-      <p className="settings-hint">
-        Recommended: at least 3 samples. Each sample should be about 5 seconds of clear speech.
+      <p className="rs-card-meta">
+        Recommended: at least 3 samples of about 5 seconds each.
       </p>
     </Section>
   )

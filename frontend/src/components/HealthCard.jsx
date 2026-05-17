@@ -26,99 +26,71 @@ const HealthCard = () => {
     return () => clearInterval(interval)
   }, [])
 
-  if (loading && !health) return <div className="stat-card">Loading health...</div>
-  if (error && !health) return <div className="stat-card" style={{ borderLeft: '4px solid var(--error)' }}>Health Unavailable</div>
+  if (loading && !health) return <div className="rs-card-meta" style={{ padding: 24 }}>SCANNING SYSTEMS...</div>
+  if (error && !health) return <div className="rs-card" style={{ borderLeft: '4px solid var(--md-error)' }}>HEALTH TELEMETRY OFFLINE</div>
 
-  const statusColor = health.status === 'ok' ? 'var(--md-tertiary)' : 
-                      health.status === 'degraded' ? 'var(--md-warning)' : 'var(--error)'
+  const statusColor = health.status === 'ok' ? '#4ade80' : 
+                      health.status === 'degraded' ? '#facc15' : 'var(--md-error)'
   
-  const statusLabel = health.status === 'ok' ? 'All Systems Go' : 
-                      health.status === 'degraded' ? 'Degraded' : 'Error'
+  const statusLabel = health.status === 'ok' ? 'NOMINAL' : 
+                      health.status === 'degraded' ? 'DEGRADED' : 'CRITICAL'
 
   const formatLastBriefing = (iso) => {
-    if (!iso) return 'Never'
+    if (!iso) return 'NEVER'
     const date = new Date(iso)
     const now = new Date()
     const isToday = date.toDateString() === now.toDateString()
-    
     const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-    return isToday ? `Today at ${timeStr}` : date.toLocaleDateString()
+    return isToday ? `TODAY ${timeStr}` : date.toLocaleDateString().toUpperCase()
   }
 
   return (
-    <div className="stat-card health-card">
-      <div className="health-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>River Song — System Health</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ 
-            width: 8, height: 8, borderRadius: '50%', 
-            backgroundColor: statusColor,
-            boxShadow: `0 0 6px ${statusColor}`
-          }} />
-          <span style={{ fontSize: '0.75rem', color: statusColor, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {statusLabel}
-          </span>
+    <div className="rs-card health-card" style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}>
+      <div className="rs-card-head">
+        <span className="rs-card-label">SYSTEM HEALTH</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="rs-status-dot" style={{ background: statusColor, boxShadow: `0 0 8px ${statusColor}` }} />
+          <span className="rs-card-label" style={{ color: statusColor, opacity: 1 }}>{statusLabel}</span>
         </div>
       </div>
 
-      <div className="health-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
+      <div className="health-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px' }}>
         <HealthRow 
-          label="Brain (Ollama)" 
-          value={health.ollama.reachable ? 'Online' : 'Offline'} 
+          label="BRAIN" 
+          value={health.ollama.reachable ? 'ONLINE' : 'OFFLINE'} 
           subValue={health.ollama.reachable ? `${health.ollama.response_time_ms}ms` : null}
           isError={!health.ollama.reachable}
         />
-        <HealthRow label="LLM Model" value={health.ollama.active_model || health.providers.llm_model} />
-        <HealthRow label="Voice" value={health.providers.active_voice} />
-        <HealthRow label="Ears (Whisper)" value={health.providers.stt_model} />
+        <HealthRow label="LLM MODEL" value={(health.ollama.active_model || health.providers.llm_model)?.toUpperCase()} />
+        <HealthRow label="VOICE" value={health.providers.active_voice?.toUpperCase()} />
+        <HealthRow label="EARS" value={health.providers.stt_model?.toUpperCase()} />
         <HealthRow 
-          label="Memories" 
-          value={`${health.memory.fact_count} facts · ${health.memory.habit_count} habits`} 
+          label="MEMORIES" 
+          value={`${health.memory.fact_count} FACTS · ${health.memory.habit_count} PATTERNS`} 
         />
         <HealthRow 
-          label="Push Alerts" 
-          value={health.push_notifications_enabled ? 'Enabled' : 'Disabled'} 
+          label="PUSH ALERTS" 
+          value={health.push_notifications_enabled ? 'ENABLED' : 'DISABLED'} 
         />
         <HealthRow 
-          label="Last Briefing" 
+          label="LAST BRIEFING" 
           value={formatLastBriefing(health.last_briefing)} 
         />
         <HealthRow 
-          label="Uptime" 
-          value={`${Math.floor(health.uptime_seconds / 3600)}h ${Math.floor((health.uptime_seconds % 3600) / 60)}m`} 
+          label="UPTIME" 
+          value={`${Math.floor(health.uptime_seconds / 3600)}H ${Math.floor((health.uptime_seconds % 3600) / 60)}M`} 
         />
       </div>
-
-      <style>{`
-        .health-row-label {
-          font-size: 0.7rem;
-          color: var(--text-dim);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          margin-bottom: 2px;
-        }
-        .health-row-value {
-          font-size: 0.85rem;
-          font-weight: 500;
-          color: var(--md-on-surface);
-        }
-        .health-row-sub {
-          font-size: 0.7rem;
-          color: var(--text-dim);
-          margin-left: 6px;
-          font-weight: 400;
-        }
-      `}</style>
     </div>
   )
 }
 
 const HealthRow = ({ label, value, subValue, isError }) => (
   <div className="health-row">
-    <div className="health-row-label">{label}</div>
-    <div className="health-row-value" style={{ color: isError ? 'var(--error)' : 'inherit' }}>
+    <div className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 2 }}>{label}</div>
+    <div className="rs-card-value" style={{ fontSize: '0.9rem', color: isError ? 'var(--md-error)' : 'var(--fg)', letterSpacing: '0.02em' }}>
       {value}
-      {subValue && <span className="health-row-sub">[{subValue}]</span>}
+      {subValue && <span style={{ opacity: 0.5, fontSize: '0.75rem', marginLeft: 6 }}>[{subValue}]</span>}
     </div>
   </div>
 )

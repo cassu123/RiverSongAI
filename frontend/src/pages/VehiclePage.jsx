@@ -1,30 +1,27 @@
-// =============================================================================
-// src/pages/VehiclePage.jsx
-//
-// Garage page: Lightweight overview of the user's vehicle fleet.
-// Deeper maintenance logs and inspections are handled by MaintenancePulse.jsx.
-// =============================================================================
-
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import MaintenancePulse from '../components/MaintenancePulse.jsx'
-import './VehiclePage.css'
 
-export default function VehiclePage() {
+/**
+ * VehiclePage — Phase 3 Rewrite
+ * -----------------------------------------------------------------------------
+ * Heavy-duty fleet management.
+ */
+
+export default function VehiclePage({ onNavigate }) {
   const { token } = useAuth()
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedVehicleId, setSelectedVehicleId] = useState(null)
+  const [uploadingDoc, setUploadingDoc] = useState(false)
 
   const fetchVehicles = useCallback(async () => {
     try {
       const res = await fetch('/api/vehicles/', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
-      if (!res.ok) throw new Error('Failed to fetch vehicles')
-      const data = await res.json()
-      setVehicles(data)
+      if (res.ok) setVehicles(await res.json())
     } catch (err) {
       setError(err.message)
     } finally {
@@ -33,17 +30,6 @@ export default function VehiclePage() {
   }, [token])
 
   useEffect(() => { fetchVehicles() }, [fetchVehicles])
-
-  const getTypeIcon = (type) => {
-    switch (type) {
-      case 'moto': return 'motorcycle'
-      case 'truck': return 'truck'
-      case 'atv': return 'agriculture'
-      default: return 'directions_car'
-    }
-  }
-
-  const [uploadingDoc, setUploadingDoc] = useState(false)
 
   const handleManualUpload = async (e, vehicleId) => {
     const file = e.target.files?.[0]
@@ -57,105 +43,94 @@ export default function VehiclePage() {
         headers: { Authorization: `Bearer ${token}` },
         body: fd
       })
-      if (!res.ok) throw new Error('Upload failed')
-      alert('Manual uploaded and indexed!')
-    } catch (err) {
-      alert('Failed to upload manual.')
+      if (res.ok) alert('MANUAL INDEXED')
+    } catch {
+      alert('UPLOAD FAILED')
     } finally {
       setUploadingDoc(false)
     }
   }
 
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'moto': return 'motorcycle'
+      case 'truck': return 'truck'
+      case 'atv': return 'agriculture'
+      default: return 'directions_car'
+    }
+  }
+
   if (selectedVehicleId) {
     return (
-      <div className="page-wrap vehicle-page">
-        <div className="page-header-row">
-          <div>
-            <div className="page-breadcrumb">
-              <span>◢</span><span>ASSETS</span>
-              <span className="page-breadcrumb-sep">/</span>
-              <span>GARAGE</span>
-              <span className="page-breadcrumb-sep">/</span>
-              <span>MAINTENANCE</span>
-            </div>
-            <h1 className="page-title">Vehicle Pulse</h1>
-          </div>
+      <div className="rs-foyer">
+        <div className="rs-foyer-head">
+          <h1 className="rs-greeting">Maintenance Pulse</h1>
+          <button className="rs-pill" onClick={() => setSelectedVehicleId(null)}>← BACK TO FLEET</button>
         </div>
-        <MaintenancePulse 
-          preselectedId={selectedVehicleId} 
-          onBack={() => { setSelectedVehicleId(null); fetchVehicles(); }} 
-        />
+        <div className="rs-card is-wide" style={{ padding: 0, overflow: 'hidden' }}>
+          <MaintenancePulse 
+            preselectedId={selectedVehicleId} 
+            onBack={() => { setSelectedVehicleId(null); fetchVehicles(); }} 
+          />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="page-wrap vehicle-page">
-      <div className="page-header-row">
-        <div>
-          <div className="page-breadcrumb">
-            <span>◢</span><span>ASSETS</span>
-            <span className="page-breadcrumb-sep">/</span>
-            <span>GARAGE</span>
-          </div>
-          <h1 className="page-title">The Garage</h1>
-          <div className="page-subtitle">
-            <span className="page-subtitle-dot" />
-            Manage your fleet and service status.
-          </div>
-        </div>
-        <button className="btn btn--primary" onClick={() => setSelectedVehicleId('NEW')}>
-          + ADD VEHICLE
-        </button>
+    <div className="rs-foyer animate-fade-in">
+      <div className="rs-foyer-head">
+        <h1 className="rs-greeting">The Garage</h1>
+        <div className="rs-greeting-sub">Monitor fleet status and maintenance telemetry.</div>
       </div>
 
-      {loading ? (
-        <div className="vh-loading">SCANNING TRANSPONDERS...</div>
-      ) : error ? (
-        <div className="vh-error">{error}</div>
-      ) : vehicles.length === 0 ? (
-        <div className="card vh-empty">
-          <span className="material-symbols-rounded">garage</span>
-          <p>Your garage is empty. Add your first vehicle to start tracking maintenance.</p>
-          <button className="btn btn--secondary" onClick={() => setSelectedVehicleId('NEW')}>ADD VEHICLE</button>
-        </div>
-      ) : (
-        <div className="vh-grid">
-          {vehicles.map(v => (
-            <div key={v.id} className="card vh-card" onClick={() => setSelectedVehicleId(v.id)}>
-              <div className="vh-card-header">
-                <span className="material-symbols-rounded vh-type-icon">{getTypeIcon(v.vehicle_type)}</span>
-                <div className="vh-card-meta">
-                  <div className="vh-nickname">{v.nickname || 'UNNAMED'}</div>
-                  <div className="vh-id">{v.year} {v.make} {v.model}</div>
+      <div className="rs-card-flow">
+        {loading ? (
+          <div className="rs-card-meta">SCANNING TRANSPONDERS...</div>
+        ) : vehicles.length === 0 ? (
+          <div className="rs-card is-wide" style={{ textAlign: 'center', padding: 48 }}>
+             <span className="material-symbols-rounded" style={{ fontSize: '3rem', opacity: 0.2 }}>garage</span>
+             <p className="rs-card-meta">No vehicles detected in sector.</p>
+             <button className="rs-btn-primary" style={{ marginTop: 24 }} onClick={() => setSelectedVehicleId('NEW')}>+ ADD VEHICLE</button>
+          </div>
+        ) : (
+          vehicles.map(v => (
+            <div key={v.id} className="rs-card is-wide is-tappable" onClick={() => setSelectedVehicleId(v.id)}>
+              <div className="rs-card-head">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <span className="material-symbols-rounded" style={{ fontSize: '2rem', color: 'var(--primary)' }}>{getTypeIcon(v.vehicle_type)}</span>
+                  <div>
+                    <div className="rs-card-value">{v.nickname || 'UNNAMED'}</div>
+                    <div className="rs-card-label" style={{ fontSize: '0.65rem' }}>{v.year} {v.make} {v.model}</div>
+                  </div>
                 </div>
+                <div className="rs-status-dot" style={{ background: '#4ade80' }} />
               </div>
               
-              <div className="vh-stats">
-                <div className="vh-stat">
-                  <label>COLOR</label>
-                  <span>{v.color || '—'}</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, margin: '20px 0' }}>
+                <div>
+                  <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>COLOR</div>
+                  <div style={{ fontSize: '0.9rem' }}>{v.color || '—'}</div>
                 </div>
-                <div className="vh-stat">
-                  <label>VIN</label>
-                  <span>{v.vin ? `...${v.vin.slice(-6)}` : '—'}</span>
+                <div>
+                  <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>VIN</div>
+                  <div style={{ fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}>{v.vin ? `...${v.vin.slice(-6)}` : '—'}</div>
                 </div>
               </div>
 
-              <div className="vh-footer">
-                <button className="btn btn--ghost btn--xs" onClick={(e) => { e.stopPropagation(); setSelectedVehicleId(v.id); }}>VIEW SPECS</button>
-                <label className="btn btn--ghost btn--xs" style={{ cursor: uploadingDoc ? 'wait' : 'pointer' }}>
+              <div style={{ display: 'flex', gap: 8, borderTop: '1px solid var(--md-outline-variant)', paddingTop: 16 }}>
+                <button className="rs-pill" onClick={(e) => { e.stopPropagation(); setSelectedVehicleId(v.id); }}>TELEMETRY</button>
+                <label className="rs-pill" style={{ cursor: 'pointer' }}>
                   {uploadingDoc ? '...' : 'MANUAL'}
-                  <input type="file" accept=".pdf,.txt" style={{ display: 'none' }} onChange={(e) => handleManualUpload(e, v.id)} onClick={e => e.stopPropagation()} />
+                  <input type="file" style={{ display: 'none' }} onChange={(e) => handleManualUpload(e, v.id)} onClick={e => e.stopPropagation()} />
                 </label>
                 <button 
-                  className="btn btn--primary btn--xs" 
+                  className="rs-pill is-active" 
+                  style={{ marginLeft: 'auto' }}
                   onClick={(e) => { 
                     e.stopPropagation(); 
-                    const msg = `What are the maintenance intervals for my ${v.year} ${v.make} ${v.model}?`;
-                    // Use localStorage to pass context to ChatPage
                     localStorage.setItem('rs-chat-intent', JSON.stringify({ 
-                      text: msg, 
+                      text: `Status report for the ${v.nickname || v.model}?`, 
                       docId: `vehicle_${v.id}` 
                     }));
                     window.dispatchEvent(new Event('rs-navigate-chat'));
@@ -165,9 +140,9 @@ export default function VehiclePage() {
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   )
 }
