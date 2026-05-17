@@ -997,6 +997,11 @@ export default function SettingsPage({
       <VoiceIDSection token={token} />
 
       {/* ================================================================ */}
+      {/* TOKEN USAGE                                                      */}
+      {/* ================================================================ */}
+      <TokenUsageSection token={token} />
+
+      {/* ================================================================ */}
       {/* MEMORY                                                           */}
       {/* ================================================================ */}
       {memSettings && (
@@ -2305,6 +2310,109 @@ function NotificationsSection({ token }) {
           </button>
           {testResult && <span style={{ fontSize: '0.75rem', color: 'var(--md-tertiary)' }}>{testResult}</span>}
         </div>
+      )}
+    </Section>
+  )
+}
+
+
+function TokenUsageSection({ token }) {
+  const [data,    setData]    = useState(null)
+  const [days,    setDays]    = useState(30)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!token) return
+    setLoading(true)
+    fetch(`/api/usage/tokens?days=${days}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setData(d); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [token, days])
+
+  function fmtTokens(n) {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
+    if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`
+    return String(n)
+  }
+
+  function fmtCostUsd(n) {
+    if (n === 0) return 'free'
+    if (n < 0.01) return `$${n.toFixed(4)}`
+    return `$${n.toFixed(2)}`
+  }
+
+  return (
+    <Section title="TOKEN USAGE">
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
+        <label className="settings-label" style={{ margin: 0 }}>PERIOD</label>
+        {[7, 30, 90].map(d => (
+          <button
+            key={d}
+            className={`btn btn--ghost${days === d ? ' btn--selected' : ''}`}
+            style={{ padding: '4px 12px', fontSize: '0.75rem', opacity: days === d ? 1 : 0.6 }}
+            onClick={() => setDays(d)}
+          >{d}d</button>
+        ))}
+      </div>
+
+      {loading && <p className="settings-hint">Loading…</p>}
+
+      {!loading && data && (
+        <>
+          <div style={{ display: 'flex', gap: 24, marginBottom: 20, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--md-outline)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Input</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--md-on-surface)' }}>{fmtTokens(data.total_input)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--md-outline)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Output</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--md-on-surface)' }}>{fmtTokens(data.total_output)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--md-outline)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Est. Cost</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 600, color: data.estimated_cost_usd > 0 ? 'var(--md-primary)' : '#00ff66' }}>
+                {fmtCostUsd(data.estimated_cost_usd)}
+              </div>
+            </div>
+          </div>
+
+          {data.by_model.length === 0 ? (
+            <p className="settings-hint">No usage recorded yet. Token tracking starts from the next conversation.</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+              <thead>
+                <tr style={{ color: 'var(--md-outline)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.06em' }}>
+                  <th style={{ textAlign: 'left', paddingBottom: 6 }}>Model</th>
+                  <th style={{ textAlign: 'right', paddingBottom: 6 }}>Calls</th>
+                  <th style={{ textAlign: 'right', paddingBottom: 6 }}>Input</th>
+                  <th style={{ textAlign: 'right', paddingBottom: 6 }}>Output</th>
+                  <th style={{ textAlign: 'right', paddingBottom: 6 }}>Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.by_model.map((row, i) => (
+                  <tr key={i} style={{ borderTop: '1px solid var(--md-outline-variant)', color: 'var(--md-on-surface)' }}>
+                    <td style={{ padding: '6px 0' }}>
+                      <span style={{ opacity: 0.5, fontSize: '0.7rem', marginRight: 6 }}>{row.provider}</span>
+                      {row.model}
+                    </td>
+                    <td style={{ textAlign: 'right', padding: '6px 0' }}>{row.calls}</td>
+                    <td style={{ textAlign: 'right', padding: '6px 0' }}>{fmtTokens(row.input_tokens)}</td>
+                    <td style={{ textAlign: 'right', padding: '6px 0' }}>{fmtTokens(row.output_tokens)}</td>
+                    <td style={{ textAlign: 'right', padding: '6px 0', color: row.estimated_cost_usd > 0 ? 'var(--md-primary)' : '#00ff66' }}>
+                      {fmtCostUsd(row.estimated_cost_usd)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          <p className="settings-hint" style={{ marginTop: 12 }}>
+            Cost estimates use public list prices. Ollama (local) is always free.
+          </p>
+        </>
       )}
     </Section>
   )

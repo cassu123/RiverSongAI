@@ -287,7 +287,8 @@ def create_app() -> FastAPI:
         vehicles_router, feeds_router, reading_router, features_router,
         parent_router, analytics_router, culinary_router, location_router, google_router,
         vision_router, vault_router, pulse_router, voice_id_router, n8n_webhooks, shopify_webhooks_router, image_router, push_router,
-        legal_router, rag_router, daemons_router, context_router, broadcast_router, rover_router
+        legal_router, rag_router, daemons_router, context_router, broadcast_router, rover_router,
+        usage_router
     )
 
     app.include_router(auth_router)
@@ -324,6 +325,7 @@ def create_app() -> FastAPI:
     app.include_router(context_router)
     app.include_router(broadcast_router)
     app.include_router(rover_router)
+    app.include_router(usage_router)
 
     # Serve the built React frontend — must be last so API routes take priority
     import os

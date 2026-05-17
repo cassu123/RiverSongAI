@@ -33,6 +33,7 @@ from .pulse import router as pulse_router
 from .voice_id import router as voice_id_router
 from . import n8n_webhooks
 from .legal import router as legal_router
+from .usage import router as usage_router
 
 __all__ = [
     "health_router",
@@ -70,4 +71,5 @@ __all__ = [
     "voice_id_router",
     "n8n_webhooks",
     "legal_router",
+    "usage_router",
 ]

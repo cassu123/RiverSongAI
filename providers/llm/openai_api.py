@@ -28,6 +28,7 @@ from typing import AsyncGenerator, List
 import openai
 
 from config.settings import get_settings
+from core.token_tracker import record_usage
 from providers.base import LLMProvider
 
 
@@ -99,13 +100,22 @@ class OpenAILLM(LLMProvider):
                 max_tokens=self._max_tokens,
                 temperature=self._temperature,
                 stream=True,
+                stream_options={"include_usage": True},
             )
 
+            last_usage = None
             async for chunk in stream:
+                if chunk.usage:
+                    last_usage = chunk.usage
                 delta = chunk.choices[0].delta if chunk.choices else None
                 text = getattr(delta, "content", None) if delta else None
                 if text:
                     yield text
+
+            if last_usage:
+                record_usage("openai", self._model,
+                             last_usage.prompt_tokens, last_usage.completion_tokens,
+                             call_type="stream")
 
         except Exception as exc:
             logger.error("OpenAI API call failed: %s", exc, exc_info=True)

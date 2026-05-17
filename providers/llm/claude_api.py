@@ -11,6 +11,7 @@ from typing import AsyncGenerator, List, Optional
 
 import anthropic
 from config.settings import get_settings
+from core.token_tracker import record_usage
 from providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,9 @@ class ClaudeAPILLM(LLMProvider):
                 system=system_prompt,
                 messages=chat_messages
             )
+            record_usage("anthropic", self._model,
+                         response.usage.input_tokens, response.usage.output_tokens,
+                         call_type="chat")
             return "".join(b.text for b in response.content if b.type == "text")
         except Exception as exc:
             logger.error("Claude API call failed: %s", exc, exc_info=True)
@@ -77,6 +81,13 @@ class ClaudeAPILLM(LLMProvider):
             ) as stream:
                 async for text in stream.text_stream:
                     yield text
+                try:
+                    msg = await stream.get_final_message()
+                    record_usage("anthropic", self._model,
+                                 msg.usage.input_tokens, msg.usage.output_tokens,
+                                 call_type="stream")
+                except Exception:
+                    pass
         except Exception as exc:
             logger.error("Claude streaming failed: %s", exc, exc_info=True)
             yield _friendly_error(exc)
@@ -124,6 +135,10 @@ class ClaudeAPILLM(LLMProvider):
                 messages=messages,
                 tools=tools
             )
+
+            record_usage("anthropic", self._model,
+                         response.usage.input_tokens, response.usage.output_tokens,
+                         call_type="tools")
 
             if response.stop_reason == "tool_use":
                 # Find the first tool_use block
