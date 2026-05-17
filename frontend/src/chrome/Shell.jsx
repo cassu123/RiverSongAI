@@ -42,7 +42,12 @@ export default function Shell({
 
       <main className="rs-content">{children}</main>
 
-      {action && <div className="rs-action">{action}</div>}
+      {action ? (
+        <div className="rs-action">{action}</div>
+      ) : (
+        /* Padding to prevent content being hidden by floating system UI on mobile */
+        <div style={{ height: 'env(safe-area-inset-bottom)' }} />
+      )}
     </div>
   )
 }

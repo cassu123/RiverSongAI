@@ -1,0 +1,150 @@
+/* =============================================================================
+   chrome-components.css — Shared futuristic grammar (rs-card, rs-pill, etc.)
+   -----------------------------------------------------------------------------
+   Migrated from preview/preview.css to power Phase 3 page rewrites.
+   ============================================================================= */
+
+/* --- Tokens (Bridge between global and shell) --------------------------- */
+:root {
+  --rs-card-r:  var(--md-shape-xl);
+  --rs-pill-r:  var(--md-shape-sm);
+  --rs-motion-mid: 300ms;
+  --rs-motion-fast: 180ms;
+  --rs-motion-curve: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* --- Glass card ---------------------------------------------------------- */
+.rs-card {
+  container-type: inline-size;
+  background: color-mix(in srgb, var(--bg-base) 55%, transparent);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--rs-card-r);
+  padding: clamp(16px, 4cqi, 28px);
+  box-shadow: var(--md-elevation-2);
+  transition: background var(--rs-motion-fast) var(--rs-motion-curve),
+              border-color var(--rs-motion-fast) var(--rs-motion-curve),
+              transform var(--rs-motion-fast) var(--rs-motion-curve);
+  position: relative;
+  overflow: hidden;
+}
+
+.rs-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--card-texture);
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+.rs-card.is-elev {
+  background: color-mix(in srgb, var(--bg-base) 70%, transparent);
+  border-color: var(--md-outline);
+  box-shadow: var(--md-elevation-4);
+}
+
+.rs-card.is-tappable { cursor: pointer; }
+.rs-card.is-tappable:active { transform: scale(0.985); }
+@media (pointer: fine) {
+  .rs-card.is-tappable:hover {
+    background: color-mix(in srgb, var(--bg-base) 65%, transparent);
+    border-color: var(--primary);
+  }
+}
+
+/* --- Dashboard Greeting -------------------------------------------------- */
+.rs-greeting {
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.1;
+  font-weight: 400;
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-mood);
+  letter-spacing: -0.02em;
+}
+
+.rs-greeting-sub {
+  font-size: 1.1rem;
+  color: var(--md-on-surface-variant);
+  margin-block-start: 12px;
+  opacity: 0.8;
+}
+
+/* --- Flows --------------------------------------------------------------- */
+.rs-card-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-block-start: 32px;
+}
+.rs-card-flow > .rs-card { flex: 1 1 300px; }
+.rs-card-flow > .rs-card.is-wide { flex-basis: 100%; }
+
+/* --- Card Content Grammar ------------------------------------------------ */
+.rs-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: 16px;
+}
+
+.rs-card-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--rs-fs-micro);
+  color: var(--md-on-surface-variant);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.rs-card-value {
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--fg);
+  line-height: 1.2;
+}
+
+.rs-card-meta {
+  font-size: var(--rs-fs-small);
+  color: var(--md-on-surface-variant);
+  margin-block-start: 8px;
+}
+
+/* --- Status Strip --------------------------------------------------------- */
+.rs-status-strip {
+  padding: 12px 20px;
+  font-size: var(--rs-fs-small);
+  color: var(--md-on-surface-variant);
+  background: color-mix(in srgb, var(--bg-base) 40%, transparent);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  backdrop-filter: var(--glass-blur-sm);
+}
+
+.rs-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 10px #4ade80;
+  animation: rs-pulse 2s ease-in-out infinite;
+}
+
+@keyframes rs-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* --- Typographic Overrides ----------------------------------------------- */
+.rs-card-label, .rs-status-strip {
+  letter-spacing: var(--type-tracking);
+  text-transform: var(--type-case);
+}

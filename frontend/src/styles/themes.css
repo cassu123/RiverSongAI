@@ -41,133 +41,147 @@
 /* ── Dune · Atreides — noble, sparse, raking sunset light ─── */
 body[data-env="atreides"] {
   --layout-pad:           28px;
-  --layout-gap:           20px;
-  --card-radius:          1px;
+  --layout-gap:           24px;
+  --card-radius:          var(--md-shape-xl);
   --card-border-width:    1px;
-  --card-shadow:          0 12px 40px rgba(0,0,0,0.45);
+  --card-shadow:          0 12px 48px rgba(0,0,0,0.55);
   --divider-style:        solid;
   --type-tracking:        0.18em;
   --type-case:            uppercase;
-  --sidebar-bg-alpha:     0.82;
-  --card-texture:         linear-gradient(135deg, rgba(212,160,64,0.04) 0%, transparent 60%);
+  --sidebar-bg-alpha:     0.78;
+  --card-texture:         linear-gradient(135deg, rgba(212,160,64,0.06) 0%, transparent 60%);
   --btn-actuation:        scale(0.98) translateY(1px);
-  --btn-shadow:           inset 0 2px 4px rgba(0,0,0,0.3);
+  --btn-shadow:           0 4px 20px rgba(0,0,0,0.4);
 }
 
 /* ── Dune · Harkonnen — dense, industrial, oppressive ─────── */
 body[data-env="harkonnen"] {
-  --layout-pad:           12px;
-  --layout-gap:           6px;
-  --card-radius:          0px;
+  --layout-pad:           16px;
+  --layout-gap:           12px;
+  --card-radius:          var(--md-shape-lg);
   --card-border-width:    1px;
-  --card-shadow:          inset 0 0 0 1px rgba(255,40,20,.14);
+  --card-shadow:          0 8px 32px rgba(255,40,20,.12);
   --divider-style:        solid;
-  --type-tracking:        -0.02em;
+  --type-tracking:        -0.01em;
   --type-case:            uppercase;
-  --sidebar-bg-alpha:     0.95;
-  --card-texture:         repeating-linear-gradient(45deg, rgba(0,0,0,0.12) 0 2px, transparent 2px 4px);
+  --sidebar-bg-alpha:     0.88;
+  --card-texture:         repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0 2px, transparent 2px 6px);
   --btn-actuation:        translateY(2px);
-  --btn-shadow:           0 0 0 2px var(--error);
+  --btn-shadow:           0 0 15px color-mix(in srgb, var(--error) 40%, transparent);
+}
+
+/* ── Dune · Arrakis — vast, ancient, spice-shimmer ───────── */
+body[data-env="arrakis"] {
+  --layout-pad:           24px;
+  --layout-gap:           20px;
+  --card-radius:          var(--md-shape-2xl);
+  --card-border-width:    1px;
+  --card-shadow:          0 20px 60px rgba(42,20,10,.65);
+  --divider-style:        solid;
+  --type-tracking:        0.15em;
+  --type-case:            uppercase;
+  --sidebar-bg-alpha:     0.82;
+  --card-texture:         radial-gradient(ellipse at 70% 20%, rgba(212,116,56,0.1) 0%, transparent 80%);
+  --btn-actuation:        scale(0.99) translateY(1px);
+  --btn-shadow:           0 8px 24px rgba(0,0,0,0.5);
 }
 
 /* ── Halo · Forerunner — pristine, hex-architectural ──────── */
 body[data-env="forerunner"] {
   --layout-pad:           24px;
   --layout-gap:           18px;
-  --card-radius:          4px;
+  --card-radius:          var(--md-shape-xl);
   --card-border-width:    1px;
-  --card-shadow:          0 0 30px rgba(120,200,230,.15);
+  --card-shadow:          0 0 40px rgba(120,200,230,.20);
   --divider-style:        dotted;
-  --type-tracking:        0.12em;
+  --type-tracking:        0.10em;
   --type-case:            none;
-  --sidebar-bg-alpha:     0.78;
-  --card-texture:         radial-gradient(circle at 50% 50%, rgba(120,200,230,0.05) 0%, transparent 100%);
+  --sidebar-bg-alpha:     0.75;
+  --card-texture:         radial-gradient(circle at 50% 50%, rgba(120,200,230,0.08) 0%, transparent 100%);
   --btn-actuation:        translateY(-1px);
-  --btn-shadow:           0 0 15px var(--accent);
+  --btn-shadow:           0 0 20px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 
-/* ── Halo · UNSC — tactical, hard-edged, military hangar ──── */
+/* ── Halo · UNSC — tactical, military hangar ──── */
 body[data-env="unsc"] {
-  --layout-pad:           14px;
-  --layout-gap:           8px;
-  --card-radius:          0px;
-  --card-border-width:    2px;
-  --card-shadow:          0 4px 0 rgba(240,140,50,.18);
+  --layout-pad:           18px;
+  --layout-gap:           12px;
+  --card-radius:          var(--md-shape-md);
+  --card-border-width:    1.5px;
+  --card-shadow:          0 6px 12px rgba(0,0,0,0.4);
   --divider-style:        solid;
-  --type-tracking:        0.06em;
+  --type-tracking:        0.04em;
   --type-case:            uppercase;
-  --sidebar-bg-alpha:     0.92;
-  --card-texture:
-    linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 50%),
-    repeating-linear-gradient(0deg, rgba(240,140,50,0.02) 0 1px, transparent 1px 2px);
-  --btn-actuation:        translateY(1px);
-  --btn-shadow:           2px 2px 0 var(--accent);
+  --sidebar-bg-alpha:     0.88;
+  --card-texture:         linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 50%),
+    repeating-linear-gradient(0deg, rgba(240,140,50,0.03) 0 1px, transparent 1px 4px);
+  --btn-actuation:        translateY(1.5px);
+  --btn-shadow:           4px 4px 0 color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 /* ── MV · Sacred Spires — Escher impossibility, vertical ──── */
 body[data-env="spires"] {
   --layout-pad:           26px;
-  --layout-gap:           20px;
-  --card-radius:          8px;
+  --layout-gap:           24px;
+  --card-radius:          var(--md-shape-2xl);
   --card-border-width:    1px;
-  --card-shadow:          0 0 30px rgba(200,180,220,.16);
+  --card-shadow:          0 10px 40px rgba(0,0,0,0.3);
   --divider-style:        dotted;
   --type-tracking:        0.04em;
   --type-case:            none;
-  --sidebar-bg-alpha:     0.74;
+  --sidebar-bg-alpha:     0.70;
   --card-texture:
-    linear-gradient(60deg,  rgba(200,180,220,0.06) 0%, transparent 70%),
-    linear-gradient(-60deg, rgba(160,160,200,0.04) 0%, transparent 70%);
-  --btn-actuation:        scale(0.97);
-  --btn-shadow:           0 0 12px rgba(200,180,220,.45);
+    linear-gradient(60deg,  rgba(200,180,220,0.08) 0%, transparent 70%),
+    linear-gradient(-60deg, rgba(160,160,200,0.06) 0%, transparent 70%);
+  --btn-actuation:        scale(0.96);
+  --btn-shadow:           0 0 16px rgba(200,180,220,.45);
 }
 
 /* ── MV · Garden Pavilion — horizontal organic, warm low light */
 body[data-env="garden"] {
-  --layout-pad:           22px;
-  --layout-gap:           16px;
-  --card-radius:          16px;
+  --layout-pad:           24px;
+  --layout-gap:           20px;
+  --card-radius:          var(--md-shape-3xl);
   --card-border-width:    0px;
-  --card-shadow:          0 8px 24px rgba(180,90,30,.22);
+  --card-shadow:          0 12px 32px rgba(180,90,30,.25);
   --divider-style:        solid;
   --type-tracking:        0.06em;
   --type-case:            none;
-  --sidebar-bg-alpha:     0.84;
-  --card-texture:         radial-gradient(ellipse at 30% 80%, rgba(255,180,120,0.08) 0%, transparent 65%);
-  --btn-actuation:        translateY(1px) scale(0.99);
-  --btn-shadow:           0 4px 12px rgba(180,90,30,.35);
+  --sidebar-bg-alpha:     0.80;
+  --card-texture:         radial-gradient(ellipse at 30% 80%, rgba(255,180,120,0.12) 0%, transparent 65%);
+  --btn-actuation:        translateY(1.5px) scale(0.98);
+  --btn-shadow:           0 6px 16px rgba(180,90,30,.4);
 }
 
 /* ── Night City · Corpo Plaza — clean brutalist, chrome ───── */
 body[data-env="corpo"] {
-  --layout-pad:           16px;
-  --layout-gap:           10px;
-  --card-radius:          1px;
+  --layout-pad:           20px;
+  --layout-gap:           16px;
+  --card-radius:          var(--md-shape-lg);
   --card-border-width:    1px;
-  --card-shadow:          0 0 0 1px rgba(200,200,220,.20), 0 4px 24px rgba(255,60,140,.10);
+  --card-shadow:          0 0 0 1px rgba(200,200,220,.25), 0 8px 32px rgba(255,60,140,.15);
   --divider-style:        solid;
-  --type-tracking:        0.20em;
+  --type-tracking:        0.18em;
   --type-case:            uppercase;
-  --sidebar-bg-alpha:     0.96;
-  --card-texture:         linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 30%);
-  --btn-actuation:        translateY(1px);
-  --btn-shadow:           0 0 12px rgba(255,60,140,.55);
+  --sidebar-bg-alpha:     0.90;
+  --card-texture:         linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 30%);
+  --btn-actuation:        translateY(1.5px);
+  --btn-shadow:           0 0 16px rgba(255,60,140,.6);
 }
-
 /* ── Night City · Pacifica Street — decayed neon, scanline ── */
 body[data-env="pacifica"] {
-  --layout-pad:           10px;
-  --layout-gap:           6px;
-  --card-radius:          0px;
+  --layout-pad:           14px;
+  --layout-gap:           10px;
+  --card-radius:          var(--md-shape-md);
   --card-border-width:    1px;
-  --card-shadow:          4px 4px 0 rgba(220,180,40,.30);
+  --card-shadow:          6px 6px 0 rgba(220,180,40,.25);
   --divider-style:        dashed;
   --type-tracking:        0.02em;
   --type-case:            uppercase;
-  --sidebar-bg-alpha:     0.92;
+  --sidebar-bg-alpha:     0.88;
   --card-texture:
-    repeating-linear-gradient(0deg, transparent 0 2px, rgba(220,200,80,.04) 2px 3px),
-    linear-gradient(135deg, rgba(255,0,255,0.04) 0%, transparent 60%);
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(220,200,80,.06) 2px 4px),
+    linear-gradient(135deg, rgba(255,0,255,0.06) 0%, transparent 60%);
   --btn-actuation:        translateY(2px) skewX(-1deg);
   --btn-shadow:           2px 2px 0 var(--primary);
 }
@@ -242,6 +256,15 @@ body:not(.rs-stage-active)[data-env="spires"]::before {
     repeating-linear-gradient(60deg,  transparent 0 80px, rgba(120,100,160,.20) 80px 84px),
     repeating-linear-gradient(-60deg, transparent 0 80px, rgba(120,100,160,.20) 80px 84px),
     linear-gradient(180deg, rgba(48,32,72,.55) 0%, rgba(12,8,24,.85) 100%);
+}
+
+/* Arrakis — deep desert, orange dunes, spice blow, wormsign */
+body:not(.rs-stage-active)[data-env="arrakis"]::before {
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 60%, rgba(255,140,40,.35) 0%, transparent 70%),
+    radial-gradient(circle 300px at 15% 85%, rgba(220,100,40,.25) 0%, transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,200,100,.04) 3px 6px),
+    linear-gradient(180deg, rgba(60,30,15,.45) 0%, rgba(10,5,2,.95) 100%);
 }
 
 /* Garden Pavilion — horizontal terraces, low warm sun, organic */
@@ -325,6 +348,30 @@ body:not(.rs-stage-active)::after {
   --panel-bg:    rgba(12,8,4,.62);
   --silhouette:  #f3d896;
   --vortex-deep: #6e3a16;
+}
+[data-mood="deep-desert"] {
+  --bg-base:     #1a0a04;
+  --fg:          #f5d4a0;
+  --primary:     #d47438;
+  --secondary:   #8a4818;
+  --accent:      #ffd06a;
+  --line:        rgba(212,116,56,.22);
+  --error:       #c84030;
+  --panel-bg:    rgba(26,10,4,.65);
+  --silhouette:  #f5d4a0;
+  --vortex-deep: #3a1f10;
+}
+[data-mood="wormsign"] {
+  --bg-base:     #0a0402;
+  --fg:          #ffcc80;
+  --primary:     #8a4820;
+  --secondary:   #4a2410;
+  --accent:      #ff8038;
+  --line:        rgba(138,72,32,.26);
+  --error:       #b83321;
+  --panel-bg:    rgba(10,4,2,.70);
+  --silhouette:  #ffcc80;
+  --vortex-deep: #2a140a;
 }
 
 /* ── Dune · Harkonnen ────────────────────────────────────── */

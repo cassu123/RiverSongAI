@@ -219,50 +219,50 @@ export default function ChatPage() {
       } else {
         // Stream the response
         const reader = res.body.getReader()
-        // ... rest of streaming logic ...
-      const decoder = new TextDecoder()
-      let full = ''
-      let streamDone = false
-      let buffer = ''
+        const decoder = new TextDecoder()
+        let full = ''
+        let streamDone = false
+        let buffer = ''
 
-      while (!streamDone) {
-        const { done, value } = await reader.read()
-        if (done) break
-        
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        // Keep the last partial line in the buffer
-        buffer = lines.pop()
+        while (!streamDone) {
+          const { done, value } = await reader.read()
+          if (done) break
+          
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          // Keep the last partial line in the buffer
+          buffer = lines.pop()
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const piece = line.slice(6)
-            if (piece === '[DONE]') { 
-              streamDone = true
-              break 
-            }
-            try {
-              // Now that we JSON-encode on the server, we must parse here
-              const evt = JSON.parse(piece)
-              if (evt.type === 'text') {
-                full += evt.content
-                setStreamingResponse(full)
-              } else if (evt.type === 'tool_use' || evt.type === 'tool_result') {
-                setToolEvents(prev => [...prev, evt])
-              } else if (evt.type === 'error') {
-                setError(`Server Error: ${evt.content || 'An unknown error occurred'}`)
-                streamDone = true; break
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const piece = line.slice(6)
+              if (piece === '[DONE]') { 
+                streamDone = true
+                break 
               }
-            } catch (e) {
-              // Fallback for non-JSON or partial chunks
-              full += piece
-              setStreamingResponse(full)
+              try {
+                // Now that we JSON-encode on the server, we must parse here
+                const evt = JSON.parse(piece)
+                if (evt.type === 'text') {
+                  full += evt.content
+                  setStreamingResponse(full)
+                } else if (evt.type === 'tool_use' || evt.type === 'tool_result') {
+                  setToolEvents(prev => [...prev, evt])
+                } else if (evt.type === 'error') {
+                  setError(`Server Error: ${evt.content || 'An unknown error occurred'}`)
+                  streamDone = true; break
+                }
+              } catch (e) {
+                // Fallback for non-JSON or partial chunks
+                full += piece
+                setStreamingResponse(full)
+              }
             }
           }
         }
+        setStreamingResponse('')
+        setMessages(p => [...p, { role: 'assistant', text: full || '...' }])
       }
-      setStreamingResponse('')
-      setMessages(p => [...p, { role: 'assistant', text: full || '...' }])
     } catch (err) {
       setError('Failed to get a response. Check your connection.')
       setStreamingResponse('')
@@ -270,7 +270,7 @@ export default function ChatPage() {
       setIsThinking(false)
       setThinkingStart(null)
     }
-  }, [inputText, isThinking, messages, selectedModel, token, webSearch, thinkingMode, systemPrompt])
+  }, [inputText, isThinking, messages, selectedModel, token, webSearch, thinkingMode, systemPrompt, activeDocId])
 
   const handleKeyDown = useCallback(e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }

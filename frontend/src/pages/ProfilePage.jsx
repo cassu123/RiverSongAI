@@ -30,7 +30,8 @@ const UNIVERSES = [
 
 const ENVIRONMENTS = {
   dune:      [{ key: 'atreides',   label: 'ATREIDES',   primary: '#deb651', bg: '#1a1209' },
-              { key: 'harkonnen',  label: 'HARKONNEN',  primary: '#c53a1f', bg: '#0a0606' }],
+              { key: 'harkonnen',  label: 'HARKONNEN',  primary: '#c53a1f', bg: '#0a0606' },
+              { key: 'arrakis',    label: 'ARRAKIS',    primary: '#d47438', bg: '#1a0a04' }],
   halo:      [{ key: 'forerunner', label: 'FORERUNNER', primary: '#00e5ff', bg: '#050c14' },
               { key: 'unsc',       label: 'UNSC',       primary: '#f08c32', bg: '#0c1116' }],
   mv:        [{ key: 'spires',     label: 'SACRED SPIRES',    primary: '#a0a8c0', bg: '#1a1a2e' },
@@ -44,6 +45,8 @@ const MOODS = {
                { key: 'spice-hall',       label: 'SPICE HALL',       primary: '#deb651', bg: '#0b0805' }],
   harkonnen:  [{ key: 'giedi',            label: 'GIEDI PRIME',      primary: '#7a8390', bg: '#050505' },
                { key: 'bloodlight',       label: 'BLOODLIGHT',       primary: '#c53a1f', bg: '#140c0b' }],
+  arrakis:    [{ key: 'deep-desert',      label: 'DEEP DESERT',      primary: '#d47438', bg: '#1a0a04' },
+               { key: 'wormsign',         label: 'WORMSIGN',         primary: '#8a4820', bg: '#0a0402' }],
   forerunner: [{ key: 'hard-light',       label: 'HARD-LIGHT',       primary: '#00e5ff', bg: '#050c14' },
                { key: 'ceramic-veil',     label: 'CERAMIC VEIL',     primary: '#a8e0ff', bg: '#0a1820' }],
   unsc:       [{ key: 'combat-steel',     label: 'COMBAT STEEL',     primary: '#f08c32', bg: '#0c1116' },

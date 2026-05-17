@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react'
 import { useAuth }        from './context/AuthContext.jsx'
-import Sidebar            from './components/Sidebar.jsx'
+import Shell              from './chrome/Shell.jsx'
+import Drawer             from './chrome/Drawer.jsx'
 import ErrorBoundary      from './components/ErrorBoundary.jsx'
 import RsMark             from './components/RsMark.jsx'
 import Stage              from './chrome/Stage.jsx'
+import './styles/chrome-shell.css'
 import './styles/chrome-stage.css'
+import './styles/chrome-components.css'
 
 // Lazy load pages
 const LoginPage          = lazy(() => import('./pages/LoginPage.jsx'))
@@ -48,7 +51,7 @@ function save(key, value) {
 // universe -> environment -> mood. Each pair below is the canonical default
 // when an axis up the chain changes. Also used to validate persisted state.
 const UNIVERSE_ENVS = {
-  dune:      ['atreides',   'harkonnen'],
+  dune:      ['atreides',   'harkonnen', 'arrakis'],
   halo:      ['forerunner', 'unsc'],
   mv:        ['spires',     'garden'],
   nightcity: ['corpo',      'pacifica'],
@@ -56,6 +59,7 @@ const UNIVERSE_ENVS = {
 const ENV_MOODS = {
   atreides:   ['caladan', 'spice-hall'],
   harkonnen:  ['giedi', 'bloodlight'],
+  arrakis:    ['deep-desert', 'wormsign'],
   forerunner: ['hard-light', 'ceramic-veil'],
   unsc:       ['combat-steel', 'night-vision'],
   spires:     ['sacred', 'daybreak-temple', 'twilight-spires'],
@@ -81,7 +85,7 @@ export default function App() {
   const [enabledFeatures, setEnabledFeatures] = useState(null) // null = not loaded yet
   const [currentPage,   setCurrentPage]   = useState(() => load('rs-page', 'speak'))
   const [adminMode,     setAdminMode]     = useState(false)
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [drawerOpen,    setDrawerOpen]    = useState(false)
   const universeKey   = user ? `rs-universe:${user.id}`   : 'rs-universe'
   const envKey        = user ? `rs-env:${user.id}`        : 'rs-env'
   const moodKey       = user ? `rs-mood:${user.id}`       : 'rs-mood'
@@ -93,6 +97,11 @@ export default function App() {
     if (user) return { displayName: user.display_name, username: user.email, birthday: '' }
     return load('rs-profile', { displayName: 'User', username: '', birthday: '' })
   })
+
+  useEffect(() => {
+    document.body.classList.add('rs-stage-active')
+    return () => document.body.classList.remove('rs-stage-active')
+  }, [])
 
   useEffect(() => { save('rs-page',    currentPage) }, [currentPage])
   useEffect(() => { save('rs-admin',   adminMode)   }, [adminMode])
@@ -265,13 +274,24 @@ export default function App() {
   }
 
   if (setupRequired) {
-    return <SetupPage />
+    return (
+      <div className="app-shell">
+        <Stage environment="atreides" />
+        <SetupPage />
+      </div>
+    )
   }
 
   if (!user) {
-    return authView === 'login'
-      ? <LoginPage  onSwitchToSignup={() => setAuthView('signup')} />
-      : <SignupPage onSwitchToLogin={()  => setAuthView('login')}  />
+    return (
+      <div className="app-shell">
+        <Stage environment="atreides" />
+        {authView === 'login'
+          ? <LoginPage  onSwitchToSignup={() => setAuthView('signup')} />
+          : <SignupPage onSwitchToLogin={()  => setAuthView('login')}  />
+        }
+      </div>
+    )
   }
 
   const featureEnabled = (page) => {
@@ -292,7 +312,7 @@ export default function App() {
     if (!featureEnabled(page)) return
     setCurrentPage(page)
     window.scrollTo(0, 0)
-    setMobileNavOpen(false)
+    setDrawerOpen(false)
   }
 
   const handleAdminToggle = (next) => {
@@ -303,45 +323,16 @@ export default function App() {
   const pageLabel = (adminMode ? ADMIN_ITEMS : USER_ITEMS).find(i => i.key === currentPage)?.label || 'River Song'
 
   return (
-    <div className="app-shell">
+    <div className="rs-root">
       {/* Photographic backdrop — fixed full-viewport behind everything */}
       <Stage environment={environment} />
 
-      {/* Mobile top bar */}
-      <div className="mobile-topbar">
-        <div className="mobile-topbar-brand">
-          <RsMark mark="mono" size={32} />
-          <span className="sidebar-title">{pageLabel.toUpperCase()}</span>
-        </div>
-        <button
-          className="mobile-hamburger"
-          onClick={() => setMobileNavOpen(true)}
-          aria-label="Open navigation"
-        >
-          <span /><span /><span />
-        </button>
-      </div>
-
-      {/* Mobile nav overlay backdrop */}
-      {mobileNavOpen && (
-        <div className="mobile-overlay" onClick={() => setMobileNavOpen(false)} />
-      )}
-
-      <Sidebar
-        currentPage={currentPage}
-        onNavigate={(page) => { handleNavigate(page); setMobileNavOpen(false) }}
-        isAdmin={adminMode}
-        showAdminToggle={userIsAdmin}
-        onAdminToggle={handleAdminToggle}
-        displayName={profile.displayName}
-        onLogout={logout}
-        mobileOpen={mobileNavOpen}
-        onMobileClose={() => setMobileNavOpen(false)}
-        enabledFeatures={enabledFeatures}
-        userIsAdmin={userIsAdmin}
-      />
-
-      <main className="app-main">
+      <Shell
+        context={pageLabel}
+        onOpenDrawer={() => setDrawerOpen(true)}
+        onOpenSpeak={() => handleNavigate('speak')}
+        onHome={() => handleNavigate('dashboard')}
+      >
         <ErrorBoundary key={currentPage}>
           <Suspense fallback={<div className="loading-screen">INITIALIZING...</div>}>
             <div className="page-enter">
@@ -384,7 +375,20 @@ export default function App() {
             </div>
           </Suspense>
         </ErrorBoundary>
-      </main>
+      </Shell>
+
+      <Drawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        adminMode={adminMode}
+        userIsAdmin={userIsAdmin}
+        onAdminToggle={handleAdminToggle}
+        enabledFeatures={enabledFeatures}
+        displayName={profile.displayName}
+        onLogout={logout}
+      />
     </div>
   )
 }

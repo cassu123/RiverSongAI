@@ -75,14 +75,18 @@
   --md-state-dragged: 0.16;
 
   /* ── M3 Shape tokens ─────────────────────────────────────── */
-  --md-shape-xs:    4px;
-  --md-shape-sm:    8px;
-  --md-shape-md:    12px;
-  --md-shape-lg:    16px;
-  --md-shape-xl:    20px;
-  --md-shape-2xl:   24px;
-  --md-shape-3xl:   28px;
+  --md-shape-xs:    6px;
+  --md-shape-sm:    12px;
+  --md-shape-md:    20px;
+  --md-shape-lg:    28px;
+  --md-shape-xl:    36px;
+  --md-shape-2xl:   44px;
+  --md-shape-3xl:   52px;
   --md-shape-full:  9999px;
+
+  /* ── Chrome Blur ─────────────────────────────────────────── */
+  --glass-blur: blur(20px);
+  --glass-blur-sm: blur(8px);
 
   /* ── M3 Elevation (surface tint + shadow) ────────────────── */
   --md-elevation-1: 0px 1px 2px rgba(0,0,0,.3), 0px 1px 3px 1px rgba(0,0,0,.15);
@@ -174,26 +178,6 @@
     justify-content: center;
     flex-shrink: 0;
   }
-}
-
-/* ============================================================
-   App Shell
-   ============================================================ */
-
-.app-shell {
-  display: flex;
-  flex-direction: row;
-  height: 100%;
-  width: 100%;
-  background: transparent;
-}
-
-.app-main {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
 }
 
 /* ============================================================
@@ -1628,138 +1612,12 @@
   padding: 2px 8px;
 }
 
-/* ============================================================
-   Sidebar coming-soon pill
-   ============================================================ */
-
-.sidebar-item--soon { opacity: 0.75; }
-.sidebar-soon-pill {
-  margin-left: auto;
-  font-size: 0.5625rem;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  color: var(--md-on-surface-variant);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-shape-full);
-  padding: 1px 6px;
-  line-height: 1.4;
-  text-transform: uppercase;
-}
-
-/* ============================================================
-   Mobile — top bar
-   ============================================================ */
-
-.mobile-topbar    { display: none; }
-.mobile-overlay   { display: none; }
-.sidebar-mobile-close { display: none; }
-
 @media (max-width: 768px) {
-  .mobile-topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    height: 64px;
-    flex-shrink: 0;
-    background: var(--md-surface-container);
-    border-bottom: 1px solid var(--md-outline-variant);
-    position: sticky;
-    top: 0;
-    z-index: 20;
-  }
-
-  .mobile-topbar-brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .mobile-hamburger {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 5px;
-    width: 40px;
-    height: 40px;
-    padding: 8px;
-    cursor: pointer;
-    border-radius: var(--md-shape-full);
-    background: transparent;
-    border: none;
-    transition: background 200ms;
-  }
-
-  .mobile-hamburger:hover { background: rgba(255,255,255,0.08); }
-
-  .mobile-hamburger span {
-    display: block;
-    height: 2px;
-    background: var(--md-on-surface);
-    border-radius: 1px;
-  }
-
   html, body, #root {
     overflow: auto;
     height: auto;
     min-height: 100%;
     background-color: transparent;
-  }
-
-  .app-shell {
-    flex-direction: column;
-    min-height: 100dvh;
-  }
-
-  .app-main {
-    flex: 1;
-    overflow: visible;
-  }
-
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 260px !important; /* Fixed width for tablet/mobile drawer */
-    z-index: 100;
-    transform: translateX(-100%);
-    transition: transform 250ms cubic-bezier(0.2, 0, 0, 1);
-    overflow-y: auto;
-  }
-
-  .sidebar--mobile-open {
-    transform: translateX(0);
-    box-shadow: var(--md-elevation-5);
-  }
-
-  .sidebar-collapse { display: none; }
-
-  .sidebar-mobile-close {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: auto;
-    width: 40px;
-    height: 40px;
-    border-radius: var(--md-shape-full);
-    color: var(--md-on-surface-variant);
-    font-size: 1.25rem;
-    cursor: pointer;
-    background: transparent;
-    border: none;
-    transition: background 200ms;
-    flex-shrink: 0;
-  }
-
-  .sidebar-mobile-close:hover { background: rgba(255,255,255,0.08); }
-
-  .mobile-overlay {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: var(--md-scrim);
-    z-index: 40;
   }
 
   .page-wrap { padding: 16px 16px 24px; }
