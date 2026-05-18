@@ -19,7 +19,7 @@
  *   - On permission denied, shows a "Camera access required" message with Cancel.
  *   - On unmount, fully stops the MediaStream (no track leaks).
  */
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import { BarcodeFormat, DecodeHintType } from '@zxing/library'
 import './BarcodeScanner.css'
@@ -40,7 +40,12 @@ export default function BarcodeScanner({ onDetected, onClose, formats, continuou
   const [lastValue, setLastValue] = useState('')
   const [lastSeen, setLastSeen] = useState(0)
 
+  const handleClose = useCallback(() => {
+    if (onClose) onClose()
+  }, [onClose])
+
   useEffect(() => {
+
     const hints = new Map()
     hints.set(DecodeHintType.POSSIBLE_FORMATS, formats || DEFAULT_FORMATS)
 
@@ -49,30 +54,46 @@ export default function BarcodeScanner({ onDetected, onClose, formats, continuou
 
     const start = async () => {
       try {
-        await reader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
+        const constraints = {
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        }
+
+        // Try constraints first
+        await reader.decodeFromConstraints(constraints, videoRef.current, (result, err) => {
           if (result) {
             const value = result.getText()
             const format = result.getBarcodeFormat()
             const now = Date.now()
-            // Dedupe — ignore identical scan within 1500ms
             if (value === lastValue && now - lastSeen < 1500) return
             setLastValue(value)
             setLastSeen(now)
             try { navigator.vibrate?.(80) } catch {}
             onDetected(value, format)
-            if (!continuous) onClose()
+            if (!continuous) setTimeout(() => handleClose(), 300)
           }
         })
       } catch (e) {
-        if (e.name === 'NotAllowedError') {
-          setError('Camera access denied. Enable it in browser settings.')
-        } else if (e.name === 'NotFoundError') {
-          setError('No camera found on this device.')
-        } else {
-          setError('Camera error: ' + e.message)
+        console.warn('decodeFromConstraints failed, falling back to default device:', e)
+        try {
+          // Fallback to default device
+          await reader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
+             if (result) {
+                const value = result.getText()
+                onDetected(value, result.getBarcodeFormat())
+                if (!continuous) handleClose()
+             }
+          })
+        } catch (e2) {
+          setError('Camera initialization failed. Please ensure permissions are granted.')
         }
       }
     }
+
+
 
     start()
 
@@ -94,8 +115,9 @@ export default function BarcodeScanner({ onDetected, onClose, formats, continuou
         <video ref={videoRef} className="barcode-scanner-video" playsInline muted />
         <div className="barcode-scanner-frame" />
         <div className="barcode-scanner-formats">UPC-A · EAN-13 · QR</div>
-        <button className="barcode-scanner-cancel" onClick={onClose}>Cancel</button>
+        <button className="barcode-scanner-cancel" onClick={handleClose}>Cancel</button>
         {error && <div className="barcode-scanner-error">{error}</div>}
+
       </div>
     </div>
   )

@@ -108,6 +108,20 @@ def _migrate_culinary_schema() -> None:
             conn.commit()
         except Exception:
             pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE cul_stockroom ADD COLUMN quantity FLOAT NOT NULL DEFAULT 1.0"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE cul_stockroom ADD COLUMN min_quantity FLOAT NOT NULL DEFAULT 0.25"
+            ))
+            conn.commit()
+        except Exception:
+            pass
 
 
 _migrate_culinary_schema()
@@ -1049,9 +1063,12 @@ def _stock_out(s: StockroomItem) -> dict:
         "barcode":      s.barcode,
         "brand":        s.brand,
         "state":        s.state.value if s.state else "Good",
+        "quantity":     getattr(s, "quantity", 1.0),
+        "min_quantity": getattr(s, "min_quantity", 0.25),
         "created_at":   s.created_at.isoformat() if s.created_at else None,
         "updated_at":   s.updated_at.isoformat() if s.updated_at else None,
     }
+
 
 
 def _equipment_out(eq: KitchenEquipment) -> dict:
@@ -2113,6 +2130,11 @@ async def delete_stockroom_item(item_id: str, request: Request, db: Session = De
     await _ws_manager.broadcast(hh.id, "stockroom_updated", {"deleted_id": item_id})
 
 
+class ScanRequest(BaseModel):
+    barcode:  str
+    quantity: float = 1.0
+
+
 @router.post("/stockroom/scan")
 async def scan_barcode(
     body: ScanRequest,
@@ -2132,8 +2154,9 @@ async def scan_barcode(
     ).first()
 
     if existing:
-        existing.state = StockState.GOOD
-        existing.name  = product["name"] or existing.name
+        existing.quantity += body.quantity
+        existing.state = StockState.GOOD if existing.quantity > 0.25 else StockState.LOW
+        existing.name  = product["name"] if product["name"] != body.barcode else existing.name
         existing.brand = product["brand"] or existing.brand
         db.commit()
         db.refresh(existing)
@@ -2144,15 +2167,18 @@ async def scan_barcode(
             name=product["name"],
             brand=product.get("brand", ""),
             barcode=body.barcode,
-            state=StockState.GOOD,
+            quantity=body.quantity,
+            state=StockState.GOOD if body.quantity > 0.25 else StockState.LOW,
         )
         db.add(item)
+
         db.commit()
         db.refresh(item)
         out = _stock_out(item)
 
     await _ws_manager.broadcast(hh.id, "stockroom_updated", out)
     return out
+
 
 
 @router.post("/stockroom/deplete")
@@ -2171,19 +2197,22 @@ async def deplete_item(
     if not item:
         product = await _lookup_barcode(body.barcode)
         if not product:
-            product = {"name": body.barcode, "brand": ""}
+            product = {"name": f"UPC: {body.barcode}", "brand": ""}
         item = StockroomItem(
             household_id=hh.id,
             name=product["name"],
             brand=product.get("brand", ""),
             barcode=body.barcode,
+            quantity=0,
             state=StockState.LOW,
         )
         db.add(item)
     else:
-        item.state = StockState.LOW
+        item.quantity = max(0, item.quantity - body.quantity)
+        item.state = StockState.GOOD if item.quantity > 0.25 else StockState.LOW
 
     db.commit()
+
     db.refresh(item)
     out = _stock_out(item)
     await _ws_manager.broadcast(hh.id, "stockroom_updated", out)

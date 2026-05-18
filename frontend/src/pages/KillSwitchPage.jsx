@@ -159,15 +159,15 @@ export default function KillSwitchPage() {
               Enter the admin password to reset the kill switch. After a successful
               reset you must restart the server to resume normal operation.
             </p>
-            <form style={{ display: 'flex', gap: 12 }} onSubmit={handleReset}>
+            <form style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }} onSubmit={handleReset}>
               <input
                 style={{ 
-                  flex: 1, 
-                  background: 'rgba(255, 255, 255, 0.05)', 
+                  flex: '1 1 200px', 
+                  background: 'var(--md-surface-container)', 
                   border: '1px solid rgba(255, 51, 34, 0.3)', 
                   borderRadius: 'var(--md-shape-xl)',
                   color: 'white',
-                  padding: '8px 16px',
+                  padding: '12px 16px',
                   outline: 'none'
                 }}
                 type="password"
@@ -179,11 +179,13 @@ export default function KillSwitchPage() {
               <button
                 className="rs-btn-primary"
                 type="submit"
+                style={{ flex: '1 1 100px', padding: '12px' }}
                 disabled={resetting || !password}
               >
                 {resetting ? 'VERIFYING…' : '↺ RESET'}
               </button>
             </form>
+
             {resetMsg && (
               <div style={{ 
                 marginTop: 12, 

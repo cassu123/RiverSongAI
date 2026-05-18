@@ -150,8 +150,11 @@ export function useAudioRecorder({ onComplete, onNoSpeech, onAmbientChunk }) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
       streamRef.current = stream
 
-      const context = new AudioContext({ sampleRate: 16000 })
+      const AudioCtx = window.AudioContext || window.webkitAudioContext
+      const context = new AudioCtx({ sampleRate: 16000 })
+      if (context.state === 'suspended') await context.resume()
       contextRef.current = context
+
 
       const source    = context.createMediaStreamSource(stream)
       const processor = context.createScriptProcessor(CHUNK_SIZE, 1, 1)

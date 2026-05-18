@@ -269,8 +269,10 @@ class ConversationLoop:
         self._initialized: bool = False
         self._turn_transcript: str = ""
         self._flush_memory: bool = False
-        self._web_search_enabled: bool = False
+        self._web_search: bool = False
+        self._thinking_mode: Optional[str] = "fast" # "fast" | "thinking" | "pro"
         self._suppress_memory: bool = False
+
 
     async def initialize(self) -> None:
         """
@@ -400,7 +402,25 @@ class ConversationLoop:
         except Exception as exc:
             logger.debug("Context injection skipped: %s", exc)
 
-        full_system = self._system_prompt + memory_block + context_block
+        mode_block = ""
+        if self._thinking_mode in ("thinking", "pro"):
+            mode_block += (
+                "\n\nREASONING MODE: Think step-by-step before answering. "
+                "Briefly outline your reasoning, then give the final answer."
+            )
+            if self._thinking_mode == "pro":
+                mode_block += (
+                    " Be especially careful and thorough — verify assumptions, "
+                    "consider edge cases, and double-check your reasoning."
+                )
+        if self._web_search:
+            mode_block += (
+                "\n\nWEB ACCESS: The web_search tool is available. "
+                "Use it when the user asks about current events, recent facts, "
+                "or anything outside your training cutoff."
+            )
+
+        full_system = self._system_prompt + memory_block + context_block + mode_block
         if self._history and self._history[0].get("role") == "system":
             self._history[0]["content"] = full_system
         else:
@@ -807,13 +827,18 @@ class ConversationLoop:
                 
                 # Filter tools based on session settings
                 active_tools = TOOL_SCHEMAS
-                if not self._web_search_enabled:
+                if not self._web_search:
                     active_tools = [t for t in TOOL_SCHEMAS if t["name"] != "web_search"]
                 
                 tool_system_prompt = (
                     "You have access to tools. If the user asks for an action that matches "
                     "a tool, use the tool. If not, respond normally."
                 )
+                
+                # Use thinking stream if requested
+                use_thinking = self._thinking_mode in ("thinking", "pro")
+                stream_method = self._llm.stream_response_thinking if use_thinking else self._llm.stream_response
+
                 if hasattr(self._llm, "chat_with_tools"):
                     messages_with_tools = self._history.copy()
                     if messages_with_tools[0]["role"] == "system":
@@ -848,27 +873,31 @@ class ConversationLoop:
                             })
                             self._history.append({"role": "tool", "content": result_text})
                             
-                        async for chunk in self._llm.stream_response(self._history):
+                        async for chunk in stream_method(self._history):
                             full_response += chunk
                             await on_event({"type": "token", "content": chunk})
                     else:
                         full_response = res["content"]
                         await on_event({"type": "token", "content": full_response})
                 else:
-                    async for chunk in self._llm.stream_response(self._history):
+                    async for chunk in stream_method(self._history):
                         full_response += chunk
                         await on_event({"type": "response_chunk", "text": chunk})
 
             # Phase 2: Normal streaming (no tool use enabled)
             elif self._settings.llm_streaming_enabled and self._llm.__class__.__name__ == "OllamaLLM":
-                stream_chat_fn = getattr(self._llm, "stream_chat", self._llm.stream_response)
+                use_thinking = self._thinking_mode in ("thinking", "pro")
+                stream_chat_fn = self._llm.stream_response_thinking if use_thinking else getattr(self._llm, "stream_chat", self._llm.stream_response)
                 async for chunk in stream_chat_fn(self._history):
                     full_response += chunk
                     await on_event({"type": "token", "content": chunk})
             else:
-                async for chunk in self._llm.stream_response(self._history):
+                use_thinking = self._thinking_mode in ("thinking", "pro")
+                stream_chat_fn = self._llm.stream_response_thinking if use_thinking else self._llm.stream_response
+                async for chunk in stream_chat_fn(self._history):
                     full_response += chunk
                     await on_event({"type": "response_chunk", "text": chunk})
+
 
         except Exception as exc:
             self._history.pop()

@@ -104,19 +104,22 @@ function ModelCard({ model, isSelected, isDisabled, onSelect }) {
 }
 
 // ---------------------------------------------------------------------------
-// Toggle switch
+// Toggle switch — M3-style sliding switch
 // ---------------------------------------------------------------------------
-function Toggle({ checked, onChange, label, id }) {
+function Toggle({ checked, onChange, label, id, disabled }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-      {label && <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{label}</span>}
+    <div className="toggle-row" style={{ padding: 0 }}>
+      {label && <span className="toggle-label">{label}</span>}
       <button
         id={id}
-        className={`rs-pill ${checked ? 'is-active' : ''}`}
-        onClick={() => onChange(!checked)}
-        style={{ minWidth: 80, justifyContent: 'center' }}
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        className={`toggle-switch ${checked ? 'toggle-switch--on' : ''}`}
+        onClick={() => !disabled && onChange(!checked)}
       >
-        {checked ? 'ENABLED' : 'DISABLED'}
+        <span className="toggle-knob" />
       </button>
     </div>
   )
@@ -133,10 +136,13 @@ const PROVIDER_NAMES = {
   ollama:     'Ollama (local)',
 }
 
-export default function SettingsPage({ 
-  onFeaturesChanged
+export default function SettingsPage({
+  onFeaturesChanged,
+  viewMode = 'user',  // 'user' or 'admin'
 }) {
   const { user, token } = useAuth()
+  const showUser = viewMode === 'user'
+  const showAdmin = viewMode === 'admin' && user?.role === 'admin'
 
   const [models,           setModels]           = useState({ local: [], cloud: [] })
   const [visibility,       setVisibility]       = useState(null)
@@ -475,11 +481,17 @@ export default function SettingsPage({
 
       <header className="rs-foyer-head">
         <div className="rs-card-label" style={{ marginBottom: 8 }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>settings</span>
-          SYSTEM / CONFIGURATION
+          <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>
+            {showAdmin ? 'shield_person' : 'settings'}
+          </span>
+          {showAdmin ? 'SYSTEM / ADMIN' : 'PERSONAL / CONFIGURATION'}
         </div>
-        <h1 className="rs-greeting">Settings</h1>
-        <div className="rs-greeting-sub">Adjust River Song's core parameters and available features.</div>
+        <h1 className="rs-greeting">{showAdmin ? 'Admin Settings' : 'Settings'}</h1>
+        <div className="rs-greeting-sub">
+          {showAdmin
+            ? 'Global controls, daemons, visibility, families. API credentials live in .env.'
+            : 'Your model, voice, memory, and notifications.'}
+        </div>
       </header>
 
       {/* Save status toast */}
@@ -503,9 +515,9 @@ export default function SettingsPage({
       <div className="rs-card-flow">
       
       {/* ================================================================ */}
-      {/* ORCHESTRATION                                                   */}
+      {/* ORCHESTRATION (n8n) — admin view, toggle only. Credentials live in .env */}
       {/* ================================================================ */}
-      {orchestrationSettings && user?.role === "admin" && (
+      {showAdmin && orchestrationSettings && (
         <Section title="ORCHESTRATION (n8n)">
           <Toggle
             id="n8n-toggle"
@@ -513,48 +525,18 @@ export default function SettingsPage({
             checked={orchestrationSettings.n8n_enabled}
             onChange={v => saveOrchestration({ n8n_enabled: v })}
           />
-          <div style={{ display: 'grid', gap: 12 }}>
-            <label className="rs-card-meta">
-              <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>n8n URL</span>
-              <input
-                type="text"
-                className="rs-pill"
-                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px', borderRadius: 'var(--md-shape-sm)' }}
-                value={orchestrationSettings.n8n_url}
-                onChange={e => saveOrchestration({ n8n_url: e.target.value })}
-              />
-            </label>
-            <label className="rs-card-meta">
-              <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>n8n API Key</span>
-              <input
-                type="password"
-                className="rs-pill"
-                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px', borderRadius: 'var(--md-shape-sm)' }}
-                value={orchestrationSettings.n8n_api_key}
-                placeholder="••••••••"
-                onChange={e => saveOrchestration({ n8n_api_key: e.target.value })}
-              />
-            </label>
-            <label className="rs-card-meta">
-              <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>n8n Webhook Secret</span>
-              <input
-                type="text"
-                className="rs-pill"
-                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px', borderRadius: 'var(--md-shape-sm)' }}
-                value={orchestrationSettings.n8n_webhook_secret}
-                onChange={e => saveOrchestration({ n8n_webhook_secret: e.target.value })}
-              />
-            </label>
-          </div>
           <p className="rs-card-meta">
-            n8n handles complex multi-step routines. The webhook secret is required
-            to validate incoming requests from n8n to River Song.
+            n8n handles complex multi-step routines. Credentials
+            (<code>N8N_URL</code>, <code>N8N_API_KEY</code>, <code>N8N_WEBHOOK_SECRET</code>)
+            are loaded from <code>.env</code>.
           </p>
         </Section>
       )}
-    
-      {/* AI MODEL                                                         */}
+
       {/* ================================================================ */}
+      {/* AI MODEL — user-facing                                           */}
+      {/* ================================================================ */}
+      {showUser && (
       <Section title="AI MODEL">
         <p className="rs-card-meta" style={{ marginBottom: 16 }}>
           The selected model is used for both Chat and Speak. For Speak, choose a model
@@ -661,11 +643,12 @@ export default function SettingsPage({
           })}
         </div>
       </Section>
+      )}
 
       {/* ================================================================ */}
-      {/* DAEMON CONTROL                                                 */}
+      {/* DAEMON CONTROL — admin                                          */}
       {/* ================================================================ */}
-      {user?.role === 'admin' && (
+      {showAdmin && (
         <Section title="DAEMON CONTROL">
           <p className="rs-card-meta" style={{ marginBottom: 16 }}>
             Manage background daemon processes. These run as independent services on the server.
@@ -771,9 +754,9 @@ export default function SettingsPage({
       )}
 
       {/* ================================================================ */}
-      {/* LOCAL AI FEATURES                                                */}
+      {/* LOCAL AI FEATURES — admin                                        */}
       {/* ================================================================ */}
-      {user?.role === 'admin' && (
+      {showAdmin && (
         <Section title="LOCAL AI FEATURES">
           <p className="rs-card-meta" style={{ marginBottom: 16 }}>
             Toggle advanced AI capabilities. These are global settings that affect all users.
@@ -856,9 +839,9 @@ export default function SettingsPage({
       )}
 
       {/* ================================================================ */}
-      {/* PERSONALITY                                                      */}
+      {/* PERSONALITY — admin                                              */}
       {/* ================================================================ */}
-      {user?.role === 'admin' && personaSettings && (
+      {showAdmin && personaSettings && (
         <Section title="PERSONALITY">
           <div style={{ marginBottom: 12, padding: '12px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid #ffaa00', borderRadius: 'var(--md-shape-sm)', color: '#ffaa00', fontSize: '0.8rem' }}>
             ⚠️ Advanced — Keep "River Song" references intact or she will lose her identity.
@@ -894,8 +877,9 @@ export default function SettingsPage({
       )}
 
       {/* ================================================================ */}
-      {/* CLOUD FALLBACK                                                   */}
+      {/* CLOUD FALLBACK — user                                            */}
       {/* ================================================================ */}
+      {showUser && (
       <Section title="CLOUD FALLBACK">
         <p className="rs-card-meta" style={{ marginBottom: 12 }}>
           When local models are unavailable, River can fall back to cloud providers.
@@ -949,10 +933,12 @@ export default function SettingsPage({
           </div>
         )}
       </Section>
+      )}
 
       {/* ================================================================ */}
-      {/* VOICE                                                            */}
+      {/* VOICE — user                                                     */}
       {/* ================================================================ */}
+      {showUser && (
       <Section title="VOICE">
         {voiceSettings ? (
           <VoiceSection
@@ -971,10 +957,12 @@ export default function SettingsPage({
           <div className="rs-card-meta">Loading voices…</div>
         )}
       </Section>
+      )}
 
       {/* ================================================================ */}
-      {/* WAKE WORD                                                        */}
+      {/* WAKE WORD — user                                                 */}
       {/* ================================================================ */}
+      {showUser && (
       <Section title="WAKE WORD">
         <Toggle
           id="wake-word-toggle"
@@ -1002,21 +990,22 @@ export default function SettingsPage({
           </span>
         </div>
       </Section>
+      )}
 
       {/* ================================================================ */}
-      {/* VOICE ID                                                         */}
+      {/* VOICE ID — user                                                  */}
       {/* ================================================================ */}
-      <VoiceIDSection token={token} />
+      {showUser && <VoiceIDSection token={token} />}
 
       {/* ================================================================ */}
-      {/* TOKEN USAGE                                                      */}
+      {/* TOKEN USAGE — user                                               */}
       {/* ================================================================ */}
-      <TokenUsageSection token={token} />
+      {showUser && <TokenUsageSection token={token} />}
 
       {/* ================================================================ */}
-      {/* MEMORY                                                           */}
+      {/* MEMORY — user                                                    */}
       {/* ================================================================ */}
-      {memSettings && (
+      {showUser && memSettings && (
         <Section title="MEMORY">
 
           <Toggle
@@ -1055,14 +1044,14 @@ export default function SettingsPage({
       )}
 
       {/* ================================================================ */}
-      {/* NOTIFICATIONS                                                    */}
+      {/* NOTIFICATIONS — user                                             */}
       {/* ================================================================ */}
-      <NotificationsSection token={token} />
+      {showUser && <NotificationsSection token={token} />}
 
       {/* ================================================================ */}
-      {/* PARENT — my children (parent only)                              */}
+      {/* PARENT — my children (parent only, user view)                   */}
       {/* ================================================================ */}
-      {user?.role === 'parent' && childrenData && (
+      {showUser && user?.role === 'parent' && childrenData && (
         <ParentChildrenSection
           data={childrenData}
           token={token}
@@ -1074,9 +1063,9 @@ export default function SettingsPage({
       )}
 
       {/* ================================================================ */}
-      {/* ADMIN — feature visibility (admin only)                         */}
+      {/* ADMIN — feature visibility                                       */}
       {/* ================================================================ */}
-      {user?.role === 'admin' && featureVis && (
+      {showAdmin && featureVis && (
         <AdminFeatureSection
           featureVis={featureVis}
           token={token}
@@ -1088,9 +1077,9 @@ export default function SettingsPage({
       )}
 
       {/* ================================================================ */}
-      {/* ADMIN — family groups (admin only)                              */}
+      {/* ADMIN — family groups                                            */}
       {/* ================================================================ */}
-      {user?.role === 'admin' && familyGroups && (
+      {showAdmin && familyGroups && (
         <FamilyGroupsSection
           data={familyGroups}
           token={token}
@@ -1099,16 +1088,16 @@ export default function SettingsPage({
       )}
 
       {/* ================================================================ */}
-      {/* ADMIN — Wake Word configuration (admin only)                    */}
+      {/* ADMIN — Wake Word configuration                                  */}
       {/* ================================================================ */}
-      {user?.role === 'admin' && (
+      {showAdmin && (
         <AdminWakeWordSection token={token} />
       )}
 
       {/* ================================================================ */}
-      {/* ADMIN — model visibility (admin only)                            */}
+      {/* ADMIN — model visibility                                         */}
       {/* ================================================================ */}
-      {user?.role === 'admin' && visibility && (
+      {showAdmin && visibility && (
         <AdminVisibilitySection
           visibility={visibility}
           token={token}
@@ -1297,65 +1286,27 @@ function VoiceSection({ voiceSettings, token, user, elevenLabsSettings, onSaveEl
         <span className="rs-pill is-active" style={{ fontSize: '0.75rem' }}>{voiceSettings.active_voice}</span>
       </p>
 
-      {/* ELEVENLABS SETTINGS (Admin Only) */}
+      {/* ELEVENLABS STATUS (Admin Only) — credentials live in .env */}
       {user?.role === 'admin' && elevenLabsSettings && (
         <div className="rs-card" style={{
           marginBottom: 24, padding: 16,
           background: 'var(--md-surface-container-high)',
         }}>
-          <div className="rs-card-label" style={{ color: 'var(--md-primary)', marginBottom: 12 }}>
-            ELEVENLABS VOICE CONFIGURATION
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div className="rs-card-label" style={{ color: 'var(--md-primary)' }}>
+              ELEVENLABS
+            </div>
+            <span className="rs-card-label" style={{ color: elevenLabsSettings.api_key ? '#4ade80' : 'var(--md-outline)' }}>
+              {elevenLabsSettings.api_key ? '● KEY LOADED' : '○ NO KEY'}
+            </span>
           </div>
-          
-          <div style={{ display: 'grid', gap: 12 }}>
-            <label className="rs-card-meta">
-              <span className="rs-card-label" style={{ fontSize: '0.6rem', marginBottom: 4 }}>API Key</span>
-              <input
-                type="password"
-                className="rs-pill"
-                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px' }}
-                value={elevenLabsSettings.api_key}
-                onChange={e => onSaveElevenLabs({ api_key: e.target.value })}
-                placeholder="••••••••"
-              />
-            </label>
-
-            <label className="rs-card-meta">
-              <span className="rs-card-label" style={{ fontSize: '0.6rem', marginBottom: 4 }}>Voice ID</span>
-              <input
-                type="text"
-                className="rs-pill"
-                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px' }}
-                value={elevenLabsSettings.voice_id}
-                onChange={e => onSaveElevenLabs({ voice_id: e.target.value })}
-              />
-            </label>
-
-            <label className="rs-card-meta">
-              <span className="rs-card-label" style={{ fontSize: '0.6rem', marginBottom: 4 }}>Model</span>
-              <select
-                className="rs-pill"
-                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px' }}
-                value={elevenLabsSettings.model_id}
-                onChange={e => onSaveElevenLabs({ model_id: e.target.value })}
-              >
-                <option value="eleven_multilingual_v2">eleven_multilingual_v2</option>
-                <option value="eleven_monolingual_v1">eleven_monolingual_v1</option>
-                <option value="eleven_turbo_v2">eleven_turbo_v2</option>
-              </select>
-            </label>
-          </div>
-
-          <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-             <button className="rs-btn-primary" style={{ padding: '8px 16px' }} onClick={() => onSaveElevenLabs({})}>
-               SAVE CONFIG
-             </button>
-             {voiceSettings.provider === 'elevenlabs' ? (
-               <span className="rs-card-label" style={{ color: '#4ade80' }}>● ACTIVE</span>
-             ) : (
-               <span className="rs-card-meta" style={{ fontSize: '0.7rem' }}>Select an ElevenLabs voice below.</span>
-             )}
-          </div>
+          <p className="rs-card-meta" style={{ margin: 0 }}>
+            Set <code>ELEVENLABS_API_KEY</code>, <code>ELEVENLABS_VOICE_ID</code>, and{' '}
+            <code>ELEVENLABS_MODEL_ID</code> in <code>.env</code> to enable cloud voices.
+            {voiceSettings.provider === 'elevenlabs' && (
+              <span style={{ color: '#4ade80', marginLeft: 8 }}>● ACTIVE</span>
+            )}
+          </p>
         </div>
       )}
 

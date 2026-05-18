@@ -13,7 +13,9 @@ import './styles/chrome-components.css'
 const LoginPage          = lazy(() => import('./pages/LoginPage.jsx'))
 const SignupPage         = lazy(() => import('./pages/SignupPage.jsx'))
 const SetupPage          = lazy(() => import('./pages/SetupPage.jsx'))
+const BriefingPage       = lazy(() => import('./pages/BriefingPage.jsx'))
 const DashboardPage      = lazy(() => import('./pages/DashboardPage.jsx'))
+
 const ConversationPage   = lazy(() => import('./pages/ConversationPage.jsx'))
 const ChatPage           = lazy(() => import('./pages/ChatPage.jsx'))
 const MemoryPage         = lazy(() => import('./pages/MemoryPage.jsx'))
@@ -23,6 +25,7 @@ const UsersPage          = lazy(() => import('./pages/UsersPage.jsx'))
 const KillSwitchPage     = lazy(() => import('./pages/KillSwitchPage.jsx'))
 const ProfilePage        = lazy(() => import('./pages/ProfilePage.jsx'))
 const SettingsPage       = lazy(() => import('./pages/SettingsPage.jsx'))
+const AdminSettingsPage  = lazy(() => import('./pages/AdminSettingsPage.jsx'))
 const FeedsPage          = lazy(() => import('./pages/FeedsPage.jsx'))
 const GooglePage         = lazy(() => import('./pages/GooglePage.jsx'))
 const CommercePage       = lazy(() => import('./pages/CommercePage.jsx'))
@@ -73,8 +76,9 @@ export default function App() {
     const path = window.location.pathname
     if (path === '/callback') return 'google_callback'
     if (path === '/reading-oauth-callback') return 'reading_callback'
-    return load('rs-page', 'speak')
+    return load('rs-page', 'briefing')
   })
+
   const [adminMode,     setAdminMode]     = useState(false)
   const [drawerOpen,    setDrawerOpen]    = useState(false)
   const [pageAction,    setPageAction]    = useState(null)
@@ -241,7 +245,9 @@ export default function App() {
         <ErrorBoundary key={currentPage}>
           <Suspense fallback={<div className="loading-screen">INITIALIZING...</div>}>
             <div className="page-enter">
+              {currentPage === 'briefing'   && <BriefingPage  onNavigate={handleNavigate} />}
               {currentPage === 'dashboard'  && <DashboardPage  onNavigate={handleNavigate} isAdmin={adminMode} setAction={setPageAction} />}
+
               {currentPage === 'speak'      && <ConversationPage setAction={setPageAction} />}
               {currentPage === 'chat'       && <ChatPage setAction={setPageAction} />}
               {currentPage === 'memory'     && <MemoryPage setAction={setPageAction} />}
@@ -251,6 +257,7 @@ export default function App() {
               {currentPage === 'killswitch' && <KillSwitchPage setAction={setPageAction} />}
               {currentPage === 'profile'    && <ProfilePage profile={profile} onSave={setProfile} universe={universe} environment={environment} mood={mood} onUniverseChange={setUniverseSafe} onEnvironmentChange={setEnvironmentSafe} onMoodChange={setMood} setAction={setPageAction} />}
               {currentPage === 'settings'   && <SettingsPage onFeaturesChanged={refreshFeatures} setAction={setPageAction} />}
+              {currentPage === 'admin_settings' && <AdminSettingsPage onFeaturesChanged={refreshFeatures} />}
               {currentPage === 'feeds'      && <FeedsPage setAction={setPageAction} />}
               {currentPage === 'google'     && <GooglePage setAction={setPageAction} />}
               {currentPage === 'commerce'   && <CommercePage setAction={setPageAction} />}

@@ -116,9 +116,9 @@ export default function CulinaryPage({ setAction }) {
     { key: 'dinner',    label: "Dinner",           icon: 'dinner_dining' },
     { key: 'stockroom', label: 'Stock',            icon: 'warehouse' },
     { key: 'prep',      label: 'Prep',             icon: 'set_meal' },
-    { key: 'walmart',   label: 'Grocery',          icon: 'shopping_cart' },
+    { key: 'grocery',   label: 'Grocery',          icon: 'shopping_cart' },
     { key: 'banned',    label: 'Banned',           icon: 'block' },
-    { key: 'settings',  label: 'Gear',             icon: 'kitchen' },
+    { key: 'equipment', label: 'Equipment',        icon: 'kitchen' },
   ]
 
   return (
@@ -146,13 +146,14 @@ export default function CulinaryPage({ setAction }) {
         {tab === 'dinner'    && <WhatsDinnerTab  api={api} token={token} />}
         {tab === 'stockroom' && <StockroomTab    api={api} />}
         {tab === 'prep'      && <PrepDeckTab     api={api} household={household} />}
-        {tab === 'walmart'   && <WalmartTab      api={api} />}
+        {tab === 'grocery'   && <GroceryTab      api={api} />}
         {tab === 'banned'    && <BannedTab       api={api} />}
-        {tab === 'settings'  && <EquipmentTab    api={api} />}
+        {tab === 'equipment' && <EquipmentTab    api={api} />}
       </div>
     </div>
   )
 }
+
 
 // ── Banned Tab ────────────────────────────────────────────────────────────────
 
@@ -201,42 +202,116 @@ function BannedTab({ api }) {
 function StockroomTab({ api }) {
   const [items, setItems] = useState([])
   const [barcode, setBarcode] = useState('')
+  const [quantity, setQuantity] = useState(1.0)
   const [showScanner, setShowScanner] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const load = useCallback(() => api.get('/stockroom').then(setItems), [api])
   useEffect(() => { load() }, [load])
 
-  const scan = async (deplete) => {
+  const scan = async (isDeplete) => {
     if (!barcode.trim()) return
-    await api.post(deplete ? '/stockroom/deplete' : '/stockroom/scan', { barcode: barcode.trim() })
-    setBarcode(''); load()
+    setLoading(true)
+    try {
+      await api.post(isDeplete ? '/stockroom/deplete' : '/stockroom/scan', { 
+        barcode: barcode.trim(),
+        quantity: quantity 
+      })
+      setBarcode('')
+      setQuantity(1.0)
+      load()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const remove = async (id) => {
+    if (!window.confirm('Delete this item record?')) return
+    await api.delete(`/stockroom/${id}`)
+    load()
   }
 
   return (
     <div className="rs-card-flow">
       <div className="rs-card is-wide">
-        <div className="rs-card-head"><span className="rs-card-label">BARCODE TELEMETRY</span></div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <input className="rs-pill" style={{ flex: 1, background: 'var(--md-surface-container-low)' }} placeholder="SCAN UPC..." value={barcode} onChange={e => setBarcode(e.target.value)} onKeyDown={e => e.key === 'Enter' && scan(false)} />
-          <button className="rs-pill" onClick={() => setShowScanner(true)}>CAMERA</button>
-          <button className="rs-btn-primary" onClick={() => scan(false)}>STOCK IN</button>
-          <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={() => scan(true)}>DEPLETE</button>
+        <div className="rs-card-head">
+          <span className="rs-card-label">INVENTORY TELEMETRY</span>
+          {loading && <span className="rs-status-dot" style={{ background: 'var(--primary)' }} />}
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
+          <div style={{ flex: '1 1 300px', display: 'flex', gap: 8 }}>
+            <input 
+              className="rs-pill" 
+              style={{ flex: 1, background: 'var(--md-surface-container-low)' }} 
+              placeholder="SCAN OR ENTER UPC..." 
+              value={barcode} 
+              onChange={e => setBarcode(e.target.value)} 
+              onKeyDown={e => e.key === 'Enter' && scan(false)} 
+            />
+            <button className="rs-pill is-active" onClick={() => setShowScanner(true)}>
+              <Icon name="camera" size={18} />
+              SCAN
+            </button>
+          </div>
+
+          <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="rs-card-label" style={{ fontSize: '0.6rem' }}>ADJUSTMENT: {quantity.toFixed(2)}</span>
+              <button className="rs-card-meta" style={{ all: 'unset', cursor: 'pointer', color: 'var(--primary)' }} onClick={() => setQuantity(1.0)}>RESET</button>
+            </div>
+            <input 
+              type="range" 
+              min="0" 
+              max="5" 
+              step="0.25" 
+              value={quantity} 
+              onChange={e => setQuantity(parseFloat(e.target.value))}
+              style={{ width: '100%', accentColor: 'var(--primary)' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <button className="rs-btn-primary" style={{ flex: 1 }} onClick={() => scan(false)} disabled={!barcode}>
+              STOCK IN (+{quantity.toFixed(2)})
+            </button>
+            <button className="rs-pill" style={{ flex: 1, color: 'var(--md-error)', borderColor: 'var(--md-error)' }} onClick={() => scan(true)} disabled={!barcode}>
+              DEPLETE (-{quantity.toFixed(2)})
+            </button>
+          </div>
         </div>
       </div>
-      {showScanner && <div className="rs-card is-elev is-wide"><BarcodeScanner onDetected={v => { setBarcode(v); setShowScanner(false) }} /></div>}
+
+      {showScanner && (
+        <BarcodeScanner 
+          onDetected={v => { setBarcode(v); setShowScanner(false) }} 
+          onClose={() => setShowScanner(false)} 
+        />
+      )}
+
       {items.map(item => (
         <div key={item.id} className="rs-card">
            <div className="rs-card-head">
-             <span className="rs-card-label">{item.state.toUpperCase()}</span>
-             <div className="rs-status-dot" style={{ background: item.state === 'Good' ? '#4ade80' : item.state === 'Low' ? 'var(--md-error)' : '#facc15' }} />
+             <span className="rs-card-label" style={{ color: item.quantity <= item.min_quantity ? 'var(--md-error)' : '#4ade80' }}>
+               {item.quantity.toFixed(2)} IN STOCK
+             </span>
+             <button className="rs-btn-ghost" style={{ padding: 4 }} onClick={() => remove(item.id)}>
+                <Icon name="delete" size={16} style={{ color: 'var(--md-error)' }} />
+             </button>
            </div>
            <div className="rs-card-value" style={{ fontSize: '1.1rem' }}>{item.name}</div>
            <div className="rs-card-meta">{item.brand}</div>
+           <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+              <button className="rs-pill" onClick={() => { setBarcode(item.barcode); setQuantity(1.0); scan(false); }}>+1</button>
+              <button className="rs-pill" onClick={() => { setBarcode(item.barcode); setQuantity(item.quantity); scan(true); }}>EMPTY</button>
+           </div>
         </div>
       ))}
     </div>
   )
 }
+
+
 
 // ── Library Tab ───────────────────────────────────────────────────────────────
 
@@ -308,8 +383,98 @@ function RecipeDetailModal({ recipe, onClose, onSave }) {
   )
 }
 
-// -- WhatsDinnerTab, PrepDeckTab, WalmartTab, EquipmentTab omitted for brevity but migrated to same rs- patterns internally --
+// -- WhatsDinnerTab, PrepDeckTab, GroceryTab, EquipmentTab --
 function WhatsDinnerTab() { return <div className="rs-card-meta">PROPOSAL ENGINE ACTIVE.</div> }
 function PrepDeckTab() { return <div className="rs-card-meta">PREP SUBSYSTEM NOMINAL.</div> }
-function WalmartTab() { return <div className="rs-card-meta">LOGISTICS BRIDGE READY.</div> }
-function EquipmentTab() { return <div className="rs-card-meta">GEAR CALIBRATION COMPLETE.</div> }
+
+function GroceryTab() {
+  const [items, setItems] = useState([])
+  const { token } = useAuth()
+
+  useEffect(() => {
+    fetch('/api/inventory/homes', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(async (homes) => {
+        if (homes[0]) {
+          const res = await fetch(`/api/inventory/homes/${homes[0].id}/manifest`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (res.ok) {
+            const data = await res.json()
+            setItems(data.filter(i => i.status === 'low' || i.quantity <= i.min_quantity))
+          }
+        }
+      })
+  }, [token])
+
+  return (
+    <div className="rs-card-flow">
+      <div className="rs-card is-wide">
+        <div className="rs-card-head">
+          <span className="rs-card-label">SHOPPING LIST</span>
+          <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>shopping_cart</span>
+        </div>
+        {items.length === 0 ? (
+          <div className="rs-card-meta">Pantry fully stocked. No urgent items.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {items.map((it, idx) => (
+              <div key={idx} className="rs-pill" style={{ justifyContent: 'flex-start' }}>
+                <span style={{ flex: 1 }}>{it.name}</span>
+                <span className="rs-card-label" style={{ fontSize: '0.6rem', color: 'var(--md-error)' }}>LOW STOCK</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function EquipmentTab() {
+  const [equipment, setEquipment] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('rs-culinary-equipment') || '[]') } catch { return [] }
+  })
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setShowForm] = useState({ make: '', model: '', type: '' })
+
+  const save = (newEq) => {
+    setEquipment(newEq)
+    localStorage.setItem('rs-culinary-equipment', JSON.stringify(newEq))
+  }
+
+  return (
+    <div className="rs-card-flow">
+      <div className="rs-card is-wide">
+        <div className="rs-card-head">
+          <span className="rs-card-label">EQUIPMENT PROFILE</span>
+          <button className="rs-pill" onClick={() => setShowAdd(!showAdd)}>{showAdd ? 'CANCEL' : 'ADD NEW'}</button>
+        </div>
+        
+        {showAdd && (
+          <div style={{ marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            <input className="rs-pill" style={{ flex: '1 1 150px' }} placeholder="Make" value={form.make} onChange={e => setShowForm({...form, make: e.target.value})} />
+            <input className="rs-pill" style={{ flex: '1 1 150px' }} placeholder="Model" value={form.model} onChange={e => setShowForm({...form, model: e.target.value})} />
+            <input className="rs-pill" style={{ flex: '1 1 150px' }} placeholder="Type (e.g. Oven)" value={form.type} onChange={e => setShowForm({...form, type: e.target.value})} />
+            <button className="rs-btn-primary" onClick={() => { save([...equipment, form]); setShowForm({make:'',model:'',type:''}); setShowAdd(false); }}>SAVE</button>
+          </div>
+        )}
+
+        {equipment.length === 0 ? (
+          <div className="rs-card-meta">No equipment profiles defined. Add your oven, sous-vide, etc.</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            {equipment.map((eq, i) => (
+              <div key={i} className="rs-card">
+                <div className="rs-card-label">{(eq.type || 'EQUIPMENT').toUpperCase()}</div>
+                <div className="rs-card-value" style={{ fontSize: '1rem' }}>{eq.make} {eq.model}</div>
+                <button className="rs-card-meta" style={{ all: 'unset', cursor: 'pointer', marginTop: 8, color: 'var(--md-error)' }} onClick={() => save(equipment.filter((_, idx) => idx !== i))}>REMOVE</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+

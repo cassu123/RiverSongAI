@@ -1,18 +1,10 @@
 import React from 'react'
 import RsMark from '../components/RsMark.jsx'
 import EnvIcon from './EnvIcon.jsx'
-import { USER_ITEMS, ADMIN_ITEMS } from '../utils/constants.js'
+import { NAV_GROUPS } from '../utils/constants.js'
 
 /**
  * Drawer — overlay navigation. Replaces the permanent Sidebar.
- *
- * Absorbs everything the Sidebar used to own in its footer:
- *   - Filtered nav list (USER_ITEMS / ADMIN_ITEMS gated by enabledFeatures)
- *   - Profile row with avatar + display name
- *   - Admin mode toggle (only when userIsAdmin)
- *   - Settings + Logout buttons
- *
- * Shares row DNA with Sheet — same radius, same hover, same active rail.
  */
 export default function Drawer({
   open,
@@ -26,14 +18,6 @@ export default function Drawer({
   displayName,
   onLogout,
 }) {
-  // Same filtering rules the Sidebar used: admin sees everything, otherwise
-  // only items present in enabledFeatures (always-visible items handled by
-  // App.jsx's handleNavigate guard, which itself reads ALWAYS_VISIBLE).
-  const baseItems = adminMode ? ADMIN_ITEMS : USER_ITEMS
-  const items = userIsAdmin || !enabledFeatures
-    ? baseItems
-    : baseItems.filter(i => enabledFeatures.has(i.key))
-
   const initials = (typeof displayName === 'string' && displayName.trim())
     ? displayName.trim().split(/\s+/).map(w => w ? w[0] : '').join('').slice(0, 2).toUpperCase()
     : 'RS'
@@ -42,6 +26,18 @@ export default function Drawer({
     onNavigate(key)
     onClose()
   }
+
+  // Filter NAV_GROUPS based on admin mode and enabled features
+  const groups = NAV_GROUPS.filter(g => {
+    if (g.isAdmin && !adminMode) return false
+    return true
+  }).map(g => {
+    const filteredItems = g.items.filter(it => {
+      if (userIsAdmin || !enabledFeatures) return true
+      return enabledFeatures.has(it.key)
+    })
+    return { ...g, items: filteredItems }
+  }).filter(g => g.items.length > 0)
 
   return (
     <>
@@ -65,30 +61,31 @@ export default function Drawer({
           </button>
         </div>
 
-        {/* Primary nav — feature-gated, respects admin mode */}
-        <div className="rs-drawer-section">
-          <h3 className="rs-drawer-section-label">
-            {adminMode ? 'Admin' : 'Primary'}
-          </h3>
-          <div className="rs-drawer-list">
-            {(items || []).map(it => {
-              const danger = it.key === 'killswitch'
-              return (
-                <button
-                  key={it.key}
-                  className={`rs-drawer-item ${currentPage === it.key ? 'is-active' : ''} ${danger ? 'is-danger' : ''}`}
-                  onClick={() => navigate(it.key)}
-                >
-                  <EnvIcon name={it.key} className="rs-icon" />
-                  <span>{it.label}</span>
-                </button>
-              )
-            })}
-          </div>
+        {/* Grouped nav sections */}
+        <div className="rs-drawer-scroll-area">
+          {groups.map(group => (
+            <div key={group.label} className="rs-drawer-section">
+              <h3 className="rs-drawer-section-label">{group.label}</h3>
+              <div className="rs-drawer-list">
+                {group.items.map(it => {
+                  const danger = it.key === 'killswitch'
+                  return (
+                    <button
+                      key={it.key}
+                      className={`rs-drawer-item ${currentPage === it.key ? 'is-active' : ''} ${danger ? 'is-danger' : ''}`}
+                      onClick={() => navigate(it.key)}
+                    >
+                      <EnvIcon name={it.key} className="rs-icon" />
+                      <span>{it.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Account footer — profile + admin toggle + settings/logout.
-            Pinned to bottom via margin-top: auto in CSS. */}
+        {/* Account footer */}
         <div className="rs-drawer-section rs-drawer-footer">
           <h3 className="rs-drawer-section-label">Account</h3>
 

@@ -22,15 +22,19 @@ export const EnvProvider = EnvContext.Provider
 /* Universal fallback glyphs ─────────────────────────────────────────────── */
 const BASE = {
   // Primary nav
+  briefing: 'auto_stories', dashboard: 'dashboard', chat: 'chat_bubble',
   speak: 'graphic_eq', memory: 'psychology', home: 'home',
   chronos: 'menu_book', pulse: 'bolt', routines: 'settings_suggest',
   // Secondary
   inventory: 'inventory_2', culinary: 'restaurant', garage: 'directions_car',
-  store: 'storefront', analytics: 'analytics', feeds: 'rss_feed',
+  vehicles: 'directions_car',
+  store: 'storefront', commerce: 'shopping_bag',
+  analytics: 'analytics', feeds: 'rss_feed', google: 'hub',
   sifter: 'filter_alt', reading: 'auto_stories', dreamscape: 'auto_awesome',
   environment: 'public',
   // Admin
-  settings: 'settings', logout: 'logout',
+  settings: 'settings', admin_settings: 'shield_person',
+  users: 'group', killswitch: 'power_settings_new', logout: 'logout',
   // Dashboard
   mail: 'mail', weather: 'partly_cloudy_day', events: 'event',
   // Input + chrome

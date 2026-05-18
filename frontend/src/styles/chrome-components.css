@@ -225,10 +225,18 @@
   color: var(--md-on-surface);
 }
 
+/* --- Chat & Input -------------------------------------------------------- */
+.rs-input-bar {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
 @keyframes rs-pulse {
   0%, 100% { opacity: 0.6; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.2); }
 }
+
 
 /* --- Typographic Overrides ----------------------------------------------- */
 .rs-card-label, .rs-status-strip, .rs-pill, .rs-btn-primary, .rs-btn-ghost {

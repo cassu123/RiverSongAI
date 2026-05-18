@@ -7,11 +7,13 @@ from sqlalchemy import (
     Column,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Integer,
     String,
     Text,
 )
+
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -130,8 +132,8 @@ class BannedIngredient(Base):
 
 class StockroomItem(Base):
     """
-    Raw ingredient inventory with strictly ternary state.
-    Items marked Low are auto-injected into the grocery list.
+    Raw ingredient inventory with numeric quantity.
+    Items with quantity <= min_quantity are auto-injected into the grocery list.
     """
     __tablename__ = "cul_stockroom"
 
@@ -142,9 +144,14 @@ class StockroomItem(Base):
     barcode = Column(String, nullable=True, index=True)
     brand   = Column(String, nullable=True)
     state   = Column(Enum(StockState), default=StockState.GOOD, nullable=False)
+    
+    quantity     = Column(Float, default=1.0, nullable=False)
+    min_quantity = Column(Float, default=0.25, nullable=False)
+
 
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now, onupdate=_now)
+
 
     household = relationship("Household", back_populates="stockroom_items")
 

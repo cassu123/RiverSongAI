@@ -47,8 +47,9 @@ export default function ChatPage({ setAction }) {
 
   const [modelOpen, setModelOpen] = useState(false)
   const [webSearch, setWebSearch] = useState(false)
-  const [thinkingMode, setThinkingMode] = useState(false)
+  const [thinkingMode, setThinkingMode] = useState('fast') // 'fast' | 'thinking' | 'pro'
   const [showSystem, setShowSystem] = useState(false)
+
   const [systemPrompt, setSystemPrompt] = useState('')
   const [enhancing, setEnhancing] = useState(false)
   const [forgetMemory, setForgetMemory] = useState(false)
@@ -270,12 +271,13 @@ export default function ChatPage({ setAction }) {
     } catch {}
   }, [token])
 
-  const { startRecording, isRecording } = useAudioRecorder({ onComplete: handleAudioComplete })
+  const { startRecording, stopRecording, isRecording } = useAudioRecorder({ onComplete: handleAudioComplete })
 
   const handleGenerateImage = useCallback(async () => {
     const t = inputText.trim()
     if (!t || isThinking) return
     setInputText('')
+    setError(null)
     setMessages(p => [...p, { role: 'user', text: `DREAMSCAPE: ${t}` }])
     setIsThinking(true)
     setThinkingStart(Date.now())
@@ -285,36 +287,62 @@ export default function ChatPage({ setAction }) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ prompt: t }),
       })
+      
       if (res.ok) {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
         setMessages(p => [...p, { role: 'assistant', text: `Generated visual for: "${t}"`, image: url }])
+      } else {
+        const data = await res.json()
+        setError(`Generation failed: ${data.detail || 'Unknown error'}`)
       }
-    } catch {
-      setError('Visual generation failed.')
+    } catch (err) {
+      setError('Visual generation failed. Check server logs.')
     } finally {
       setIsThinking(false)
       setThinkingStart(null)
     }
   }, [inputText, isThinking, token])
 
+
   // -- Bottom Action Slot --
   const ActionSlot = useMemo(() => (
     <div className="rs-input-bar">
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
         <button 
           className={`rs-pill ${isRecording ? 'is-active' : ''}`} 
-          onClick={() => !isRecording && startRecording()}
+          onClick={() => isRecording ? stopRecording() : startRecording()}
           disabled={isThinking}
+          title={isRecording ? 'Stop Recording' : 'Start Voice Input'}
+          style={{ width: 44, height: 44, padding: 0, justifyContent: 'center' }}
         >
-          <span className="material-symbols-rounded">{isRecording ? 'mic' : 'mic_none'}</span>
+          <span className="material-symbols-rounded">{isRecording ? 'stop' : 'mic'}</span>
         </button>
         
-        <div className="rs-card" style={{ flex: 1, padding: '8px 12px', display: 'flex', gap: 12, alignItems: 'flex-end', background: 'var(--md-surface-container-low)' }}>
+        <div style={{ 
+          flex: 1, 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 10, 
+          background: 'var(--md-surface-container-low)', 
+          borderRadius: '24px', 
+          padding: '4px 12px',
+          border: '1px solid var(--md-outline-variant)'
+        }}>
           <textarea
             ref={inputRef}
             rows={1}
-            style={{ all: 'unset', flex: 1, fontSize: '0.95rem', padding: '6px 0', minHeight: '24px' }}
+            style={{ 
+              flex: 1, 
+              background: 'transparent', 
+              border: 'none', 
+              color: 'inherit',
+              fontSize: '1rem', 
+              padding: '8px 4px', 
+              resize: 'none',
+              outline: 'none',
+              fontFamily: 'inherit'
+            }}
             placeholder="Message River Song..."
             value={inputText}
             onChange={e => setInputText(e.target.value)}
@@ -322,34 +350,40 @@ export default function ChatPage({ setAction }) {
             disabled={isThinking || !!viewingSession}
           />
           
-          <div style={{ display: 'flex', gap: 8 }}>
-             <button className="rs-pill" onClick={handleGenerateImage} disabled={!inputText.trim()} title="Dreamscape">
+          <div style={{ display: 'flex', gap: 6 }}>
+             <button className="rs-btn-ghost" onClick={handleGenerateImage} disabled={!inputText.trim()} title="Dreamscape" style={{ padding: 8 }}>
                <span className="material-symbols-rounded">auto_awesome</span>
              </button>
              
              {activeDocId ? (
-               <button className="rs-pill is-active" onClick={() => setActiveDocId(null)} title="Clear RAG Context">
+               <button className="rs-btn-ghost is-active" onClick={() => setActiveDocId(null)} title="Clear RAG Context" style={{ padding: 8, color: 'var(--primary)' }}>
                  <span className="material-symbols-rounded">close</span>
                </button>
              ) : (
-               <label className="rs-pill" style={{ cursor: 'pointer' }} title="RAG Context">
+               <label className="rs-btn-ghost" style={{ cursor: 'pointer', padding: 8 }} title="RAG Context">
                  <span className="material-symbols-rounded">attach_file</span>
                  <input type="file" style={{ display: 'none' }} onChange={handleUploadDoc} />
                </label>
              )}
 
-             <button className="rs-btn-primary" style={{ padding: '8px 16px' }} onClick={handleSend} disabled={!inputText.trim() || isThinking}>
+             <button 
+               className="rs-pill is-active" 
+               style={{ width: 40, height: 40, padding: 0, justifyContent: 'center' }} 
+               onClick={handleSend} 
+               disabled={!inputText.trim() || isThinking}
+             >
                <span className="material-symbols-rounded">send</span>
              </button>
           </div>
         </div>
 
-        <button className="rs-pill" onClick={handleReset} title="Clear Session">
+        <button className="rs-pill" onClick={handleReset} title="Clear Session" style={{ width: 44, height: 44, padding: 0, justifyContent: 'center' }}>
           <span className="material-symbols-rounded">refresh</span>
         </button>
       </div>
     </div>
-  ), [inputText, handleSend, handleReset, isRecording, startRecording, isThinking, viewingSession, handleGenerateImage, handleUploadDoc, activeDocId])
+  ), [inputText, handleSend, handleReset, isRecording, startRecording, stopRecording, isThinking, viewingSession, handleGenerateImage, handleUploadDoc, activeDocId])
+
 
   useEffect(() => {
     setAction(ActionSlot)
@@ -368,10 +402,20 @@ export default function ChatPage({ setAction }) {
             <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>public</span>
             WEB
           </button>
-          <button className={`rs-pill ${thinkingMode ? 'is-active' : ''}`} onClick={() => setThinkingMode(!thinkingMode)}>
-            <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>psychology</span>
-            THINK
+          <button 
+            className={`rs-pill ${thinkingMode !== 'fast' ? 'is-active' : ''}`} 
+            onClick={() => {
+              const next = thinkingMode === 'fast' ? 'thinking' : thinkingMode === 'thinking' ? 'pro' : 'fast'
+              setThinkingMode(next)
+            }}
+            title={`Mode: ${thinkingMode.toUpperCase()}`}
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>
+              {thinkingMode === 'fast' ? 'bolt' : thinkingMode === 'thinking' ? 'psychology' : 'verified'}
+            </span>
+            {thinkingMode.toUpperCase()}
           </button>
+
           {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginLeft: 12 }}>SYNCING MODEL...</span>}
         </div>
 

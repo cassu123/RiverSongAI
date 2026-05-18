@@ -348,7 +348,7 @@ class _ChatRequest(BaseModel):
     model_id: str | None = None
     web_search: bool = False
     system_prompt: str | None = None
-    thinking_mode: bool = False
+    thinking_mode: str | None = None  # "fast" | "thinking" | "pro"
     forget_memory: bool = False
 
 
@@ -382,6 +382,11 @@ async def chat_http(
         is_kiosk=False,
     )
     loop._suppress_memory = body.forget_memory
+    loop._web_search = body.web_search
+    loop._thinking_mode = body.thinking_mode
+    if body.system_prompt and body.system_prompt.strip():
+        loop._system_prompt = loop._system_prompt + "\n\n" + body.system_prompt.strip()
+
     # Re-inject history into the loop
     for m in body.history[-20:]:
         role = m.get("role", "user")

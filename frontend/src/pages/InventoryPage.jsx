@@ -65,14 +65,12 @@ export default function InventoryPage({ setAction }) {
       </div>
 
       {scannerOpen && (
-        <div className="rs-card is-elev" style={{ marginBottom: 24, position: 'relative' }}>
-          <div className="rs-card-head">
-            <span className="rs-card-label">BARCODE SCANNER</span>
-            <button className="rs-pill" onClick={() => setScannerOpen(false)}>CLOSE</button>
-          </div>
-          <BarcodeScanner onDetected={(code) => { console.log(code); setScannerOpen(false); }} />
-        </div>
+        <BarcodeScanner 
+          onDetected={(code) => { console.log(code); setScannerOpen(false); }} 
+          onClose={() => setScannerOpen(false)} 
+        />
       )}
+
 
       <div className="rs-card-flow">
         {loading ? (
