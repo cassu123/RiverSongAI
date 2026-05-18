@@ -32,7 +32,7 @@ export default class ErrorBoundary extends React.Component {
           </div>
           <div className="eb-title">Page Error</div>
           <div className="eb-msg">{msg}</div>
-          <button className="btn btn--primary eb-btn" onClick={this.reset}>
+          <button className="rs-btn-primary eb-btn" onClick={this.reset}>
             ↺ RETRY
           </button>
         </div>

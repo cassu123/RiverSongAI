@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import './ReadingPage.css'
 
 const API = '/api/reading'
 
@@ -539,57 +538,6 @@ export default function ReadingPage({ setAction }) {
   )
 }
 
-      {/* Modals */}
-      {showModal && (
-        <BookModal
-          book={editBook}
-          defaultService={activeService !== 'all' && activeService !== 'libby' ? activeService : (activeServices[0]?.key || 'kindle')}
-          availableServices={activeServices.length > 0 ? activeServices : ALL_SERVICES}
-          onSave={handleSave}
-          onClose={() => { setShowModal(false); setEditBook(null) }}
-        />
-      )}
-
-      {deleteTarget && (
-        <DeleteConfirm
-          book={deleteTarget}
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)}
-        />
-      )}
-
-      {connectModal === 'libby' && (
-        <LibbyConnectModal
-          onDone={() => { setConnectModal(null); loadConnections() }}
-          onClose={() => setConnectModal(null)}
-        />
-      )}
-
-      {connectModal === 'audible' && (
-        <AudibleConnectModal
-          onDone={() => { setConnectModal(null); loadConnections() }}
-          onClose={() => setConnectModal(null)}
-        />
-      )}
-
-      {connectModal === 'google_play' && (
-        <GooglePlayConnectModal
-          onDone={() => { setConnectModal(null); loadConnections() }}
-          onClose={() => setConnectModal(null)}
-        />
-      )}
-
-      {importTarget && (
-        <CsvImportModal
-          svc={importTarget}
-          onDone={() => { setImportTarget(null); loadShelf() }}
-          onClose={() => setImportTarget(null)}
-        />
-      )}
-    </div>
-  )
-}
-
 // =============================================================================
 // Service Picker (first-run + manage)
 // =============================================================================
@@ -655,10 +603,10 @@ function ServicePickerPage({ current, onSave, isFirstRun, onCancel }) {
 
       <div className="reading-picker-footer">
         {onCancel && (
-          <button className="btn" onClick={onCancel}>Cancel</button>
+          <button className="rs-pill" onClick={onCancel}>Cancel</button>
         )}
         <button
-          className="btn btn--primary"
+          className="rs-btn-primary"
           onClick={() => onSave(orderedKeys)}
           disabled={selected.size === 0}
         >
@@ -1017,8 +965,8 @@ function LibbyConnectModal({ onDone, onClose }) {
               </div>
               {err && <div className="reading-form-error">{err}</div>}
               <div className="reading-modal-actions">
-                <button className="btn" onClick={onClose}>Cancel</button>
-                <button className="btn btn--primary" onClick={start} disabled={busy}>
+                <button className="rs-pill" onClick={onClose}>Cancel</button>
+                <button className="rs-btn-primary" onClick={start} disabled={busy}>
                   {busy ? 'Creating pairing…' : 'Start Pairing'}
                 </button>
               </div>
@@ -1042,8 +990,8 @@ function LibbyConnectModal({ onDone, onClose }) {
               </div>
               {err && <div className="reading-form-error">{err}</div>}
               <div className="reading-modal-actions">
-                <button className="btn" onClick={() => { setStep(1); setCode(''); setErr('') }}>Back</button>
-                <button className="btn btn--primary" onClick={complete} disabled={busy || code.length < 8}>
+                <button className="rs-pill" onClick={() => { setStep(1); setCode(''); setErr('') }}>Back</button>
+                <button className="rs-btn-primary" onClick={complete} disabled={busy || code.length < 8}>
                   {busy ? 'Linking…' : 'Link Account'}
                 </button>
               </div>
@@ -1118,8 +1066,8 @@ function AudibleConnectModal({ onDone, onClose }) {
             </div>
             {err && <div className="reading-form-error">{err}</div>}
             <div className="reading-modal-actions">
-              <button type="button" className="btn" onClick={onClose}>Cancel</button>
-              <button type="submit" className="btn btn--primary" disabled={busy}>
+              <button type="button" className="rs-pill" onClick={onClose}>Cancel</button>
+              <button type="submit" className="rs-btn-primary" disabled={busy}>
                 {busy ? 'Connecting…' : 'Connect Audible'}
               </button>
             </div>
@@ -1228,8 +1176,8 @@ function GooglePlayConnectModal({ onDone, onClose }) {
               </div>
               {err && <div className="reading-form-error">{err}</div>}
               <div className="reading-modal-actions">
-                <button className="btn" onClick={onClose}>Cancel</button>
-                <button className="btn btn--primary" onClick={startOAuth} disabled={busy}>
+                <button className="rs-pill" onClick={onClose}>Cancel</button>
+                <button className="rs-btn-primary" onClick={startOAuth} disabled={busy}>
                   {busy ? 'Opening…' : 'Sign in with Google'}
                 </button>
               </div>
@@ -1246,7 +1194,7 @@ function GooglePlayConnectModal({ onDone, onClose }) {
               </div>
               {err && <div className="reading-form-error">{err}</div>}
               <div className="reading-modal-actions">
-                <button className="btn" onClick={() => { setWaiting(false); onClose() }}>Cancel</button>
+                <button className="rs-pill" onClick={() => { setWaiting(false); onClose() }}>Cancel</button>
               </div>
             </>
           )}
@@ -1354,10 +1302,10 @@ function CsvImportModal({ svc, onDone, onClose }) {
 
           <div className="reading-modal-actions">
             {result
-              ? <button className="btn btn--primary" onClick={onDone}>Done</button>
+              ? <button className="rs-btn-primary" onClick={onDone}>Done</button>
               : <>
-                  <button className="btn" onClick={onClose}>Cancel</button>
-                  <button className="btn btn--primary" onClick={submit} disabled={busy || !file}>
+                  <button className="rs-pill" onClick={onClose}>Cancel</button>
+                  <button className="rs-btn-primary" onClick={submit} disabled={busy || !file}>
                     {busy ? 'Importing…' : 'Import Books'}
                   </button>
                 </>
@@ -1387,8 +1335,8 @@ function DeleteConfirm({ book, onConfirm, onCancel }) {
             Remove <strong>"{book.title}"</strong> from your shelf? This cannot be undone.
           </p>
           <div className="reading-modal-actions">
-            <button className="btn" onClick={onCancel}>Cancel</button>
-            <button className="btn btn--danger" onClick={onConfirm}>Remove Book</button>
+            <button className="rs-pill" onClick={onCancel}>Cancel</button>
+            <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={onConfirm}>Remove Book</button>
           </div>
         </div>
       </div>
@@ -1518,8 +1466,8 @@ function BookModal({ book, defaultService, availableServices, onSave, onClose })
           {err && <div className="reading-form-error">{err}</div>}
 
           <div className="reading-modal-actions">
-            <button type="button" className="btn" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn--primary" disabled={saving}>
+            <button type="button" className="rs-pill" onClick={onClose}>Cancel</button>
+            <button type="submit" className="rs-btn-primary" disabled={saving}>
               {saving ? 'Saving…' : book ? 'Save Changes' : 'Add Book'}
             </button>
           </div>

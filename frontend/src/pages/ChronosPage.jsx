@@ -187,7 +187,7 @@ export default function ChronosPage({ setAction }) {
       
       {/* Search Modal */}
       {showQuickSwitcher && (
-        <div style={{ position: 'fixed', inset: 0, z-index: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }} onClick={() => setShowQuickSwitcher(false)}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }} onClick={() => setShowQuickSwitcher(false)}>
           <div className="rs-card is-elev" style={{ width: '100%', maxWidth: 500 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 12 }}>
                <span className="material-symbols-rounded">search</span>

@@ -32,9 +32,9 @@ export default function InventoryPage({ setAction }) {
 
   useEffect(() => { fetchItems() }, [fetchItems])
 
-  const filtered = items.filter(i => 
-    i.name.toLowerCase().includes(query.toLowerCase()) || 
-    i.category.toLowerCase().includes(query.toLowerCase())
+  const filtered = (items || []).filter(i => 
+    (i.name || '').toLowerCase().includes(query.toLowerCase()) || 
+    (i.category || '').toLowerCase().includes(query.toLowerCase())
   )
 
   useEffect(() => {
@@ -83,9 +83,9 @@ export default function InventoryPage({ setAction }) {
           filtered.map(item => (
             <div key={item.id} className="rs-card">
               <div className="rs-card-head">
-                <span className="rs-card-label">{item.category.toUpperCase()}</span>
+                <span className="rs-card-label">{(item.category || 'ASSET').toUpperCase()}</span>
                 <span className="rs-card-label" style={{ opacity: 1, color: item.quantity > 0 ? '#4ade80' : 'var(--md-error)' }}>
-                  {item.quantity} {item.unit.toUpperCase()}
+                  {item.quantity} {(item.unit || '').toUpperCase()}
                 </span>
               </div>
               <div className="rs-card-value" style={{ fontSize: '1.2rem' }}>{item.name}</div>

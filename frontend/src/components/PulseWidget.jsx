@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import './PulseWidget.css'
 
 export default function PulseWidget({ token }) {
   const [data, setData] = useState(null)

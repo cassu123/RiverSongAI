@@ -34,8 +34,8 @@ export default function Drawer({
     ? baseItems
     : baseItems.filter(i => enabledFeatures.has(i.key))
 
-  const initials = displayName
-    ? displayName.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  const initials = (typeof displayName === 'string' && displayName.trim())
+    ? displayName.trim().split(/\s+/).map(w => w ? w[0] : '').join('').slice(0, 2).toUpperCase()
     : 'RS'
 
   function navigate(key) {
@@ -71,7 +71,7 @@ export default function Drawer({
             {adminMode ? 'Admin' : 'Primary'}
           </h3>
           <div className="rs-drawer-list">
-            {items.map(it => {
+            {(items || []).map(it => {
               const danger = it.key === 'killswitch'
               return (
                 <button
@@ -79,7 +79,7 @@ export default function Drawer({
                   className={`rs-drawer-item ${currentPage === it.key ? 'is-active' : ''} ${danger ? 'is-danger' : ''}`}
                   onClick={() => navigate(it.key)}
                 >
-                  <span className="material-symbols-rounded rs-icon">{it.icon}</span>
+                  <EnvIcon name={it.key} className="rs-icon" />
                   <span>{it.label}</span>
                 </button>
               )

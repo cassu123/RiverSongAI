@@ -324,7 +324,7 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
         )}
 
         <ul className="spec-edit-list cp-list">
-          {vehicle.check_points.map((cp) => (
+          {(vehicle.check_points || []).map((cp) => (
             <CheckPointRow key={cp.id} cp={cp} token={token} vehicleId={vehicle.id} onUpdated={onUpdated} />
           ))}
         </ul>
@@ -516,7 +516,7 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
                 </tr>
               </thead>
               <tbody>
-                {preview.map((item, i) => {
+                {(preview || []).map((item, i) => {
                   const interval = [
                     item.interval_miles ? `${item.interval_miles.toLocaleString()} mi` : '',
                     item.interval_days  ? fmtDays(item.interval_days) : '',
@@ -660,7 +660,7 @@ function PeopleSettings({ token, people, onRefresh }) {
         </div>
       ) : (
         <ul className="mp-person-list">
-          {filtered.map((p) => (
+          {(filtered || []).map((p) => (
             <li key={p.id} className="mp-person-item">
               <div className="mp-person-info">
                 <span className="mp-person-name">{p.display_name || p.email}</span>
@@ -709,7 +709,7 @@ function AssignmentsSettings({ token, vehicles, people, onPeopleRefresh }) {
 
   useEffect(() => { fetchAssignments(); }, [fetchAssignments]);
 
-  const assignedPersonIds = new Set(assignments.map((a) => a.person_id));
+  const assignedPersonIds = new Set((assignments || []).map((a) => a.person_id));
   const unassigned = people.filter((p) => !assignedPersonIds.has(p.id));
 
   const handleAssign = async (personId) => {
@@ -758,7 +758,7 @@ function AssignmentsSettings({ token, vehicles, people, onPeopleRefresh }) {
               value={selectedVehicleId}
               onChange={(e) => setSelectedVehicleId(e.target.value)}
             >
-              {vehicles.map((v) => (
+              {(vehicles || []).map((v) => (
                 <option key={v.id} value={v.id}>{vehicleLabel(v)}</option>
               ))}
             </select>
@@ -775,7 +775,7 @@ function AssignmentsSettings({ token, vehicles, people, onPeopleRefresh }) {
                   <div className="mp-assign-empty">No one assigned yet.</div>
                 ) : (
                   <ul className="mp-person-list">
-                    {assignments.map((a) => (
+                    {(assignments || []).map((a) => (
                       <li key={a.person_id} className="mp-person-item mp-person-item--assigned">
                         <div className="mp-person-info">
                           <span className="mp-person-name">{a.person_display_name || a.person_email}</span>
@@ -797,7 +797,7 @@ function AssignmentsSettings({ token, vehicles, people, onPeopleRefresh }) {
                 <div className="mp-assign-col">
                   <div className="mp-assign-col-label">AVAILABLE TO ASSIGN</div>
                   <ul className="mp-person-list">
-                    {unassigned.map((p) => (
+                    {(unassigned || []).map((p) => (
                       <li key={p.id} className="mp-person-item">
                         <div className="mp-person-info">
                           <span className="mp-person-name">{p.display_name || p.email}</span>
@@ -945,7 +945,7 @@ function VehicleRAG({ token, vehicleId }) {
             <details className="mp-answer-sources">
               <summary>View Sources ▸</summary>
               <div className="mp-sources-list">
-                {answer.chunks.map((c, i) => (
+                {(answer.chunks || []).map((c, i) => (
                   <div key={i} className="mp-source-item">
                     <span className="mp-source-meta">Source: {c.source}</span>
                     <p>{c.text}</p>
@@ -1091,7 +1091,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
 
   const handleMarkAll = (state) =>
     setCheckedPoints(
-      Object.fromEntries(currentVehicle.check_points.map((_, i) => [i, state]))
+      Object.fromEntries((currentVehicle.check_points || []).map((_, i) => [i, state]))
     );
 
   const handleActualValue = (idx, val) =>
@@ -1100,7 +1100,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
   const handleSave = async () => {
     if (!currentVehicle) return;
     // Only include items that were actually serviced (done), not skipped or pending
-    const checkResults = currentVehicle.check_points
+    const checkResults = (currentVehicle.check_points || [])
       .map((cp, idx) => ({ cp, idx }))
       .filter(({ idx }) => isProService || checkedPoints[idx] === 'done')
       .map(({ cp, idx }) => ({
@@ -1254,7 +1254,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
                 value={selectedId || ''}
                 onChange={(e) => { setSelectedId(e.target.value); setCheckedPoints({}); setFormMode('none'); }}
               >
-                {vehicles.map((v) => (
+                {(vehicles || []).map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.year ? `${v.year} ` : ''}{v.make} {v.model}{v.nickname ? ` "${v.nickname}"` : ''}
                   </option>
@@ -1286,7 +1286,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
 
           {formMode !== 'edit' && (
             <div className="pulse-view-tabs">
-              {VIEW_TABS.map((t) => (
+              {(VIEW_TABS || []).map((t) => (
                 <button
                   key={t.key}
                   className={`pulse-tab-btn ${view === t.key ? 'active' : ''}`}
@@ -1314,7 +1314,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
                 onChange={(e) => setPerformedById(e.target.value)}
               >
                 <option value="">— Select person —</option>
-                {vehicleAssignments.map((a) => (
+                {(vehicleAssignments || []).map((a) => (
                   <option key={a.person_id} value={a.person_id}>
                     {a.person_display_name || a.person_email}
                   </option>
@@ -1375,7 +1375,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
                     <div className="spec-card">
                       <h4>[ FLUID SPECS ]</h4>
                       <ul>
-                        {currentVehicle.fluid_specs.map((f) => (
+                        {(currentVehicle.fluid_specs || []).map((f) => (
                           <li key={f.id}>
                             <span className="spec-name">{f.name}</span>
                             <span className="spec-val">{f.spec}{f.volume ? ` (${f.volume})` : ''}</span>
@@ -1388,7 +1388,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
                     <div className="spec-card">
                       <h4>[ TORQUE VALUES ]</h4>
                       <ul>
-                        {currentVehicle.torque_specs.map((t) => (
+                        {(currentVehicle.torque_specs || []).map((t) => (
                           <li key={t.id}>
                             <span className="spec-name">{t.name}</span>
                             <span className="spec-val hl-warn">{t.ft_lb} Ft-Lb // {t.nm} N·m</span>
@@ -1416,7 +1416,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
                     <button className="insp-bulk-btn insp-bulk-btn--reset" onClick={() => { setCheckedPoints({}); setActualValues({}); }}>↺ RESET</button>
                   </div>
 
-                  {currentVehicle.check_points.map((cp, idx) => {
+                  {(currentVehicle.check_points || []).map((cp, idx) => {
                     const actual    = actualValues[idx] || '';
                     const rowState  = checkedPoints[idx]; // 'done' | 'skip' | undefined
                     const done      = rowState === 'done';
@@ -1596,7 +1596,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
             <div className="mp-empty-specs">No service logs yet for this vehicle.</div>
           ) : (
             <div className="history-list">
-              {logs.map((log) => (
+              {(logs || []).map((log) => (
                 <div key={log.id} className="history-entry">
                   <div className="history-row">
                     <span className="history-date">{new Date(log.service_date).toLocaleDateString()}</span>
@@ -1618,7 +1618,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
                   {log.service_center && <div className="history-center">{log.service_center}</div>}
                   {log.check_results.length > 0 && (
                     <div className="history-checks">
-                      {log.check_results.map((cr) => {
+                      {(log.check_results || []).map((cr) => {
                         const st = cr.status || (cr.passed ? 'pass' : 'fail');
                         const icon = st === 'pass' ? '✓' : st === 'warn' ? '⚠' : '✗';
                         return (

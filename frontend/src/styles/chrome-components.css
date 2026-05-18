@@ -138,13 +138,101 @@
   animation: rs-pulse 2s ease-in-out infinite;
 }
 
+/* --- Pills & Buttons ------------------------------------------------------ */
+.rs-pill {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--bg-base) 60%, transparent);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-full);
+  font-size: var(--rs-fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+  cursor: pointer;
+  transition: all var(--rs-motion-fast) var(--rs-motion-curve);
+  backdrop-filter: var(--glass-blur-sm);
+}
+
+.rs-pill:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
+  border-color: var(--md-outline);
+  color: var(--md-on-surface);
+}
+
+.rs-pill.is-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--bg-base);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.rs-btn-primary {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 28px;
+  background: var(--primary);
+  color: var(--bg-base);
+  border-radius: var(--md-shape-lg);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--rs-motion-fast) var(--rs-motion-curve);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+.rs-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--primary) 35%, transparent);
+  filter: brightness(1.1);
+}
+
+.rs-btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.rs-btn-ghost {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  border: 1px solid transparent;
+  border-radius: var(--md-shape-md);
+  font-size: var(--rs-fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--rs-motion-fast) var(--rs-motion-curve);
+}
+
+.rs-btn-ghost:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--md-on-surface-variant) 8%, transparent);
+  color: var(--md-on-surface);
+}
+
 @keyframes rs-pulse {
   0%, 100% { opacity: 0.6; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.2); }
 }
 
 /* --- Typographic Overrides ----------------------------------------------- */
-.rs-card-label, .rs-status-strip {
+.rs-card-label, .rs-status-strip, .rs-pill, .rs-btn-primary, .rs-btn-ghost {
   letter-spacing: var(--type-tracking);
   text-transform: var(--type-case);
 }
+

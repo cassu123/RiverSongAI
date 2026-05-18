@@ -87,14 +87,14 @@ export default function VehiclePage({ onNavigate }) {
       <div className="rs-card-flow">
         {loading ? (
           <div className="rs-card-meta">SCANNING TRANSPONDERS...</div>
-        ) : vehicles.length === 0 ? (
+        ) : (vehicles || []).length === 0 ? (
           <div className="rs-card is-wide" style={{ textAlign: 'center', padding: 48 }}>
              <span className="material-symbols-rounded" style={{ fontSize: '3rem', opacity: 0.2 }}>garage</span>
              <p className="rs-card-meta">No vehicles detected in sector.</p>
              <button className="rs-btn-primary" style={{ marginTop: 24 }} onClick={() => setSelectedVehicleId('NEW')}>+ ADD VEHICLE</button>
           </div>
         ) : (
-          vehicles.map(v => (
+          (vehicles || []).map(v => (
             <div key={v.id} className="rs-card is-wide is-tappable" onClick={() => setSelectedVehicleId(v.id)}>
               <div className="rs-card-head">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

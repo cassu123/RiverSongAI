@@ -38,7 +38,7 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingContent, isThinking, toolEvents])
 
-  if (messages.length === 0 && !streamingContent && !isThinking && toolEvents.length === 0) {
+  if (!messages || (messages.length === 0 && !streamingContent && !isThinking && (toolEvents || []).length === 0)) {
     return (
       <div className="chat-panel chat-panel--empty">
         <div className="chat-empty-icon">
@@ -57,7 +57,7 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
   return (
     <div className="chat-panel" aria-label="Conversation">
       <div className="chat-messages" role="log" aria-live="polite">
-        {messages.map((msg, idx) => (
+        {(messages || []).map((msg, idx) => (
           <div key={idx} className={`chat-row chat-row--${msg.role}`}>
             {msg.role === 'assistant' && (
               <div className="chat-avatar chat-avatar--rs" aria-hidden="true">RS</div>
@@ -85,7 +85,7 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
         ))}
 
         {/* Tool events */}
-        {toolEvents.map((evt, idx) => (
+        {(toolEvents || []).map((evt, idx) => (
           <div key={`tool-${idx}`} className="chat-row chat-row--assistant chat-row--tool">
             <div className="chat-avatar chat-avatar--rs chat-avatar--tool" aria-hidden="true">
               <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>build</span>

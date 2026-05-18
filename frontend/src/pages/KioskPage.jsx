@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { AudioPlayer } from '../utils/AudioPlayer'
-import './KioskPage.css'
 
 const RiverSong = lazy(() => import('../components/RiverSong'))
 
@@ -145,7 +144,7 @@ export default function KioskPage() {
         <div className="kiosk-error-overlay animate-pulse">
           <span className="material-symbols-rounded" style={{ fontSize: '3rem' }}>sync_problem</span>
           <div style={{ marginTop: 10, fontSize: '0.8rem', letterSpacing: '0.1em' }}>CONNECTION FAILED</div>
-          <button className="btn btn--ghost btn--xs" style={{ marginTop: 20 }} onClick={() => window.location.reload()}>RELOAD</button>
+          <button className="rs-btn-ghost" style={{ marginTop: 20, fontSize: '0.7rem' }} onClick={() => window.location.reload()}>↺ RELOAD</button>
         </div>
       )}
     </div>

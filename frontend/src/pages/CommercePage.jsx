@@ -471,7 +471,7 @@ export default function CommercePage({ setAction }) {
     }
   };
 
-  const filtered = products.filter((p) => {
+  const filtered = (products || []).filter((p) => {
     const q = search.toLowerCase();
     const matchSearch = !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q);
     const matchCat = filterCat === 'ALL' || p.category === filterCat;
@@ -515,7 +515,7 @@ export default function CommercePage({ setAction }) {
             </div>
           ) : (
             <div style={{ width: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-              {filtered.map(p => (
+              {(filtered || []).map(p => (
                 <ProductCard 
                   key={p.id} 
                   product={p} 

@@ -60,7 +60,7 @@ export default function ConversationPage({ setAction }) {
 
   const [showTranscript, setShowTranscript] = useState(() => {
     if (!user) return true
-    try { const v = localStorage.getItem(`rs-transcript:${user?.id}`); return v === null ? true : v === 'true' } catch { return true }
+    try { const v = localStorage.getItem(`rs-transcript:${user.id}`); return v === null ? true : v === 'true' } catch { return true }
   })
 
   const toggleAvatar = () => {
@@ -84,6 +84,8 @@ export default function ConversationPage({ setAction }) {
   const audioPlayer = useMemo(() => new AudioPlayer(), [])
   const isPlayingRef = useRef(false)
 
+  const [toolEvents, setToolEvents] = useState([])
+
   const handleMessage = useCallback((event) => {
     const { type, text, content, message, data } = event
     switch (type) {
@@ -97,6 +99,10 @@ export default function ConversationPage({ setAction }) {
         setStreamingContent(p => p + (content || ''))
         if (streamTimeoutRef.current) clearTimeout(streamTimeoutRef.current)
         streamTimeoutRef.current = setTimeout(finalizeStream, 30000)
+        break
+      case 'tool_use':
+      case 'tool_result':
+        setToolEvents(p => [...p, event])
         break
       case 'stream_done':
         finalizeStream()
@@ -191,20 +197,25 @@ export default function ConversationPage({ setAction }) {
         model:    activeModel?.display_name || 'Default',
         messages: [...messages],
       }
-      const updated = [...loadHistory(user.id), session]
+      const existing = loadHistory(user.id)
+      const updated = Array.isArray(existing) ? [...existing, session] : [session]
       saveHistory(user.id, updated)
       setHistory(updated)
     }
     sendMessage({ type: 'reset_history', flush_memory: true })
     setMessages([])
     setStreamingContent('')
+    setToolEvents([])
     setError(null)
     setViewingSession(null)
     setMemoryMuted(true)
   }, [connectionStatus, messages, sendMessage, user, activeModel])
 
   useEffect(() => {
-    if (user) setHistory(loadHistory(user.id))
+    if (user) {
+      const h = loadHistory(user.id)
+      setHistory(Array.isArray(h) ? h : [])
+    }
   }, [user])
 
   useEffect(() => {
@@ -218,7 +229,7 @@ export default function ConversationPage({ setAction }) {
   }, [token])
 
   useEffect(() => {
-    setAction(
+    if (setAction) setAction(
       <div style={{ display: 'flex', gap: 24, alignItems: 'center', justifyContent: 'center', width: '100%', padding: '0 20px' }}>
         <button 
           className={ambientEnabled ? 'rs-pill is-active' : 'rs-pill'} 
@@ -269,7 +280,7 @@ export default function ConversationPage({ setAction }) {
         {/* Left: Avatar & State */}
         {showAvatar && (
           <div style={{ flex: '1 1 40%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, padding: '24px 0' }}>
-            <div className="rs-card" style={{ width: '100%', maxWidth: 360, aspectRayo: '1/1', padding: 0, borderRadius: '50%', overflow: 'hidden', position: 'relative' }}>
+            <div className="rs-card" style={{ width: '100%', maxWidth: 360, aspectRatio: '1/1', padding: 0, borderRadius: '50%', overflow: 'hidden', position: 'relative' }}>
               <Suspense fallback={<div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.05)' }} />}>
                 <RiverSong state={convState} audioLevel={visualLvl} />
               </Suspense>
@@ -317,7 +328,7 @@ export default function ConversationPage({ setAction }) {
             </div>
             <button className={showHistory ? 'rs-pill is-active' : 'rs-pill'} onClick={() => { setShowHistory(!showHistory); setViewingSession(null) }}>
               <span className="material-symbols-rounded">history</span>
-              {history.length > 0 && <span style={{ marginLeft: 6, opacity: 0.6 }}>{history.length}</span>}
+              {(history || []).length > 0 && <span style={{ marginLeft: 6, opacity: 0.6 }}>{history.length}</span>}
             </button>
           </div>
 
@@ -326,27 +337,27 @@ export default function ConversationPage({ setAction }) {
               <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
                 {viewingSession ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--md-outline-variant)', pb: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 12 }}>
                       <button className="rs-pill" onClick={() => setViewingSession(null)}>BACK</button>
                       <span className="rs-card-meta">{fmtDate(viewingSession.date)}</span>
                     </div>
-                    <ConversationPanel messages={viewingSession.messages} />
+                    <ConversationPanel messages={viewingSession.messages || []} />
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {[...history].reverse().map(s => (
+                    {(history || []).slice().reverse().map(s => (
                       <button key={s.id} className="rs-card is-tappable" style={{ padding: 12, display: 'flex', justifyContent: 'space-between' }} onClick={() => setViewingSession(s)}>
                         <span className="rs-card-label">{fmtDate(s.date)}</span>
-                        <span className="rs-card-meta">{s.messages.length} msg</span>
+                        <span className="rs-card-meta">{(s.messages || []).length} msg</span>
                       </button>
                     ))}
-                    {history.length === 0 && <div className="rs-card-meta" style={{ textAlign: 'center', padding: 40 }}>No history recorded.</div>}
+                    {(history || []).length === 0 && <div className="rs-card-meta" style={{ textAlign: 'center', padding: 40 }}>No history recorded.</div>}
                   </div>
                 )}
               </div>
             ) : showTranscript ? (
               <div style={{ flex: 1, overflowY: 'auto' }}>
-                <ConversationPanel messages={displayMessages} streamingContent={displayStreaming} />
+                <ConversationPanel messages={displayMessages || []} streamingContent={displayStreaming} toolEvents={toolEvents} />
               </div>
             ) : (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

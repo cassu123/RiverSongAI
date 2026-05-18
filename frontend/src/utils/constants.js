@@ -7,7 +7,7 @@
 
 export const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch'])
 
-export const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings', 'image', 'chronos'])
+export const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings', 'chronos'])
 
 export const STATE_TABS = ['idle', 'listening', 'thinking', 'speaking']
 

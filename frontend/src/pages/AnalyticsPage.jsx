@@ -131,7 +131,7 @@ function PlatformTile({ platform, snapshots, connected, onSelect, selected }) {
   }
 
   const revenue = latest?.metrics?.revenue
-  const chartData = snapshots.map(s => ({ date: s.date, value: s.metrics?.[primary] ?? 0 }))
+  const chartData = (snapshots || []).map(s => ({ date: s.date, value: s.metrics?.[primary] ?? 0 }))
 
   return (
     <div
@@ -248,8 +248,8 @@ function PlatformDetail({
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 24, marginBottom: 32 }}>
-        {metrics.map(metric => {
-          const chartData = snapshots
+        {(metrics || []).map(metric => {
+          const chartData = (snapshots || [])
             .filter(s => s.metrics?.[metric] != null)
             .map(s => ({ date: s.date, value: s.metrics[metric] }))
           if (!chartData.length) return null
@@ -271,15 +271,15 @@ function PlatformDetail({
           <thead>
             <tr style={{ borderBottom: '1px solid var(--md-outline-variant)', background: 'rgba(255,255,255,0.02)' }}>
               <th style={{ padding: '12px', textAlign: 'left' }} className="rs-card-label">Date</th>
-              {metrics.map(m => <th key={m} style={{ padding: '12px', textAlign: 'left' }} className="rs-card-label">{metricLabel(m)}</th>)}
+              {(metrics || []).map(m => <th key={m} style={{ padding: '12px', textAlign: 'left' }} className="rs-card-label">{metricLabel(m)}</th>)}
               <th style={{ padding: '12px' }}></th>
             </tr>
           </thead>
           <tbody>
-            {[...snapshots].reverse().map(s => (
+            {[...(snapshots || [])].reverse().map(s => (
               <tr key={s.id} style={{ borderBottom: '1px solid var(--md-outline-variant)' }}>
                 <td style={{ padding: '10px 12px' }}>{s.date}</td>
-                {metrics.map(m => (
+                {(metrics || []).map(m => (
                   <td key={m} style={{ padding: '10px 12px' }}>{fmtMetric(m, s.metrics?.[m])}</td>
                 ))}
                 <td style={{ padding: '10px 12px', textAlign: 'right' }}>
@@ -305,7 +305,7 @@ function AddDataModal({ platform, onClose, onSave }) {
   const p = PLATFORM_MAP[platform] || { label: platform, color: '#888', metrics: [] }
   const today = new Date().toISOString().slice(0, 10)
   const [date, setDate] = useState(today)
-  const [vals, setVals] = useState(Object.fromEntries(p.metrics.map(m => [m, ''])))
+  const [vals, setVals] = useState(Object.fromEntries((p.metrics || []).map(m => [m, ''])))
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
 
@@ -313,7 +313,7 @@ function AddDataModal({ platform, onClose, onSave }) {
     setSaving(true)
     setErr('')
     const metrics = {}
-    for (const [k, v] of Object.entries(vals)) {
+    for (const [k, v] of Object.entries(vals || {})) {
       const n = parseFloat(v)
       if (v !== '' && !isNaN(n)) metrics[k] = n
     }
@@ -351,7 +351,7 @@ function AddDataModal({ platform, onClose, onSave }) {
               onChange={e => setDate(e.target.value)}
             />
           </div>
-          {p.metrics.map(m => (
+          {(p.metrics || []).map(m => (
             <div key={m} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label className="rs-card-label" style={{ fontSize: '0.6rem' }}>{metricLabel(m)}</label>
               <input
@@ -472,12 +472,12 @@ export default function AnalyticsPage() {
   useEffect(() => { loadData() }, [loadData])
 
   function snapshotsFor(platform) {
-    return snapshots.filter(s => s.platform === platform)
+    return (snapshots || []).filter(s => s.platform === platform)
   }
 
   function connectedPlatforms() {
-    const withData = new Set(snapshots.map(s => s.platform))
-    const withConfig = new Set(platforms.map(p => p.platform))
+    const withData = new Set((snapshots || []).map(s => s.platform))
+    const withConfig = new Set((platforms || []).map(p => p.platform))
     return new Set([...withData, ...withConfig])
   }
 
@@ -503,8 +503,8 @@ export default function AnalyticsPage() {
       return 0
     })
 
-  const latestSnapshots = snapshots.filter(s => {
-    const forPlatform = snapshots.filter(x => x.platform === s.platform)
+  const latestSnapshots = (snapshots || []).filter(s => {
+    const forPlatform = (snapshots || []).filter(x => x.platform === s.platform)
     return s === forPlatform[forPlatform.length - 1]
   })
 
@@ -658,7 +658,7 @@ export default function AnalyticsPage() {
 
         {/* Platform Grid */}
         <div style={{ width: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
-          {sortedPlatforms.map(p => (
+          {(sortedPlatforms || []).map(p => (
             <PlatformTile
               key={p.key}
               platform={p.key}

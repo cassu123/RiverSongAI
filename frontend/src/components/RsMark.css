@@ -115,6 +115,27 @@ html[data-env="harkonnen"] .rs-mark::before {
 }
 html[data-env="harkonnen"] .rs-mark .rs-mark-glyph { color: #0a0a0a; }
 
+/* ── Arrakis — vast, ancient, spice-shimmer ──────────── */
+html[data-env="arrakis"] .rs-mark {
+  font-family: "Lexend", sans-serif;
+  font-weight: 300;
+  letter-spacing: 0.15em;
+  color: var(--primary);
+  text-shadow: 0 0 10px rgba(212, 116, 56, 0.4);
+}
+html[data-env="arrakis"] .rs-mark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(212, 116, 56, 0.15) 0%, transparent 70%);
+  animation: rs-ark-spice-glow 8s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes rs-ark-spice-glow {
+  from { opacity: 0.3; transform: scale(0.95); }
+  to   { opacity: 0.7; transform: scale(1.05); }
+}
+
 /* ── Forerunner — RS inside hex glyph ring, cyan halo ────── */
 html[data-env="forerunner"] .rs-mark {
   font-family: "Outfit", sans-serif;

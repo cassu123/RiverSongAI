@@ -22,8 +22,34 @@
   --rs-fs-micro:      0.72rem;
 }
 
+.rs-root {
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-base);
+  color: var(--md-on-surface);
+}
+
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-base);
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  z-index: 1000;
+}
+
 .rs-shell {
-  min-block-size: 100dvh;
+  position: relative;
+  z-index: 10;
+  block-size: 100dvh;
+  inline-size: 100vw;
   color: var(--md-on-surface);
   font-family: var(--font-mood, system-ui);
   display: grid;
@@ -31,6 +57,29 @@
   isolation: isolate;
   background: transparent;
 }
+
+/* --- Foyer (Page Container) ----------------------------------------------- */
+.rs-foyer {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 var(--rs-content-pad-i) 80px;
+}
+
+.rs-foyer-head {
+  margin-block-end: 40px;
+  padding-block-start: 20px;
+}
+
+/* --- Markdown Styles ------------------------------------------------------ */
+.rs-markdown {
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+.rs-markdown h1, .rs-markdown h2 { margin-top: 1.5rem; margin-bottom: 0.5rem; }
+.rs-markdown p { margin-bottom: 1rem; }
+.rs-markdown ul { margin-left: 1.5rem; margin-bottom: 1rem; }
+.rs-markdown code { background: var(--md-surface-container-high); padding: 2px 4px; border-radius: 4px; }
 
 /* --- Header --------------------------------------------------------------- */
 .rs-header {
@@ -105,7 +154,9 @@
   padding-inline: var(--rs-content-pad-i);
   padding-block: var(--rs-content-pad-b);
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* --- Action Zone (Bottom) ------------------------------------------------- */

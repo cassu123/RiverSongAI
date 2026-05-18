@@ -86,13 +86,16 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
 
   useEffect(() => {
     try {
-      const all = JSON.parse(localStorage.getItem(`rs-history:${userId}`) || '[]')
-      setSessions(all.reverse().slice(0, 5))
+      const raw = localStorage.getItem(`rs-history:${userId}`)
+      const all = raw ? JSON.parse(raw) : []
+      if (Array.isArray(all)) {
+        setSessions([...all].reverse().slice(0, 5))
+      }
     } catch {}
   }, [userId])
 
   const firstName = user?.display_name?.split(' ')[0] || 'Operator'
-  const activeRooms = Object.entries(rooms).filter(([_, r]) => r.persons > 0)
+  const activeRooms = Object.entries(rooms || {}).filter(([_, r]) => r && r.persons > 0)
   const statusOk = !stats || stats.status === 'operational'
 
   return (
@@ -129,7 +132,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
             <div style={{ display: 'flex', gap: 24 }}>
               <div>
                 <div className="rs-card-label">MEMORY</div>
-                <div className="rs-card-value">{stats?.memory?.facts.toLocaleString() || '—'}</div>
+                <div className="rs-card-value">{stats?.memory?.facts?.toLocaleString() || '—'}</div>
                 <div className="rs-card-meta">Known facts</div>
               </div>
               <div>
@@ -175,7 +178,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
             <span className="rs-card-label">RECENT SESSIONS</span>
             <button className="rs-pill" onClick={() => onNavigate('memory')}>HISTORY</button>
           </div>
-          {sessions.length === 0 ? (
+          {(!sessions || sessions.length === 0) ? (
             <div className="rs-card-meta">No recent activity recorded.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -187,7 +190,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
                   <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.92rem' }}>
                     {s.messages?.[0]?.text || 'Voice Interaction'}
                   </span>
-                  <span className="rs-card-label" style={{ fontSize: '0.6rem' }}>{s.messages?.length} MSG</span>
+                  <span className="rs-card-label" style={{ fontSize: '0.6rem' }}>{s.messages?.length || 0} MSG</span>
                 </div>
               ))}
             </div>
@@ -211,7 +214,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
               ))}
             </div>
           )}
-          <div className="rs-card-meta">Sensors active in {Object.keys(rooms).length} zones.</div>
+          <div className="rs-card-meta">Sensors active in {Object.keys(rooms || {}).length} zones.</div>
         </div>
 
         {/* Routines / Briefing */}
@@ -221,10 +224,10 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
             <span className="material-symbols-rounded rs-card-chevron">chevron_right</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {routines.slice(0, 3).map(r => (
+            {(routines || []).slice(0, 3).map(r => (
               <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span className="rs-status-dot" style={{ width: 6, height: 6, opacity: r.enabled ? 1 : 0.2 }} />
-                <span style={{ fontSize: '0.9rem' }}>{r.name.toUpperCase()}</span>
+                <span style={{ fontSize: '0.9rem' }}>{r.name?.toUpperCase() || 'UNNAMED'}</span>
               </div>
             ))}
           </div>

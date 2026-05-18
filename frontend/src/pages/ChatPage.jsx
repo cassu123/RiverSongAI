@@ -195,7 +195,7 @@ export default function ChatPage({ setAction }) {
     setActiveDocId(null)
   }, [])
 
-  const handleUploadDoc = async (e) => {
+  const handleUploadDoc = useCallback(async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     setIsUploading(true)
