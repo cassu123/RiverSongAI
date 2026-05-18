@@ -72,6 +72,15 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
                   </a>
                 </div>
               )}
+              {msg.chunks && msg.chunks.length > 0 && (
+                <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6, borderTop: '1px solid var(--md-outline-variant)', paddingTop: 8 }}>
+                  {msg.chunks.map((chunk, i) => (
+                    <span key={i} className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px', opacity: 0.8 }} title={chunk.text}>
+                      SOURCE: {chunk.source?.toUpperCase() || 'DOCUMENT'}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             {msg.role === 'user' && (
               <div className="chat-avatar chat-avatar--user" aria-hidden="true">

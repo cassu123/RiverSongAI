@@ -18,7 +18,7 @@ function loadHistory(userId) {
   try { return JSON.parse(localStorage.getItem(historyKey(userId)) || '[]') } catch { return [] }
 }
 function saveHistory(userId, sessions) {
-  try { localStorage.setItem(historyKey(userId), JSON.stringify(sessions.slice(-MAX_HISTORY_SESSIONS))) } catch {}
+  try { localStorage.setItem(historyKey(userId), JSON.stringify(sessions.slice(0, MAX_HISTORY_SESSIONS))) } catch {}
 }
 function fmtDate(iso) {
   if (!iso) return ''
@@ -41,6 +41,7 @@ export default function ChatPage({ setAction }) {
   const [savingModel,     setSavingModel]     = useState(false)
 
   const [history,        setHistory]        = useState([])
+  const [currentSessionId, setCurrentSessionId] = useState(null)
   const [showHistory,    setShowHistory]    = useState(false)
   const [viewingSession, setViewingSession] = useState(null)
 
@@ -96,6 +97,30 @@ export default function ChatPage({ setAction }) {
     setSavingModel(false)
   }
 
+  const updateHistory = useCallback((updatedMessages) => {
+    if (!user) return
+    setHistory(prev => {
+      let newHistory = [...prev]
+      if (currentSessionId) {
+        const idx = newHistory.findIndex(s => s.id === currentSessionId)
+        if (idx !== -1) {
+          newHistory[idx] = { ...newHistory[idx], messages: updatedMessages }
+        } else {
+          // Should not happen if ID was set correctly
+          const newSession = { id: currentSessionId, date: new Date().toISOString(), messages: updatedMessages }
+          newHistory = [newSession, ...newHistory]
+        }
+      } else {
+        const newId = Date.now()
+        const newSession = { id: newId, date: new Date().toISOString(), messages: updatedMessages }
+        newHistory = [newSession, ...newHistory]
+        setCurrentSessionId(newId)
+      }
+      saveHistory(user.id, newHistory)
+      return newHistory
+    })
+  }, [user, currentSessionId])
+
   // -- Actions --
   const handleSend = useCallback(async () => {
     const t = inputText.trim()
@@ -137,7 +162,14 @@ export default function ChatPage({ setAction }) {
 
       if (activeDocId) {
         const data = await res.json()
-        setMessages(p => [...p, { role: 'assistant', text: data.answer }])
+        const assistantMsg = { 
+          role: 'assistant', 
+          text: data.answer, 
+          chunks: data.chunks 
+        }
+        const updated = [...next, assistantMsg]
+        setMessages(updated)
+        updateHistory(updated)
       } else {
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
@@ -175,7 +207,10 @@ export default function ChatPage({ setAction }) {
           }
         }
         setStreamingResponse('')
-        setMessages(p => [...p, { role: 'assistant', text: full || '...' }])
+        const assistantMsg = { role: 'assistant', text: full || '...' }
+        const updated = [...next, assistantMsg]
+        setMessages(updated)
+        updateHistory(updated)
       }
     } catch (err) {
       setError('Connection failure.')
@@ -184,15 +219,17 @@ export default function ChatPage({ setAction }) {
       setIsThinking(false)
       setThinkingStart(null)
     }
-  }, [inputText, isThinking, messages, selectedModel, token, webSearch, thinkingMode, systemPrompt, activeDocId, forgetMemory])
+  }, [inputText, isThinking, messages, selectedModel, token, webSearch, thinkingMode, systemPrompt, activeDocId, forgetMemory, user, updateHistory])
 
   const handleReset = useCallback(() => {
     setMessages([])
     setStreamingResponse('')
+    setToolEvents([])
     setError(null)
     setViewingSession(null)
     setForgetMemory(true)
     setActiveDocId(null)
+    setCurrentSessionId(null)
   }, [])
 
   const handleUploadDoc = useCallback(async (e) => {
@@ -289,10 +326,18 @@ export default function ChatPage({ setAction }) {
              <button className="rs-pill" onClick={handleGenerateImage} disabled={!inputText.trim()} title="Dreamscape">
                <span className="material-symbols-rounded">auto_awesome</span>
              </button>
-             <label className={`rs-pill ${activeDocId ? 'is-active' : ''}`} style={{ cursor: 'pointer' }} title="RAG Context">
-               <span className="material-symbols-rounded">attach_file</span>
-               <input type="file" style={{ display: 'none' }} onChange={handleUploadDoc} />
-             </label>
+             
+             {activeDocId ? (
+               <button className="rs-pill is-active" onClick={() => setActiveDocId(null)} title="Clear RAG Context">
+                 <span className="material-symbols-rounded">close</span>
+               </button>
+             ) : (
+               <label className="rs-pill" style={{ cursor: 'pointer' }} title="RAG Context">
+                 <span className="material-symbols-rounded">attach_file</span>
+                 <input type="file" style={{ display: 'none' }} onChange={handleUploadDoc} />
+               </label>
+             )}
+
              <button className="rs-btn-primary" style={{ padding: '8px 16px' }} onClick={handleSend} disabled={!inputText.trim() || isThinking}>
                <span className="material-symbols-rounded">send</span>
              </button>
@@ -327,6 +372,7 @@ export default function ChatPage({ setAction }) {
             <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>psychology</span>
             THINK
           </button>
+          {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginLeft: 12 }}>SYNCING MODEL...</span>}
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>

@@ -206,8 +206,50 @@ class VaultProvider:
         return {"mtime": stat.st_mtime, "size": stat.st_size}
 
     async def search_text(self, user_id: str, query: str, limit: int = 50) -> list[dict]:
+        """Substring search over filename AND content."""
         if not self.store: return []
-        return await self.store.search_vault_notes(user_id, query, limit)
+        
+        # 1. Start with metadata search from DB
+        meta_results = await self.store.search_vault_notes(user_id, query, limit)
+        
+        # 2. Augment with basic content grep
+        results = {r["virtual_path"]: r for r in meta_results}
+        
+        # Determine accessible roots
+        roots = [
+            (self.base_vault / "users" / user_id, VROOT_PERSONAL),
+            (self.base_vault / "households", VROOT_HOUSEHOLD),
+        ]
+        
+        for root_path, v_prefix in roots:
+            if not root_path.exists(): continue
+            for p in root_path.rglob("*.md"):
+                v_path = "/".join([v_prefix] + list(p.relative_to(root_path).parts))
+                if v_path in results: continue
+                
+                try:
+                    stat = p.stat()
+                    if stat.st_size > 1_048_576: # 1MB limit
+                        logger.debug("search_text: skipping large file %s", p)
+                        continue
+
+                    content = p.read_text("utf-8")
+                    if query.lower() in content.lower():
+                        results[v_path] = {
+                            "virtual_path": v_path,
+                            "title": p.stem,
+                        }
+                except (OSError, UnicodeDecodeError) as e:
+                    logger.debug("search_text: failed to read %s: %s", p, e)
+                    continue
+                except Exception as e:
+                    logger.warning("search_text: unexpected error reading %s: %s", p, e)
+                    continue
+                
+                if len(results) >= limit: break
+            if len(results) >= limit: break
+                
+        return list(results.values())[:limit]
 
     async def get_backlinks(self, user_id: str, virtual_path: str) -> list[dict]:
         if not self.store: return []

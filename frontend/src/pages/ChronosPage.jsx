@@ -62,26 +62,31 @@ export default function ChronosPage({ setAction }) {
           headers: { Authorization: `Bearer ${token}` }
         })
         if (blRes.ok) setBacklinks(await blRes.json())
+        return true
       }
+      return false
     } catch (err) {
       setError(err.message)
+      return false
     } finally {
       setLoading(false)
     }
   }
 
-  const createNote = async () => {
-    const name = window.prompt('NOTE NAME:')
+  const createNote = async (suggestedName = null) => {
+    const name = suggestedName || window.prompt('NOTE NAME:')
     if (!name) return
     const path = `${activeRoot}/${name.endsWith('.md') ? name : name + '.md'}`
     try {
-      await fetch('/api/vault/note', {
+      const res = await fetch('/api/vault/note', {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ path, content: '# ' + name.replace('.md', '') + '\n\n' })
       })
+      if (!res.ok) throw new Error('Failed to create')
       await fetchTree(activeRoot)
       loadNote(path)
+      setEditMode(true)
     } catch {
       setError('Failed to create.')
     }
@@ -261,7 +266,23 @@ export default function ChronosPage({ setAction }) {
                     a: ({ node, href, children, ...props }) => {
                       if (href?.startsWith('wikilink:')) {
                         const title = href.replace('wikilink:', '')
-                        return <button className="rs-pill" onClick={() => loadNote(`${activeRoot}/${title}.md`)}>{children}</button>
+                        const targetPath = `${activeRoot}/${title}.md`
+                        return (
+                          <button 
+                            className="rs-pill" 
+                            style={{ padding: '0 8px', height: '1.4rem', fontSize: '0.85rem' }}
+                            onClick={async () => {
+                              const exists = await loadNote(targetPath)
+                              if (!exists) {
+                                if (window.confirm(`Note "${title}" does not exist. Create it?`)) {
+                                  await createNote(title)
+                                }
+                              }
+                            }}
+                          >
+                            {children}
+                          </button>
+                        )
                       }
                       return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>
                     }
