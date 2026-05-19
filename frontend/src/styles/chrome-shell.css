@@ -471,7 +471,7 @@
 @media (max-width: 600px) {
   :root {
     --rs-header-h:      56px;
-    --rs-content-pad-i: 14px;
+    --rs-content-pad-i: 20px;
   }
 
   .rs-header {
@@ -552,13 +552,20 @@
 
 /* --- Responsive bands per RIVER_SONG_CHROME_PLAN.md §11 ------------------- */
 
+/* Mid-range (480–767px): cap foyer so it's never full-bleed on small tablets. */
+@media (min-width: 480px) and (max-width: 767px) {
+  .rs-foyer {
+    max-inline-size: min(100%, 560px);
+  }
+}
+
 /* Tablet (768–1199): wider drawer when open; content centered at 672px. */
 @media (min-width: 768px) and (max-width: 1199px) {
   .rs-drawer {
     inline-size: min(85vw, 320px);
   }
   .rs-foyer {
-    max-inline-size: clamp(0px, 100%, 672px);
+    max-inline-size: min(100%, 672px);
   }
 }
 

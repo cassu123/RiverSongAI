@@ -551,32 +551,31 @@ export default function ChatPage({ setAction, onNavigate }) {
         </div>
       </div>
 
-      {/* Cloud usage card — only shown when a cloud/API model is active */}
+      {/* Cloud usage card — compact, clipped, only shown when API model active */}
       {!isLocalModel && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', rowGap: 6,
-          padding: '10px 16px', marginBottom: 20,
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '8px 14px', marginBottom: 16,
           background: 'color-mix(in srgb, var(--primary) 8%, transparent)',
           border: '1px solid color-mix(in srgb, var(--primary) 22%, transparent)',
           borderRadius: 'var(--md-shape-md)',
+          overflow: 'hidden',
+          minWidth: 0,
         }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--primary)', flexShrink: 0 }}>cloud</span>
-          <span style={{ fontWeight: 600, fontSize: '0.85rem', flex: 1, minWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontWeight: 600, fontSize: '0.82rem', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {selectedCloudModelInfo?.display_name || selectedModel?.model_id || 'Cloud model'}
           </span>
           {selectedCloudModelInfo?.cost_per_1k_input_usd != null && (
-            <span className="rs-card-label" style={{ fontSize: '0.65rem', opacity: 0.9, flexShrink: 0 }}>
-              IN {fmtCost(selectedCloudModelInfo.cost_per_1k_input_usd)} tokens
+            <span style={{ fontSize: '0.62rem', color: 'var(--md-on-surface-variant)', flexShrink: 0, whiteSpace: 'nowrap' }}>
+              {fmtCost(selectedCloudModelInfo.cost_per_1k_input_usd)} in
             </span>
           )}
           {selectedCloudModelInfo?.cost_per_1k_output_usd != null && (
-            <span className="rs-card-label" style={{ fontSize: '0.65rem', opacity: 0.9, flexShrink: 0 }}>
-              OUT {fmtCost(selectedCloudModelInfo.cost_per_1k_output_usd)} tokens
+            <span style={{ fontSize: '0.62rem', color: 'var(--md-on-surface-variant)', flexShrink: 0, whiteSpace: 'nowrap' }}>
+              · {fmtCost(selectedCloudModelInfo.cost_per_1k_output_usd)} out
             </span>
           )}
-          <button className="rs-pill" style={{ padding: '2px 8px', fontSize: '0.65rem' }} onClick={() => setFamilySheetOpen(true)}>
-            SWITCH
-          </button>
         </div>
       )}
 
@@ -609,7 +608,7 @@ export default function ChatPage({ setAction, onNavigate }) {
           )}
         </div>
       ) : (
-        <div className="rs-thread" style={{ paddingBottom: '100px' }}>
+        <div className="rs-thread" style={{ paddingBottom: '100px', overflow: 'hidden' }}>
           {viewingSession && (
             <div style={{ marginBottom: 20 }}>
               <button className="rs-pill" onClick={() => setViewingSession(null)}>← RETURN TO LIVE</button>

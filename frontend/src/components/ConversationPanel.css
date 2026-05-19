@@ -348,16 +348,28 @@
   max-width: 72%;
 }
 
+/* Tablet + phone: tighten up, give bubbles max space within the bounded foyer */
 @media (max-width: 1024px) {
   .chat-messages {
-    padding: 16px 16px 8px;
+    padding: 16px 12px 8px;
     gap: 12px;
   }
   .chat-bubble {
-    max-width: 88%;
+    max-width: 92%;
   }
   .chat-tool-event {
-    max-width: 90%;
+    max-width: 92%;
+  }
+}
+
+/* Phone: strip horizontal padding entirely — rs-content already provides the margin */
+@media (max-width: 600px) {
+  .chat-messages {
+    padding: 12px 4px 8px;
+    gap: 10px;
+  }
+  .chat-bubble {
+    max-width: 94%;
   }
 }
 .chat-panel::-webkit-scrollbar       { width: 4px; }
