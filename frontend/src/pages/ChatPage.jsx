@@ -23,6 +23,11 @@ import {
 const API_BASE = import.meta.env.VITE_API_URL || ''
 const MAX_HISTORY_SESSIONS = 30
 
+function fmtCost(v) {
+  if (v == null) return null
+  return `$${(v * 1000000).toFixed(2)}/M`
+}
+
 function historyKey(userId) { return `rs-history:${userId}` }
 function loadHistory(userId) {
   try { return JSON.parse(localStorage.getItem(historyKey(userId)) || '[]') } catch { return [] }
@@ -56,10 +61,12 @@ export default function ChatPage({ setAction, onNavigate }) {
   const [showHistory,    setShowHistory]    = useState(false)
   const [viewingSession, setViewingSession] = useState(null)
 
-  const [webSearch,       setWebSearch]       = useState(false)
-  const [thinkingMode,    setThinkingMode]    = useState('fast')
-  const [showSystem,      setShowSystem]      = useState(false)
-  const [modelSheetOpen,  setModelSheetOpen]  = useState(false)
+  const [webSearch,         setWebSearch]         = useState(false)
+  const [thinkingMode,      setThinkingMode]      = useState('fast')
+  const [showSystem,        setShowSystem]        = useState(false)
+  const [familySheetOpen,   setFamilySheetOpen]   = useState(false)
+  const [tierSheetOpen,     setTierSheetOpen]     = useState(false)
+  const [cloudSheetOpen,    setCloudSheetOpen]    = useState(false)
 
   const [systemPrompt, setSystemPrompt] = useState('')
   const [enhancing, setEnhancing] = useState(false)
@@ -98,7 +105,6 @@ export default function ChatPage({ setAction, onNavigate }) {
   // -- Model selection --
   const handleModelSelect = async (provider, model_id) => {
     setSelectedModel({ provider, model_id })
-    setModelOpen(false)
     setSavingModel(true)
     try {
       await fetch(`${API_BASE}/api/settings/llm?user_id=${user.id}`, {
@@ -126,40 +132,67 @@ export default function ChatPage({ setAction, onNavigate }) {
     [selectedModel?.provider, selectedModel?.model_id, visibleFamilies],
   )
 
-  // Label for the pill: "DeepSeek · Thinking" when mapped, "<raw> · Custom"
-  // when the user has some model not in MODEL_FAMILIES, "Select model" otherwise.
-  const modelPillLabel = useMemo(() => {
-    if (currentMapping) {
-      return `${currentMapping.family.displayName} · ${TIER_META[currentMapping.tier].label}`
-    }
-    if (selectedModel?.model_id) {
-      return `${selectedModel.model_id} · Custom`
-    }
-    return 'Select model'
-  }, [currentMapping, selectedModel?.model_id])
-
   // Keep thinkingMode in sync with the loaded selection.
   useEffect(() => {
     if (currentMapping?.tier) setThinkingMode(currentMapping.tier)
   }, [currentMapping?.tier])
 
-  // Split families into local (Ollama) and cloud for the section headers.
-  const localFamilies = useMemo(
-    () => visibleFamilies.filter(f => f.provider === 'ollama'),
-    [visibleFamilies],
-  )
-  const cloudFamilies = useMemo(
-    () => visibleFamilies.filter(f => f.provider !== 'ollama'),
-    [visibleFamilies],
+  // Is the current model running on-device?
+  const isLocalModel = !selectedModel?.provider || selectedModel.provider === 'ollama'
+
+  // Families that have at least one installed/available tier (admin-disabled & uninstalled hidden).
+  const availableFamilies = useMemo(
+    () => visibleFamilies.filter(f =>
+      TIER_ORDER.some(t => isTierAvailable(f, t, availabilitySet))
+    ),
+    [visibleFamilies, availabilitySet],
   )
 
-  const handlePickModel = useCallback((family, tier) => {
-    const model_id = family.tiers?.[tier]
-    if (!model_id || !isTierAvailable(family, tier, availabilitySet)) return
+  // For the tier sheet: only the tiers actually installed for the current local family.
+  const availableTiersForFamily = useMemo(() => {
+    const fam = currentMapping?.family
+    if (!fam || fam.provider !== 'ollama') return []
+    return TIER_ORDER.filter(t => isTierAvailable(fam, t, availabilitySet))
+  }, [currentMapping, availabilitySet])
+
+  // Full model info for the selected cloud model (for the usage card).
+  const selectedCloudModelInfo = useMemo(
+    () => !isLocalModel
+      ? models.cloud.find(m => m.provider === selectedModel?.provider && m.model_id === selectedModel?.model_id)
+      : null,
+    [isLocalModel, models.cloud, selectedModel?.provider, selectedModel?.model_id],
+  )
+
+  // Pick a family — if local, auto-select best available tier.
+  // If cloud, auto-select first available tier but stay on the family.
+  const handlePickFamily = useCallback((family) => {
+    setFamilySheetOpen(false)
+    const tier = isTierAvailable(family, thinkingMode, availabilitySet)
+      ? thinkingMode
+      : TIER_ORDER.find(t => isTierAvailable(family, t, availabilitySet))
+    if (!tier) return
+    const model_id = family.tiers[tier]
+    if (!model_id) return
     setThinkingMode(tier)
-    handleModelSelect(family.provider, model_id)
-    setModelSheetOpen(false)
-  }, [availabilitySet]) // eslint-disable-line react-hooks/exhaustive-deps
+    handleModelSelect(family.provider, model_id) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [thinkingMode, availabilitySet]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pick a tier within the current local family.
+  const handlePickTier = useCallback((tier) => {
+    setTierSheetOpen(false)
+    const fam = currentMapping?.family
+    if (!fam) return
+    const model_id = fam.tiers[tier]
+    if (!model_id) return
+    setThinkingMode(tier)
+    handleModelSelect(fam.provider, model_id) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentMapping]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pick a specific cloud model directly.
+  const handlePickCloudModel = useCallback((model) => {
+    setCloudSheetOpen(false)
+    handleModelSelect(model.provider, model.model_id) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateHistory = useCallback((updatedMessages) => {
     if (!user) return
@@ -465,19 +498,45 @@ export default function ChatPage({ setAction, onNavigate }) {
             <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>public</span>
             WEB
           </button>
-          <button
-            className="rs-pill is-active"
-            onClick={() => setModelSheetOpen(true)}
-            title={modelPillLabel}
-            style={{ maxWidth: 'min(220px, calc(100vw - 140px))', overflow: 'hidden' }}
-          >
-            <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', flexShrink: 0 }}>
-              {thinkingMode === 'fast' ? 'bolt' : thinkingMode === 'thinking' ? 'psychology' : 'verified'}
-            </span>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-              {modelPillLabel}
-            </span>
-          </button>
+
+          {/* Local: family pill + separate tier pill */}
+          {isLocalModel ? (
+            <>
+              <button
+                className={`rs-pill ${currentMapping?.family ? 'is-active' : ''}`}
+                onClick={() => setFamilySheetOpen(true)}
+                style={{ maxWidth: 'min(160px, calc(50vw - 80px))', overflow: 'hidden' }}
+              >
+                <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', flexShrink: 0 }}>memory</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                  {currentMapping?.family?.displayName || 'Local model'}
+                </span>
+              </button>
+              {currentMapping?.family && (
+                <button
+                  className="rs-pill is-active"
+                  onClick={() => setTierSheetOpen(true)}
+                >
+                  <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', flexShrink: 0 }}>
+                    {thinkingMode === 'fast' ? 'bolt' : thinkingMode === 'thinking' ? 'psychology' : 'verified'}
+                  </span>
+                  {TIER_META[thinkingMode]?.label || 'Speed'}
+                </button>
+              )}
+            </>
+          ) : (
+            /* Cloud: single model pill */
+            <button
+              className="rs-pill is-active"
+              onClick={() => setCloudSheetOpen(true)}
+              style={{ maxWidth: 'min(200px, calc(60vw - 80px))', overflow: 'hidden' }}
+            >
+              <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', flexShrink: 0 }}>cloud</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                {selectedCloudModelInfo?.display_name || currentMapping?.family?.displayName || selectedModel?.model_id || 'Cloud model'}
+              </span>
+            </button>
+          )}
 
           {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginLeft: 4 }}>SYNCING…</span>}
         </div>
@@ -491,6 +550,35 @@ export default function ChatPage({ setAction, onNavigate }) {
           </button>
         </div>
       </div>
+
+      {/* Cloud usage card — only shown when a cloud/API model is active */}
+      {!isLocalModel && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', rowGap: 6,
+          padding: '10px 16px', marginBottom: 20,
+          background: 'color-mix(in srgb, var(--primary) 8%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--primary) 22%, transparent)',
+          borderRadius: 'var(--md-shape-md)',
+        }}>
+          <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--primary)', flexShrink: 0 }}>cloud</span>
+          <span style={{ fontWeight: 600, fontSize: '0.85rem', flex: 1, minWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {selectedCloudModelInfo?.display_name || selectedModel?.model_id || 'Cloud model'}
+          </span>
+          {selectedCloudModelInfo?.cost_per_1k_input_usd != null && (
+            <span className="rs-card-label" style={{ fontSize: '0.65rem', opacity: 0.9, flexShrink: 0 }}>
+              IN {fmtCost(selectedCloudModelInfo.cost_per_1k_input_usd)} tokens
+            </span>
+          )}
+          {selectedCloudModelInfo?.cost_per_1k_output_usd != null && (
+            <span className="rs-card-label" style={{ fontSize: '0.65rem', opacity: 0.9, flexShrink: 0 }}>
+              OUT {fmtCost(selectedCloudModelInfo.cost_per_1k_output_usd)} tokens
+            </span>
+          )}
+          <button className="rs-pill" style={{ padding: '2px 8px', fontSize: '0.65rem' }} onClick={() => setFamilySheetOpen(true)}>
+            SWITCH
+          </button>
+        </div>
+      )}
 
       {showSystem && (
         <div className="rs-card is-elev" style={{ marginBottom: 24 }}>
@@ -538,63 +626,93 @@ export default function ChatPage({ setAction, onNavigate }) {
         </div>
       )}
 
-      {/* ---------- Single-step model picker (Gemini-style) ---------- */}
-      <Sheet
-        open={modelSheetOpen}
-        onClose={() => setModelSheetOpen(false)}
-        title="AI model"
-      >
-        {/* LOCAL section */}
-        {localFamilies.length > 0 && (
+      {/* Sheet 1 — Family picker (all available families, local + cloud) */}
+      <Sheet open={familySheetOpen} onClose={() => setFamilySheetOpen(false)} title="AI family">
+        {availableFamilies.filter(f => f.provider === 'ollama').length > 0 && (
           <div className="rs-sheet-section-label">Local — Ollama</div>
         )}
-        {localFamilies.flatMap(family =>
-          TIER_ORDER.map(tier => {
-            const model_id = family.tiers?.[tier]
-            if (!model_id) return null
-            const meta      = TIER_META[tier]
-            const available = isTierAvailable(family, tier, availabilitySet)
-            const isActive  = currentMapping?.family?.id === family.id && currentMapping?.tier === tier
-            return (
-              <SheetRow
-                key={`${family.id}::${tier}`}
-                icon={family.icon || 'memory'}
-                title={family.displayName}
-                sub={available ? meta.blurb : 'Not installed'}
-                badge={meta.label}
-                active={isActive}
-                dimmed={!available}
-                onClick={() => handlePickModel(family, tier)}
-              />
-            )
-          }).filter(Boolean)
-        )}
+        {availableFamilies.filter(f => f.provider === 'ollama').map(family => (
+          <SheetRow
+            key={family.id}
+            icon={family.icon || 'memory'}
+            title={family.displayName}
+            sub={family.blurb}
+            active={currentMapping?.family?.id === family.id}
+            onClick={() => handlePickFamily(family)}
+          />
+        ))}
 
-        {/* CLOUD section */}
-        {cloudFamilies.length > 0 && (
+        {availableFamilies.filter(f => f.provider !== 'ollama').length > 0 && (
           <div className="rs-sheet-section-label">Cloud — API</div>
         )}
-        {cloudFamilies.flatMap(family =>
-          TIER_ORDER.map(tier => {
-            const model_id = family.tiers?.[tier]
-            if (!model_id) return null
-            const meta      = TIER_META[tier]
-            const available = isTierAvailable(family, tier, availabilitySet)
-            const isActive  = currentMapping?.family?.id === family.id && currentMapping?.tier === tier
+        {availableFamilies.filter(f => f.provider !== 'ollama').map(family => (
+          <SheetRow
+            key={family.id}
+            icon={family.icon || 'cloud'}
+            title={family.displayName}
+            sub={family.blurb}
+            active={currentMapping?.family?.id === family.id}
+            onClick={() => handlePickFamily(family)}
+          />
+        ))}
+      </Sheet>
+
+      {/* Sheet 2 — Tier picker (local only: Fast / Thinking / Pro) */}
+      <Sheet
+        open={tierSheetOpen}
+        onClose={() => setTierSheetOpen(false)}
+        title={currentMapping?.family ? `${currentMapping.family.displayName} — speed` : 'Speed tier'}
+      >
+        {availableTiersForFamily.map(tier => {
+          const meta     = TIER_META[tier]
+          const model_id = currentMapping?.family?.tiers?.[tier]
+          const isActive = thinkingMode === tier
+          return (
+            <SheetRow
+              key={tier}
+              icon={meta.icon}
+              title={meta.label}
+              sub={`${meta.blurb}${model_id ? ` · ${model_id}` : ''}`}
+              active={isActive}
+              onClick={() => handlePickTier(tier)}
+            />
+          )
+        })}
+      </Sheet>
+
+      {/* Sheet 3 — Cloud model picker (direct list, grouped by provider) */}
+      <Sheet
+        open={cloudSheetOpen}
+        onClose={() => setCloudSheetOpen(false)}
+        title="Cloud model"
+      >
+        {availableFamilies
+          .filter(f => f.provider !== 'ollama')
+          .map(fam => {
+            const provModels = models.cloud.filter(m => m.provider === fam.provider)
+            if (!provModels.length) return null
             return (
-              <SheetRow
-                key={`${family.id}::${tier}`}
-                icon={family.icon || 'chat'}
-                title={family.displayName}
-                sub={available ? meta.blurb : 'API key required'}
-                badge={meta.label}
-                active={isActive}
-                dimmed={!available}
-                onClick={() => handlePickModel(family, tier)}
-              />
+              <React.Fragment key={fam.id}>
+                <div className="rs-sheet-section-label">{fam.displayName}</div>
+                {provModels.map(m => {
+                  const inputCost  = fmtCost(m.cost_per_1k_input_usd)
+                  const outputCost = fmtCost(m.cost_per_1k_output_usd)
+                  const costStr    = [inputCost && `IN ${inputCost}`, outputCost && `OUT ${outputCost}`].filter(Boolean).join(' · ')
+                  const isActive   = selectedModel?.provider === m.provider && selectedModel?.model_id === m.model_id
+                  return (
+                    <SheetRow
+                      key={m.model_id}
+                      icon={fam.icon || 'cloud'}
+                      title={m.display_name}
+                      sub={costStr || fam.blurb}
+                      active={isActive}
+                      onClick={() => handlePickCloudModel(m)}
+                    />
+                  )
+                })}
+              </React.Fragment>
             )
-          }).filter(Boolean)
-        )}
+          })}
       </Sheet>
 
     </div>
