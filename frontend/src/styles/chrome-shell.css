@@ -82,6 +82,31 @@
 .rs-markdown ul { margin-left: 1.5rem; margin-bottom: 1rem; }
 .rs-markdown code { background: var(--md-surface-container-high); padding: 2px 4px; border-radius: 4px; }
 
+/* Wikilink chips (CHRONOS cross-page navigation) */
+.rs-wikilink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  height: 1.5rem;
+  font-size: 0.85em;
+  font-family: inherit;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--rs-motion-fast), border-color var(--rs-motion-fast);
+  vertical-align: baseline;
+}
+.rs-wikilink::before { content: '[['; opacity: 0.5; }
+.rs-wikilink::after  { content: ']]'; opacity: 0.5; }
+.rs-wikilink:hover {
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  border-color: var(--primary);
+}
+
 /* --- Header --------------------------------------------------------------- */
 .rs-header {
   grid-row: 1;

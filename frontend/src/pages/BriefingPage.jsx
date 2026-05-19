@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import PulseWidget from '../components/PulseWidget.jsx'
+import RsMarkdown from '../components/RsMarkdown.jsx'
 
 /**
  * BriefingPage — Daily Briefing
@@ -65,9 +66,9 @@ export default function BriefingPage({ onNavigate }) {
             <span className="rs-card-label">DAILY SUMMARY</span>
             <span className="material-symbols-rounded" style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>auto_stories</span>
           </div>
-          <p style={{ lineHeight: 1.6, fontSize: '1rem', color: 'rgba(255,255,255,0.9)' }}>
-            {summary}
-          </p>
+          <div style={{ lineHeight: 1.6, fontSize: '1rem', color: 'rgba(255,255,255,0.9)' }}>
+            <RsMarkdown onNavigate={onNavigate}>{summary}</RsMarkdown>
+          </div>
           <div className="rs-card-meta" style={{ marginTop: 12 }}>
             Generated from your recent interactions and schedules.
           </div>

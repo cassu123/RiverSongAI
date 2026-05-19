@@ -45,6 +45,30 @@ export default function ChronosPage({ setAction }) {
     if (token) fetchTree(activeRoot)
   }, [token, activeRoot, fetchTree])
 
+  // Cross-page handoff: open a note someone wikilinked from Chat/Briefing.
+  useEffect(() => {
+    if (!token) return
+    let raw
+    try { raw = localStorage.getItem('rs-chronos-open') } catch { return }
+    if (!raw) return
+    try { localStorage.removeItem('rs-chronos-open') } catch {}
+    let payload
+    try { payload = JSON.parse(raw) } catch { return }
+    if (!payload?.title) return
+    const root = payload.root || 'personal'
+    if (root !== activeRoot) setActiveRoot(root)
+    const path = `${root}/${payload.title.endsWith('.md') ? payload.title : payload.title + '.md'}`
+    ;(async () => {
+      const exists = await loadNote(path)
+      if (!exists) {
+        if (window.confirm(`Note "${payload.title}" does not exist. Create it?`)) {
+          await createNote(payload.title)
+        }
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token])
+
   const loadNote = async (path) => {
     setLoading(true)
     setError(null)

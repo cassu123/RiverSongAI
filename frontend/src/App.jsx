@@ -178,8 +178,16 @@ export default function App() {
 
   useEffect(() => {
     const handleNavChat = () => { setCurrentPage('chat'); window.scrollTo(0, 0); }
+    const handleNav = (e) => {
+      const page = e?.detail?.page
+      if (page) { setCurrentPage(page); window.scrollTo(0, 0); setDrawerOpen(false) }
+    }
     window.addEventListener('rs-navigate-chat', handleNavChat)
-    return () => window.removeEventListener('rs-navigate-chat', handleNavChat)
+    window.addEventListener('rs-navigate', handleNav)
+    return () => {
+      window.removeEventListener('rs-navigate-chat', handleNavChat)
+      window.removeEventListener('rs-navigate', handleNav)
+    }
   }, [])
 
   const handleNavigate = (page) => {
@@ -249,7 +257,7 @@ export default function App() {
               {currentPage === 'dashboard'  && <DashboardPage  onNavigate={handleNavigate} isAdmin={adminMode} setAction={setPageAction} />}
 
               {currentPage === 'speak'      && <ConversationPage setAction={setPageAction} />}
-              {currentPage === 'chat'       && <ChatPage setAction={setPageAction} />}
+              {currentPage === 'chat'       && <ChatPage setAction={setPageAction} onNavigate={handleNavigate} />}
               {currentPage === 'memory'     && <MemoryPage setAction={setPageAction} />}
               {currentPage === 'routines'   && <RoutinesPage setAction={setPageAction} />}
               {currentPage === 'home'       && <HomeNodePage setAction={setPageAction} />}

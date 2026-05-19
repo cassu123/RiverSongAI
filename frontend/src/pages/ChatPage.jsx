@@ -25,7 +25,7 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-export default function ChatPage({ setAction }) {
+export default function ChatPage({ setAction, onNavigate }) {
   const { token, user } = useAuth()
 
   const [messages,          setMessages]          = useState([])
@@ -464,12 +464,13 @@ export default function ChatPage({ setAction }) {
               <button className="rs-pill" onClick={() => setViewingSession(null)}>← RETURN TO LIVE</button>
             </div>
           )}
-          <ConversationPanel 
-            messages={displayMessages} 
-            streamingContent={displayStreaming} 
-            isThinking={isThinking && !viewingSession} 
+          <ConversationPanel
+            messages={displayMessages}
+            streamingContent={displayStreaming}
+            isThinking={isThinking && !viewingSession}
             thinkingStart={thinkingStart}
             toolEvents={toolEvents}
+            onNavigate={onNavigate}
           />
         </div>
       )}

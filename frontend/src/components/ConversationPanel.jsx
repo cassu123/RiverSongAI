@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import RsMarkdown from './RsMarkdown.jsx'
 import './ConversationPanel.css'
 
 function ThinkingBubble({ startTime }) {
@@ -31,7 +32,7 @@ function ThinkingBubble({ startTime }) {
   )
 }
 
-export default function ConversationPanel({ messages, streamingContent, isThinking, thinkingStart, toolEvents = [] }) {
+export default function ConversationPanel({ messages, streamingContent, isThinking, thinkingStart, toolEvents = [], onNavigate }) {
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -63,7 +64,11 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
               <div className="chat-avatar chat-avatar--rs" aria-hidden="true">RS</div>
             )}
             <div className={`chat-bubble chat-bubble--${msg.role}`}>
-              {msg.text && <p className="chat-bubble-text">{msg.text}</p>}
+              {msg.text && (
+                msg.role === 'assistant'
+                  ? <div className="chat-bubble-text"><RsMarkdown onNavigate={onNavigate}>{msg.text}</RsMarkdown></div>
+                  : <p className="chat-bubble-text">{msg.text}</p>
+              )}
               {msg.image && (
                 <div className="chat-image-wrap">
                   <img src={msg.image} alt="Generated" className="chat-bubble-image" />
@@ -126,10 +131,10 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
           <div className="chat-row chat-row--assistant">
             <div className="chat-avatar chat-avatar--rs" aria-hidden="true">RS</div>
             <div className="chat-bubble chat-bubble--assistant chat-bubble--streaming">
-              <p className="chat-bubble-text">
-                {streamingContent}
+              <div className="chat-bubble-text">
+                <RsMarkdown onNavigate={onNavigate}>{streamingContent}</RsMarkdown>
                 <span className="chat-cursor" aria-hidden="true" />
-              </p>
+              </div>
             </div>
           </div>
         )}
