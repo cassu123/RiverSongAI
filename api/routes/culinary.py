@@ -201,6 +201,7 @@ async def _get_user_id(request: Request) -> str:
 
 
 from core.family import resolve_module_owner as _resolve_module_owner
+from providers.vault.vault_provider import VaultProvider, VROOT_HOUSEHOLD, VROOT_PERSONAL
 
 
 def _get_household(db: Session, owner_id: str) -> Household:
@@ -1041,6 +1042,126 @@ def _recipe_out(r: Recipe) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# CHRONOS vault sync — every recipe becomes a markdown note.
+# ---------------------------------------------------------------------------
+
+def _safe_filename(title: str) -> str:
+    """Strip path separators and clamp length so the title makes a safe filename."""
+    cleaned = re.sub(r'[\\/]+', '-', title or "Untitled Recipe").strip()
+    cleaned = re.sub(r'[\x00-\x1f]', '', cleaned)
+    cleaned = cleaned.strip('. ')
+    if not cleaned:
+        cleaned = "Untitled Recipe"
+    return cleaned[:100]
+
+
+def _recipe_vault_path_for(r: Recipe, root: str = VROOT_HOUSEHOLD) -> str:
+    return f"{root}/Recipes/{_safe_filename(r.title)}.md"
+
+
+def _recipe_to_markdown(r: Recipe) -> str:
+    """Serialize a Recipe to markdown with YAML frontmatter."""
+    ingredients = _safe_json(r.ingredients_json, [])
+    steps       = _safe_json(r.steps_json, [])
+    equipment   = _safe_json(r.equipment_needed_json, [])
+
+    def _yaml_str(v) -> str:
+        if v is None:
+            return '""'
+        s = str(v).replace('"', '\\"')
+        return f'"{s}"'
+
+    frontmatter = [
+        "---",
+        "kind: recipe",
+        f"recipe_id: {_yaml_str(r.id)}",
+        f"title: {_yaml_str(r.title)}",
+        f"meal_type: {_yaml_str(r.meal_type.value if r.meal_type else 'Other')}",
+        f"primary_protein: {_yaml_str(r.primary_protein or '')}",
+        f"servings: {r.servings or 0}",
+        f"rating: {r.rating if r.rating is not None else 'null'}",
+        f"source_url: {_yaml_str(r.source_url or '')}",
+        "---",
+        "",
+        f"# {r.title}",
+        "",
+    ]
+    body: list[str] = list(frontmatter)
+    if r.image_url:
+        body.append(f"![cover]({r.image_url})")
+        body.append("")
+    body.append("## Ingredients")
+    body.append("")
+    if ingredients:
+        for ing in ingredients:
+            if isinstance(ing, dict):
+                qty   = ing.get("quantity") or ing.get("amount") or ""
+                unit  = ing.get("unit", "")
+                name  = ing.get("name") or ing.get("item") or ""
+                line  = " ".join(p for p in [str(qty).strip(), unit.strip(), name.strip()] if p)
+                body.append(f"- {line}")
+            else:
+                body.append(f"- {ing}")
+    else:
+        body.append("_(none listed)_")
+    body.append("")
+    body.append("## Steps")
+    body.append("")
+    if steps:
+        for i, step in enumerate(steps, 1):
+            text = step if isinstance(step, str) else (step.get("text") or step.get("instruction") or str(step))
+            body.append(f"{i}. {text}")
+    else:
+        body.append("_(no steps recorded)_")
+    body.append("")
+    if equipment:
+        body.append("## Equipment")
+        body.append("")
+        for eq in equipment:
+            label = eq if isinstance(eq, str) else (eq.get("name") or str(eq))
+            body.append(f"- {label}")
+        body.append("")
+    return "\n".join(body)
+
+
+async def _sync_recipe_to_vault(uid: str, r: Recipe, old_title: Optional[str] = None) -> None:
+    """
+    Write the recipe to the user's vault as a markdown note. Best-effort:
+    a vault failure must never break the recipe save itself.
+    """
+    try:
+        provider = VaultProvider(store=None)
+        content = _recipe_to_markdown(r)
+        # Prefer household root when the user has one; otherwise fall back to personal.
+        owner_id = _resolve_module_owner(uid, "vault")
+        root = VROOT_HOUSEHOLD if owner_id.startswith("family:") else VROOT_PERSONAL
+        new_path = _recipe_vault_path_for(r, root=root)
+        # If the title changed, retire the old file by renaming (delete-on-fail).
+        if old_title and _safe_filename(old_title) != _safe_filename(r.title):
+            old_path = f"{root}/Recipes/{_safe_filename(old_title)}.md"
+            try:
+                await provider.rename_note(uid, old_path, new_path)
+            except (FileNotFoundError, ValueError):
+                pass
+            except Exception as exc:
+                logger.debug("Recipe note rename skipped: %s", exc)
+        await provider.write_note(uid, new_path, content)
+    except Exception as exc:
+        logger.debug("Recipe vault sync skipped (recipe=%s): %s", getattr(r, "id", "?"), exc)
+
+
+async def _delete_recipe_from_vault(uid: str, r: Recipe) -> None:
+    try:
+        provider = VaultProvider(store=None)
+        owner_id = _resolve_module_owner(uid, "vault")
+        root = VROOT_HOUSEHOLD if owner_id.startswith("family:") else VROOT_PERSONAL
+        path = _recipe_vault_path_for(r, root=root)
+        await provider.delete_note(uid, path)
+    except Exception as exc:
+        logger.debug("Recipe vault delete skipped (recipe=%s): %s", getattr(r, "id", "?"), exc)
+
+
 def _proposal_out(p: DinnerProposal) -> dict:
     return {
         "id":           p.id,
@@ -1509,6 +1630,7 @@ async def create_recipe(
     db.add(r)
     db.commit()
     db.refresh(r)
+    await _sync_recipe_to_vault(uid, r)
     await _ws_manager.broadcast(hh.id, "recipe_created", _recipe_out(r))
     return _recipe_out(r)
 
@@ -1535,6 +1657,7 @@ async def update_recipe(
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
         raise HTTPException(status_code=404, detail="Recipe not found")
+    old_title = r.title
     if body.title is not None:
         r.title = body.title
     if body.meal_type is not None:
@@ -1554,6 +1677,7 @@ async def update_recipe(
         r.image_url = body.image_url
     db.commit()
     db.refresh(r)
+    await _sync_recipe_to_vault(uid, r, old_title=old_title)
     await _ws_manager.broadcast(hh.id, "recipe_updated", _recipe_out(r))
     return _recipe_out(r)
 
@@ -1565,6 +1689,7 @@ async def delete_recipe(recipe_id: str, request: Request, db: Session = Depends(
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
         raise HTTPException(status_code=404, detail="Recipe not found")
+    await _delete_recipe_from_vault(uid, r)
     db.delete(r)
     db.commit()
     await _ws_manager.broadcast(hh.id, "recipe_deleted", {"id": recipe_id})
@@ -1587,6 +1712,7 @@ async def rate_recipe(
     r.rating = body.rating
     db.commit()
     db.refresh(r)
+    await _sync_recipe_to_vault(uid, r)
     await _ws_manager.broadcast(hh.id, "recipe_updated", _recipe_out(r))
     return _recipe_out(r)
 
@@ -1943,6 +2069,7 @@ async def ingest_recipe(
         )
     for r in saved:
         db.refresh(r)
+        await _sync_recipe_to_vault(uid, r)
         await _ws_manager.broadcast(hh.id, "recipe_created", _recipe_out(r))
 
     return {"count": len(saved), "recipes": [_recipe_out(r) for r in saved]}

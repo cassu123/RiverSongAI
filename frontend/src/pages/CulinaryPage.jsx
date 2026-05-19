@@ -352,12 +352,31 @@ function LibraryTab({ api, setAction }) {
 }
 
 function RecipeDetailModal({ recipe, onClose, onSave }) {
+  const openInChronos = () => {
+    const safeTitle = (recipe.title || 'Untitled Recipe').replace(/[\\/]+/g, '-').slice(0, 100)
+    try {
+      localStorage.setItem('rs-chronos-open', JSON.stringify({
+        title: `Recipes/${safeTitle}`,
+        root: 'household',
+      }))
+    } catch {}
+    try {
+      window.dispatchEvent(new CustomEvent('rs-navigate', { detail: { page: 'chronos' } }))
+    } catch {}
+    onClose()
+  }
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div className="rs-card is-elev" style={{ width: '100%', maxWidth: 700, maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="rs-card-head">
           <span className="rs-card-label">{recipe.meal_type}</span>
-          <button className="rs-pill" onClick={onClose}>CLOSE</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="rs-pill" onClick={openInChronos} title="View this recipe's markdown note in CHRONOS">
+              <span className="material-symbols-rounded" style={{ fontSize: '0.95rem', marginRight: 4 }}>auto_stories</span>
+              CHRONOS
+            </button>
+            <button className="rs-pill" onClick={onClose}>CLOSE</button>
+          </div>
         </div>
         <h1 className="rs-greeting" style={{ fontSize: '1.8rem' }}>{recipe.title}</h1>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, marginTop: 24 }}>
