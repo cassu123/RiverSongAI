@@ -39,7 +39,29 @@ const EnvironmentPage         = lazy(() => import('./pages/EnvironmentPage.jsx')
 const GoogleCallbackPage      = lazy(() => import('./pages/GoogleCallbackPage.jsx'))
 const ReadingOAuthCallbackPage = lazy(() => import('./pages/ReadingOAuthCallbackPage.jsx'))
 
-import { ADMIN_PAGES, ALWAYS_VISIBLE, USER_ITEMS, ADMIN_ITEMS } from './utils/constants.js'
+import { ADMIN_PAGES, ALWAYS_VISIBLE } from './utils/constants.js'
+
+// Environment display names — used as header context outside of dashboard/briefing.
+const ENV_LABELS = {
+  atreides:   'Atreides',
+  harkonnen:  'Harkonnen',
+  arrakis:    'Arrakis',
+  forerunner: 'Forerunner',
+  unsc:       'UNSC',
+  spires:     'Sacred Spires',
+  garden:     'Garden Pavilion',
+  corpo:      'Corpo Plaza',
+  pacifica:   'Pacifica Street',
+}
+
+function timeOfDayGreeting() {
+  const h = new Date().getHours()
+  if (h < 5)  return 'Late night'
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  if (h < 21) return 'Good evening'
+  return 'Good night'
+}
 
 function load(key, fallback) {
   try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback }
@@ -237,18 +259,38 @@ export default function App() {
     )
   }
 
-  const pageLabel = (adminMode ? ADMIN_ITEMS : USER_ITEMS).find(i => i.key === currentPage)?.label || 'River Song'
+  // Header context per RIVER_SONG_CHROME_PLAN.md §3:
+  //   - dashboard / briefing: time-of-day greeting fragment
+  //   - all other pages:      active environment name
+  // Never the page's own label.
+  const headerContext = (currentPage === 'dashboard' || currentPage === 'briefing')
+    ? timeOfDayGreeting()
+    : (ENV_LABELS[environment] || '')
+
+  // Desktop chat-history sidebar slot (≥1200px). Placeholder until wired to data;
+  // hidden under 1200px via CSS. Only rendered for chat/speak pages so the slot
+  // doesn't leak DOM elsewhere.
+  const showChatSidebar = currentPage === 'chat' || currentPage === 'speak'
+  const chatSidebar = showChatSidebar ? (
+    <div className="rs-chat-sidebar-inner">
+      <h3 className="rs-chat-sidebar-title">Recent</h3>
+      <p className="rs-chat-sidebar-empty">
+        Past conversations will appear here. Start speaking and River will remember.
+      </p>
+    </div>
+  ) : null
 
   return (
     <div className="rs-root">
       <Stage environment={environment} />
 
       <Shell
-        context={pageLabel}
+        context={headerContext}
         onOpenDrawer={() => setDrawerOpen(true)}
         onOpenSpeak={() => handleNavigate('speak')}
         onHome={() => handleNavigate('dashboard')}
         action={pageAction}
+        chatSidebar={chatSidebar}
       >
         <ErrorBoundary key={currentPage}>
           <Suspense fallback={<div className="loading-screen">INITIALIZING...</div>}>

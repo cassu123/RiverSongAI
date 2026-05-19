@@ -1,7 +1,17 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import ConversationPanel   from '../components/ConversationPanel.jsx'
+import Sheet, { SheetRow } from '../chrome/Sheet.jsx'
 import { useAuth }         from '../context/AuthContext.jsx'
 import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
+import {
+  MODEL_FAMILIES,
+  TIER_ORDER,
+  TIER_META,
+  findFamilyForModel,
+  buildAvailabilitySet,
+  isTierAvailable,
+  familyHasAnyTier,
+} from '../utils/modelFamilies.js'
 
 /**
  * ChatPage — Phase 3 Rewrite
@@ -50,6 +60,11 @@ export default function ChatPage({ setAction, onNavigate }) {
   const [thinkingMode, setThinkingMode] = useState('fast') // 'fast' | 'thinking' | 'pro'
   const [showSystem, setShowSystem] = useState(false)
 
+  // Two-step model picker — Family sheet -> Variant sheet
+  const [familySheetOpen,  setFamilySheetOpen]  = useState(false)
+  const [variantSheetOpen, setVariantSheetOpen] = useState(false)
+  const [pendingFamily,    setPendingFamily]    = useState(null)
+
   const [systemPrompt, setSystemPrompt] = useState('')
   const [enhancing, setEnhancing] = useState(false)
   const [forgetMemory, setForgetMemory] = useState(false)
@@ -97,6 +112,61 @@ export default function ChatPage({ setAction, onNavigate }) {
     } catch {}
     setSavingModel(false)
   }
+
+  // -- Derived: current family/tier + availability ---------------------------
+  const availabilitySet = useMemo(
+    () => buildAvailabilitySet(models),
+    [models],
+  )
+
+  const currentMapping = useMemo(
+    () => findFamilyForModel(selectedModel?.provider, selectedModel?.model_id),
+    [selectedModel?.provider, selectedModel?.model_id],
+  )
+
+  // Label for the pill: "DeepSeek · Thinking" when mapped, "<raw> · Custom"
+  // when the user has some model not in MODEL_FAMILIES, "Select model" otherwise.
+  const modelPillLabel = useMemo(() => {
+    if (currentMapping) {
+      return `${currentMapping.family.displayName} · ${TIER_META[currentMapping.tier].label}`
+    }
+    if (selectedModel?.model_id) {
+      return `${selectedModel.model_id} · Custom`
+    }
+    return 'Select model'
+  }, [currentMapping, selectedModel?.model_id])
+
+  const visibleFamilies = useMemo(() => MODEL_FAMILIES, [])
+
+  // Keep thinkingMode in sync with the loaded selection so the chat body's
+  // thinking_mode reflects reality even before the user opens the picker.
+  useEffect(() => {
+    if (currentMapping?.tier) setThinkingMode(currentMapping.tier)
+  }, [currentMapping?.tier])
+
+  const openFamilySheet = useCallback(() => {
+    // Seed pendingFamily from current selection so the variant sheet has
+    // something sensible if the user reopens it mid-flow.
+    if (currentMapping?.family) setPendingFamily(currentMapping.family)
+    setVariantSheetOpen(false)
+    setFamilySheetOpen(true)
+  }, [currentMapping])
+
+  const handlePickFamily = useCallback((family) => {
+    setPendingFamily(family)
+    setFamilySheetOpen(false)
+    setVariantSheetOpen(true)
+  }, [])
+
+  const handlePickVariant = useCallback((tier) => {
+    if (!pendingFamily) return
+    const model_id = pendingFamily.tiers?.[tier]
+    if (!model_id) return
+    if (!isTierAvailable(pendingFamily, tier, availabilitySet)) return
+    setThinkingMode(tier)
+    handleModelSelect(pendingFamily.provider, model_id)
+    setVariantSheetOpen(false)
+  }, [pendingFamily, availabilitySet]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateHistory = useCallback((updatedMessages) => {
     if (!user) return
@@ -402,18 +472,15 @@ export default function ChatPage({ setAction, onNavigate }) {
             <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>public</span>
             WEB
           </button>
-          <button 
-            className={`rs-pill ${thinkingMode !== 'fast' ? 'is-active' : ''}`} 
-            onClick={() => {
-              const next = thinkingMode === 'fast' ? 'thinking' : thinkingMode === 'thinking' ? 'pro' : 'fast'
-              setThinkingMode(next)
-            }}
-            title={`Mode: ${thinkingMode.toUpperCase()}`}
+          <button
+            className="rs-pill is-active"
+            onClick={openFamilySheet}
+            title="Choose model family and tier"
           >
             <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>
               {thinkingMode === 'fast' ? 'bolt' : thinkingMode === 'thinking' ? 'psychology' : 'verified'}
             </span>
-            {thinkingMode.toUpperCase()}
+            {modelPillLabel}
           </button>
 
           {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginLeft: 12 }}>SYNCING MODEL...</span>}
@@ -474,6 +541,66 @@ export default function ChatPage({ setAction, onNavigate }) {
           />
         </div>
       )}
+
+      {/* ---------- Model family sheet (step 1) ---------- */}
+      <Sheet
+        open={familySheetOpen}
+        onClose={() => setFamilySheetOpen(false)}
+        title="Model family"
+      >
+        {visibleFamilies.map(family => {
+          const anyAvail = familyHasAnyTier(family, availabilitySet)
+          const isActive = currentMapping?.family?.id === family.id
+          return (
+            <SheetRow
+              key={family.id}
+              icon={family.icon || 'chat'}
+              title={family.displayName}
+              sub={anyAvail ? family.blurb : `${family.blurb} — unavailable`}
+              active={isActive}
+              onClick={() => handlePickFamily(family)}
+            />
+          )
+        })}
+      </Sheet>
+
+      {/* ---------- Variant sheet (step 2) ---------- */}
+      <Sheet
+        open={variantSheetOpen}
+        onClose={() => setVariantSheetOpen(false)}
+        title={pendingFamily ? `${pendingFamily.displayName} — tier` : 'Tier'}
+      >
+        {pendingFamily && TIER_ORDER.map(tier => {
+          const meta      = TIER_META[tier]
+          const model_id  = pendingFamily.tiers?.[tier]
+          const available = isTierAvailable(pendingFamily, tier, availabilitySet)
+          const isActive  =
+            currentMapping?.family?.id === pendingFamily.id &&
+            currentMapping?.tier === tier
+          const sub = !model_id
+            ? `${meta.blurb} — not mapped`
+            : !available
+              ? `${meta.blurb} — unavailable`
+              : `${meta.blurb} · ${model_id}`
+          return (
+            <div
+              key={tier}
+              style={{
+                opacity: (!model_id || !available) ? 0.45 : 1,
+                pointerEvents: (!model_id || !available) ? 'none' : 'auto',
+              }}
+            >
+              <SheetRow
+                icon={meta.icon}
+                title={meta.label}
+                sub={sub}
+                active={isActive}
+                onClick={() => handlePickVariant(tier)}
+              />
+            </div>
+          )
+        })}
+      </Sheet>
 
     </div>
   )

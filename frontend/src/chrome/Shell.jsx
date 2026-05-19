@@ -21,10 +21,15 @@ export default function Shell({
   onOpenSpeak,
   onHome,
   action,
+  chatSidebar,
   children,
 }) {
+  // `has-sidebar` adds left padding at desktop so content clears the chat-history
+  // column. The persistent left rail (Drawer at desktop) is offset via the
+  // `.rs-shell` desktop-padding rules — kept in CSS, not JS.
+  const shellClass = `rs-shell${chatSidebar ? ' has-sidebar' : ''}`
   return (
-    <div className="rs-shell">
+    <div className={shellClass}>
       <header className="rs-header">
         <button className="rs-mark-btn" onClick={onHome} aria-label="Home">
           <RsMark mark="mono" size={28} />
@@ -39,6 +44,12 @@ export default function Shell({
           </svg>
         </button>
       </header>
+
+      {chatSidebar && (
+        <aside className="rs-chat-sidebar" aria-label="Chat history">
+          {chatSidebar}
+        </aside>
+      )}
 
       <main className="rs-content">{children}</main>
 

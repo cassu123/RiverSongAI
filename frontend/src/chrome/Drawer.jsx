@@ -61,28 +61,48 @@ export default function Drawer({
           </button>
         </div>
 
-        {/* Grouped nav sections */}
+        {/* Grouped nav sections — Primary (list) · More (grid) · Admin (list) */}
         <div className="rs-drawer-scroll-area">
-          {groups.map(group => (
-            <div key={group.label} className="rs-drawer-section">
-              <h3 className="rs-drawer-section-label">{group.label}</h3>
-              <div className="rs-drawer-list">
-                {group.items.map(it => {
-                  const danger = it.key === 'killswitch'
-                  return (
-                    <button
-                      key={it.key}
-                      className={`rs-drawer-item ${currentPage === it.key ? 'is-active' : ''} ${danger ? 'is-danger' : ''}`}
-                      onClick={() => navigate(it.key)}
-                    >
-                      <EnvIcon name={it.key} className="rs-icon" />
-                      <span>{it.label}</span>
-                    </button>
-                  )
-                })}
+          {groups.map(group => {
+            const isGrid = group.layout === 'grid'
+            const isPrimary = group.label === 'Primary'
+            return (
+              <div key={group.label} className={`rs-drawer-section ${isGrid ? 'is-grid' : ''}`}>
+                {/* Primary group renders without a label; others get a divider/label */}
+                {!isPrimary && (
+                  <h3 className="rs-drawer-section-label">— {group.label} —</h3>
+                )}
+                <div className={isGrid ? 'rs-drawer-grid' : 'rs-drawer-list'}>
+                  {group.items.map(it => {
+                    const danger = it.key === 'killswitch'
+                    const itemKey = `${group.label}:${it.key}`
+                    if (isGrid) {
+                      return (
+                        <button
+                          key={itemKey}
+                          className={`rs-drawer-cell ${currentPage === it.key ? 'is-active' : ''}`}
+                          onClick={() => navigate(it.key)}
+                        >
+                          <EnvIcon name={it.icon || it.key} className="rs-icon" />
+                          <span>{it.label}</span>
+                        </button>
+                      )
+                    }
+                    return (
+                      <button
+                        key={itemKey}
+                        className={`rs-drawer-item ${currentPage === it.key ? 'is-active' : ''} ${danger ? 'is-danger' : ''}`}
+                        onClick={() => navigate(it.key)}
+                      >
+                        <EnvIcon name={it.icon || it.key} className="rs-icon" />
+                        <span>{it.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Account footer */}

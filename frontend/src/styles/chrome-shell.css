@@ -59,12 +59,19 @@
   background: transparent;
 }
 
-/* --- Foyer (Page Container) ----------------------------------------------- */
+/* --- Foyer (Page Container) -----------------------------------------------
+   Responsive content cap per RIVER_SONG_CHROME_PLAN.md §11.
+   Mobile  (<768px)  : full width minus padding.
+   Tablet  (768–1199): centered, max-inline-size 672px.
+   Desktop (≥1200px) : centered, max-inline-size 900px (overridden when a
+                       desktop rail or chat sidebar is present — handled by
+                       the .rs-shell column-padding rules, not here).
+   --------------------------------------------------------------------------- */
 .rs-foyer {
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-  padding: 0 var(--rs-content-pad-i) 80px;
+  margin-inline: auto;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  padding-block-end: 80px;
 }
 
 .rs-foyer-head {
@@ -283,10 +290,68 @@
   opacity: 0.5;
 }
 
-.rs-drawer-list { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 2px; 
+.rs-drawer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* "More" group — 2-column grid of icon-above-label cells (plan §5). */
+.rs-drawer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding-inline: 4px;
+}
+
+.rs-drawer-cell {
+  background: none;
+  border: 1px solid transparent;
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border-radius: var(--md-shape-lg);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background var(--rs-motion-fast),
+              border-color var(--rs-motion-fast),
+              color var(--rs-motion-fast);
+  color: var(--md-on-surface);
+  text-align: center;
+  line-height: 1.2;
+  min-block-size: 72px;
+}
+
+.rs-drawer-cell .rs-icon {
+  inline-size: 22px;
+  block-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+}
+
+.rs-drawer-cell:hover {
+  background: var(--md-surface-container-high);
+  border-color: var(--md-outline-variant);
+}
+
+.rs-drawer-cell.is-active {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Section dividers — bookend the "More" / "Admin" labels with a thin rule. */
+.rs-drawer-section + .rs-drawer-section {
+  padding-block-start: 8px;
+  border-block-start: 1px solid var(--md-outline-variant);
+  margin-block-start: 4px;
 }
 
 .rs-drawer-item {
@@ -452,6 +517,117 @@
 /* Tablets and up — slight tightening on the drawer */
 @media (min-width: 601px) {
   .rs-drawer { padding-inline: 24px; }
+}
+
+/* --- Chat-history sidebar (desktop only, chat/speak pages) ---------------- */
+/* Hidden by default; shown at ≥1200px via media query below. */
+.rs-chat-sidebar {
+  display: none;
+}
+
+.rs-chat-sidebar-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+.rs-chat-sidebar-title {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+  font-weight: 700;
+  opacity: 0.6;
+}
+
+.rs-chat-sidebar-empty {
+  margin: 0;
+  font-size: var(--rs-fs-small);
+  color: var(--md-on-surface-variant);
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+/* --- Responsive bands per RIVER_SONG_CHROME_PLAN.md §11 ------------------- */
+
+/* Tablet (768–1199): wider drawer when open; content centered at 672px. */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .rs-drawer {
+    inline-size: min(85vw, 320px);
+  }
+  .rs-foyer {
+    max-inline-size: clamp(0px, 100%, 672px);
+  }
+}
+
+/* Desktop (≥1200px): persistent left rail (240px) + optional chat sidebar
+   (280px) + capped content column. Drawer becomes the rail — fixed at the
+   viewport edge, no scrim, no transform, glass material preserved. */
+@media (min-width: 1200px) {
+  :root {
+    --rs-rail-w:     240px;
+    --rs-chat-side-w: 280px;
+  }
+
+  /* Hamburger + drawer-close hidden at this width — rail is permanent. */
+  .rs-hamburger,
+  .rs-drawer-close {
+    display: none;
+  }
+
+  /* Scrim never shows at desktop; rail is always present. */
+  .rs-drawer-scrim {
+    display: none;
+  }
+
+  /* Drawer becomes a permanent rail. Glass material preserved so the Stage
+     backdrop reads through. */
+  .rs-drawer {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: var(--rs-rail-w);
+    transform: none;
+    transition: none;
+    z-index: 40;
+    /* Slightly more translucent than mobile so backdrop shows */
+    background: color-mix(in srgb, var(--bg-base) 60%, transparent);
+    padding-block-start: max(env(safe-area-inset-top), 20px);
+  }
+
+  /* Shift the whole shell over by rail width — header, content, action. */
+  .rs-shell {
+    padding-inline-start: var(--rs-rail-w);
+  }
+
+  /* When chat-history sidebar is present (chat/speak pages), shift content
+     past it. Rail still anchored to the viewport edge. */
+  .rs-shell.has-sidebar {
+    padding-inline-start: calc(var(--rs-rail-w) + var(--rs-chat-side-w));
+  }
+
+  /* Chat-history sidebar — fixed column right of the rail. */
+  .rs-shell.has-sidebar .rs-chat-sidebar {
+    display: block;
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: var(--rs-rail-w);
+    inline-size: var(--rs-chat-side-w);
+    z-index: 35;
+    background: color-mix(in srgb, var(--bg-base) 50%, transparent);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-inline-end: 1px solid var(--md-outline-variant);
+    padding-block-start: calc(var(--rs-header-h) + env(safe-area-inset-top) + 8px);
+    overflow-y: auto;
+  }
+
+  /* Content cap at desktop — 900px centered inside its column. */
+  .rs-foyer {
+    max-inline-size: 900px;
+  }
 }
 
 /* --- Icon Treatment ------------------------------------------------------- */
