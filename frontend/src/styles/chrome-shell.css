@@ -697,6 +697,36 @@
   gap: 2px;
 }
 
+/* Section label inside a sheet — e.g. "LOCAL" / "CLOUD" headers */
+.rs-sheet-section-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+  padding: 14px 14px 4px;
+  opacity: 0.5;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* Tier badge inside a sheet row title */
+.rs-sheet-row-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
 .rs-sheet-row {
   display: flex;
   align-items: center;
@@ -718,6 +748,10 @@
 .rs-sheet-row.is-active {
   background: color-mix(in srgb, var(--md-primary) 16%, transparent);
   border-color: color-mix(in srgb, var(--md-primary) 35%, transparent);
+}
+.rs-sheet-row.is-dimmed {
+  opacity: 0.38;
+  pointer-events: none;
 }
 
 .rs-sheet-row-icon {

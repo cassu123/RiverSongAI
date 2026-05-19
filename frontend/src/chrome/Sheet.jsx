@@ -35,12 +35,18 @@ export default function Sheet({ open, onClose, title, children }) {
 }
 
 /** SheetRow — interactive option row. Same DNA as drawer items. */
-export function SheetRow({ icon, title, sub, active, onClick }) {
+export function SheetRow({ icon, title, sub, active, onClick, badge, dimmed }) {
   return (
-    <button className={`rs-sheet-row ${active ? 'is-active' : ''}`} onClick={onClick}>
+    <button
+      className={`rs-sheet-row ${active ? 'is-active' : ''} ${dimmed ? 'is-dimmed' : ''}`}
+      onClick={onClick}
+    >
       {icon && <EnvIcon name={icon} className="rs-sheet-row-icon" />}
       <div className="rs-sheet-row-body">
-        <div className="rs-sheet-row-title">{title}</div>
+        <div className="rs-sheet-row-title">
+          {title}
+          {badge && <span className="rs-sheet-row-badge">{badge}</span>}
+        </div>
         {sub && <div className="rs-sheet-row-sub">{sub}</div>}
       </div>
       {active && <EnvIcon name="check" className="rs-sheet-check" />}

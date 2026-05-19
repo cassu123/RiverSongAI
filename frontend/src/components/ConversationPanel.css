@@ -284,6 +284,70 @@
   50%       { opacity: 1;   transform: scale(1.4); }
 }
 
+/* Pre / code blocks inside bubbles — scroll horizontally, never burst the bubble */
+.chat-bubble pre,
+.chat-bubble .rs-markdown pre {
+  overflow-x: auto;
+  max-width: 100%;
+  white-space: pre;
+  background: var(--md-surface-container-high);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+.chat-bubble .rs-markdown pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Tool call JSON */
+.tool-call,
+.tool-result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+}
+
+.tool-tag {
+  font-family: var(--font-display);
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--primary);
+  opacity: 0.8;
+}
+
+.tool-tag--done { color: #4ade80; }
+
+.tool-name {
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.tool-input {
+  overflow-x: auto;
+  max-width: 100%;
+  white-space: pre;
+  background: var(--md-surface-container-high);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  margin-top: 4px;
+  color: var(--md-on-surface-variant);
+}
+
+.chat-tool-event {
+  background: color-mix(in srgb, var(--md-surface-container) 70%, transparent);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-lg);
+  padding: 10px 14px;
+  max-width: 72%;
+}
+
 @media (max-width: 1024px) {
   .chat-messages {
     padding: 16px 16px 8px;
@@ -291,6 +355,9 @@
   }
   .chat-bubble {
     max-width: 88%;
+  }
+  .chat-tool-event {
+    max-width: 90%;
   }
 }
 .chat-panel::-webkit-scrollbar       { width: 4px; }
