@@ -28,6 +28,9 @@
               transform var(--rs-motion-fast) var(--rs-motion-curve);
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .rs-card::before {
@@ -79,7 +82,7 @@
   gap: 16px;
   margin-block-start: 32px;
 }
-.rs-card-flow > .rs-card { flex: 1 1 300px; }
+.rs-card-flow > .rs-card { flex: 1 1 300px; min-width: 0; }
 .rs-card-flow > .rs-card.is-wide { flex-basis: 100%; }
 
 /* --- Card Content Grammar ------------------------------------------------ */
@@ -87,7 +90,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-block-end: 16px;
+}
+.rs-card-head > * {
+  min-width: 0;
 }
 
 .rs-card-label {
@@ -107,12 +114,15 @@
   font-weight: 400;
   color: var(--fg);
   line-height: 1.2;
+  overflow-wrap: break-word;
+  min-width: 0;
 }
 
 .rs-card-meta {
   font-size: var(--rs-fs-small);
   color: var(--md-on-surface-variant);
   margin-block-start: 8px;
+  overflow-wrap: break-word;
 }
 
 /* --- Status Strip --------------------------------------------------------- */

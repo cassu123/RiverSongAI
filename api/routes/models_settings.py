@@ -144,9 +144,11 @@ async def list_models(
     enabled   = _get_enabled_providers()
 
     hidden_llms: set[str] = set()
+    family_overrides: dict = {}
     try:
         config = await request.app.state.memory_manager._store.get_admin_config()
         hidden_llms = set(config.get("hidden_llms", []))
+        family_overrides = config.get("model_families", {}) or {}
     except Exception:
         pass
 
@@ -166,6 +168,7 @@ async def list_models(
         "cloud":             cloud_models,
         "enabled_providers": enabled,
         "ollama_reachable":  bool(installed) or True,
+        "family_overrides":  family_overrides,
     }
 
 
@@ -239,6 +242,54 @@ async def save_llm_settings(
     _strip = lambda s: str(s).replace("\r", "").replace("\n", "").replace("\t", "")
     logger.info("LLM settings saved (user=%s, provider=%s, model=%s).", _strip(user_id), _strip(body.provider), _strip(body.model_id))
     return {"status": "ok", "provider": body.provider, "model": body.model_id}
+
+
+# =============================================================================
+# Model families (Phase B — admin override of Chat selector families)
+# =============================================================================
+
+class ModelFamiliesBody(BaseModel):
+    # families is a free-form dict keyed by family id (e.g. "deepseek"):
+    #   { enabled: bool, quirky_name: str|null, tiers: {fast?, thinking?, pro?} }
+    # Tier values are model_id strings or null (= use default from modelFamilies.js).
+    families: dict
+
+
+@router.get("/settings/model-families")
+async def get_model_families(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Return the admin-configured family overrides. Empty dict if none set."""
+    await _require_admin(authorization)
+    try:
+        config = await request.app.state.memory_manager._store.get_admin_config()
+        return {"families": config.get("model_families", {}) or {}}
+    except Exception as e:
+        logger.warning("Failed to load model_families config: %s", e)
+        return {"families": {}}
+
+
+@router.post("/settings/model-families")
+async def save_model_families(
+    request: Request,
+    body: ModelFamiliesBody,
+    authorization: Optional[str] = Header(default=None),
+):
+    user_id = await _require_admin(authorization)
+    try:
+        store = request.app.state.memory_manager._store
+        config = await store.get_admin_config()
+        config["model_families"] = body.families
+        await store.set_admin_config(config)
+    except Exception as e:
+        logger.error("Failed to persist model_families: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to persist model families.")
+
+    logger.info("Model family overrides saved by admin %s (count=%d).",
+                str(user_id).replace("\r", "").replace("\n", "").replace("\t", ""),
+                len(body.families))
+    return {"ok": True}
 
 
 # =============================================================================

@@ -25,7 +25,9 @@ export const NAV_GROUPS = [
     label: 'Primary',
     layout: 'list',
     items: [
+      { key: 'briefing',    label: 'Briefing',    icon: 'briefing' },
       { key: 'speak',       label: 'Speak',       icon: 'speak' },
+      { key: 'chat',        label: 'Chat',        icon: 'chat' },
       { key: 'memory',      label: 'Memory',      icon: 'memory' },
       { key: 'home',        label: 'Home Node',   icon: 'home' },
       { key: 'chronos',     label: 'CHRONOS',     icon: 'chronos' },

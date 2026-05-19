@@ -158,9 +158,9 @@ export const TIER_META = {
  * Returns { family, tier } when matched, or null when the selection is some
  * model not present in MODEL_FAMILIES (custom / unmapped).
  */
-export function findFamilyForModel(provider, model_id) {
+export function findFamilyForModel(provider, model_id, families = MODEL_FAMILIES) {
   if (!provider || !model_id) return null
-  for (const family of MODEL_FAMILIES) {
+  for (const family of families) {
     if (family.provider !== provider) continue
     for (const tier of TIER_ORDER) {
       if (family.tiers[tier] === model_id) {
@@ -169,6 +169,37 @@ export function findFamilyForModel(provider, model_id) {
     }
   }
   return null
+}
+
+/**
+ * Apply admin overrides on top of the default family list. `overrides` is the
+ * shape returned by /api/settings/model-families (also embedded in /api/models
+ * as `family_overrides`): a map keyed by family.id with shape
+ *   { enabled?: bool, quirky_name?: string|null, tiers?: { fast?, thinking?, pro? } }
+ *
+ * - `enabled === false` drops the family entirely.
+ * - `quirky_name` replaces `displayName` when truthy.
+ * - Tier entries replace the default tier model_id when truthy (empty/null = default).
+ */
+export function applyFamilyOverrides(defaults, overrides) {
+  if (!overrides || typeof overrides !== 'object') return defaults
+  const out = []
+  for (const family of defaults) {
+    const ov = overrides[family.id]
+    if (ov && ov.enabled === false) continue
+    if (!ov) { out.push(family); continue }
+    const tiersOv = ov.tiers || {}
+    out.push({
+      ...family,
+      displayName: ov.quirky_name || family.displayName,
+      tiers: {
+        fast:     tiersOv.fast     || family.tiers.fast     || null,
+        thinking: tiersOv.thinking || family.tiers.thinking || null,
+        pro:      tiersOv.pro      || family.tiers.pro      || null,
+      },
+    })
+  }
+  return out
 }
 
 /**

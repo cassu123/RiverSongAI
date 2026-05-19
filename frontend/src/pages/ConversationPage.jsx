@@ -1,18 +1,29 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from 'react'
 import ConversationPanel  from '../components/ConversationPanel.jsx'
 import AudioVisualizer    from '../components/AudioVisualizer.jsx'
+import Sheet, { SheetRow } from '../chrome/Sheet.jsx'
 import { useWebSocket }   from '../hooks/useWebSocket.js'
 import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
 import { useAuth }        from '../context/AuthContext.jsx'
 import { AudioPlayer }    from '../utils/AudioPlayer.js'
+import {
+  MODEL_FAMILIES,
+  applyFamilyOverrides,
+  findFamilyForModel,
+  buildAvailabilitySet,
+  familyHasAnyTier,
+  TIER_ORDER,
+} from '../utils/modelFamilies.js'
 
+// NOTE: Future avatar work loads from /avatar.glb (frontend/public/avatar.glb).
+// Swap the <RiverSong> orb below for an <AvatarModel> component once the rig
+// is wired with facial + body animation.
 const RiverSong = lazy(() => import('../components/RiverSong.jsx'))
 
 const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const MAX_HISTORY_SESSIONS = 30
 
 function historyKey(userId) { return `rs-history:${userId}` }
-function avatarKey(userId)  { return `rs-avatar:${userId}`  }
 
 function loadHistory(userId) {
   try { return JSON.parse(localStorage.getItem(historyKey(userId)) || '[]') } catch { return [] }
@@ -21,9 +32,13 @@ function saveHistory(userId, sessions) {
   try { localStorage.setItem(historyKey(userId), JSON.stringify(sessions.slice(-MAX_HISTORY_SESSIONS))) } catch {}
 }
 
-function fmtDate(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+/** Pick the first available tier of a family. Voice doesn't need Thinking/Pro
+ *  — we default to Fast for low latency. */
+function pickVoiceTier(family) {
+  for (const tier of TIER_ORDER) {
+    if (family.tiers?.[tier]) return tier
+  }
+  return null
 }
 
 export default function ConversationPage({ setAction }) {
@@ -34,9 +49,10 @@ export default function ConversationPage({ setAction }) {
   const [messages,          setMessages]          = useState([])
   const [streamingContent,  setStreamingContent]  = useState('')
   const [error,             setError]             = useState(null)
-  const [ambientEnabled,    setAmbientEnabled]    = useState(false)
-  const [webSearch,         setWebSearch]         = useState(false)
   const [memoryMuted,       setMemoryMuted]       = useState(false)
+  const [muted,             setMuted]             = useState(false)
+  const [showTranscript,    setShowTranscript]    = useState(false)
+  const [familySheetOpen,   setFamilySheetOpen]   = useState(false)
 
   const streamTimeoutRef = useRef(null)
 
@@ -53,38 +69,16 @@ export default function ConversationPage({ setAction }) {
     }
   }, [])
 
-  const [showAvatar, setShowAvatar] = useState(() => {
-    if (!user) return true
-    try { const v = localStorage.getItem(avatarKey(user.id)); return v === null ? true : v === 'true' } catch { return true }
-  })
-
-  const [showTranscript, setShowTranscript] = useState(() => {
-    if (!user) return true
-    try { const v = localStorage.getItem(`rs-transcript:${user.id}`); return v === null ? true : v === 'true' } catch { return true }
-  })
-
-  const toggleAvatar = () => {
-    const next = !showAvatar
-    setShowAvatar(next)
-    if (user) localStorage.setItem(avatarKey(user.id), String(next))
-  }
-
-  const toggleTranscript = () => {
-    const next = !showTranscript
-    setShowTranscript(next)
-    if (user) localStorage.setItem(`rs-transcript:${user.id}`, String(next))
-  }
-
-  const [activeModel, setActiveModel] = useState(null)
-  const [activeVoice, setActiveVoice] = useState(null)
-  const [history,        setHistory]        = useState([])
-  const [showHistory,    setShowHistory]    = useState(false)
-  const [viewingSession, setViewingSession] = useState(null)
+  const [activeModel,     setActiveModel]     = useState(null)  // { provider, model_id, display_name }
+  const [activeVoice,     setActiveVoice]     = useState(null)
+  const [savingModel,     setSavingModel]     = useState(false)
+  const [models,          setModels]          = useState({ local: [], cloud: [] })
+  const [familyOverrides, setFamilyOverrides] = useState({})
+  const [history,         setHistory]         = useState([])
+  const [toolEvents,      setToolEvents]      = useState([])
 
   const audioPlayer = useMemo(() => new AudioPlayer(), [])
   const isPlayingRef = useRef(false)
-
-  const [toolEvents, setToolEvents] = useState([])
 
   const handleMessage = useCallback((event) => {
     const { type, text, content, message, data } = event
@@ -117,7 +111,7 @@ export default function ConversationPage({ setAction }) {
         }
         setStreamingContent('')
         break
-      case 'speaking': 
+      case 'speaking':
         setConvState('speaking')
         audioPlayer.stop()
         break
@@ -130,7 +124,7 @@ export default function ConversationPage({ setAction }) {
           })
         }
         break
-      case 'idle':    
+      case 'idle':
         if (!isPlayingRef.current) setConvState('idle')
         break
       case 'error':   setError(message || 'An unknown error occurred.'); break
@@ -152,31 +146,17 @@ export default function ConversationPage({ setAction }) {
     }
   }, [connectionStatus])
 
-  const { startRecording, stopRecording, audioLevel, toggleAmbient, isAmbient } = useAudioRecorder({
+  const { startRecording, stopRecording, audioLevel } = useAudioRecorder({
     onComplete: wavB64 => sendMessage({ type: 'audio_data', data: wavB64 }),
     onNoSpeech: () => setConvState(s => (s === 'listening' ? 'idle' : s)),
-    onAmbientChunk: b64 => sendMessage({ type: 'ambient_audio', data: b64 }),
   })
 
   const canSpeak  = convState === 'idle' && connectionStatus === 'connected'
   const isActive  = convState !== 'idle' && convState !== 'connecting'
-  const visualLvl = (convState === 'listening' || convState === 'speaking' || isAmbient) ? audioLevel : 0
-
-  const handleToggleAmbient = useCallback(async () => {
-    const next = !ambientEnabled
-    setAmbientEnabled(next)
-    sendMessage({ type: 'ambient_mode', enabled: next })
-    await toggleAmbient(next)
-  }, [ambientEnabled, toggleAmbient, sendMessage])
-
-  const handleToggleWebSearch = useCallback(() => {
-    const next = !webSearch
-    setWebSearch(next)
-    sendMessage({ type: 'settings', web_search: next })
-  }, [webSearch, sendMessage])
+  const visualLvl = (convState === 'listening' || convState === 'speaking') ? audioLevel : 0
 
   const handleStartListening = useCallback(async () => {
-    if (!canSpeak) return
+    if (!canSpeak || muted) return
     setError(null)
     setConvState('listening')
     const granted = await startRecording()
@@ -186,7 +166,19 @@ export default function ConversationPage({ setAction }) {
       setConvState('idle')
       setError('Microphone access denied.')
     }
-  }, [canSpeak, startRecording, sendMessage])
+  }, [canSpeak, muted, startRecording, sendMessage])
+
+  const handleToggleMute = useCallback(() => {
+    setMuted(prev => {
+      const next = !prev
+      // If we're listening when the user mutes, stop the recorder immediately.
+      if (next && convState === 'listening') {
+        try { stopRecording() } catch {}
+        setConvState('idle')
+      }
+      return next
+    })
+  }, [convState, stopRecording])
 
   const handleReset = useCallback(() => {
     if (connectionStatus !== 'connected') return
@@ -207,7 +199,6 @@ export default function ConversationPage({ setAction }) {
     setStreamingContent('')
     setToolEvents([])
     setError(null)
-    setViewingSession(null)
     setMemoryMuted(true)
   }, [connectionStatus, messages, sendMessage, user, activeModel])
 
@@ -218,168 +209,204 @@ export default function ConversationPage({ setAction }) {
     }
   }, [user])
 
+  // Load models + family overrides + current selection.
   useEffect(() => {
     if (!token) return
-    fetch('/api/settings/llm', { headers: { Authorization: `Bearer ${token}` }})
+    fetch('/api/models', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(d => setActiveModel({ display_name: d.display_name || d.model }))
-    fetch('/api/settings/voice', { headers: { Authorization: `Bearer ${token}` }})
+      .then(data => {
+        setModels({
+          cloud: (data.cloud || []).filter(m => m.available),
+          local: (data.local || []).filter(m => m.available),
+        })
+        setFamilyOverrides(data.family_overrides || {})
+      })
+      .catch(() => {})
+
+    fetch('/api/settings/llm', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setActiveModel({
+        provider:     d.provider,
+        model_id:     d.model,
+        display_name: d.display_name || d.model,
+      }))
+      .catch(() => {})
+
+    fetch('/api/settings/voice', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => setActiveVoice({ active_voice: d.active_voice }))
+      .catch(() => {})
   }, [token])
 
+  const visibleFamilies = useMemo(
+    () => applyFamilyOverrides(MODEL_FAMILIES, familyOverrides),
+    [familyOverrides],
+  )
+
+  const availabilitySet = useMemo(() => buildAvailabilitySet(models), [models])
+
+  const currentMapping = useMemo(
+    () => findFamilyForModel(activeModel?.provider, activeModel?.model_id, visibleFamilies),
+    [activeModel?.provider, activeModel?.model_id, visibleFamilies],
+  )
+
+  const pickerLabel = currentMapping?.family?.displayName
+    || activeModel?.display_name
+    || 'Model'
+
+  const handlePickFamily = useCallback(async (family) => {
+    const tier = pickVoiceTier(family)
+    const model_id = tier ? family.tiers[tier] : null
+    if (!model_id) return
+    setFamilySheetOpen(false)
+    setSavingModel(true)
+    setActiveModel({ provider: family.provider, model_id, display_name: family.displayName })
+    try {
+      await fetch(`/api/settings/llm?user_id=${user?.id || ''}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ provider: family.provider, model_id, cloud_fallback_enabled: false }),
+      })
+    } catch {}
+    setSavingModel(false)
+  }, [user?.id, token])
+
+  // ---- Bottom action slot --------------------------------------------------
   useEffect(() => {
-    if (setAction) setAction(
-      <div style={{ display: 'flex', gap: 24, alignItems: 'center', justifyContent: 'center', width: '100%', padding: '0 20px' }}>
-        <button 
-          className={ambientEnabled ? 'rs-pill is-active' : 'rs-pill'} 
-          onClick={handleToggleAmbient}
-          title="Ambient Mode"
+    if (!setAction) return
+    setAction(
+      <div className="rs-speak-actions">
+        <button
+          className={`rs-pill ${muted ? 'is-active' : ''}`}
+          onClick={handleToggleMute}
+          title={muted ? 'Unmute mic' : 'Mute mic'}
         >
-          <span className="material-symbols-rounded">auto_awesome</span>
-        </button>
-        
-        <button 
-          className={webSearch ? 'rs-pill is-active' : 'rs-pill'} 
-          onClick={handleToggleWebSearch}
-          title="Web Search"
-        >
-          <span className="material-symbols-rounded">public</span>
+          <span className="material-symbols-rounded">{muted ? 'mic_off' : 'mic'}</span>
+          <span className="rs-speak-actions-label">{muted ? 'Muted' : 'Live'}</span>
         </button>
 
-        <button 
-          className="rs-btn-primary" 
-          style={{ 
-            width: 72, height: 72, borderRadius: '50%', padding: 0,
-            boxShadow: isActive ? '0 0 24px var(--primary)' : undefined,
-            background: isActive ? 'var(--primary)' : undefined,
-            color: isActive ? '#000' : undefined,
-            opacity: !canSpeak ? 0.5 : 1
-          }}
-          onClick={handleStartListening}
-          disabled={!canSpeak}
+        <button
+          className="rs-pill"
+          onClick={() => setFamilySheetOpen(true)}
+          title="Choose AI model"
+          disabled={savingModel}
         >
-          <span className="material-symbols-rounded" style={{ fontSize: '2.5rem' }}>mic</span>
+          <span className="material-symbols-rounded">smart_toy</span>
+          <span className="rs-speak-actions-label">{savingModel ? 'Syncing…' : pickerLabel}</span>
         </button>
 
-        <button className="rs-pill" onClick={handleReset} title="Save & reset">
-          <span className="material-symbols-rounded">history_edu</span>
+        <button
+          className="rs-btn-primary rs-speak-mic-btn"
+          onClick={isActive ? undefined : handleStartListening}
+          disabled={!canSpeak || muted}
+          aria-label={isActive ? convState : 'Tap to speak'}
+        >
+          <span className="material-symbols-rounded">
+            {convState === 'listening' ? 'graphic_eq'
+             : convState === 'speaking'  ? 'volume_up'
+             : convState === 'thinking'  ? 'hourglass_top'
+             : 'mic'}
+          </span>
+        </button>
+
+        <button
+          className={`rs-pill ${showTranscript ? 'is-active' : ''}`}
+          onClick={() => setShowTranscript(s => !s)}
+          title={showTranscript ? 'Hide transcript' : 'Show transcript'}
+        >
+          <span className="material-symbols-rounded">notes</span>
+          <span className="rs-speak-actions-label">Transcript</span>
+        </button>
+
+        <button
+          className="rs-pill"
+          onClick={handleReset}
+          title="Reset session"
+        >
+          <span className="material-symbols-rounded">refresh</span>
         </button>
       </div>
     )
-  }, [canSpeak, isActive, ambientEnabled, webSearch, handleToggleAmbient, handleToggleWebSearch, handleStartListening, handleReset, setAction])
-
-  const displayMessages = viewingSession ? viewingSession.messages : messages
-  const displayStreaming = viewingSession ? '' : streamingContent
+  }, [
+    muted, handleToggleMute,
+    handleStartListening, canSpeak, isActive, convState,
+    pickerLabel, savingModel,
+    showTranscript, handleReset, setAction,
+  ])
 
   return (
-    <div className="rs-foyer animate-fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden', gap: 24 }}>
-        
-        {/* Left: Avatar & State */}
-        {showAvatar && (
-          <div style={{ flex: '1 1 40%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, padding: '24px 0' }}>
-            <div className="rs-card" style={{ width: '100%', maxWidth: 360, aspectRatio: '1/1', padding: 0, borderRadius: '50%', overflow: 'hidden', position: 'relative' }}>
-              <Suspense fallback={<div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.05)' }} />}>
-                <RiverSong state={convState} audioLevel={visualLvl} />
-              </Suspense>
-              {convState === 'speaking' && (
-                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-                  <AudioVisualizer audioLevel={visualLvl} />
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-              <div className="rs-status-strip">
-                <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#6b7280', animation: isActive ? undefined : 'none' }} />
-                <span style={{ fontWeight: 600 }}>{convState.toUpperCase()}</span>
-              </div>
-              
-              <div style={{ display: 'flex', gap: 8 }}>
-                {activeModel && (
-                  <span className="rs-pill" style={{ fontSize: '0.65rem' }}>
-                    <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4 }}>memory</span>
-                    {activeModel.display_name}
-                  </span>
-                )}
-                {activeVoice && (
-                  <span className="rs-pill" style={{ fontSize: '0.65rem' }}>
-                    <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4 }}>settings_voice</span>
-                    {activeVoice.active_voice}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
+    <div className="rs-speak-stage">
+      {/* Status strip — top of the stage */}
+      <div className="rs-speak-status">
+        <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#6b7280' }} />
+        <span style={{ fontWeight: 600, letterSpacing: '0.1em' }}>{convState.toUpperCase()}</span>
+        {activeVoice && (
+          <span className="rs-pill" style={{ fontSize: '0.65rem' }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4 }}>settings_voice</span>
+            {activeVoice.active_voice}
+          </span>
         )}
-
-        {/* Right: Transcript / History */}
-        <div style={{ flex: '1 1 60%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className={showAvatar ? 'rs-pill is-active' : 'rs-pill'} onClick={toggleAvatar}>
-                <span className="material-symbols-rounded">person</span>
-              </button>
-              <button className={showTranscript ? 'rs-pill is-active' : 'rs-pill'} onClick={toggleTranscript}>
-                <span className="material-symbols-rounded">notes</span>
-              </button>
-            </div>
-            <button className={showHistory ? 'rs-pill is-active' : 'rs-pill'} onClick={() => { setShowHistory(!showHistory); setViewingSession(null) }}>
-              <span className="material-symbols-rounded">history</span>
-              {(history || []).length > 0 && <span style={{ marginLeft: 6, opacity: 0.6 }}>{history.length}</span>}
-            </button>
-          </div>
-
-          <div className="rs-card" style={{ flex: 1, overflow: 'hidden', padding: 0, display: 'flex', flexDirection: 'column' }}>
-            {showHistory ? (
-              <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
-                {viewingSession ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 12 }}>
-                      <button className="rs-pill" onClick={() => setViewingSession(null)}>BACK</button>
-                      <span className="rs-card-meta">{fmtDate(viewingSession.date)}</span>
-                    </div>
-                    <ConversationPanel messages={viewingSession.messages || []} />
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {(history || []).slice().reverse().map(s => (
-                      <button key={s.id} className="rs-card is-tappable" style={{ padding: 12, display: 'flex', justifyContent: 'space-between' }} onClick={() => setViewingSession(s)}>
-                        <span className="rs-card-label">{fmtDate(s.date)}</span>
-                        <span className="rs-card-meta">{(s.messages || []).length} msg</span>
-                      </button>
-                    ))}
-                    {(history || []).length === 0 && <div className="rs-card-meta" style={{ textAlign: 'center', padding: 40 }}>No history recorded.</div>}
-                  </div>
-                )}
-              </div>
-            ) : showTranscript ? (
-              <div style={{ flex: 1, overflowY: 'auto' }}>
-                <ConversationPanel messages={displayMessages || []} streamingContent={displayStreaming} toolEvents={toolEvents} />
-              </div>
-            ) : (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span className="rs-card-meta">Transcript hidden</span>
-              </div>
-            )}
-          </div>
-
-          {(error || convState === 'connecting') && (
-            <div style={{ padding: '8px 12px', textAlign: 'center' }}>
-              {error ? <span style={{ color: '#f87171', fontSize: '0.8rem' }}>{error}</span> : <span className="rs-card-meta">Connecting...</span>}
-            </div>
-          )}
-        </div>
-
+        {memoryMuted && (
+          <span className="rs-pill" style={{ fontSize: '0.65rem', color: '#facc15', fontWeight: 700 }}>
+            MEMORY MUTED
+          </span>
+        )}
       </div>
 
-      {memoryMuted && (
-        <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)' }} className="rs-pill">
-          <span style={{ color: '#facc15', fontSize: '0.7rem', fontWeight: 700 }}>MEMORY MUTED</span>
+      {/* Orb — front and center, fills the stage. Future: swap for avatar.glb. */}
+      <div className="rs-speak-orb">
+        <Suspense fallback={<div className="rs-speak-orb-fallback" />}>
+          <RiverSong state={convState} audioLevel={visualLvl} />
+        </Suspense>
+        {convState === 'speaking' && (
+          <div className="rs-speak-visualizer">
+            <AudioVisualizer audioLevel={visualLvl} />
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <div className="rs-speak-error">
+          <span style={{ color: '#f87171', fontSize: '0.8rem' }}>{error}</span>
         </div>
       )}
+
+      {/* Transcript overlay — slides up from the bottom when toggled on. */}
+      {showTranscript && (
+        <div className="rs-speak-transcript">
+          <div className="rs-speak-transcript-head">
+            <span className="rs-card-label">Transcript</span>
+            <button className="rs-pill" onClick={() => setShowTranscript(false)} aria-label="Close transcript">
+              <span className="material-symbols-rounded">close</span>
+            </button>
+          </div>
+          <div className="rs-speak-transcript-body">
+            <ConversationPanel
+              messages={messages}
+              streamingContent={streamingContent}
+              toolEvents={toolEvents}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Model family picker — single step, no tier (voice = Fast default). */}
+      <Sheet open={familySheetOpen} onClose={() => setFamilySheetOpen(false)} title="AI model">
+        {visibleFamilies.map(family => {
+          const anyAvail = familyHasAnyTier(family, availabilitySet)
+          const isActiveFam = currentMapping?.family?.id === family.id
+          return (
+            <SheetRow
+              key={family.id}
+              icon={family.icon || 'chat'}
+              title={family.displayName}
+              sub={anyAvail ? family.blurb : `${family.blurb} — unavailable`}
+              active={isActiveFam}
+              onClick={() => anyAvail && handlePickFamily(family)}
+            />
+          )
+        })}
+      </Sheet>
     </div>
   )
 }

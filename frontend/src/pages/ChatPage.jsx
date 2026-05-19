@@ -11,6 +11,7 @@ import {
   buildAvailabilitySet,
   isTierAvailable,
   familyHasAnyTier,
+  applyFamilyOverrides,
 } from '../utils/modelFamilies.js'
 
 /**
@@ -47,6 +48,7 @@ export default function ChatPage({ setAction, onNavigate }) {
   const [error,             setError]             = useState(null)
 
   const [models,          setModels]          = useState({ cloud: [], local: [] })
+  const [familyOverrides, setFamilyOverrides] = useState({})
   const [selectedModel,   setSelectedModel]   = useState(null)
   const [savingModel,     setSavingModel]     = useState(false)
 
@@ -83,6 +85,7 @@ export default function ChatPage({ setAction, onNavigate }) {
           cloud: (data.cloud || []).filter(m => m.available),
           local: (data.local || []).filter(m => m.available),
         })
+        setFamilyOverrides(data.family_overrides || {})
       })
       .catch(() => {})
 
@@ -119,9 +122,14 @@ export default function ChatPage({ setAction, onNavigate }) {
     [models],
   )
 
+  const visibleFamilies = useMemo(
+    () => applyFamilyOverrides(MODEL_FAMILIES, familyOverrides),
+    [familyOverrides],
+  )
+
   const currentMapping = useMemo(
-    () => findFamilyForModel(selectedModel?.provider, selectedModel?.model_id),
-    [selectedModel?.provider, selectedModel?.model_id],
+    () => findFamilyForModel(selectedModel?.provider, selectedModel?.model_id, visibleFamilies),
+    [selectedModel?.provider, selectedModel?.model_id, visibleFamilies],
   )
 
   // Label for the pill: "DeepSeek · Thinking" when mapped, "<raw> · Custom"
@@ -135,8 +143,6 @@ export default function ChatPage({ setAction, onNavigate }) {
     }
     return 'Select model'
   }, [currentMapping, selectedModel?.model_id])
-
-  const visibleFamilies = useMemo(() => MODEL_FAMILIES, [])
 
   // Keep thinkingMode in sync with the loaded selection so the chat body's
   // thinking_mode reflects reality even before the user opens the picker.
@@ -466,8 +472,8 @@ export default function ChatPage({ setAction, onNavigate }) {
     <div className="rs-foyer">
       
       {/* Feature Row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', rowGap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
           <button className={`rs-pill ${webSearch ? 'is-active' : ''}`} onClick={() => setWebSearch(!webSearch)}>
             <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>public</span>
             WEB
@@ -475,18 +481,21 @@ export default function ChatPage({ setAction, onNavigate }) {
           <button
             className="rs-pill is-active"
             onClick={openFamilySheet}
-            title="Choose model family and tier"
+            title={modelPillLabel}
+            style={{ maxWidth: 'min(220px, calc(100vw - 140px))', overflow: 'hidden' }}
           >
-            <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', flexShrink: 0 }}>
               {thinkingMode === 'fast' ? 'bolt' : thinkingMode === 'thinking' ? 'psychology' : 'verified'}
             </span>
-            {modelPillLabel}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+              {modelPillLabel}
+            </span>
           </button>
 
-          {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginLeft: 12 }}>SYNCING MODEL...</span>}
+          {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginLeft: 4 }}>SYNCING…</span>}
         </div>
 
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           <button className="rs-pill" onClick={() => setShowSystem(!showSystem)}>
             <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>settings_input_component</span>
           </button>
@@ -519,7 +528,7 @@ export default function ChatPage({ setAction, onNavigate }) {
                   <span className="rs-card-label">{fmtDate(s.date)}</span>
                   <span className="rs-card-label">{s.messages.length} EVENTS</span>
                 </div>
-                <div className="rs-card-value" style={{ fontSize: '1.1rem' }}>{s.messages[0]?.text || 'Interaction'}</div>
+                <div className="rs-card-value" style={{ fontSize: '1.1rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{s.messages[0]?.text || 'Interaction'}</div>
               </div>
             ))
           )}

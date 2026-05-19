@@ -15,6 +15,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useAudioRecorder } from '../hooks/useAudioRecorder'
 import { registerPushNotifications, unregisterPushNotifications, getPushSubscription } from '../utils/pushNotifications'
+import { MODEL_FAMILIES, TIER_ORDER, TIER_META } from '../utils/modelFamilies.js'
 
 const API_BASE = '' // same origin
 
@@ -61,14 +62,14 @@ function ModelCard({ model, isSelected, isDisabled, onSelect }) {
     <div
       className={`rs-card is-tappable ${isSelected ? 'is-elev' : ''} ${isDisabled ? 'is-disabled' : ''}`}
       onClick={() => !isDisabled && onSelect(model)}
-      style={{ 
-        flex: '1 1 200px', 
+      style={{
+        flex: '1 1 200px',
         padding: '16px',
         borderColor: isSelected ? 'var(--primary)' : undefined,
         opacity: isDisabled ? 0.5 : 1
       }}
     >
-      <div className="rs-card-value" style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 8 }}>{model.display_name}</div>
+      <div className="rs-card-value" style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{model.display_name}</div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
         {model.vram_gb != null && (
@@ -657,12 +658,12 @@ export default function SettingsPage({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* WARDEN */}
             <div className="rs-card" style={{ padding: 16, background: 'var(--md-surface-container-low)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>WARDEN (Vision/Security)</div>
                   <div className="rs-card-meta" style={{ margin: 0 }}>RTSP Camera Monitoring</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
                   <span className="rs-card-label" style={{ color: daemonStatus.warden?.alive ? '#4ade80' : 'var(--md-outline)' }}>
                     {daemonStatus.warden?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
@@ -678,12 +679,12 @@ export default function SettingsPage({
 
             {/* MECHANIC */}
             <div className="rs-card" style={{ padding: 16, background: 'var(--md-surface-container-low)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>MECHANIC (Telemetry)</div>
                   <div className="rs-card-meta" style={{ margin: 0 }}>MAVLink / ArduRover Link</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
                   <span className="rs-card-label" style={{ color: daemonStatus.mechanic?.alive ? '#4ade80' : 'var(--md-outline)' }}>
                     {daemonStatus.mechanic?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
@@ -705,12 +706,12 @@ export default function SettingsPage({
 
             {/* HERALD */}
             <div className="rs-card" style={{ padding: 16, background: 'var(--md-surface-container-low)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>HERALD (Casting/Lip-Sync)</div>
                   <div className="rs-card-meta" style={{ margin: 0 }}>Google Home Hub Integration</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
                   <span className="rs-card-label" style={{ color: daemonStatus.herald?.alive ? '#4ade80' : 'var(--md-outline)' }}>
                     {daemonStatus.herald?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
@@ -731,12 +732,12 @@ export default function SettingsPage({
 
             {/* SIFTER */}
             <div className="rs-card" style={{ padding: 16, background: 'var(--md-surface-container-low)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>SIFTER (RAG)</div>
                   <div className="rs-card-meta" style={{ margin: 0 }}>Background Document Indexing</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
                   <span className="rs-card-label" style={{ color: daemonStatus.sifter?.alive ? '#4ade80' : 'var(--md-outline)' }}>
                     {daemonStatus.sifter?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
@@ -865,7 +866,7 @@ export default function SettingsPage({
             Defines her personality and knowledge. Changes take effect on the next session.
           </p>
 
-          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
             <button className="rs-btn-primary" onClick={() => savePersona(personaSettings.system_prompt)}>
               SAVE CHANGES
             </button>
@@ -1103,6 +1104,13 @@ export default function SettingsPage({
           token={token}
           onChanged={updated => setVisibility(updated)}
         />
+      )}
+
+      {/* ================================================================ */}
+      {/* ADMIN — model families (Phase B)                                 */}
+      {/* ================================================================ */}
+      {showAdmin && (
+        <AdminModelFamiliesSection token={token} />
       )}
 
       </div>
@@ -2084,6 +2092,151 @@ function AdminVisibilitySection({ visibility, token, onChanged }) {
           </div>
         )
       })}
+    </Section>
+  )
+}
+
+// =============================================================================
+// AdminModelFamiliesSection — Phase B: toggle / rename / remap families that
+// appear in the Chat picker. Defaults live in utils/modelFamilies.js; overrides
+// persist to admin_config["model_families"] and ride along with /api/models.
+// =============================================================================
+
+function AdminModelFamiliesSection({ token }) {
+  const [overrides, setOverrides] = useState({})
+  const [loading,   setLoading]   = useState(true)
+  const [saving,    setSaving]    = useState(false)
+  const [msg,       setMsg]       = useState('')
+
+  useEffect(() => {
+    fetch('/api/settings/model-families', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { families: {} })
+      .then(data => {
+        setOverrides(data.families || {})
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [token])
+
+  const update = (familyId, patch) => {
+    setOverrides(prev => ({
+      ...prev,
+      [familyId]: { ...(prev[familyId] || {}), ...patch },
+    }))
+  }
+  const updateTier = (familyId, tier, value) => {
+    setOverrides(prev => ({
+      ...prev,
+      [familyId]: {
+        ...(prev[familyId] || {}),
+        tiers: { ...(prev[familyId]?.tiers || {}), [tier]: value || null },
+      },
+    }))
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    setMsg('')
+    try {
+      const res = await fetch('/api/settings/model-families', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ families: overrides }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      setMsg('Saved. Reload Chat to see updates.')
+    } catch (e) {
+      setMsg(`Error: ${e.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return null
+
+  return (
+    <Section title="ADMIN — MODEL FAMILIES">
+      <p className="settings-hint" style={{ marginBottom: 12 }}>
+        Toggle which families appear in the Chat picker, give them quirky names, and
+        override the model_id each tier maps to. Leave any field blank to use the default.
+        Overrides are not validated against the registry — invalid model_ids just show
+        as unavailable in the picker.
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {MODEL_FAMILIES.map(family => {
+          const ov = overrides[family.id] || {}
+          const enabled = ov.enabled !== false  // default true
+          return (
+            <div
+              key={family.id}
+              className="rs-card"
+              style={{ padding: 12, opacity: enabled ? 1 : 0.55 }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                    {family.displayName}
+                    {ov.quirky_name && (
+                      <span style={{ marginLeft: 8, fontWeight: 400, fontSize: '0.8rem', color: 'var(--md-primary)' }}>
+                        → {ov.quirky_name}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--md-outline)' }}>
+                    {family.provider} · {family.blurb}
+                  </div>
+                </div>
+                <Toggle
+                  checked={enabled}
+                  onChange={v => update(family.id, { enabled: v })}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
+                <label style={{ fontSize: '0.72rem' }}>
+                  <span style={{ display: 'block', color: 'var(--md-outline)', marginBottom: 2 }}>
+                    Quirky name
+                  </span>
+                  <input
+                    type="text"
+                    className="settings-input"
+                    placeholder={family.displayName}
+                    value={ov.quirky_name || ''}
+                    onChange={e => update(family.id, { quirky_name: e.target.value || null })}
+                    style={{ width: '100%' }}
+                    disabled={!enabled}
+                  />
+                </label>
+
+                {TIER_ORDER.map(tier => (
+                  <label key={tier} style={{ fontSize: '0.72rem' }}>
+                    <span style={{ display: 'block', color: 'var(--md-outline)', marginBottom: 2 }}>
+                      {TIER_META[tier].label} model_id
+                    </span>
+                    <input
+                      type="text"
+                      className="settings-input"
+                      placeholder={family.tiers[tier] || '(not mapped)'}
+                      value={ov.tiers?.[tier] || ''}
+                      onChange={e => updateTier(family.id, tier, e.target.value)}
+                      style={{ width: '100%' }}
+                      disabled={!enabled}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="profile-save-row" style={{ marginTop: 16 }}>
+        <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'SAVING...' : 'SAVE FAMILY OVERRIDES'}
+        </button>
+        {msg && <span className="profile-saved-msg">{msg}</span>}
+      </div>
     </Section>
   )
 }

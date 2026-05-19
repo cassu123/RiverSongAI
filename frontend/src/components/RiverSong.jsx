@@ -1,7 +1,10 @@
 import React, { useRef, useMemo, useEffect, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import * as THREE from 'three'
+// NOTE: @react-three/postprocessing@3 requires @react-three/fiber@>=9; we are on
+// fiber@8, so EffectComposer/Bloom crash on init ("cannot read .length of undefined").
+// Bloom is cosmetic — orb renders fine without it. To restore: downgrade
+// @react-three/postprocessing to ^2.16.0 and re-add the imports/JSX below.
 
 // ─ Constants pulled verbatim from prototypes/presence-orb.html ─────────────
 const PALETTES = {
@@ -466,9 +469,6 @@ export default function RiverSong({ state, audioLevel = 0, lipSyncOpen = 0, comp
         onCreated={({ gl }) => { gl.outputColorSpace = THREE.SRGBColorSpace }}
       >
         <OrbCore state={state} audioLevel={audioLevel} lipSyncOpen={lipSyncOpen} palette={palette} />
-        <EffectComposer>
-          <Bloom intensity={0.62} luminanceThreshold={0.18} luminanceSmoothing={0.78} />
-        </EffectComposer>
       </Canvas>
     </div>
   )
