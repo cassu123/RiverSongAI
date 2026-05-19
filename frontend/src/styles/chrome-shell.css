@@ -72,6 +72,7 @@
   inline-size: 100%;
   max-inline-size: 100%;
   padding-block-end: 80px;
+  overflow-x: clip;
 }
 
 .rs-foyer-head {

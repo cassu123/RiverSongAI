@@ -415,26 +415,28 @@ export default function ChatPage({ setAction, onNavigate }) {
           <span className="material-symbols-rounded">{isRecording ? 'stop' : 'mic'}</span>
         </button>
         
-        <div style={{ 
-          flex: 1, 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 10, 
-          background: 'var(--md-surface-container-low)', 
-          borderRadius: '24px', 
+        <div style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          background: 'var(--md-surface-container-low)',
+          borderRadius: '24px',
           padding: '4px 12px',
           border: '1px solid var(--md-outline-variant)'
         }}>
           <textarea
             ref={inputRef}
             rows={1}
-            style={{ 
-              flex: 1, 
-              background: 'transparent', 
-              border: 'none', 
+            style={{
+              flex: 1,
+              minWidth: 0,
+              background: 'transparent',
+              border: 'none',
               color: 'inherit',
-              fontSize: '1rem', 
-              padding: '8px 4px', 
+              fontSize: '1rem',
+              padding: '8px 4px',
               resize: 'none',
               outline: 'none',
               fontFamily: 'inherit'
@@ -446,7 +448,7 @@ export default function ChatPage({ setAction, onNavigate }) {
             disabled={isThinking || !!viewingSession}
           />
           
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
              <button className="rs-btn-ghost" onClick={handleGenerateImage} disabled={!inputText.trim()} title="Dreamscape" style={{ padding: 8 }}>
                <span className="material-symbols-rounded">auto_awesome</span>
              </button>
@@ -608,7 +610,7 @@ export default function ChatPage({ setAction, onNavigate }) {
           )}
         </div>
       ) : (
-        <div className="rs-thread" style={{ paddingBottom: '100px', overflow: 'hidden' }}>
+        <div className="rs-thread" style={{ paddingBottom: '100px' }}>
           {viewingSession && (
             <div style={{ marginBottom: 20 }}>
               <button className="rs-pill" onClick={() => setViewingSession(null)}>← RETURN TO LIVE</button>
