@@ -161,6 +161,72 @@ class VaultProvider:
             
         return result
 
+    async def append_to_note(
+        self,
+        user_id: str,
+        virtual_path: str,
+        appended: str,
+        default_template: str = "",
+    ) -> dict:
+        """
+        Append text to a note, creating it from ``default_template`` if missing.
+        Used by daily-notes and any feature that streams entries into a log.
+        """
+        try:
+            existing = await self.read_note(user_id, virtual_path)
+        except FileNotFoundError:
+            existing = default_template
+        body = existing
+        if body and not body.endswith("\n"):
+            body += "\n"
+        body += appended
+        return await self.write_note(user_id, virtual_path, body)
+
+    async def get_or_create_daily_note(
+        self,
+        user_id: str,
+        date_str: Optional[str] = None,
+    ) -> dict:
+        """
+        Read today's (or ``date_str``'s) daily note, creating an empty
+        templated note if it doesn't yet exist. Returns
+        ``{virtual_path, date, content}``.
+        """
+        if not date_str:
+            date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        virtual_path = f"{VROOT_PERSONAL}/Daily/{date_str}.md"
+        template = (
+            f"---\ndate: {date_str}\nkind: daily\n---\n\n"
+            f"# {date_str}\n\n"
+        )
+        try:
+            content = await self.read_note(user_id, virtual_path)
+        except FileNotFoundError:
+            await self.write_note(user_id, virtual_path, template)
+            content = template
+        return {"virtual_path": virtual_path, "date": date_str, "content": content}
+
+    async def append_to_daily(
+        self,
+        user_id: str,
+        section_title: str,
+        body: str,
+        date_str: Optional[str] = None,
+    ) -> dict:
+        """
+        Append a timestamped section to today's (or ``date_str``'s) daily note.
+        """
+        if not date_str:
+            date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        virtual_path = f"{VROOT_PERSONAL}/Daily/{date_str}.md"
+        template = (
+            f"---\ndate: {date_str}\nkind: daily\n---\n\n"
+            f"# {date_str}\n\n"
+        )
+        hhmm = datetime.now(timezone.utc).strftime("%H:%M UTC")
+        entry = f"\n## {hhmm} — {section_title}\n\n{body.strip()}\n"
+        return await self.append_to_note(user_id, virtual_path, entry, default_template=template)
+
     async def delete_note(self, user_id: str, virtual_path: str) -> None:
         target = self._resolve_virtual(user_id, virtual_path)
         if not target.exists(): return

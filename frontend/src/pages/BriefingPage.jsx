@@ -23,22 +23,48 @@ function fmtDate() {
   })
 }
 
+function stripFrontmatter(content) {
+  if (!content.startsWith('---')) return content
+  const end = content.indexOf('\n---', 3)
+  if (end === -1) return content
+  return content.slice(end + 4).replace(/^\s*\n/, '')
+}
+
+function openDailyInChronos(virtualPath) {
+  if (!virtualPath) return
+  const parts = virtualPath.split('/')
+  const root = parts.shift()
+  const title = parts.join('/').replace(/\.md$/, '')
+  try {
+    localStorage.setItem('rs-chronos-open', JSON.stringify({ title, root }))
+  } catch {}
+  try {
+    window.dispatchEvent(new CustomEvent('rs-navigate', { detail: { page: 'chronos' } }))
+  } catch {}
+}
+
 export default function BriefingPage({ onNavigate }) {
   const { user, token } = useAuth()
+  const EMPTY_HINT = 'No entries yet today. Once you chat with River or save notes, they\'ll show up in your daily [[Daily/' + new Date().toISOString().slice(0, 10) + ']] log.'
   const [weather, setWeather] = useState(null)
   const [calendar, setCalendar] = useState([])
-  const [summary, setSummary] = useState('No briefing for today yet. Ask River to summarize your day.')
+  const [summary, setSummary] = useState(EMPTY_HINT)
+  const [dailyPath, setDailyPath] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
     try {
-      const sRes = await fetch('/api/conversation/summary', { headers: { Authorization: `Bearer ${token}` } })
-      if (sRes.ok) {
-        const data = await sRes.json()
-        if (data.summary) setSummary(data.summary)
+      const res = await fetch('/api/vault/daily/today', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setDailyPath(data.virtual_path)
+        const body = stripFrontmatter(data.content || '')
+        if (body.trim()) setSummary(body)
       }
     } catch (e) {
-      console.error('Fetch failed', e)
+      console.error('Daily note fetch failed', e)
     } finally {
       setLoading(false)
     }
@@ -63,14 +89,23 @@ export default function BriefingPage({ onNavigate }) {
         {/* Daily Summary */}
         <div className="rs-card is-elev is-wide">
           <div className="rs-card-head">
-            <span className="rs-card-label">DAILY SUMMARY</span>
-            <span className="material-symbols-rounded" style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>auto_stories</span>
+            <span className="rs-card-label">DAILY LOG</span>
+            <button
+              className="rs-pill"
+              onClick={() => openDailyInChronos(dailyPath)}
+              disabled={!dailyPath}
+              title="Open today's daily note in CHRONOS"
+              style={{ fontSize: '0.65rem', padding: '4px 10px' }}
+            >
+              <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', marginRight: 4 }}>auto_stories</span>
+              OPEN IN CHRONOS
+            </button>
           </div>
           <div style={{ lineHeight: 1.6, fontSize: '1rem', color: 'rgba(255,255,255,0.9)' }}>
             <RsMarkdown onNavigate={onNavigate}>{summary}</RsMarkdown>
           </div>
           <div className="rs-card-meta" style={{ marginTop: 12 }}>
-            Generated from your recent interactions and schedules.
+            Compiled from conversation summaries and your CHRONOS daily note.
           </div>
         </div>
 

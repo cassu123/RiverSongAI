@@ -154,6 +154,37 @@ async def summarize_note(
         logger.error("Failed to summarize note: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/daily/today")
+async def get_daily_today(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Return today's daily note, creating an empty templated one if missing."""
+    user_id = await _require_user(authorization)
+    provider = _get_provider(request)
+    try:
+        return await provider.get_or_create_daily_note(user_id)
+    except Exception as e:
+        logger.error("Failed to get daily note: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/daily/{date_str}")
+async def get_daily_for_date(
+    date_str: str,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Return the daily note for a given YYYY-MM-DD date, creating if missing."""
+    user_id = await _require_user(authorization)
+    provider = _get_provider(request)
+    try:
+        return await provider.get_or_create_daily_note(user_id, date_str)
+    except Exception as e:
+        logger.error("Failed to get daily note for %s: %s", date_str, e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/search")
 async def search_vault(
     request: Request,

@@ -56,6 +56,7 @@ from core.wake_word_service import WakeWordService
 from config.settings import get_settings
 from core.limiter import limiter
 from providers.web.search import build_search_provider
+from providers.vault.vault_provider import VaultProvider
 
 
 logger = logging.getLogger(__name__)
@@ -589,6 +590,8 @@ async def extract_facts_http(
         except Exception as exc:
             logger.warning("Preference extraction failed (user=%s): %s", user_id, exc)
 
+    vault_store = getattr(memory_manager, "_store", None)
+
     async def _generate_summary():
         summary_prompt = (
             "Write a 2-3 sentence summary of this conversation for future reference.\n"
@@ -608,6 +611,13 @@ async def extract_facts_http(
             if full:
                 await memory_manager.record_summary(user_id, full)
                 logger.info("Summary saved (user=%s): %s", user_id, full[:100])
+                # Append the same summary as a section in today's daily note.
+                # Best-effort; vault failures must not break fact extraction.
+                try:
+                    provider = VaultProvider(store=vault_store)
+                    await provider.append_to_daily(user_id, "Conversation summary", full)
+                except Exception as vexc:
+                    logger.debug("Daily-note append skipped (user=%s): %s", user_id, vexc)
         except Exception as exc:
             logger.warning("Summary generation failed (user=%s): %s", user_id, exc)
 
