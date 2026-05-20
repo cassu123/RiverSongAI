@@ -31,6 +31,20 @@ const GOOGLE_FEATURES = [
     tags: ['Travel time', 'Place search', 'Route info'],
   },
   {
+    key: 'books',
+    icon: IconBooks,
+    title: 'GOOGLE BOOKS',
+    desc: 'Browse your reading library, search for new titles, and track your reading progress across all your devices.',
+    tags: ['Library sync', 'Progress tracking', 'Book search'],
+  },
+  {
+    key: 'tasks',
+    icon: IconTasks,
+    title: 'GOOGLE TASKS',
+    desc: 'Stay on top of your to-do list. Create, view, and complete tasks directly through River Song.',
+    tags: ['Task lists', 'Quick add', 'Voice management'],
+  },
+  {
     key: 'music',
     icon: IconMusic,
     title: 'YOUTUBE MUSIC',
@@ -44,6 +58,8 @@ export default function GooglePage() {
   const [status, setStatus] = useState({ connected: false, loading: true })
   const [calendar, setCalendar] = useState({ events: [], loading: false })
   const [gmail, setGmail] = useState({ messages: [], loading: false })
+  const [books, setBooks] = useState({ library: [], loading: false })
+  const [tasks, setTasks] = useState({ list: [], loading: false })
   const [error, setError] = useState('')
 
   const loadStatus = useCallback(async () => {
@@ -62,22 +78,44 @@ export default function GooglePage() {
   const loadData = async () => {
     setCalendar(prev => ({ ...prev, loading: true }))
     setGmail(prev => ({ ...prev, loading: true }))
+    setBooks(prev => ({ ...prev, loading: true }))
+    setTasks(prev => ({ ...prev, loading: true }))
 
-    try {
-      const [calRes, mailRes] = await Promise.all([
-        fetch(`${API_BASE}/calendar/upcoming`, { headers: authHeaders() }),
-        fetch(`${API_BASE}/gmail/unread`, { headers: authHeaders() })
-      ])
-      const calData = await calRes.json()
-      const mailData = await mailRes.json()
+    // Calendar
+    fetch(`${API_BASE}/calendar/upcoming`, { headers: authHeaders() })
+      .then(res => res.json())
+      .then(data => setCalendar({ events: data.events || [], loading: false }))
+      .catch(err => {
+        console.error('Failed to load Calendar:', err)
+        setCalendar(prev => ({ ...prev, loading: false }))
+      })
 
-      setCalendar({ events: calData.events || [], loading: false })
-      setGmail({ messages: mailData.messages || [], loading: false })
-    } catch (err) {
-      console.error('Failed to load Google data:', err)
-      setCalendar(prev => ({ ...prev, loading: false }))
-      setGmail(prev => ({ ...prev, loading: false }))
-    }
+    // Gmail
+    fetch(`${API_BASE}/gmail/unread`, { headers: authHeaders() })
+      .then(res => res.json())
+      .then(data => setGmail({ messages: data.messages || [], loading: false }))
+      .catch(err => {
+        console.error('Failed to load Gmail:', err)
+        setGmail(prev => ({ ...prev, loading: false }))
+      })
+
+    // Google Books
+    fetch(`${API_BASE}/books/library`, { headers: authHeaders() })
+      .then(res => res.json())
+      .then(data => setBooks({ library: data.library || [], loading: false }))
+      .catch(err => {
+        console.error('Failed to load Google Books:', err)
+        setBooks(prev => ({ ...prev, loading: false }))
+      })
+
+    // Google Tasks
+    fetch(`${API_BASE}/tasks`, { headers: authHeaders() })
+      .then(res => res.json())
+      .then(data => setTasks({ list: data.tasks || [], loading: false }))
+      .catch(err => {
+        console.error('Failed to load Google Tasks:', err)
+        setTasks(prev => ({ ...prev, loading: false }))
+      })
   }
 
   useEffect(() => {
@@ -100,6 +138,30 @@ export default function GooglePage() {
       window.location.href = auth_url
     } catch (err) {
       setError('Failed to initiate Google connection.')
+    }
+  }
+
+  const handleDisconnect = async () => {
+    if (!window.confirm('Are you sure you want to disconnect your Google account? This will remove access to Calendar, Gmail, and other services.')) {
+      return
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/auth`, {
+        method: 'DELETE',
+        headers: authHeaders()
+      })
+      if (res.ok) {
+        setStatus({ connected: false, loading: false })
+        setCalendar({ events: [], loading: false })
+        setGmail({ messages: [], loading: false })
+        setBooks({ library: [], loading: false })
+        setTasks({ list: [], loading: false })
+      } else {
+        throw new Error('Failed to disconnect')
+      }
+    } catch (err) {
+      setError('Failed to disconnect Google account.')
     }
   }
 
@@ -143,13 +205,20 @@ export default function GooglePage() {
                    {status.loading ? 'CHECKING CONNECTION...' : (status.connected ? `CONNECTED AS ${status.email?.toUpperCase() || 'GOOGLE USER'}` : 'NOT CONNECTED')}
                 </span>
              </div>
-             <button 
-               className={status.connected ? 'rs-pill' : 'rs-btn-primary'} 
-               onClick={handleConnect}
-               disabled={status.loading}
-             >
-                {status.connected ? 'RECONNECT' : 'CONNECT GOOGLE ACCOUNT'}
-             </button>
+             <div style={{ display: 'flex', gap: 12 }}>
+                {status.connected && (
+                  <button className="rs-pill" onClick={handleDisconnect} style={{ color: 'var(--md-error)' }}>
+                    DISCONNECT
+                  </button>
+                )}
+                <button 
+                  className={status.connected ? 'rs-pill' : 'rs-btn-primary'} 
+                  onClick={handleConnect}
+                  disabled={status.loading}
+                >
+                    {status.connected ? 'RECONNECT' : 'CONNECT GOOGLE ACCOUNT'}
+                </button>
+             </div>
           </div>
         </div>
 
@@ -215,6 +284,111 @@ export default function GooglePage() {
                 ) : <div className="rs-card-meta">Connect account to see emails</div>}
               </div>
            </div>
+
+           {/* Google Books Preview */}
+           <div className="rs-card" style={{ 
+             opacity: !status.connected ? 0.6 : 1, 
+             backdropFilter: 'var(--glass-blur)',
+             display: 'flex',
+             flexDirection: 'column'
+           }}>
+              <div className="rs-card-head">
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <IconBooks />
+                    <span className="rs-card-label">READING LIBRARY</span>
+                 </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                {status.connected ? (
+                  books.loading ? <div className="rs-card-meta">Loading library...</div> :
+                  books.library.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {books.library.slice(0, 3).map(b => (
+                        <div key={b.volume_id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none', display: 'flex', gap: 12 }}>
+                          {b.cover_url && (
+                            <img src={b.cover_url} alt={b.title} style={{ width: 40, height: 60, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {b.authors.join(', ')}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                              <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '1px 6px' }}>
+                                {b.status === 'reading' ? 'READING' : b.status === 'finished' ? 'FINISHED' : 'WANT TO READ'}
+                              </span>
+                              {b.status === 'reading' && (
+                                <span style={{ fontSize: '0.65rem', color: 'var(--md-tertiary)', fontWeight: 600 }}>{Math.round(b.progress_pct)}%</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <div className="rs-card-meta">No books found.</div>
+                ) : <div className="rs-card-meta">Connect account to see library</div>}
+              </div>
+           </div>
+
+           {/* Google Tasks Preview */}
+           <div className="rs-card" style={{ 
+             opacity: !status.connected ? 0.6 : 1, 
+             backdropFilter: 'var(--glass-blur)',
+             display: 'flex',
+             flexDirection: 'column'
+           }}>
+              <div className="rs-card-head">
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <IconTasks />
+                    <span className="rs-card-label">GOOGLE TASKS</span>
+                 </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                {status.connected ? (
+                  tasks.loading ? <div className="rs-card-meta">Loading tasks...</div> :
+                  tasks.list.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {tasks.list.slice(0, 4).map(t => {
+                        const completed = t.status === 'completed'
+                        return (
+                          <div key={t.id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ 
+                              width: 14, 
+                              height: 14, 
+                              borderRadius: '50%', 
+                              border: completed ? 'none' : '1.5px solid var(--text-muted)',
+                              background: completed ? 'var(--md-tertiary)' : 'transparent',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}>
+                              {completed && (
+                                <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                  <path d="M1.5 4l1.5 1.5 3.5-3.5" stroke="var(--bg-base)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              )}
+                            </span>
+                            <div style={{ 
+                              fontSize: '0.85rem', 
+                              fontWeight: 500,
+                              textDecoration: completed ? 'line-through' : 'none',
+                              opacity: completed ? 0.5 : 1,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              flex: 1
+                            }}>
+                              {t.title}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : <div className="rs-card-meta">No tasks found.</div>
+                ) : <div className="rs-card-meta">Connect account to see tasks</div>}
+              </div>
+           </div>
         </div>
 
         {/* Features Grid */}
@@ -271,6 +445,24 @@ function IconMaps() {
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
       <path d="M10 2a5 5 0 0 1 5 5c0 4-5 11-5 11S5 11 5 7a5 5 0 0 1 5-5z" stroke="currentColor" strokeWidth="1.3"/>
       <circle cx="10" cy="7" r="2" stroke="currentColor" strokeWidth="1.3"/>
+    </svg>
+  )
+}
+
+function IconBooks() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M4 4h12v12H4z" stroke="currentColor" strokeWidth="1.3"/>
+      <path d="M7 4v12M10 4v12M13 4v12" stroke="currentColor" strokeWidth="1.3"/>
+    </svg>
+  )
+}
+
+function IconTasks() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+      <path d="M7 10l2 2 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }

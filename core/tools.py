@@ -242,6 +242,40 @@ TOOL_SCHEMAS = [
             },
             "required": ["prompt"]
         }
+    },
+    {
+        "name": "search_google_books",
+        "description": "Search your Google Books library or the general Google Books catalog.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The title, author, or keyword to search for."},
+                "library_only": {"type": "boolean", "description": "If true, only search your own library. Defaults to false."},
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "add_google_task",
+        "description": "Add a new task to your Google Tasks list.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "The name of the task."},
+                "notes": {"type": "string", "description": "Optional additional details for the task."},
+            },
+            "required": ["title"]
+        }
+    },
+    {
+        "name": "list_google_tasks",
+        "description": "Retrieve a list of tasks from your Google Tasks.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "show_completed": {"type": "boolean", "description": "Whether to include completed tasks. Defaults to false."},
+            }
+        }
     }
 ]
 
@@ -318,6 +352,15 @@ async def execute_tool(tool_name: str, tool_input: Dict[str, Any], context: Dict
 
         elif tool_name == "generate_image":
             return await _exec_generate_image(tool_input, user_id)
+
+        elif tool_name == "search_google_books":
+            return await _exec_search_google_books(tool_input, user_id)
+
+        elif tool_name == "add_google_task":
+            return await _exec_add_google_task(tool_input, user_id)
+
+        elif tool_name == "list_google_tasks":
+            return await _exec_list_google_tasks(tool_input, user_id)
 
         else:
             return f"Unknown tool '{tool_name}' requested."
@@ -830,6 +873,72 @@ async def _exec_generate_image(args: dict, user_id: str) -> str:
     except Exception as exc:
         logger.error("Image generation tool failed: %s", exc)
         return f"I tried to generate the image, but encountered an issue: {str(exc)}"
+
+
+async def _exec_search_google_books(args: dict, user_id: str) -> str:
+    try:
+        from providers.google.books import get_books_provider
+        provider = get_books_provider()
+        
+        query = args["query"]
+        library_only = args.get("library_only", False)
+        
+        if not provider.is_connected(user_id):
+            return "Your Google Books account is not linked. Please connect it in Settings."
+            
+        library = await provider.get_library(user_id)
+        # Search in library
+        matches = [b for b in library if query.lower() in b.title.lower() or any(query.lower() in a.lower() for a in b.authors)]
+        
+        if not matches:
+            return f"I couldn't find any books matching '{query}' in your library."
+            
+        lines = [f"Found {len(matches)} book(s) in your library:"]
+        for b in matches[:5]:
+            authors = ", ".join(b.authors)
+            lines.append(f"- {b.title} by {authors} ({int(b.progress_pct)}% read, status: {b.status})")
+            
+        return "\n".join(lines)
+    except Exception as exc:
+        logger.error("Google Books tool failed: %s", exc)
+        return f"I tried to search your Google Books, but encountered an error: {str(exc)}"
+
+
+async def _exec_add_google_task(args: dict, user_id: str) -> str:
+    try:
+        from providers.google.tasks import build_tasks_provider
+        provider = build_tasks_provider(user_id)
+        
+        title = args["title"]
+        notes = args.get("notes")
+        
+        task = await provider.create_task(title=title, notes=notes)
+        return f"Successfully added task: '{title}' to your Google Tasks."
+    except Exception as exc:
+        logger.error("Google Tasks add failed: %s", exc)
+        return f"I tried to add the task '{args['title']}' to Google Tasks, but encountered an error: {str(exc)}"
+
+
+async def _exec_list_google_tasks(args: dict, user_id: str) -> str:
+    try:
+        from providers.google.tasks import build_tasks_provider
+        provider = build_tasks_provider(user_id)
+        
+        show_completed = args.get("show_completed", False)
+        tasks = await provider.get_tasks(show_completed=show_completed)
+        
+        if not tasks:
+            return "You don't have any tasks in your main Google Tasks list."
+            
+        lines = ["Your Google Tasks:"]
+        for t in tasks[:10]:
+            status = "✓" if t.get("status") == "completed" else "○"
+            lines.append(f"{status} {t['title']}")
+            
+        return "\n".join(lines)
+    except Exception as exc:
+        logger.error("Google Tasks list failed: %s", exc)
+        return f"I tried to retrieve your Google Tasks, but encountered an error: {str(exc)}"
 
 
 async def get_upcoming_events(user_id: str, hours_ahead: int = 8) -> list[dict]:

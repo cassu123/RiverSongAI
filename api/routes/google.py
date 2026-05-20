@@ -97,6 +97,9 @@ async def get_status(
     auth = _get_google_auth()
     try:
         creds = auth.get_credentials(user_id)
+        # Attempt to get the email from the token if possible
+        # credentials objects from from_authorized_user_info don't always have email
+        # but we can try to find it in the stored file or just return True
         return {
             "connected": True,
             "expired": creds.expired,
@@ -104,6 +107,19 @@ async def get_status(
         }
     except Exception:
         return {"connected": False}
+
+
+@router.delete("/auth")
+async def disconnect_google(
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Delete the user's stored Google tokens.
+    """
+    user_id = await _require_user(authorization)
+    auth = _get_google_auth()
+    deleted = auth.delete_credentials(user_id)
+    return {"ok": True, "deleted": deleted}
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +162,49 @@ async def get_gmail_unread(
         return {"messages": messages}
     except Exception as exc:
         logger.error("Failed to fetch Gmail for %s: %s", user_id, exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Tasks
+# ---------------------------------------------------------------------------
+
+@router.get("/tasks")
+async def get_google_tasks(
+    tasklist: str = "@default",
+    authorization: Optional[str] = Header(default=None),
+):
+    user_id = await _require_user(authorization)
+    from providers.google.tasks import build_tasks_provider
+    provider = build_tasks_provider(user_id)
+    try:
+        tasks = await provider.get_tasks(tasklist_id=tasklist)
+        return {"tasks": tasks}
+    except Exception as exc:
+        logger.error("Failed to fetch Google Tasks for %s: %s", user_id, exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Books
+# ---------------------------------------------------------------------------
+
+@router.get("/books/library")
+async def get_google_books_library(
+    authorization: Optional[str] = Header(default=None),
+):
+    user_id = await _require_user(authorization)
+    from providers.google.books import get_books_provider
+    try:
+        provider = get_books_provider()
+        if not provider.is_connected(user_id):
+            return {"connected": False}
+        library = await provider.get_library(user_id)
+        import dataclasses
+        library_dicts = [dataclasses.asdict(b) for b in library]
+        return {"connected": True, "library": library_dicts}
+    except Exception as exc:
+        logger.error("Failed to fetch Google Books for %s: %s", user_id, exc)
         raise HTTPException(status_code=500, detail=str(exc))
 
 

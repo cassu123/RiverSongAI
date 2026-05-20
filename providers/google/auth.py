@@ -26,6 +26,7 @@ DEFAULT_SCOPES: List[str] = [
     "https://www.googleapis.com/auth/gmail.modify",
     "https://www.googleapis.com/auth/drive.readonly",
     "https://www.googleapis.com/auth/youtube",
+    "https://www.googleapis.com/auth/tasks",
 ]
 
 
@@ -143,6 +144,21 @@ class GoogleAuth:
             if tmp_path.exists():
                 tmp_path.unlink(missing_ok=True)
             raise
+
+    def save_credentials_from_dict(self, user_id: str, data: dict) -> None:
+        """Manually save credential data (e.g. from a login flow) to the user's token file."""
+        token_path = self._token_path(user_id)
+        # We need to ensure the scopes match what the provider expects
+        creds = Credentials.from_authorized_user_info(data, self._scopes)
+        self._save_credentials(token_path, creds)
+
+    def delete_credentials(self, user_id: str) -> bool:
+        """Delete the user's stored token file. Returns True if deleted, False if not found."""
+        token_path = self._token_path(user_id)
+        if token_path.exists():
+            token_path.unlink()
+            return True
+        return False
 
 
 def _build_google_auth_from_settings() -> "GoogleAuth":

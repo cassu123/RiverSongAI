@@ -435,6 +435,20 @@ async def google_callback(request: Request, body: GoogleCallbackBody):
 
     token = create_access_token(user_id=user["id"], email=user["email"], role=user["role"])
     logger.info("Google sign-in: %s", google_email)
+
+    # Sync tokens to service storage so AI can use Calendar/Gmail immediately
+    try:
+        from providers.google.auth import GoogleAuth
+        settings = get_settings()
+        auth = GoogleAuth(
+            client_secrets_path=settings.google_client_secrets_path,
+            token_storage_path=settings.google_token_storage_path,
+        )
+        auth.save_credentials_from_dict(user["id"], tokens)
+        logger.info("Synced Google tokens to service storage for user %s", user["id"])
+    except Exception as exc:
+        logger.warning("Failed to sync Google tokens to service storage: %s", exc)
+
     return {
         "token": token,
         "user": {"id": user["id"], "email": user["email"], "display_name": user["display_name"], "role": user["role"], "is_approved": user["is_approved"]},
