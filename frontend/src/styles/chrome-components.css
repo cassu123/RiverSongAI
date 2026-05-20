@@ -267,3 +267,141 @@
   justify-content: center !important;
   box-shadow: 0 8px 20px -6px var(--primary);
 }
+
+/* =============================================================================
+   Dashboard / Foyer Layout Classes
+   ============================================================================= */
+.rs-dashboard-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rs-card-gap);
+  margin-block-start: 32px;
+  width: 100%;
+}
+
+.rs-dashboard-flow > .rs-card {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-width: min(100%, 300px);
+  transition: opacity var(--rs-motion-mid) var(--rs-motion-curve),
+              transform var(--rs-motion-mid) var(--rs-motion-curve),
+              background var(--rs-motion-fast) var(--rs-motion-curve),
+              border-color var(--rs-motion-fast) var(--rs-motion-curve);
+}
+
+.rs-dashboard-flow > .rs-card.is-wide {
+  flex-basis: 100%;
+}
+
+@media (min-width: 768px) {
+  .rs-dashboard-flow > .rs-card.is-small {
+    flex-basis: calc(50% - var(--rs-card-gap) / 2);
+  }
+  .rs-dashboard-flow > .rs-card.is-wide {
+    flex-basis: 100%;
+  }
+}
+
+/* Card expansion and receding states */
+.rs-dashboard-flow > .rs-card.is-receding {
+  opacity: 0.25;
+  transform: scale(0.97);
+  pointer-events: none;
+  filter: blur(2px);
+}
+
+.rs-dashboard-flow > .rs-card.is-expanded {
+  flex-basis: 100% !important;
+  max-width: 100% !important;
+  background: color-mix(in srgb, var(--md-surface-container-high) 85%, transparent);
+  border-color: var(--primary);
+  box-shadow: 0 24px 64px -8px rgba(0, 0, 0, 0.7);
+  transform: scale(1.01);
+  z-index: 50;
+}
+
+/* Telemetry Card Internals */
+.rs-telemetry-container {
+  display: flex;
+  align-items: center;
+  gap: clamp(24px, 4vw, 48px);
+  flex-wrap: wrap;
+}
+
+.rs-telemetry-visual {
+  flex: 1;
+  min-width: 240px;
+}
+
+.rs-telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(16px, 3vw, 32px);
+}
+
+/* Widget wrappers */
+.rs-widget-pulse-wrapper {
+  height: 140px;
+  margin-block: 12px;
+}
+
+.rs-widget-health-wrapper {
+  padding-block: 8px;
+}
+
+/* Active Archives grid */
+.rs-archives-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.rs-archive-item {
+  border-inline-start: 1px solid var(--md-outline-variant);
+  padding-inline-start: 20px;
+}
+
+.rs-archive-message {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-block-start: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Status strip bottom placement */
+.rs-dashboard-status-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-block-start: 48px;
+  width: 100%;
+}
+
+.rs-status-divider {
+  opacity: 0.2;
+}
+
+.rs-status-time {
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+}
+
+.rs-card-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 60;
+}
+
+.rs-empty-state {
+  text-align: center;
+  padding-block: 32px;
+  color: var(--md-on-surface-variant);
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+
+

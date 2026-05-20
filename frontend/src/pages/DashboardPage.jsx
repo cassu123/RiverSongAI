@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext.jsx'
  * Futuristic "Foyer" layout. 
  * Replaces the grid-locked SaaS dashboard with a floating "Flow" of cards.
  * Uses the shared grammar defined in chrome-components.css.
+ * Supports fluid glass card expansion and interactive transitions.
  */
 
 function greeting() {
@@ -42,6 +43,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
   const [routines, setRoutines] = useState([])
   const [rooms, setRooms] = useState({})
   const [loading, setLoading] = useState(true)
+  const [expandedCard, setExpandedCard] = useState(null)
 
   // Update clock
   useEffect(() => {
@@ -111,6 +113,17 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
   const firstName = user?.display_name?.split(' ')[0] || 'Operator'
   const statusOk = !stats || stats.status === 'operational'
 
+  const toggleExpand = (cardId) => {
+    setExpandedCard(prev => prev === cardId ? null : cardId)
+  }
+
+  const getCardClasses = (cardId, baseClasses = '') => {
+    const isExpanded = expandedCard === cardId
+    const isAnyExpanded = expandedCard !== null
+    const isReceding = isAnyExpanded && !isExpanded
+    return `${baseClasses} ${isExpanded ? 'is-expanded' : ''} ${isReceding ? 'is-receding' : ''}`
+  }
+
   if (loading) return <div className="loading-screen">NEURAL LINK ACTIVE...</div>
 
   return (
@@ -122,110 +135,260 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
         <div className="rs-greeting-sub">River is standing by. Sector {stats?.sector || '7-G'} systems nominal.</div>
       </header>
 
-      {/* Main Flow (Hardened Bento Grid) */}
-      <div className="rs-card-flow">
+      {/* Main Flow (Floating Bento Layout) */}
+      <div className="rs-dashboard-flow">
 
         {/* River Core Status — High Density Telemetry */}
-        <div className="rs-card is-elev is-wide">
+        <div 
+          className={getCardClasses('telemetry', 'rs-card is-elev is-wide is-tappable')}
+          onClick={() => toggleExpand('telemetry')}
+        >
+          {expandedCard === 'telemetry' && (
+            <button 
+              className="rs-icon-btn rs-card-close" 
+              onClick={(e) => { e.stopPropagation(); setExpandedCard(null); }}
+            >
+              <span className="material-symbols-rounded">close</span>
+            </button>
+          )}
+
           <div className="rs-card-inner">
             <div className="rs-card-head">
               <span className="rs-card-label">CORE TELEMETRY</span>
               <div className="rs-status-strip">
-                <span className="rs-status-dot" style={{ background: statusOk ? '#4ade80' : '#facc15' }} />
+                <span className="rs-status-dot" style={{ color: statusOk ? 'var(--rs-status-nominal)' : 'var(--rs-status-warning)' }} />
                 <span>{statusOk ? 'ESTABLISHED' : 'DEGRADED'}</span>
               </div>
             </div>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: 48, flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: 240 }}>
+            <div className="rs-telemetry-container">
+              <div className="rs-telemetry-visual">
                 <RiverStatusBox state={loading ? 'thinking' : 'idle'} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 32 }}>
+              <div className="rs-telemetry-grid">
                 <div>
                   <div className="rs-card-label">COGNITIVE LOAD</div>
-                  <div className="rs-card-value" style={{ fontFamily: 'var(--font-mono)' }}>{stats?.memory?.facts?.toLocaleString() || '—'}</div>
+                  <div className="rs-card-value">{stats?.memory?.facts?.toLocaleString() || '—'}</div>
                   <div className="rs-card-meta">Recorded facts</div>
                 </div>
                 <div>
                   <div className="rs-card-label">UPTIME</div>
-                  <div className="rs-card-value" style={{ fontFamily: 'var(--font-mono)' }}>{stats?.uptime || '—'}</div>
+                  <div className="rs-card-value">{stats?.uptime || '—'}</div>
                   <div className="rs-card-meta">Node age</div>
                 </div>
                 <div>
                   <div className="rs-card-label">NEURAL LATENCY</div>
-                  <div className="rs-card-value" style={{ fontFamily: 'var(--font-mono)' }}>12<small style={{ fontSize: '0.6rem', opacity: 0.5, marginLeft: 4 }}>MS</small></div>
+                  <div className="rs-card-value">12<small style={{ fontSize: '0.6rem', opacity: 0.5, marginLeft: 4 }}>MS</small></div>
                   <div className="rs-card-meta">Link speed</div>
                 </div>
                 <div>
                   <div className="rs-card-label">SECTOR SYNC</div>
-                  <div className="rs-card-value" style={{ fontFamily: 'var(--font-mono)' }}>1.2<small style={{ fontSize: '0.6rem', opacity: 0.5, marginLeft: 4 }}>GB/S</small></div>
+                  <div className="rs-card-value">1.2<small style={{ fontSize: '0.6rem', opacity: 0.5, marginLeft: 4 }}>GB/S</small></div>
                   <div className="rs-card-meta">Data throughput</div>
                 </div>
               </div>
             </div>
+
+            {expandedCard === 'telemetry' && (
+              <div className="rs-card-inner animate-fade-in">
+                <div className="rs-card-label">INTEGRATED COGNITIVE SKILLS & TOOLS</div>
+                <div className="rs-archives-grid" style={{ marginTop: 16 }}>
+                  <div className="rs-archive-item">
+                    <div className="rs-card-label">GOOGLE TASKS</div>
+                    <div className="rs-health-value">ACTIVE</div>
+                    <div className="rs-health-subvalue">list_google_tasks, add_google_task</div>
+                  </div>
+                  <div className="rs-archive-item">
+                    <div className="rs-card-label">GOOGLE BOOKS</div>
+                    <div className="rs-health-value">ACTIVE</div>
+                    <div className="rs-health-subvalue">search_google_books</div>
+                  </div>
+                  <div className="rs-archive-item">
+                    <div className="rs-card-label">DREAMSCAPE ENGINE</div>
+                    <div className="rs-health-value">ACTIVE</div>
+                    <div className="rs-health-subvalue">generate_image</div>
+                  </div>
+                  <div className="rs-archive-item">
+                    <div className="rs-card-label">COGNITIVE AGENTS</div>
+                    <div className="rs-health-value">RESEARCHER, SELF</div>
+                    <div className="rs-health-subvalue">Subagent orchestrator v2.0</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Pulse / Ambient */}
-        <div className="rs-card is-tappable" onClick={() => onNavigate('feeds')}>
+        <div 
+          className={getCardClasses('pulse', 'rs-card is-tappable is-small')}
+          onClick={() => toggleExpand('pulse')}
+        >
+          {expandedCard === 'pulse' && (
+            <button 
+              className="rs-icon-btn rs-card-close" 
+              onClick={(e) => { e.stopPropagation(); setExpandedCard(null); }}
+            >
+              <span className="material-symbols-rounded">close</span>
+            </button>
+          )}
+
           <div className="rs-card-inner">
             <div className="rs-card-head">
               <span className="rs-card-label">SECTOR PULSE</span>
               <span className="material-symbols-rounded" style={{ opacity: 0.2 }}>sensors</span>
             </div>
-            <div style={{ height: 140, margin: '12px 0' }}>
+            <div className="rs-widget-pulse-wrapper">
               <PulseWidget data={stats?.pulse} />
             </div>
             <div className="rs-card-meta">Real-time activity reports</div>
+
+            {expandedCard === 'pulse' && (
+              <div className="rs-card-inner animate-fade-in">
+                <div className="rs-card-label">DETAILED ENVIRONMENT TELEMETRY</div>
+                <div className="rs-archives-grid" style={{ marginTop: 16 }}>
+                  <div className="rs-archive-item">
+                    <div className="rs-card-label">ACTIVE ROOMS</div>
+                    <div className="rs-health-value">
+                      {Object.keys(rooms).length > 0 
+                        ? Object.entries(rooms).map(([name, r]) => `${name.toUpperCase()} (${r.temperature}°C)`).join(' · ') 
+                        : 'NO ACTIVE BEACON'}
+                    </div>
+                    <div className="rs-health-subvalue">Context-aware environment sync</div>
+                  </div>
+                  <div className="rs-archive-item">
+                    <div className="rs-card-label">ROUTINES IN QUEUE</div>
+                    <div className="rs-health-value">
+                      {routines.length > 0 
+                        ? `${routines.length} ACTIVE PATTERNS` 
+                        : 'NONE CONFIGURED'}
+                    </div>
+                    <div className="rs-health-subvalue">Automatic trigger matching</div>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-6">
+                  <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('feeds'); }}>
+                    <span>Open Feeds Panel</span>
+                    <span className="material-symbols-rounded">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Maintenance / Health */}
-        <div className="rs-card is-tappable" onClick={() => onNavigate('pulse')}>
+        <div 
+          className={getCardClasses('integrity', 'rs-card is-tappable is-small')}
+          onClick={() => toggleExpand('integrity')}
+        >
+          {expandedCard === 'integrity' && (
+            <button 
+              className="rs-icon-btn rs-card-close" 
+              onClick={(e) => { e.stopPropagation(); setExpandedCard(null); }}
+            >
+              <span className="material-symbols-rounded">close</span>
+            </button>
+          )}
+
           <div className="rs-card-inner">
             <div className="rs-card-head">
               <span className="rs-card-label">SYSTEM INTEGRITY</span>
-              <span className="material-symbols-rounded" style={{ opacity: 0.2 }}>monitor_heart</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="rs-status-dot" style={{ color: statusOk ? 'var(--rs-status-nominal)' : 'var(--rs-status-warning)' }} />
+                <span className="rs-card-label" style={{ color: statusOk ? 'var(--rs-status-nominal)' : 'var(--rs-status-warning)', opacity: 1 }}>
+                  {statusOk ? 'NOMINAL' : 'DEGRADED'}
+                </span>
+              </div>
             </div>
-            <div style={{ padding: '8px 0' }}>
+            <div className="rs-widget-health-wrapper">
                <HealthCard stats={stats} />
             </div>
             <div className="rs-card-meta">Fleet & Hardware status</div>
+
+            {expandedCard === 'integrity' && (
+              <div className="flex justify-end mt-6 animate-fade-in">
+                <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('pulse'); }}>
+                  <span>Open Pulse Panel</span>
+                  <span className="material-symbols-rounded">arrow_forward</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Recent Conversations */}
-        <div className="rs-card is-wide is-tappable" onClick={() => onNavigate('memory')}>
+        <div 
+          className={getCardClasses('archives', 'rs-card is-tappable is-wide')}
+          onClick={() => toggleExpand('archives')}
+        >
+          {expandedCard === 'archives' && (
+            <button 
+              className="rs-icon-btn rs-card-close" 
+              onClick={(e) => { e.stopPropagation(); setExpandedCard(null); }}
+            >
+              <span className="material-symbols-rounded">close</span>
+            </button>
+          )}
+
           <div className="rs-card-inner">
             <div className="rs-card-head">
               <span className="rs-card-label">ACTIVE ARCHIVES</span>
               <span className="material-symbols-rounded" style={{ opacity: 0.2 }}>history</span>
             </div>
             {(!sessions || sessions.length === 0) ? (
-              <div className="rs-card-meta" style={{ padding: '24px 0', textAlign: 'center' }}>Archives empty. Start a link to begin recording.</div>
+              <div className="rs-empty-state">Archives empty. Start a link to begin recording.</div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 24 }}>
-                {sessions.slice(0, 3).map((s, i) => (
-                  <div key={i} style={{ borderLeft: '1px solid var(--md-outline-variant)', paddingLeft: 20 }}>
-                    <div className="rs-card-label" style={{ fontSize: '0.55rem' }}>{new Date(s.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                    <div style={{ fontWeight: 600, fontSize: '0.95rem', marginTop: 6, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{s.messages?.[0]?.text || 'Voice interaction'}</div>
-                    <div className="rs-card-meta" style={{ fontSize: '0.65rem' }}>{s.messages?.length || 0} MSG</div>
+              <div className="rs-archives-grid">
+                {(expandedCard === 'archives' ? sessions : sessions.slice(0, 3)).map((s, i) => (
+                  <div key={i} className="rs-archive-item">
+                    <div className="rs-card-label">{new Date(s.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    <div className="rs-archive-message">{s.messages?.[0]?.text || 'Voice interaction'}</div>
+                    <div className="rs-card-meta">{s.messages?.length || 0} MSG</div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {expandedCard === 'archives' && (
+              <div className="rs-card-inner animate-fade-in">
+                <div className="rs-card-label">RECENT KNOWLEDGE REVELATIONS & MEMORY STACKS</div>
+                <div className="rs-archives-grid" style={{ marginTop: 16 }}>
+                  {stats?.memory?.recent_facts?.length > 0 ? (
+                    stats.memory.recent_facts.map((fact, idx) => (
+                      <div key={idx} className="rs-archive-item">
+                        <div className="rs-card-label">FACT RECORD #{idx + 1}</div>
+                        <div className="rs-archive-message" style={{ WebkitLineClamp: 2 }}>{fact}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rs-archive-item">
+                      <div className="rs-card-label">FACT CORE</div>
+                      <div className="rs-health-value">SYNC COMPLETE</div>
+                      <div className="rs-health-subvalue">No recent modifications</div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-end mt-6">
+                  <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('memory'); }}>
+                    <span>Open Memory Vault</span>
+                    <span className="material-symbols-rounded">arrow_forward</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
         </div>
 
         {/* Status Strip (Bottom) */}
-        <div className="rs-card is-wide !bg-transparent !border-none !shadow-none !p-0 flex justify-center mt-12">
-          <div className="rs-status-strip" style={{ padding: '12px 28px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <span className="rs-status-dot" style={{ background: statusOk ? '#4ade80' : '#facc15' }} />
-            <span style={{ fontSize: '0.65rem', fontWeight: 900 }}>NEURAL LINK: {statusOk ? 'NOMINAL' : 'DEGRADED'}</span>
-            <span style={{ opacity: 0.2 }}>|</span>
-            <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>{date.toUpperCase()}</span>
-            <span style={{ opacity: 0.2 }}>|</span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', letterSpacing: '0.1em' }}>{time}</span>
+        <div className="rs-dashboard-status-wrapper">
+          <div className="rs-status-strip">
+            <span className="rs-status-dot" style={{ color: statusOk ? 'var(--rs-status-nominal)' : 'var(--rs-status-warning)' }} />
+            <span>NEURAL LINK: {statusOk ? 'NOMINAL' : 'DEGRADED'}</span>
+            <span className="rs-status-divider">|</span>
+            <span>{date.toUpperCase()}</span>
+            <span className="rs-status-divider">|</span>
+            <span className="rs-status-time">{time}</span>
           </div>
         </div>
 

@@ -74,6 +74,11 @@
   --rs-motion-mid:  350ms;
   --rs-motion-slow: 750ms;
   --rs-motion-curve: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Semantic Status Colors */
+  --rs-status-nominal:  #4ade80;
+  --rs-status-warning:  #facc15;
+  --rs-status-critical: #ff8b8b;
 }
 
 /* ============================================================
