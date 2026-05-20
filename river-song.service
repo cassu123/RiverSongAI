@@ -4,16 +4,14 @@ After=network.target
 
 [Service]
 Type=simple
-User=river_song
-WorkingDirectory=/home/river_song/RiverSongAI
-ExecStart=/home/river_song/RiverSongAI/venv/bin/python main.py
+User=riversong
+WorkingDirectory=/home/riversong/RiverSongAI
+ExecStart=/home/riversong/RiverSongAI/venv/bin/python main.py
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-
-# Load .env file so all your API keys and settings are available
-EnvironmentFile=/home/river_song/RiverSongAI/.env
+EnvironmentFile=/home/riversong/RiverSongAI/.env
 
 [Install]
 WantedBy=multi-user.target

@@ -47,8 +47,15 @@ python scripts/download_voices.py
 
 step "Building frontend"
 cd frontend
-rm -rf dist
-npm install --legacy-peer-deps --silent
+PKG_HASH_FILE="../.npm_package.sha256"
+NEW_PKG_HASH="$(sha256sum package.json package-lock.json 2>/dev/null | sha256sum | awk '{print $1}')"
+OLD_PKG_HASH="$(cat "$PKG_HASH_FILE" 2>/dev/null || echo '')"
+if [[ "$NEW_PKG_HASH" != "$OLD_PKG_HASH" ]]; then
+    npm install --legacy-peer-deps --silent
+    echo "$NEW_PKG_HASH" > "$PKG_HASH_FILE"
+else
+    echo "    (package.json unchanged — skipping npm install)"
+fi
 npm run build
 cd ..
 
