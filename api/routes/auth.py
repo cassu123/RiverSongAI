@@ -12,10 +12,10 @@
 from __future__ import annotations
 
 import json
+import os
 import uuid
 import logging
-import re
-import dotenv
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import bcrypt
@@ -25,6 +25,7 @@ from typing import Optional
 import httpx
 
 from core.auth import create_access_token, decode_token
+from core.errors import api_error, bad_request, conflict, forbidden, not_found, unauthorized
 from config.settings import get_settings
 from core.limiter import limiter
 
@@ -45,6 +46,10 @@ class LoginBody(BaseModel):
 
 class ChangePasswordBody(BaseModel):
     current_password: str
+    new_password: str
+
+
+class ForceChangePasswordBody(BaseModel):
     new_password: str
 
 
@@ -70,13 +75,13 @@ async def setup(request: Request, body: SetupBody):
     store = _get_store(request)
 
     if await store.has_admin():
-        raise HTTPException(status_code=409, detail="Admin account already exists.")
+        raise conflict("Admin account already exists.")
 
     if len(body.password) < 12:
-        raise HTTPException(status_code=400, detail="Password must be at least 12 characters.")
+        raise bad_request("Password must be at least 12 characters.")
 
     if await store.email_exists(body.email.lower()):
-        raise HTTPException(status_code=409, detail="An account with that email already exists.")
+        raise conflict("An account with that email already exists.")
 
     password_hash = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
     user_id = str(uuid.uuid4())
@@ -99,15 +104,15 @@ async def setup(request: Request, body: SetupBody):
 @limiter.limit(get_settings().rate_limit_auth_signup)
 async def signup(request: Request, body: SignupBody):
     if len(body.password) < 12:
-        raise HTTPException(status_code=400, detail="Password must be at least 12 characters.")
+        raise bad_request("Password must be at least 12 characters.")
 
     store = _get_store(request)
 
     if not await store.has_admin():
-        raise HTTPException(status_code=400, detail="System not yet configured. Please complete admin setup first.")
+        raise bad_request("System not yet configured. Please complete admin setup first.")
 
     if await store.email_exists(body.email.lower()):
-        raise HTTPException(status_code=409, detail="An account with that email already exists.")
+        raise conflict("An account with that email already exists.")
 
     password_hash = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
     user_id = str(uuid.uuid4())
@@ -132,19 +137,26 @@ async def login(request: Request, body: LoginBody):
     user = await store.get_user_by_email(body.email.lower())
 
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid email or password.")
+        raise unauthorized("Invalid email or password.")
 
     if not bcrypt.checkpw(body.password.encode(), user["password_hash"].encode()):
-        raise HTTPException(status_code=401, detail="Invalid email or password.")
+        raise unauthorized("Invalid email or password.")
 
     if not user["is_approved"]:
-        raise HTTPException(status_code=403, detail="Your account is pending admin approval.")
+        raise forbidden("Your account is pending admin approval.")
 
     token = create_access_token(user_id=user["id"], email=user["email"], role=user["role"])
     logger.info("User logged in: %s", body.email.replace('\n', '').replace('\r', ''))
     return {
         "token": token,
-        "user": {"id": user["id"], "email": user["email"], "display_name": user["display_name"], "role": user["role"], "is_approved": user["is_approved"]},
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "display_name": user["display_name"],
+            "role": user["role"],
+            "is_approved": user["is_approved"],
+            "force_password_change": user.get("force_password_change", False)
+        },
     }
 
 
@@ -172,40 +184,68 @@ async def logout(request: Request, authorization: Optional[str] = Header(default
 @router.get("/me")
 async def me(request: Request, authorization: Optional[str] = Header(default=None)):
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
+        raise unauthorized("Not authenticated.")
 
     token = authorization.removeprefix("Bearer ")
     payload = await decode_token(token)
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise unauthorized("Invalid or expired token.")
 
     store = _get_store(request)
     user = await store.get_user_by_id(payload["sub"])
     if not user:
-        raise HTTPException(status_code=401, detail="User not found.")
+        raise unauthorized("User not found.")
 
     return user
 
 @router.patch("/password")
 async def change_password(body: ChangePasswordBody, request: Request, authorization: Optional[str] = Header(default=None)):
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
+        raise unauthorized("Not authenticated.")
 
     token = authorization.removeprefix("Bearer ")
     payload = await decode_token(token)
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise unauthorized("Invalid or expired token.")
 
     store = _get_store(request)
     user = await store.get_user_by_id(payload["sub"])
     if not user:
-        raise HTTPException(status_code=401, detail="User not found.")
+        raise unauthorized("User not found.")
 
     if not bcrypt.checkpw(body.current_password.encode("utf-8"), user["password_hash"].encode("utf-8")):
-        raise HTTPException(status_code=401, detail="Current password is incorrect.")
+        raise unauthorized("Current password is incorrect.")
 
     new_hash = bcrypt.hashpw(body.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
     await store.update_user_password(user["id"], new_hash)
+
+    return {"status": "ok"}
+
+
+@router.post("/force-change-password")
+async def force_change_password(body: ForceChangePasswordBody, request: Request, authorization: Optional[str] = Header(default=None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise unauthorized("Not authenticated.")
+
+    token = authorization.removeprefix("Bearer ")
+    payload = await decode_token(token)
+    if not payload:
+        raise unauthorized("Invalid or expired token.")
+
+    store = _get_store(request)
+    user = await store.get_user_by_id(payload["sub"])
+    if not user:
+        raise unauthorized("User not found.")
+
+    if not user.get("force_password_change"):
+        raise bad_request("Password change not required.")
+
+    if len(body.new_password) < 12:
+        raise bad_request("Password must be at least 12 characters.")
+
+    new_hash = bcrypt.hashpw(body.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    await store.update_user_password(user["id"], new_hash)
+    logger.info("User %s completed mandatory password change", user["id"])
 
     return {"status": "ok"}
 
@@ -221,12 +261,12 @@ class IntegrationsUpdate(BaseModel):
 
 async def _require_admin(request: Request, authorization: Optional[str]) -> dict:
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
+        raise unauthorized("Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise unauthorized("Invalid or expired token.")
     if payload.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required.")
+        raise forbidden("Admin access required.")
     return payload
 
 
@@ -346,7 +386,7 @@ async def google_callback(request: Request, body: GoogleCallbackBody):
             "grant_type": "authorization_code",
         })
     if token_resp.status_code != 200:
-        raise HTTPException(status_code=400, detail="Failed to exchange Google auth code.")
+        raise bad_request("Failed to exchange Google auth code.")
     tokens = token_resp.json()
     access_token = tokens.get("access_token")
 
@@ -357,7 +397,7 @@ async def google_callback(request: Request, body: GoogleCallbackBody):
             headers={"Authorization": f"Bearer {access_token}"},
         )
     if profile_resp.status_code != 200:
-        raise HTTPException(status_code=400, detail="Failed to fetch Google profile.")
+        raise bad_request("Failed to fetch Google profile.")
     profile = profile_resp.json()
 
     google_id = profile["id"]
@@ -391,7 +431,7 @@ async def google_callback(request: Request, body: GoogleCallbackBody):
         user = await store.get_user_by_id(new_id)
 
     if not user["is_approved"]:
-        raise HTTPException(status_code=403, detail="Your account is pending admin approval.")
+        raise forbidden("Your account is pending admin approval.")
 
     token = create_access_token(user_id=user["id"], email=user["email"], role=user["role"])
     logger.info("Google sign-in: %s", google_email)
@@ -459,12 +499,12 @@ async def get_ws_ticket(request: Request, authorization: Optional[str] = Header(
     Exchange a long-lived JWT for a one-time 60s WebSocket ticket.
     """
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
+        raise unauthorized("Not authenticated.")
     
     token = authorization.removeprefix("Bearer ").strip()
     payload = await decode_token(token)
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise unauthorized("Invalid or expired token.")
     
     user_id = payload["sub"]
     settings = get_settings()
@@ -486,7 +526,7 @@ async def get_ws_ticket_kiosk(request: Request, x_kiosk_token: Optional[str] = H
     """
     settings = get_settings()
     if not x_kiosk_token or x_kiosk_token != settings.kiosk_token:
-        raise HTTPException(status_code=401, detail="Invalid kiosk token.")
+        raise unauthorized("Invalid kiosk token.")
     
     ticket = str(uuid.uuid4())
     request.app.state.ws_tickets[ticket] = {
@@ -504,10 +544,10 @@ async def get_profile(request: Request, authorization: Optional[str] = Header(de
     token = (authorization or "").removeprefix("Bearer ").strip()
     payload = await decode_token(token)
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise unauthorized("Invalid token")
     user = await store.get_user_by_id(payload["sub"])
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise not_found("User not found")
     return {
         "id": user["id"],
         "email": user["email"],
@@ -528,7 +568,7 @@ async def update_profile(body: ProfilePatch, request: Request, authorization: Op
     token = (authorization or "").removeprefix("Bearer ").strip()
     payload = await decode_token(token)
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise unauthorized("Invalid token")
     user_id = payload["sub"]
 
     # Legacy translation: if a client still sends `theme`, map it to the new triple
@@ -543,23 +583,23 @@ async def update_profile(body: ProfilePatch, request: Request, authorization: Op
 
     if body.universe is not None:
         if body.universe not in VALID_UNIVERSES:
-            raise HTTPException(status_code=400, detail=f"Invalid universe. Valid: {', '.join(sorted(VALID_UNIVERSES))}")
+            raise bad_request(f"Invalid universe. Valid: {', '.join(sorted(VALID_UNIVERSES))}")
         await store.update_user_universe(user_id, body.universe)
 
     if body.environment is not None:
         if body.environment not in VALID_ENVIRONMENTS:
-            raise HTTPException(status_code=400, detail=f"Invalid environment. Valid: {', '.join(sorted(VALID_ENVIRONMENTS))}")
+            raise bad_request(f"Invalid environment. Valid: {', '.join(sorted(VALID_ENVIRONMENTS))}")
         user_record = await store.get_user_by_id(user_id)
         current_universe = body.universe or user_record.get("universe", "dune")
         if body.environment not in UNIVERSE_ENV_PAIRS.get(current_universe, set()):
-            raise HTTPException(status_code=400, detail=f"environment '{body.environment}' is not valid under universe '{current_universe}'")
+            raise bad_request(f"environment '{body.environment}' is not valid under universe '{current_universe}'")
         await store.update_user_environment(user_id, body.environment)
 
     if body.mood is not None:
         user_record = await store.get_user_by_id(user_id)
         current_env = body.environment or user_record.get("environment", "atreides")
         if body.mood not in ENV_MOOD_PAIRS.get(current_env, set()):
-            raise HTTPException(status_code=400, detail=f"mood '{body.mood}' is not valid under environment '{current_env}'")
+            raise bad_request(f"mood '{body.mood}' is not valid under environment '{current_env}'")
         await store.update_user_mood(user_id, body.mood)
 
     user = await store.get_user_by_id(user_id)

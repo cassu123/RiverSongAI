@@ -15,6 +15,7 @@ import httpx
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from core.auth import decode_token
+from core.errors import bad_request, forbidden, not_found, unauthorized
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/location", tags=["location"])

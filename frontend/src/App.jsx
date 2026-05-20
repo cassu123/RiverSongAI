@@ -8,6 +8,7 @@ import Stage              from './chrome/Stage.jsx'
 import './styles/chrome-shell.css'
 import './styles/chrome-stage.css'
 import './styles/chrome-components.css'
+import './styles/chrome-drawer.css'
 
 // Lazy load pages
 const LoginPage          = lazy(() => import('./pages/LoginPage.jsx'))
@@ -38,6 +39,7 @@ const CulinaryPage            = lazy(() => import('./pages/CulinaryPage.jsx'))
 const EnvironmentPage         = lazy(() => import('./pages/EnvironmentPage.jsx'))
 const GoogleCallbackPage      = lazy(() => import('./pages/GoogleCallbackPage.jsx'))
 const ReadingOAuthCallbackPage = lazy(() => import('./pages/ReadingOAuthCallbackPage.jsx'))
+const ForcePasswordChangePage  = lazy(() => import('./pages/ForcePasswordChangePage.jsx'))
 
 import { ADMIN_PAGES, ALWAYS_VISIBLE } from './utils/constants.js'
 
@@ -259,6 +261,15 @@ export default function App() {
     )
   }
 
+  // Force password change lock
+  if (user?.force_password_change) {
+    return (
+      <Suspense fallback={<div className="loading-screen">LOCKING SECURITY...</div>}>
+        <ForcePasswordChangePage />
+      </Suspense>
+    )
+  }
+
   // Header context per RIVER_SONG_CHROME_PLAN.md §3:
   //   - dashboard / briefing: time-of-day greeting fragment
   //   - all other pages:      active environment name
@@ -280,17 +291,34 @@ export default function App() {
     </div>
   ) : null
 
+  const shellMode = (currentPage === 'dashboard' || currentPage === 'briefing') ? 'foyer' : 'workshop'
+
   return (
     <div className="rs-root">
       <Stage environment={environment} />
 
       <Shell
         context={headerContext}
+        mode={shellMode}
         onOpenDrawer={() => setDrawerOpen(true)}
         onOpenSpeak={() => handleNavigate('speak')}
         onHome={() => handleNavigate('dashboard')}
         action={pageAction}
         chatSidebar={chatSidebar}
+        drawer={
+          <Drawer
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            currentPage={currentPage}
+            onNavigate={handleNavigate}
+            adminMode={adminMode}
+            userIsAdmin={userIsAdmin}
+            onAdminToggle={handleAdminToggle}
+            enabledFeatures={enabledFeatures}
+            displayName={profile.displayName}
+            onLogout={logout}
+          />
+        }
       >
         <ErrorBoundary key={currentPage}>
           <Suspense fallback={<div className="loading-screen">INITIALIZING...</div>}>
@@ -322,19 +350,6 @@ export default function App() {
           </Suspense>
         </ErrorBoundary>
       </Shell>
-
-      <Drawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        currentPage={currentPage}
-        onNavigate={handleNavigate}
-        adminMode={adminMode}
-        userIsAdmin={userIsAdmin}
-        onAdminToggle={handleAdminToggle}
-        enabledFeatures={enabledFeatures}
-        displayName={profile.displayName}
-        onLogout={logout}
-      />
     </div>
   )
 }

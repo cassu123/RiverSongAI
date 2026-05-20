@@ -119,7 +119,8 @@ CREATE TABLE IF NOT EXISTS llm_settings (
     cloud_fallback_enabled  INTEGER NOT NULL DEFAULT 0,
     cloud_fallback_provider TEXT,
     cloud_fallback_model    TEXT,
-    voice_id                TEXT NOT NULL DEFAULT 'river'
+    voice_id                TEXT NOT NULL DEFAULT 'river',
+    whisper_model           TEXT NOT NULL DEFAULT 'base'
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -129,6 +130,7 @@ CREATE TABLE IF NOT EXISTS users (
     display_name  TEXT NOT NULL,
     role          TEXT NOT NULL DEFAULT 'user',
     is_approved   INTEGER NOT NULL DEFAULT 0,
+    force_password_change INTEGER NOT NULL DEFAULT 0,
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL
 );
@@ -394,6 +396,7 @@ class SQLiteStore:
             "ALTER TABLE users ADD COLUMN environment TEXT NOT NULL DEFAULT 'atreides'",
             "ALTER TABLE users ADD COLUMN universe TEXT NOT NULL DEFAULT 'dune'",
             "ALTER TABLE users ADD COLUMN mood TEXT NOT NULL DEFAULT 'caladan'",
+            "ALTER TABLE users ADD COLUMN force_password_change INTEGER NOT NULL DEFAULT 0",
             # One-time mapping: legacy palette -> universe (idempotent via default-gate)
             "UPDATE users SET universe='halo' WHERE palette='halo' AND universe='dune'",
             # One-time mapping: legacy theme -> mood (idempotent — only rewrites rows still at default)
@@ -828,6 +831,7 @@ class SQLiteStore:
             cloud_fallback_provider=row["cloud_fallback_provider"],
             cloud_fallback_model=row["cloud_fallback_model"],
             voice_id=row["voice_id"] if "voice_id" in row.keys() else "river",
+            whisper_model=row["whisper_model"] if "whisper_model" in row.keys() else "base",
         )
 
     async def save_llm_settings(self, settings: LLMSettings) -> None:
@@ -839,17 +843,18 @@ class SQLiteStore:
             """
             INSERT INTO llm_settings
                 (user_id, provider, model, cloud_fallback_enabled,
-                 cloud_fallback_provider, cloud_fallback_model, voice_id)
+                 cloud_fallback_provider, cloud_fallback_model, voice_id, whisper_model)
             VALUES
                 (:user_id, :provider, :model, :cloud_fallback_enabled,
-                 :cloud_fallback_provider, :cloud_fallback_model, :voice_id)
+                 :cloud_fallback_provider, :cloud_fallback_model, :voice_id, :whisper_model)
             ON CONFLICT(user_id) DO UPDATE SET
                 provider                = excluded.provider,
                 model                   = excluded.model,
                 cloud_fallback_enabled  = excluded.cloud_fallback_enabled,
                 cloud_fallback_provider = excluded.cloud_fallback_provider,
                 cloud_fallback_model    = excluded.cloud_fallback_model,
-                voice_id                = excluded.voice_id
+                voice_id                = excluded.voice_id,
+                whisper_model           = excluded.whisper_model
             """,
             {
                 "user_id":                 settings.user_id,
@@ -859,6 +864,7 @@ class SQLiteStore:
                 "cloud_fallback_provider": settings.cloud_fallback_provider,
                 "cloud_fallback_model":    settings.cloud_fallback_model,
                 "voice_id":                settings.voice_id,
+                "whisper_model":           settings.whisper_model,
             },
         )
         conn.commit()
@@ -1148,8 +1154,8 @@ class SQLiteStore:
         conn = self._get_conn()
         now = _now_str()
         conn.execute(
-            "INSERT INTO users (id, email, password_hash, display_name, role, is_approved, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
-            (id, email, password_hash, display_name, role, int(is_approved), now, now),
+            "INSERT INTO users (id, email, password_hash, display_name, role, is_approved, force_password_change, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+            (id, email, password_hash, display_name, role, int(is_approved), 0, now, now),
         )
         conn.commit()
 
@@ -1159,12 +1165,21 @@ class SQLiteStore:
     def _sync_get_user_by_email(self, email: str) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT id, email, password_hash, display_name, role, is_approved, created_at FROM users WHERE email=?",
+            "SELECT id, email, password_hash, display_name, role, is_approved, force_password_change, created_at FROM users WHERE email=?",
             (email,),
         ).fetchone()
         if row is None:
             return None
-        return {"id": row[0], "email": row[1], "password_hash": row[2], "display_name": row[3], "role": row[4], "is_approved": bool(row[5]), "created_at": row[6]}
+        return {
+            "id": row[0],
+            "email": row[1],
+            "password_hash": row[2],
+            "display_name": row[3],
+            "role": row[4],
+            "is_approved": bool(row[5]),
+            "force_password_change": bool(row[6]),
+            "created_at": row[7]
+        }
 
     async def get_user_by_id(self, user_id: str) -> Optional[dict]:
         return await self._run(self._sync_get_user_by_id, user_id)
@@ -1172,7 +1187,7 @@ class SQLiteStore:
     def _sync_get_user_by_id(self, user_id: str) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT id, email, display_name, role, is_approved, created_at, password_hash, theme, palette, environment, universe, mood FROM users WHERE id=?",
+            "SELECT id, email, display_name, role, is_approved, created_at, password_hash, theme, palette, environment, universe, mood, force_password_change FROM users WHERE id=?",
             (user_id,),
         ).fetchone()
         if row is None:
@@ -1190,6 +1205,7 @@ class SQLiteStore:
             "environment": row[9] or "atreides",
             "universe": row[10] or "dune",
             "mood": row[11] or "caladan",
+            "force_password_change": bool(row[12]),
         }
 
     async def update_user_theme(self, user_id: str, theme: str) -> None:
@@ -1254,14 +1270,24 @@ class SQLiteStore:
     def _sync_list_users(self) -> list:
         conn = self._get_conn()
         rows = conn.execute(
-            "SELECT id, email, display_name, role, is_approved, created_at FROM users ORDER BY created_at ASC"
+            "SELECT id, email, display_name, role, is_approved, force_password_change, created_at FROM users ORDER BY created_at ASC"
         ).fetchall()
-        return [{"id": r[0], "email": r[1], "display_name": r[2], "role": r[3], "is_approved": bool(r[4]), "created_at": r[5]} for r in rows]
+        return [
+            {
+                "id": r[0],
+                "email": r[1],
+                "display_name": r[2],
+                "role": r[3],
+                "is_approved": bool(r[4]),
+                "force_password_change": bool(r[5]),
+                "created_at": r[6]
+            } for r in rows
+        ]
 
-    async def update_user(self, user_id: str, role: Optional[str] = None, is_approved: Optional[bool] = None) -> bool:
-        return await self._run(self._sync_update_user, user_id, role, is_approved)
+    async def update_user(self, user_id: str, role: Optional[str] = None, is_approved: Optional[bool] = None, force_password_change: Optional[bool] = None) -> bool:
+        return await self._run(self._sync_update_user, user_id, role, is_approved, force_password_change)
 
-    def _sync_update_user(self, user_id: str, role: Optional[str], is_approved: Optional[bool]) -> bool:
+    def _sync_update_user(self, user_id: str, role: Optional[str], is_approved: Optional[bool], force_password_change: Optional[bool]) -> bool:
         conn = self._get_conn()
         now = _now_str()
         parts, vals = [], []
@@ -1274,6 +1300,9 @@ class SQLiteStore:
         if is_approved is not None:
             parts.append("is_approved = ?")
             vals.append(int(is_approved))
+        if force_password_change is not None:
+            parts.append("force_password_change = ?")
+            vals.append(int(force_password_change))
         if not parts:
             return False
         parts.append("updated_at = ?")
@@ -1293,7 +1322,7 @@ class SQLiteStore:
         conn = self._get_conn()
         now = _now_str()
         conn.execute(
-            "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",
+            "UPDATE users SET password_hash = ?, force_password_change = 0, updated_at = ? WHERE id = ?",
             (password_hash, now, user_id)
         )
         conn.commit()

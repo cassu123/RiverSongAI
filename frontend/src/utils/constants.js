@@ -27,18 +27,18 @@ export const NAV_GROUPS = [
     items: [
       { key: 'briefing',    label: 'Briefing',    icon: 'briefing' },
       { key: 'speak',       label: 'Speak',       icon: 'speak' },
-      { key: 'chat',        label: 'Chat',        icon: 'chat' },
       { key: 'memory',      label: 'Memory',      icon: 'memory' },
       { key: 'home',        label: 'Home Node',   icon: 'home' },
       { key: 'chronos',     label: 'CHRONOS',     icon: 'chronos' },
       { key: 'vehicles',    label: 'Pulse',       icon: 'pulse' },
-      { key: 'routines',    label: 'Routines',    icon: 'routines' },
     ]
   },
   {
     label: 'More',
     layout: 'grid',
     items: [
+      { key: 'chat',        label: 'Chat',        icon: 'chat' },
+      { key: 'routines',    label: 'Routines',    icon: 'routines' },
       { key: 'inventory',   label: 'Inventory',   icon: 'inventory' },
       { key: 'culinary',    label: 'Culinary',    icon: 'culinary' },
       { key: 'vehicles',    label: 'Garage',      icon: 'vehicles' },
@@ -67,5 +67,3 @@ export const NAV_GROUPS = [
 // because other modules import them).
 export const USER_ITEMS = NAV_GROUPS.filter(g => !g.isAdmin).flatMap(g => g.items)
 export const ADMIN_ITEMS = NAV_GROUPS.flatMap(g => g.items)
-
-

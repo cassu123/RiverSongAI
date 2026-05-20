@@ -227,6 +227,27 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+    # Global catch-all: unhandled exceptions return JSON 500 instead of HTML
+    from fastapi import Request as _Request
+    from fastapi.responses import JSONResponse as _JSONResponse
+    from fastapi.exceptions import RequestValidationError
+
+    @app.exception_handler(RequestValidationError)
+    async def _validation_error_handler(_req: _Request, exc: RequestValidationError):
+        logger.warning("Request validation error: %s", exc.errors())
+        return _JSONResponse(
+            status_code=422,
+            content={"detail": exc.errors()},
+        )
+
+    @app.exception_handler(Exception)
+    async def _unhandled_error_handler(_req: _Request, exc: Exception):
+        logger.error("Unhandled exception on %s %s: %s", _req.method, _req.url.path, exc, exc_info=True)
+        return _JSONResponse(
+            status_code=500,
+            content={"detail": "An unexpected server error occurred."},
+        )
+
     # Reject requests from unexpected hostnames (protects against Host header attacks)
     if settings.allowed_hosts != ["*"]:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)

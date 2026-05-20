@@ -12,6 +12,7 @@ import logging
 import uuid
 from typing import List, Optional
 
+import bcrypt
 from core.family_migration import migrate_member_to_family
 
 from fastapi import APIRouter, HTTPException, Request, Header
@@ -20,6 +21,7 @@ from pydantic import BaseModel
 from api.routes.features import ALL_FEATURES, ALL_FEATURE_KEYS
 
 from core.auth import decode_token
+from core.errors import bad_request, forbidden, not_found, unauthorized
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -31,18 +33,23 @@ def _get_store(request: Request):
 
 async def _require_admin(request: Request, authorization: Optional[str]) -> dict:
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
+        raise unauthorized("Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise unauthorized("Invalid or expired token.")
     if payload.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required.")
+        raise forbidden("Admin access required.")
     return payload
 
 
 class UpdateUserBody(BaseModel):
     role: Optional[str] = None
     is_approved: Optional[bool] = None
+    force_password_change: Optional[bool] = None
+
+
+class AdminChangePasswordBody(BaseModel):
+    new_password: str
 
 
 class ModelVisibilityBody(BaseModel):
@@ -70,22 +77,46 @@ async def update_user(
     payload = await _require_admin(request, authorization)
 
     if body.role is not None and body.role not in VALID_ROLES:
-        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {', '.join(VALID_ROLES)}")
+        raise bad_request(f"Invalid role. Must be one of: {', '.join(VALID_ROLES)}")
 
     # Prevent admin from demoting themselves
     if payload["sub"] == user_id and body.role and body.role != "admin":
-        raise HTTPException(status_code=400, detail="You cannot change your own role.")
+        raise bad_request("You cannot change your own role.")
 
     store = _get_store(request)
     target = await store.get_user_by_id(user_id)
     if not target:
-        raise HTTPException(status_code=404, detail="User not found.")
+        raise not_found("User not found.")
 
-    await store.update_user(user_id, role=body.role, is_approved=body.is_approved)
-    logger.info("Admin %s updated user %s: role=%s approved=%s", payload["sub"], user_id, body.role, body.is_approved)
+    await store.update_user(user_id, role=body.role, is_approved=body.is_approved, force_password_change=body.force_password_change)
+    logger.info("Admin %s updated user %s: role=%s approved=%s force_password_change=%s", payload["sub"], user_id, body.role, body.is_approved, body.force_password_change)
 
     updated = await store.get_user_by_id(user_id)
     return updated
+
+
+@router.post("/users/{user_id}/password")
+async def change_user_password(
+    user_id: str,
+    body: AdminChangePasswordBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    
+    if len(body.new_password) < 12:
+        raise bad_request("Password must be at least 12 characters.")
+
+    store = _get_store(request)
+    target = await store.get_user_by_id(user_id)
+    if not target:
+        raise not_found("User not found.")
+
+    new_hash = bcrypt.hashpw(body.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    await store.update_user_password(user_id, new_hash)
+    logger.info("Admin %s reset password for user %s", payload["sub"], user_id)
+
+    return {"success": True, "message": "Password updated successfully."}
 
 
 # =============================================================================
@@ -204,7 +235,7 @@ async def set_feature_visibility(
     # Validate keys
     invalid = [k for k in body.hidden_features if k not in ALL_FEATURE_KEYS]
     if invalid:
-        raise HTTPException(status_code=400, detail=f"Unknown feature keys: {invalid}")
+        raise bad_request(f"Unknown feature keys: {invalid}")
     store  = _get_store(request)
     config = await store.get_admin_config()
     config["hidden_features"] = body.hidden_features
@@ -246,11 +277,11 @@ async def add_family_link(
     parent = await store.get_user_by_id(body.parent_id)
     child  = await store.get_user_by_id(body.child_id)
     if not parent:
-        raise HTTPException(status_code=404, detail="Parent user not found.")
+        raise not_found("Parent user not found.")
     if not child:
-        raise HTTPException(status_code=404, detail="Child user not found.")
+        raise not_found("Child user not found.")
     if body.parent_id == body.child_id:
-        raise HTTPException(status_code=400, detail="Parent and child cannot be the same user.")
+        raise bad_request("Parent and child cannot be the same user.")
 
     await store.add_parent_child(body.parent_id, body.child_id)
 
@@ -328,7 +359,7 @@ async def create_family_group(
     payload = await _require_admin(request, authorization)
     invalid = [m for m in body.shared_modules if m not in VALID_MODULES]
     if invalid:
-        raise HTTPException(status_code=400, detail=f"Invalid modules: {invalid}")
+        raise bad_request(f"Invalid modules: {invalid}")
     store    = _get_store(request)
     group_id = str(uuid.uuid4())
     group    = await store.create_family_group(group_id, body.name.strip(), body.shared_modules)
@@ -347,11 +378,11 @@ async def update_family_group(
     if body.shared_modules is not None:
         invalid = [m for m in body.shared_modules if m not in VALID_MODULES]
         if invalid:
-            raise HTTPException(status_code=400, detail=f"Invalid modules: {invalid}")
+            raise bad_request(f"Invalid modules: {invalid}")
     store  = _get_store(request)
     result = await store.update_family_group(group_id, body.name, body.shared_modules)
     if not result:
-        raise HTTPException(status_code=404, detail="Family group not found.")
+        raise not_found("Family group not found.")
     return result
 
 
@@ -365,7 +396,7 @@ async def delete_family_group(
     store   = _get_store(request)
     group   = await store.get_family_group(group_id)
     if not group:
-        raise HTTPException(status_code=404, detail="Family group not found.")
+        raise not_found("Family group not found.")
     await store.delete_family_group(group_id)
     logger.info("Admin %s deleted family group %s", payload["sub"], group_id)
 
@@ -379,14 +410,14 @@ async def add_family_member(
 ):
     payload = await _require_admin(request, authorization)
     if body.relationship not in VALID_RELATIONS:
-        raise HTTPException(status_code=400, detail=f"Invalid relationship. Choose from: {', '.join(VALID_RELATIONS)}")
+        raise bad_request(f"Invalid relationship. Choose from: {', '.join(VALID_RELATIONS)}")
     store = _get_store(request)
     group = await store.get_family_group(group_id)
     if not group:
-        raise HTTPException(status_code=404, detail="Family group not found.")
+        raise not_found("Family group not found.")
     user = await store.get_user_by_id(body.profile_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
+        raise not_found("User not found.")
     result = await store.add_family_member(group_id, body.profile_id, body.relationship)
     logger.info("Admin %s added %s to family group %s as %s", payload["sub"], body.profile_id, group_id, body.relationship)
 

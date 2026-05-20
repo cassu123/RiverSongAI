@@ -23,6 +23,7 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from core.auth import decode_token
+from core.errors import bad_request, forbidden, not_found, unauthorized
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])

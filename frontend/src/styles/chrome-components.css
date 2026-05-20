@@ -1,36 +1,27 @@
 /* =============================================================================
    chrome-components.css — Shared futuristic grammar (rs-card, rs-pill, etc.)
    -----------------------------------------------------------------------------
-   Migrated from preview/preview.css to power Phase 3 page rewrites.
+   Hardened Spatial v2.0 Architecture.
    ============================================================================= */
 
-/* --- Tokens (Bridge between global and shell) --------------------------- */
-:root {
-  --rs-card-r:  var(--md-shape-xl);
-  --rs-pill-r:  var(--md-shape-sm);
-  --rs-motion-mid: 300ms;
-  --rs-motion-fast: 180ms;
-  --rs-motion-curve: cubic-bezier(0.2, 0, 0, 1);
-}
-
-/* --- Glass card ---------------------------------------------------------- */
+/* --- Glass card (Double-Bezel Architecture) ------------------------------ */
 .rs-card {
   container-type: inline-size;
-  background: color-mix(in srgb, var(--bg-base) 55%, transparent);
+  position: relative;
+  background: color-mix(in srgb, var(--md-surface-container-low) 45%, transparent);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--rs-card-r);
-  padding: clamp(16px, 4cqi, 28px);
-  box-shadow: var(--md-elevation-2);
+  border-radius: 2rem; /* Double-bezel outer radius */
+  padding: clamp(20px, 5cqi, 32px);
+  box-shadow: 0 8px 32px -12px rgba(0,0,0,0.5),
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.08); /* Inner refraction bezel */
   transition: background var(--rs-motion-fast) var(--rs-motion-curve),
               border-color var(--rs-motion-fast) var(--rs-motion-curve),
               transform var(--rs-motion-fast) var(--rs-motion-curve);
-  position: relative;
   overflow: hidden;
   min-width: 0;
   word-break: break-word;
-  overflow-wrap: break-word;
 }
 
 .rs-card::before {
@@ -39,103 +30,90 @@
   inset: 0;
   background: var(--card-texture);
   pointer-events: none;
-  opacity: 0.4;
+  opacity: 0.2;
+}
+
+.rs-card-inner {
+  /* Impeccable Rule: No cards-inside-cards. Use clean semantic separation instead. */
+  padding-block: 20px;
+  border-block-start: 1px solid color-mix(in srgb, var(--md-outline-variant) 40%, transparent);
+}
+
+.rs-card-inner:first-of-type {
+  border-block-start: none;
 }
 
 .rs-card.is-elev {
-  background: color-mix(in srgb, var(--bg-base) 70%, transparent);
+  background: color-mix(in srgb, var(--md-surface-container-high) 65%, transparent);
   border-color: var(--md-outline);
-  box-shadow: var(--md-elevation-4);
+  box-shadow: 0 16px 64px -16px rgba(0,0,0,0.6),
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
 }
 
 .rs-card.is-tappable { cursor: pointer; }
 .rs-card.is-tappable:active { transform: scale(0.985); }
 @media (pointer: fine) {
   .rs-card.is-tappable:hover {
-    background: color-mix(in srgb, var(--bg-base) 65%, transparent);
+    background: color-mix(in srgb, var(--md-surface-container-high) 50%, transparent);
     border-color: var(--primary);
   }
 }
 
-/* --- Dashboard Greeting -------------------------------------------------- */
-.rs-greeting {
-  font-size: clamp(2rem, 5vw, 3rem);
-  line-height: 1.1;
-  font-weight: 400;
-  margin: 0;
-  color: var(--fg);
-  font-family: var(--font-mood);
-  letter-spacing: -0.02em;
-}
-
-.rs-greeting-sub {
-  font-size: 1.1rem;
-  color: var(--md-on-surface-variant);
-  margin-block-start: 12px;
-  opacity: 0.8;
-}
-
-/* --- Flows --------------------------------------------------------------- */
-.rs-card-flow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-block-start: 32px;
-}
-.rs-card-flow > .rs-card { flex: 1 1 300px; min-width: 0; }
-.rs-card-flow > .rs-card.is-wide { flex-basis: 100%; }
-
-/* --- Card Content Grammar ------------------------------------------------ */
+/* --- Card Grammar -------------------------------------------------------- */
 .rs-card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-block-end: 16px;
-}
-.rs-card-head > * {
-  min-width: 0;
+  gap: 12px;
+  margin-block-end: 24px;
 }
 
 .rs-card-label {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: var(--rs-fs-micro);
+  font-size: 0.65rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   color: var(--md-on-surface-variant);
-  letter-spacing: 0.15em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  font-weight: 600;
-  opacity: 0.7;
+  font-weight: 800;
+  opacity: 0.6;
 }
 
 .rs-card-value {
-  font-size: 1.5rem;
-  font-weight: 400;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 800;
   color: var(--fg);
-  line-height: 1.2;
+  line-height: 1.1;
   overflow-wrap: break-word;
   min-width: 0;
+  letter-spacing: -0.03em;
 }
 
 .rs-card-meta {
-  font-size: var(--rs-fs-small);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
   color: var(--md-on-surface-variant);
-  margin-block-start: 8px;
+  margin-block-start: 12px;
   overflow-wrap: break-word;
+  opacity: 0.5;
 }
 
-/* --- Status Strip --------------------------------------------------------- */
+/* --- Status & Alerts ----------------------------------------------------- */
 .rs-status-strip {
-  padding: 12px 20px;
-  font-size: var(--rs-fs-small);
+  padding: 8px 16px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
   color: var(--md-on-surface-variant);
   background: color-mix(in srgb, var(--bg-base) 40%, transparent);
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-shape-full);
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   backdrop-filter: var(--glass-blur-sm);
 }
 
@@ -143,114 +121,149 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 10px #4ade80;
-  animation: rs-pulse 2s ease-in-out infinite;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+  animation: rs-breathing 3s infinite var(--rs-motion-curve);
 }
 
-/* --- Pills & Buttons ------------------------------------------------------ */
+@keyframes rs-breathing {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); box-shadow: 0 0 15px currentColor; }
+}
+
+/* --- Chat & Input (Spatial Command Architecture) ------------------------- */
+.rs-chat-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: color-mix(in srgb, var(--md-surface-container-low) 45%, transparent);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 2rem; /* Double-bezel outer radius */
+  padding: 16px 20px;
+  box-shadow: 0 20px 48px -12px rgba(0,0,0,0.6),
+              inset 0 1px 0 0 rgba(255,255,255,0.08);
+}
+
+.rs-chat-textarea {
+  all: unset;
+  width: 100%;
+  min-height: 48px;
+  max-height: 200px;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--fg);
+  background: color-mix(in srgb, var(--bg-base) 15%, transparent);
+  padding: 12px 16px;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255,255,255,0.04);
+  resize: none;
+  overflow-y: auto;
+  transition: border-color var(--rs-motion-fast);
+}
+
+.rs-chat-textarea:focus {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.rs-chat-textarea::placeholder {
+  color: var(--md-on-surface-variant);
+  opacity: 0.5;
+}
+
+.rs-chat-input-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.rs-chat-input-left, .rs-chat-input-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Collapse pill text labels on narrow phones — keep icons only */
+@media (max-width: 480px) {
+  .rs-speak-actions-label { display: none; }
+  .rs-chat-input-left { gap: 6px; }
+  .rs-chat-input-right { gap: 6px; }
+}
+
+/* --- Interactive Elements ------------------------------------------------ */
 .rs-pill {
   all: unset;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: color-mix(in srgb, var(--bg-base) 60%, transparent);
-  border: 1px solid var(--md-outline-variant);
+  gap: 10px;
+  padding: 10px 18px;
   border-radius: var(--md-shape-full);
-  font-size: var(--rs-fs-micro);
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  background: color-mix(in srgb, var(--md-on-surface-variant) 8%, transparent);
   color: var(--md-on-surface-variant);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
   cursor: pointer;
   transition: all var(--rs-motion-fast) var(--rs-motion-curve);
-  backdrop-filter: var(--glass-blur-sm);
-}
-
-.rs-pill:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
-  border-color: var(--md-outline);
-  color: var(--md-on-surface);
+  border: 1px solid transparent;
 }
 
 .rs-pill.is-active {
   background: var(--primary);
-  border-color: var(--primary);
   color: var(--bg-base);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 30%, transparent);
+  box-shadow: 0 4px 12px -4px var(--primary);
 }
+
+.rs-pill:hover:not(.is-active) {
+  background: color-mix(in srgb, var(--md-on-surface-variant) 15%, transparent);
+  transform: translateY(-1px);
+}
+
+.rs-pill:active { transform: scale(0.96); }
 
 .rs-btn-primary {
   all: unset;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 12px 28px;
+  padding: 14px 28px;
   background: var(--primary);
   color: var(--bg-base);
-  border-radius: var(--md-shape-lg);
-  font-family: var(--font-display);
+  border-radius: var(--md-shape-full);
+  font-weight: 800;
   font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
   cursor: pointer;
   transition: all var(--rs-motion-fast) var(--rs-motion-curve);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 25%, transparent);
+  box-shadow: 0 8px 24px -8px var(--primary);
 }
 
-.rs-btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px color-mix(in srgb, var(--primary) 35%, transparent);
-  filter: brightness(1.1);
-}
+.rs-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px -8px var(--primary); }
+.rs-btn-primary:active { transform: translateY(0) scale(0.98); }
 
-.rs-btn-primary:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.rs-btn-ghost {
-  all: unset;
-  display: inline-flex;
+.rs-icon-btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: transparent;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--md-on-surface-variant) 8%, transparent);
   color: var(--md-on-surface-variant);
-  border: 1px solid transparent;
-  border-radius: var(--md-shape-md);
-  font-size: var(--rs-fs-micro);
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
   transition: all var(--rs-motion-fast) var(--rs-motion-curve);
 }
 
-.rs-btn-ghost:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--md-on-surface-variant) 8%, transparent);
-  color: var(--md-on-surface);
+.rs-icon-btn:hover { background: var(--md-surface-container-highest); transform: scale(1.05); }
+.rs-icon-btn:active { transform: scale(0.92); }
+
+.rs-send-btn {
+  width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  box-shadow: 0 8px 20px -6px var(--primary);
 }
-
-/* --- Chat & Input -------------------------------------------------------- */
-.rs-input-bar {
-  width: 100%;
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
-@keyframes rs-pulse {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.2); }
-}
-
-
-/* --- Typographic Overrides ----------------------------------------------- */
-.rs-card-label, .rs-status-strip, .rs-pill, .rs-btn-primary, .rs-btn-ghost {
-  letter-spacing: var(--type-tracking);
-  text-transform: var(--type-case);
-}
-

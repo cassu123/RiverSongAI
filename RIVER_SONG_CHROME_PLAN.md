@@ -1,6 +1,6 @@
 # RIVER SONG — CHROME & UX DESIGN PLAN
 **Version:** 1.0  
-**Status:** Design Lock — Pre-Implementation  
+**Status:** Shipped
 **Scope:** Global chrome, chat page, dashboard, navigation, model selector, component system  
 **Stack:** React + Vite, Tailwind CSS, existing 3-axis theme system (Universe / Environment / Mood)
 

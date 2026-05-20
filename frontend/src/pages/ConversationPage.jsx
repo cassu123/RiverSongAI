@@ -275,63 +275,83 @@ export default function ConversationPage({ setAction }) {
   useEffect(() => {
     if (!setAction) return
     setAction(
-      <div className="rs-speak-actions">
-        <button
-          className={`rs-pill ${muted ? 'is-active' : ''}`}
-          onClick={handleToggleMute}
-          title={muted ? 'Unmute mic' : 'Mute mic'}
-        >
-          <span className="material-symbols-rounded">{muted ? 'mic_off' : 'mic'}</span>
-          <span className="rs-speak-actions-label">{muted ? 'Muted' : 'Live'}</span>
-        </button>
+      <div className="rs-chat-input-container">
+        {/* Row 1: Status / Text Info (Since this is voice-first, we use it for status) */}
+        <div className="rs-chat-textarea" style={{ display: 'flex', alignItems: 'center', minHeight: 40, opacity: 0.8 }}>
+          <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#6b7280', marginRight: 12 }} />
+          <span style={{ fontWeight: 600, letterSpacing: '0.1em', fontSize: '0.85rem' }}>{convState.toUpperCase()}</span>
+          {activeVoice && (
+            <span className="rs-pill" style={{ fontSize: '0.65rem', marginLeft: 12 }}>
+              <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4 }}>settings_voice</span>
+              {activeVoice.active_voice}
+            </span>
+          )}
+        </div>
 
-        <button
-          className="rs-pill"
-          onClick={() => setFamilySheetOpen(true)}
-          title="Choose AI model"
-          disabled={savingModel}
-        >
-          <span className="material-symbols-rounded">smart_toy</span>
-          <span className="rs-speak-actions-label">{savingModel ? 'Syncing…' : pickerLabel}</span>
-        </button>
+        {/* Row 2: Controls */}
+        <div className="rs-chat-input-controls">
+          <div className="rs-chat-input-left">
+            <button
+              className={`rs-pill ${muted ? 'is-active' : ''}`}
+              onClick={handleToggleMute}
+              title={muted ? 'Unmute mic' : 'Mute mic'}
+            >
+              <span className="material-symbols-rounded">{muted ? 'mic_off' : 'mic'}</span>
+              <span className="rs-speak-actions-label">{muted ? 'Muted' : 'Live'}</span>
+            </button>
 
-        <button
-          className="rs-btn-primary rs-speak-mic-btn"
-          onClick={isActive ? undefined : handleStartListening}
-          disabled={!canSpeak || muted}
-          aria-label={isActive ? convState : 'Tap to speak'}
-        >
-          <span className="material-symbols-rounded">
-            {convState === 'listening' ? 'graphic_eq'
-             : convState === 'speaking'  ? 'volume_up'
-             : convState === 'thinking'  ? 'hourglass_top'
-             : 'mic'}
-          </span>
-        </button>
+            <button
+              className={`rs-pill ${showTranscript ? 'is-active' : ''}`}
+              onClick={() => setShowTranscript(s => !s)}
+              title={showTranscript ? 'Hide transcript' : 'Show transcript'}
+            >
+              <span className="material-symbols-rounded">notes</span>
+              <span className="rs-speak-actions-label">Transcript</span>
+            </button>
+          </div>
 
-        <button
-          className={`rs-pill ${showTranscript ? 'is-active' : ''}`}
-          onClick={() => setShowTranscript(s => !s)}
-          title={showTranscript ? 'Hide transcript' : 'Show transcript'}
-        >
-          <span className="material-symbols-rounded">notes</span>
-          <span className="rs-speak-actions-label">Transcript</span>
-        </button>
+          <div className="rs-chat-input-right">
+            <button
+              className="rs-pill"
+              onClick={() => setFamilySheetOpen(true)}
+              title="Choose AI model"
+              disabled={savingModel}
+            >
+              <span className="material-symbols-rounded">smart_toy</span>
+              <span className="rs-speak-actions-label">{savingModel ? 'Syncing…' : pickerLabel}</span>
+            </button>
 
-        <button
-          className="rs-pill"
-          onClick={handleReset}
-          title="Reset session"
-        >
-          <span className="material-symbols-rounded">refresh</span>
-        </button>
+            <button
+              className="rs-btn-primary rs-icon-btn rs-send-btn"
+              onClick={isActive ? undefined : handleStartListening}
+              disabled={!canSpeak || muted}
+              aria-label={isActive ? convState : 'Tap to speak'}
+              style={{ background: 'var(--primary)', color: 'var(--bg-base)' }}
+            >
+              <span className="material-symbols-rounded" style={{ fontSize: '1.4rem' }}>
+                {convState === 'listening' ? 'stop'
+                 : convState === 'speaking'  ? 'volume_up'
+                 : convState === 'thinking'  ? 'hourglass_top'
+                 : 'mic'}
+              </span>
+            </button>
+
+            <button
+              className="rs-pill"
+              onClick={handleReset}
+              title="Reset session"
+            >
+              <span className="material-symbols-rounded">refresh</span>
+            </button>
+          </div>
+        </div>
       </div>
     )
   }, [
     muted, handleToggleMute,
     handleStartListening, canSpeak, isActive, convState,
     pickerLabel, savingModel,
-    showTranscript, handleReset, setAction,
+    showTranscript, handleReset, setAction, activeVoice,
   ])
 
   return (

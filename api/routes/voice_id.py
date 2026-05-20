@@ -6,6 +6,7 @@ Voice enrollment + identification API.
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Header, Request
 from core.auth import decode_token
+from core.errors import bad_request, forbidden, not_found, unauthorized
 from providers.voice_id.voice_id_provider import VoiceIDProvider
 
 router = APIRouter(prefix="/api/voice-id", tags=["voice-id"])

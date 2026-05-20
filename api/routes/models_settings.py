@@ -33,6 +33,8 @@ from pydantic import BaseModel
 
 from config.settings import get_settings
 from core.auth import decode_token
+from core.errors import api_error, bad_request, forbidden, not_found, unauthorized
+from core.errors import api_error, bad_request, forbidden, not_found, unauthorized
 from providers.llm.registry import LLMRegistry, ModelEntry
 from providers.memory.models import LLMSettings, MemorySettings, TTLOption
 
@@ -110,18 +112,18 @@ def _get_enabled_providers() -> dict:
 
 async def _require_user(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
+        raise unauthorized("Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise unauthorized("Invalid or expired token.")
     return payload["sub"]
 
 async def _require_admin(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
+        raise unauthorized("Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload or payload.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin role required.")
+        raise forbidden("Admin role required.")
     return payload["sub"]
 
 
@@ -182,6 +184,7 @@ class LLMSettingsBody(BaseModel):
     cloud_fallback_enabled: bool = False
     cloud_fallback_provider: Optional[str] = None
     cloud_fallback_model: Optional[str] = None
+    whisper_model: str = "base"
 
 
 @router.get("/settings/llm")
@@ -202,6 +205,7 @@ async def get_llm_settings(request: Request, authorization: Optional[str] = Head
         "cloud_fallback_enabled": s.cloud_fallback_enabled,
         "cloud_fallback_provider":s.cloud_fallback_provider,
         "cloud_fallback_model":   s.cloud_fallback_model,
+        "whisper_model":          s.whisper_model,
     }
 
 
@@ -214,20 +218,14 @@ async def save_llm_settings(
     user_id = await _require_user(authorization)
     entry = LLMRegistry.get(body.provider, body.model_id)
     if not entry:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown model '{body.model_id}' for provider '{body.provider}'. "
-                   f"Check /api/models for valid options.",
-        )
+        raise bad_request(f"Unknown model '{body.model_id}' for provider '{body.provider}'. "
+               f"Check /api/models for valid options.")
 
     if entry.is_cloud:
         enabled = _get_enabled_providers()
         if not enabled.get(body.provider, False):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Provider '{body.provider}' is not enabled or has no API key set. "
-                       f"Set {body.provider.upper()}_ENABLED=true and {body.provider.upper()}_API_KEY in .env.",
-            )
+            raise bad_request(f"Provider '{body.provider}' is not enabled or has no API key set. "
+                   f"Set {body.provider.upper()}_ENABLED=true and {body.provider.upper()}_API_KEY in .env.")
 
     memory = request.app.state.memory_manager
     settings = LLMSettings(
@@ -237,6 +235,7 @@ async def save_llm_settings(
         cloud_fallback_enabled=body.cloud_fallback_enabled,
         cloud_fallback_provider=body.cloud_fallback_provider,
         cloud_fallback_model=body.cloud_fallback_model,
+        whisper_model=body.whisper_model,
     )
     await memory.save_llm_settings(settings)
     _strip = lambda s: str(s).replace("\r", "").replace("\n", "").replace("\t", "")
@@ -324,10 +323,7 @@ async def save_memory_settings(
 ):
     user_id = await _require_user(authorization)
     if not TTLOption.is_valid(body.default_ttl):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid TTL '{body.default_ttl}'. Valid options: {TTLOption.ALL}",
-        )
+        raise bad_request(f"Invalid TTL '{body.default_ttl}'. Valid options: {TTLOption.ALL}")
 
     memory = request.app.state.memory_manager
     settings = MemorySettings(
@@ -465,7 +461,7 @@ async def set_active_voice(
 
     entry = VoiceRegistry.get(body.voice_id)
     if not entry:
-        raise HTTPException(status_code=404, detail=f"Unknown voice ID: {body.voice_id}")
+        raise not_found(f"Unknown voice ID: {body.voice_id}")
 
     # Piper voices need the .onnx file on disk
     if entry.engine == "piper":
@@ -474,11 +470,8 @@ async def set_active_voice(
             raise HTTPException(status_code=500, detail="PIPER_MODEL_PATH not configured.")
         new_piper_path = os.path.join(model_dir, entry.filename)
         if not os.path.exists(new_piper_path):
-            raise HTTPException(
-                status_code=404,
-                detail=f"{entry.display_name} is not installed. "
-                       f"Run: python scripts/download_voices.py {entry.voice_id}",
-            )
+            raise not_found(f"{entry.display_name} is not installed. "
+                   f"Run: python scripts/download_voices.py {entry.voice_id}")
 
     # Save voice_id to SQLite (same store as LLM settings)
     mm = getattr(request.app.state, "memory_manager", None)
@@ -533,7 +526,7 @@ async def save_orchestration_settings(
     # but we restrict saving to admins only for security.
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if payload.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can modify orchestration settings.")
+        raise forbidden("Only admins can modify orchestration settings.")
 
     # In a real app we might persist these to .env or a DB. 
     # For now, we update the runtime settings singleton.
@@ -564,7 +557,7 @@ async def preview_voice(
 
     entry = VoiceRegistry.get(voice_id)
     if not entry:
-        raise HTTPException(status_code=404, detail=f"Unknown voice ID: {voice_id}")
+        raise not_found(f"Unknown voice ID: {voice_id}")
 
     settings = get_settings()
 
@@ -580,17 +573,14 @@ async def preview_voice(
                 raise HTTPException(status_code=503, detail="PIPER_MODEL_PATH not configured.")
             model_path = os.path.join(model_dir, entry.filename)
             if not os.path.exists(model_path):
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"{entry.display_name} is not installed. "
-                           f"Run: python scripts/download_voices.py {entry.voice_id}",
-                )
+                raise not_found(f"{entry.display_name} is not installed. "
+                       f"Run: python scripts/download_voices.py {entry.voice_id}")
             from providers.tts.piper import PiperTTS
             # Override the model path for this preview only
             provider = PiperTTS(model_path_override=model_path)
 
         else:
-            raise HTTPException(status_code=400, detail=f"Unsupported engine: {entry.engine}")
+            raise bad_request(f"Unsupported engine: {entry.engine}")
 
         wav_bytes = await provider.synthesize(entry.preview_text)
 

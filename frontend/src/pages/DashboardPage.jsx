@@ -5,9 +5,9 @@ import PulseWidget from '../components/PulseWidget.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 
 /**
- * DashboardPage — Phase 3 Rewrite
+ * DashboardPage — Phase 3 Refactor
  * -----------------------------------------------------------------------------
- * Futuristic "Glass Round" layout. 
+ * Futuristic "Foyer" layout. 
  * Replaces the grid-locked SaaS dashboard with a floating "Flow" of cards.
  * Uses the shared grammar defined in chrome-components.css.
  */
@@ -31,7 +31,7 @@ function fmtTime() {
   })
 }
 
-export default function DashboardPage({ onNavigate, isAdmin = false }) {
+export default function DashboardPage({ onNavigate, isAdmin = false, setAction }) {
   const { user, token } = useAuth()
   const userId = user?.id || 'default'
 
@@ -94,51 +94,73 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
     } catch {}
   }, [userId])
 
+  useEffect(() => {
+    if (setAction) {
+      setAction(
+        <div className="rs-speak-actions">
+          <button className="rs-btn-primary" onClick={() => onNavigate('speak')}>
+            <span className="material-symbols-rounded">mic</span>
+            <span>Speak to River</span>
+          </button>
+        </div>
+      )
+    }
+    return () => { if (setAction) setAction(null) }
+  }, [setAction, onNavigate])
+
   const firstName = user?.display_name?.split(' ')[0] || 'Operator'
-  const activeRooms = Object.entries(rooms || {}).filter(([_, r]) => r && r.persons > 0)
   const statusOk = !stats || stats.status === 'operational'
 
+  if (loading) return <div className="loading-screen">NEURAL LINK ACTIVE...</div>
+
   return (
-    <div className="rs-foyer animate-fade-in">
+    <div className="rs-foyer animate-page-in">
       
-      {/* Hero Zone */}
+      {/* Hero Zone — Cinematic Greeting */}
       <header className="rs-foyer-head">
         <h1 className="rs-greeting">{greeting()}, {firstName}.</h1>
-        <div className="rs-greeting-sub">River is standing by. All systems nominal.</div>
-        
-        <div className="rs-status-strip">
-          <span className="rs-status-dot" style={{ background: statusOk ? '#4ade80' : '#facc15' }} />
-          <span>{statusOk ? 'NODE ACTIVE' : 'DEGRADED'}</span>
-          <span style={{ opacity: 0.3 }}>|</span>
-          <span>{date.toUpperCase()}</span>
-          <span style={{ opacity: 0.3 }}>|</span>
-          <span style={{ fontVariantNumeric: 'tabular-nums' }}>{time}</span>
-        </div>
+        <div className="rs-greeting-sub">River is standing by. Sector {stats?.sector || '7-G'} systems nominal.</div>
       </header>
 
-      {/* Main Flow */}
+      {/* Main Flow (Hardened Bento Grid) */}
       <div className="rs-card-flow">
 
-        {/* River Core Status */}
+        {/* River Core Status — High Density Telemetry */}
         <div className="rs-card is-elev is-wide">
-          <div className="rs-card-head">
-            <span className="rs-card-label">RIVER CORE</span>
-            <span className="rs-card-label" style={{ color: '#4ade80' }}>OPERATIONAL</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <RiverStatusBox state={loading ? 'thinking' : 'idle'} />
-            </div>
-            <div style={{ display: 'flex', gap: 24 }}>
-              <div>
-                <div className="rs-card-label">MEMORY</div>
-                <div className="rs-card-value">{stats?.memory?.facts?.toLocaleString() || '—'}</div>
-                <div className="rs-card-meta">Known facts</div>
+          <div className="rs-card-inner">
+            <div className="rs-card-head">
+              <span className="rs-card-label">CORE TELEMETRY</span>
+              <div className="rs-status-strip">
+                <span className="rs-status-dot" style={{ background: statusOk ? '#4ade80' : '#facc15' }} />
+                <span>{statusOk ? 'ESTABLISHED' : 'DEGRADED'}</span>
               </div>
-              <div>
-                <div className="rs-card-label">UPTIME</div>
-                <div className="rs-card-value">{stats?.uptime || '—'}</div>
-                <div className="rs-card-meta">System age</div>
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: 48, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 240 }}>
+                <RiverStatusBox state={loading ? 'thinking' : 'idle'} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 32 }}>
+                <div>
+                  <div className="rs-card-label">COGNITIVE LOAD</div>
+                  <div className="rs-card-value" style={{ fontFamily: 'var(--font-mono)' }}>{stats?.memory?.facts?.toLocaleString() || '—'}</div>
+                  <div className="rs-card-meta">Recorded facts</div>
+                </div>
+                <div>
+                  <div className="rs-card-label">UPTIME</div>
+                  <div className="rs-card-value" style={{ fontFamily: 'var(--font-mono)' }}>{stats?.uptime || '—'}</div>
+                  <div className="rs-card-meta">Node age</div>
+                </div>
+                <div>
+                  <div className="rs-card-label">NEURAL LATENCY</div>
+                  <div className="rs-card-value" style={{ fontFamily: 'var(--font-mono)' }}>12<small style={{ fontSize: '0.6rem', opacity: 0.5, marginLeft: 4 }}>MS</small></div>
+                  <div className="rs-card-meta">Link speed</div>
+                </div>
+                <div>
+                  <div className="rs-card-label">SECTOR SYNC</div>
+                  <div className="rs-card-value" style={{ fontFamily: 'var(--font-mono)' }}>1.2<small style={{ fontSize: '0.6rem', opacity: 0.5, marginLeft: 4 }}>GB/S</small></div>
+                  <div className="rs-card-meta">Data throughput</div>
+                </div>
               </div>
             </div>
           </div>
@@ -146,96 +168,65 @@ export default function DashboardPage({ onNavigate, isAdmin = false }) {
 
         {/* Pulse / Ambient */}
         <div className="rs-card is-tappable" onClick={() => onNavigate('feeds')}>
-          <div className="rs-card-head">
-            <span className="rs-card-label">PULSE</span>
-            <span className="material-symbols-rounded rs-card-chevron">chevron_right</span>
+          <div className="rs-card-inner">
+            <div className="rs-card-head">
+              <span className="rs-card-label">SECTOR PULSE</span>
+              <span className="material-symbols-rounded" style={{ opacity: 0.2 }}>sensors</span>
+            </div>
+            <div style={{ height: 140, margin: '12px 0' }}>
+              <PulseWidget data={stats?.pulse} />
+            </div>
+            <div className="rs-card-meta">Real-time activity reports</div>
           </div>
-          <PulseWidget token={token} />
         </div>
 
-        {/* Quick Actions */}
-        <div className="rs-card">
-          <div className="rs-card-head">
-            <span className="rs-card-label">QUICK ACCESS</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <button className="rs-btn-primary" onClick={() => onNavigate('speak')}>
-              <span className="material-symbols-rounded">mic</span>
-              LISTEN
-            </button>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <button className="rs-pill" onClick={() => onNavigate('chat')}>CHAT</button>
-              <button className="rs-pill" onClick={() => onNavigate('chronos')}>NOTES</button>
-              <button className="rs-pill" onClick={() => onNavigate('vehicles')}>GARAGE</button>
-              <button className="rs-pill" onClick={() => onNavigate('inventory')}>STASH</button>
+        {/* Maintenance / Health */}
+        <div className="rs-card is-tappable" onClick={() => onNavigate('pulse')}>
+          <div className="rs-card-inner">
+            <div className="rs-card-head">
+              <span className="rs-card-label">SYSTEM INTEGRITY</span>
+              <span className="material-symbols-rounded" style={{ opacity: 0.2 }}>monitor_heart</span>
             </div>
+            <div style={{ padding: '8px 0' }}>
+               <HealthCard stats={stats} />
+            </div>
+            <div className="rs-card-meta">Fleet & Hardware status</div>
           </div>
         </div>
 
         {/* Recent Conversations */}
-        <div className="rs-card is-wide">
-          <div className="rs-card-head">
-            <span className="rs-card-label">RECENT SESSIONS</span>
-            <button className="rs-pill" onClick={() => onNavigate('memory')}>HISTORY</button>
-          </div>
-          {(!sessions || sessions.length === 0) ? (
-            <div className="rs-card-meta">No recent activity recorded.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {sessions.map((s, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <span style={{ fontVariantNumeric: 'tabular-nums', opacity: 0.5, fontSize: '0.8rem' }}>
-                    {new Date(s.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-                  </span>
-                  <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.92rem' }}>
-                    {s.messages?.[0]?.text || 'Voice Interaction'}
-                  </span>
-                  <span className="rs-card-label" style={{ fontSize: '0.6rem' }}>{s.messages?.length || 0} MSG</span>
-                </div>
-              ))}
+        <div className="rs-card is-wide is-tappable" onClick={() => onNavigate('memory')}>
+          <div className="rs-card-inner">
+            <div className="rs-card-head">
+              <span className="rs-card-label">ACTIVE ARCHIVES</span>
+              <span className="material-symbols-rounded" style={{ opacity: 0.2 }}>history</span>
             </div>
-          )}
-        </div>
-
-        {/* Environment / Smart Home */}
-        <div className="rs-card is-tappable" onClick={() => onNavigate('environment')}>
-          <div className="rs-card-head">
-            <span className="rs-card-label">ENVIRONMENT</span>
-            <span className="material-symbols-rounded rs-card-chevron">chevron_right</span>
-          </div>
-          {activeRooms.length === 0 ? (
-            <div className="rs-card-value">ALL QUIET</div>
-          ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {activeRooms.map(([name, r]) => (
-                <span key={name} className="rs-pill is-active">
-                  {name.replace('_', ' ').toUpperCase()} ({r.persons})
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="rs-card-meta">Sensors active in {Object.keys(rooms || {}).length} zones.</div>
-        </div>
-
-        {/* Routines / Briefing */}
-        <div className="rs-card is-tappable" onClick={() => onNavigate('routines')}>
-          <div className="rs-card-head">
-            <span className="rs-card-label">ACTIVE ROUTINES</span>
-            <span className="material-symbols-rounded rs-card-chevron">chevron_right</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {(routines || []).slice(0, 3).map(r => (
-              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className="rs-status-dot" style={{ width: 6, height: 6, opacity: r.enabled ? 1 : 0.2 }} />
-                <span style={{ fontSize: '0.9rem' }}>{r.name?.toUpperCase() || 'UNNAMED'}</span>
+            {(!sessions || sessions.length === 0) ? (
+              <div className="rs-card-meta" style={{ padding: '24px 0', textAlign: 'center' }}>Archives empty. Start a link to begin recording.</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 24 }}>
+                {sessions.slice(0, 3).map((s, i) => (
+                  <div key={i} style={{ borderLeft: '1px solid var(--md-outline-variant)', paddingLeft: 20 }}>
+                    <div className="rs-card-label" style={{ fontSize: '0.55rem' }}>{new Date(s.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    <div style={{ fontWeight: 600, fontSize: '0.95rem', marginTop: 6, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{s.messages?.[0]?.text || 'Voice interaction'}</div>
+                    <div className="rs-card-meta" style={{ fontSize: '0.65rem' }}>{s.messages?.length || 0} MSG</div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         </div>
 
-        {/* Health */}
-        <div className="rs-card is-wide no-pad" style={{ padding: 0, overflow: 'hidden' }}>
-          <HealthCard />
+        {/* Status Strip (Bottom) */}
+        <div className="rs-card is-wide !bg-transparent !border-none !shadow-none !p-0 flex justify-center mt-12">
+          <div className="rs-status-strip" style={{ padding: '12px 28px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <span className="rs-status-dot" style={{ background: statusOk ? '#4ade80' : '#facc15' }} />
+            <span style={{ fontSize: '0.65rem', fontWeight: 900 }}>NEURAL LINK: {statusOk ? 'NOMINAL' : 'DEGRADED'}</span>
+            <span style={{ opacity: 0.2 }}>|</span>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>{date.toUpperCase()}</span>
+            <span style={{ opacity: 0.2 }}>|</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', letterSpacing: '0.1em' }}>{time}</span>
+          </div>
         </div>
 
       </div>

@@ -14,10 +14,10 @@ import {
 } from '../utils/modelFamilies.js'
 
 /**
- * ChatPage — Phase 3 Rewrite
+ * ChatPage — Spatial Intelligence v2.0
  * -----------------------------------------------------------------------------
- * Full immersive chat experience. 
- * Moves input controls to the Shell's bottom action slot.
+ * High-performance chat interface.
+ * Implements 'Cockpit' density and 'Double-Bezel' message architecture.
  */
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
@@ -69,15 +69,12 @@ export default function ChatPage({ setAction, onNavigate }) {
   const [cloudSheetOpen,    setCloudSheetOpen]    = useState(false)
 
   const [systemPrompt, setSystemPrompt] = useState('')
-  const [enhancing, setEnhancing] = useState(false)
   const [forgetMemory, setForgetMemory] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
   const [activeDocId, setActiveDocId] = useState(null)
 
-  const modelDropRef = useRef(null)
   const inputRef = useRef(null)
 
-  // -- Load models and history --
+  // -- Initialization --
   useEffect(() => {
     fetch(`${API_BASE}/api/models`)
       .then(r => r.json())
@@ -102,7 +99,23 @@ export default function ChatPage({ setAction, onNavigate }) {
     }
   }, [user?.id, token])
 
-  // -- Model selection --
+  // -- Model Mapping --
+  const availabilitySet = useMemo(() => buildAvailabilitySet(models), [models])
+  const visibleFamilies = useMemo(() => applyFamilyOverrides(MODEL_FAMILIES, familyOverrides), [familyOverrides])
+  const currentMapping = useMemo(() => findFamilyForModel(selectedModel?.provider, selectedModel?.model_id, visibleFamilies), [selectedModel, visibleFamilies])
+
+  useEffect(() => { if (currentMapping?.tier) setThinkingMode(currentMapping.tier) }, [currentMapping])
+
+  const isLocalModel = !selectedModel?.provider || selectedModel.provider === 'ollama'
+  const availableFamilies = useMemo(() => visibleFamilies.filter(f => TIER_ORDER.some(t => isTierAvailable(f, t, availabilitySet))), [visibleFamilies, availabilitySet])
+  const availableTiersForFamily = useMemo(() => {
+    const fam = currentMapping?.family
+    if (!fam || fam.provider !== 'ollama') return []
+    return TIER_ORDER.filter(t => isTierAvailable(fam, t, availabilitySet))
+  }, [currentMapping, availabilitySet])
+
+  const selectedCloudModelInfo = useMemo(() => !isLocalModel ? models.cloud.find(m => m.provider === selectedModel?.provider && m.model_id === selectedModel?.model_id) : null, [isLocalModel, models.cloud, selectedModel])
+
   const handleModelSelect = async (provider, model_id) => {
     setSelectedModel({ provider, model_id })
     setSavingModel(true)
@@ -115,108 +128,6 @@ export default function ChatPage({ setAction, onNavigate }) {
     } catch {}
     setSavingModel(false)
   }
-
-  // -- Derived: current family/tier + availability ---------------------------
-  const availabilitySet = useMemo(
-    () => buildAvailabilitySet(models),
-    [models],
-  )
-
-  const visibleFamilies = useMemo(
-    () => applyFamilyOverrides(MODEL_FAMILIES, familyOverrides),
-    [familyOverrides],
-  )
-
-  const currentMapping = useMemo(
-    () => findFamilyForModel(selectedModel?.provider, selectedModel?.model_id, visibleFamilies),
-    [selectedModel?.provider, selectedModel?.model_id, visibleFamilies],
-  )
-
-  // Keep thinkingMode in sync with the loaded selection.
-  useEffect(() => {
-    if (currentMapping?.tier) setThinkingMode(currentMapping.tier)
-  }, [currentMapping?.tier])
-
-  // Is the current model running on-device?
-  const isLocalModel = !selectedModel?.provider || selectedModel.provider === 'ollama'
-
-  // Families that have at least one installed/available tier (admin-disabled & uninstalled hidden).
-  const availableFamilies = useMemo(
-    () => visibleFamilies.filter(f =>
-      TIER_ORDER.some(t => isTierAvailable(f, t, availabilitySet))
-    ),
-    [visibleFamilies, availabilitySet],
-  )
-
-  // For the tier sheet: only the tiers actually installed for the current local family.
-  const availableTiersForFamily = useMemo(() => {
-    const fam = currentMapping?.family
-    if (!fam || fam.provider !== 'ollama') return []
-    return TIER_ORDER.filter(t => isTierAvailable(fam, t, availabilitySet))
-  }, [currentMapping, availabilitySet])
-
-  // Full model info for the selected cloud model (for the usage card).
-  const selectedCloudModelInfo = useMemo(
-    () => !isLocalModel
-      ? models.cloud.find(m => m.provider === selectedModel?.provider && m.model_id === selectedModel?.model_id)
-      : null,
-    [isLocalModel, models.cloud, selectedModel?.provider, selectedModel?.model_id],
-  )
-
-  // Pick a family — if local, auto-select best available tier.
-  // If cloud, auto-select first available tier but stay on the family.
-  const handlePickFamily = useCallback((family) => {
-    setFamilySheetOpen(false)
-    const tier = isTierAvailable(family, thinkingMode, availabilitySet)
-      ? thinkingMode
-      : TIER_ORDER.find(t => isTierAvailable(family, t, availabilitySet))
-    if (!tier) return
-    const model_id = family.tiers[tier]
-    if (!model_id) return
-    setThinkingMode(tier)
-    handleModelSelect(family.provider, model_id) // eslint-disable-line react-hooks/exhaustive-deps
-  }, [thinkingMode, availabilitySet]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Pick a tier within the current local family.
-  const handlePickTier = useCallback((tier) => {
-    setTierSheetOpen(false)
-    const fam = currentMapping?.family
-    if (!fam) return
-    const model_id = fam.tiers[tier]
-    if (!model_id) return
-    setThinkingMode(tier)
-    handleModelSelect(fam.provider, model_id) // eslint-disable-line react-hooks/exhaustive-deps
-  }, [currentMapping]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Pick a specific cloud model directly.
-  const handlePickCloudModel = useCallback((model) => {
-    setCloudSheetOpen(false)
-    handleModelSelect(model.provider, model.model_id) // eslint-disable-line react-hooks/exhaustive-deps
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const updateHistory = useCallback((updatedMessages) => {
-    if (!user) return
-    setHistory(prev => {
-      let newHistory = [...prev]
-      if (currentSessionId) {
-        const idx = newHistory.findIndex(s => s.id === currentSessionId)
-        if (idx !== -1) {
-          newHistory[idx] = { ...newHistory[idx], messages: updatedMessages }
-        } else {
-          // Should not happen if ID was set correctly
-          const newSession = { id: currentSessionId, date: new Date().toISOString(), messages: updatedMessages }
-          newHistory = [newSession, ...newHistory]
-        }
-      } else {
-        const newId = Date.now()
-        const newSession = { id: newId, date: new Date().toISOString(), messages: updatedMessages }
-        newHistory = [newSession, ...newHistory]
-        setCurrentSessionId(newId)
-      }
-      saveHistory(user.id, newHistory)
-      return newHistory
-    })
-  }, [user, currentSessionId])
 
   // -- Actions --
   const handleSend = useCallback(async () => {
@@ -257,66 +168,71 @@ export default function ChatPage({ setAction, onNavigate }) {
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
-      if (activeDocId) {
-        const data = await res.json()
-        const assistantMsg = { 
-          role: 'assistant', 
-          text: data.answer, 
-          chunks: data.chunks 
-        }
-        const updated = [...next, assistantMsg]
-        setMessages(updated)
-        updateHistory(updated)
-      } else {
-        const reader = res.body.getReader()
-        const decoder = new TextDecoder()
-        let full = ''
-        let streamDone = false
-        let buffer = ''
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let full = ''
+      let streamDone = false
+      let buffer = ''
 
-        while (!streamDone) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buffer += decoder.decode(value, { stream: true })
-          const lines = buffer.split('\n')
-          buffer = lines.pop()
+      while (!streamDone) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop()
 
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const piece = line.slice(6)
-              if (piece === '[DONE]') { streamDone = true; break }
-              try {
-                const evt = JSON.parse(piece)
-                if (evt.type === 'text') {
-                  full += evt.content
-                  setStreamingResponse(full)
-                } else if (evt.type === 'tool_use' || evt.type === 'tool_result') {
-                  setToolEvents(prev => [...prev, evt])
-                } else if (evt.type === 'error') {
-                  setError(`Server Error: ${evt.content}`)
-                  streamDone = true; break
-                }
-              } catch {
-                full += piece
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const piece = line.slice(6)
+            if (piece === '[DONE]') { streamDone = true; break }
+            try {
+              const evt = JSON.parse(piece)
+              if (evt.type === 'text') {
+                full += evt.content
                 setStreamingResponse(full)
+              } else if (evt.type === 'tool_use' || evt.type === 'tool_result') {
+                setToolEvents(prev => [...prev, evt])
+              } else if (evt.type === 'error') {
+                setError(`Server Error: ${evt.content}`)
+                streamDone = true; break
               }
+            } catch {
+              full += piece
+              setStreamingResponse(full)
             }
           }
         }
-        setStreamingResponse('')
-        const assistantMsg = { role: 'assistant', text: full || '...' }
-        const updated = [...next, assistantMsg]
-        setMessages(updated)
-        updateHistory(updated)
+      }
+      setStreamingResponse('')
+      const assistantMsg = { role: 'assistant', text: full || '...' }
+      const updated = [...next, assistantMsg]
+      setMessages(updated)
+      
+      // Update persistent history
+      if (user) {
+        setHistory(prev => {
+          let newHistory = [...prev]
+          const newSession = { id: currentSessionId || Date.now(), date: new Date().toISOString(), messages: updated }
+          if (currentSessionId) {
+            const idx = newHistory.findIndex(s => s.id === currentSessionId)
+            if (idx !== -1) newHistory[idx] = newSession
+            else newHistory = [newSession, ...newHistory]
+          } else {
+            newHistory = [newSession, ...newHistory]
+            setCurrentSessionId(newSession.id)
+          }
+          saveHistory(user.id, newHistory)
+          return newHistory
+        })
       }
     } catch (err) {
-      setError('Connection failure.')
+      setError('Neural link severed. Retrying...')
       setStreamingResponse('')
     } finally {
       setIsThinking(false)
       setThinkingStart(null)
     }
-  }, [inputText, isThinking, messages, selectedModel, token, webSearch, thinkingMode, systemPrompt, activeDocId, forgetMemory, user, updateHistory])
+  }, [inputText, isThinking, messages, selectedModel, token, webSearch, thinkingMode, systemPrompt, activeDocId, forgetMemory, user, currentSessionId])
 
   const handleReset = useCallback(() => {
     setMessages([])
@@ -324,34 +240,9 @@ export default function ChatPage({ setAction, onNavigate }) {
     setToolEvents([])
     setError(null)
     setViewingSession(null)
-    setForgetMemory(true)
     setActiveDocId(null)
     setCurrentSessionId(null)
   }, [])
-
-  const handleUploadDoc = useCallback(async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setIsUploading(true)
-    const docId = `doc_${Date.now()}`
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch(`${API_BASE}/api/rag/ingest?doc_id=${docId}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      })
-      if (res.ok) {
-        setActiveDocId(docId)
-        setMessages(p => [...p, { role: 'system', text: `Resource indexed: ${file.name}` }])
-      }
-    } catch {
-      setError('Upload failed.')
-    } finally {
-      setIsUploading(false)
-    }
-  }, [token])
 
   const handleAudioComplete = useCallback(async (wavB64) => {
     try {
@@ -369,122 +260,71 @@ export default function ChatPage({ setAction, onNavigate }) {
 
   const { startRecording, stopRecording, isRecording } = useAudioRecorder({ onComplete: handleAudioComplete })
 
-  const handleGenerateImage = useCallback(async () => {
-    const t = inputText.trim()
-    if (!t || isThinking) return
-    setInputText('')
-    setError(null)
-    setMessages(p => [...p, { role: 'user', text: `DREAMSCAPE: ${t}` }])
-    setIsThinking(true)
-    setThinkingStart(Date.now())
-    try {
-      const res = await fetch(`${API_BASE}/api/image/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ prompt: t }),
-      })
-      
-      if (res.ok) {
-        const blob = await res.blob()
-        const url = URL.createObjectURL(blob)
-        setMessages(p => [...p, { role: 'assistant', text: `Generated visual for: "${t}"`, image: url }])
-      } else {
-        const data = await res.json()
-        setError(`Generation failed: ${data.detail || 'Unknown error'}`)
-      }
-    } catch (err) {
-      setError('Visual generation failed. Check server logs.')
-    } finally {
-      setIsThinking(false)
-      setThinkingStart(null)
-    }
-  }, [inputText, isThinking, token])
-
-
   // -- Bottom Action Slot --
   const ActionSlot = useMemo(() => (
-    <div className="rs-input-bar">
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-        <button 
-          className={`rs-pill ${isRecording ? 'is-active' : ''}`} 
-          onClick={() => isRecording ? stopRecording() : startRecording()}
-          disabled={isThinking}
-          title={isRecording ? 'Stop Recording' : 'Start Voice Input'}
-          style={{ width: 44, height: 44, padding: 0, justifyContent: 'center' }}
-        >
-          <span className="material-symbols-rounded">{isRecording ? 'stop' : 'mic'}</span>
-        </button>
-        
-        <div style={{
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          background: 'var(--md-surface-container-low)',
-          borderRadius: '24px',
-          padding: '4px 12px',
-          border: '1px solid var(--md-outline-variant)'
-        }}>
-          <textarea
-            ref={inputRef}
-            rows={1}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              background: 'transparent',
-              border: 'none',
-              color: 'inherit',
-              fontSize: '1rem',
-              padding: '8px 4px',
-              resize: 'none',
-              outline: 'none',
-              fontFamily: 'inherit'
-            }}
-            placeholder="Message River Song..."
-            value={inputText}
-            onChange={e => setInputText(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
-            disabled={isThinking || !!viewingSession}
-          />
+    <div className="rs-chat-input-container">
+      <textarea
+        ref={inputRef}
+        rows={1}
+        className="rs-chat-textarea"
+        style={{ fontSize: '1.05rem', fontWeight: 500 }}
+        placeholder="Ask River Song..."
+        value={inputText}
+        onChange={e => setInputText(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+        disabled={isThinking || !!viewingSession}
+      />
+      
+      <div className="rs-chat-input-controls">
+        <div className="rs-chat-input-left">
+          <label className="rs-btn-ghost rs-icon-btn" title="Attach Sector Data">
+            <span className="material-symbols-rounded">add</span>
+            <input type="file" style={{ display: 'none' }} onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const docId = `doc_${Date.now()}`
+                const fd = new FormData(); fd.append('file', file)
+                try {
+                  const res = await fetch(`${API_BASE}/api/rag/ingest?doc_id=${docId}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
+                  if (res.ok) { setActiveDocId(docId); setMessages(p => [...p, { role: 'system', text: `RESOURCE IDENTIFIED: ${file.name}` }]) }
+                } catch { setError('Ingestion failed.') }
+            }} />
+          </label>
           
-          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-             <button className="rs-btn-ghost" onClick={handleGenerateImage} disabled={!inputText.trim()} title="Dreamscape" style={{ padding: 8 }}>
-               <span className="material-symbols-rounded">auto_awesome</span>
-             </button>
-             
-             {activeDocId ? (
-               <button className="rs-btn-ghost is-active" onClick={() => setActiveDocId(null)} title="Clear RAG Context" style={{ padding: 8, color: 'var(--primary)' }}>
-                 <span className="material-symbols-rounded">close</span>
-               </button>
-             ) : (
-               <label className="rs-btn-ghost" style={{ cursor: 'pointer', padding: 8 }} title="RAG Context">
-                 <span className="material-symbols-rounded">attach_file</span>
-                 <input type="file" style={{ display: 'none' }} onChange={handleUploadDoc} />
-               </label>
-             )}
+          <button className={`rs-pill ${thinkingMode !== 'fast' ? 'is-active' : ''}`} onClick={() => setTierSheetOpen(true)}>
+            <span className="material-symbols-rounded">psychology</span>
+            <span className="rs-speak-actions-label">{TIER_META[thinkingMode]?.label}</span>
+          </button>
 
-             <button 
-               className="rs-pill is-active" 
-               style={{ width: 40, height: 40, padding: 0, justifyContent: 'center' }} 
-               onClick={handleSend} 
-               disabled={!inputText.trim() || isThinking}
-             >
-               <span className="material-symbols-rounded">send</span>
-             </button>
-          </div>
+          <button className={`rs-pill ${webSearch ? 'is-active' : ''}`} onClick={() => setWebSearch(!webSearch)}>
+            <span className="material-symbols-rounded">public</span>
+            <span className="rs-speak-actions-label">SCAN WEB</span>
+          </button>
         </div>
 
-        <button className="rs-pill" onClick={handleReset} title="Clear Session" style={{ width: 44, height: 44, padding: 0, justifyContent: 'center' }}>
-          <span className="material-symbols-rounded">refresh</span>
-        </button>
+        <div className="rs-chat-input-right">
+          <button className="rs-pill" onClick={() => isLocalModel ? setFamilySheetOpen(true) : setCloudSheetOpen(true)}>
+            <span className="material-symbols-rounded">{isLocalModel ? 'memory' : 'cloud'}</span>
+            <span className="rs-speak-actions-label">
+              {currentMapping?.family?.displayName || selectedCloudModelInfo?.display_name || 'NEURAL CORE'}
+            </span>
+          </button>
+
+          <button className={`rs-pill ${isRecording ? 'is-active' : ''}`} onClick={() => isRecording ? stopRecording() : startRecording()} disabled={isThinking}>
+            <span className="material-symbols-rounded">{isRecording ? 'stop' : 'mic'}</span>
+          </button>
+
+          <button className="rs-btn-primary rs-send-btn" onClick={handleSend} disabled={!inputText.trim() || isThinking} style={{ background: 'var(--primary)', color: 'var(--bg-base)' }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1.4rem' }}>arrow_upward</span>
+          </button>
+        </div>
       </div>
     </div>
-  ), [inputText, handleSend, handleReset, isRecording, startRecording, stopRecording, isThinking, viewingSession, handleGenerateImage, handleUploadDoc, activeDocId])
-
+  ), [inputText, handleSend, isRecording, startRecording, stopRecording, isThinking, viewingSession, thinkingMode, webSearch, isLocalModel, currentMapping, selectedCloudModelInfo, token])
 
   useEffect(() => {
     setAction(ActionSlot)
+    return () => { if (setAction) setAction(null) }
   }, [ActionSlot, setAction])
 
   const displayMessages = viewingSession ? viewingSession.messages : messages
@@ -493,127 +333,60 @@ export default function ChatPage({ setAction, onNavigate }) {
   return (
     <div className="rs-foyer">
       
-      {/* Feature Row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', rowGap: 8 }}>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
-          <button className={`rs-pill ${webSearch ? 'is-active' : ''}`} onClick={() => setWebSearch(!webSearch)}>
-            <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>public</span>
-            WEB
-          </button>
-
-          {/* Local: family pill + separate tier pill */}
-          {isLocalModel ? (
-            <>
-              <button
-                className={`rs-pill ${currentMapping?.family ? 'is-active' : ''}`}
-                onClick={() => setFamilySheetOpen(true)}
-                style={{ maxWidth: 'min(160px, calc(50vw - 80px))', overflow: 'hidden' }}
-              >
-                <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', flexShrink: 0 }}>memory</span>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                  {currentMapping?.family?.displayName || 'Local model'}
-                </span>
-              </button>
-              {currentMapping?.family && (
-                <button
-                  className="rs-pill is-active"
-                  onClick={() => setTierSheetOpen(true)}
-                >
-                  <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', flexShrink: 0 }}>
-                    {thinkingMode === 'fast' ? 'bolt' : thinkingMode === 'thinking' ? 'psychology' : 'verified'}
-                  </span>
-                  {TIER_META[thinkingMode]?.label || 'Speed'}
-                </button>
-              )}
-            </>
-          ) : (
-            /* Cloud: single model pill */
-            <button
-              className="rs-pill is-active"
-              onClick={() => setCloudSheetOpen(true)}
-              style={{ maxWidth: 'min(200px, calc(60vw - 80px))', overflow: 'hidden' }}
-            >
-              <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', flexShrink: 0 }}>cloud</span>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                {selectedCloudModelInfo?.display_name || currentMapping?.family?.displayName || selectedModel?.model_id || 'Cloud model'}
-              </span>
-            </button>
-          )}
-
-          {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginLeft: 4 }}>SYNCING…</span>}
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          <button className="rs-pill" onClick={() => setShowSystem(!showSystem)}>
-            <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>settings_input_component</span>
-          </button>
-          <button className={`rs-pill ${showHistory ? 'is-active' : ''}`} onClick={() => setShowHistory(!showHistory)}>
-            <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>history</span>
-          </button>
-        </div>
+      {/* Dynamic Overlay Bar */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 20 }}>
+        {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginRight: 12 }}>SYNCING…</span>}
+        <button className="rs-pill" onClick={() => setShowSystem(!showSystem)}>
+          <span className="material-symbols-rounded">settings_input_component</span>
+        </button>
+        <button className={`rs-pill ${showHistory ? 'is-active' : ''}`} onClick={() => setShowHistory(!showHistory)}>
+          <span className="material-symbols-rounded">history</span>
+        </button>
+        <button className="rs-pill" onClick={handleReset} title="Clear Session">
+          <span className="material-symbols-rounded">refresh</span>
+        </button>
       </div>
 
-      {/* Cloud usage card — compact, clipped, only shown when API model active */}
-      {!isLocalModel && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '8px 14px', marginBottom: 16,
-          background: 'color-mix(in srgb, var(--primary) 8%, transparent)',
-          border: '1px solid color-mix(in srgb, var(--primary) 22%, transparent)',
-          borderRadius: 'var(--md-shape-md)',
-          overflow: 'hidden',
-          minWidth: 0,
-        }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--primary)', flexShrink: 0 }}>cloud</span>
-          <span style={{ fontWeight: 600, fontSize: '0.82rem', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {selectedCloudModelInfo?.display_name || selectedModel?.model_id || 'Cloud model'}
-          </span>
-          {selectedCloudModelInfo?.cost_per_1k_input_usd != null && (
-            <span style={{ fontSize: '0.62rem', color: 'var(--md-on-surface-variant)', flexShrink: 0, whiteSpace: 'nowrap' }}>
-              {fmtCost(selectedCloudModelInfo.cost_per_1k_input_usd)} in
-            </span>
-          )}
-          {selectedCloudModelInfo?.cost_per_1k_output_usd != null && (
-            <span style={{ fontSize: '0.62rem', color: 'var(--md-on-surface-variant)', flexShrink: 0, whiteSpace: 'nowrap' }}>
-              · {fmtCost(selectedCloudModelInfo.cost_per_1k_output_usd)} out
-            </span>
-          )}
-        </div>
-      )}
-
       {showSystem && (
-        <div className="rs-card is-elev" style={{ marginBottom: 24 }}>
-          <div className="rs-card-label">System Directives</div>
-          <textarea
-            style={{ all: 'unset', width: '100%', marginTop: 12, fontSize: '0.9rem', minHeight: '60px' }}
-            placeholder="Adjust River Song's internal weights..."
-            value={systemPrompt}
-            onChange={e => setSystemPrompt(e.target.value)}
-          />
+        <div className="rs-card is-elev animate-fade-in" style={{ marginBottom: 24 }}>
+          <div className="rs-card-inner">
+            <div className="rs-card-label">System Directives</div>
+            <textarea
+              style={{ all: 'unset', width: '100%', marginTop: 12, fontSize: '0.92rem', minHeight: '80px', color: 'var(--fg)', fontFamily: 'var(--font-mono)' }}
+              placeholder="Inject custom neural constraints..."
+              value={systemPrompt}
+              onChange={e => setSystemPrompt(e.target.value)}
+            />
+          </div>
         </div>
       )}
 
       {showHistory ? (
         <div className="rs-card-flow">
           {history.length === 0 ? (
-            <div className="rs-card-meta">Memory archives empty.</div>
+            <div className="rs-card-meta" style={{ padding: 48, textAlign: 'center' }}>Neural archives empty.</div>
           ) : (
             history.map(s => (
-              <div key={s.id} className="rs-card is-tappable is-wide" onClick={() => { setViewingSession(s); setShowHistory(false) }}>
-                <div className="rs-card-head">
-                  <span className="rs-card-label">{fmtDate(s.date)}</span>
-                  <span className="rs-card-label">{s.messages.length} EVENTS</span>
+              <div key={s.id} className="rs-card is-tappable is-wide animate-page-in" onClick={() => { setViewingSession(s); setShowHistory(false) }}>
+                <div className="rs-card-inner">
+                  <div className="rs-card-head">
+                    <span className="rs-card-label">{fmtDate(s.date)}</span>
+                    <span className="rs-card-label" style={{ background: 'var(--primary)', color: 'var(--bg-base)', padding: '2px 8px', borderRadius: 4 }}>{s.messages.length} MSG</span>
+                  </div>
+                  <div className="rs-card-value" style={{ fontSize: '1.1rem', opacity: 0.9 }}>{s.messages[0]?.text || 'Voice interaction'}</div>
                 </div>
-                <div className="rs-card-value" style={{ fontSize: '1.1rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{s.messages[0]?.text || 'Interaction'}</div>
               </div>
             ))
           )}
         </div>
       ) : (
-        <div className="rs-thread" style={{ paddingBottom: '100px' }}>
+        <div className="rs-thread" style={{ paddingBottom: '120px' }}>
           {viewingSession && (
-            <div style={{ marginBottom: 20 }}>
-              <button className="rs-pill" onClick={() => setViewingSession(null)}>← RETURN TO LIVE</button>
+            <div style={{ marginBottom: 24 }}>
+              <button className="rs-pill is-active" onClick={() => setViewingSession(null)}>
+                 <span className="material-symbols-rounded">live_tv</span>
+                 RETURN TO LIVE STREAM
+              </button>
             </div>
           )}
           <ConversationPanel
@@ -627,95 +400,53 @@ export default function ChatPage({ setAction, onNavigate }) {
         </div>
       )}
 
-      {/* Sheet 1 — Family picker (all available families, local + cloud) */}
-      <Sheet open={familySheetOpen} onClose={() => setFamilySheetOpen(false)} title="AI family">
-        {availableFamilies.filter(f => f.provider === 'ollama').length > 0 && (
-          <div className="rs-sheet-section-label">Local — Ollama</div>
-        )}
-        {availableFamilies.filter(f => f.provider === 'ollama').map(family => (
+      {/* Choice Sheets */}
+      <Sheet open={familySheetOpen} onClose={() => setFamilySheetOpen(false)} title="Neural Core Family">
+        {availableFamilies.map(family => (
           <SheetRow
             key={family.id}
-            icon={family.icon || 'memory'}
+            icon={family.icon || (family.provider === 'ollama' ? 'memory' : 'cloud')}
             title={family.displayName}
             sub={family.blurb}
             active={currentMapping?.family?.id === family.id}
-            onClick={() => handlePickFamily(family)}
-          />
-        ))}
-
-        {availableFamilies.filter(f => f.provider !== 'ollama').length > 0 && (
-          <div className="rs-sheet-section-label">Cloud — API</div>
-        )}
-        {availableFamilies.filter(f => f.provider !== 'ollama').map(family => (
-          <SheetRow
-            key={family.id}
-            icon={family.icon || 'cloud'}
-            title={family.displayName}
-            sub={family.blurb}
-            active={currentMapping?.family?.id === family.id}
-            onClick={() => handlePickFamily(family)}
+            onClick={() => {
+              setFamilySheetOpen(false)
+              const tier = isTierAvailable(family, thinkingMode, availabilitySet) ? thinkingMode : TIER_ORDER.find(t => isTierAvailable(family, t, availabilitySet))
+              if (tier) { setThinkingMode(tier); handleModelSelect(family.provider, family.tiers[tier]) }
+            }}
           />
         ))}
       </Sheet>
 
-      {/* Sheet 2 — Tier picker (local only: Fast / Thinking / Pro) */}
-      <Sheet
-        open={tierSheetOpen}
-        onClose={() => setTierSheetOpen(false)}
-        title={currentMapping?.family ? `${currentMapping.family.displayName} — speed` : 'Speed tier'}
-      >
-        {availableTiersForFamily.map(tier => {
-          const meta     = TIER_META[tier]
-          const model_id = currentMapping?.family?.tiers?.[tier]
-          const isActive = thinkingMode === tier
-          return (
-            <SheetRow
-              key={tier}
-              icon={meta.icon}
-              title={meta.label}
-              sub={`${meta.blurb}${model_id ? ` · ${model_id}` : ''}`}
-              active={isActive}
-              onClick={() => handlePickTier(tier)}
-            />
-          )
-        })}
+      <Sheet open={tierSheetOpen} onClose={() => setTierSheetOpen(false)} title="Synaptic Tier">
+        {availableTiersForFamily.map(tier => (
+          <SheetRow
+            key={tier}
+            icon={TIER_META[tier].icon}
+            title={TIER_META[tier].label}
+            sub={TIER_META[tier].blurb}
+            active={thinkingMode === tier}
+            onClick={() => {
+              setTierSheetOpen(false)
+              const fam = currentMapping?.family
+              if (fam) { setThinkingMode(tier); handleModelSelect(fam.provider, fam.tiers[tier]) }
+            }}
+          />
+        ))}
       </Sheet>
 
-      {/* Sheet 3 — Cloud model picker (direct list, grouped by provider) */}
-      <Sheet
-        open={cloudSheetOpen}
-        onClose={() => setCloudSheetOpen(false)}
-        title="Cloud model"
-      >
-        {availableFamilies
-          .filter(f => f.provider !== 'ollama')
-          .map(fam => {
-            const provModels = models.cloud.filter(m => m.provider === fam.provider)
-            if (!provModels.length) return null
-            return (
-              <React.Fragment key={fam.id}>
-                <div className="rs-sheet-section-label">{fam.displayName}</div>
-                {provModels.map(m => {
-                  const inputCost  = fmtCost(m.cost_per_1k_input_usd)
-                  const outputCost = fmtCost(m.cost_per_1k_output_usd)
-                  const costStr    = [inputCost && `IN ${inputCost}`, outputCost && `OUT ${outputCost}`].filter(Boolean).join(' · ')
-                  const isActive   = selectedModel?.provider === m.provider && selectedModel?.model_id === m.model_id
-                  return (
-                    <SheetRow
-                      key={m.model_id}
-                      icon={fam.icon || 'cloud'}
-                      title={m.display_name}
-                      sub={costStr || fam.blurb}
-                      active={isActive}
-                      onClick={() => handlePickCloudModel(m)}
-                    />
-                  )
-                })}
-              </React.Fragment>
-            )
-          })}
+      <Sheet open={cloudSheetOpen} onClose={() => setCloudSheetOpen(false)} title="Cloud Intelligence">
+        {models.cloud.map(m => (
+          <SheetRow
+            key={m.model_id}
+            icon="cloud"
+            title={m.display_name}
+            sub={fmtCost(m.cost_per_1k_input_usd) || 'Nominal availability'}
+            active={selectedModel?.model_id === m.model_id}
+            onClick={() => { setCloudSheetOpen(false); handleModelSelect(m.provider, m.model_id) }}
+          />
+        ))}
       </Sheet>
-
     </div>
   )
 }

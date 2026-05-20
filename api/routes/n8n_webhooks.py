@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from config.settings import get_settings
 from core.limiter import limiter
 from core.auth import decode_token
+from core.errors import bad_request, forbidden, not_found, unauthorized
 from providers.automation.n8n_client import build_n8n_client
 
 logger = logging.getLogger(__name__)

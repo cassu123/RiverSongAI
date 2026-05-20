@@ -83,8 +83,10 @@ export default function Drawer({
                           className={`rs-drawer-cell ${currentPage === it.key ? 'is-active' : ''}`}
                           onClick={() => navigate(it.key)}
                         >
-                          <EnvIcon name={it.icon || it.key} className="rs-icon" />
-                          <span>{it.label}</span>
+                          <div className="rs-card-inner" style={{ padding: '12px 8px', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                            <EnvIcon name={it.icon || it.key} className="rs-icon" />
+                            <span className="rs-card-label" style={{ fontSize: '0.6rem', opacity: 1 }}>{it.label}</span>
+                          </div>
                         </button>
                       )
                     }
@@ -95,7 +97,7 @@ export default function Drawer({
                         onClick={() => navigate(it.key)}
                       >
                         <EnvIcon name={it.icon || it.key} className="rs-icon" />
-                        <span>{it.label}</span>
+                        <span style={{ fontWeight: 700, letterSpacing: '-0.01em' }}>{it.label}</span>
                       </button>
                     )
                   })}

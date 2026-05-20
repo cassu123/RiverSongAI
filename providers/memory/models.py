@@ -206,3 +206,4 @@ class LLMSettings:
     cloud_fallback_provider: Optional[str] = None
     cloud_fallback_model: Optional[str] = None
     voice_id: str = "river"   # active TTS voice from the voice registry
+    whisper_model: str = "base" # active STT Whisper model size

@@ -39,6 +39,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, sessionmaker
 
 from core.auth import decode_token
+from core.errors import bad_request, not_found, unauthorized
 from core.family import resolve_module_owner
 from vehicles.management import (
     AssignmentExistsError,
@@ -159,13 +160,13 @@ def get_db() -> Generator[Session, None, None]:
 async def get_current_user_id(request: Request) -> str:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
+        raise unauthorized("Missing Bearer token")
     payload = await decode_token(auth.removeprefix("Bearer ").strip())
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise unauthorized("Invalid or expired token")
     user_id = str(payload.get("sub", ""))
     if not user_id:
-        raise HTTPException(status_code=401, detail="Token missing sub claim")
+        raise unauthorized("Token missing sub claim")
     return resolve_module_owner(user_id, "maintenance")
 
 
@@ -496,7 +497,7 @@ def get_vehicle_route(
         vehicles = get_vehicles(db, user_id)
         v = next((v for v in vehicles if str(v.id) == vehicle_id), None)
         if not v:
-            raise HTTPException(status_code=404, detail="Vehicle not found")
+            raise not_found("Vehicle not found")
         return _ser_vehicle(v)
     except HTTPException:
         raise
@@ -655,14 +656,14 @@ async def preview_manual(
     try:
         data = await file.read()
         if not data:
-            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+            raise bad_request("Uploaded file is empty.")
         try:
             pdf_text = extract_text_from_pdf(data)
         except Exception as e:
-            raise HTTPException(status_code=422, detail=f"Could not read PDF: {e}")
+            raise bad_request(f"Could not read PDF: {e}")
 
         if len(pdf_text.strip()) < 200:
-            raise HTTPException(status_code=422, detail="PDF has no extractable text.")
+            raise bad_request("PDF has no extractable text.")
 
         settings = get_settings()
         ollama_url   = getattr(settings, "ollama_base_url", None) or None
@@ -697,18 +698,15 @@ async def upload_manual(
     try:
         data = await file.read()
         if not data:
-            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+            raise bad_request("Uploaded file is empty.")
 
         try:
             pdf_text = extract_text_from_pdf(data)
         except Exception as e:
-            raise HTTPException(status_code=422, detail=f"Could not read PDF: {e}")
+            raise bad_request(f"Could not read PDF: {e}")
 
         if len(pdf_text.strip()) < 200:
-            raise HTTPException(
-                status_code=422,
-                detail="PDF has no extractable text. Scanned/image-only PDFs are not supported."
-            )
+            raise bad_request("PDF has no extractable text. Scanned/image-only PDFs are not supported.")
 
         settings = get_settings()
         ollama_url   = getattr(settings, "ollama_base_url", None) or None
@@ -717,10 +715,7 @@ async def upload_manual(
         items = parse_manual(pdf_text, ollama_url=ollama_url, ollama_model=ollama_model)
 
         if not items:
-            raise HTTPException(
-                status_code=422,
-                detail="No maintenance data found. Check that the PDF contains a maintenance schedule or specifications section."
-            )
+            raise bad_request("No maintenance data found. Check that the PDF contains a maintenance schedule or specifications section.")
             
         # Phase 5: Ingest into RAG provider for conversational retrieval
         try:

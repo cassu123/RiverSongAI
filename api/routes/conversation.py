@@ -43,6 +43,7 @@ import asyncio
 import base64
 import json
 import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
@@ -139,9 +140,10 @@ async def conversation_websocket(websocket: WebSocket) -> None:
         try:
             store = memory_manager._store
             user_settings = await store.get_llm_settings(user_id)
-            llm_provider = user_settings.provider
-            llm_model    = user_settings.model
-            voice_id     = user_settings.voice_id or None
+            llm_provider  = user_settings.provider
+            llm_model     = user_settings.model
+            voice_id      = user_settings.voice_id or None
+            whisper_model = user_settings.whisper_model or None
             
             if user_settings.cloud_fallback_enabled:
                 fb_provider = user_settings.cloud_fallback_provider
@@ -162,6 +164,7 @@ async def conversation_websocket(websocket: WebSocket) -> None:
         voice_id_override=voice_id,
         fallback_provider=fb_provider,
         fallback_model=fb_model,
+        stt_model_override=whisper_model if 'whisper_model' in locals() else None,
         is_kiosk=is_kiosk,
     )
 
@@ -326,7 +329,8 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                 websocket.app.state.active_connections[user_id].remove(websocket)
                 if not websocket.app.state.active_connections[user_id]:
                     del websocket.app.state.active_connections[user_id]
-            except: pass
+            except Exception as exc:
+                logger.debug("Failed to unregister active connection (user=%s): %s", user_id, exc)
 
 
 async def _send(websocket: WebSocket, payload: dict) -> None:
@@ -398,27 +402,17 @@ async def chat_http(
     await loop.initialize()
 
     async def _stream():
-        queue = asyncio.Queue()
+        queue: asyncio.Queue = asyncio.Queue()
 
         async def on_event(evt: dict):
             await queue.put(evt)
 
-        # Run in a task so we can yield from the queue
+        # Run the conversation turn in a background task
         task = asyncio.create_task(loop.run_text(body.message, on_event))
-        
+
         try:
             while True:
-                # Wait for event or task completion
-                done, _ = await asyncio.wait(
-                    [asyncio.create_task(queue.get()), task],
-                    return_when=asyncio.FIRST_COMPLETED
-                )
-                
-                # Check if task is done
-                if task.done() and queue.empty():
-                    break
-                
-                # Process queue items
+                # Drain any already-queued events first
                 while not queue.empty():
                     evt = queue.get_nowait()
                     if evt["type"] in ("response_chunk", "token"):
@@ -428,15 +422,31 @@ async def chat_http(
                         yield f"data: {json.dumps(evt)}\n\n"
                     elif evt["type"] == "error":
                         yield f"data: {json.dumps({'type': 'error', 'content': evt['message']})}\n\n"
-            
+
+                if task.done() and queue.empty():
+                    break
+
+                # Wait for the next event or task completion (whichever comes first)
+                try:
+                    evt = await asyncio.wait_for(queue.get(), timeout=0.05)
+                    if evt["type"] in ("response_chunk", "token"):
+                        text = evt.get("text") or evt.get("content", "")
+                        yield f"data: {json.dumps({'type': 'text', 'content': text})}\n\n"
+                    elif evt["type"] in ("tool_use", "tool_result"):
+                        yield f"data: {json.dumps(evt)}\n\n"
+                    elif evt["type"] == "error":
+                        yield f"data: {json.dumps({'type': 'error', 'content': evt['message']})}\n\n"
+                except asyncio.TimeoutError:
+                    pass  # No event yet; loop back to check task.done()
+
             yield "data: [DONE]\n\n"
         except Exception as exc:
             logger.error("Chat HTTP stream error: %s", exc, exc_info=True)
-            
+
             # Classify error
             code = "internal_error"
             msg = "An unexpected error occurred during streaming."
-            
+
             err_str = str(exc).lower()
             if "rate limit" in err_str or "429" in err_str:
                 code = "rate_limited"
@@ -447,7 +457,7 @@ async def chat_http(
             elif "authentication" in err_str or "api key" in err_str:
                 code = "model_unavailable"
                 msg = "The selected AI model is currently unavailable (auth failure)."
-            
+
             yield f"data: {json.dumps({'type': 'error', 'code': code, 'content': msg})}\n\n"
         finally:
             if not task.done():

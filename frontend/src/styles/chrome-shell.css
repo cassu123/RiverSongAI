@@ -1,138 +1,75 @@
 /* =============================================================================
    chrome-shell.css — Three-zone global shell + drawer.
    -----------------------------------------------------------------------------
-   Bones of the high-end instrument UI. Replaces the SaaS-style Sidebar.
+   Hardened multi-platform architecture with Bento 2.0 Grid.
    ============================================================================= */
 
 :root {
   /* Shell geometry — fluid */
-  --rs-header-h:        clamp(56px, 7svh, 64px);
-  --rs-content-pad-i:   clamp(16px, 4vw, 32px);
-  --rs-content-pad-b:   clamp(16px, 3svh, 32px);
+  --rs-header-h:        clamp(64px, 8svh, 80px);
+  --rs-content-pad-i:   clamp(24px, 6vw, 64px);
+  --rs-content-pad-b:   clamp(32px, 5svh, 56px);
+  --rs-card-gap:        clamp(24px, 4vw, 40px);
 
   /* Motion */
   --rs-motion-fast:   180ms;
-  --rs-motion-mid:    300ms;
-  --rs-motion-curve:  cubic-bezier(0.2, 0, 0, 1);
+  --rs-motion-mid:    350ms;
+  --rs-motion-slow:   750ms;
+  --rs-motion-curve:  cubic-bezier(0.25, 1, 0.5, 1);
 
   /* Type scale */
-  --rs-fs-h2:         clamp(1.2rem, 1.5vw + 0.7rem, 1.6rem);
-  --rs-fs-body:       1rem;
-  --rs-fs-small:      0.85rem;
+  --rs-fs-h1:         clamp(2.5rem, 8vw, 4.5rem);
+  --rs-fs-h2:         clamp(1.5rem, 4vw, 2.2rem);
+  --rs-fs-body:       1.05rem; /* slightly larger body text */
+  --rs-fs-small:      0.9rem;
   --rs-fs-micro:      0.75rem;
 }
 
-
 .rs-root {
-  width: 100vw;
-  height: 100dvh;
+  width: 100%;
+  height: 100svh; /* More stable than dvh on older mobile browsers */
+  min-height: -webkit-fill-available;
   overflow: hidden;
   position: relative;
   background: var(--bg-base);
   color: var(--md-on-surface);
 }
 
-.loading-screen {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-base);
-  color: var(--primary);
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  letter-spacing: 0.2em;
-  z-index: 1000;
-}
-
 .rs-shell {
   position: relative;
   z-index: 10;
-  block-size: 100dvh;
-  inline-size: 100vw;
-  color: var(--md-on-surface);
-  font-family: var(--font-mood, system-ui);
+  height: 100svh;
+  width: 100%;
   display: grid;
-  grid-template-rows: var(--rs-header-h) 1fr auto;
-  isolation: isolate;
-  background: transparent;
-}
-
-/* --- Foyer (Page Container) -----------------------------------------------
-   Responsive content cap per RIVER_SONG_CHROME_PLAN.md §11.
-   Mobile  (<768px)  : full width minus padding.
-   Tablet  (768–1199): centered, max-inline-size 672px.
-   Desktop (≥1200px) : centered, max-inline-size 900px (overridden when a
-                       desktop rail or chat sidebar is present — handled by
-                       the .rs-shell column-padding rules, not here).
-   --------------------------------------------------------------------------- */
-.rs-foyer {
-  margin-inline: auto;
-  inline-size: 100%;
-  max-inline-size: 100%;
-  padding-block-end: 80px;
-  overflow-x: clip;
-}
-
-.rs-foyer-head {
-  margin-block-end: 40px;
-  padding-block-start: 20px;
-}
-
-/* --- Markdown Styles ------------------------------------------------------ */
-.rs-markdown {
-  line-height: 1.6;
-  font-size: 0.95rem;
-}
-.rs-markdown h1, .rs-markdown h2 { margin-top: 1.5rem; margin-bottom: 0.5rem; }
-.rs-markdown p { margin-bottom: 1rem; }
-.rs-markdown ul { margin-left: 1.5rem; margin-bottom: 1rem; }
-.rs-markdown code { background: var(--md-surface-container-high); padding: 2px 4px; border-radius: 4px; }
-
-/* Wikilink chips (CHRONOS cross-page navigation) */
-.rs-wikilink {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 8px;
-  height: 1.5rem;
-  font-size: 0.85em;
-  font-family: inherit;
-  color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
-  border-radius: 8px;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background var(--rs-motion-fast), border-color var(--rs-motion-fast);
-  vertical-align: baseline;
-}
-.rs-wikilink::before { content: '[['; opacity: 0.5; }
-.rs-wikilink::after  { content: ']]'; opacity: 0.5; }
-.rs-wikilink:hover {
-  background: color-mix(in srgb, var(--primary) 22%, transparent);
-  border-color: var(--primary);
+  grid-template-areas: 
+    "header"
+    "main"
+    "action";
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 100%;
+  overflow: hidden;
 }
 
 /* --- Header --------------------------------------------------------------- */
 .rs-header {
-  grid-row: 1;
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-area: header;
+  display: flex;
   align-items: center;
-  column-gap: 16px;
+  justify-content: space-between;
   padding-inline: var(--rs-content-pad-i);
-  padding-block-start: env(safe-area-inset-top);
-  block-size: calc(var(--rs-header-h) + env(safe-area-inset-top));
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 50;
-  background: color-mix(in srgb, var(--bg-base) 70%, transparent);
+  padding-block: 12px;
+  padding-block-start: max(12px, env(safe-area-inset-top));
+  background: color-mix(in srgb, var(--bg-base) 75%, transparent);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-block-end: 1px solid var(--md-outline-variant);
-  box-shadow: 0 1px 0 0 color-mix(in srgb, var(--primary) 12%, transparent);
+  z-index: 100;
+}
+
+.rs-header-left, .rs-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .rs-context {
@@ -144,6 +81,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   opacity: 0.8;
+  max-width: 200px;
 }
 
 .rs-mark-btn {
@@ -163,9 +101,32 @@
   border: none;
   cursor: pointer;
   box-shadow: 0 0 12px var(--primary);
-  transition: all 0.3s ease;
+  transition: width 0.4s var(--rs-motion-curve), 
+              height 0.4s var(--rs-motion-curve), 
+              opacity 0.4s var(--rs-motion-curve), 
+              transform 0.3s ease, 
+              box-shadow 0.3s ease;
 }
 .rs-orb:hover { transform: scale(1.2); box-shadow: 0 0 20px var(--primary); }
+
+.rs-orb.is-large {
+  width: 24px;
+  height: 24px;
+  box-shadow: 0 0 16px var(--primary);
+  animation: rs-orb-breathe 3s ease-in-out infinite;
+}
+
+.rs-orb.is-small {
+  width: 12px;
+  height: 12px;
+  opacity: 0.6;
+  animation: rs-orb-breathe 4s ease-in-out infinite;
+}
+
+@keyframes rs-orb-breathe {
+  0%, 100% { opacity: 0.6; box-shadow: 0 0 8px var(--primary); }
+  50%       { opacity: 1;   box-shadow: 0 0 20px var(--primary); }
+}
 
 .rs-hamburger {
   background: none;
@@ -184,34 +145,86 @@
 .rs-hamburger:hover { background: var(--md-surface-container-highest); }
 .rs-hamburger svg { width: 24px; height: 24px; }
 
-/* --- Main Content --------------------------------------------------------- */
+/* --- Main Content Area ---------------------------------------------------- */
 .rs-content {
-  grid-row: 2;
-  padding-inline: var(--rs-content-pad-i);
-  padding-block: var(--rs-content-pad-b);
+  grid-area: main;
   overflow-y: auto;
   overflow-x: hidden;
-  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding-inline: var(--rs-content-pad-i);
+  padding-block: var(--rs-content-pad-b);
+  display: flex;
+  flex-direction: column;
+}
+
+.rs-foyer {
+  margin-inline: auto;
+  inline-size: 100%;
+  max-inline-size: 1100px;
+  padding-block-end: 100px;
+  overflow: clip; /* Prevent horizontal leakage */
+}
+
+/* The Shell's direct-child foyer is a centering wrapper only.
+   Pages provide their own rs-foyer with the 100px bottom clearance,
+   so the outer wrapper must not double-stack the padding. */
+.rs-content > .rs-foyer {
+  padding-block-end: 0;
+}
+
+.rs-foyer-head {
+  margin-block-end: 40px;
+  padding-block-start: 20px;
 }
 
 /* --- Action Zone (Bottom) ------------------------------------------------- */
 .rs-action {
-  grid-row: 3;
+  grid-area: action;
   padding-inline: var(--rs-content-pad-i);
   padding-block-start: 16px;
   padding-block-end: max(16px, env(safe-area-inset-bottom));
-  background: linear-gradient(to top, var(--md-surface-container-low) 20%, transparent);
+  background: color-mix(in srgb, var(--bg-base) 60%, transparent);
   backdrop-filter: var(--glass-blur-sm);
+  -webkit-backdrop-filter: var(--glass-blur-sm);
   border-block-start: 1px solid var(--md-outline-variant);
+  position: relative;
+  z-index: 100;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* --- Drawer --------------------------------------------------------------- */
+.rs-action-inner {
+  max-width: 1000px;
+  margin-inline: auto;
+}
+
+/* --- Flows (Bento 2.0 Grid Architecture) ---------------------------------- */
+.rs-card-flow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  grid-auto-flow: dense;
+  gap: var(--rs-card-gap);
+  margin-block-start: 32px;
+  width: 100%;
+}
+
+.rs-card-flow > .rs-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.rs-card.is-wide { grid-column: span 1; }
+.rs-card.is-tall { grid-row: span 2; }
+
+/* --- Drawer & Sidebar ----------------------------------------------------- */
 .rs-drawer-scrim {
   position: fixed;
   inset: 0;
-  z-index: 60;
-  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  background: rgba(0,0,0,0.55);
   backdrop-filter: blur(4px);
   opacity: 0;
   pointer-events: none;
@@ -223,7 +236,7 @@
   position: fixed;
   inset-block: 0;
   inset-inline-start: 0;
-  z-index: 70;
+  z-index: 250;
   inline-size: min(85vw, 320px);
   background: var(--md-surface-container-highest);
   backdrop-filter: var(--glass-blur);
@@ -236,740 +249,72 @@
   display: flex;
   flex-direction: column;
 }
-
-.rs-drawer-scroll-area {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-}
 .rs-drawer.is-open { transform: translateX(0); }
 
-.rs-drawer-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-block-end: 32px;
-}
-.rs-drawer-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.rs-drawer-close {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--md-shape-full);
-  color: var(--md-on-surface-variant);
-}
-
-.rs-drawer-section { 
-  display: flex;
-  flex-direction: column;
-  margin-block-end: 24px; 
-}
-.rs-drawer-section-label {
-  font-size: 0.65rem;
-  color: var(--md-on-surface-variant);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  padding-inline: 16px;
-  margin-block: 8px 12px;
-  font-weight: 700;
-  opacity: 0.5;
-}
-
-.rs-drawer-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-/* "More" group — 2-column grid of icon-above-label cells (plan §5). */
-.rs-drawer-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  padding-inline: 4px;
-}
-
-.rs-drawer-cell {
-  background: none;
-  border: 1px solid transparent;
-  font: inherit;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 14px 8px;
-  border-radius: var(--md-shape-lg);
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: background var(--rs-motion-fast),
-              border-color var(--rs-motion-fast),
-              color var(--rs-motion-fast);
-  color: var(--md-on-surface);
-  text-align: center;
-  line-height: 1.2;
-  min-block-size: 72px;
-}
-
-.rs-drawer-cell .rs-icon {
-  inline-size: 22px;
-  block-size: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.85;
-}
-
-.rs-drawer-cell:hover {
-  background: var(--md-surface-container-high);
-  border-color: var(--md-outline-variant);
-}
-
-.rs-drawer-cell.is-active {
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
-  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
-  color: var(--primary);
-  font-weight: 600;
-}
-
-/* Section dividers — bookend the "More" / "Admin" labels with a thin rule. */
-.rs-drawer-section + .rs-drawer-section {
-  padding-block-start: 8px;
-  border-block-start: 1px solid var(--md-outline-variant);
-  margin-block-start: 4px;
-}
-
-.rs-drawer-item {
-  background: none;
-  border: none;
-  font: inherit;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-radius: var(--md-shape-lg);
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all var(--rs-motion-fast);
-  color: var(--md-on-surface);
-  width: 100%;
-  box-sizing: border-box;
-  text-align: left;
-  line-height: 1.2;
-}
-
-.rs-drawer-item .rs-icon {
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  opacity: 0.8;
-}
-.rs-drawer-item:hover { background: var(--md-surface-container-high); }
-
-
-
-.rs-drawer-item.is-active {
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
-  color: var(--primary);
-  font-weight: 600;
-}
-.rs-drawer-item.is-danger { color: var(--md-error); }
-.rs-drawer-item.is-danger:hover { background: var(--md-error-container); color: var(--md-on-error-container); }
-
-.rs-drawer-footer {
-  margin-top: auto;
-  padding-top: 24px;
-  border-top: 1px solid var(--md-outline-variant);
-}
-
-.rs-drawer-profile {
-  all: unset;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: var(--md-shape-lg);
-  cursor: pointer;
-  margin-bottom: 16px;
-  transition: background var(--rs-motion-fast);
-}
-.rs-drawer-profile:hover { background: var(--md-surface-container-high); }
-
-.rs-drawer-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: var(--bg-base);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  font-size: 0.9rem;
-}
-
-.rs-drawer-profile-body { display: flex; flex-direction: column; }
-.rs-drawer-profile-name { font-weight: 600; font-size: 0.95rem; }
-.rs-drawer-profile-sub { font-size: 0.75rem; color: var(--md-on-surface-variant); }
-
-/* --- Toggle --------------------------------------------------------------- */
-.rs-drawer-toggle {
-  all: unset;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-radius: var(--md-shape-lg);
-  cursor: pointer;
-  font-size: var(--rs-fs-body);
-}
-.rs-drawer-toggle:hover { background: var(--md-surface-container-high); }
-
-.rs-toggle-track {
-  width: 36px;
-  height: 20px;
-  border-radius: 10px;
-  background: var(--md-surface-container-highest);
-  position: relative;
-  transition: background 0.2s;
-  border: 1px solid var(--md-outline);
-}
-.rs-drawer-toggle.is-on .rs-toggle-track { background: var(--primary); border-color: var(--primary); }
-
-.rs-toggle-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--md-outline);
-  transition: transform 0.2s, background 0.2s;
-}
-.rs-drawer-toggle.is-on .rs-toggle-thumb { transform: translateX(16px); background: var(--md-on-primary); }
-
-
-/* --- Mobile -------------------------------------------------------------- */
-@media (max-width: 600px) {
-  :root {
-    --rs-header-h:      56px;
-    --rs-content-pad-i: 20px;
-  }
-
-  .rs-header {
-    column-gap: 8px;
-  }
-
-  .rs-context {
-    font-size: 0.7rem;
-    letter-spacing: 0.08em;
-  }
-
-  .rs-orb {
-    width: 18px;
-    height: 18px;
-  }
-
-  .rs-hamburger {
-    width: 44px;
-    height: 44px;
-  }
-
-  .rs-drawer {
-    inline-size: min(92vw, 320px);
-    padding-inline: 16px;
-  }
-
-  .rs-drawer-head {
-    margin-block-end: 20px;
-  }
-
-  .rs-drawer-item {
-    padding: 12px 14px;
-    font-size: 0.95rem;
-    min-height: 44px;
-  }
-
-  .rs-action {
-    padding-block: 12px;
-    padding-block-end: max(12px, env(safe-area-inset-bottom));
-  }
-}
-
-/* Tablets and up — slight tightening on the drawer */
-@media (min-width: 601px) {
-  .rs-drawer { padding-inline: 24px; }
-}
-
-/* --- Chat-history sidebar (desktop only, chat/speak pages) ---------------- */
-/* Hidden by default; shown at ≥1200px via media query below. */
 .rs-chat-sidebar {
   display: none;
 }
 
-.rs-chat-sidebar-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 20px;
-}
+/* --- Responsive Adjustments ----------------------------------------------- */
 
-.rs-chat-sidebar-title {
-  margin: 0;
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--md-on-surface-variant);
-  font-weight: 700;
-  opacity: 0.6;
-}
-
-.rs-chat-sidebar-empty {
-  margin: 0;
-  font-size: var(--rs-fs-small);
-  color: var(--md-on-surface-variant);
-  line-height: 1.5;
-  opacity: 0.8;
-}
-
-/* --- Responsive bands per RIVER_SONG_CHROME_PLAN.md §11 ------------------- */
-
-/* Mid-range (480–767px): cap foyer so it's never full-bleed on small tablets. */
-@media (min-width: 480px) and (max-width: 767px) {
-  .rs-foyer {
-    max-inline-size: min(100%, 560px);
+/* Mobile (< 768px) */
+@media (max-width: 767px) {
+  .rs-card-flow {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
+  .rs-context { display: none; }
 }
 
-/* Tablet (768–1199): wider drawer when open; content centered at 672px. */
-@media (min-width: 768px) and (max-width: 1199px) {
-  .rs-drawer {
-    inline-size: min(85vw, 320px);
-  }
-  .rs-foyer {
-    max-inline-size: min(100%, 672px);
-  }
+/* Tablets (≥ 768px) */
+@media (min-width: 768px) {
+  .rs-card.is-wide { grid-column: span 2; }
 }
 
-/* Desktop (≥1200px): persistent left rail (240px) + optional chat sidebar
-   (280px) + capped content column. Drawer becomes the rail — fixed at the
-   viewport edge, no scrim, no transform, glass material preserved. */
+/* Desktop (≥ 1200px) */
 @media (min-width: 1200px) {
   :root {
-    --rs-rail-w:     240px;
-    --rs-chat-side-w: 280px;
+    --rs-rail-w: 260px;
   }
 
-  /* Hamburger + drawer-close hidden at this width — rail is permanent. */
-  .rs-hamburger,
-  .rs-drawer-close {
-    display: none;
-  }
-
-  /* Scrim never shows at desktop; rail is always present. */
-  .rs-drawer-scrim {
-    display: none;
-  }
-
-  /* Drawer becomes a permanent rail. Glass material preserved so the Stage
-     backdrop reads through. */
-  .rs-drawer {
-    position: fixed;
-    inset-block: 0;
-    inset-inline-start: 0;
-    inline-size: var(--rs-rail-w);
-    transform: none;
-    transition: none;
-    z-index: 40;
-    /* Slightly more translucent than mobile so backdrop shows */
-    background: color-mix(in srgb, var(--bg-base) 60%, transparent);
-    padding-block-start: max(env(safe-area-inset-top), 20px);
-  }
-
-  /* Shift the whole shell over by rail width — header, content, action. */
   .rs-shell {
-    padding-inline-start: var(--rs-rail-w);
+    grid-template-columns: var(--rs-rail-w) 1fr;
+    grid-template-areas: 
+      "drawer header"
+      "drawer main"
+      "drawer action";
   }
 
-  /* When chat-history sidebar is present (chat/speak pages), shift content
-     past it. Rail still anchored to the viewport edge. */
   .rs-shell.has-sidebar {
-    padding-inline-start: calc(var(--rs-rail-w) + var(--rs-chat-side-w));
+    grid-template-columns: var(--rs-rail-w) 300px 1fr;
+    grid-template-areas: 
+      "drawer sidebar header"
+      "drawer sidebar main"
+      "drawer sidebar action";
   }
 
-  /* Chat-history sidebar — fixed column right of the rail. */
-  .rs-shell.has-sidebar .rs-chat-sidebar {
-    display: block;
-    position: fixed;
-    inset-block: 0;
-    inset-inline-start: var(--rs-rail-w);
-    inline-size: var(--rs-chat-side-w);
-    z-index: 35;
-    background: color-mix(in srgb, var(--bg-base) 50%, transparent);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
+  .rs-drawer {
+    grid-area: drawer;
+    position: static;
+    inline-size: 100%;
+    transform: none !important;
+    background: color-mix(in srgb, var(--bg-base) 60%, transparent);
     border-inline-end: 1px solid var(--md-outline-variant);
-    padding-block-start: calc(var(--rs-header-h) + env(safe-area-inset-top) + 8px);
+    z-index: 150;
+  }
+
+  .rs-chat-sidebar {
+    display: block;
+    grid-area: sidebar;
+    background: color-mix(in srgb, var(--bg-base) 45%, transparent);
+    backdrop-filter: var(--glass-blur);
+    border-inline-end: 1px solid var(--md-outline-variant);
+    z-index: 140;
+    padding-top: var(--rs-header-h);
     overflow-y: auto;
   }
 
-  /* Content cap at desktop — 900px centered inside its column. */
-  .rs-foyer {
-    max-inline-size: 900px;
+  .rs-hamburger, .rs-drawer-close, .rs-drawer-scrim {
+    display: none !important;
   }
 }
-
-/* --- Sheet (bottom modal) ------------------------------------------------- */
-.rs-sheet-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(4px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--rs-motion-mid) var(--rs-motion-curve);
-}
-.rs-sheet-scrim.is-open { opacity: 1; pointer-events: auto; }
-
-.rs-sheet {
-  position: fixed;
-  inset-inline: 0;
-  inset-block-end: 0;
-  z-index: 90;
-  max-block-size: 80svh;
-  background: var(--md-surface-container-highest);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-block-start: 1px solid var(--md-outline-variant);
-  border-start-start-radius: 20px;
-  border-start-end-radius: 20px;
-  padding: 10px 16px max(env(safe-area-inset-bottom), 16px);
-  transform: translateY(100%);
-  transition: transform var(--rs-motion-mid) var(--rs-motion-curve);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.rs-sheet.is-open { transform: translateY(0); }
-
-.rs-sheet-handle {
-  inline-size: 48px;
-  block-size: 4px;
-  border-radius: 2px;
-  background: var(--md-outline-variant);
-  margin: 4px auto 12px;
-  flex: 0 0 auto;
-}
-
-.rs-sheet-head {
-  margin-block-end: 8px;
-  padding-inline: 4px;
-  flex: 0 0 auto;
-}
-.rs-sheet-title {
-  font-family: var(--font-display);
-  font-size: 0.85rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--md-on-surface-variant);
-  margin: 0;
-}
-
-.rs-sheet-body {
-  flex: 1 1 auto;
-  min-block-size: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-/* Section label inside a sheet — e.g. "LOCAL" / "CLOUD" headers */
-.rs-sheet-section-label {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--md-on-surface-variant);
-  padding: 14px 14px 4px;
-  opacity: 0.5;
-  pointer-events: none;
-  flex-shrink: 0;
-}
-
-/* Tier badge inside a sheet row title */
-.rs-sheet-row-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background: color-mix(in srgb, var(--primary) 14%, transparent);
-  color: var(--primary);
-  border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
-  margin-left: 8px;
-  vertical-align: middle;
-}
-
-.rs-sheet-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  inline-size: 100%;
-  padding: 12px 14px;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  text-align: start;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease;
-}
-.rs-sheet-row:hover {
-  background: color-mix(in srgb, var(--md-on-surface) 6%, transparent);
-}
-.rs-sheet-row.is-active {
-  background: color-mix(in srgb, var(--md-primary) 16%, transparent);
-  border-color: color-mix(in srgb, var(--md-primary) 35%, transparent);
-}
-.rs-sheet-row.is-dimmed {
-  opacity: 0.38;
-  pointer-events: none;
-}
-
-.rs-sheet-row-icon {
-  inline-size: 24px;
-  block-size: 24px;
-  flex: 0 0 auto;
-  color: var(--md-on-surface-variant);
-}
-
-.rs-sheet-row-body {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1 1 auto;
-  min-inline-size: 0;
-}
-.rs-sheet-row-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  line-height: 1.2;
-}
-.rs-sheet-row-sub {
-  font-size: 0.72rem;
-  color: var(--md-on-surface-variant);
-  line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.rs-sheet-check {
-  inline-size: 20px;
-  block-size: 20px;
-  flex: 0 0 auto;
-  color: var(--md-primary);
-}
-
-/* Desktop: anchor sheet to a centered card instead of spanning edge-to-edge. */
-@media (min-width: 768px) {
-  .rs-sheet {
-    inset-inline: 50%;
-    transform: translate(-50%, 100%);
-    inline-size: min(520px, calc(100vw - 64px));
-    inset-block-end: 24px;
-    border-radius: 20px;
-    border: 1px solid var(--md-outline-variant);
-  }
-  .rs-sheet.is-open { transform: translate(-50%, 0); }
-}
-
-/* --- Speak stage (ConversationPage) -------------------------------------- */
-.rs-speak-stage {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: calc(100dvh - var(--rs-header-h) - 120px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.rs-speak-status {
-  position: absolute;
-  inset-block-start: 16px;
-  inset-inline: 0;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-  pointer-events: none;
-}
-.rs-speak-status > * { pointer-events: auto; }
-
-.rs-status-dot {
-  inline-size: 8px;
-  block-size: 8px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.rs-speak-orb {
-  position: relative;
-  inline-size: min(85vw, 65svh, 720px);
-  aspect-ratio: 1 / 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.rs-speak-orb-fallback {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%,
-    color-mix(in srgb, var(--md-primary) 20%, transparent) 0%,
-    transparent 70%);
-}
-
-.rs-speak-visualizer {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.rs-speak-error {
-  position: absolute;
-  inset-block-end: 16px;
-  inset-inline: 0;
-  display: flex;
-  justify-content: center;
-  z-index: 2;
-}
-
-/* Bottom-action bar contents (lives inside #rs-shell-action) */
-.rs-speak-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  width: 100%;
-}
-.rs-speak-actions .rs-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.rs-speak-actions-label {
-  font-size: 0.75rem;
-  letter-spacing: 0.06em;
-}
-@media (max-width: 480px) {
-  .rs-speak-actions-label { display: none; }
-}
-
-.rs-speak-mic-btn {
-  inline-size: 72px;
-  block-size: 72px;
-  border-radius: 50%;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.rs-speak-mic-btn .material-symbols-rounded {
-  font-size: 2.2rem;
-}
-.rs-speak-mic-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Transcript slide-up overlay */
-.rs-speak-transcript {
-  position: absolute;
-  inset-inline: 8px;
-  inset-block-end: 8px;
-  block-size: min(55svh, 480px);
-  background: var(--md-surface-container-highest);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: 16px;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  animation: rs-speak-slide-up var(--rs-motion-mid) var(--rs-motion-curve);
-}
-@keyframes rs-speak-slide-up {
-  from { transform: translateY(20px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-
-.rs-speak-transcript-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-block-end: 1px solid var(--md-outline-variant);
-  flex: 0 0 auto;
-}
-.rs-speak-transcript-body {
-  flex: 1 1 auto;
-  min-block-size: 0;
-  overflow: hidden;
-  padding: 8px;
-}
-
-@media (min-width: 768px) {
-  .rs-speak-transcript {
-    inset-inline: auto;
-    inset-inline-end: 24px;
-    inset-block-end: 24px;
-    inline-size: min(420px, 90vw);
-  }
-}
-
-/* --- Icon Treatment ------------------------------------------------------- */
-body.rs-stage-active[data-env="atreides"]   [class*="material-symbols"] { font-family: 'Material Symbols Sharp'; font-variation-settings: 'wght' 600, 'FILL' 0, 'GRAD' 200, 'opsz' 24; }
-body.rs-stage-active[data-env="harkonnen"]  [class*="material-symbols"] { font-family: 'Material Symbols Sharp'; font-variation-settings: 'wght' 700, 'FILL' 0, 'GRAD' 200, 'opsz' 20; }
-body.rs-stage-active[data-env="arrakis"]    [class*="material-symbols"] { font-family: 'Material Symbols Outlined'; font-variation-settings: 'wght' 400, 'FILL' 0, 'GRAD' 100, 'opsz' 24; }
-body.rs-stage-active[data-env="forerunner"] [class*="material-symbols"] { font-family: 'Material Symbols Rounded'; font-variation-settings: 'wght' 300, 'FILL' 1, 'GRAD' -25, 'opsz' 24; }
-body.rs-stage-active[data-env="unsc"]       [class*="material-symbols"] { font-family: 'Material Symbols Sharp'; font-variation-settings: 'wght' 600, 'FILL' 0, 'GRAD' 100, 'opsz' 24; }
-body.rs-stage-active[data-env="spires"]     [class*="material-symbols"] { font-family: 'Material Symbols Outlined'; font-variation-settings: 'wght' 200, 'FILL' 0, 'GRAD' -50, 'opsz' 24; }
-body.rs-stage-active[data-env="garden"]     [class*="material-symbols"] { font-family: 'Material Symbols Rounded'; font-variation-settings: 'wght' 400, 'FILL' 1, 'GRAD' 0, 'opsz' 24; }
-body.rs-stage-active[data-env="corpo"]      [class*="material-symbols"] { font-family: 'Material Symbols Sharp'; font-variation-settings: 'wght' 300, 'FILL' 0, 'GRAD' 100, 'opsz' 24; }
-body.rs-stage-active[data-env="pacifica"]   [class*="material-symbols"] { font-family: 'Material Symbols Outlined'; font-variation-settings: 'wght' 500, 'FILL' 0, 'GRAD' 200, 'opsz' 24; }

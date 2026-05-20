@@ -22,7 +22,7 @@ import uuid as _uuid_mod
 from datetime import date
 from typing import Generator, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import and_, create_engine
@@ -30,6 +30,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, sessionmaker
 
 from core.auth import decode_token
+from core.errors import bad_request, conflict, forbidden, not_found, unauthorized
 from core.family import resolve_module_owner
 from inventory.auth import HomeNotFoundError, PermissionDeniedError, set_active_home
 from inventory.management import (
@@ -111,17 +112,17 @@ def get_db() -> Generator[Session, None, None]:
 async def get_current_inv_user(request: Request, db: Session = Depends(get_db)) -> InvUser:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
+        raise unauthorized("Missing Bearer token")
     payload = await decode_token(auth.removeprefix("Bearer ").strip())
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise unauthorized("Invalid or expired token")
 
     user_id      = str(payload.get("sub", ""))
     email        = payload.get("email", "")
     display_name = payload.get("display_name", "") or email
 
     if not user_id or not email:
-        raise HTTPException(status_code=401, detail="Token missing required fields")
+        raise unauthorized("Token missing required fields")
 
     effective_id = resolve_module_owner(user_id, "inventory")
     return get_or_create_inv_user(db, external_user_id=effective_id, email=email, display_name=display_name)
@@ -311,9 +312,9 @@ def edit_home_route(home_id: str, body: HomePatch, db: Session = Depends(get_db)
 def delete_home_route(home_id: str, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
     home = db.query(InvHome).filter(InvHome.id == _uid(home_id)).first()
     if not home:
-        raise HTTPException(status_code=404, detail="Home not found")
+        raise not_found("Home not found")
     if str(home.owner_id) != str(user.id):
-        raise HTTPException(status_code=403, detail="Only the owner can delete a home")
+        raise forbidden("Only the owner can delete a home")
     db.delete(home)
     db.commit()
 
@@ -411,7 +412,7 @@ def update_timezone(body: TimezoneUpdate, db: Session = Depends(get_db), user: I
     try:
         zoneinfo.ZoneInfo(body.timezone)
     except Exception:
-        raise HTTPException(status_code=422, detail=f"Unknown timezone '{body.timezone}'")
+        raise bad_request(f"Unknown timezone '{body.timezone}'")
     user.timezone = body.timezone
     db.commit()
     return {"timezone": user.timezone}
@@ -525,7 +526,7 @@ def download_attachment(attachment_id: str, db: Session = Depends(get_db), user:
     from inventory.file_utils import INVENTORY_FILES_BASE_DIR
     attachment = db.query(ItemAttachment).filter(ItemAttachment.id == _uid(attachment_id)).first()
     if not attachment:
-        raise HTTPException(status_code=404, detail="Attachment not found")
+        raise not_found("Attachment not found")
     try:
         get_attachments(db, str(user.id), str(attachment.item_id))  # permission check
     except Exception as e:
@@ -534,10 +535,10 @@ def download_attachment(attachment_id: str, db: Session = Depends(get_db), user:
     base = os.path.realpath(INVENTORY_FILES_BASE_DIR)
     full_path = os.path.realpath(os.path.join(base, attachment.stored_path))
     if not full_path.startswith(base + os.sep):
-        raise HTTPException(status_code=400, detail="Invalid file path.")
+        raise bad_request("Invalid file path.")
 
     if not os.path.exists(full_path):
-        raise HTTPException(status_code=404, detail="File not found on disk")
+        raise not_found("File not found on disk")
     safe_filename = os.path.basename(attachment.original_filename or "file")
     return FileResponse(full_path, filename=safe_filename, media_type=attachment.mime_type or "application/octet-stream")
 
@@ -623,7 +624,7 @@ async def upload_warranty_image(
 def issue_item_route(item_id: str, body: IssueItem, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
     collab = db.query(InvUser).filter(InvUser.email == body.collaborator_email).first()
     if not collab:
-        raise HTTPException(status_code=404, detail=f"No user with email '{body.collaborator_email}'")
+        raise not_found(f"No user with email '{body.collaborator_email}'")
     try:
         return _ser_item(issue_item(db, str(user.id), item_id, str(collab.id)))
     except Exception as e:
@@ -668,7 +669,7 @@ def list_collaborators(home_id: str, db: Session = Depends(get_db), user: InvUse
 def add_collaborator(home_id: str, body: CollaboratorAdd, db: Session = Depends(get_db), user: InvUser = Depends(get_current_inv_user)):
     collab = db.query(InvUser).filter(InvUser.email == body.user_email).first()
     if not collab:
-        raise HTTPException(status_code=404, detail=f"No user with email '{body.user_email}'")
+        raise not_found(f"No user with email '{body.user_email}'")
     try:
         manage_collaborators(db, str(user.id), home_id, str(collab.id), "add", body.role)
         return {"status": "added", "email": body.user_email, "role": body.role.value}
@@ -709,7 +710,7 @@ def insurance_manifest(home_id: str, db: Session = Depends(get_db), user: InvUse
     base = os.path.realpath(INVENTORY_FILES_BASE_DIR)
     full_path = os.path.realpath(pdf_path)
     if not full_path.startswith(base + os.sep):
-        raise HTTPException(status_code=400, detail="Invalid file path.")
+        raise bad_request("Invalid file path.")
     return FileResponse(
         full_path,
         media_type="application/pdf",

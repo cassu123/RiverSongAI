@@ -40,6 +40,7 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from core.auth import decode_token
+from core.errors import api_error, bad_request, not_found, unauthorized
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -66,10 +67,10 @@ def _get_libby():
 
 async def _require_user(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
+        raise unauthorized("Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise unauthorized("Invalid or expired token.")
     return payload["sub"]
 
 
@@ -128,9 +129,9 @@ async def list_shelf(
     user_id = await _require_user(authorization)
 
     if service and service not in VALID_SERVICES:
-        raise HTTPException(status_code=422, detail=f"Invalid service filter.")
+        raise bad_request(f"Invalid service filter.")
     if status and status not in VALID_STATUSES:
-        raise HTTPException(status_code=422, detail=f"Invalid status filter.")
+        raise bad_request(f"Invalid status filter.")
 
     store = _store(request)
     books = await store.list_shelf(user_id, service=service, status=status)
@@ -174,15 +175,9 @@ async def add_book(
     user_id = await _require_user(authorization)
 
     if body.service not in VALID_SERVICES:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid service. Must be one of: {', '.join(sorted(VALID_SERVICES))}"
-        )
+        raise bad_request(f"Invalid service. Must be one of: {', '.join(sorted(VALID_SERVICES))}")
     if body.status not in VALID_STATUSES:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid status. Must be one of: {', '.join(sorted(VALID_STATUSES))}"
-        )
+        raise bad_request(f"Invalid status. Must be one of: {', '.join(sorted(VALID_STATUSES))}")
 
     store = _store(request)
     book = await store.create_book({
@@ -212,21 +207,21 @@ async def update_book(
     fields = body.model_dump(exclude_unset=True)
 
     if "service" in fields and fields["service"] not in VALID_SERVICES:
-        raise HTTPException(status_code=422, detail="Invalid service.")
+        raise bad_request("Invalid service.")
     if "status" in fields and fields["status"] not in VALID_STATUSES:
-        raise HTTPException(status_code=422, detail="Invalid status.")
+        raise bad_request("Invalid status.")
 
     # Sentinel: rating=-1 means clear the rating
     if fields.get("rating") == -1:
         fields["rating"] = None
 
     if not fields:
-        raise HTTPException(status_code=422, detail="No fields to update.")
+        raise bad_request("No fields to update.")
 
     store = _store(request)
     book = await store.update_book(book_id, user_id, fields)
     if book is None:
-        raise HTTPException(status_code=404, detail="Book not found.")
+        raise not_found("Book not found.")
     return _serialize_book(book)
 
 
@@ -240,7 +235,7 @@ async def delete_book(
     store = _store(request)
     deleted = await store.delete_book(book_id, user_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail="Book not found.")
+        raise not_found("Book not found.")
 
 
 # ---------------------------------------------------------------------------
@@ -268,12 +263,9 @@ async def libby_loans(
             for l in loans
         ]
     except FileNotFoundError:
-        raise HTTPException(
-            status_code=404,
-            detail="Libby not set up. Run: python -m providers.reading.libby --setup"
-        )
+        raise not_found("Libby not set up. Run: python -m providers.reading.libby --setup")
     except PermissionError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+        raise unauthorized(str(exc))
     except Exception as exc:
         logger.error("Libby loans fetch failed: %s", exc)
         raise HTTPException(status_code=502, detail="Could not reach Libby. Check your connection.")
@@ -300,12 +292,9 @@ async def libby_holds(
             for h in holds
         ]
     except FileNotFoundError:
-        raise HTTPException(
-            status_code=404,
-            detail="Libby not set up. Run: python -m providers.reading.libby --setup"
-        )
+        raise not_found("Libby not set up. Run: python -m providers.reading.libby --setup")
     except PermissionError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+        raise unauthorized(str(exc))
     except Exception as exc:
         logger.error("Libby holds fetch failed: %s", exc)
         raise HTTPException(status_code=502, detail="Could not reach Libby. Check your connection.")
@@ -416,14 +405,11 @@ async def libby_connect_complete(
     user_id = await _require_user(authorization)
     chip = _pending_chips.get(user_id)
     if not chip:
-        raise HTTPException(
-            status_code=400,
-            detail="No pending Libby pairing found. Start the flow again."
-        )
+        raise bad_request("No pending Libby pairing found. Start the flow again.")
 
     code = body.code.strip().replace(" ", "").replace("-", "")
     if not code.isdigit() or len(code) != 8:
-        raise HTTPException(status_code=422, detail="Code must be exactly 8 digits.")
+        raise bad_request("Code must be exactly 8 digits.")
 
     try:
         auth_headers = {**_LIBBY_HEADERS, "Authorization": f"Bearer {chip}"}
@@ -436,7 +422,7 @@ async def libby_connect_complete(
             resp.raise_for_status()
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in (400, 401, 403):
-            raise HTTPException(status_code=422, detail="Invalid or expired code. Check the code and try again.")
+            raise bad_request("Invalid or expired code. Check the code and try again.")
         logger.error("Libby chip clone failed: %s", exc)
         raise HTTPException(status_code=502, detail="Could not reach Libby.")
     except Exception as exc:
@@ -516,17 +502,11 @@ async def audible_connect(
     except Exception as exc:
         err = str(exc).lower()
         if "captcha" in err:
-            raise HTTPException(
-                status_code=422,
-                detail="Amazon requires a CAPTCHA for this login. Try again later or use a different network."
-            )
+            raise bad_request("Amazon requires a CAPTCHA for this login. Try again later or use a different network.")
         if "otp" in err or "2-step" in err or "two-step" in err:
-            raise HTTPException(
-                status_code=422,
-                detail="Your Amazon account has 2-step verification enabled. Disable it temporarily for setup, then re-enable it."
-            )
+            raise bad_request("Your Amazon account has 2-step verification enabled. Disable it temporarily for setup, then re-enable it.")
         logger.error("Audible login failed for user '%s': %s", user_id, exc)
-        raise HTTPException(status_code=401, detail=f"Login failed: {exc}")
+        raise unauthorized(f"Login failed: {exc}")
 
     logger.info("Audible auth saved for user '%s'", user_id)
     return {"connected": True}
@@ -616,7 +596,7 @@ async def google_play_callback(
         })
     if resp.status_code != 200:
         logger.error("Google Books token exchange failed: %s", resp.text)
-        raise HTTPException(status_code=400, detail="Failed to exchange Google auth code.")
+        raise bad_request("Failed to exchange Google auth code.")
 
     try:
         from providers.google.books import get_books_provider
@@ -671,10 +651,7 @@ async def sync_kindle(
         provider = _get_kindle()
         books = await provider.get_library(user_id, limit=100)
     except FileNotFoundError as exc:
-        raise HTTPException(
-            status_code=404,
-            detail="Kindle not set up. Connect your Audible/Amazon account first."
-        )
+        raise not_found("Kindle not set up. Connect your Audible/Amazon account first.")
     except Exception as exc:
         logger.error("Kindle sync failed for '%s': %s", user_id, exc)
         raise HTTPException(status_code=502, detail=f"Could not reach the Kindle library: {exc}")
@@ -730,12 +707,9 @@ async def sync_google_play(
         provider = get_books_provider()
         books = await provider.get_library(user_id)
     except FileNotFoundError:
-        raise HTTPException(
-            status_code=404,
-            detail="Google Play Books not connected. Authorize via the Reading page first."
-        )
+        raise not_found("Google Play Books not connected. Authorize via the Reading page first.")
     except PermissionError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+        raise unauthorized(str(exc))
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except Exception as exc:
@@ -907,7 +881,7 @@ async def import_csv(
     reader = csv.DictReader(io.StringIO(text))
     rows = list(reader)
     if not rows:
-        raise HTTPException(status_code=422, detail="CSV file is empty or has no data rows.")
+        raise bad_request("CSV file is empty or has no data rows.")
 
     fmt = _detect_format(reader.fieldnames or [])
     store = _store(request)

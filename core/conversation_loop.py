@@ -80,7 +80,7 @@ class FallbackLLMProvider(LLMProvider):
 # Provider factories
 # -----------------------------------------------------------------------------
 
-def _build_stt_provider() -> STTProvider:
+def _build_stt_provider(model_size: Optional[str] = None) -> STTProvider:
     """
     Instantiate the STT provider named in STT_PROVIDER.
 
@@ -94,7 +94,7 @@ def _build_stt_provider() -> STTProvider:
     key = get_settings().stt_provider
     if key == "whisper_local":
         from providers.stt.whisper_local import WhisperLocalSTT
-        return WhisperLocalSTT()
+        return WhisperLocalSTT(model_size=model_size)
     raise ValueError(
         f"Unsupported STT_PROVIDER '{key}'. Supported values: whisper_local"
     )
@@ -193,7 +193,7 @@ def _build_tts_provider(voice_id_override: Optional[str] = None) -> TTSProvider:
                 if entry.engine == "elevenlabs":
                     from providers.tts.elevenlabs import ElevenLabsTTS
                     return ElevenLabsTTS(voice_code=entry.voice_code)
-        except (RuntimeError, Exception) as exc:
+        except Exception as exc:
             import logging as _log
             _log.getLogger(__name__).warning(
                 "TTS provider initialization failed for '%s': %s — falling back to Piper",
@@ -249,6 +249,7 @@ class ConversationLoop:
         voice_id_override: Optional[str] = None,
         fallback_provider: Optional[str] = None,
         fallback_model: Optional[str] = None,
+        stt_model_override: Optional[str] = None,
         is_kiosk: bool = False,
     ) -> None:
         settings = get_settings()
@@ -261,6 +262,7 @@ class ConversationLoop:
         self._voice_id_override: Optional[str] = voice_id_override
         self._fallback_provider: Optional[str] = fallback_provider
         self._fallback_model: Optional[str] = fallback_model
+        self._stt_model_override: Optional[str] = stt_model_override
         self._is_kiosk: bool = is_kiosk
         self._stt: Optional[STTProvider] = None
         self._llm: Optional[LLMProvider] = None
@@ -297,9 +299,10 @@ class ConversationLoop:
             voice_id_override     = self._voice_id_override
             fallback_provider     = self._fallback_provider
             fallback_model        = self._fallback_model
+            stt_model_override    = self._stt_model_override
 
             def _build_all():
-                stt = _build_stt_provider()
+                stt = _build_stt_provider(model_size=stt_model_override)
                 llm = _build_llm_provider(
                     provider_override=llm_provider_override,
                     model_override=llm_model_override,
@@ -352,10 +355,12 @@ class ConversationLoop:
 
             # 3. Generate greeting (10s timeout)
             try:
-                response = await asyncio.wait_for(
-                    self._llm.chat([{"role": "user", "content": prompt}]),
-                    timeout=10.0
-                )
+                response = ""
+                async def _collect():
+                    nonlocal response
+                    async for chunk in self._llm.stream_response([{"role": "user", "content": prompt}]):
+                        response += chunk
+                await asyncio.wait_for(_collect(), timeout=10.0)
             except asyncio.TimeoutError:
                 logger.debug("Startup briefing LLM timed out.")
                 return

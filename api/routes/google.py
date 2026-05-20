@@ -16,6 +16,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from core.auth import decode_token
+from core.errors import bad_request, forbidden, not_found, unauthorized
 from providers.google.auth import GoogleAuth
 from config.settings import get_settings
 

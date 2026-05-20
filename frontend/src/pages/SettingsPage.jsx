@@ -275,6 +275,7 @@ export default function SettingsPage({
           cloud_fallback_enabled: next.cloud_fallback_enabled,
           cloud_fallback_provider: next.cloud_fallback_provider,
           cloud_fallback_model:   next.cloud_fallback_model,
+          whisper_model:          next.whisper_model,
         }),
       })
       if (!res.ok) throw new Error('Save failed')
@@ -519,17 +520,15 @@ export default function SettingsPage({
       {/* ORCHESTRATION (n8n) — admin view, toggle only. Credentials live in .env */}
       {/* ================================================================ */}
       {showAdmin && orchestrationSettings && (
-        <Section title="ORCHESTRATION (n8n)">
+        <Section title="WORKFLOW AUTOMATION">
           <Toggle
             id="n8n-toggle"
-            label="Enable n8n integration"
+            label="Enable Background Automation"
             checked={orchestrationSettings.n8n_enabled}
             onChange={v => saveOrchestration({ n8n_enabled: v })}
           />
           <p className="rs-card-meta">
-            n8n handles complex multi-step routines. Credentials
-            (<code>N8N_URL</code>, <code>N8N_API_KEY</code>, <code>N8N_WEBHOOK_SECRET</code>)
-            are loaded from <code>.env</code>.
+            River can execute complex, multi-step routines in the background. System credentials are automatically securely loaded from the core environment.
           </p>
         </Section>
       )}
@@ -642,6 +641,31 @@ export default function SettingsPage({
               </div>
             )
           })}
+        </div>
+      </Section>
+      )}
+
+      {/* ================================================================ */}
+      {/* VOICE RECOGNITION (STT) — user-facing                            */}
+      {/* ================================================================ */}
+      {showUser && (
+      <Section title="VOICE RECOGNITION (STT)">
+        <p className="rs-card-meta" style={{ marginBottom: 16 }}>
+          Select the Whisper model size for real-time speech-to-text. Smaller models respond instantly, larger models are more accurate. Runs 100% locally.
+        </p>
+        <div style={{ marginTop: 8 }}>
+          <label className="settings-label">WHISPER MODEL SIZE</label>
+          <select 
+            className="settings-select"
+            value={llmSettings?.whisper_model || 'base'}
+            onChange={e => saveFallback({ whisper_model: e.target.value })}
+            style={{ width: '200px' }}
+          >
+            <option value="tiny">Tiny (Fastest, low VRAM)</option>
+            <option value="base">Base (Balanced)</option>
+            <option value="small">Small (More accurate)</option>
+            <option value="medium">Medium (Requires more VRAM)</option>
+          </select>
         </div>
       </Section>
       )}
@@ -971,20 +995,19 @@ export default function SettingsPage({
           checked={!!aiFeatures.WAKE_WORD_ENABLED}
           onChange={v => saveAiFeature('WAKE_WORD_ENABLED', v)}
         />
-        <p className="rs-card-meta">Enable ambient detection. Requires openWakeWord.</p>
+        <p className="rs-card-meta">Enable ambient detection. River will actively listen for your designated phrase.</p>
         
         {wakeWordRestart && (
           <div style={{ marginTop: 12, padding: '12px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid #ffaa00', borderRadius: 'var(--md-shape-sm)' }}>
             <span style={{ fontSize: '0.8rem', color: '#ffaa00', fontWeight: 600 }}>
-              ⚠️ Wake word changes require backend restart.
+              System restart required to apply changes.
             </span>
           </div>
         )}
 
         <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--md-surface-container-low)', padding: '12px 16px', borderRadius: 'var(--md-shape-sm)' }}>
           <div style={{ display: 'flex', gap: 16, fontSize: '0.75rem' }}>
-            <span>Model: <strong>hey_river</strong></span>
-            <code style={{ background: 'black', color: '#4ade80', padding: '4px 8px', borderRadius: 4 }}>pip install openwakeword</code>
+            <span>Active Phrase: <strong>Hey River</strong></span>
           </div>
           <span className="rs-card-label" style={{ color: aiFeatures.WAKE_WORD_ENABLED ? '#4ade80' : 'var(--md-outline)' }}>
             {aiFeatures.WAKE_WORD_ENABLED ? 'ACTIVE' : 'OFF'}
@@ -1156,16 +1179,16 @@ function AdminWakeWordSection({ token }) {
   if (loading) return null
 
   return (
-    <Section title="WAKE WORD (ADMIN)">
+    <Section title="AMBIENT LISTENING">
       {!installed && (
         <div className="settings-hint" style={{ color: 'var(--md-error)', marginBottom: 16 }}>
-          ⚠️ <code>openWakeWord</code> is not installed in the python environment. Wake word detection will be inactive.
+          The local ambient detection engine is currently offline. River cannot hear you until it is restored.
         </div>
       )}
 
       <Toggle 
         id="ww-admin-enabled"
-        label="Enable Wake Word Detection"
+        label="Enable Ambient Detection"
         checked={form.enabled}
         onChange={v => setForm({ ...form, enabled: v })}
       />

@@ -22,27 +22,35 @@ export default function Shell({
   onHome,
   action,
   chatSidebar,
+  drawer, // Add drawer component as prop for static placement at desktop
   children,
+  mode = 'workshop' // 'foyer' or 'workshop'
 }) {
-  // `has-sidebar` adds left padding at desktop so content clears the chat-history
-  // column. The persistent left rail (Drawer at desktop) is offset via the
-  // `.rs-shell` desktop-padding rules — kept in CSS, not JS.
-  const shellClass = `rs-shell${chatSidebar ? ' has-sidebar' : ''}`
+  const shellClass = `rs-shell rs-mode-${mode}${chatSidebar ? ' has-sidebar' : ''}`
+  
   return (
     <div className={shellClass}>
+      {drawer}
+
+      {/* ZONE 1: HEADER */}
       <header className="rs-header">
-        <button className="rs-mark-btn" onClick={onHome} aria-label="Home">
-          <RsMark mark="mono" size={28} />
-        </button>
-        <div className="rs-context">{context}</div>
-        <button className="rs-orb" onClick={onOpenSpeak} aria-label="Speak to River" />
-        <button className="rs-hamburger" onClick={onOpenDrawer} aria-label="Open navigation">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="5" y1="8"  x2="19" y2="8"  />
-            <line x1="5" y1="12" x2="19" y2="12" />
-            <line x1="5" y1="16" x2="19" y2="16" />
-          </svg>
-        </button>
+        <div className="rs-header-left">
+          <button className="rs-mark-btn" onClick={onHome} aria-label="Home">
+            <RsMark mark="mono" size={24} />
+          </button>
+          <div className="rs-context">{context}</div>
+        </div>
+        
+        <div className="rs-header-right">
+          <button className={`rs-orb ${mode === 'foyer' ? 'is-large' : 'is-small'}`} onClick={onOpenSpeak} aria-label="Speak to River" />
+          <button className="rs-hamburger" onClick={onOpenDrawer} aria-label="Open navigation">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="5" y1="8"  x2="19" y2="8"  />
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <line x1="5" y1="16" x2="19" y2="16" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       {chatSidebar && (
@@ -51,10 +59,18 @@ export default function Shell({
         </aside>
       )}
 
-      <main className="rs-content">{children}</main>
+      {/* ZONE 2: CONTENT */}
+      <main className="rs-content">
+        <div className="rs-foyer">
+          {children}
+        </div>
+      </main>
 
+      {/* ZONE 3: ACTION BAR */}
       <div id="rs-shell-action" className="rs-action" style={{ display: action ? 'block' : 'none' }}>
-        {action}
+        <div className="rs-action-inner">
+          {action}
+        </div>
       </div>
       {!action && <div style={{ height: 'env(safe-area-inset-bottom)' }} />}
     </div>

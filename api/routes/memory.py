@@ -18,6 +18,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from core.auth import decode_token
+from core.errors import bad_request, not_found, unauthorized
 
 router = APIRouter(prefix="/api/memory", tags=["memory"])
 
@@ -37,10 +38,10 @@ def _mm(request: Request):
 async def _require_user(authorization: Optional[str]) -> str:
     """Validate Bearer token and return the user's sub claim."""
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
+        raise unauthorized("Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise unauthorized("Invalid or expired token.")
     return payload["sub"]
 
 
@@ -66,7 +67,7 @@ async def get_facts(request: Request, authorization: Optional[str] = Header(defa
 async def create_fact(body: FactCreate, request: Request, authorization: Optional[str] = Header(default=None)):
     user_id = await _require_user(authorization)
     if not body.key.strip() or not body.value.strip():
-        raise HTTPException(status_code=422, detail="key and value are required")
+        raise bad_request("key and value are required")
     mm = _mm(request)
     await mm.upsert_fact(user_id=user_id, key=body.key, value=body.value, source="manual")
     facts = await mm.get_facts(user_id)
@@ -89,7 +90,7 @@ async def delete_fact(fact_id: str, request: Request, authorization: Optional[st
     mm = _mm(request)
     ok = await mm.delete_fact(fact_id, user_id)
     if not ok:
-        raise HTTPException(status_code=404, detail="Fact not found")
+        raise not_found("Fact not found")
 
 
 @router.get("/preferences")
@@ -115,7 +116,7 @@ async def delete_preference(pref_id: str, request: Request, authorization: Optio
     mm = _mm(request)
     ok = await mm.delete_preference(pref_id, user_id)
     if not ok:
-        raise HTTPException(status_code=404, detail="Preference not found")
+        raise not_found("Preference not found")
 
 
 @router.get("/pending-habits")
@@ -134,7 +135,7 @@ async def approve_habit(habit_id: str, request: Request, authorization: Optional
     habits = await mm.get_pending_habits(user_id)
     habit = next((h for h in habits if h["id"] == habit_id), None)
     if not habit:
-        raise HTTPException(status_code=404, detail="Pending habit not found")
+        raise not_found("Pending habit not found")
     
     # Move to preferences
     from providers.memory.models import Preference
@@ -161,7 +162,7 @@ async def delete_pending_habit(habit_id: str, request: Request, authorization: O
     mm = _mm(request)
     ok = await mm.delete_pending_habit(habit_id, user_id)
     if not ok:
-        raise HTTPException(status_code=404, detail="Pending habit not found")
+        raise not_found("Pending habit not found")
 
 
 @router.get("/summaries")
@@ -188,4 +189,4 @@ async def delete_summary(summary_id: str, request: Request, authorization: Optio
     mm = _mm(request)
     ok = await mm.delete_summary(summary_id, user_id)
     if not ok:
-        raise HTTPException(status_code=404, detail="Summary not found")
+        raise not_found("Summary not found")

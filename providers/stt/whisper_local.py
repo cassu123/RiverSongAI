@@ -68,9 +68,9 @@ class WhisperLocalSTT(STTProvider):
     Audio arrives as WAV bytes from the browser and is decoded server-side.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, model_size: Optional[str] = None) -> None:
         settings = get_settings()
-        self._model_size: str = settings.whisper_model_size
+        self._model_size: str = model_size or settings.whisper_model_size
 
         self._executor = ThreadPoolExecutor(
             max_workers=2, thread_name_prefix="whisper"

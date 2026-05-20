@@ -14,6 +14,7 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from core.auth import decode_token
+from core.errors import bad_request, forbidden, not_found, unauthorized
 from api.services.feed_service import FeedService
 from providers.feeds.news import (
     NEWS_SOURCES, NEWS_SOURCE_CATEGORIES,

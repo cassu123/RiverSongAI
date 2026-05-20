@@ -17,6 +17,7 @@ from typing import Optional
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from core.auth import decode_token
+from core.errors import bad_request, forbidden, not_found, unauthorized
 
 router = APIRouter(prefix="/api", tags=["features"])
 

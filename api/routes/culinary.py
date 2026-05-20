@@ -59,6 +59,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from core.auth import decode_token
+from core.errors import api_error, bad_request, conflict, not_found, unauthorized
 from culinary.models import (
     Base,
     BannedIngredient,
@@ -190,13 +191,13 @@ def get_db() -> Generator[Session, None, None]:
 async def _get_user_id(request: Request) -> str:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
+        raise unauthorized("Missing Bearer token")
     payload = await decode_token(auth.removeprefix("Bearer ").strip())
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise unauthorized("Invalid or expired token")
     uid = str(payload.get("sub", ""))
     if not uid:
-        raise HTTPException(status_code=401, detail="Token missing sub")
+        raise unauthorized("Token missing sub")
     return uid
 
 
@@ -1371,7 +1372,7 @@ async def update_banned_ingredient(
     hh = _get_household(db, uid)
     bi = db.query(BannedIngredient).filter_by(id=bi_id, household_id=hh.id).first()
     if not bi:
-        raise HTTPException(status_code=404, detail="Banned ingredient not found")
+        raise not_found("Banned ingredient not found")
 
     if body.name is not None:
         bi.name = body.name.strip().lower()
@@ -1394,7 +1395,7 @@ async def delete_banned_ingredient(
     hh = _get_household(db, uid)
     bi = db.query(BannedIngredient).filter_by(id=bi_id, household_id=hh.id).first()
     if not bi:
-        raise HTTPException(status_code=404, detail="Banned ingredient not found")
+        raise not_found("Banned ingredient not found")
     db.delete(bi)
     db.commit()
     await _ws_manager.broadcast(hh.id, "banned_deleted", {"id": bi_id})
@@ -1476,7 +1477,7 @@ async def update_equipment(
     hh = _get_household(db, uid)
     eq = db.query(KitchenEquipment).filter_by(id=eq_id, household_id=hh.id).first()
     if not eq:
-        raise HTTPException(status_code=404, detail="Equipment not found")
+        raise not_found("Equipment not found")
 
     make_changed = body.make is not None
     model_changed = body.model is not None
@@ -1538,7 +1539,7 @@ async def delete_equipment(
     hh = _get_household(db, uid)
     eq = db.query(KitchenEquipment).filter_by(id=eq_id, household_id=hh.id).first()
     if not eq:
-        raise HTTPException(status_code=404, detail="Equipment not found")
+        raise not_found("Equipment not found")
     try:
         caps = json.loads(eq.capabilities_json or "[]")
     except Exception:
@@ -1610,7 +1611,7 @@ async def create_recipe(
             sqlalchemy.func.lower(Recipe.title) == title_norm
         ).first()
         if existing:
-            raise HTTPException(status_code=409, detail=f"A recipe with title '{body.title}' already exists.")
+            raise conflict(f"A recipe with title '{body.title}' already exists.")
 
     blacklisted = _flag_blacklist(db, hh.id, body.ingredients)
     meal = MealType(body.meal_type) if body.meal_type in [m.value for m in MealType] else MealType.OTHER
@@ -1641,7 +1642,7 @@ async def get_recipe(recipe_id: str, request: Request, db: Session = Depends(get
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise not_found("Recipe not found")
     return _recipe_out(r)
 
 
@@ -1656,7 +1657,7 @@ async def update_recipe(
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise not_found("Recipe not found")
     old_title = r.title
     if body.title is not None:
         r.title = body.title
@@ -1688,7 +1689,7 @@ async def delete_recipe(recipe_id: str, request: Request, db: Session = Depends(
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise not_found("Recipe not found")
     await _delete_recipe_from_vault(uid, r)
     db.delete(r)
     db.commit()
@@ -1706,9 +1707,9 @@ async def rate_recipe(
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise not_found("Recipe not found")
     if not (1 <= body.rating <= 5):
-        raise HTTPException(status_code=422, detail="Rating must be 1–5")
+        raise bad_request("Rating must be 1–5")
     r.rating = body.rating
     db.commit()
     db.refresh(r)
@@ -1750,7 +1751,7 @@ async def suggest_dinner(
     hh  = _get_household(db, uid)
     recipe = db.query(Recipe).filter_by(id=body.recipe_id, household_id=hh.id).first()
     if not recipe:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise not_found("Recipe not found")
     p = DinnerProposal(household_id=hh.id, recipe_id=recipe.id, proposed_by=uid)
     db.add(p)
     db.commit()
@@ -1771,7 +1772,7 @@ async def vote_dinner(
     hh  = _get_household(db, uid)
     p   = db.query(DinnerProposal).filter_by(id=proposal_id, household_id=hh.id).first()
     if not p:
-        raise HTTPException(status_code=404, detail="Proposal not found")
+        raise not_found("Proposal not found")
 
     yes_list = json.loads(p.votes_yes or "[]")
     no_list  = json.loads(p.votes_no  or "[]")
@@ -1784,7 +1785,7 @@ async def vote_dinner(
     elif body.vote == "no":
         no_list.append(uid)
     else:
-        raise HTTPException(status_code=422, detail="vote must be 'yes' or 'no'")
+        raise bad_request("vote must be 'yes' or 'no'")
 
     p.votes_yes = json.dumps(yes_list)
     p.votes_no  = json.dumps(no_list)
@@ -1805,7 +1806,7 @@ async def dismiss_dinner(
     hh  = _get_household(db, uid)
     p   = db.query(DinnerProposal).filter_by(id=proposal_id, household_id=hh.id).first()
     if not p:
-        raise HTTPException(status_code=404, detail="Proposal not found")
+        raise not_found("Proposal not found")
     db.delete(p)
     db.commit()
     proposals = [_proposal_out(x) for x in _active_proposals(db, hh.id)]
@@ -1823,10 +1824,10 @@ async def cook_now(
     hh  = _get_household(db, uid)
     p   = db.query(DinnerProposal).filter_by(id=proposal_id, household_id=hh.id).first()
     if not p:
-        raise HTTPException(status_code=404, detail="Proposal not found")
+        raise not_found("Proposal not found")
     recipe = p.recipe
     if not recipe:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise not_found("Recipe not found")
 
     original_servings = recipe.servings or 4
     target_servings   = 4
@@ -1883,10 +1884,7 @@ async def ingest_recipe(
             doc = fitz.open(stream=content, filetype="pdf")
         except Exception as exc:
             logger.error("Failed to parse uploaded PDF: %s", exc)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="The uploaded file is not a valid PDF or is corrupted. Ensure you are uploading a direct PDF file."
-            )
+            raise bad_request("The uploaded file is not a valid PDF or is corrupted. Ensure you are uploading a direct PDF file.")
         src_type = SourceType.PDF
 
         text_pages:  List[str] = []
@@ -1953,13 +1951,10 @@ async def ingest_recipe(
         src_type  = SourceType.URL
 
         if _is_bot_challenge(page_html):
-            raise HTTPException(
-                status_code=422,
-                detail=(
-                    "This site uses bot protection and blocked the request. "
-                    "Try copying the recipe text and using the Manual Entry form instead."
-                ),
-            )
+            raise bad_request((
+                "This site uses bot protection and blocked the request. "
+                "Try copying the recipe text and using the Manual Entry form instead."
+            ))
 
         # ── Track 1a: JSON-LD structured extraction (instant, no AI) ────────
         jsonld_recipes = _extract_jsonld_recipes(page_html)
@@ -2004,7 +1999,7 @@ async def ingest_recipe(
                     recipe_dict["image_url"] = og_image
 
     else:
-        raise HTTPException(status_code=422, detail="Provide either a PDF file or a source_url")
+        raise bad_request("Provide either a PDF file or a source_url")
 
     if not all_parsed:
         raise HTTPException(status_code=502, detail="No recipes found in source")
@@ -2027,7 +2022,7 @@ async def ingest_recipe(
                 sqlalchemy.func.lower(Recipe.title).in_(titles)
             ).first()
             if existing:
-                raise HTTPException(status_code=409, detail=f"Recipe '{existing.title}' already exists in your library.")
+                raise conflict(f"Recipe '{existing.title}' already exists in your library.")
 
     saved: List[Recipe] = []
     try:
@@ -2063,10 +2058,7 @@ async def ingest_recipe(
     except Exception as exc:
         db.rollback()
         logger.error("Failed to save ingested recipes: %s", exc, exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error while saving recipes: {exc}"
-        )
+        raise api_error(f"Database error while saving recipes: {exc}", exc, logger)
     for r in saved:
         db.refresh(r)
         await _sync_recipe_to_vault(uid, r)
@@ -2090,7 +2082,7 @@ async def scale_recipe(
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise not_found("Recipe not found")
 
     orig_servings = r.servings or 1
     scale_factor = body.target_servings / orig_servings
@@ -2147,7 +2139,7 @@ async def translate_equipment(
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
     if not r:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise not_found("Recipe not found")
 
     steps = json.loads(r.steps_json or "[]")
     prompt = _EQUIPMENT_TRANSLATE_PROMPT.format(
@@ -2214,7 +2206,7 @@ async def get_stockroom_item(item_id: str, request: Request, db: Session = Depen
     hh = _get_household(db, uid)
     item = db.query(StockroomItem).filter_by(id=item_id, household_id=hh.id).first()
     if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise not_found("Item not found")
     return _stock_out(item)
 
 
@@ -2229,7 +2221,7 @@ async def update_stockroom_item(
     hh = _get_household(db, uid)
     item = db.query(StockroomItem).filter_by(id=item_id, household_id=hh.id).first()
     if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise not_found("Item not found")
     if body.name is not None:
         item.name = body.name
     if body.brand is not None:
@@ -2251,7 +2243,7 @@ async def delete_stockroom_item(item_id: str, request: Request, db: Session = De
     hh = _get_household(db, uid)
     item = db.query(StockroomItem).filter_by(id=item_id, household_id=hh.id).first()
     if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise not_found("Item not found")
     db.delete(item)
     db.commit()
     await _ws_manager.broadcast(hh.id, "stockroom_updated", {"deleted_id": item_id})
@@ -2356,7 +2348,7 @@ async def get_active_prep(request: Request, db: Session = Depends(get_db)):
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(household_id=hh.id, is_active=True).first()
     if not session:
-        raise HTTPException(status_code=404, detail="No active prep session")
+        raise not_found("No active prep session")
     return _session_out(session)
 
 
@@ -2397,10 +2389,10 @@ async def add_recipe_to_prep(
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
     if not session:
-        raise HTTPException(status_code=404, detail="Prep session not found")
+        raise not_found("Prep session not found")
     recipe = db.query(Recipe).filter_by(id=body.recipe_id, household_id=hh.id).first()
     if not recipe:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise not_found("Recipe not found")
     entry = PrepSessionRecipe(
         session_id=session_id,
         recipe_id=body.recipe_id,
@@ -2426,11 +2418,11 @@ async def update_prep_recipe_scale(
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
     if not session:
-        raise HTTPException(status_code=404, detail="Prep session not found")
+        raise not_found("Prep session not found")
     
     entry = db.query(PrepSessionRecipe).filter_by(id=entry_id, session_id=session_id).first()
     if not entry:
-        raise HTTPException(status_code=404, detail="Recipe entry not found in session")
+        raise not_found("Recipe entry not found in session")
 
     entry.servings_target = body.target_servings
     entry.scaled_ingredients_json = json.dumps(body.scaled_ingredients)
@@ -2453,7 +2445,7 @@ async def remove_recipe_from_prep(
     hh = _get_household(db, uid)
     entry = db.query(PrepSessionRecipe).filter_by(id=entry_id, session_id=session_id).first()
     if not entry:
-        raise HTTPException(status_code=404, detail="Entry not found")
+        raise not_found("Entry not found")
     db.delete(entry)
     db.commit()
     session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
@@ -2471,7 +2463,7 @@ async def get_shopping_list(session_id: str, request: Request, db: Session = Dep
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
     if not session:
-        raise HTTPException(status_code=404, detail="Prep session not found")
+        raise not_found("Prep session not found")
 
     # Build set of Good stockroom items (normalized lowercase)
     good_stock = {
@@ -2527,7 +2519,7 @@ async def get_staging_area(session_id: str, request: Request, db: Session = Depe
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
     if not session:
-        raise HTTPException(status_code=404, detail="Prep session not found")
+        raise not_found("Prep session not found")
 
     good_stock = {
         s.name.lower().strip()
@@ -2563,7 +2555,7 @@ async def complete_prep_session(
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
     if not session:
-        raise HTTPException(status_code=404, detail="Prep session not found")
+        raise not_found("Prep session not found")
     session.is_active = False
     session.completed_at = datetime.now(timezone.utc)
     db.commit()
@@ -2603,11 +2595,11 @@ async def create_walmart_mapping(
         if match:
             item_id = match.group(1)
         else:
-            raise HTTPException(status_code=422, detail="Invalid Walmart URL. Could not find Item ID.")
+            raise bad_request("Invalid Walmart URL. Could not find Item ID.")
 
     # 2. Validation: Must be numeric
     if not item_id.isdigit():
-        raise HTTPException(status_code=422, detail="Invalid Walmart Item ID. Must be a number.")
+        raise bad_request("Invalid Walmart Item ID. Must be a number.")
 
     existing = db.query(WalmartMapping).filter_by(household_id=hh.id, ingredient_name=name_norm).first()
     if existing:
@@ -2631,7 +2623,7 @@ async def delete_walmart_mapping(mapping_id: str, request: Request, db: Session 
     hh = _get_household(db, uid)
     m = db.query(WalmartMapping).filter_by(id=mapping_id, household_id=hh.id).first()
     if not m:
-        raise HTTPException(status_code=404, detail="Mapping not found")
+        raise not_found("Mapping not found")
     db.delete(m)
     db.commit()
 
@@ -2655,7 +2647,7 @@ async def walmart_export(
         session = db.query(PrepSession).filter_by(household_id=hh.id, is_active=True).first()
 
     if not session:
-        raise HTTPException(status_code=404, detail="No prep session found")
+        raise not_found("No prep session found")
 
     # Gather all ingredients from session
     all_ingredients: List[dict] = []

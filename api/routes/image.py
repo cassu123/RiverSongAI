@@ -12,6 +12,7 @@ from providers.image.sd_provider import SDProvider
 from config.settings import get_settings
 from core.limiter import limiter
 from core.auth import decode_token
+from core.errors import bad_request, forbidden, not_found, unauthorized
 
 router = APIRouter(prefix="/api/image", tags=["image"])
 _bearer = HTTPBearer(auto_error=False)

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from core.auth import decode_token
+from core.errors import bad_request, forbidden, not_found, unauthorized
 from config.settings import get_settings
 from providers.llm.vision_provider import VisionProvider
 

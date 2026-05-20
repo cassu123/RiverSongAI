@@ -20,6 +20,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from core.auth import decode_token
+from core.errors import bad_request, forbidden, not_found, unauthorized
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/routines", tags=["routines"])

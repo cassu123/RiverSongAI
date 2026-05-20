@@ -153,6 +153,27 @@ That alias is defined in `~/.ssh/config` and uses `~/.ssh/id_ed25519`. Verify wi
 
 ---
 
+## Session Handoff (2026-05-20)
+
+### Backend Status (Track A, B, and Round 3)
+- **Round 3 Repairs:** Verified. All malformed `async def await` signatures in the 18 route files have been corrected. `analytics.py` has been restored to its original functional state and correctly migrated to async. `n8n_webhooks.py` now includes the missing `Depends` import.
+- **Track A (Voice ID):** Infrastructure in place (`api/routes/voice_id.py`, `providers/voice_id/`). Verified that the backend compiles and routes are registered.
+- **Track B (3-axis UI backend):** Support for `universe`, `environment`, and `mood` in `api/routes/auth.py` and `sqlite_store.py` is present.
+
+### Next Steps: Chrome Rework (Plan Locked)
+The user has directed to **execute the UI rework** based on `RIVER_SONG_CHROME_PLAN.md`.
+- **Constraint:** Exclude the "Chat" and "Speak" pages from the rework for now.
+- **Plan File:** Refer to `/home/riversong/.gemini/tmp/riversongai/9c3bd89e-04e2-43bb-aa17-6e414f8c99bb/plans/chrome-rework-execution.md` for the step-by-step implementation.
+- **Current Task:** Start **Phase 1: CSS Infrastructure & Bones**. This involves establishing the 3-zone skeleton (Header, Content, Action Bar) and the CSS custom properties mapping.
+
+### Key Files for Next Session
+- `RIVER_SONG_CHROME_PLAN.md`: Global design specification.
+- `chrome-rework-execution.md`: Implementation plan (in the plan folder).
+- `frontend/src/App.jsx`: Target for the 3-zone layout skeleton.
+- `frontend/src/styles/themes.css`: Target for the CSS architecture overhaul.
+
+---
+
 ## To Restore Claude Memory on a New Machine
 Copy this directory from the Chromebook:
 `~/.claude/projects/-home-river-song-RiverSongAI/memory/`

@@ -19,6 +19,7 @@ from typing import Optional
 from fastapi import Header
 
 from core.auth import decode_token
+from core.errors import bad_request, forbidden, not_found, unauthorized
 from core.kill_switch import (
     is_kill_switch_active,
     activate_global_kill_switch,
