@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
-import Sheet, { SheetRow } from '../chrome/Sheet'
+import Sheet from '../chrome/Sheet'
 import BarcodeScanner from '../components/BarcodeScanner.jsx'
 
 /**
