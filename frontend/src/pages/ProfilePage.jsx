@@ -58,6 +58,38 @@ export default function ProfilePage({
   const [displayName, setDisplayName] = useState(profile.displayName || '')
   const [pushStatus, setPushStatus] = useState('idle')
   const [saveStatus, setSaveStatus] = useState(null)
+  
+  const [integrations, setIntegrations] = useState(null)
+  const [integrationsSaving, setIntegrationsSaving] = useState(false)
+
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      fetch('/api/auth/integrations', { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.amazon_sp_api) {
+            setIntegrations(data)
+          }
+        })
+        .catch(err => console.error('Failed to load integrations', err))
+    }
+  }, [user, token])
+
+  const saveIntegrations = async () => {
+    if (!integrations) return
+    setIntegrationsSaving(true)
+    try {
+      await fetch('/api/auth/integrations', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(integrations)
+      })
+    } catch (err) {
+      console.error('Failed to save integrations', err)
+    } finally {
+      setIntegrationsSaving(false)
+    }
+  }
 
   const handleSaveProfile = async () => {
     setSaveStatus('SAVING...')
@@ -207,6 +239,60 @@ export default function ProfilePage({
             </button>
           </div>
         </div>
+
+        {/* Admin Integrations (Links) */}
+        {user?.role === 'admin' && integrations && (
+          <div className="rs-card is-wide">
+            <div className="rs-card-head">
+              <span className="rs-card-label">EXTERNAL LINKS & INTEGRATIONS</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <p className="rs-card-meta">Link your Amazon Seller Central, Walmart, or TikTok store APIs for global analytics.</p>
+              
+              <div className="rs-input-group">
+                <label>Amazon Seller ID</label>
+                <input 
+                  type="text" 
+                  className="rs-input" 
+                  value={integrations.amazon_sp_api?.seller_id || ''}
+                  onChange={e => setIntegrations(prev => ({...prev, amazon_sp_api: {...prev.amazon_sp_api, seller_id: e.target.value}}))}
+                  placeholder="A1B2C3D4E5F6G"
+                />
+              </div>
+
+              <div className="rs-input-group">
+                <label>Amazon LWA App ID</label>
+                <input 
+                  type="text" 
+                  className="rs-input" 
+                  value={integrations.amazon_sp_api?.lwa_app_id || ''}
+                  onChange={e => setIntegrations(prev => ({...prev, amazon_sp_api: {...prev.amazon_sp_api, lwa_app_id: e.target.value}}))}
+                  placeholder="amzn1.application-oa2-client.xyz..."
+                />
+              </div>
+
+              <div className="rs-input-group">
+                <label>Amazon LWA Client Secret</label>
+                <input 
+                  type="password" 
+                  className="rs-input" 
+                  value={integrations.amazon_sp_api?.lwa_client_secret || ''}
+                  onChange={e => setIntegrations(prev => ({...prev, amazon_sp_api: {...prev.amazon_sp_api, lwa_client_secret: e.target.value}}))}
+                  placeholder="Required for automated refresh..."
+                />
+              </div>
+              
+              <button 
+                className="rs-btn-primary" 
+                onClick={saveIntegrations} 
+                disabled={integrationsSaving}
+                style={{ alignSelf: 'flex-start', marginTop: 8 }}
+              >
+                {integrationsSaving ? 'SAVING LINKS...' : 'SAVE INTEGRATIONS'}
+              </button>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

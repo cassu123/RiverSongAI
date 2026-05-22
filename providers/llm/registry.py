@@ -579,6 +579,98 @@ _CATALOG: List[ModelEntry] = [
         notes="Top-tier Mistral model",
         priority=141,
     ),
+
+    # =========================================================================
+    # NVIDIA NIM (priority 150-169) — free tier, ~40 req/min
+    # One API key covers the full catalog; model_id is swapped per-request.
+    # cost = $0.00 on free tier (rate-limited, not billed).
+    # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # Kimi K2.6 — Moonshot AI, strong creative + long context
+    # -------------------------------------------------------------------------
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="moonshotai/kimi-k2",
+        display_name="Kimi K2.6",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Moonshot AI — creative, conversation, long context. Free via NIM.",
+        priority=150,
+    ),
+
+    # -------------------------------------------------------------------------
+    # Nemotron — NVIDIA's flagship reasoning model
+    # -------------------------------------------------------------------------
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="nvidia/llama-3.1-nemotron-ultra-253b-v1",
+        display_name="Nemotron Ultra 253B",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="NVIDIA's largest reasoning model. Best for complex analysis. Free via NIM.",
+        priority=151,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="nvidia/llama-3.3-nemotron-super-49b-v1",
+        display_name="Nemotron Super 49B",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="NVIDIA Nemotron — strong reasoning, faster than 253B. Free via NIM.",
+        priority=152,
+    ),
+
+    # -------------------------------------------------------------------------
+    # DeepSeek R1 via NIM — reasoning powerhouse
+    # -------------------------------------------------------------------------
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="deepseek-ai/deepseek-r1",
+        display_name="DeepSeek R1 (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="DeepSeek R1 full model via NVIDIA NIM. Free tier.",
+        priority=153,
+    ),
+
+    # -------------------------------------------------------------------------
+    # Llama 3.1 70B via NIM — solid general purpose, free
+    # -------------------------------------------------------------------------
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="meta/llama-3.1-70b-instruct",
+        display_name="Llama 3.1 70B (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Meta Llama 3.1 70B via NVIDIA NIM. Strong general model, free tier.",
+        priority=154,
+    ),
+
+    # -------------------------------------------------------------------------
+    # Mistral Large via NIM — fast and capable
+    # -------------------------------------------------------------------------
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="mistralai/mistral-large-2-instruct",
+        display_name="Mistral Large (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Mistral Large 2 via NVIDIA NIM. Fast European model, free tier.",
+        priority=155,
+    ),
 ]
 
 

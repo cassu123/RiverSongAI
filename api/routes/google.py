@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import asyncio
+import httpx
 from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request, Query
@@ -67,17 +68,37 @@ async def get_auth_url(
 
 @router.get("/auth/callback")
 async def auth_callback(
+    request: Request,
     code: str = Query(...),
     state: str = Query(...),  # state contains our user_id
-    redirect_uri: str = Query(...),
 ):
     """
     Exchange the authorization code for tokens and save them.
+    Also links the Google identity to the user account if not already linked.
     """
     user_id = state
     auth = _get_google_auth()
+    # Reconstruct the redirect_uri from the current URL (strip query params).
+    # Google does not echo redirect_uri back; it must match what was registered.
+    redirect_uri = str(request.url).split("?")[0]
     try:
-        auth.fetch_token_from_code(user_id=user_id, code=code, redirect_uri=redirect_uri)
+        creds = auth.fetch_token_from_code(user_id=user_id, code=code, redirect_uri=redirect_uri)
+        
+        # Link the identity so "Login with Google" also works
+        try:
+            async with httpx.AsyncClient() as http:
+                resp = await http.get(
+                    "https://www.googleapis.com/oauth2/v2/userinfo",
+                    headers={"Authorization": f"Bearer {creds.token}"},
+                )
+                if resp.status_code == 200:
+                    profile = resp.json()
+                    store = request.app.state.memory_manager._store
+                    await store.link_google_account(user_id, profile["id"], profile["email"])
+                    logger.info("Linked Google identity %s to user %s during service connection", profile["email"], user_id)
+        except Exception as link_exc:
+            logger.warning("Failed to link Google identity for user %s: %s", user_id, link_exc)
+
         # Redirect back to the frontend Google page
         return RedirectResponse(url="/google")
     except Exception as exc:
@@ -88,6 +109,7 @@ async def auth_callback(
 
 @router.get("/status")
 async def get_status(
+    request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
     """
@@ -97,11 +119,15 @@ async def get_status(
     auth = _get_google_auth()
     try:
         creds = auth.get_credentials(user_id)
-        # Attempt to get the email from the token if possible
-        # credentials objects from from_authorized_user_info don't always have email
-        # but we can try to find it in the stored file or just return True
+        
+        # Also check if identity is linked in DB
+        store = request.app.state.memory_manager._store
+        user = await store.get_user_by_id(user_id)
+        google_email = user.get("google_email") if user else None
+
         return {
             "connected": True,
+            "email": google_email,
             "expired": creds.expired,
             "scopes": creds.scopes,
         }

@@ -11,6 +11,8 @@ export function AuthProvider({ children }) {
   const [user,          setUser]          = useState(() => { try { return JSON.parse(localStorage.getItem(USER_KEY)) } catch { return null } })
   const [loading,       setLoading]       = useState(true)
   const [setupRequired, setSetupRequired] = useState(false)
+  
+  const [isAdminImpersonating, setIsAdminImpersonating] = useState(() => !!localStorage.getItem('rs-admin-token'))
 
   // Check setup status and validate token on mount
   useEffect(() => {
@@ -120,10 +122,45 @@ export function AuthProvider({ children }) {
     setUser(null)
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
+    localStorage.removeItem('rs-admin-token')
+    setIsAdminImpersonating(false)
   }, [token])
 
+  const impersonate = useCallback((newToken, impersonatedUser) => {
+    localStorage.setItem('rs-admin-token', token)
+    setToken(newToken)
+    setUser(impersonatedUser)
+    localStorage.setItem(TOKEN_KEY, newToken)
+    localStorage.setItem(USER_KEY, JSON.stringify(impersonatedUser))
+    setIsAdminImpersonating(true)
+    window.location.href = '/' // Force full reload to clear any local states
+  }, [token])
+
+  const revertImpersonation = useCallback(async () => {
+    const origToken = localStorage.getItem('rs-admin-token')
+    if (origToken) {
+      setToken(origToken)
+      localStorage.removeItem('rs-admin-token')
+      localStorage.setItem(TOKEN_KEY, origToken)
+      setIsAdminImpersonating(false)
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/me`, { headers: { Authorization: `Bearer ${origToken}` } })
+        if (res.ok) {
+          const u = await res.json()
+          setUser(u)
+          localStorage.setItem(USER_KEY, JSON.stringify(u))
+          window.location.href = '/users' // Reload back to users page
+        } else {
+          logout()
+        }
+      } catch {
+        logout()
+      }
+    }
+  }, [logout])
+
   return (
-    <AuthContext.Provider value={{ token, user, loading, setupRequired, setupAdmin, login, signup, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ token, user, loading, setupRequired, setupAdmin, login, signup, loginWithGoogle, logout, impersonate, revertImpersonation, isAdminImpersonating }}>
       {children}
     </AuthContext.Provider>
   )

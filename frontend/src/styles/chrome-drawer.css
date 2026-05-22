@@ -275,13 +275,18 @@
 
 /* ── BOTTOM SHEET ──────────────────────────────────────────────────────────── */
 
+/* ── LIQUID GLASS SHEET ─────────────────────────────────────────────────────
+   Scrim: very light tint so the scene stays alive behind the glass.
+   Sheet: near-transparent + heavy blur + saturate = genuine liquid glass.
+   ─────────────────────────────────────────────────────────────────────────── */
+
 .rs-sheet-scrim {
   position: fixed;
   inset: 0;
   z-index: 300;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--rs-motion-mid) var(--rs-motion-curve);
@@ -298,10 +303,18 @@
   z-index: 350;
   border-start-start-radius: 28px;
   border-start-end-radius: 28px;
-  background: var(--md-surface-container-highest);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-block-start: 1px solid var(--md-outline-variant);
+
+  /* Liquid glass core: scene bleeds through heavy blur */
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(56px) saturate(180%) brightness(1.08);
+  -webkit-backdrop-filter: blur(56px) saturate(180%) brightness(1.08);
+
+  /* Specular top edge + depth shadow */
+  border-block-start: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 -1px 0 rgba(255, 255, 255, 0.12) inset,
+    0 -12px 60px rgba(0, 0, 0, 0.45);
+
   padding: 14px 18px;
   padding-block-end: max(env(safe-area-inset-bottom), 18px);
   transform: translateY(100%);
@@ -310,20 +323,18 @@
   margin-inline: auto;
   max-block-size: 80svh;
   overflow-y: auto;
-  box-shadow: 0 -8px 40px rgba(0,0,0,0.4);
 }
 .rs-sheet.is-open {
   transform: translateY(0);
 }
 
 .rs-sheet-handle {
-  width: 40px;
+  width: 36px;
   height: 4px;
-  background: var(--md-outline-variant);
+  background: rgba(255, 255, 255, 0.35);
   border-radius: 999px;
   margin-inline: auto;
   margin-block-end: 14px;
-  opacity: 0.65;
 }
 
 .rs-sheet-head {
@@ -336,7 +347,8 @@
   font-weight: 700;
   margin: 0;
   letter-spacing: 0.01em;
-  color: var(--md-on-surface);
+  color: var(--fg);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
 }
 
 .rs-sheet-body {
@@ -349,12 +361,12 @@
   all: unset;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 12px;
+  gap: 14px;
+  padding: 13px 12px;
+  border-radius: 14px;
   cursor: pointer;
   position: relative;
-  color: var(--md-on-surface);
+  color: var(--fg);
   width: 100%;
   box-sizing: border-box;
   transition: background var(--rs-motion-fast) var(--rs-motion-curve),
@@ -362,13 +374,13 @@
 }
 @media (pointer: fine) {
   .rs-sheet-row:hover {
-    background: color-mix(in srgb, var(--md-on-surface) 8%, transparent);
+    background: rgba(255, 255, 255, 0.1);
   }
   .rs-sheet-row:hover .rs-sheet-row-icon { opacity: 1; }
 }
 
 .rs-sheet-row.is-active {
-  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  background: color-mix(in srgb, var(--primary) 18%, rgba(255, 255, 255, 0.06));
   color: var(--primary);
 }
 .rs-sheet-row.is-active::before {
@@ -376,21 +388,23 @@
   position: absolute;
   inset-block: 10px;
   inset-inline-start: 0;
-  inline-size: 2px;
+  inline-size: 2.5px;
   background: var(--primary);
   border-radius: 2px;
+  box-shadow: 0 0 6px var(--primary);
 }
 .rs-sheet-row.is-active .rs-sheet-row-icon {
   color: var(--primary);
   opacity: 1;
 }
-.rs-sheet-row.is-dimmed { opacity: 0.4; pointer-events: none; }
+.rs-sheet-row.is-dimmed { opacity: 0.35; pointer-events: none; }
 
 .rs-sheet-row-icon {
   font-size: 20px;
-  opacity: 0.65;
+  opacity: 0.55;
+  flex-shrink: 0;
   transition: opacity var(--rs-motion-fast);
-  color: var(--md-on-surface-variant);
+  color: var(--fg);
 }
 
 .rs-sheet-row-body {
@@ -404,13 +418,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
 .rs-sheet-row-sub {
   font-size: var(--rs-fs-small);
-  color: var(--md-on-surface-variant);
+  color: rgba(255, 255, 255, 0.5);
   margin-block-start: 2px;
-  opacity: 0.8;
 }
 
 .rs-sheet-row-badge {
@@ -428,6 +442,44 @@
 .rs-sheet-check {
   color: var(--primary);
   font-size: 20px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 4px var(--primary));
+}
+
+.rs-sheet-chevron {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.rs-sheet-back {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-block-end: 6px;
+  transition: background 120ms ease, color 120ms ease;
+}
+.rs-sheet-back:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+}
+.rs-sheet-back .material-symbols-rounded { font-size: 1rem; }
+
+.rs-sheet-empty {
+  padding: 28px 16px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.6;
 }
 
 /* ── GREETING (Dashboard / Briefing hero) ──────────────────────────────────── */

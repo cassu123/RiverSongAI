@@ -307,7 +307,7 @@ def create_app() -> FastAPI:
         admin_router, routines_router, inventory_router, commerce_router,
         vehicles_router, feeds_router, reading_router, features_router,
         parent_router, analytics_router, culinary_router, location_router, google_router,
-        vision_router, vault_router, pulse_router, voice_id_router, n8n_webhooks, shopify_webhooks_router, image_router, push_router,
+        vision_router, vault_router, pulse_router, voice_id_router, n8n_webhooks, shopify_webhooks_router, shopify_auth_router, image_router, push_router,
         legal_router, rag_router, daemons_router, context_router, broadcast_router, rover_router,
         usage_router
     )
@@ -338,6 +338,7 @@ def create_app() -> FastAPI:
     app.include_router(pulse_router)
     app.include_router(voice_id_router)
     app.include_router(shopify_webhooks_router)
+    app.include_router(shopify_auth_router)
     app.include_router(image_router)
     app.include_router(push_router)
     app.include_router(legal_router)
@@ -375,6 +376,8 @@ app: FastAPI = create_app()
 
 if __name__ == "__main__":
     settings = get_settings()
+    with open("/tmp/backend_test.txt", "w") as f:
+        f.write(f"RESTARTED! KEY: {settings.nvidia_api_key} ENABLED: {settings.nvidia_nim_enabled}\n")
     uvicorn.run(
         "main:app",
         host=settings.app_host,

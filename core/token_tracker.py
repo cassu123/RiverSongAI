@@ -35,6 +35,13 @@ _COST_PER_M: Dict[str, Dict[str, float]] = {
     # Mistral
     "mistral-large-latest":       {"in": 2.00,  "out": 6.00},
     "mistral-small-latest":       {"in": 0.10,  "out": 0.30},
+    # NVIDIA NIM — free tier, $0 cost, rate-limited ~40 req/min
+    "moonshotai/kimi-k2":                            {"in": 0.0, "out": 0.0},
+    "nvidia/llama-3.1-nemotron-ultra-253b-v1":       {"in": 0.0, "out": 0.0},
+    "nvidia/llama-3.3-nemotron-super-49b-v1":        {"in": 0.0, "out": 0.0},
+    "deepseek-ai/deepseek-r1":                       {"in": 0.0, "out": 0.0},
+    "meta/llama-3.1-70b-instruct":                   {"in": 0.0, "out": 0.0},
+    "mistralai/mistral-large-2-instruct":             {"in": 0.0, "out": 0.0},
 }
 
 
@@ -172,3 +179,36 @@ def get_summary(days: int = 30) -> dict:
             "days": days, "total_input": 0, "total_output": 0,
             "estimated_cost_usd": 0.0, "by_model": [],
         }
+
+
+def get_provider_rate(provider: str, window_seconds: int = 60) -> dict:
+    """
+    Return request count and token totals for a provider within the last
+    `window_seconds`. Used by the NIM rate-limit monitor (40 req/min limit).
+    """
+    try:
+        ensure_table()
+        cutoff = time.time() - window_seconds
+        with sqlite3.connect(_db_path()) as conn:
+            row = conn.execute(
+                """
+                SELECT COUNT(*) AS calls,
+                       SUM(input_tokens)  AS input_tokens,
+                       SUM(output_tokens) AS output_tokens
+                FROM token_usage
+                WHERE provider = ? AND ts >= ?
+                """,
+                (provider, cutoff),
+            ).fetchone()
+        calls = row[0] or 0
+        return {
+            "provider":       provider,
+            "window_seconds": window_seconds,
+            "calls":          calls,
+            "input_tokens":   row[1] or 0,
+            "output_tokens":  row[2] or 0,
+        }
+    except Exception as exc:
+        logger.warning("token_tracker: rate query failed: %s", exc)
+        return {"provider": provider, "window_seconds": window_seconds, "calls": 0,
+                "input_tokens": 0, "output_tokens": 0}

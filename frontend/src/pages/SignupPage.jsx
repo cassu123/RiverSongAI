@@ -29,7 +29,7 @@ export default function SignupPage({ onSwitchToLogin }) {
   }
 
   return (
-    <div className="rs-foyer" style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+    <div style={{ position: 'relative', zIndex: 1, minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
       <div className="rs-card is-elev" style={{ width: '100%', maxWidth: 420, padding: '2.5rem 1.5rem' }}>
         
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>

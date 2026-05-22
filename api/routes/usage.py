@@ -12,7 +12,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Header, HTTPException, Query
 
 from core.auth import decode_token
-from core.token_tracker import get_summary
+from core.token_tracker import get_summary, get_provider_rate
 
 router = APIRouter(prefix="/api/usage", tags=["usage"])
 
@@ -29,3 +29,18 @@ async def token_usage(
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     return get_summary(days=days)
+
+
+@router.get("/rate/{provider}")
+async def provider_rate(
+    provider: str,
+    window: int = Query(default=60, ge=10, le=3600),
+    authorization: str = Header(default=""),
+):
+    """Return request count + token totals for a provider in the last `window` seconds."""
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing Bearer token")
+    payload = await decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return get_provider_rate(provider, window_seconds=window)

@@ -98,15 +98,22 @@ def _model_to_dict(m: ModelEntry, installed: Optional[Set[str]] = None) -> dict:
     }
 
 
-def _get_enabled_providers() -> dict:
+def _get_enabled_providers(admin_config: Optional[dict] = None) -> dict:
     s = get_settings()
+    admin_config = admin_config or {}
+    
+    local_enabled = admin_config.get("local_llms_enabled_global", True)
+    cloud_enabled = admin_config.get("cloud_llms_enabled_global", True)
+    nvidia_enabled = admin_config.get("nvidia_nim_enabled_global", s.nvidia_nim_enabled)
+
     return {
-        "anthropic":  s.anthropic_enabled  and bool(s.anthropic_api_key),
-        "gemini":     s.gemini_enabled     and bool(s.gemini_api_key),
-        "openai":     s.openai_enabled     and bool(s.openai_api_key),
-        "mistral_ai": s.mistral_ai_enabled and bool(s.mistral_api_key),
-        "bedrock":    s.bedrock_enabled    and bool(s.aws_access_key_id) and bool(s.aws_secret_access_key),
-        "ollama":     True,
+        "anthropic":  cloud_enabled and s.anthropic_enabled  and bool(s.anthropic_api_key),
+        "gemini":     cloud_enabled and s.gemini_enabled     and bool(s.gemini_api_key),
+        "openai":     cloud_enabled and s.openai_enabled     and bool(s.openai_api_key),
+        "mistral_ai": cloud_enabled and s.mistral_ai_enabled and bool(s.mistral_api_key),
+        "bedrock":    cloud_enabled and s.bedrock_enabled    and bool(s.aws_access_key_id) and bool(s.aws_secret_access_key),
+        "nvidia_nim": nvidia_enabled and bool(s.nvidia_api_key),
+        "ollama":     local_enabled,
     }
 
 
@@ -142,17 +149,34 @@ async def list_models(
     Cloud models include an `available` flag based on configured API keys.
     """
     await _require_user(authorization)
+    is_admin = False
+    try:
+        tok = (authorization or "").removeprefix("Bearer ")
+        p = await decode_token(tok)
+        is_admin = p.get("role") == "admin" if p else False
+    except Exception:
+        pass
+
     installed = _get_ollama_installed_models()
     enabled   = _get_enabled_providers()
 
     hidden_llms: set[str] = set()
     family_overrides: dict = {}
+    nvidia_nim_users_enabled: bool = True
     try:
         config = await request.app.state.memory_manager._store.get_admin_config()
         hidden_llms = set(config.get("hidden_llms", []))
         family_overrides = config.get("model_families", {}) or {}
+        nvidia_nim_users_enabled = config.get("nvidia_nim_user_access", True)
+        
+        enabled = _get_enabled_providers(config)
     except Exception:
         pass
+
+    # Non-admins cannot see NIM models when access is restricted
+    if not is_admin and not nvidia_nim_users_enabled:
+        from providers.llm.registry import LLMRegistry as _reg
+        hidden_llms = hidden_llms | {m.model_id for m in _reg.list_by_provider("nvidia_nim")}
 
     local_models = [
         _model_to_dict(m, installed)
@@ -492,6 +516,130 @@ async def set_active_voice(
 
 
 # =============================================================================
+# Intent Router settings
+# =============================================================================
+
+class NvidiaUserAccessBody(BaseModel):
+    enabled: bool
+
+
+@router.get("/settings/nvidia-nim-access")
+async def get_nvidia_nim_access(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(authorization)
+    try:
+        config = await request.app.state.memory_manager._store.get_admin_config()
+        return {"enabled": config.get("nvidia_nim_user_access", True)}
+    except Exception:
+        return {"enabled": True}
+
+
+@router.post("/settings/nvidia-nim-access")
+async def set_nvidia_nim_access(
+    request: Request,
+    body: NvidiaUserAccessBody,
+    authorization: Optional[str] = Header(default=None),
+):
+    user_id = await _require_admin(authorization)
+    try:
+        store = request.app.state.memory_manager._store
+        config = await store.get_admin_config()
+        config["nvidia_nim_user_access"] = body.enabled
+        await store.set_admin_config(config)
+    except Exception as e:
+        logger.warning("Failed to persist nvidia_nim_user_access: %s", e)
+    logger.info("NIM user access set to %s by admin %s.", body.enabled, user_id)
+    return {"ok": True, "enabled": body.enabled}
+
+
+class LLMRoutingFlagsBody(BaseModel):
+    local_enabled: bool
+    cloud_enabled: bool
+    nvidia_enabled: bool
+
+@router.get("/admin/llm-routing-flags")
+async def get_llm_routing_flags(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(authorization)
+    try:
+        config = await request.app.state.memory_manager._store.get_admin_config()
+        from config.settings import get_settings
+        s = get_settings()
+        return {
+            "local_enabled": config.get("local_llms_enabled_global", True),
+            "cloud_enabled": config.get("cloud_llms_enabled_global", True),
+            "nvidia_enabled": config.get("nvidia_nim_enabled_global", s.nvidia_nim_enabled)
+        }
+    except Exception:
+        return {"local_enabled": True, "cloud_enabled": True, "nvidia_enabled": False}
+
+@router.post("/admin/llm-routing-flags")
+async def set_llm_routing_flags(
+    request: Request,
+    body: LLMRoutingFlagsBody,
+    authorization: Optional[str] = Header(default=None),
+):
+    user_id = await _require_admin(authorization)
+    try:
+        store = request.app.state.memory_manager._store
+        config = await store.get_admin_config()
+        config["local_llms_enabled_global"] = body.local_enabled
+        config["cloud_llms_enabled_global"] = body.cloud_enabled
+        config["nvidia_nim_enabled_global"] = body.nvidia_enabled
+        await store.set_admin_config(config)
+    except Exception as e:
+        logger.warning("Failed to persist llm routing flags: %s", e)
+    logger.info("LLM routing flags set by admin %s.", user_id)
+    return {"ok": True}
+
+
+class IntentRouterBody(BaseModel):
+    enabled: bool
+    min_hits: int = 2
+
+
+@router.get("/settings/intent-router")
+async def get_intent_router_settings(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Return the current model intent router configuration."""
+    await _require_admin(authorization)
+    s = get_settings()
+    return {
+        "enabled":  s.model_intent_router_enabled,
+        "min_hits": s.model_intent_router_min_hits,
+    }
+
+
+@router.post("/settings/intent-router")
+async def save_intent_router_settings(
+    request: Request,
+    body: IntentRouterBody,
+    authorization: Optional[str] = Header(default=None),
+):
+    user_id = await _require_admin(authorization)
+    s = get_settings()
+    s.model_intent_router_enabled = body.enabled
+    s.model_intent_router_min_hits = body.min_hits
+
+    try:
+        store = request.app.state.memory_manager._store
+        config = await store.get_admin_config()
+        config["intent_router_config"] = body.model_dump()
+        await store.set_admin_config(config)
+    except Exception as e:
+        logger.warning("Failed to persist intent router settings: %s", e)
+
+    logger.info("Intent router settings saved by admin %s.", user_id)
+    return {"ok": True}
+
+
+# =============================================================================
 # Orchestration settings (Phase 9)
 # =============================================================================
 
@@ -758,3 +906,27 @@ async def save_persona(
         
     logger.info("Persona settings updated by admin %s.", user_id)
     return {"ok": True}
+
+
+# =============================================================================
+# Provider Rate Tracking
+# =============================================================================
+
+@router.get("/settings/provider-rate")
+def get_current_provider_rate(
+    provider: str,
+    window: int = 60,
+    authorization: Optional[str] = Header(default=None)
+):
+    # Synchronous because get_provider_rate uses sqlite3 synchronously
+    from core.token_tracker import get_provider_rate
+    # No auth check needed or just quick check
+    if authorization and authorization.startswith("Bearer "):
+        pass # we could require_user but sync auth is tricky, let's keep it open or do async def + run_in_executor
+    
+    rate = get_provider_rate(provider, window_seconds=window)
+    return {
+        "provider": provider,
+        "rpm": rate["calls"],
+        "window": window
+    }

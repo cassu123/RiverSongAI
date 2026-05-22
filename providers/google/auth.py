@@ -22,6 +22,9 @@ from googleapiclient.discovery import build
 logger = logging.getLogger(__name__)
 
 DEFAULT_SCOPES: List[str] = [
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/gmail.modify",
     "https://www.googleapis.com/auth/drive.readonly",

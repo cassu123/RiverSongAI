@@ -9,6 +9,7 @@ import './styles/chrome-shell.css'
 import './styles/chrome-stage.css'
 import './styles/chrome-components.css'
 import './styles/chrome-drawer.css'
+import './styles/white-pages.css'
 
 // Lazy load pages
 const LoginPage          = lazy(() => import('./pages/LoginPage.jsx'))
@@ -93,7 +94,7 @@ const ENV_MOODS = {
 }
 
 export default function App() {
-  const { user, token, loading, logout, setupRequired } = useAuth()
+  const { user, token, loading, logout, setupRequired, isAdminImpersonating, revertImpersonation } = useAuth()
   const [authView,      setAuthView]      = useState('login')
   const [enabledFeatures, setEnabledFeatures] = useState(null)
   const [currentPage,   setCurrentPage]   = useState(() => {
@@ -106,6 +107,7 @@ export default function App() {
   const [adminMode,     setAdminMode]     = useState(false)
   const [drawerOpen,    setDrawerOpen]    = useState(false)
   const [pageAction,    setPageAction]    = useState(null)
+  const [sidebarOpen,   setSidebarOpen]   = useState(() => load('rs-sidebar-open', true))
 
   const universeKey   = user ? `rs-universe:${user.id}`   : 'rs-universe'
   const envKey        = user ? `rs-env:${user.id}`        : 'rs-env'
@@ -128,6 +130,7 @@ export default function App() {
   useEffect(() => { save('rs-page', currentPage); setPageAction(null); }, [currentPage])
   useEffect(() => { save('rs-admin', adminMode) }, [adminMode])
   useEffect(() => { save('rs-profile', profile) }, [profile])
+  useEffect(() => { save('rs-sidebar-open', sidebarOpen) }, [sidebarOpen])
 
   useEffect(() => {
     save(universeKey, universe)
@@ -171,22 +174,35 @@ export default function App() {
       .then(r => r.json())
       .then(d => {
         const feats = new Set()
-        if (d && d.ai_features) {
-          Object.entries(d.ai_features).forEach(([k, v]) => {
-            if (v) feats.add(k.toLowerCase().replace('_enabled', ''))
-          })
+        if (d) {
+          if (Array.isArray(d.features)) d.features.forEach(f => feats.add(f))
+          if (d.ai_features) {
+            Object.entries(d.ai_features).forEach(([k, v]) => {
+              if (v) feats.add(k.toLowerCase().replace('_enabled', ''))
+            })
+          }
         }
         setEnabledFeatures(feats)
       })
       .catch(() => setEnabledFeatures(new Set()))
   }, [token])
 
-  const refreshFeatures = () => {
+  const refreshFeatures = useCallback(() => {
+    if (!token) return
     fetch('/api/features', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(d => {
-        if (d.ai_features) setEnabledFeatures(new Set(Object.entries(d.ai_features).filter(([_,v])=>v).map(([k,_])=>k.toLowerCase().replace('_enabled',''))))
+        const feats = new Set()
+        if (d) {
+          if (Array.isArray(d.features)) d.features.forEach(f => feats.add(f))
+          if (d.ai_features) {
+            Object.entries(d.ai_features).forEach(([k, v]) => {
+              if (v) feats.add(k.toLowerCase().replace('_enabled', ''))
+            })
+          }
+        }
+        setEnabledFeatures(feats)
       })
-  }
+  }, [token])
 
   const setUniverseSafe = (u) => { setUniverse(u); setEnvironment(UNIVERSE_ENVS[u][0]); setMood(ENV_MOODS[UNIVERSE_ENVS[u][0]][0]); }
   const setEnvironmentSafe = (e) => { setEnvironment(e); setMood(ENV_MOODS[e][0]); }
@@ -199,6 +215,11 @@ export default function App() {
     if (!enabledFeatures) return false
     return enabledFeatures.has(page)
   }
+
+  useEffect(() => {
+    window.addEventListener('rs-features-changed', refreshFeatures)
+    return () => window.removeEventListener('rs-features-changed', refreshFeatures)
+  }, [refreshFeatures])
 
   useEffect(() => {
     const handleNavChat = () => { setCurrentPage('chat'); window.scrollTo(0, 0); }
@@ -278,13 +299,20 @@ export default function App() {
     ? timeOfDayGreeting()
     : (ENV_LABELS[environment] || '')
 
-  // Desktop chat-history sidebar slot (≥1200px). Placeholder until wired to data;
-  // hidden under 1200px via CSS. Only rendered for chat/speak pages so the slot
-  // doesn't leak DOM elsewhere.
+  // Desktop chat-history sidebar slot (≥1200px). Only on chat/speak pages.
   const showChatSidebar = currentPage === 'chat' || currentPage === 'speak'
-  const chatSidebar = showChatSidebar ? (
+  const chatSidebar = showChatSidebar && sidebarOpen ? (
     <div className="rs-chat-sidebar-inner">
-      <h3 className="rs-chat-sidebar-title">Recent</h3>
+      <div className="rs-sidebar-head">
+        <span className="rs-chat-sidebar-title">Recent</span>
+        <button
+          className="rs-sidebar-toggle"
+          onClick={() => setSidebarOpen(false)}
+          title="Hide recent panel"
+        >
+          <span className="material-symbols-rounded">left_panel_close</span>
+        </button>
+      </div>
       <p className="rs-chat-sidebar-empty">
         Past conversations will appear here. Start speaking and River will remember.
       </p>
@@ -293,8 +321,15 @@ export default function App() {
 
   const shellMode = (currentPage === 'dashboard' || currentPage === 'briefing') ? 'foyer' : 'workshop'
 
+  const impersonationBanner = isAdminImpersonating ? (
+    <div style={{ background: '#f59e0b', color: '#000', padding: '8px', textAlign: 'center', fontWeight: 'bold', zIndex: 9999, position: 'relative' }}>
+      ⚠️ Viewing as {user?.display_name || 'User'} — <button onClick={revertImpersonation} style={{ background: 'transparent', border: 'none', textDecoration: 'underline', cursor: 'pointer', fontWeight: 'bold', padding: 0, color: 'inherit' }}>Return to Admin</button>
+    </div>
+  ) : null;
+
   return (
     <div className="rs-root">
+      {impersonationBanner}
       <Stage environment={environment} />
 
       <Shell
@@ -305,6 +340,7 @@ export default function App() {
         onHome={() => handleNavigate('dashboard')}
         action={pageAction}
         chatSidebar={chatSidebar}
+        onShowSidebar={showChatSidebar && !sidebarOpen ? () => setSidebarOpen(true) : null}
         drawer={
           <Drawer
             open={drawerOpen}

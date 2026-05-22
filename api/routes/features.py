@@ -23,18 +23,18 @@ router = APIRouter(prefix="/api", tags=["features"])
 
 # Canonical feature catalog — keys must match nav item keys in Sidebar.jsx
 ALL_FEATURES = [
-    {"key": "speak",       "label": "Speak (Voice Conversation)"},
+    {"key": "speak",       "label": "Speaking"},
     {"key": "chat",        "label": "Chat"},
     {"key": "memory",      "label": "Memory"},
-    {"key": "inventory",   "label": "Inventory"},
+    {"key": "inventory",   "label": "Stash"},
     {"key": "vehicles",    "label": "Garage"},
     {"key": "commerce",    "label": "Store"},
-    {"key": "culinary",    "label": "Culinary"},
+    {"key": "culinary",    "label": "Kitchen"},
     {"key": "feeds",       "label": "Feeds"},
     {"key": "google",      "label": "Google"},
-    {"key": "reading",     "label": "Reading Shelf"},
-    {"key": "links",       "label": "Links"},
+    {"key": "chronos",     "label": "Notes"},
     {"key": "dashboard",   "label": "Dashboard"},
+    {"key": "briefing",    "label": "Briefing"},
     {"key": "routines",    "label": "Routines"},
     {"key": "home",        "label": "Home Node"},
     {"key": "analytics",   "label": "Analytics"},

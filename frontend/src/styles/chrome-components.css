@@ -403,5 +403,235 @@
   opacity: 0.6;
 }
 
+/* ── Model picker popover (rs-mpop) ─────────────────────────────────────────
+   Compact floating card anchored above the action bar, near the model button.
+   Uses z-index 9991 to sit above the shell (z-index 10) and action bar (100).
+   No backdrop-filter on the card itself to avoid containing-block conflicts
+   with the animated Stage; instead uses a rich opaque-glass mix.
+   ─────────────────────────────────────────────────────────────────────────── */
+.rs-mpop {
+  position: fixed;
+  width: min(300px, calc(100vw - 36px));
+  max-height: 60vh;
+  overflow-y: auto;
+  z-index: 9991;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--bg-base) 78%, rgba(255,255,255,0.14));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 2px 0 rgba(255,255,255,0.08) inset,
+    0 16px 48px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(0,0,0,0.3);
+  padding: 6px;
+  animation: rs-mpop-in 160ms var(--rs-motion-curve) both;
+}
+@keyframes rs-mpop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.rs-mpop-row {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 11px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--fg);
+  transition: background 120ms ease;
+}
+.rs-mpop-row:hover { background: rgba(255,255,255,0.08); }
+.rs-mpop-row.is-active {
+  background: color-mix(in srgb, var(--primary) 18%, rgba(255,255,255,0.04));
+  color: var(--primary);
+}
+.rs-mpop-row.is-dimmed { opacity: 0.35; pointer-events: none; }
+
+.rs-mpop-icon {
+  font-size: 18px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.rs-mpop-row.is-active .rs-mpop-icon { opacity: 1; color: var(--primary); }
+
+.rs-mpop-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.rs-mpop-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.rs-mpop-sub {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rs-mpop-badge {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--primary);
+  color: var(--bg-base);
+}
+.rs-mpop-check {
+  font-size: 18px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.rs-mpop-chevron {
+  font-size: 18px;
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+.rs-mpop-back {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.45);
+  margin-block-end: 4px;
+  transition: background 120ms ease, color 120ms ease;
+}
+.rs-mpop-back:hover {
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.8);
+}
+.rs-mpop-back .material-symbols-rounded { font-size: 0.95rem; }
+
+.rs-mpop-empty {
+  padding: 20px 12px;
+  text-align: center;
+  font-size: 0.78rem;
+  opacity: 0.4;
+  margin: 0;
+}
 
 
+
+
+/* ============================================================
+   Toggle Switch (M3 Style)
+   ============================================================ */
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 0;
+}
+
+.toggle-label {
+  font-size: 0.9rem;
+  color: var(--text);
+  flex: 1;
+}
+
+.toggle-switch {
+  width: 46px;
+  height: 24px;
+  border-radius: 12px;
+  border: 1px solid var(--border-bright);
+  background: rgba(5,12,22,0.8);
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  transition: background 0.25s, border-color 0.25s;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toggle-switch--on {
+  background: rgba(0,255,204,0.15);
+  border-color: var(--secondary);
+  box-shadow: var(--glow-teal);
+}
+
+.toggle-knob {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: transform 0.25s, background 0.25s;
+  pointer-events: none;
+}
+
+.toggle-switch--on .toggle-knob {
+  transform: translateX(22px);
+  background: var(--secondary);
+}
+
+.toggle-value {
+  font-family: var(--font-display);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  width: 30px;
+  color: var(--text-dim);
+}
+
+.toggle-switch--on + .toggle-value { color: var(--secondary); }
+.select-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+}
+
+.select-label {
+  font-size: 0.9rem;
+  color: var(--text);
+  flex: 1;
+}
+
+.settings-select {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  background: var(--bg-card);
+  color: var(--primary);
+  border: 1px solid var(--border-bright);
+  border-radius: 2px;
+  padding: 6px 12px;
+  appearance: none;
+  cursor: pointer;
+  min-width: 140px;
+}
+
+.settings-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--glow-sm);
+}
+
+.settings-hint {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+  padding: 4px 0;
+  border-left: 2px solid var(--border-bright);
+  padding-left: 12px;
+  max-width: 640px;
+}

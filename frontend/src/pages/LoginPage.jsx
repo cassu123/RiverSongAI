@@ -1,13 +1,55 @@
 import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 
-/**
- * LoginPage — Phase 3 Rewrite
- * -----------------------------------------------------------------------------
- * Chromeless glass card centered on the Stage backdrop.
- */
-
 const API_BASE = import.meta.env.VITE_API_URL || ''
+
+const inputStyle = {
+  boxSizing: 'border-box',
+  width: '100%',
+  padding: '12px 16px',
+  fontSize: '0.9rem',
+  background: 'rgba(255,255,255,0.07)',
+  border: '1px solid rgba(255,255,255,0.14)',
+  borderRadius: '10px',
+  color: 'var(--md-on-surface)',
+  outline: 'none',
+  fontFamily: 'inherit',
+}
+
+const btnPrimary = {
+  boxSizing: 'border-box',
+  width: '100%',
+  padding: '13px 20px',
+  background: 'var(--primary)',
+  color: 'var(--bg-base)',
+  border: 'none',
+  borderRadius: '10px',
+  fontWeight: 800,
+  fontSize: '0.85rem',
+  letterSpacing: '0.08em',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+  marginTop: 4,
+}
+
+const btnGoogle = {
+  boxSizing: 'border-box',
+  width: '100%',
+  padding: '11px 20px',
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.14)',
+  borderRadius: '10px',
+  color: 'var(--md-on-surface)',
+  fontWeight: 700,
+  fontSize: '0.85rem',
+  letterSpacing: '0.06em',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 10,
+}
 
 export default function LoginPage({ onSwitchToSignup }) {
   const { login } = useAuth()
@@ -46,24 +88,23 @@ export default function LoginPage({ onSwitchToSignup }) {
   }
 
   return (
-    <div className="rs-foyer" style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div className="rs-card is-elev" style={{ width: '100%', maxWidth: 420, padding: '2.5rem 1.5rem' }}>
-        
+    <div style={{ position: 'relative', zIndex: 1, minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div className="rs-card is-elev" style={{ width: '100%', maxWidth: 400, padding: '2.25rem 1.75rem' }}>
+
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', marginBottom: 8 }}>
-            <span className="rs-pill is-active" style={{ fontSize: '1rem', padding: '8px 12px' }}>RS</span>
-            <span style={{ fontFamily: 'var(--font-mood)', fontSize: '1.25rem', letterSpacing: '0.12em', fontWeight: 600 }}>RIVER SONG</span>
+            <span className="rs-pill is-active" style={{ fontSize: '0.95rem', padding: '7px 11px' }}>RS</span>
+            <span style={{ fontFamily: 'var(--font-mood)', fontSize: '1.2rem', letterSpacing: '0.12em', fontWeight: 600 }}>RIVER SONG</span>
           </div>
-          <div className="rs-card-label" style={{ opacity: 0.5, fontSize: '0.7rem' }}>NEURAL LINK INTERFACE</div>
+          <div className="rs-card-label" style={{ opacity: 0.45, fontSize: '0.65rem' }}>NEURAL LINK INTERFACE</div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <div className="rs-card-label" style={{ marginBottom: 6, paddingLeft: 4, fontSize: '0.65rem' }}>IDENTIFIER</div>
+            <div className="rs-card-label" style={{ marginBottom: 6, paddingLeft: 2, fontSize: '0.62rem', opacity: 0.7 }}>IDENTIFIER</div>
             <input
               type="email"
-              className="rs-pill"
-              style={{ width: '100%', padding: '12px 16px', fontSize: '0.95rem', background: 'var(--md-surface-container)' }}
+              style={inputStyle}
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
@@ -73,11 +114,10 @@ export default function LoginPage({ onSwitchToSignup }) {
           </div>
 
           <div>
-            <div className="rs-card-label" style={{ marginBottom: 6, paddingLeft: 4, fontSize: '0.65rem' }}>PASS-KEY</div>
+            <div className="rs-card-label" style={{ marginBottom: 6, paddingLeft: 2, fontSize: '0.62rem', opacity: 0.7 }}>PASS-KEY</div>
             <input
               type="password"
-              className="rs-pill"
-              style={{ width: '100%', padding: '12px 16px', fontSize: '0.95rem', background: 'var(--md-surface-container)' }}
+              style={inputStyle}
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -87,34 +127,37 @@ export default function LoginPage({ onSwitchToSignup }) {
 
           {error && <div style={{ color: 'var(--md-error)', fontSize: '0.75rem', textAlign: 'center' }}>{error.toUpperCase()}</div>}
 
-          <button className="rs-btn-primary" type="submit" disabled={loading} style={{ marginTop: 4, width: '100%' }}>
+          <button type="submit" disabled={loading} style={{ ...btnPrimary, opacity: loading ? 0.7 : 1 }}>
             {loading ? 'SYNCHRONIZING...' : 'ESTABLISH LINK'}
           </button>
         </form>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '1.5rem 0' }}>
-          <div style={{ flex: 1, height: 1, background: 'var(--md-outline-variant)' }} />
-          <span className="rs-card-label" style={{ fontSize: '0.6rem' }}>OR</span>
-          <div style={{ flex: 1, height: 1, background: 'var(--md-outline-variant)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '1.25rem 0' }}>
+          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+          <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', opacity: 0.4 }}>OR</span>
+          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
         </div>
 
-        <button className="rs-pill" onClick={handleGoogleSignIn} disabled={googleLoading} style={{ width: '100%', justifyContent: 'center', padding: '10px' }}>
-          <svg width="18" height="18" viewBox="0 0 18 18" style={{ marginRight: 8 }}>
+        <button onClick={handleGoogleSignIn} disabled={googleLoading} style={{ ...btnGoogle, opacity: googleLoading ? 0.7 : 1 }}>
+          <svg width="17" height="17" viewBox="0 0 18 18">
             <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
             <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
             <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
             <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
           </svg>
-          <span style={{ fontSize: '0.9rem' }}>{googleLoading ? 'REDIRECTING...' : 'GOOGLE GATEWAY'}</span>
+          {googleLoading ? 'REDIRECTING...' : 'GOOGLE GATEWAY'}
         </button>
 
-        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-          <button type="button" className="rs-card-label" style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.7rem' }} onClick={onSwitchToSignup}>
+        <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+          <button
+            type="button"
+            onClick={onSwitchToSignup}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-on-surface-variant)', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit', opacity: 0.6 }}
+          >
             NEW OPERATOR? REGISTER HERE
           </button>
         </div>
       </div>
     </div>
-
   )
 }

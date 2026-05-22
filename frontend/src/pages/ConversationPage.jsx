@@ -6,6 +6,7 @@ import { useWebSocket }   from '../hooks/useWebSocket.js'
 import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
 import { useAuth }        from '../context/AuthContext.jsx'
 import { AudioPlayer }    from '../utils/AudioPlayer.js'
+import RateIndicator      from '../components/RateIndicator.jsx'
 import {
   MODEL_FAMILIES,
   applyFamilyOverrides,
@@ -53,6 +54,7 @@ export default function ConversationPage({ setAction }) {
   const [muted,             setMuted]             = useState(false)
   const [showTranscript,    setShowTranscript]    = useState(false)
   const [familySheetOpen,   setFamilySheetOpen]   = useState(false)
+  const [nimSheetOpen,      setNimSheetOpen]      = useState(false)
 
   const streamTimeoutRef = useRef(null)
 
@@ -371,6 +373,7 @@ export default function ConversationPage({ setAction }) {
             MEMORY MUTED
           </span>
         )}
+        <RateIndicator activeModel={activeModel} token={token} />
       </div>
 
       {/* Orb — front and center, fills the stage. Future: swap for avatar.glb. */}
@@ -413,8 +416,9 @@ export default function ConversationPage({ setAction }) {
       {/* Model family picker — single step, no tier (voice = Fast default). */}
       <Sheet open={familySheetOpen} onClose={() => setFamilySheetOpen(false)} title="AI model">
         {visibleFamilies.map(family => {
-          const anyAvail = familyHasAnyTier(family, availabilitySet)
-          const isActiveFam = currentMapping?.family?.id === family.id
+          const anyAvail = family.isAuto || family.isFullList || familyHasAnyTier(family, availabilitySet)
+          const isActiveFam = currentMapping?.family?.id === family.id ||
+            (family.isAuto && activeModel?.provider === 'auto')
           return (
             <SheetRow
               key={family.id}
@@ -422,10 +426,29 @@ export default function ConversationPage({ setAction }) {
               title={family.displayName}
               sub={anyAvail ? family.blurb : `${family.blurb} — unavailable`}
               active={isActiveFam}
-              onClick={() => anyAvail && handlePickFamily(family)}
+              onClick={() => {
+                if (!anyAvail) return
+                setFamilySheetOpen(false)
+                if (family.isAuto) { handlePickFamily(family); return }
+                if (family.isFullList) { setNimSheetOpen(true); return }
+                handlePickFamily(family)
+              }}
             />
           )
         })}
+      </Sheet>
+
+      <Sheet open={nimSheetOpen} onClose={() => setNimSheetOpen(false)} title="NVIDIA NIM Models">
+        {(models?.cloud || []).filter(m => m.provider === 'nvidia_nim').map(m => (
+          <SheetRow
+            key={m.model_id}
+            icon="memory_alt"
+            title={m.display_name}
+            sub={m.notes || 'Free · NVIDIA NIM'}
+            active={activeModel?.model_id === m.model_id}
+            onClick={() => { setNimSheetOpen(false); handlePickFamily({ provider: 'nvidia_nim', tiers: { fast: m.model_id }, id: 'nvidia-nim' }, m.model_id) }}
+          />
+        ))}
       </Sheet>
     </div>
   )

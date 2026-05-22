@@ -318,3 +318,65 @@
     display: none !important;
   }
 }
+
+/* ── Sidebar inner layout ─────────────────────────────────────────────────── */
+.rs-chat-sidebar-inner {
+  padding: 20px 16px;
+}
+
+.rs-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: 12px;
+}
+
+.rs-chat-sidebar-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+  opacity: 0.7;
+}
+
+.rs-chat-sidebar-empty {
+  font-size: 0.82rem;
+  color: var(--md-on-surface-variant);
+  opacity: 0.55;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.rs-sidebar-toggle {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--md-on-surface-variant);
+  opacity: 0.55;
+  transition: opacity 150ms ease, background 150ms ease;
+}
+.rs-sidebar-toggle:hover { opacity: 1; background: rgba(255,255,255,0.08); }
+.rs-sidebar-toggle .material-symbols-rounded { font-size: 1.1rem; }
+
+/* Reopen button in the shell header (only visible when sidebar is collapsed) */
+.rs-sidebar-reopen {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--md-on-surface-variant);
+  opacity: 0.6;
+  transition: opacity 150ms ease, background 150ms ease;
+}
+.rs-sidebar-reopen:hover { opacity: 1; background: rgba(255,255,255,0.08); }
+.rs-sidebar-reopen .material-symbols-rounded { font-size: 1.2rem; }

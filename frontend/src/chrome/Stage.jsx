@@ -124,13 +124,13 @@ function AtreidesScene() {
             <linearGradient id="cal-cliff-mid" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%"  stopColor="#2a3848" />
               <stop offset="60%" stopColor="#101820" />
-              <stop offset="100%" stopColor="#040608" />
+              <stop offset="100%" stopColor="#060e18" />
             </linearGradient>
             {/* Foreground basalt — vertical strata gradient */}
             <linearGradient id="cal-cliff-fore" x1="0.5" y1="0" x2="0.5" y2="1">
               <stop offset="0%"  stopColor="#1a2330" />
               <stop offset="40%" stopColor="#0a1018" />
-              <stop offset="100%" stopColor="#000" />
+              <stop offset="100%" stopColor="#050c16" />
             </linearGradient>
             {/* Vertical erosion strata texture */}
             <pattern id="cal-strata" x="0" y="0" width="6" height="40" patternUnits="userSpaceOnUse">

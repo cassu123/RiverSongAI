@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from api.routes.features import ALL_FEATURES, ALL_FEATURE_KEYS
 
-from core.auth import decode_token
+from core.auth import decode_token, create_access_token
 from core.errors import bad_request, forbidden, not_found, unauthorized
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,7 @@ class UpdateUserBody(BaseModel):
     role: Optional[str] = None
     is_approved: Optional[bool] = None
     force_password_change: Optional[bool] = None
+    is_suspended: Optional[bool] = None
 
 
 class AdminChangePasswordBody(BaseModel):
@@ -88,8 +89,8 @@ async def update_user(
     if not target:
         raise not_found("User not found.")
 
-    await store.update_user(user_id, role=body.role, is_approved=body.is_approved, force_password_change=body.force_password_change)
-    logger.info("Admin %s updated user %s: role=%s approved=%s force_password_change=%s", payload["sub"], user_id, body.role, body.is_approved, body.force_password_change)
+    await store.update_user(user_id, role=body.role, is_approved=body.is_approved, force_password_change=body.force_password_change, is_suspended=body.is_suspended)
+    logger.info("Admin %s updated user %s: role=%s approved=%s force_password_change=%s is_suspended=%s", payload["sub"], user_id, body.role, body.is_approved, body.force_password_change, body.is_suspended)
 
     updated = await store.get_user_by_id(user_id)
     return updated
@@ -113,11 +114,76 @@ async def change_user_password(
         raise not_found("User not found.")
 
     new_hash = bcrypt.hashpw(body.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-    await store.update_user_password(user_id, new_hash)
-    logger.info("Admin %s reset password for user %s", payload["sub"], user_id)
+    await store.update_user_password(user_id, new_hash, force_change=True)
+    logger.info("Admin %s reset password for user %s and forced change", payload["sub"], user_id)
 
     return {"success": True, "message": "Password updated successfully."}
 
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    
+    # Prevent admin from deleting themselves
+    if payload["sub"] == user_id:
+        raise bad_request("You cannot terminate your own account.")
+
+    store = _get_store(request)
+    target = await store.get_user_by_id(user_id)
+    if not target:
+        raise not_found("User not found.")
+
+    await store.delete_user(user_id)
+    logger.info("Admin %s terminated user %s", payload["sub"], user_id)
+    
+    return {"success": True, "message": "User terminated successfully."}
+
+
+@router.post("/users/{user_id}/force-logout")
+async def force_logout(
+    user_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    
+    store = _get_store(request)
+    target = await store.get_user_by_id(user_id)
+    if not target:
+        raise not_found("User not found.")
+
+    await store.force_logout(user_id)
+    logger.info("Admin %s forced logout for user %s", payload["sub"], user_id)
+    
+    return {"success": True, "message": "User active sessions invalidated."}
+
+
+@router.post("/users/{user_id}/impersonate")
+async def impersonate_user(
+    user_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    
+    store = _get_store(request)
+    target = await store.get_user_by_id(user_id)
+    if not target:
+        raise not_found("User not found.")
+
+    admin_id = payload["sub"]
+    if admin_id == user_id:
+        raise bad_request("You cannot impersonate yourself.")
+
+    # Create a token for the target user, but note the impersonator
+    token = create_access_token(user_id=target["id"], email=target["email"], role=target["role"], impersonator_id=admin_id)
+    logger.info("Admin %s initiated impersonation of user %s", admin_id, user_id)
+    
+    return {"access_token": token, "token_type": "bearer", "impersonated_user": target}
 
 # =============================================================================
 # Model visibility

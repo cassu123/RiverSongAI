@@ -151,7 +151,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     llm_provider: str = Field(
         default="ollama",
-        description="LLM provider key. Supported: ollama | anthropic | gemini | openai | mistral_ai | bedrock",
+        description="LLM provider key. Supported: ollama | anthropic | gemini | openai | mistral_ai | bedrock | nvidia_nim",
     )
     ollama_base_url: str = Field(
         default="http://localhost:11434",
@@ -219,6 +219,29 @@ class Settings(BaseSettings):
         default="amazon.nova-lite-v1:0",
         description="Default Bedrock model ID when none is specified.",
     )
+
+    # NVIDIA NIM (OpenAI-compatible, 100+ free models)
+    nvidia_api_key: str = Field(
+        default="",
+        description="NVIDIA NIM API key. Get one free at build.nvidia.com (starts with nvapi-).",
+    )
+    nvidia_nim_base_url: str = Field(
+        default="https://integrate.api.nvidia.com/v1",
+        description="Base URL for the NVIDIA NIM API. OpenAI-compatible endpoint.",
+    )
+    nvidia_nim_model: str = Field(
+        default="meta/llama-3.1-70b-instruct",
+        description=(
+            "Default NVIDIA NIM model ID. Browse full catalog at build.nvidia.com. "
+            "Examples: meta/llama-3.1-70b-instruct | deepseek-ai/deepseek-r1 | "
+            "mistralai/mistral-7b-instruct-v0.3 | nvidia/llama-3.1-nemotron-70b-instruct"
+        ),
+    )
+    nvidia_nim_enabled: bool = Field(
+        default=False,
+        description="Allow NVIDIA NIM as a selectable LLM provider (free tier: ~40 req/min).",
+    )
+
     river_song_system_prompt: str = Field(
         default=(
             "You are River Song, the resident intelligence of this household. The name is borrowed "
@@ -478,6 +501,14 @@ class Settings(BaseSettings):
     walmart_low_stock_threshold: int = Field(
         default=5,
         description="Walmart units at or below this count are flagged as low stock.",
+    )
+    shopify_api_key: str = Field(
+        default="",
+        description="Shopify app API key from Partners Dashboard.",
+    )
+    shopify_api_secret: str = Field(
+        default="",
+        description="Shopify app API secret key from Partners Dashboard.",
     )
     shopify_webhook_secret: str = Field(
         default="",
@@ -751,6 +782,20 @@ class Settings(BaseSettings):
             "Minimum confidence score (0.0 - 1.0) required to route a transcript "
             "to a Google provider. Below this threshold the conversation falls "
             "through to the Ollama path."
+        ),
+    )
+    model_intent_router_enabled: bool = Field(
+        default=False,
+        description=(
+            "When true, setting provider='auto' triggers the model intent router, "
+            "which picks the best provider/model for each message automatically."
+        ),
+    )
+    model_intent_router_min_hits: int = Field(
+        default=2,
+        description=(
+            "Minimum pattern-match score required to commit to a non-general intent. "
+            "Lower = more aggressive routing; higher = more conservative (falls to general)."
         ),
     )
     default_user_id: str = Field(

@@ -127,6 +127,209 @@ function Toggle({ checked, onChange, label, id, disabled }) {
 }
 
 // ---------------------------------------------------------------------------
+// NIM Rate Monitor — live req/min gauge + global enable toggle
+// ---------------------------------------------------------------------------
+const NIM_RATE_LIMIT = 40  // NVIDIA free tier cap
+
+function NimSection({ enabled, token, llmRoutingFlags, saveLlmRoutingFlags }) {
+  const [rate, setRate]         = useState(null)
+  const [dayUsage, setDay]      = useState(null)
+  const [nimOn, setNimOn]       = useState(llmRoutingFlags?.nvidia_enabled ?? true)
+  const [userAccess, setAccess] = useState(true)
+
+  useEffect(() => {
+    if (llmRoutingFlags?.nvidia_enabled !== undefined) {
+      setNimOn(llmRoutingFlags.nvidia_enabled)
+    }
+  }, [llmRoutingFlags?.nvidia_enabled])
+
+  useEffect(() => {
+    if (!token) return
+    fetch(`${API_BASE}/api/settings/nvidia-nim-access`, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).then(r => r.json()).then(d => setAccess(d.enabled ?? true)).catch(() => {})
+  }, [token])
+
+  const saveUserAccess = async (val) => {
+    setAccess(val)
+    await fetch(`${API_BASE}/api/settings/nvidia-nim-access`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ enabled: val }),
+    }).catch(() => {})
+  }
+
+  // Poll rate every 15 s when section is mounted
+  useEffect(() => {
+    if (!token) return
+    const headers = { Authorization: `Bearer ${token}` }
+    const fetchRate = () =>
+      Promise.all([
+        fetch(`${API_BASE}/api/usage/rate/nvidia_nim?window=60`, { headers }).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/api/usage/tokens?days=1`, { headers }).then(r => r.json()).catch(() => null),
+      ]).then(([rateData, dayData]) => {
+        if (rateData) setRate(rateData)
+        if (dayData)  setDay(dayData)
+      })
+    fetchRate()
+    const id = setInterval(fetchRate, 15000)
+    return () => clearInterval(id)
+  }, [token])
+
+  const nimCalls  = rate?.calls  ?? 0
+  const pct       = Math.min(100, Math.round((nimCalls / NIM_RATE_LIMIT) * 100))
+  const barColor  = pct >= 90 ? 'var(--md-error)' : pct >= 60 ? 'var(--md-sys-color-tertiary)' : 'var(--primary)'
+
+  const nimDayData = dayData => {
+    if (!dayData?.by_model) return { calls: 0, tokens: 0, cost: 0 }
+    const rows = dayData.by_model.filter(r => r.provider === 'nvidia_nim')
+    return {
+      calls:  rows.reduce((s, r) => s + r.calls, 0),
+      tokens: rows.reduce((s, r) => s + r.input_tokens + r.output_tokens, 0),
+      cost:   rows.reduce((s, r) => s + (r.estimated_cost_usd || 0), 0)
+    }
+  }
+  const day = nimDayData(dayUsage)
+
+  const saveNimEnabled = async (val) => {
+    setNimOn(val)
+    saveLlmRoutingFlags({ nvidia_enabled: val })
+  }
+
+  return (
+    <Section title="NVIDIA NIM">
+
+      {/* Connection status row — read-only, reflects .env */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span
+          className="material-symbols-rounded"
+          style={{ fontSize: '1.4rem', color: enabled ? 'var(--primary)' : 'var(--md-error)' }}
+        >
+          {enabled ? 'cloud_done' : 'cloud_off'}
+        </span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Free cloud inference · 100+ models</div>
+          <div className="rs-card-meta">
+            {enabled
+              ? 'Connected · ~40 req/min free tier'
+              : nimOn 
+                ? 'Offline — Missing NVIDIA_API_KEY in .env'
+                : 'Disabled globally by admin switch below.'}
+          </div>
+        </div>
+        <span
+          className="rs-pill"
+          style={{
+            fontSize: '0.65rem',
+            background: enabled ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'color-mix(in srgb, var(--md-error) 15%, transparent)',
+            color: enabled ? 'var(--primary)' : 'var(--md-error)',
+            border: `1px solid ${enabled ? 'var(--primary)' : 'var(--md-error)'}`,
+            flexShrink: 0,
+          }}
+        >
+          {enabled ? 'LIVE' : 'OFFLINE'}
+        </span>
+      </div>
+
+      {/* Global toggle */}
+      <Toggle
+        id="nim-global-access"
+        label="Globally Enable NVIDIA NIM"
+        checked={nimOn}
+        onChange={saveNimEnabled}
+      />
+      <p className="rs-card-meta" style={{ marginTop: -8 }}>
+        When disabled, NVIDIA NIM models are completely unavailable to all users, including admins.
+      </p>
+
+      {/* User access toggle — this is the real admin control */}
+      <Toggle
+        id="nim-user-access"
+        label="Allow all users to select NIM models"
+        checked={userAccess}
+        onChange={saveUserAccess}
+      />
+      <p className="rs-card-meta" style={{ marginTop: -8 }}>
+        When off, NIM models are hidden from non-admin accounts. Admins always retain access.
+      </p>
+
+      {/* Rate monitor */}
+      <div className="rs-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>monitoring</span>
+            <span style={{ fontWeight: 600, fontSize: '0.8rem', letterSpacing: '0.06em' }}>RATE MONITOR</span>
+          </div>
+          <span className="rs-card-meta" style={{ fontSize: '0.68rem' }}>auto-refreshes · 15s</span>
+        </div>
+
+        {/* Req/min gauge */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span className="rs-card-meta">Requests this minute</span>
+            <span style={{ fontWeight: 700, color: barColor, fontSize: '0.9rem', fontVariantNumeric: 'tabular-nums' }}>
+              {nimCalls}<span style={{ opacity: 0.5, fontWeight: 400 }}> / {NIM_RATE_LIMIT}</span>
+            </span>
+          </div>
+          <div style={{ height: 8, borderRadius: 4, background: 'var(--md-sys-color-surface-variant)', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', width: `${pct}%`, background: barColor,
+              borderRadius: 4, transition: 'width 0.4s ease-out',
+              boxShadow: pct > 0 ? `0 0 8px ${barColor}60` : 'none',
+            }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }} className="rs-card-meta">
+            <span className="material-symbols-rounded" style={{
+              fontSize: '0.85rem',
+              color: pct >= 90 ? 'var(--md-error)' : pct >= 60 ? 'var(--md-sys-color-tertiary)' : 'var(--primary)',
+            }}>
+              {pct >= 90 ? 'warning' : pct >= 60 ? 'info' : 'check_circle'}
+            </span>
+            <span style={{ fontSize: '0.68rem' }}>
+              {pct >= 90 ? 'Near rate limit — requests may queue' : pct >= 60 ? 'Moderate usage' : 'Healthy'}
+            </span>
+          </div>
+        </div>
+
+        {/* Today's stats — 3-column grid with tabular nums */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, paddingTop: 4, borderTop: '1px solid var(--md-sys-color-outline-variant)' }}>
+          {[
+            { value: day.calls.toLocaleString(), label: 'requests today',  icon: 'bolt' },
+            { value: `${(day.tokens / 1000).toFixed(1)}K`, label: 'tokens today', icon: 'token' },
+            { value: `$${day.cost.toFixed(2)}`, label: 'cost accrued', icon: 'savings', color: 'var(--primary)' },
+          ].map(({ value, label, icon, color }) => (
+            <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="material-symbols-rounded" style={{ fontSize: '0.8rem', opacity: 0.6 }}>{icon}</span>
+                <span style={{ fontWeight: 700, fontSize: '1rem', fontVariantNumeric: 'tabular-nums', color: color || 'inherit' }}>{value}</span>
+              </div>
+              <div className="rs-card-meta" style={{ fontSize: '0.63rem' }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Model pill grid */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {[
+          { name: 'Kimi K2.6',          tag: 'Creative' },
+          { name: 'Nemotron 253B',       tag: 'Reasoning' },
+          { name: 'Nemotron 49B',        tag: 'Reasoning' },
+          { name: 'DeepSeek R1',         tag: 'Reasoning' },
+          { name: 'Llama 3.1 70B',       tag: 'General' },
+          { name: 'Mistral Large',       tag: 'General' },
+        ].map(({ name, tag }) => (
+          <div key={name} className="rs-pill" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', padding: '3px 10px' }}>
+            <span>{name}</span>
+            <span style={{ opacity: 0.5, fontSize: '0.6rem' }}>· {tag}</span>
+          </div>
+        ))}
+      </div>
+    </Section>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main settings page
 // ---------------------------------------------------------------------------
 const PROVIDER_NAMES = {
@@ -134,7 +337,9 @@ const PROVIDER_NAMES = {
   gemini:     'Google Gemini',
   openai:     'OpenAI',
   mistral_ai: 'Mistral AI',
+  nvidia_nim: 'NVIDIA NIM',
   ollama:     'Ollama (local)',
+  auto:       'River Decides (Auto)',
 }
 
 export default function SettingsPage({
@@ -166,65 +371,81 @@ export default function SettingsPage({
     n8n_api_key: '',
     n8n_webhook_secret: ''
   })
-  const [modelFilter,      setModelFilter]      = useState('ALL')
+  const [intentRouterSettings, setIntentRouterSettings] = useState({ enabled: false, min_hits: 2 })
+  const [llmRoutingFlags,      setLlmRoutingFlags]      = useState({ local_enabled: true, cloud_enabled: true, nvidia_enabled: true })
+  const [chronosSettings,      setChronosSettings]      = useState(null)
+  const [modelFilter,          setModelFilter]          = useState('ALL')
   const [loading,          setLoading]          = useState(true)
   const [saveStatus,       setSaveStatus]       = useState('')
 
   // ---- Initial data load ----
   useEffect(() => {
-    const headers = token ? { Authorization: `Bearer ${token}` } : {}
-    const query = user?.id ? `?user_id=${user.id}` : ''
+    let active = true
+    const loadData = async () => {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const query = user?.id ? `?user_id=${user.id}` : ''
+      try {
+        const [modData, llmData, memData, voiceData, featData] = await Promise.all([
+          fetch(`${API_BASE}/api/models`).then(r => r.json()),
+          fetch(`${API_BASE}/api/settings/llm${query}`, { headers }).then(r => r.json()),
+          fetch(`${API_BASE}/api/settings/memory${query}`, { headers }).then(r => r.json()),
+          fetch(`${API_BASE}/api/settings/voice`, { headers }).then(r => r.json()).catch(() => null),
+          fetch(`${API_BASE}/api/features`, { headers }).then(r => r.json()).catch(() => ({ ai_features: {} })),
+        ])
 
-    const fetches = [
-      fetch(`${API_BASE}/api/models`).then(r => r.json()),
-      fetch(`${API_BASE}/api/settings/llm${query}`, { headers }).then(r => r.json()),
-      fetch(`${API_BASE}/api/settings/memory${query}`, { headers }).then(r => r.json()),
-      fetch(`${API_BASE}/api/settings/voice`, { headers }).then(r => r.json()).catch(() => null),
-      fetch(`${API_BASE}/api/features`, { headers }).then(r => r.json()).catch(() => ({ ai_features: {} })),
-    ]
-    if (user?.role === 'admin') {
-      fetches.push(
-        fetch(`${API_BASE}/api/admin/model-visibility`, { headers }).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE}/api/admin/feature-visibility`, { headers }).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE}/api/admin/family`, { headers }).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE}/api/admin/family-groups`, { headers }).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE}/api/settings/orchestration`, { headers }).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE}/api/settings/elevenlabs`, { headers }).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE}/api/settings/persona`, { headers }).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE}/api/daemon/status`, { headers }).then(r => r.json()).catch(() => null),
-      )
-    }
-    if (user?.role === 'parent') {
-      fetches.push(
-        null, null, null, null, null, null, null, // pad to keep indices consistent
-        fetch(`${API_BASE}/api/parent/children`, { headers }).then(r => r.json()).catch(() => null),
-      )
-    }
+        if (!active) return
 
-    Promise.all(fetches)
-      .then(([modData, llmData, memData, voiceData, featData, visData, featVisData, familyRaw, familyGroupsRaw, orchData, elData, personaData, dStatus, childrenRaw]) => {
         setModels({ local: modData.local || [], cloud: modData.cloud || [] })
         setEnabledProviders(modData.enabled_providers || {})
         setLlmSettings(llmData)
         setMemSettings(memData)
         setVoiceSettings(voiceData)
-        if (featData)         setAiFeatures(featData.ai_features || {})
-        if (visData)          setVisibility(visData)
-        if (featVisData)      setFeatureVis(featVisData)
-        if (familyRaw)        setFamilyData(familyRaw)
-        if (familyGroupsRaw)  setFamilyGroups(familyGroupsRaw)
-        if (orchData)         setOrchestrationSettings(orchData)
-        if (elData)           setElevenLabsSettings(elData)
-        if (personaData)      setPersonaSettings(personaData)
-        if (dStatus)          setDaemonStatus(dStatus.daemons || {})
-        if (childrenRaw)      setChildrenData(childrenRaw)
+        if (featData) setAiFeatures(featData.ai_features || {})
+
+        if (user?.role === 'admin') {
+          const [visData, featVisData, familyRaw, familyGroupsRaw, orchData, elData, personaData, dStatus, intentRouterData, chronosData, routingFlags] = await Promise.all([
+            fetch(`${API_BASE}/api/admin/model-visibility`, { headers }).then(r => r.json()).catch(() => null),
+            fetch(`${API_BASE}/api/admin/feature-visibility`, { headers }).then(r => r.json()).catch(() => null),
+            fetch(`${API_BASE}/api/admin/family`, { headers }).then(r => r.json()).catch(() => null),
+            fetch(`${API_BASE}/api/admin/family-groups`, { headers }).then(r => r.json()).catch(() => null),
+            fetch(`${API_BASE}/api/settings/orchestration`, { headers }).then(r => r.json()).catch(() => null),
+            fetch(`${API_BASE}/api/settings/elevenlabs`, { headers }).then(r => r.json()).catch(() => null),
+            fetch(`${API_BASE}/api/settings/persona`, { headers }).then(r => r.json()).catch(() => null),
+            fetch(`${API_BASE}/api/daemon/status`, { headers }).then(r => r.json()).catch(() => null),
+            fetch(`${API_BASE}/api/settings/intent-router`, { headers }).then(r => r.json()).catch(() => null),
+            fetch(`${API_BASE}/api/daemon/scribe/status`, { headers }).then(r => r.json()).catch(() => null),
+            fetch(`${API_BASE}/api/admin/llm-routing-flags`, { headers }).then(r => r.json()).catch(() => null),
+          ])
+          if (!active) return
+          if (visData) setVisibility(visData)
+          if (featVisData) setFeatureVis(featVisData)
+          if (familyRaw) setFamilyData(familyRaw)
+          if (familyGroupsRaw) setFamilyGroups(familyGroupsRaw)
+          if (orchData) setOrchestrationSettings(orchData)
+          if (elData) setElevenLabsSettings(elData)
+          if (personaData) setPersonaSettings(personaData)
+          if (dStatus) setDaemonStatus(dStatus.daemons || {})
+          if (intentRouterData) setIntentRouterSettings(intentRouterData)
+          if (chronosData) setChronosSettings(chronosData)
+          if (routingFlags) setLlmRoutingFlags(routingFlags)
+        } else if (user?.role === 'parent') {
+          const [childrenRaw] = await Promise.all([
+            fetch(`${API_BASE}/api/parent/children`, { headers }).then(r => r.json()).catch(() => null)
+          ])
+          if (!active) return
+          if (childrenRaw) setChildrenData(childrenRaw)
+        }
+
         setLoading(false)
-      })
-      .catch(err => {
+      } catch (err) {
         console.error('[SettingsPage] Load failed:', err)
+        if (!active) return
         setLoading(false)
         setSaveStatus('error')
-      })
+      }
+    }
+    loadData()
+    return () => { active = false }
   }, [user?.id, user?.role, token])
 
   // ---- Save LLM selection ----
@@ -288,6 +509,28 @@ export default function SettingsPage({
   }, [llmSettings, user?.id, token])
 
   // ---- Save orchestration settings ----
+  const saveIntentRouter = useCallback(async (patch) => {
+    const next = { ...intentRouterSettings, ...patch }
+    setIntentRouterSettings(next)
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    await fetch(`${API_BASE}/api/settings/intent-router`, {
+      method: 'POST', headers, body: JSON.stringify(next),
+    }).catch(err => console.error('Intent router save failed:', err))
+  }, [intentRouterSettings, token])
+
+  const saveLlmRoutingFlags = useCallback(async (patch) => {
+    const next = { ...llmRoutingFlags, ...patch }
+    setLlmRoutingFlags(next)
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    await fetch(`${API_BASE}/api/admin/llm-routing-flags`, {
+      method: 'POST', headers, body: JSON.stringify(next),
+    }).then(res => {
+      if (res.ok) window.location.reload()
+    }).catch(err => console.error('LLM routing flags save failed:', err))
+  }, [llmRoutingFlags, token])
+
   const saveOrchestration = useCallback(async (patch) => {
     const next = { ...orchestrationSettings, ...patch }
     setOrchestrationSettings(next)
@@ -534,10 +777,166 @@ export default function SettingsPage({
       )}
 
       {/* ================================================================ */}
+      {/* NVIDIA NIM — admin                                               */}
+      {/* ================================================================ */}
+      {showAdmin && (
+        <NimSection
+          enabled={enabledProviders.nvidia_nim || false}
+          token={token}
+          llmRoutingFlags={llmRoutingFlags}
+          saveLlmRoutingFlags={saveLlmRoutingFlags}
+        />
+      )}
+
+      {/* ================================================================ */}
+      {/* INTENT ROUTER — admin                                            */}
+      {/* ================================================================ */}
+      {showAdmin && (
+        <Section title="INTENT ROUTER">
+          <Toggle
+            id="intent-router-toggle"
+            label="Enable Auto Model Routing"
+            checked={intentRouterSettings.enabled}
+            onChange={v => saveIntentRouter({ enabled: v })}
+          />
+          <p className="rs-card-meta">
+            Selecting <strong>River Decides</strong> in the chat model picker routes each message
+            to the best provider automatically. Home commands stay local, complex reasoning goes
+            to Nemotron, creative writing to Kimi, research to Gemini.
+          </p>
+
+          {/* Sensitivity selector — min 44px touch targets */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span className="rs-card-meta" style={{ margin: 0, flexShrink: 0 }}>Signal sensitivity</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {[
+                { n: 1, label: 'High',          desc: 'Routes on 1+ match' },
+                { n: 2, label: 'Balanced',      desc: 'Routes on 2+ matches' },
+                { n: 3, label: 'Conservative',  desc: 'Routes on 3+ matches' },
+              ].map(({ n, label }) => (
+                <button
+                  key={n}
+                  className={`rs-pill is-tappable${intentRouterSettings.min_hits === n ? ' is-active' : ''}`}
+                  style={{ fontSize: '0.75rem', minHeight: 44, minWidth: 44, padding: '0 14px', cursor: 'pointer' }}
+                  onClick={() => saveIntentRouter({ min_hits: n })}
+                  aria-pressed={intentRouterSettings.min_hits === n}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Routing map — 2-column grid, intent → model */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 6 }}>
+            {[
+              { intent: 'Home Control', model: 'Llama 1B',    icon: 'home',          where: 'local' },
+              { intent: 'Quick Lookup', model: 'Llama 3B',    icon: 'bolt',          where: 'local' },
+              { intent: 'Reasoning',    model: 'Nemotron',    icon: 'psychology',    where: 'NIM' },
+              { intent: 'Creative',     model: 'Kimi K2.6',   icon: 'draw',          where: 'NIM' },
+              { intent: 'Code',         model: 'Qwen Coder',  icon: 'code',          where: 'local' },
+              { intent: 'Commerce',     model: 'Claude',      icon: 'storefront',    where: 'cloud' },
+              { intent: 'Research',     model: 'Gemini',      icon: 'travel_explore', where: 'cloud' },
+              { intent: 'General',      model: 'Llama 3B',    icon: 'chat',          where: 'local' },
+            ].map(({ intent, model, icon, where }) => (
+              <div key={intent} className="rs-card" style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.75 }}>{icon}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{intent}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span className="rs-card-meta" style={{ fontSize: '0.68rem' }}>{model}</span>
+                  <span className="rs-pill" style={{
+                    fontSize: '0.55rem', padding: '1px 6px',
+                    opacity: 0.7,
+                    background: where === 'local' ? 'color-mix(in srgb, var(--primary) 12%, transparent)' :
+                                where === 'NIM'   ? 'color-mix(in srgb, var(--md-sys-color-tertiary) 12%, transparent)' :
+                                                    'color-mix(in srgb, var(--md-sys-color-secondary) 12%, transparent)',
+                  }}>{where}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* ================================================================ */}
+      {/* CHRONOS / SCRIBE — admin                                         */}
+      {/* ================================================================ */}
+      {showAdmin && (
+        <Section title="CHRONOS · MEMORY VAULT">
+          {/* Header row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1.6rem', color: 'var(--primary)', flexShrink: 0 }}>history_edu</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Local markdown vault · Obsidian-style</div>
+              <div className="rs-card-meta">Voice-to-note · Conversation memory · Editable facts · Backlinks</div>
+            </div>
+            <span className="rs-pill" style={{ fontSize: '0.6rem', flexShrink: 0, opacity: 0.7 }}>PHASE 2</span>
+          </div>
+
+          {/* Vault tree — 3-column, folder icons, monospace paths */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+            {[
+              { path: 'Personal/',       desc: 'Private to you',     icon: 'lock',         color: 'var(--primary)' },
+              { path: 'Household/',      desc: 'Shared with family',  icon: 'home',         color: 'var(--md-sys-color-tertiary)' },
+              { path: 'Shared with me/', desc: 'Explicit invites',    icon: 'group',        color: 'var(--md-sys-color-secondary)' },
+            ].map(({ path, desc, icon, color }) => (
+              <div key={path} className="rs-card" style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="material-symbols-rounded" style={{ fontSize: '0.95rem', color }}>{icon}</span>
+                  <code style={{ fontSize: '0.7rem', fontWeight: 600 }}>{path}</code>
+                </div>
+                <div className="rs-card-meta" style={{ fontSize: '0.63rem' }}>{desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Scribe daemon toggle */}
+          <Toggle
+            id="scribe-toggle"
+            label="Enable Scribe Daemon"
+            checked={daemonStatus?.scribe?.running || false}
+            onChange={() => triggerDaemonTask('scribe', daemonStatus?.scribe?.running ? 'stop' : 'start')}
+          />
+          <p className="rs-card-meta" style={{ marginTop: -8 }}>
+            Watches the vault, re-indexes notes, suggests backlinks, and generates weekly summaries.
+            Path: <code>data/vault/</code>
+          </p>
+
+          {/* Phase notice */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'color-mix(in srgb, var(--md-sys-color-tertiary) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--md-sys-color-tertiary) 20%, transparent)' }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-sys-color-tertiary)', flexShrink: 0 }}>construction</span>
+            <span className="rs-card-meta" style={{ fontSize: '0.72rem' }}>
+              CHRONOS page, editor, and graph view — Phase 2 build. Vault structure and Scribe daemon design are locked in.
+            </span>
+          </div>
+        </Section>
+      )}
+
+      {/* ================================================================ */}
       {/* AI MODEL — user-facing                                           */}
       {/* ================================================================ */}
       {showUser && (
       <Section title="AI MODEL">
+        {showAdmin && (
+          <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--md-outline-variant)' }}>
+            <div className="rs-card-label" style={{ marginBottom: 8, color: 'var(--md-primary)' }}>ADMIN MASTER SWITCHES</div>
+            <Toggle
+              id="llm-routing-local"
+              label="Globally Enable Local LLMs (Ollama)"
+              checked={llmRoutingFlags.local_enabled}
+              onChange={v => saveLlmRoutingFlags({ local_enabled: v })}
+            />
+            <Toggle
+              id="llm-routing-cloud"
+              label="Globally Enable Cloud LLMs"
+              checked={llmRoutingFlags.cloud_enabled}
+              onChange={v => saveLlmRoutingFlags({ cloud_enabled: v })}
+            />
+          </div>
+        )}
+
         <p className="rs-card-meta" style={{ marginBottom: 16 }}>
           The selected model is used for both Chat and Speak. For Speak, choose a model
           tagged <strong>⚡ GPU / SPEAK</strong> — these fit in your GPU's VRAM and respond
@@ -582,7 +981,9 @@ export default function SettingsPage({
 
           <div className="rs-card-label" style={{ marginBottom: 8 }}>
             <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px', background: 'var(--primary)', color: 'black' }}>LOCAL</span>
-            Ollama — runs on your machine
+            {llmRoutingFlags?.local_enabled 
+              ? 'Ollama — runs on your machine'
+              : 'Disabled globally by admin switch above.'}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {filteredLocalModels.map(m => (
@@ -601,7 +1002,9 @@ export default function SettingsPage({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 24 }}>
           <div className="rs-card-label">
             <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px', background: 'var(--md-tertiary)', color: 'black' }}>CLOUD</span>
-            API providers — costs per token · requires API key in .env
+            {llmRoutingFlags?.cloud_enabled 
+              ? 'API providers — costs per token · requires API key in .env'
+              : 'Disabled globally by admin switch above.'}
           </div>
 
           {['anthropic', 'gemini', 'openai', 'mistral_ai'].map(providerKey => {
@@ -621,7 +1024,11 @@ export default function SettingsPage({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                   <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{providerNames[providerKey]}</span>
                   {!enabled && (
-                    <span className="rs-card-label" style={{ fontSize: '0.6rem', color: 'var(--md-error)' }}>LOCKED</span>
+                    <span className="rs-card-label" style={{ fontSize: '0.6rem', color: 'var(--md-error)' }}>
+                      {llmRoutingFlags?.cloud_enabled 
+                        ? 'LOCKED (MISSING KEY IN .ENV)'
+                        : 'DISABLED GLOBALLY BY ADMIN SWITCH'}
+                    </span>
                   )}
                   {enabled && (
                     <span className="rs-card-label" style={{ fontSize: '0.6rem', color: '#4ade80' }}>ENABLED</span>
@@ -1533,6 +1940,7 @@ function AdminFeatureSection({ featureVis, token, onChanged }) {
       onChanged(featureVis)
     } finally {
       setSaving(false)
+      window.dispatchEvent(new Event('rs-features-changed'))
     }
   }
 
@@ -1566,7 +1974,9 @@ const ALL_MODULES = [
   { key: 'culinary',    label: 'Culinary' },
   { key: 'inventory',   label: 'Inventory' },
   { key: 'store',       label: 'Store' },
-  { key: 'maintenance', label: 'Maintenance' },
+  { key: 'maintenance', label: 'Garage' },
+  { key: 'home_node',   label: 'Home Node' },
+  { key: 'environment', label: 'Environment' },
 ]
 
 const RELATIONSHIPS = ['member', 'parent', 'child', 'spouse', 'guardian', 'other']

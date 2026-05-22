@@ -354,10 +354,11 @@ class GoogleCallbackBody(BaseModel):
 @router.get("/google/authorize")
 async def google_authorize():
     """Return the Google OAuth consent-screen URL for the frontend to redirect to."""
+    from providers.google.auth import DEFAULT_SCOPES
     client = _load_google_client()
     client_id = client.get("client_id", "")
     auth_uri = client.get("auth_uri", "https://accounts.google.com/o/oauth2/auth")
-    scope = "openid email profile"
+    scope = " ".join(DEFAULT_SCOPES)
     params = (
         f"client_id={client_id}"
         f"&response_type=code"
@@ -444,7 +445,15 @@ async def google_callback(request: Request, body: GoogleCallbackBody):
             client_secrets_path=settings.google_client_secrets_path,
             token_storage_path=settings.google_token_storage_path,
         )
-        auth.save_credentials_from_dict(user["id"], tokens)
+        # Credentials.from_authorized_user_info expects 'token' not 'access_token'
+        # and needs client_id/client_secret to be able to refresh.
+        sync_data = {
+            **tokens,
+            "token": tokens.get("access_token"),
+            "client_id": client.get("client_id"),
+            "client_secret": client.get("client_secret"),
+        }
+        auth.save_credentials_from_dict(user["id"], sync_data)
         logger.info("Synced Google tokens to service storage for user %s", user["id"])
     except Exception as exc:
         logger.warning("Failed to sync Google tokens to service storage: %s", exc)

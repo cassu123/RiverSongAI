@@ -7,7 +7,7 @@ import Sheet from '../chrome/Sheet'
  */
 
 export default function UsersPage() {
-  const { token, user: currentUser } = useAuth()
+  const { token, user: currentUser, impersonate } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   
@@ -51,6 +51,102 @@ export default function UsersPage() {
     }
   }
 
+  const toggleSuspend = async (targetUser) => {
+    try {
+      const res = await fetch(`/api/admin/users/${targetUser.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ is_suspended: !targetUser.is_suspended })
+      })
+      if (res.ok) {
+        setUsers(users.map(u => u.id === targetUser.id ? { ...u, is_suspended: !u.is_suspended } : u))
+      }
+    } catch (err) {
+      console.error('Failed to suspend user', err)
+    }
+  }
+
+  const updateRole = async (targetUser, newRole) => {
+    try {
+      const res = await fetch(`/api/admin/users/${targetUser.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ role: newRole })
+      })
+      if (res.ok) {
+        setUsers(users.map(u => u.id === targetUser.id ? { ...u, role: newRole } : u))
+      } else {
+        const data = await res.json()
+        alert(data.detail || 'Failed to update role')
+      }
+    } catch (err) {
+      console.error('Failed to update role', err)
+      alert('Network error')
+    }
+  }
+
+  const handleForceLogout = async (targetUser) => {
+    if (!window.confirm(`Force logout ${targetUser.display_name} from all devices?`)) return;
+    try {
+      const res = await fetch(`/api/admin/users/${targetUser.id}/force-logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) alert('All active sessions invalidated.');
+      else alert('Failed to force logout.');
+    } catch (err) {
+      alert('Network error.');
+    }
+  }
+
+  const handleImpersonate = async (targetUser) => {
+    if (!window.confirm(`Login as ${targetUser.display_name}?`)) return;
+    try {
+      const res = await fetch(`/api/admin/users/${targetUser.id}/impersonate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json();
+        impersonate(data.access_token, data.impersonated_user);
+      } else {
+        alert('Failed to impersonate user.');
+      }
+    } catch (err) {
+      alert('Network error.');
+    }
+  }
+
+  const handleTerminate = async (targetUser) => {
+    if (!window.confirm(`Are you sure you want to terminate ${targetUser.display_name}? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      const res = await fetch(`/api/admin/users/${targetUser.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        setUsers(users.filter(u => u.id !== targetUser.id));
+      } else {
+        const data = await res.json();
+        alert(data.detail || 'Failed to terminate user.');
+      }
+    } catch (err) {
+      console.error('Failed to terminate user', err);
+      alert('Network error.');
+    }
+  }
+
   const handleResetPassword = async (e) => {
     e.preventDefault()
     setResetError('')
@@ -74,7 +170,7 @@ export default function UsersPage() {
       if (res.ok) {
         setResetSuccess('Password updated successfully.')
         setNewPassword('')
-        // Refresh user list because server resets force_password_change to 0
+        // Refresh user list to fetch the updated force_password_change state
         setTimeout(() => {
           setResetTarget(null)
           setResetSuccess('')
@@ -103,10 +199,25 @@ export default function UsersPage() {
           users.map(u => (
             <div key={u.id} className="rs-card">
               <div className="rs-card-head">
-                <span className="rs-card-label">OPERATOR</span>
-                <span className={`rs-pill ${u.role === 'admin' ? 'is-active' : ''}`} style={{ fontSize: '0.6rem' }}>
-                  {u.role.toUpperCase()}
-                </span>
+                <span className="rs-card-label">OPERATOR {u.is_suspended && <span style={{color: 'var(--md-error)'}}>(SUSPENDED)</span>}</span>
+                {u.id === currentUser.id ? (
+                  <span className={`rs-pill ${u.role === 'admin' ? 'is-active' : ''}`} style={{ fontSize: '0.6rem' }}>
+                    {u.role.toUpperCase()}
+                  </span>
+                ) : (
+                  <select 
+                    className={`rs-pill ${u.role === 'admin' ? 'is-active' : ''}`}
+                    style={{ fontSize: '0.6rem', padding: '4px 12px', outline: 'none', border: '1px solid var(--md-outline-variant)', cursor: 'pointer', textAlign: 'center' }}
+                    value={u.role}
+                    onChange={(e) => updateRole(u, e.target.value)}
+                  >
+                    <option value="admin">ADMIN</option>
+                    <option value="parent">PARENT</option>
+                    <option value="user">USER</option>
+                    <option value="child">CHILD</option>
+                    <option value="guest">GUEST</option>
+                  </select>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div className="rs-status-dot" style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary)', color: 'var(--bg-base)', fontWeight: 900, fontSize: '1rem', animation: 'none' }}>
@@ -130,10 +241,25 @@ export default function UsersPage() {
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="rs-pill" onClick={() => { setResetTarget(u); setNewPassword(''); setResetError(''); }}>RESET PASSWORD</button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="rs-card-label" style={{ opacity: 0.8 }}>SUSPEND ACCOUNT</span>
+                  <button 
+                    className={`rs-pill ${u.is_suspended ? 'is-active' : ''}`}
+                    onClick={() => toggleSuspend(u)}
+                    style={{ minWidth: 60, justifyContent: 'center' }}
+                  >
+                    {u.is_suspended ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button className="rs-pill" onClick={() => { setResetTarget(u); setNewPassword(''); setResetError(''); }}>SET TEMPORARY PASSWORD</button>
+                  <button className="rs-pill" onClick={() => handleForceLogout(u)}>FORCE LOGOUT</button>
                   {u.id !== currentUser.id && (
-                    <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={() => alert('Phase 4 clearance required for termination.')}>TERMINATE</button>
+                    <>
+                      <button className="rs-pill" onClick={() => handleImpersonate(u)}>LOGIN AS</button>
+                      <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={() => handleTerminate(u)}>TERMINATE</button>
+                    </>
                   )}
                 </div>
               </div>
@@ -142,7 +268,7 @@ export default function UsersPage() {
         )}
       </div>
 
-      <Sheet open={!!resetTarget} onClose={() => setResetTarget(null)} title={`Reset Password: ${resetTarget?.display_name}`}>
+      <Sheet open={!!resetTarget} onClose={() => setResetTarget(null)} title={`Set Temporary Password: ${resetTarget?.display_name}`}>
         <form onSubmit={handleResetPassword} style={{ padding: '0 16px 16px' }}>
           <div style={{ marginBottom: 20 }}>
             <div className="rs-card-label" style={{ marginBottom: 8 }}>NEW PASSWORD</div>
@@ -168,7 +294,7 @@ export default function UsersPage() {
           {resetSuccess && <div style={{ color: '#4ade80', fontSize: '0.8rem', marginBottom: 16 }}>{resetSuccess}</div>}
 
           <div style={{ display: 'flex', gap: 12 }}>
-            <button type="submit" className="rs-btn-primary" style={{ flex: 1 }}>UPDATE PASSWORD</button>
+            <button type="submit" className="rs-btn-primary" style={{ flex: 1 }}>SET PASSWORD</button>
             <button type="button" className="rs-pill" onClick={() => setResetTarget(null)} style={{ height: 44 }}>CANCEL</button>
           </div>
         </form>

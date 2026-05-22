@@ -35,7 +35,7 @@ export default function Sheet({ open, onClose, title, children }) {
 }
 
 /** SheetRow — interactive option row. Same DNA as drawer items. */
-export function SheetRow({ icon, title, sub, active, onClick, badge, dimmed }) {
+export function SheetRow({ icon, title, sub, active, onClick, badge, dimmed, chevron }) {
   return (
     <button
       className={`rs-sheet-row ${active ? 'is-active' : ''} ${dimmed ? 'is-dimmed' : ''}`}
@@ -50,6 +50,7 @@ export function SheetRow({ icon, title, sub, active, onClick, badge, dimmed }) {
         {sub && <div className="rs-sheet-row-sub">{sub}</div>}
       </div>
       {active && <EnvIcon name="check" className="rs-sheet-check" />}
+      {chevron && !active && <EnvIcon name="chevron_right" className="rs-sheet-chevron" />}
     </button>
   )
 }

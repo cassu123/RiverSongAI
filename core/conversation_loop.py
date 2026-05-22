@@ -131,9 +131,15 @@ def _instantiate_llm(key: str, model: Optional[str]) -> LLMProvider:
             raise ValueError("Amazon Bedrock is disabled. Set BEDROCK_ENABLED=true in .env.")
         from providers.llm.bedrock import BedrockLLM
         return BedrockLLM(model=model) if model else BedrockLLM()
+    if key == "nvidia_nim":
+        from api.routes.models_settings import _get_enabled_providers
+        if not _get_enabled_providers().get("nvidia_nim", False):
+            raise ValueError("NVIDIA NIM is disabled. Set NVIDIA_API_KEY in .env or enable it in Settings.")
+        from providers.llm.nvidia_nim import NvidiaNimLLM
+        return NvidiaNimLLM(model=model) if model else NvidiaNimLLM()
     raise ValueError(
         f"Unsupported LLM_PROVIDER '{key}'. "
-        f"Supported values: ollama | anthropic | gemini | openai | mistral_ai"
+        f"Supported values: ollama | anthropic | gemini | openai | mistral_ai | bedrock | nvidia_nim"
     )
 
 
@@ -142,25 +148,59 @@ def _build_llm_provider(
     model_override: Optional[str] = None,
     fallback_provider: Optional[str] = None,
     fallback_model: Optional[str] = None,
-) -> LLMProvider:
+    message_text: Optional[str] = None,
+    admin_config: Optional[dict] = None,
+) -> tuple[LLMProvider, Optional[str]]:
     """
-    Instantiate the LLM provider. If provider_override is given it takes
-    precedence over LLM_PROVIDER in .env; model_override is passed to
-    the provider constructor when supported.
+    Instantiate the LLM provider.
+
+    When provider_override is "auto" and model_intent_router_enabled is true,
+    the model intent router classifies message_text and picks the best provider.
+
+    Returns:
+        (provider_instance, router_label) — router_label is a UI display string
+        like "Nemotron · Reasoning" when Auto routing was used, else None.
     """
     settings = get_settings()
     key = provider_override or settings.llm_provider
-    
+    router_label: Optional[str] = None
+
+    from api.routes.models_settings import _get_enabled_providers
+    enabled_providers = _get_enabled_providers(admin_config)
+
+    if key == "auto":
+        if settings.model_intent_router_enabled and message_text:
+            from providers.llm.model_intent_router import route as router_route
+            try:
+                decision = router_route(message_text, enabled_providers)
+                key = decision.provider
+                model_override = decision.model_id
+                router_label = decision.display_label
+                logger.info(
+                    "Intent router: '%s' → %s/%s (score=%d)",
+                    decision.intent, key, model_override, decision.confidence,
+                )
+            except Exception as exc:
+                logger.error("Intent router failed, falling back to direct provider resolution: %s", exc)
+                key = fallback_provider or settings.llm_provider
+                model_override = fallback_model or settings.llm_model
+        else:
+            key = fallback_provider or settings.llm_provider
+            model_override = fallback_model or settings.llm_model
+
+    if key != "auto" and key in enabled_providers and not enabled_providers[key]:
+        raise ValueError(f"Provider '{key}' is disabled globally by the administrator.")
+
     primary = _instantiate_llm(key, model_override)
-    
+
     if fallback_provider:
         try:
             secondary = _instantiate_llm(fallback_provider, fallback_model)
-            return FallbackLLMProvider(primary, secondary)
+            return FallbackLLMProvider(primary, secondary), router_label
         except Exception as exc:
             logger.warning("Failed to initialize secondary LLM fallback: %s", exc)
-            
-    return primary
+
+    return primary, router_label
 
 
 def _build_tts_provider(voice_id_override: Optional[str] = None) -> TTSProvider:
@@ -293,6 +333,14 @@ class ConversationLoop:
 
         logger.info("Initializing ConversationLoop providers...")
         loop = asyncio.get_running_loop()
+        
+        admin_config = {}
+        if self._memory and hasattr(self._memory, "_store"):
+            try:
+                admin_config = await self._memory._store.get_admin_config()
+            except Exception as e:
+                logger.warning("Failed to fetch admin config for LLM routing: %s", e)
+
         try:
             llm_provider_override = self._llm_provider_override
             llm_model_override    = self._llm_model_override
@@ -303,11 +351,12 @@ class ConversationLoop:
 
             def _build_all():
                 stt = _build_stt_provider(model_size=stt_model_override)
-                llm = _build_llm_provider(
+                llm, _router_label = _build_llm_provider(
                     provider_override=llm_provider_override,
                     model_override=llm_model_override,
                     fallback_provider=fallback_provider,
                     fallback_model=fallback_model,
+                    admin_config=admin_config,
                 )
                 tts = _build_tts_provider(voice_id_override=voice_id_override)
                 return stt, llm, tts
@@ -910,6 +959,10 @@ class ConversationLoop:
             await on_event({"type": "error", "message": f"LLM error: {exc}"})
             await on_event({"type": "idle"})
             return
+
+        # Strip DeepSeek / Qwen thinking blocks that some models emit inline.
+        import re as _re
+        full_response = _re.sub(r"<think>.*?</think>", "", full_response, flags=_re.DOTALL).strip()
 
         self._history.append({"role": "assistant", "content": full_response})
         await on_event({"type": "response_complete", "text": full_response})

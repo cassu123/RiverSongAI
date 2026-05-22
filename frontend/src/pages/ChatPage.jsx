@@ -1,17 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import ConversationPanel   from '../components/ConversationPanel.jsx'
-import Sheet, { SheetRow } from '../chrome/Sheet.jsx'
 import { useAuth }         from '../context/AuthContext.jsx'
 import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
-import {
-  MODEL_FAMILIES,
-  TIER_ORDER,
-  TIER_META,
-  findFamilyForModel,
-  buildAvailabilitySet,
-  isTierAvailable,
-  applyFamilyOverrides,
-} from '../utils/modelFamilies.js'
+import RateIndicator       from '../components/RateIndicator.jsx'
 
 /**
  * ChatPage — Spatial Intelligence v2.0
@@ -26,6 +17,36 @@ const MAX_HISTORY_SESSIONS = 30
 function fmtCost(v) {
   if (v == null) return null
   return `$${(v * 1000000).toFixed(2)}/M`
+}
+
+/* ── Model picker micro-components ─────────────────────────────────────────── */
+function MpopRow({ icon, title, sub, active, dimmed, chevron, badge, onClick }) {
+  return (
+    <button
+      className={`rs-mpop-row${active ? ' is-active' : ''}${dimmed ? ' is-dimmed' : ''}`}
+      onClick={onClick}
+    >
+      <span className="material-symbols-rounded rs-mpop-icon">{icon}</span>
+      <span className="rs-mpop-body">
+        <span className="rs-mpop-title">
+          {title}
+          {badge && <span className="rs-mpop-badge">{badge}</span>}
+        </span>
+        {sub && <span className="rs-mpop-sub">{sub}</span>}
+      </span>
+      {active  && <span className="material-symbols-rounded rs-mpop-check">check</span>}
+      {chevron && !active && <span className="material-symbols-rounded rs-mpop-chevron">chevron_right</span>}
+    </button>
+  )
+}
+
+function MpopBack({ label, onClick }) {
+  return (
+    <button className="rs-mpop-back" onClick={onClick}>
+      <span className="material-symbols-rounded">arrow_back</span>
+      {label}
+    </button>
+  )
 }
 
 function historyKey(userId) { return `rs-history:${userId}` }
@@ -61,12 +82,11 @@ export default function ChatPage({ setAction, onNavigate }) {
   const [showHistory,    setShowHistory]    = useState(false)
   const [viewingSession, setViewingSession] = useState(null)
 
-  const [webSearch,         setWebSearch]         = useState(false)
-  const [thinkingMode,      setThinkingMode]      = useState('fast')
-  const [showSystem,        setShowSystem]        = useState(false)
-  const [familySheetOpen,   setFamilySheetOpen]   = useState(false)
-  const [tierSheetOpen,     setTierSheetOpen]     = useState(false)
-  const [cloudSheetOpen,    setCloudSheetOpen]    = useState(false)
+  const [webSearch,        setWebSearch]        = useState(false)
+  const [showSystem,       setShowSystem]       = useState(false)
+  const [modelPickerOpen,  setModelPickerOpen]  = useState(false)
+  const [pickerView,       setPickerView]       = useState('home')
+  const [popoverPos,       setPopoverPos]       = useState({ bottom: 100, right: 20 })
 
   const [systemPrompt, setSystemPrompt] = useState('')
   const [forgetMemory, setForgetMemory] = useState(false)
@@ -76,12 +96,15 @@ export default function ChatPage({ setAction, onNavigate }) {
 
   // -- Initialization --
   useEffect(() => {
-    fetch(`${API_BASE}/api/models`)
+    if (!token) return
+    fetch(`${API_BASE}/api/models`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then(r => r.json())
       .then(data => {
         setModels({
-          cloud: (data.cloud || []).filter(m => m.available),
-          local: (data.local || []).filter(m => m.available),
+          cloud: data.cloud || [],
+          local: data.local || [],
         })
         setFamilyOverrides(data.family_overrides || {})
       })
@@ -100,21 +123,33 @@ export default function ChatPage({ setAction, onNavigate }) {
   }, [user?.id, token])
 
   // -- Model Mapping --
-  const availabilitySet = useMemo(() => buildAvailabilitySet(models), [models])
-  const visibleFamilies = useMemo(() => applyFamilyOverrides(MODEL_FAMILIES, familyOverrides), [familyOverrides])
-  const currentMapping = useMemo(() => findFamilyForModel(selectedModel?.provider, selectedModel?.model_id, visibleFamilies), [selectedModel, visibleFamilies])
+  const localModels  = useMemo(() => models.local, [models.local])
+  const nimModels    = useMemo(() => models.cloud.filter(m => m.provider === 'nvidia_nim'), [models.cloud])
+  const cloudModels  = useMemo(() => models.cloud.filter(m => m.provider !== 'nvidia_nim'), [models.cloud])
 
-  useEffect(() => { if (currentMapping?.tier) setThinkingMode(currentMapping.tier) }, [currentMapping])
+  const hasNvidia    = nimModels.length > 0
+  const hasCloud     = cloudModels.some(m => m.available)
 
-  const isLocalModel = !selectedModel?.provider || selectedModel.provider === 'ollama'
-  const availableFamilies = useMemo(() => visibleFamilies.filter(f => TIER_ORDER.some(t => isTierAvailable(f, t, availabilitySet))), [visibleFamilies, availabilitySet])
-  const availableTiersForFamily = useMemo(() => {
-    const fam = currentMapping?.family
-    if (!fam || fam.provider !== 'ollama') return []
-    return TIER_ORDER.filter(t => isTierAvailable(fam, t, availabilitySet))
-  }, [currentMapping, availabilitySet])
+  const closeModelPicker = () => { setModelPickerOpen(false); setPickerView('home') }
 
-  const selectedCloudModelInfo = useMemo(() => !isLocalModel ? models.cloud.find(m => m.provider === selectedModel?.provider && m.model_id === selectedModel?.model_id) : null, [isLocalModel, models.cloud, selectedModel])
+  const openModelPicker = useCallback((e) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setPopoverPos({
+      bottom: window.innerHeight - rect.top + 8,
+      right:  window.innerWidth  - rect.right,
+    })
+    setPickerView('home')
+    setModelPickerOpen(true)
+  }, [])
+
+  const selectedModelLabel = useMemo(() => {
+    if (!selectedModel) return 'Model'
+    if (selectedModel.provider === 'auto') return 'Auto'
+    const all = [...models.local, ...models.cloud]
+    const found = all.find(m => m.model_id === selectedModel.model_id && m.provider === selectedModel.provider)
+    if (!found) return selectedModel.model_id?.split('/').pop() || 'Model'
+    return found.display_name.replace(/\s*\([^)]+\)/g, '').trim()
+  }, [selectedModel, models])
 
   const handleModelSelect = async (provider, model_id) => {
     setSelectedModel({ provider, model_id })
@@ -150,7 +185,6 @@ export default function ChatPage({ setAction, onNavigate }) {
         provider: selectedModel?.provider,
         model_id: selectedModel?.model_id,
         web_search: webSearch,
-        thinking_mode: thinkingMode,
         forget_memory: forgetMemory,
         ...(systemPrompt.trim() ? { system_prompt: systemPrompt.trim() } : {}),
       }
@@ -232,7 +266,7 @@ export default function ChatPage({ setAction, onNavigate }) {
       setIsThinking(false)
       setThinkingStart(null)
     }
-  }, [inputText, isThinking, messages, selectedModel, token, webSearch, thinkingMode, systemPrompt, activeDocId, forgetMemory, user, currentSessionId])
+  }, [inputText, isThinking, messages, selectedModel, token, webSearch, systemPrompt, activeDocId, forgetMemory, user, currentSessionId])
 
   const handleReset = useCallback(() => {
     setMessages([])
@@ -291,11 +325,6 @@ export default function ChatPage({ setAction, onNavigate }) {
             }} />
           </label>
           
-          <button className={`rs-pill ${thinkingMode !== 'fast' ? 'is-active' : ''}`} onClick={() => setTierSheetOpen(true)}>
-            <span className="material-symbols-rounded">psychology</span>
-            <span className="rs-speak-actions-label">{TIER_META[thinkingMode]?.label}</span>
-          </button>
-
           <button className={`rs-pill ${webSearch ? 'is-active' : ''}`} onClick={() => setWebSearch(!webSearch)}>
             <span className="material-symbols-rounded">public</span>
             <span className="rs-speak-actions-label">SCAN WEB</span>
@@ -303,11 +332,11 @@ export default function ChatPage({ setAction, onNavigate }) {
         </div>
 
         <div className="rs-chat-input-right">
-          <button className="rs-pill" onClick={() => isLocalModel ? setFamilySheetOpen(true) : setCloudSheetOpen(true)}>
-            <span className="material-symbols-rounded">{isLocalModel ? 'memory' : 'cloud'}</span>
-            <span className="rs-speak-actions-label">
-              {currentMapping?.family?.displayName || selectedCloudModelInfo?.display_name || 'NEURAL CORE'}
+          <button className="rs-pill" onClick={openModelPicker}>
+            <span className="material-symbols-rounded">
+              {selectedModel?.provider === 'auto' ? 'auto_awesome' : selectedModel?.provider === 'nvidia_nim' ? 'memory_alt' : selectedModel?.provider === 'ollama' ? 'memory' : 'cloud'}
             </span>
+            <span className="rs-speak-actions-label">{selectedModelLabel}</span>
           </button>
 
           <button className={`rs-pill ${isRecording ? 'is-active' : ''}`} onClick={() => isRecording ? stopRecording() : startRecording()} disabled={isThinking}>
@@ -320,7 +349,7 @@ export default function ChatPage({ setAction, onNavigate }) {
         </div>
       </div>
     </div>
-  ), [inputText, handleSend, isRecording, startRecording, stopRecording, isThinking, viewingSession, thinkingMode, webSearch, isLocalModel, currentMapping, selectedCloudModelInfo, token])
+  ), [inputText, handleSend, isRecording, startRecording, stopRecording, isThinking, viewingSession, webSearch, selectedModel, selectedModelLabel, token, openModelPicker])
 
   useEffect(() => {
     setAction(ActionSlot)
@@ -334,7 +363,8 @@ export default function ChatPage({ setAction, onNavigate }) {
     <div className="rs-foyer">
       
       {/* Dynamic Overlay Bar */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 20, alignItems: 'center' }}>
+        <RateIndicator activeModel={selectedModel} token={token} />
         {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginRight: 12 }}>SYNCING…</span>}
         <button className="rs-pill" onClick={() => setShowSystem(!showSystem)}>
           <span className="material-symbols-rounded">settings_input_component</span>
@@ -389,6 +419,20 @@ export default function ChatPage({ setAction, onNavigate }) {
               </button>
             </div>
           )}
+          {error && (
+            <div className="rs-error-banner animate-fade-in" style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 16px', marginBottom: 16, borderRadius: 10,
+              background: 'rgba(220,60,60,0.15)', border: '1px solid rgba(220,60,60,0.3)',
+              color: '#f08080', fontSize: '0.9rem',
+            }}>
+              <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>error</span>
+              <span style={{ flex: 1 }}>{error}</span>
+              <button onClick={() => setError(null)} style={{ all: 'unset', cursor: 'pointer', opacity: 0.7 }}>
+                <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>close</span>
+              </button>
+            </div>
+          )}
           <ConversationPanel
             messages={displayMessages}
             streamingContent={displayStreaming}
@@ -400,53 +444,46 @@ export default function ChatPage({ setAction, onNavigate }) {
         </div>
       )}
 
-      {/* Choice Sheets */}
-      <Sheet open={familySheetOpen} onClose={() => setFamilySheetOpen(false)} title="Neural Core Family">
-        {availableFamilies.map(family => (
-          <SheetRow
-            key={family.id}
-            icon={family.icon || (family.provider === 'ollama' ? 'memory' : 'cloud')}
-            title={family.displayName}
-            sub={family.blurb}
-            active={currentMapping?.family?.id === family.id}
-            onClick={() => {
-              setFamilySheetOpen(false)
-              const tier = isTierAvailable(family, thinkingMode, availabilitySet) ? thinkingMode : TIER_ORDER.find(t => isTierAvailable(family, t, availabilitySet))
-              if (tier) { setThinkingMode(tier); handleModelSelect(family.provider, family.tiers[tier]) }
-            }}
-          />
-        ))}
-      </Sheet>
+      {/* Model picker — floating popover near the button */}
+      {modelPickerOpen && (
+        <>
+          {/* Click-outside dismissal */}
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9990 }} onClick={closeModelPicker} />
 
-      <Sheet open={tierSheetOpen} onClose={() => setTierSheetOpen(false)} title="Synaptic Tier">
-        {availableTiersForFamily.map(tier => (
-          <SheetRow
-            key={tier}
-            icon={TIER_META[tier].icon}
-            title={TIER_META[tier].label}
-            sub={TIER_META[tier].blurb}
-            active={thinkingMode === tier}
-            onClick={() => {
-              setTierSheetOpen(false)
-              const fam = currentMapping?.family
-              if (fam) { setThinkingMode(tier); handleModelSelect(fam.provider, fam.tiers[tier]) }
-            }}
-          />
-        ))}
-      </Sheet>
+          <div className="rs-mpop" style={{ bottom: popoverPos.bottom, right: popoverPos.right }}>
 
-      <Sheet open={cloudSheetOpen} onClose={() => setCloudSheetOpen(false)} title="Cloud Intelligence">
-        {models.cloud.map(m => (
-          <SheetRow
-            key={m.model_id}
-            icon="cloud"
-            title={m.display_name}
-            sub={fmtCost(m.cost_per_1k_input_usd) || 'Nominal availability'}
-            active={selectedModel?.model_id === m.model_id}
-            onClick={() => { setCloudSheetOpen(false); handleModelSelect(m.provider, m.model_id) }}
-          />
-        ))}
-      </Sheet>
+            {/* HOME */}
+            {pickerView === 'home' && <>
+              <MpopRow icon="auto_awesome" title="River Decides" sub="Auto-routes to the best model" active={selectedModel?.provider === 'auto'} onClick={() => { closeModelPicker(); handleModelSelect('auto', 'auto') }} />
+              <MpopRow icon="memory" title="Local" sub={localModels.filter(m => m.available).length > 0 ? `${localModels.filter(m => m.available).length} ready · Ollama` : 'No models installed'} active={selectedModel?.provider === 'ollama'} chevron onClick={() => setPickerView('local')} />
+              {hasNvidia && <MpopRow icon="memory_alt" title="NVIDIA NIM" sub="Free cloud inference" active={selectedModel?.provider === 'nvidia_nim'} chevron onClick={() => setPickerView('nvidia')} />}
+              {hasCloud  && <MpopRow icon="cloud" title="Cloud" sub="Claude · Gemini · GPT" active={!!selectedModel && !['auto','ollama','nvidia_nim'].includes(selectedModel.provider)} chevron onClick={() => setPickerView('cloud')} />}
+            </>}
+
+            {/* LOCAL */}
+            {pickerView === 'local' && <>
+              <MpopBack label="Local Models" onClick={() => setPickerView('home')} />
+              {localModels.length === 0
+                ? <p className="rs-mpop-empty">Pull a model via Ollama first.</p>
+                : localModels.map(m => <MpopRow key={m.model_id} icon="memory" title={m.display_name} sub={m.notes || (m.vram_gb ? `${m.vram_gb} GB VRAM` : m.model_id)} active={selectedModel?.model_id === m.model_id && selectedModel?.provider === 'ollama'} dimmed={!m.available} onClick={() => { closeModelPicker(); handleModelSelect('ollama', m.model_id) }} />)
+              }
+            </>}
+
+            {/* NVIDIA */}
+            {pickerView === 'nvidia' && <>
+              <MpopBack label="NVIDIA NIM" onClick={() => setPickerView('home')} />
+              {nimModels.map(m => <MpopRow key={m.model_id} icon="memory_alt" title={m.display_name} sub={m.available ? (m.notes || 'Free · NIM') : 'Enable NIM in .env'} badge={m.available ? 'FREE' : null} active={selectedModel?.model_id === m.model_id && selectedModel?.provider === 'nvidia_nim'} dimmed={!m.available} onClick={() => { closeModelPicker(); handleModelSelect('nvidia_nim', m.model_id) }} />)}
+            </>}
+
+            {/* CLOUD */}
+            {pickerView === 'cloud' && <>
+              <MpopBack label="Cloud Providers" onClick={() => setPickerView('home')} />
+              {cloudModels.map(m => <MpopRow key={`${m.provider}::${m.model_id}`} icon="cloud" title={m.display_name} sub={m.available ? (m.cost_per_1k_input_usd != null ? fmtCost(m.cost_per_1k_input_usd) : m.provider) : 'Enable in admin settings'} active={selectedModel?.model_id === m.model_id && selectedModel?.provider === m.provider} dimmed={!m.available} onClick={() => { closeModelPicker(); handleModelSelect(m.provider, m.model_id) }} />)}
+            </>}
+
+          </div>
+        </>
+      )}
     </div>
   )
 }

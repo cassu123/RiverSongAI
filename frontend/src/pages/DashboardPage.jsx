@@ -32,6 +32,37 @@ function fmtTime() {
   })
 }
 
+function NimTelemetry({ token }) {
+  const [rpm, setRpm] = useState(null)
+  
+  useEffect(() => {
+    let mounted = true
+    const fetchRate = async () => {
+      try {
+        const API_BASE = import.meta.env.VITE_API_URL || ''
+        const res = await fetch(`${API_BASE}/api/settings/provider-rate?provider=nvidia_nim`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (mounted) setRpm(data.rpm)
+        }
+      } catch (err) {}
+    }
+    fetchRate()
+    const iv = setInterval(fetchRate, 5000) // update every 5 seconds for real-time feel
+    return () => { mounted = false; clearInterval(iv) }
+  }, [token])
+
+  return (
+    <div>
+      <div className="rs-card-label">NIM TRAFFIC</div>
+      <div className="rs-card-value">{rpm !== null ? rpm : '—'}<small style={{ fontSize: '0.6rem', opacity: 0.5, marginLeft: 4 }}>RPM</small></div>
+      <div className="rs-card-meta">Global request rate</div>
+    </div>
+  )
+}
+
 export default function DashboardPage({ onNavigate, isAdmin = false, setAction }) {
   const { user, token } = useAuth()
   const userId = user?.id || 'default'
@@ -186,6 +217,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
                   <div className="rs-card-value">1.2<small style={{ fontSize: '0.6rem', opacity: 0.5, marginLeft: 4 }}>GB/S</small></div>
                   <div className="rs-card-meta">Data throughput</div>
                 </div>
+                <NimTelemetry token={token} />
               </div>
             </div>
 

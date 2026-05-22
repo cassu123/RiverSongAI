@@ -131,6 +131,8 @@ CREATE TABLE IF NOT EXISTS users (
     role          TEXT NOT NULL DEFAULT 'user',
     is_approved   INTEGER NOT NULL DEFAULT 0,
     force_password_change INTEGER NOT NULL DEFAULT 0,
+    is_suspended  INTEGER NOT NULL DEFAULT 0,
+    tokens_valid_after TEXT,
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL
 );
@@ -397,6 +399,8 @@ class SQLiteStore:
             "ALTER TABLE users ADD COLUMN universe TEXT NOT NULL DEFAULT 'dune'",
             "ALTER TABLE users ADD COLUMN mood TEXT NOT NULL DEFAULT 'caladan'",
             "ALTER TABLE users ADD COLUMN force_password_change INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN is_suspended INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN tokens_valid_after TEXT",
             # One-time mapping: legacy palette -> universe (idempotent via default-gate)
             "UPDATE users SET universe='halo' WHERE palette='halo' AND universe='dune'",
             # One-time mapping: legacy theme -> mood (idempotent — only rewrites rows still at default)
@@ -1270,7 +1274,7 @@ class SQLiteStore:
     def _sync_list_users(self) -> list:
         conn = self._get_conn()
         rows = conn.execute(
-            "SELECT id, email, display_name, role, is_approved, force_password_change, created_at FROM users ORDER BY created_at ASC"
+            "SELECT id, email, display_name, role, is_approved, force_password_change, is_suspended, tokens_valid_after, created_at FROM users ORDER BY created_at ASC"
         ).fetchall()
         return [
             {
@@ -1280,14 +1284,16 @@ class SQLiteStore:
                 "role": r[3],
                 "is_approved": bool(r[4]),
                 "force_password_change": bool(r[5]),
-                "created_at": r[6]
+                "is_suspended": bool(r[6]),
+                "tokens_valid_after": r[7],
+                "created_at": r[8]
             } for r in rows
         ]
 
-    async def update_user(self, user_id: str, role: Optional[str] = None, is_approved: Optional[bool] = None, force_password_change: Optional[bool] = None) -> bool:
-        return await self._run(self._sync_update_user, user_id, role, is_approved, force_password_change)
+    async def update_user(self, user_id: str, role: Optional[str] = None, is_approved: Optional[bool] = None, force_password_change: Optional[bool] = None, is_suspended: Optional[bool] = None) -> bool:
+        return await self._run(self._sync_update_user, user_id, role, is_approved, force_password_change, is_suspended)
 
-    def _sync_update_user(self, user_id: str, role: Optional[str], is_approved: Optional[bool], force_password_change: Optional[bool]) -> bool:
+    def _sync_update_user(self, user_id: str, role: Optional[str], is_approved: Optional[bool], force_password_change: Optional[bool], is_suspended: Optional[bool]) -> bool:
         conn = self._get_conn()
         now = _now_str()
         parts, vals = [], []
@@ -1303,6 +1309,9 @@ class SQLiteStore:
         if force_password_change is not None:
             parts.append("force_password_change = ?")
             vals.append(int(force_password_change))
+        if is_suspended is not None:
+            parts.append("is_suspended = ?")
+            vals.append(int(is_suspended))
         if not parts:
             return False
         parts.append("updated_at = ?")
@@ -1315,16 +1324,35 @@ class SQLiteStore:
         conn.commit()
         return True
 
-    async def update_user_password(self, user_id: str, password_hash: str) -> None:
-        await self._run(self._sync_update_user_password, user_id, password_hash)
+    async def update_user_password(self, user_id: str, password_hash: str, force_change: bool = False) -> None:
+        await self._run(self._sync_update_user_password, user_id, password_hash, force_change)
 
-    def _sync_update_user_password(self, user_id: str, password_hash: str) -> None:
+    def _sync_update_user_password(self, user_id: str, password_hash: str, force_change: bool) -> None:
         conn = self._get_conn()
         now = _now_str()
+        force_val = 1 if force_change else 0
         conn.execute(
-            "UPDATE users SET password_hash = ?, force_password_change = 0, updated_at = ? WHERE id = ?",
-            (password_hash, now, user_id)
+            "UPDATE users SET password_hash = ?, force_password_change = ?, updated_at = ? WHERE id = ?",
+            (password_hash, force_val, now, user_id)
         )
+        conn.commit()
+
+    async def delete_user(self, user_id: str) -> bool:
+        return await self._run(self._sync_delete_user, user_id)
+
+    def _sync_delete_user(self, user_id: str) -> bool:
+        conn = self._get_conn()
+        cursor = conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+
+    async def force_logout(self, user_id: str) -> None:
+        await self._run(self._sync_force_logout, user_id)
+
+    def _sync_force_logout(self, user_id: str) -> None:
+        conn = self._get_conn()
+        now = _now_str()
+        conn.execute("UPDATE users SET tokens_valid_after = ?, updated_at = ? WHERE id = ?", (now, now, user_id))
         conn.commit()
 
     async def get_user_by_google_id(self, google_id: str) -> Optional[dict]:

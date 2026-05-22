@@ -15,6 +15,23 @@
 
 export const MODEL_FAMILIES = [
   // ---------------------------------------------------------------------------
+  // Auto — intent router picks the best model per message
+  // ---------------------------------------------------------------------------
+  {
+    id: 'auto',
+    displayName: 'River Decides',
+    provider: 'auto',
+    blurb: 'Auto-routes each message to the best model',
+    icon: 'auto_awesome',
+    tiers: {
+      fast:     null,
+      thinking: null,
+      pro:      null,
+    },
+    isAuto: true,
+  },
+
+  // ---------------------------------------------------------------------------
   // Local — Ollama
   // ---------------------------------------------------------------------------
   {
@@ -139,6 +156,24 @@ export const MODEL_FAMILIES = [
       fast:     'mistral-small-latest',
       thinking: null,
       pro:      'mistral-large-latest',
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // NVIDIA NIM — full model list, not 3-tier — isFullList flag triggers
+  // a dedicated model sheet in ChatPage/ConversationPage
+  // ---------------------------------------------------------------------------
+  {
+    id: 'nvidia-nim',
+    displayName: 'NVIDIA NIM',
+    provider: 'nvidia_nim',
+    blurb: 'Free cloud inference — pick any model',
+    icon: 'memory_alt',
+    isFullList: true,
+    tiers: {
+      fast:     'meta/llama-3.1-70b-instruct',
+      thinking: 'moonshotai/kimi-k2',
+      pro:      'nvidia/llama-3.1-nemotron-ultra-253b-v1',
     },
   },
 ]

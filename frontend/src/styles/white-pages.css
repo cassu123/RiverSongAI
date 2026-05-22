@@ -1,0 +1,124 @@
+/* =============================================================================
+   white-pages.css — High-contrast editorial aesthetic for River Song AI.
+   -----------------------------------------------------------------------------
+   Swiss-style minimalism: white backgrounds, black typography, 0-4px radius.
+   ============================================================================= */
+
+.white-pages-mode {
+  --bg-base: #FFFFFF;
+  --fg: #111111;
+  --primary: #000000;
+  --md-surface: #FFFFFF;
+  --md-surface-container-low: #FFFFFF;
+  --md-surface-container: #F9F9F9;
+  --md-surface-container-high: #F2F2F2;
+  --md-on-surface-variant: #444444;
+  --md-outline-variant: #111111;
+  --md-outline: #000000;
+  
+  --glass-blur: none;
+  --glass-blur-sm: none;
+  --card-texture: none;
+  
+  --card-radius: 4px;
+  --inner-radius: 0px;
+  
+  background: var(--bg-base);
+  color: var(--fg);
+}
+
+.white-pages-mode .rs-card {
+  background: #FFFFFF;
+  border: 1px solid #111111;
+  border-radius: var(--card-radius);
+  box-shadow: none; /* Flat design */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.white-pages-mode .rs-card::before {
+  display: none;
+}
+
+.white-pages-mode .rs-card.is-elev {
+  background: #F9F9F9;
+  border-width: 2px;
+}
+
+.white-pages-mode .rs-card-label {
+  color: #000000;
+  opacity: 1;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  border-bottom: 2px solid #000000;
+  padding-bottom: 4px;
+  display: inline-block;
+}
+
+.white-pages-mode .rs-card-value {
+  color: #000000;
+  font-weight: 900;
+}
+
+.white-pages-mode .rs-card-meta {
+  color: #111111;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.white-pages-mode .rs-btn-primary {
+  background: #000000;
+  color: #FFFFFF;
+  border-radius: 4px;
+  box-shadow: none;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 900;
+}
+
+.white-pages-mode .rs-btn-primary:hover {
+  background: #222222;
+  transform: none;
+  box-shadow: 4px 4px 0px #000000;
+}
+
+.white-pages-mode .rs-pill {
+  background: #FFFFFF;
+  border: 1px solid #111111;
+  border-radius: 4px;
+  color: #111111;
+}
+
+.white-pages-mode .rs-pill.is-active {
+  background: #000000;
+  color: #FFFFFF;
+  box-shadow: none;
+}
+
+.white-pages-mode .rs-status-dot {
+  box-shadow: none;
+  border: 1px solid #000000;
+}
+
+.white-pages-mode input {
+  background: #FFFFFF !important;
+  border: 1px solid #111111 !important;
+  color: #111111 !important;
+  border-radius: 4px !important;
+}
+
+.white-pages-mode .rs-card-head {
+  border-bottom: 1px solid #111111;
+  padding-bottom: 12px;
+}
+
+/* Page Header refinement */
+.white-pages-mode .rs-page-title {
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  border-bottom: 8px solid #000000;
+  display: inline-block;
+  padding-bottom: 8px;
+  margin-bottom: 32px;
+}

@@ -22,9 +22,10 @@ export default function Shell({
   onHome,
   action,
   chatSidebar,
-  drawer, // Add drawer component as prop for static placement at desktop
+  onShowSidebar,
+  drawer,
   children,
-  mode = 'workshop' // 'foyer' or 'workshop'
+  mode = 'workshop'
 }) {
   const shellClass = `rs-shell rs-mode-${mode}${chatSidebar ? ' has-sidebar' : ''}`
   
@@ -42,6 +43,11 @@ export default function Shell({
         </div>
         
         <div className="rs-header-right">
+          {onShowSidebar && (
+            <button className="rs-sidebar-reopen" onClick={onShowSidebar} title="Show recent panel">
+              <span className="material-symbols-rounded">left_panel_open</span>
+            </button>
+          )}
           <button className={`rs-orb ${mode === 'foyer' ? 'is-large' : 'is-small'}`} onClick={onOpenSpeak} aria-label="Speak to River" />
           <button className="rs-hamburger" onClick={onOpenDrawer} aria-label="Open navigation">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
