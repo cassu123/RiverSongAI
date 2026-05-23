@@ -36,6 +36,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Uuid,
+    JSON,
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -99,6 +100,7 @@ class Vehicle(Base):
     # Legacy — kept for DB compat, not surfaced in UI
     fluid_specs  = relationship("VehicleFluidSpec",  back_populates="vehicle", cascade="all, delete-orphan")
     torque_specs = relationship("VehicleTorqueSpec", back_populates="vehicle", cascade="all, delete-orphan")
+    parts        = relationship("VehiclePart",       back_populates="vehicle", cascade="all, delete-orphan")
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +168,32 @@ class VehicleCheckPoint(Base):
 
     vehicle       = relationship("Vehicle", back_populates="check_points")
     check_results = relationship("ServiceCheckResult", back_populates="check_point")
+    parts         = relationship("VehiclePart", back_populates="check_point", cascade="all, delete-orphan")
+
+
+# ---------------------------------------------------------------------------
+# Vehicle Parts
+# ---------------------------------------------------------------------------
+
+class VehiclePart(Base):
+    """
+    OEM parts and alternatives for a given checkpoint.
+    """
+    __tablename__ = "vehicle_parts"
+
+    id              = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vehicle_id      = Column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
+    checkpoint_id   = Column(Uuid(as_uuid=True), ForeignKey("vehicle_check_points.id"), nullable=False)
+    part_name       = Column(String, nullable=False)
+    oem_part_number = Column(String, nullable=True)
+    oem_specs       = Column(String, nullable=True)
+    alternatives    = Column(JSON, nullable=True, default=[])
+    source          = Column(String, nullable=True)  # "manual", "user_added", "ai_lookup"
+    created_at      = Column(DateTime, default=_now)
+    updated_at      = Column(DateTime, default=_now, onupdate=_now)
+
+    vehicle     = relationship("Vehicle", back_populates="parts")
+    check_point = relationship("VehicleCheckPoint", back_populates="parts")
 
 
 # ---------------------------------------------------------------------------

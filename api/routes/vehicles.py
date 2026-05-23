@@ -248,6 +248,21 @@ def _ser_checkpoint(cp) -> dict:
         "nm":                     cp.nm,
         "last_service_odometer":  cp.last_service_odometer,
         "last_service_date":      cp.last_service_date.isoformat() if cp.last_service_date else None,
+        "parts":                  [_ser_part(p) for p in cp.parts] if hasattr(cp, "parts") else [],
+    }
+
+def _ser_part(p) -> dict:
+    return {
+        "id":              str(p.id),
+        "vehicle_id":      str(p.vehicle_id),
+        "checkpoint_id":   str(p.checkpoint_id),
+        "part_name":       p.part_name,
+        "oem_part_number": p.oem_part_number,
+        "oem_specs":       p.oem_specs,
+        "alternatives":    p.alternatives,
+        "source":          p.source,
+        "created_at":      p.created_at.isoformat() if p.created_at else None,
+        "updated_at":      p.updated_at.isoformat() if p.updated_at else None,
     }
 
 
@@ -323,6 +338,34 @@ class VehicleCreate(BaseModel):
     license_plate: str                   = ""
     color:         str                   = ""
     notes:         str                   = ""
+
+class PartAlternativeIn(BaseModel):
+    part_number: str
+    brand: str
+    verified: bool = False
+    notes: str = ""
+
+class PartCreate(BaseModel):
+    checkpoint_id: str
+    part_name: str
+    oem_part_number: Optional[str] = None
+    oem_specs: Optional[str] = None
+    alternatives: List[PartAlternativeIn] = []
+    source: Optional[str] = "user_added"
+
+class PartPatch(BaseModel):
+    part_name: Optional[str] = None
+    oem_part_number: Optional[str] = None
+    oem_specs: Optional[str] = None
+    alternatives: Optional[List[PartAlternativeIn]] = None
+
+class PartLookupQuery(BaseModel):
+    checkpoint_id: str
+    query: str
+
+class MaintenanceAIQuery(BaseModel):
+    question: str
+    current_odometer: Optional[int] = None
 
 class VehiclePatch(BaseModel):
     make:          Optional[str]         = None
@@ -505,6 +548,82 @@ def get_vehicle_route(
         raise _http(e)
 
 
+@router.get("/{vehicle_id}/maintenance-timeline")
+def get_maintenance_timeline(
+    vehicle_id: str,
+    current_odometer: Optional[int] = None,
+    current_date: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    try:
+        vehicles = get_vehicles(db, user_id)
+        v = next((v for v in vehicles if str(v.id) == vehicle_id), None)
+        if not v:
+            raise not_found("Vehicle not found")
+
+        today = datetime.fromisoformat(current_date.replace('Z', '+00:00')).date() if current_date else datetime.now(timezone.utc).date()
+        
+        # Determine actual current odometer to use
+        logs = get_service_logs(db, user_id, vehicle_id)
+        last_log_odo = max((log.odometer for log in logs if log.odometer is not None), default=0)
+        eff_odometer = current_odometer if current_odometer is not None else last_log_odo
+
+        timeline_items = []
+        for cp in v.check_points:
+            proj_miles = None
+            proj_date = None
+            
+            # calculate miles
+            if cp.due_at_miles is not None:
+                proj_miles = cp.due_at_miles
+            elif cp.interval_miles and cp.last_service_odometer is not None:
+                proj_miles = cp.last_service_odometer + cp.interval_miles
+            elif cp.interval_miles:
+                proj_miles = eff_odometer + cp.interval_miles
+                
+            # calculate dates
+            if cp.interval_days and cp.last_service_date:
+                proj_date = cp.last_service_date.date() + __import__("datetime").timedelta(days=cp.interval_days)
+            elif cp.interval_days:
+                proj_date = today + __import__("datetime").timedelta(days=cp.interval_days)
+                
+            if proj_miles is None and proj_date is None:
+                continue # Cannot predict
+                
+            # Delta to now
+            delta_miles = proj_miles - eff_odometer if proj_miles is not None else float('inf')
+            delta_days = (proj_date - today).days if proj_date is not None else float('inf')
+            
+            # Sort score (miles if available, otherwise days translated to approx miles at 10k/yr)
+            score = delta_miles if proj_miles is not None else (delta_days * 27.4)
+            
+            # Filter out things way far in the future if we have >4 items
+            is_overdue = (delta_miles <= 0) or (delta_days <= 0)
+            
+            item_data = _ser_checkpoint(cp)
+            item_data["projected_due_miles"] = proj_miles
+            item_data["projected_due_date"] = proj_date.isoformat() if proj_date else None
+            item_data["is_overdue"] = is_overdue
+            item_data["delta_miles"] = delta_miles
+            item_data["delta_days"] = delta_days
+            item_data["score"] = score
+            
+            timeline_items.append(item_data)
+            
+        timeline_items.sort(key=lambda x: (x["score"], x["sort_order"]))
+        
+        next_up = timeline_items[0] if timeline_items else None
+        upcoming = timeline_items[1:4] if len(timeline_items) > 1 else []
+        
+        return {
+            "next_up": next_up,
+            "upcoming": upcoming
+        }
+    except Exception as e:
+        raise _http(e)
+
+
 @router.patch("/{vehicle_id}")
 def update_vehicle_route(
     vehicle_id: str, body: VehiclePatch,
@@ -639,6 +758,250 @@ def clear_all_checkpoints(
     try:
         clear_all_check_points(db, user_id, vehicle_id)
     except Exception as e:
+        raise _http(e)
+
+
+# ---------------------------------------------------------------------------
+# Parts API
+# ---------------------------------------------------------------------------
+
+@router.get("/{vehicle_id}/parts")
+def list_parts(
+    vehicle_id: str,
+    db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
+):
+    try:
+        from vehicles.models import VehiclePart
+        parts = db.query(VehiclePart).filter(VehiclePart.vehicle_id == vehicle_id).all()
+        return [_ser_part(p) for p in parts]
+    except Exception as e:
+        raise _http(e)
+
+
+@router.post("/{vehicle_id}/parts", status_code=201)
+def add_part(
+    vehicle_id: str, body: PartCreate,
+    db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
+):
+    try:
+        from vehicles.models import VehiclePart, Vehicle
+        # Verify ownership
+        get_vehicles(db, user_id)
+        v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+        if not v: raise not_found("Vehicle not found")
+        
+        alts = [a.model_dump() for a in body.alternatives]
+        
+        part = VehiclePart(
+            vehicle_id=vehicle_id,
+            checkpoint_id=body.checkpoint_id,
+            part_name=body.part_name,
+            oem_part_number=body.oem_part_number,
+            oem_specs=body.oem_specs,
+            alternatives=alts,
+            source=body.source,
+        )
+        db.add(part)
+        db.commit()
+        db.refresh(part)
+        return _ser_part(part)
+    except Exception as e:
+        db.rollback()
+        raise _http(e)
+
+
+@router.put("/{vehicle_id}/parts/{part_id}")
+def update_part(
+    vehicle_id: str, part_id: str, body: PartPatch,
+    db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
+):
+    try:
+        from vehicles.models import VehiclePart
+        get_vehicles(db, user_id)
+        part = db.query(VehiclePart).filter(VehiclePart.id == part_id, VehiclePart.vehicle_id == vehicle_id).first()
+        if not part: raise not_found("Part not found")
+        
+        if body.part_name is not None: part.part_name = body.part_name
+        if body.oem_part_number is not None: part.oem_part_number = body.oem_part_number
+        if body.oem_specs is not None: part.oem_specs = body.oem_specs
+        if body.alternatives is not None: part.alternatives = [a.model_dump() for a in body.alternatives]
+        
+        db.commit()
+        db.refresh(part)
+        return _ser_part(part)
+    except Exception as e:
+        db.rollback()
+        raise _http(e)
+
+
+@router.post("/{vehicle_id}/parts/lookup")
+def lookup_part_ai(
+    vehicle_id: str, body: PartLookupQuery,
+    db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
+):
+    from config.settings import get_settings
+    import json
+    import httpx
+    try:
+        # 1. Check existing parts for checkpoint
+        from vehicles.models import VehiclePart, Vehicle
+        get_vehicles(db, user_id)
+        v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+        if not v: raise not_found("Vehicle not found")
+        
+        existing = db.query(VehiclePart).filter(VehiclePart.checkpoint_id == body.checkpoint_id).first()
+        if existing:
+            return _ser_part(existing)
+            
+        # 2. AI lookup
+        settings = get_settings()
+        ollama_url = getattr(settings, "ollama_base_url", None) or "http://localhost:11434"
+        ollama_model = getattr(settings, "ollama_model", None) or "mistral"
+        
+        sys_prompt = f"You are a parts expert. Determine the OEM part and reputable alternatives for this vehicle: {v.year} {v.make} {v.model}. Query: {body.query}. Output ONLY strict JSON: {{\"oem\": \"number or specs\", \"alternatives\": [{{\"part_number\": \"...\", \"brand\": \"...\", \"verified\": true, \"notes\": \"...\"}}], \"confidence\": \"high/medium/low\"}}"
+        
+        with httpx.Client() as client:
+            resp = client.post(
+                f"{ollama_url}/api/chat",
+                json={
+                    "model": ollama_model,
+                    "messages": [{"role": "system", "content": sys_prompt}],
+                    "stream": False,
+                    "format": "json"
+                },
+                timeout=30.0
+            )
+            if resp.status_code == 200:
+                content = resp.json().get("message", {}).get("content", "{}")
+                try:
+                    data = json.loads(content)
+                    return data
+                except json.JSONDecodeError:
+                    return {"oem": "Unknown", "alternatives": [], "confidence": "low"}
+            return {"oem": "Unknown", "alternatives": [], "confidence": "low"}
+    except Exception as e:
+        raise _http(e)
+
+
+@router.post("/{vehicle_id}/maintenance-ai")
+async def maintenance_ai(
+    vehicle_id: str, body: MaintenanceAIQuery,
+    db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
+):
+    from providers.rag.rag_provider import RAGProvider
+    from core.tools import get_vehicle_tools, execute_tool
+    from config.settings import get_settings
+    import json
+    import httpx
+    
+    try:
+        # Get timeline context
+        timeline_resp = get_maintenance_timeline(vehicle_id, body.current_odometer, None, db, user_id)
+        next_up = timeline_resp.get("next_up")
+        
+        # Get RAG context
+        rag = RAGProvider()
+        chunks = await rag.query_context(body.question, filters={"vehicle_id": vehicle_id}, top_k=5)
+        
+        context_text = "\n".join([f"- {c['content']}" for c in chunks])
+        
+        v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+        
+        prompt = f"""Vehicle: {v.year} {v.make} {v.model}
+Current Odometer: {body.current_odometer or 'Unknown'}
+Next Service Due: {next_up['description'] if next_up else 'None'}
+Parts on file: {json.dumps(next_up.get('parts', [])) if next_up else '[]'}
+
+Owner's Manual Context:
+{context_text}
+
+User Question: {body.question}
+
+Instructions: Answer using the manual and current vehicle status.
+If the user is reporting a completed service, you MUST call the `log_vehicle_maintenance` tool.
+If asking about parts, cite OEM and verified alternatives from the context above if available."""
+        
+        settings = get_settings()
+        ollama_url = getattr(settings, "ollama_base_url", None) or "http://localhost:11434"
+        ollama_model = getattr(settings, "ollama_model", None) or "mistral"
+        
+        # Provide tools
+        tools = get_vehicle_tools()
+        ollama_tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": t.name,
+                    "description": t.description,
+                    "parameters": t.input_schema
+                }
+            }
+            for t in tools
+        ]
+        
+        messages = [{"role": "system", "content": prompt}]
+        
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{ollama_url}/api/chat",
+                json={
+                    "model": ollama_model,
+                    "messages": messages,
+                    "stream": False,
+                    "tools": ollama_tools
+                },
+                timeout=45.0
+            )
+            
+            if resp.status_code != 200:
+                raise bad_request(f"AI error: {resp.text}")
+                
+            resp_data = resp.json()
+            message = resp_data.get("message", {})
+            
+            # Check for tool call
+            if message.get("tool_calls"):
+                tool_call = message["tool_calls"][0]
+                tool_name = tool_call["function"]["name"]
+                tool_args = tool_call["function"]["arguments"]
+                
+                # Execute tool
+                tool_result = await execute_tool(
+                    tool_name, tool_args,
+                    context={"user_id": user_id, "vehicle_id": vehicle_id, "db": db}
+                )
+                
+                # Send result back to get final answer
+                messages.append(message)
+                messages.append({
+                    "role": "tool",
+                    "content": json.dumps(tool_result),
+                    "name": tool_name
+                })
+                
+                final_resp = await client.post(
+                    f"{ollama_url}/api/chat",
+                    json={
+                        "model": ollama_model,
+                        "messages": messages,
+                        "stream": False
+                    },
+                    timeout=30.0
+                )
+                return {
+                    "answer": final_resp.json().get("message", {}).get("content", ""),
+                    "tool_invoked": tool_name,
+                    "tool_result": tool_result
+                }
+                
+            return {
+                "answer": message.get("content", ""),
+                "tool_invoked": None,
+                "tool_result": None
+            }
+            
+    except Exception as e:
+        logger.error(f"Maintenance AI error: {e}")
         raise _http(e)
 
 

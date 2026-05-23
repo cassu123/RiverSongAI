@@ -39,27 +39,27 @@ function VehicleForm({ initial, onSave, onCancel, saveLabel }) {
       {error && <div className="mp-error">{error}</div>}
       <div className="form-grid">
         <div className="pulse-field">
-          <label className="pulse-label">MAKE *</label>
+          <label className="rs-card-label">MAKE *</label>
           <input className="cyber-input" value={form.make} onChange={set('make')} placeholder="e.g. Honda" />
         </div>
         <div className="pulse-field">
-          <label className="pulse-label">MODEL *</label>
+          <label className="rs-card-label">MODEL *</label>
           <input className="cyber-input" value={form.model} onChange={set('model')} placeholder="e.g. Rebel 500" />
         </div>
         <div className="pulse-field">
-          <label className="pulse-label">YEAR</label>
+          <label className="rs-card-label">YEAR</label>
           <input className="cyber-input num-input" type="number" value={form.year} onChange={set('year')} placeholder="2026" />
         </div>
         <div className="pulse-field">
-          <label className="pulse-label">TRIM</label>
+          <label className="rs-card-label">TRIM</label>
           <input className="cyber-input" value={form.trim} onChange={set('trim')} placeholder="e.g. SE" />
         </div>
         <div className="pulse-field">
-          <label className="pulse-label">NICKNAME</label>
+          <label className="rs-card-label">NICKNAME</label>
           <input className="cyber-input" value={form.nickname} onChange={set('nickname')} placeholder="e.g. The Rebel" />
         </div>
         <div className="pulse-field">
-          <label className="pulse-label">TYPE</label>
+          <label className="rs-card-label">TYPE</label>
           <select className="pulse-select cyber-input" value={form.vehicle_type} onChange={set('vehicle_type')}>
             <option value="auto">Automobile</option>
             <option value="moto">Motorcycle</option>
@@ -69,17 +69,17 @@ function VehicleForm({ initial, onSave, onCancel, saveLabel }) {
           </select>
         </div>
         <div className="pulse-field">
-          <label className="pulse-label">COLOR</label>
+          <label className="rs-card-label">COLOR</label>
           <input className="cyber-input" value={form.color} onChange={set('color')} placeholder="e.g. Matte Black" />
         </div>
         <div className="pulse-field">
-          <label className="pulse-label">VIN</label>
+          <label className="rs-card-label">VIN</label>
           <input className="cyber-input" value={form.vin} onChange={set('vin')} placeholder="Optional" />
         </div>
       </div>
       <div className="vehicle-form-footer">
-        <button className="cyber-btn" onClick={onCancel}>CANCEL</button>
-        <button className="cyber-btn btn-save" onClick={handleSubmit}>{saveLabel || '>> SAVE'}</button>
+        <button className="rs-pill" onClick={onCancel}>CANCEL</button>
+        <button className="rs-pill is-active" onClick={handleSubmit}>{saveLabel || '>> SAVE'}</button>
       </div>
     </div>
   );
@@ -97,7 +97,7 @@ const BLANK_CP = {
 };
 
 const SVC_LEVEL_LABELS = { inspect: 'INSPECT', service: 'SERVICE', replace: 'REPLACE' };
-const SVC_LEVEL_COLORS = { inspect: 'var(--primary)', service: 'var(--warn)', replace: 'var(--error)' };
+const SVC_LEVEL_COLORS = { inspect: 'var(--primary)', service: 'var(--rs-status-warning)', replace: 'var(--rs-status-critical)' };
 
 function fmtDays(d) {
   if (!d) return null;
@@ -177,7 +177,7 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
         <span className="cp-svc-badge" style={{ borderColor: svcColor, color: svcColor }}>
           {SVC_LEVEL_LABELS[cp.service_level] || 'INSPECT'}
         </span>
-        <span className="spec-name">{cp.description}</span>
+        <span className="rs-card-value" style={{ fontSize: "1.1rem" }}>{cp.description}</span>
         {cp.expected_spec && (
           <span className="cp-spec-tag">
             {cp.expected_spec}
@@ -194,20 +194,45 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
         {cp.last_service_odometer && (
           <span className="cp-last-svc">last: {cp.last_service_odometer.toLocaleString()} mi</span>
         )}
+        <button className="rs-pill" style={{marginLeft: '8px'}} onClick={async () => {
+          const partName = window.prompt('Enter Part Name (e.g. Oil Filter, 10W-40, Spark Plug):');
+          if (!partName) return;
+          const partNum = window.prompt('Enter Part Number (Optional):');
+          await apiFetch(`/api/vehicles/${vehicleId}/parts`, token, {
+            method: 'POST',
+            body: JSON.stringify({
+              check_point_id: cp.id,
+              part_name: partName,
+              part_number: partNum || null
+            })
+          });
+          onUpdated();
+        }}>+ PART</button>
+        {cp.parts && cp.parts.map(p => (
+           <span key={p.id} className="cp-interval-tag" style={{borderColor: 'var(--primary)', color: 'var(--primary)', marginLeft: '4px'}}>
+             {p.part_name} {p.part_number ? `(${p.part_number})` : ''}
+             <span style={{cursor: 'pointer', marginLeft: '4px'}} onClick={async () => {
+               if(window.confirm('Remove this part?')) {
+                 await apiFetch(`/api/vehicles/${vehicleId}/parts/${p.id}`, token, { method: 'DELETE' });
+                 onUpdated();
+               }
+             }}>✕</span>
+           </span>
+        ))}
       </div>
       <div className="cp-row-actions">
-        <button className="cyber-btn btn-xs" onClick={() => setEditing(e => !e)}>{editing ? 'CLOSE' : 'EDIT'}</button>
-        <button className="del-spec-btn" onClick={del}>✕</button>
+        <button className="rs-pill" onClick={() => setEditing(e => !e)}>{editing ? 'CLOSE' : 'EDIT'}</button>
+        <button className="rs-pill" onClick={del}>✕</button>
       </div>
       {editing && (
         <div className="cp-edit-panel">
           <div className="cp-edit-grid">
             <div className="pulse-field" style={{ gridColumn: 'span 2' }}>
-              <label className="pulse-label">DESCRIPTION</label>
+              <label className="rs-card-label">DESCRIPTION</label>
               <input className="cyber-input" value={form.description} onChange={set('description')} />
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">SERVICE LEVEL</label>
+              <label className="rs-card-label">SERVICE LEVEL</label>
               <select className="cyber-input" value={form.service_level} onChange={set('service_level')}>
                 <option value="inspect">Inspect</option>
                 <option value="service">Service</option>
@@ -215,49 +240,49 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
               </select>
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">UNIT</label>
+              <label className="rs-card-label">UNIT</label>
               <input className="cyber-input" value={form.unit} onChange={set('unit')} placeholder="mm / PSI / °C" />
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">EXPECTED SPEC</label>
+              <label className="rs-card-label">EXPECTED SPEC</label>
               <input className="cyber-input" value={form.expected_spec} onChange={set('expected_spec')} placeholder="e.g. SAE 0W-20" />
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">VOLUME / CAPACITY</label>
+              <label className="rs-card-label">VOLUME / CAPACITY</label>
               <input className="cyber-input" value={form.volume} onChange={set('volume')} placeholder="e.g. 4.2 qt" />
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">MIN VALUE</label>
+              <label className="rs-card-label">MIN VALUE</label>
               <input className="cyber-input num-input" type="number" value={form.min_value} onChange={set('min_value')} placeholder="20" />
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">MAX VALUE</label>
+              <label className="rs-card-label">MAX VALUE</label>
               <input className="cyber-input num-input" type="number" value={form.max_value} onChange={set('max_value')} placeholder="30" />
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">TORQUE (FT-LB)</label>
+              <label className="rs-card-label">TORQUE (FT-LB)</label>
               <input className="cyber-input num-input" type="number" value={form.ft_lb} onChange={set('ft_lb')} placeholder="18" />
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">TORQUE (N·m)</label>
+              <label className="rs-card-label">TORQUE (N·m)</label>
               <input className="cyber-input num-input" type="number" value={form.nm} onChange={set('nm')} placeholder="24" />
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">INTERVAL (MILES)</label>
+              <label className="rs-card-label">INTERVAL (MILES)</label>
               <input className="cyber-input num-input" type="number" value={form.interval_miles} onChange={set('interval_miles')} placeholder="5000" />
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">INTERVAL (DAYS)</label>
+              <label className="rs-card-label">INTERVAL (DAYS)</label>
               <input className="cyber-input num-input" type="number" value={form.interval_days} onChange={set('interval_days')} placeholder="365" />
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">NEXT DUE (MILES)</label>
+              <label className="rs-card-label">NEXT DUE (MILES)</label>
               <input className="cyber-input num-input" type="number" value={form.due_at_miles} onChange={set('due_at_miles')} placeholder="600" />
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
-            <button className="cyber-btn btn-xs" onClick={() => setEditing(false)}>CANCEL</button>
-            <button className="cyber-btn btn-xs btn-save" onClick={save} disabled={busy}>{busy ? '...' : 'SAVE'}</button>
+            <button className="rs-pill" onClick={() => setEditing(false)}>CANCEL</button>
+            <button className="rs-pill btn-save" onClick={save} disabled={busy}>{busy ? '...' : 'SAVE'}</button>
           </div>
         </div>
       )}
@@ -307,7 +332,7 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
           <h4 style={{ margin: 0 }}>[ SERVICE ITEMS ]</h4>
           {vehicle.check_points.length > 0 && (
             <button
-              className="cyber-btn btn-xs btn-danger"
+              className="rs-pill btn-danger"
               onClick={async () => {
                 if (!window.confirm(`Clear all ${vehicle.check_points.length} items? This cannot be undone.`)) return;
                 await apiFetch(`/api/vehicles/${vehicle.id}/specs/checkpoints`, token, { method: 'DELETE' });
@@ -330,16 +355,16 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
         </ul>
 
         {!showAdd ? (
-          <button className="cyber-btn btn-xs" style={{ marginTop: 8 }} onClick={() => setShowAdd(true)}>+ ADD ITEM</button>
+          <button className="rs-pill" style={{ marginTop: 8 }} onClick={() => setShowAdd(true)}>+ ADD ITEM</button>
         ) : (
           <div className="cp-edit-panel" style={{ marginTop: 8 }}>
             <div className="cp-edit-grid">
               <div className="pulse-field" style={{ gridColumn: 'span 2' }}>
-                <label className="pulse-label">DESCRIPTION *</label>
+                <label className="rs-card-label">DESCRIPTION *</label>
                 <input className="cyber-input" value={newPoint.description} onChange={setNp('description')} placeholder="e.g. Engine Oil Change" />
               </div>
               <div className="pulse-field">
-                <label className="pulse-label">SERVICE LEVEL</label>
+                <label className="rs-card-label">SERVICE LEVEL</label>
                 <select className="cyber-input" value={newPoint.service_level} onChange={setNp('service_level')}>
                   <option value="inspect">Inspect</option>
                   <option value="service">Service</option>
@@ -347,49 +372,49 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
                 </select>
               </div>
               <div className="pulse-field">
-                <label className="pulse-label">UNIT</label>
+                <label className="rs-card-label">UNIT</label>
                 <input className="cyber-input" value={newPoint.unit} onChange={setNp('unit')} placeholder="mm / PSI" />
               </div>
               <div className="pulse-field">
-                <label className="pulse-label">EXPECTED SPEC</label>
+                <label className="rs-card-label">EXPECTED SPEC</label>
                 <input className="cyber-input" value={newPoint.expected_spec} onChange={setNp('expected_spec')} placeholder="SAE 0W-20" />
               </div>
               <div className="pulse-field">
-                <label className="pulse-label">VOLUME</label>
+                <label className="rs-card-label">VOLUME</label>
                 <input className="cyber-input" value={newPoint.volume} onChange={setNp('volume')} placeholder="4.2 qt" />
               </div>
               <div className="pulse-field">
-                <label className="pulse-label">MIN VALUE</label>
+                <label className="rs-card-label">MIN VALUE</label>
                 <input className="cyber-input num-input" type="number" value={newPoint.min_value} onChange={setNp('min_value')} placeholder="20" />
               </div>
               <div className="pulse-field">
-                <label className="pulse-label">MAX VALUE</label>
+                <label className="rs-card-label">MAX VALUE</label>
                 <input className="cyber-input num-input" type="number" value={newPoint.max_value} onChange={setNp('max_value')} placeholder="30" />
               </div>
               <div className="pulse-field">
-                <label className="pulse-label">TORQUE (FT-LB)</label>
+                <label className="rs-card-label">TORQUE (FT-LB)</label>
                 <input className="cyber-input num-input" type="number" value={newPoint.ft_lb} onChange={setNp('ft_lb')} placeholder="18" />
               </div>
               <div className="pulse-field">
-                <label className="pulse-label">TORQUE (N·m)</label>
+                <label className="rs-card-label">TORQUE (N·m)</label>
                 <input className="cyber-input num-input" type="number" value={newPoint.nm} onChange={setNp('nm')} placeholder="24" />
               </div>
               <div className="pulse-field">
-                <label className="pulse-label">INTERVAL (MILES)</label>
+                <label className="rs-card-label">INTERVAL (MILES)</label>
                 <input className="cyber-input num-input" type="number" value={newPoint.interval_miles} onChange={setNp('interval_miles')} placeholder="5000" />
               </div>
               <div className="pulse-field">
-                <label className="pulse-label">INTERVAL (DAYS)</label>
+                <label className="rs-card-label">INTERVAL (DAYS)</label>
                 <input className="cyber-input num-input" type="number" value={newPoint.interval_days} onChange={setNp('interval_days')} placeholder="365" />
               </div>
               <div className="pulse-field">
-                <label className="pulse-label">NEXT DUE (MILES)</label>
+                <label className="rs-card-label">NEXT DUE (MILES)</label>
                 <input className="cyber-input num-input" type="number" value={newPoint.due_at_miles} onChange={setNp('due_at_miles')} placeholder="600" />
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
-              <button className="cyber-btn btn-xs" onClick={() => { setShowAdd(false); setNewPoint(BLANK_CP); }}>CANCEL</button>
-              <button className="cyber-btn btn-xs btn-save" onClick={addPoint} disabled={busy || !newPoint.description.trim()}>
+              <button className="rs-pill" onClick={() => { setShowAdd(false); setNewPoint(BLANK_CP); }}>CANCEL</button>
+              <button className="rs-pill btn-save" onClick={addPoint} disabled={busy || !newPoint.description.trim()}>
                 {busy ? '...' : '+ ADD'}
               </button>
             </div>
@@ -484,13 +509,13 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
         <div className="mp-manual-upload-row">
           <input ref={fileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
             onChange={(e) => { setFile(e.target.files[0] || null); setPreview(null); setResult(null); }} />
-          <button className="cyber-btn btn-xs" onClick={() => fileRef.current.click()}>
+          <button className="rs-pill" onClick={() => fileRef.current.click()}>
             {file ? `[ ${file.name} ]` : 'SELECT PDF'}
           </button>
           {file && <>
-            <button className="cyber-btn btn-xs" onClick={handlePreview}>PREVIEW</button>
-            <button className="cyber-btn btn-xs btn-save" onClick={handleApply}>EXTRACT &amp; APPLY</button>
-            <button className="cyber-btn btn-xs" onClick={clearFile}>✕</button>
+            <button className="rs-pill" onClick={handlePreview}>PREVIEW</button>
+            <button className="rs-pill btn-save" onClick={handleApply}>EXTRACT &amp; APPLY</button>
+            <button className="rs-pill" onClick={clearFile}>✕</button>
           </>}
         </div>
       )}
@@ -619,8 +644,8 @@ function PeopleSettings({ token, people, onRefresh }) {
             Force delete will unassign them from all vehicles. Service history will be preserved.
           </div>
           <div className="mp-confirm-actions">
-            <button className="cyber-btn btn-xs" onClick={() => setConfirmDelete(null)}>CANCEL</button>
-            <button className="cyber-btn btn-xs btn-danger" onClick={() => handleRemove(confirmDelete, true)} disabled={busy}>
+            <button className="rs-pill" onClick={() => setConfirmDelete(null)}>CANCEL</button>
+            <button className="rs-pill btn-danger" onClick={() => handleRemove(confirmDelete, true)} disabled={busy}>
               FORCE DELETE
             </button>
           </div>
@@ -637,7 +662,7 @@ function PeopleSettings({ token, people, onRefresh }) {
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           style={{ flex: 1 }}
         />
-        <button className="cyber-btn btn-xs btn-save" onClick={handleAdd} disabled={busy || !emailInput.trim()}>
+        <button className="rs-pill btn-save" onClick={handleAdd} disabled={busy || !emailInput.trim()}>
           {busy ? '...' : '+ ADD'}
         </button>
       </div>
@@ -670,7 +695,7 @@ function PeopleSettings({ token, people, onRefresh }) {
                 )}
               </div>
               <button
-                className="del-spec-btn"
+                className="rs-pill"
                 onClick={() => handleRemove(p)}
                 disabled={busy}
                 title="Remove from roster"
@@ -752,7 +777,7 @@ function AssignmentsSettings({ token, vehicles, people, onPeopleRefresh }) {
       ) : (
         <>
           <div className="pulse-field" style={{ marginBottom: 12 }}>
-            <label className="pulse-label">SELECT VEHICLE</label>
+            <label className="rs-card-label">SELECT VEHICLE</label>
             <select
               className="pulse-select cyber-input"
               value={selectedVehicleId}
@@ -782,7 +807,7 @@ function AssignmentsSettings({ token, vehicles, people, onPeopleRefresh }) {
                           <span className="mp-person-email">{a.person_display_name ? a.person_email : ''}</span>
                         </div>
                         <button
-                          className="cyber-btn btn-xs btn-danger"
+                          className="rs-pill btn-danger"
                           onClick={() => handleUnassign(a.person_id)}
                           disabled={busy}
                         >REMOVE</button>
@@ -804,7 +829,7 @@ function AssignmentsSettings({ token, vehicles, people, onPeopleRefresh }) {
                           <span className="mp-person-email">{p.display_name ? p.email : ''}</span>
                         </div>
                         <button
-                          className="cyber-btn btn-xs btn-save"
+                          className="rs-pill btn-save"
                           onClick={() => handleAssign(p.id)}
                           disabled={busy}
                         >+ ASSIGN</button>
@@ -859,7 +884,7 @@ function SettingsPanel({ token, vehicles, people, selectedVehicleId, onPeopleRef
 // RAG Documents Q&A
 // ---------------------------------------------------------------------------
 
-function VehicleRAG({ token, vehicleId }) {
+function VehicleRAG({ token, vehicleId, currentOdometer }) {
   const [file, setFile] = useState(null);
   const [ingesting, setIngesting] = useState(false);
   const [question, setQuestion] = useState('');
@@ -874,7 +899,7 @@ function VehicleRAG({ token, vehicleId }) {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch(`/api/rag/ingest?doc_id=vehicle_${vehicleId}`, {
+      const res = await fetch(`/api/vehicles/${vehicleId}/manual`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: fd
@@ -892,34 +917,39 @@ function VehicleRAG({ token, vehicleId }) {
     if (!question.trim()) return;
     setAsking(true); setError(''); setAnswer(null);
     try {
-      const res = await fetch('/api/rag/query', {
+      const odo = currentOdometer ? parseInt(currentOdometer, 10) : null;
+      const res = await fetch(`/api/vehicles/${vehicleId}/maintenance-ai`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ doc_id: `vehicle_${vehicleId}`, question: question.trim() })
+        body: JSON.stringify({ message: question.trim(), current_odometer: isNaN(odo) ? null : odo })
       });
       if (!res.ok) throw new Error('Query failed');
       const data = await res.json();
       setAnswer(data);
+      setQuestion('');
     } catch (e) { setError(e.message); }
     finally { setAsking(false); }
   };
 
   return (
-    <div className="mp-rag-section">
-      <div className="mp-settings-label">VEHICLE KNOWLEDGE BASE (RAG)</div>
+    <div className="rs-card is-wide">
+      <div className="mp-settings-label" style={{ display: 'flex', alignItems: 'center' }}>
+        CONVERSATIONAL MAINTENANCE ADVISOR
+        <span style={{ marginLeft: 8, fontSize: '0.7em', padding: '2px 6px', background: 'var(--primary)', color: '#000', borderRadius: '4px' }}>AI GROUNDED</span>
+      </div>
       <p className="mp-settings-hint">
-        Upload manuals or service records to ask conversational questions about this vehicle.
+        Ask about upcoming maintenance, request parts info, or log service directly (e.g., "I just changed the oil at 50,000 miles").
       </p>
 
       {error && <div className="mp-flash mp-flash--err">{error}</div>}
 
       <div className="mp-rag-upload">
         <input ref={fileRef} type="file" accept=".pdf,.txt" style={{ display: 'none' }} onChange={(e) => setFile(e.target.files[0])} />
-        <button className="cyber-btn btn-xs" onClick={() => fileRef.current.click()}>
+        <button className="rs-pill" onClick={() => fileRef.current.click()}>
           {file ? `[ ${file.name} ]` : 'SELECT MANUAL/RECORD'}
         </button>
         {file && (
-          <button className="cyber-btn btn-xs btn-save" onClick={handleIngest} disabled={ingesting}>
+          <button className="rs-pill btn-save" onClick={handleIngest} disabled={ingesting}>
             {ingesting ? 'INGESTING...' : 'INGEST DOCUMENT'}
           </button>
         )}
@@ -928,32 +958,124 @@ function VehicleRAG({ token, vehicleId }) {
       <form className="mp-rag-query" onSubmit={handleAsk}>
         <input 
           className="cyber-input" 
-          placeholder="Ask a question about this vehicle..." 
+          placeholder="e.g. 'What parts do I need for my next service?' or 'Log an oil change'" 
           value={question}
           onChange={e => setQuestion(e.target.value)}
           disabled={asking}
         />
-        <button className="cyber-btn btn-xs btn-save" type="submit" disabled={asking || !question.trim()}>
-          {asking ? 'ASKING...' : 'ASK'}
+        <button className="rs-pill btn-save" type="submit" disabled={asking || !question.trim()}>
+          {asking ? 'THINKING...' : 'ASK'}
         </button>
       </form>
 
       {answer && (
-        <div className="mp-rag-answer animate-fade-in">
-          <div className="mp-answer-text">{answer.answer}</div>
+        <div className="mp-rag-answer animate-fade-in" style={{ marginTop: '1rem' }}>
+          <div className="mp-answer-text" style={{ padding: '1rem', background: 'var(--bg-lighter)', borderRadius: '4px', borderLeft: '3px solid var(--primary)' }}>
+            {answer.response}
+          </div>
+          {answer.tool_result && answer.tool_result.status === 'success' && (
+            <div className="rs-card-inner" style={{ borderColor: 'var(--rs-status-nominal)', color: 'var(--rs-status-nominal)' }}>
+              <strong style={{ color: 'var(--rs-status-nominal)' }}>✓ Action Confirmed:</strong> {answer.tool_result.details}
+            </div>
+          )}
           {answer.chunks?.length > 0 && (
-            <details className="mp-answer-sources">
+            <details className="mp-answer-sources" style={{ marginTop: '1rem' }}>
               <summary>View Sources ▸</summary>
               <div className="mp-sources-list">
                 {(answer.chunks || []).map((c, i) => (
-                  <div key={i} className="mp-source-item">
-                    <span className="mp-source-meta">Source: {c.source}</span>
-                    <p>{c.text}</p>
+                  <div key={i} className="mp-source-item" style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+                    <span className="mp-source-meta" style={{ color: 'var(--text-dim)', fontSize: '0.8em' }}>Source: {c.source}</span>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.9em' }}>{c.text}</p>
                   </div>
                 ))}
               </div>
             </details>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Predictive Timeline
+// ---------------------------------------------------------------------------
+
+function PredictiveTimeline({ token, vehicleId, currentOdometer }) {
+  const [timeline, setTimeline] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!currentOdometer) {
+      setTimeline(null);
+      return;
+    }
+    const odo = parseInt(currentOdometer, 10);
+    if (isNaN(odo)) return;
+
+    let cancel = false;
+    const fetchTimeline = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await apiFetch(`/api/vehicles/${vehicleId}/maintenance-timeline?current_odometer=${odo}`, token);
+        if (!cancel) setTimeline(data);
+      } catch (err) {
+        if (!cancel) setError(err.message);
+      } finally {
+        if (!cancel) setLoading(false);
+      }
+    };
+    
+    const t = setTimeout(fetchTimeline, 500);
+    return () => { cancel = true; clearTimeout(t); };
+  }, [token, vehicleId, currentOdometer]);
+
+  if (!currentOdometer) {
+    return <div className="mp-empty-specs" style={{ margin: '2rem 0' }}>Enter your current odometer to see what's next.</div>;
+  }
+
+  if (loading) return <div className="mp-empty-specs" style={{ margin: '2rem 0' }}>CALCULATING TIMELINE...</div>;
+  if (error) return <div className="mp-error">ERROR: {error}</div>;
+  if (!timeline) return null;
+
+  return (
+    <div className="predictive-timeline">
+      {timeline.next_up && timeline.next_up.length > 0 ? (
+        <div className="rs-card is-wide" style={{ borderColor: 'var(--rs-status-warning)', marginBottom: '24px' }}>
+          <h4 style={{ color: 'var(--rs-status-warning)', marginTop: 0 }}>[ NEXT UP - ACTION REQUIRED ]</h4>
+          {timeline.next_up.map(item => (
+            <div key={item.id} className="rs-card-inner" style={{ display: 'flex', flexDirection: 'column', padding: '0.75rem', marginBottom: '0.5rem', borderRadius: '4px' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                 <span className="cp-svc-badge" style={{ borderColor: 'var(--rs-status-warning)', color: 'var(--rs-status-warning)' }}>{item.service_level.toUpperCase()}</span>
+                 <strong style={{ fontSize: '1.1rem' }}>{item.description}</strong>
+               </div>
+               <div style={{ marginTop: '0.25rem', color: 'var(--text-dim)' }}>
+                 Due {item.miles_remaining <= 0 ? <span style={{color: 'var(--rs-status-critical)'}}>NOW (Overdue by {Math.abs(item.miles_remaining)} mi)</span> : `in ${item.miles_remaining} miles`}
+               </div>
+               {item.parts && item.parts.length > 0 && (
+                 <div className="parts-list" style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
+                    <strong style={{color: 'var(--primary)'}}>Parts:</strong> {item.parts.map(p => p.part_name).join(', ')}
+                 </div>
+               )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mp-flash mp-flash--ok" style={{ marginBottom: '1.5rem' }}>[ OK ] You're all caught up on immediate maintenance.</div>
+      )}
+
+      {timeline.upcoming && timeline.upcoming.length > 0 && (
+        <div className="upcoming-list">
+          <h4 style={{ color: 'var(--text-dim)' }}>[ UPCOMING ]</h4>
+          {timeline.upcoming.map(item => (
+            <div key={item.id} className="rs-card-inner" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem' }}>
+               <span className="cp-svc-badge">{item.service_level.toUpperCase()}</span>
+               <span>{item.description}</span>
+               <span style={{ color: 'var(--text-dim)', marginLeft: 'auto' }}>in {item.miles_remaining} mi</span>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -1158,8 +1280,8 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
 
   if (loading) {
     return (
-      <div className="pulse-container glass-panel">
-        <div className="pulse-header"><h2 className="pulse-title">MAINTENANCE PULSE</h2></div>
+      <div className="rs-foyer">
+        <div className="rs-foyer-head"><h2 className="rs-greeting">MAINTENANCE PULSE</h2></div>
         <div className="mp-empty"><span style={{ color: 'var(--text-dim)' }}>LOADING GARAGE...</span></div>
       </div>
     );
@@ -1167,8 +1289,8 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
 
   if (error) {
     return (
-      <div className="pulse-container glass-panel">
-        <div className="pulse-header"><h2 className="pulse-title">MAINTENANCE PULSE</h2></div>
+      <div className="rs-foyer">
+        <div className="rs-foyer-head"><h2 className="rs-greeting">MAINTENANCE PULSE</h2></div>
         <div className="mp-error" style={{ margin: '20px 0' }}>BACKEND ERROR: {error}</div>
       </div>
     );
@@ -1180,20 +1302,20 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
 
   if (vehicles.length === 0) {
     return (
-      <div className="pulse-container glass-panel">
-        <div className="pulse-header">
-          <h2 className="pulse-title">MAINTENANCE PULSE</h2>
+      <div className="rs-foyer">
+        <div className="rs-foyer-head">
+          <h2 className="rs-greeting">MAINTENANCE PULSE</h2>
           <div className="pulse-status-indicator" data-status="idle" />
         </div>
         {formMode === 'add' ? (
           <>
-            <h3 className="section-subtitle">&gt; ADD FIRST VEHICLE</h3>
+            <h3 className="rs-card-label" style={{ marginBottom: 16 }}>&gt; ADD FIRST VEHICLE</h3>
             <VehicleForm onSave={handleAddVehicle} onCancel={() => setFormMode('none')} saveLabel=">> ADD VEHICLE" />
           </>
         ) : (
           <div className="mp-empty">
             <p style={{ color: 'var(--text-dim)', marginBottom: 4 }}>No vehicles in garage.</p>
-            <button className="cyber-btn" onClick={() => setFormMode('add')}>+ ADD FIRST VEHICLE</button>
+            <button className="rs-pill" onClick={() => setFormMode('add')}>+ ADD FIRST VEHICLE</button>
           </div>
         )}
       </div>
@@ -1217,19 +1339,19 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
   ];
 
   return (
-    <div className="pulse-container glass-panel">
-      <div className="pulse-header">
+    <div className="rs-foyer">
+      <div className="rs-foyer-head">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {onBack && (
-            <button className="cyber-btn btn-xs" onClick={onBack} title="Back to Garage">
+            <button className="rs-pill" onClick={onBack} title="Back to Garage">
               BACK
             </button>
           )}
-          <h2 className="pulse-title">MAINTENANCE PULSE</h2>
+          <h2 className="rs-greeting">MAINTENANCE PULSE</h2>
         </div>
         <div className="pulse-header-actions">
           {formMode === 'none' && (
-            <button className="cyber-btn btn-xs" onClick={() => setFormMode('add')}>+ VEHICLE</button>
+            <button className="rs-pill" onClick={() => setFormMode('add')}>+ VEHICLE</button>
           )}
           <div className="pulse-status-indicator" data-status={saveStatus ? 'active' : 'idle'} />
         </div>
@@ -1237,8 +1359,8 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
 
       {/* ── Inline add form ── */}
       {formMode === 'add' && (
-        <div className="pulse-inline-section">
-          <h3 className="section-subtitle">&gt; ADD VEHICLE</h3>
+        <div className="rs-card is-wide" style={{ marginBottom: 24 }}>
+          <h3 className="rs-card-label" style={{ marginBottom: 16 }}>&gt; ADD VEHICLE</h3>
           <VehicleForm onSave={handleAddVehicle} onCancel={() => setFormMode('none')} saveLabel=">> ADD VEHICLE" />
         </div>
       )}
@@ -1247,7 +1369,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
       {formMode !== 'add' && (
         <div className="pulse-controls">
           <div className="pulse-field">
-            <label className="pulse-label">TARGET VEHICLE</label>
+            <label className="rs-card-label">TARGET VEHICLE</label>
             <div className="vehicle-selector-row">
               <select
                 className="pulse-select cyber-input"
@@ -1260,16 +1382,16 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
                   </option>
                 ))}
               </select>
-              <button className="cyber-btn btn-xs" onClick={() => setFormMode(formMode === 'edit' ? 'none' : 'edit')}>
+              <button className="rs-pill" onClick={() => setFormMode(formMode === 'edit' ? 'none' : 'edit')}>
                 {formMode === 'edit' ? 'CANCEL' : 'EDIT'}
               </button>
-              <button className="cyber-btn btn-xs btn-danger" onClick={handleDeleteVehicle}>DEL</button>
+              <button className="rs-pill btn-danger" onClick={handleDeleteVehicle}>DEL</button>
             </div>
           </div>
 
           {formMode === 'edit' && currentVehicle && (
-            <div className="pulse-inline-section">
-              <h3 className="section-subtitle">&gt; EDIT VEHICLE</h3>
+            <div className="rs-card is-wide" style={{ marginBottom: 24 }}>
+              <h3 className="rs-card-label" style={{ marginBottom: 16 }}>&gt; EDIT VEHICLE</h3>
               <VehicleForm
                 initial={{
                   make: currentVehicle.make || '', model: currentVehicle.model || '',
@@ -1302,12 +1424,12 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
 
       {/* ── LOG VIEW ── */}
       {formMode === 'none' && view === 'log' && currentVehicle && (
-        <div className="pulse-content animate-fade-in">
+        <div className="rs-card is-wide animate-fade-in" style={{ marginBottom: 24 }}>
 
           {/* Performer selector */}
           {vehicleAssignments.length > 0 && (
             <div className="pulse-field" style={{ marginBottom: 14 }}>
-              <label className="pulse-label">PERFORMED BY</label>
+              <label className="rs-card-label">PERFORMED BY</label>
               <select
                 className="pulse-select cyber-input"
                 value={performedById}
@@ -1331,7 +1453,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
           {/* Always-visible log fields */}
           <div className="log-header-fields">
             <div className="pulse-field">
-              <label className="pulse-label">SERVICE TYPE</label>
+              <label className="rs-card-label">SERVICE TYPE</label>
               <input
                 className="cyber-input"
                 placeholder="Oil Change, Brake Service…"
@@ -1340,7 +1462,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
               />
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">ODOMETER</label>
+              <label className="rs-card-label">ODOMETER</label>
               <input
                 type="number"
                 className="cyber-input num-input"
@@ -1350,7 +1472,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
               />
             </div>
             <div className="pulse-field">
-              <label className="pulse-label">SERVICE DATE</label>
+              <label className="rs-card-label">SERVICE DATE</label>
               <input
                 type="date"
                 className="cyber-input"
@@ -1368,7 +1490,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
 
           {!isProService ? (
             <div className="inspection-mode animate-fade-in">
-              <h3 className="section-subtitle">&gt; INSPECTION MODE // DIY</h3>
+              <h3 className="rs-card-label" style={{ marginBottom: 16 }}>&gt; INSPECTION MODE // DIY</h3>
               {(currentVehicle.fluid_specs.length > 0 || currentVehicle.torque_specs.length > 0) && (
                 <div className="specs-grid">
                   {currentVehicle.fluid_specs.length > 0 && (
@@ -1377,7 +1499,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
                       <ul>
                         {(currentVehicle.fluid_specs || []).map((f) => (
                           <li key={f.id}>
-                            <span className="spec-name">{f.name}</span>
+                            <span className="rs-card-value" style={{ fontSize: "1.1rem" }}>{f.name}</span>
                             <span className="spec-val">{f.spec}{f.volume ? ` (${f.volume})` : ''}</span>
                           </li>
                         ))}
@@ -1390,7 +1512,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
                       <ul>
                         {(currentVehicle.torque_specs || []).map((t) => (
                           <li key={t.id}>
-                            <span className="spec-name">{t.name}</span>
+                            <span className="rs-card-value" style={{ fontSize: "1.1rem" }}>{t.name}</span>
                             <span className="spec-val hl-warn">{t.ft_lb} Ft-Lb // {t.nm} N·m</span>
                           </li>
                         ))}
@@ -1400,149 +1522,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
                 </div>
               )}
               {currentVehicle.check_points.length > 0 ? (
-                <div className="insp-sheet">
-                  <div className="insp-sheet-header">
-                    <span className="insp-col-item">ITEM</span>
-                    <span className="insp-col-spec">EXPECTED</span>
-                    <span className="insp-col-actual">ACTUAL</span>
-                    <span className="insp-col-torque">TORQUE</span>
-                    <span className="insp-col-status">STATUS</span>
-                  </div>
-
-                  {/* Bulk actions */}
-                  <div className="insp-bulk-row">
-                    <button className="insp-bulk-btn" onClick={() => handleMarkAll('done')}>✓ MARK ALL DONE</button>
-                    <button className="insp-bulk-btn insp-bulk-btn--skip" onClick={() => handleMarkAll('skip')}>— SKIP ALL</button>
-                    <button className="insp-bulk-btn insp-bulk-btn--reset" onClick={() => { setCheckedPoints({}); setActualValues({}); }}>↺ RESET</button>
-                  </div>
-
-                  {(currentVehicle.check_points || []).map((cp, idx) => {
-                    const actual    = actualValues[idx] || '';
-                    const rowState  = checkedPoints[idx]; // 'done' | 'skip' | undefined
-                    const done      = rowState === 'done';
-                    const skipped   = rowState === 'skip';
-
-                    // Live status from actual value vs OEM min/max
-                    let liveStatus = skipped ? 'skip' : null;
-                    if (!skipped) {
-                      if (actual !== '') {
-                        const num = parseFloat(actual);
-                        if (!isNaN(num) && cp.min_value != null) {
-                          if (cp.max_value != null) {
-                            liveStatus = num >= cp.min_value && num <= cp.max_value ? 'pass'
-                              : (num < cp.min_value * 0.9 || num > cp.max_value * 1.1) ? 'fail' : 'warn';
-                          } else {
-                            liveStatus = num >= cp.min_value ? 'pass' : 'fail';
-                          }
-                        } else {
-                          liveStatus = done ? 'pass' : null;
-                        }
-                      } else if (done) {
-                        liveStatus = 'pass';
-                      }
-                    }
-
-                    // Due status for interval colour
-                    const dueAt = cp.due_at_miles;
-                    const lastOdo = cp.last_service_odometer;
-                    const currentOdo = mileage ? Number(mileage) : null;
-                    let dueLabel = null;
-                    let dueUrgency = null;
-                    if (dueAt && currentOdo) {
-                      const remaining = dueAt - currentOdo;
-                      dueLabel = remaining <= 0 ? 'OVERDUE' : `${remaining.toLocaleString()} mi left`;
-                      dueUrgency = remaining <= 0 ? 'over' : remaining <= (cp.interval_miles || dueAt) * 0.1 ? 'soon' : null;
-                    } else if (dueAt) {
-                      dueLabel = `due at ${dueAt.toLocaleString()} mi`;
-                    } else if (cp.interval_miles) {
-                      dueLabel = `every ${cp.interval_miles.toLocaleString()} mi`;
-                    }
-                    if (cp.interval_days) {
-                      dueLabel = dueLabel ? `${dueLabel} / ${fmtDays(cp.interval_days)}` : fmtDays(cp.interval_days);
-                    }
-
-                    const svcColor = SVC_LEVEL_COLORS[cp.service_level] || 'var(--text-dim)';
-
-                    return (
-                      <div
-                        key={cp.id}
-                        className={`insp-row ${done ? 'insp-row--done' : ''} ${skipped ? 'insp-row--skip' : ''} ${liveStatus && liveStatus !== 'skip' ? `insp-row--${liveStatus}` : ''}`}
-                        onClick={() => handlePointToggle(idx)}
-                        title={skipped ? 'Click to clear skip' : done ? 'Click to skip' : 'Click to mark done'}
-                      >
-                        {/* TASK */}
-                        <div className="insp-col-item">
-                          <span className={`insp-check-dot ${done ? 'done' : ''} ${skipped ? 'skip' : ''}`} />
-                          <div className="insp-item-body">
-                            <div className="insp-item-top">
-                              <span className="insp-svc-pip" style={{ background: svcColor }} title={cp.service_level} />
-                              <span className="insp-item-name">{cp.description}</span>
-                            </div>
-                            {dueLabel && (
-                              <span className={`insp-due-label ${dueUrgency ? `insp-due-${dueUrgency}` : ''}`}>
-                                {dueLabel}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* EXPECTED */}
-                        <div className="insp-col-spec">
-                          {cp.expected_spec ? (
-                            <span className="insp-expected-val">
-                              {cp.expected_spec}
-                              {cp.unit && !cp.expected_spec.toLowerCase().includes(cp.unit.toLowerCase())
-                                ? <span className="insp-unit"> {cp.unit}</span> : ''}
-                            </span>
-                          ) : <span className="insp-no-spec">—</span>}
-                          {cp.volume && <span className="insp-volume">{cp.volume}</span>}
-                        </div>
-
-                        {/* ACTUAL */}
-                        <div className="insp-col-actual" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            className="insp-actual-input"
-                            placeholder={skipped ? 'skipped' : (cp.unit || '—')}
-                            value={actual}
-                            disabled={skipped}
-                            onChange={(e) => handleActualValue(idx, e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-
-                        {/* TORQUE */}
-                        <div className="insp-col-torque">
-                          {(cp.ft_lb || cp.nm) ? (
-                            <span className="insp-torque-val">
-                              {cp.ft_lb ? `${cp.ft_lb}` : '—'} ft-lb
-                              {cp.nm ? <><br />{cp.nm} N·m</> : ''}
-                            </span>
-                          ) : <span className="insp-no-spec">—</span>}
-                        </div>
-
-                        {/* STATUS */}
-                        <div className="insp-col-status">
-                          {liveStatus === 'pass' && <span className="insp-badge insp-badge--pass">PASS</span>}
-                          {liveStatus === 'warn' && <span className="insp-badge insp-badge--warn">WARN</span>}
-                          {liveStatus === 'fail' && <span className="insp-badge insp-badge--fail">FAIL</span>}
-                          {liveStatus === 'skip' && <span className="insp-badge insp-badge--skip">SKIP</span>}
-                          {!liveStatus && <span className="insp-badge insp-badge--pending">—</span>}
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  <div className="insp-sheet-footer">
-                    {(() => {
-                      const vals = Object.values(checkedPoints);
-                      const done = vals.filter(v => v === 'done').length;
-                      const skip = vals.filter(v => v === 'skip').length;
-                      const total = currentVehicle.check_points.length;
-                      return `${done} done · ${skip} skipped · ${total - done - skip} pending`;
-                    })()}
-                    <span className="insp-footer-hint"> — click to cycle: pending → done → skip</span>
-                  </div>
-                </div>
+                <PredictiveTimeline token={token} vehicleId={currentVehicle.id} currentOdometer={mileage} />
               ) : (
                 <div className="mp-empty-specs">
                   No inspection items yet. Go to <strong>EDIT SPECS</strong> to add them, or upload an owner's manual in <strong>SETTINGS → MANUAL IMPORT</strong>.
@@ -1551,20 +1531,20 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
             </div>
           ) : (
             <div className="logging-mode animate-fade-in">
-              <h3 className="section-subtitle">&gt; LOGGING MODE // PRO SERVICE</h3>
+              <h3 className="rs-card-label" style={{ marginBottom: 16 }}>&gt; LOGGING MODE // PRO SERVICE</h3>
               <div className="form-grid">
                 <div className="pulse-field">
-                  <label className="pulse-label">SERVICE CENTER NAME</label>
+                  <label className="rs-card-label">SERVICE CENTER NAME</label>
                   <input type="text" className="cyber-input" placeholder="e.g. Honda Powersports"
                     value={serviceCenter} onChange={(e) => setServiceCenter(e.target.value)} />
                 </div>
                 <div className="pulse-field">
-                  <label className="pulse-label">COST ($)</label>
+                  <label className="rs-card-label">COST ($)</label>
                   <input type="number" className="cyber-input num-input" placeholder="0.00" step="0.01"
                     value={cost} onChange={(e) => setCost(e.target.value)} />
                 </div>
                 <div className="pulse-field full-width">
-                  <label className="pulse-label">RECEIPT UPLOAD (PDF/IMG)</label>
+                  <label className="rs-card-label">RECEIPT UPLOAD (PDF/IMG)</label>
                   <div className="file-upload-wrapper">
                     <input type="file" id="receipt" className="file-input-hidden"
                       accept="image/*,application/pdf"
@@ -1582,22 +1562,22 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
 
       {/* ── SPECS VIEW ── */}
       {formMode === 'none' && view === 'specs' && currentVehicle && (
-        <div className="pulse-content animate-fade-in">
-          <h3 className="section-subtitle">&gt; SPECS EDITOR // {vehicleLabel.toUpperCase()}</h3>
+        <div className="rs-card is-wide animate-fade-in" style={{ marginBottom: 24 }}>
+          <h3 className="rs-card-label" style={{ marginBottom: 16 }}>&gt; SPECS EDITOR // {vehicleLabel.toUpperCase()}</h3>
           <SpecsEditor vehicle={currentVehicle} token={token} onUpdated={fetchVehicles} />
         </div>
       )}
 
       {/* ── HISTORY VIEW ── */}
       {formMode === 'none' && view === 'history' && (
-        <div className="pulse-content animate-fade-in">
-          <h3 className="section-subtitle">&gt; SERVICE HISTORY</h3>
+        <div className="rs-card is-wide animate-fade-in" style={{ marginBottom: 24 }}>
+          <h3 className="rs-card-label" style={{ marginBottom: 16 }}>&gt; SERVICE HISTORY</h3>
           {logs.length === 0 ? (
             <div className="mp-empty-specs">No service logs yet for this vehicle.</div>
           ) : (
             <div className="history-list">
               {(logs || []).map((log) => (
-                <div key={log.id} className="history-entry">
+                <div key={log.id} className="rs-card-inner">
                   <div className="history-row">
                     <span className="history-date">{new Date(log.service_date).toLocaleDateString()}</span>
                     <span className={`history-type ${log.is_pro_service ? 'pro' : 'diy'}`}>
@@ -1639,15 +1619,15 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
 
       {/* ── DOCUMENTS VIEW ── */}
       {formMode === 'none' && view === 'documents' && currentVehicle && (
-        <div className="pulse-content animate-fade-in">
-          <h3 className="section-subtitle">&gt; VEHICLE DOCUMENTS (RAG) // {vehicleLabel.toUpperCase()}</h3>
-          <VehicleRAG token={token} vehicleId={selectedId} />
+        <div className="rs-card is-wide animate-fade-in" style={{ marginBottom: 24 }}>
+          <h3 className="rs-card-label" style={{ marginBottom: 16 }}>&gt; VEHICLE DOCUMENTS (RAG) // {vehicleLabel.toUpperCase()}</h3>
+          <VehicleRAG token={token} vehicleId={selectedId} currentOdometer={mileage} />
         </div>
       )}
 
       {/* ── SETTINGS VIEW ── */}
       {formMode === 'none' && view === 'settings' && (
-        <div className="pulse-content animate-fade-in">
+        <div className="rs-card is-wide animate-fade-in" style={{ marginBottom: 24 }}>
           <SettingsPanel
             token={token}
             vehicles={vehicles}
@@ -1663,7 +1643,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
       {formMode === 'none' && view === 'log' && (
         <div className="pulse-footer">
           <button
-            className={`cyber-btn btn-save ${saveStatus.startsWith('ERROR') ? 'btn-error' : saveStatus ? 'btn-success' : ''}`}
+            className={`rs-pill is-active ${saveStatus.startsWith('ERROR') ? 'btn-error' : saveStatus ? 'btn-success' : ''}`}
             onClick={handleSave}
             disabled={!!saveStatus || !currentVehicle}
           >

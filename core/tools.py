@@ -351,7 +351,7 @@ async def execute_tool(tool_name: str, tool_input: Dict[str, Any], context: Dict
             return await _exec_control_device(tool_input, user_id)
 
         elif tool_name == "log_vehicle_maintenance":
-            return await _exec_vehicle_maintenance(tool_input, user_id)
+            return await _exec_vehicle_maintenance(tool_input, context)
 
         elif tool_name == "add_recipe_to_library":
             return await _exec_add_recipe(tool_input, user_id)
@@ -545,32 +545,85 @@ async def _exec_control_device(args: dict, user_id: str) -> str:
     except Exception:
         return f"Home Assistant is not reachable. I've noted that you want to turn {args['action']} the {args['device_name']}."
 
-async def _exec_vehicle_maintenance(args: dict, user_id: str) -> str:
-    settings = get_settings()
-    db_path = settings.db_path
+async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
+    user_id = context.get("user_id")
+    vehicle_id = context.get("vehicle_id")
+    
+    if not vehicle_id:
+        return {"error": "No vehicle_id in context. Cannot log maintenance."}
+        
     def _sync_work():
-        conn = sqlite3.connect(db_path)
+        from vehicles.management import get_vehicles, create_service_log, update_check_point
+        from vehicles.models import VehicleCheckPoint
+        import difflib
+        from datetime import datetime, timezone
+        
+        db = context.get("db")
+        if not db:
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+            engine = create_engine(os.environ.get("VEHICLES_DB_URL", "sqlite:///./data/vehicles.db"))
+            db = sessionmaker(bind=engine)()
+            close_db = True
+        else:
+            close_db = False
+            
         try:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS vehicle_logs (
-                    id INTEGER PRIMARY KEY, 
-                    user_id TEXT, 
-                    vehicle_name TEXT, 
-                    service_type TEXT, 
-                    date TEXT, 
-                    mileage INTEGER, 
-                    logged_at TEXT
-                )
-            """)
-            conn.execute(
-                """INSERT INTO vehicle_logs (user_id, vehicle_name, service_type, date, mileage, logged_at) 
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (user_id, args['vehicle_name'], args['service_type'], args['date'], args.get('mileage'), datetime.now(timezone.utc).isoformat())
+            vehicles = get_vehicles(db, user_id)
+            v = next((v for v in vehicles if str(v.id) == vehicle_id), None)
+            if not v:
+                return {"error": "Vehicle not found."}
+                
+            service_type = args.get('service_type', '')
+            date_str = args.get('date', datetime.now(timezone.utc).date().isoformat())
+            mileage = args.get('mileage')
+            
+            try:
+                service_date = datetime.strptime(date_str, "%Y-%m-%d")
+            except ValueError:
+                service_date = datetime.now(timezone.utc)
+                
+            # Fuzzy match the checkpoint
+            checkpoints = {cp.description: cp for cp in v.check_points}
+            descriptions = list(checkpoints.keys())
+            
+            matches = difflib.get_close_matches(service_type, descriptions, n=1, cutoff=0.6)
+            matched_cp = None
+            if matches:
+                matched_cp = checkpoints[matches[0]]
+                
+            check_results = []
+            if matched_cp:
+                check_results.append({
+                    "description": matched_cp.description,
+                    "check_point_id": str(matched_cp.id),
+                    "status": "pass",
+                    "passed": True
+                })
+                # Update checkpoint explicitly
+                matched_cp.last_service_odometer = mileage
+                matched_cp.last_service_date = service_date
+                db.commit()
+                
+            log = create_service_log(
+                db, user_id, vehicle_id,
+                service_date=service_date,
+                odometer=mileage,
+                service_type=service_type,
+                check_results=check_results
             )
-            conn.commit()
-            return f"Logged {args['service_type']} for {args['vehicle_name']} on {args['date']}."
+            
+            result = {
+                "success": True,
+                "message": f"Logged '{matched_cp.description if matched_cp else service_type}' at {mileage} miles.",
+                "matched_checkpoint": matched_cp.description if matched_cp else None,
+                "log_id": str(log.id)
+            }
+            return result
         finally:
-            conn.close()
+            if close_db:
+                db.close()
+                
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _sync_work)
 

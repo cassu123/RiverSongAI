@@ -991,8 +991,10 @@ def parse_manual_with_ollama(pdf_text: str, ollama_url: str, model: str) -> list
 
     prompt = (
         "Extract vehicle maintenance intervals from the text below. "
+        "Pay special attention to tabular data, matrices, or 'Maintenance Schedule' sections where intervals are listed in columns. "
         "Return a JSON array only — no explanation, no markdown. "
-        "Each object: {description, interval_miles, interval_days, expected_spec, min_value, max_value, unit}. "
+        "Each object: {description, service_level, interval_miles, interval_days, expected_spec, min_value, max_value, unit, ft_lb, nm}. "
+        "For service_level, use 'replace', 'inspect', or 'service'. "
         "Use null for unknown fields. Only include items with a clear interval.\n\n"
         + pdf_text[:40000]
     )
