@@ -678,6 +678,47 @@ async def save_intent_router_settings(
 
 
 # =============================================================================
+# Generic per-page settings  GET /api/settings/page  PATCH /api/settings/page
+# =============================================================================
+
+@router.get("/settings/page")
+async def get_page_settings(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Return the full per-page settings blob for the current user."""
+    user_id = await _require_user(authorization)
+    store = request.app.state.memory_manager._store
+    return await store.get_page_settings(user_id)
+
+
+class PageSettingsPatch(BaseModel):
+    class Config:
+        extra = "allow"
+
+    def to_dict(self) -> dict:
+        return self.model_dump()
+
+
+@router.patch("/settings/page")
+async def patch_page_settings(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Deep-merge request body at the root key level into the user's page settings."""
+    user_id = await _require_user(authorization)
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Body must be a JSON object.")
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Body must be a JSON object.")
+    store = request.app.state.memory_manager._store
+    await store.save_page_settings(user_id, body)
+    return {"ok": True}
+
+
+# =============================================================================
 # Orchestration settings (Phase 9)
 # =============================================================================
 

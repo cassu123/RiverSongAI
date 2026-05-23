@@ -452,6 +452,8 @@ class SQLiteStore:
             "CREATE TABLE IF NOT EXISTS voice_id_events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, identified_user_id TEXT, score REAL, runner_up_user_id TEXT, runner_up_score REAL, audio_duration_ms INTEGER, session_kind TEXT NOT NULL)",
             "CREATE TABLE IF NOT EXISTS user_integrations (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, service TEXT NOT NULL, access_token TEXT, refresh_token TEXT, token_expires_at TEXT, metadata TEXT NOT NULL DEFAULT '{}', is_active INTEGER NOT NULL DEFAULT 1, connected_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(user_id, service), FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)",
             "CREATE TABLE IF NOT EXISTS user_preferences (user_id TEXT PRIMARY KEY, music_provider TEXT NOT NULL DEFAULT 'youtube_music', updated_at TEXT NOT NULL DEFAULT '')",
+            "ALTER TABLE feed_preferences ADD COLUMN sports_favorite_leagues TEXT NOT NULL DEFAULT '[\"nba\",\"nfl\",\"mlb\"]'",
+            "ALTER TABLE feed_preferences ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}'",
         ]:
             try:
                 conn.execute(migration)
@@ -1895,6 +1897,7 @@ class SQLiteStore:
             "weather_lon": row["weather_lon"],
             "weather_unit": row["weather_unit"],
             "sport_teams": json.loads(row["sport_teams"] or "[]"),
+            "sports_favorite_leagues": json.loads(row["sports_favorite_leagues"] if "sports_favorite_leagues" in row.keys() else '["nba","nfl","mlb"]') or ["nba", "nfl", "mlb"],
             "stock_tickers": json.loads(row["stock_tickers"] or "[]"),
             "refresh_news_min": row["refresh_news_min"],
             "refresh_weather_min": row["refresh_weather_min"],
@@ -1904,6 +1907,58 @@ class SQLiteStore:
 
     async def save_feed_preferences(self, user_id: str, prefs: dict) -> None:
         await self._run(self._sync_save_feed_preferences, user_id, prefs)
+
+    # =========================================================================
+    # Generic per-page settings (settings_json column on feed_preferences)
+    # =========================================================================
+
+    async def get_page_settings(self, user_id: str) -> dict:
+        return await self._run(self._sync_get_page_settings, user_id)
+
+    def _sync_get_page_settings(self, user_id: str) -> dict:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT settings_json FROM feed_preferences WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        if row is None:
+            return {}
+        try:
+            return json.loads(row["settings_json"] or "{}") or {}
+        except (json.JSONDecodeError, ValueError):
+            return {}
+
+    async def save_page_settings(self, user_id: str, patch: dict) -> None:
+        await self._run(self._sync_save_page_settings, user_id, patch)
+
+    def _sync_save_page_settings(self, user_id: str, patch: dict) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            """INSERT OR IGNORE INTO feed_preferences
+               (user_id, news_sources, weather_unit, sport_teams,
+                sports_favorite_leagues, stock_tickers,
+                refresh_news_min, refresh_weather_min,
+                refresh_sports_min, refresh_stocks_min, updated_at)
+               VALUES (?, '[]', 'celsius', '[]', '["nba","nfl","mlb"]',
+                       '[]', 30, 30, 60, 60, ?)""",
+            (user_id, _now_str()),
+        )
+        row = conn.execute(
+            "SELECT settings_json FROM feed_preferences WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        try:
+            current = json.loads(row["settings_json"] or "{}") or {}
+        except (json.JSONDecodeError, ValueError):
+            current = {}
+        for key, val in patch.items():
+            if isinstance(val, dict) and isinstance(current.get(key), dict):
+                current[key] = {**current[key], **val}
+            else:
+                current[key] = val
+        conn.execute(
+            "UPDATE feed_preferences SET settings_json = ?, updated_at = ? WHERE user_id = ?",
+            (json.dumps(current), _now_str(), user_id),
+        )
+        conn.commit()
 
     # =========================================================================
     # Reading shelf
@@ -2011,38 +2066,42 @@ class SQLiteStore:
             """
             INSERT INTO feed_preferences
                 (user_id, news_sources, weather_lat, weather_lon, weather_unit,
-                 sport_teams, stock_tickers, refresh_news_min, refresh_weather_min,
+                 sport_teams, sports_favorite_leagues, stock_tickers,
+                 refresh_news_min, refresh_weather_min,
                  refresh_sports_min, refresh_stocks_min, updated_at)
             VALUES
                 (:user_id, :news_sources, :weather_lat, :weather_lon, :weather_unit,
-                 :sport_teams, :stock_tickers, :refresh_news_min, :refresh_weather_min,
+                 :sport_teams, :sports_favorite_leagues, :stock_tickers,
+                 :refresh_news_min, :refresh_weather_min,
                  :refresh_sports_min, :refresh_stocks_min, :updated_at)
             ON CONFLICT(user_id) DO UPDATE SET
-                news_sources        = excluded.news_sources,
-                weather_lat         = excluded.weather_lat,
-                weather_lon         = excluded.weather_lon,
-                weather_unit        = excluded.weather_unit,
-                sport_teams         = excluded.sport_teams,
-                stock_tickers       = excluded.stock_tickers,
-                refresh_news_min    = excluded.refresh_news_min,
-                refresh_weather_min = excluded.refresh_weather_min,
-                refresh_sports_min  = excluded.refresh_sports_min,
-                refresh_stocks_min  = excluded.refresh_stocks_min,
-                updated_at          = excluded.updated_at
+                news_sources              = excluded.news_sources,
+                weather_lat               = excluded.weather_lat,
+                weather_lon               = excluded.weather_lon,
+                weather_unit              = excluded.weather_unit,
+                sport_teams               = excluded.sport_teams,
+                sports_favorite_leagues   = excluded.sports_favorite_leagues,
+                stock_tickers             = excluded.stock_tickers,
+                refresh_news_min          = excluded.refresh_news_min,
+                refresh_weather_min       = excluded.refresh_weather_min,
+                refresh_sports_min        = excluded.refresh_sports_min,
+                refresh_stocks_min        = excluded.refresh_stocks_min,
+                updated_at                = excluded.updated_at
             """,
             {
-                "user_id":             user_id,
-                "news_sources":        json.dumps(prefs.get("news_sources", [])),
-                "weather_lat":         prefs.get("weather_lat"),
-                "weather_lon":         prefs.get("weather_lon"),
-                "weather_unit":        prefs.get("weather_unit", "celsius"),
-                "sport_teams":         json.dumps(prefs.get("sport_teams", [])),
-                "stock_tickers":       json.dumps(prefs.get("stock_tickers", [])),
-                "refresh_news_min":    prefs.get("refresh_news_min", 30),
-                "refresh_weather_min": prefs.get("refresh_weather_min", 30),
-                "refresh_sports_min":  prefs.get("refresh_sports_min", 60),
-                "refresh_stocks_min":  prefs.get("refresh_stocks_min", 60),
-                "updated_at":          _now_str(),
+                "user_id":                   user_id,
+                "news_sources":              json.dumps(prefs.get("news_sources", [])),
+                "weather_lat":               prefs.get("weather_lat"),
+                "weather_lon":               prefs.get("weather_lon"),
+                "weather_unit":              prefs.get("weather_unit", "celsius"),
+                "sport_teams":               json.dumps(prefs.get("sport_teams", [])),
+                "sports_favorite_leagues":   json.dumps(prefs.get("sports_favorite_leagues", ["nba", "nfl", "mlb"])),
+                "stock_tickers":             json.dumps(prefs.get("stock_tickers", [])),
+                "refresh_news_min":          prefs.get("refresh_news_min", 30),
+                "refresh_weather_min":       prefs.get("refresh_weather_min", 30),
+                "refresh_sports_min":        prefs.get("refresh_sports_min", 60),
+                "refresh_stocks_min":        prefs.get("refresh_stocks_min", 60),
+                "updated_at":                _now_str(),
             },
         )
         conn.commit()
