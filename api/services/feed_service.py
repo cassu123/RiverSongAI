@@ -215,11 +215,18 @@ class FeedService:
 
         radius = radius_override or fl.get("radar_radius_deg", 0.5)
         from providers.feeds.flights import fetch_overhead
-        flights = await fetch_overhead(lat, lon, radius_deg=radius)
+        result   = await fetch_overhead(lat, lon, radius_deg=radius)
+        aircraft = result.get("aircraft", [])
 
         if filter_status == "airborne":
-            flights = [f for f in flights if not f.get("on_ground")]
+            aircraft = [f for f in aircraft if not f.get("on_ground")]
         elif filter_status == "ground":
-            flights = [f for f in flights if f.get("on_ground")]
+            aircraft = [f for f in aircraft if f.get("on_ground")]
 
-        return {"flights": flights, "lat": lat, "lon": lon}
+        return {
+            "aircraft":  aircraft,
+            "cached":    result.get("cached", False),
+            "timestamp": result.get("timestamp", ""),
+            "lat":       lat,
+            "lon":       lon,
+        }

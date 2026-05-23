@@ -1,23 +1,19 @@
-// Backend: GET /api/feeds/flights?lat=&lon=&radius=&filter_status=
+// Backend: GET /api/feeds/flights → { aircraft: [...], cached, timestamp, lat, lon }
+// Normalized fields: icao24, callsign, origin_country, longitude, latitude,
+//   altitude_ft (int|null), on_ground (bool), velocity_kts (float|null), heading_deg (float|null)
 // Settings: PATCH /api/settings/page { flights: { radar_radius_deg, filter, refresh_interval_sec } }
-// Location: shared from settings_json.weather.lat/lon
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import 'leaflet/dist/leaflet.css'
 import TabSettingsPanel, { SettingsRow, ToggleGroup } from '../TabSettingsPanel.jsx'
 
-const MPS_TO_KTS = 1.94384
-const M_TO_FT    = 3.28084
-
-function mpsToKts(v) { return v != null ? Math.round(v * MPS_TO_KTS) : null }
-function mToFt(m) { return m != null ? Math.round(m * M_TO_FT) : null }
+const LIST_COLS = '1.7fr 1.4fr 1.6fr 0.9fr 0.55fr 1fr'
 
 function trackArrow(deg) {
   if (deg == null) return '·'
-  const idx = Math.round(deg / 45) % 8
-  return ['↑','↗','→','↘','↓','↙','←','↖'][idx]
+  return ['↑','↗','→','↘','↓','↙','←','↖'][Math.round(deg / 45) % 8]
 }
 
-// Reuse the same LocationSearch as WeatherTab (inline copy to avoid cross-tab coupling)
 async function searchPlaces(q) {
   if (!q || q.length < 2) return []
   try {
@@ -63,7 +59,9 @@ function LocationSearch({ onSelect }) {
           border: '1px solid var(--md-outline-variant)',
           borderRadius: 8, marginTop: 4, overflow: 'hidden',
         }}>
-          {searching && <div className="rs-card-meta" style={{ padding: '8px 14px', fontSize: '0.72rem' }}>Searching…</div>}
+          {searching && (
+            <div className="rs-card-meta" style={{ padding: '8px 14px', fontSize: '0.72rem' }}>Searching…</div>
+          )}
           {results.map((r, i) => (
             <button key={i} onClick={() => {
               onSelect({ lat: parseFloat(r.lat), lon: parseFloat(r.lon), location_query: r.display_name })
@@ -83,58 +81,141 @@ function LocationSearch({ onSelect }) {
   )
 }
 
-function AircraftRow({ flight, i, total }) {
-  const alt = mToFt(flight.baro_altitude_m)
-  const spd = mpsToKts(flight.velocity_mps)
-  const status = flight.on_ground ? 'Ground' : 'Airborne'
-  const statusColor = flight.on_ground ? 'var(--md-on-surface-variant)' : 'oklch(71% 0.17 145)'
+function FlightMap({ lat, lon, radiusDeg, aircraft }) {
+  const mapRef      = useRef(null)
+  const instanceRef = useRef(null)
+  const markersRef  = useRef([])
+  const circleRef   = useRef(null)
+  const [mapReady, setMapReady] = useState(false)
+
+  useEffect(() => {
+    if (!mapRef.current || lat == null || lon == null) return
+    import('leaflet').then(L => {
+      if (instanceRef.current) return
+      const map = L.map(mapRef.current, {
+        center: [lat, lon], zoom: 8,
+        zoomControl: false, attributionControl: false,
+      })
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map)
+      instanceRef.current = map
+      setMapReady(true)
+    })
+    return () => {
+      if (instanceRef.current) { instanceRef.current.remove(); instanceRef.current = null; setMapReady(false) }
+    }
+  }, [lat, lon])
+
+  useEffect(() => {
+    if (!mapReady || !instanceRef.current || lat == null || lon == null) return
+    import('leaflet').then(L => {
+      const map = instanceRef.current
+      if (!map) return
+
+      if (circleRef.current) circleRef.current.remove()
+      circleRef.current = L.circle([lat, lon], {
+        radius: radiusDeg * 111000,
+        color: '#60a5fa', fillColor: '#60a5fa', fillOpacity: 0.05,
+        weight: 1, opacity: 0.35,
+      }).addTo(map)
+
+      markersRef.current.forEach(m => m.remove())
+      markersRef.current = []
+
+      aircraft.forEach(a => {
+        if (a.latitude == null || a.longitude == null) return
+        const hdg  = a.heading_deg ?? 0
+        const clr  = a.on_ground ? '#888' : '#60a5fa'
+        const icon = L.divIcon({
+          className: '',
+          html: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" `
+              + `style="transform:rotate(${hdg}deg)">`
+              + `<path fill="${clr}" d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2 1.5 1.5 0 0 0 `
+              + `10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>`,
+          iconSize: [18, 18], iconAnchor: [9, 9],
+        })
+        const popup = [
+          `<b>${a.callsign || a.icao24}</b>`,
+          a.origin_country || null,
+          a.altitude_ft   != null ? `${a.altitude_ft.toLocaleString()} ft`  : null,
+          a.velocity_kts  != null ? `${a.velocity_kts} kts`                 : null,
+          a.heading_deg   != null ? `${Math.round(a.heading_deg)}°`    : null,
+          a.on_ground ? 'On ground' : 'Airborne',
+        ].filter(Boolean).join('<br>')
+        markersRef.current.push(
+          L.marker([a.latitude, a.longitude], { icon }).bindPopup(popup).addTo(map)
+        )
+      })
+    })
+  }, [aircraft, radiusDeg, lat, lon, mapReady])
+
+  return (
+    <div ref={mapRef} style={{ width: '100%', height: '100%', borderRadius: 8, overflow: 'hidden' }} />
+  )
+}
+
+function AircraftRow({ a, i, total }) {
+  const statusColor = a.on_ground ? 'var(--md-on-surface-variant)' : 'oklch(71% 0.17 145)'
   return (
     <div style={{
-      display: 'grid',
-      gridTemplateColumns: '88px 80px 80px 60px 40px 72px',
-      gap: 8, alignItems: 'center',
-      padding: '10px 0',
+      display: 'grid', gridTemplateColumns: LIST_COLS,
+      gap: 6, alignItems: 'center',
+      padding: '8px 12px',
       borderBottom: i < total - 1 ? '1px solid var(--md-outline-variant)' : 'none',
     }}>
       <div>
-        <div style={{ fontWeight: 800, fontSize: '0.82rem', letterSpacing: '0.06em' }}>
-          {flight.callsign || '—'}
+        <div style={{ fontWeight: 800, fontSize: '0.76rem', letterSpacing: '0.05em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {a.callsign || '—'}
         </div>
-        <div className="rs-card-meta" style={{ fontSize: '0.58rem', marginTop: 1 }}>
-          {flight.icao24}
+        <div className="rs-card-meta" style={{ fontSize: '0.55rem', marginTop: 1, opacity: 0.45 }}>
+          {a.icao24}
         </div>
       </div>
-      <div className="rs-card-meta" style={{ fontSize: '0.7rem' }}>
-        {flight.country || '—'}
+      <div className="rs-card-meta" style={{ fontSize: '0.64rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {a.origin_country || '—'}
       </div>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 700 }}>
-        {alt != null ? `${alt.toLocaleString()} ft` : '—'}
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+        {a.altitude_ft != null ? `${a.altitude_ft.toLocaleString()} ft` : '—'}
       </div>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
-        {spd != null ? `${spd} kts` : '—'}
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+        {a.velocity_kts != null ? `${a.velocity_kts}` : '—'}
       </div>
-      <div style={{ fontSize: '0.9rem', textAlign: 'center' }}>
-        {trackArrow(flight.true_track_deg)}
+      <div style={{ fontSize: '0.85rem', textAlign: 'center' }}>
+        {trackArrow(a.heading_deg)}
       </div>
-      <div style={{ fontSize: '0.68rem', fontWeight: 700, color: statusColor, textAlign: 'right' }}>
-        {status}
+      <div style={{ fontSize: '0.6rem', fontWeight: 700, color: statusColor, textAlign: 'right' }}>
+        {a.on_ground ? 'GND' : 'AIR'}
       </div>
     </div>
   )
 }
 
 export default function FlightsTab({ token, active }) {
-  const [flights, setFlights]     = useState([])
+  const [aircraft, setAircraft]   = useState([])
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
-  const [wxSettings, setWxSet]    = useState(null)   // settings_json.weather
-  const [flSettings, setFlSet]    = useState(null)   // settings_json.flights
+  const [wxSettings, setWxSet]    = useState(null)
+  const [flSettings, setFlSet]    = useState(null)
   const [settingsOpen, setSOpen]  = useState(false)
+  const [lastUpdated, setLastUpd] = useState(null)
+  const [agoText, setAgoText]     = useState('')
   const intervalRef               = useRef(null)
+  const agoTimerRef               = useRef(null)
   const panelRef                  = useRef(null)
   const authHeaders = { Authorization: `Bearer ${token}` }
 
   const flDef = { radar_radius_deg: 0.5, filter: 'all', refresh_interval_sec: 30 }
+
+  useEffect(() => {
+    clearInterval(agoTimerRef.current)
+    if (!lastUpdated) return
+    const tick = () => {
+      const s = Math.floor((Date.now() - lastUpdated) / 1000)
+      setAgoText(s < 5 ? 'just now' : `${s}s ago`)
+    }
+    tick()
+    agoTimerRef.current = setInterval(tick, 1000)
+    return () => clearInterval(agoTimerRef.current)
+  }, [lastUpdated])
 
   const patchFlights = useCallback(async (patch) => {
     const next = { ...flDef, ...(flSettings || {}), ...patch }
@@ -166,17 +247,15 @@ export default function FlightsTab({ token, active }) {
     if (!lat || !lon) { setError('location'); setLoading(false); return }
 
     setError(null)
-    const params = new URLSearchParams({
-      lat, lon,
-      radius: cur.radar_radius_deg,
-      filter_status: cur.filter === 'all' ? '' : cur.filter,
-    })
+    const params = new URLSearchParams({ lat, lon, radius: cur.radar_radius_deg })
+    if (cur.filter !== 'all') params.set('filter_status', cur.filter)
     try {
       const res = await fetch(`/api/feeds/flights?${params}`, { headers: authHeaders })
       if (res.status === 404) { setError('location'); return }
       if (!res.ok) throw new Error('Flights unavailable')
       const data = await res.json()
-      setFlights(data.flights || [])
+      setAircraft(data.aircraft || [])
+      setLastUpd(Date.now())
     } catch (e) {
       if (!e.message?.includes('AbortError')) setError(e.message)
     } finally {
@@ -184,7 +263,6 @@ export default function FlightsTab({ token, active }) {
     }
   }, [token, active])
 
-  // Load settings on mount
   useEffect(() => {
     if (!active) return
     fetch('/api/settings/page', { headers: authHeaders })
@@ -199,7 +277,6 @@ export default function FlightsTab({ token, active }) {
       .catch(() => { setWxSet({}); setFlSet(flDef); setError('location'); setLoading(false) })
   }, [token, active])
 
-  // Polling based on refresh interval
   useEffect(() => {
     clearInterval(intervalRef.current)
     if (!active || !wxSettings?.lat || error === 'location') return
@@ -210,8 +287,7 @@ export default function FlightsTab({ token, active }) {
 
   const handleLocationSelect = async ({ lat, lon, location_query }) => {
     const nextWx = await patchWeather({ lat, lon, location_query })
-    setError(null)
-    setLoading(true)
+    setError(null); setLoading(true)
     fetchFlights(flSettings, nextWx)
   }
 
@@ -229,21 +305,27 @@ export default function FlightsTab({ token, active }) {
     await patchFlights({ refresh_interval_sec: parseInt(v) })
   }
 
-  const fl = flSettings || flDef
+  const fl        = flSettings || flDef
   const radiusDeg = fl.radar_radius_deg || 0.5
   const radiusKm  = Math.round(radiusDeg * 111)
+  const lat       = wxSettings?.lat
+  const lon       = wxSettings?.lon
+
+  const sortedAircraft = [...aircraft].sort(
+    (a, b) => (b.altitude_ft ?? -1) - (a.altitude_ft ?? -1)
+  )
 
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span className="rs-card-meta" style={{ fontSize: '0.72rem', fontWeight: 700 }}>
             OVERHEAD RADAR
           </span>
           {!loading && !error && (
             <span className="rs-card-label" style={{ fontSize: '0.55rem', opacity: 0.45 }}>
-              {flights.length} aircraft · {radiusDeg}° ≈ {radiusKm} km
+              {aircraft.length} aircraft · {radiusDeg}° ≈ {radiusKm} km
             </span>
           )}
         </div>
@@ -280,9 +362,9 @@ export default function FlightsTab({ token, active }) {
               <SettingsRow label="FILTER">
                 <ToggleGroup
                   options={[
-                    { value: 'all', label: 'All' },
+                    { value: 'all',      label: 'All'      },
                     { value: 'airborne', label: 'Airborne' },
-                    { value: 'ground', label: 'Ground' },
+                    { value: 'ground',   label: 'Ground'   },
                   ]}
                   value={fl.filter || 'all'}
                   onChange={handleFilterChange}
@@ -321,7 +403,7 @@ export default function FlightsTab({ token, active }) {
             </span>
             <div className="rs-card-label" style={{ marginBottom: 6 }}>NO RADAR ORIGIN SET</div>
             <div className="rs-card-meta" style={{ marginBottom: 16 }}>
-              Set your location in Weather settings, or search here — the coordinates are shared.
+              Set your location in Weather settings, or search here — coordinates are shared.
             </div>
           </div>
           <LocationSearch onSelect={handleLocationSelect} />
@@ -331,69 +413,109 @@ export default function FlightsTab({ token, active }) {
       {/* Generic error */}
       {error && error !== 'location' && (
         <div style={{ padding: '24px 0', textAlign: 'center' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>flight_off</span>
+          <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>
+            flight_off
+          </span>
           <div className="rs-card-meta" style={{ marginBottom: 12 }}>{error}</div>
           <button className="rs-pill" onClick={() => fetchFlights(flSettings, wxSettings)}>RETRY</button>
         </div>
       )}
 
-      {loading && !error && <FlightsSkeleton />}
+      {/* Map + list split */}
+      {!error && (
+        <div style={{ display: 'flex', gap: 16, height: 380 }}>
 
-      {!loading && !error && (
-        <>
-          {/* Column headers */}
-          {flights.length > 0 && (
+          {/* Map — 60% */}
+          <div style={{ flex: '3 1 0', position: 'relative', minWidth: 0 }}>
+            {loading && (
+              <div style={{
+                position: 'absolute', inset: 0, zIndex: 10, borderRadius: 8,
+                background: 'var(--md-surface-container)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2 }}>flight</span>
+              </div>
+            )}
+            {lat && lon ? (
+              <FlightMap lat={lat} lon={lon} radiusDeg={radiusDeg} aircraft={loading ? [] : sortedAircraft} />
+            ) : (
+              <div style={{
+                width: '100%', height: '100%', borderRadius: 8,
+                background: 'var(--md-surface-container)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.15 }}>map</span>
+              </div>
+            )}
+          </div>
+
+          {/* Aircraft list — 40% */}
+          <div style={{
+            flex: '2 1 0', minWidth: 0, display: 'flex', flexDirection: 'column',
+            border: '1px solid var(--md-outline-variant)', borderRadius: 8, overflow: 'hidden',
+          }}>
+            {/* Column headers */}
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: '88px 80px 80px 60px 40px 72px',
-              gap: 8, paddingBottom: 8,
+              display: 'grid', gridTemplateColumns: LIST_COLS,
+              gap: 6, padding: '7px 12px', flexShrink: 0,
               borderBottom: '1px solid var(--md-outline-variant)',
+              background: 'var(--md-surface-container)',
             }}>
-              {['CALLSIGN', 'COUNTRY', 'ALTITUDE', 'SPEED', 'HDG', 'STATUS'].map(h => (
-                <div key={h} className="rs-card-label" style={{ fontSize: '0.5rem', opacity: 0.45,
-                  textAlign: h === 'STATUS' ? 'right' : 'left' }}>{h}</div>
+              {['CALLSIGN', 'COUNTRY', 'ALT', 'KTS', 'HDG', 'STATUS'].map(h => (
+                <div key={h} className="rs-card-label" style={{
+                  fontSize: '0.47rem', opacity: 0.45,
+                  textAlign: h === 'STATUS' ? 'right' : 'left',
+                }}>{h}</div>
               ))}
             </div>
-          )}
 
-          {flights.length === 0 ? (
-            <div style={{ padding: '32px 0', textAlign: 'center' }}>
-              <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>
-                flight_land
-              </span>
-              <div className="rs-card-label" style={{ marginBottom: 6 }}>CLEAR SKIES</div>
-              <div className="rs-card-meta">No aircraft detected within {radiusKm} km. Try expanding the radar radius.</div>
-            </div>
-          ) : (
-            <div>
-              {flights.map((f, i) => (
-                <AircraftRow key={f.icao24 + i} flight={f} i={i} total={flights.length} />
+            {/* Rows */}
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              {loading && (
+                <div>
+                  {[0,1,2,3,4,5].map(i => (
+                    <div key={i} style={{
+                      display: 'grid', gridTemplateColumns: LIST_COLS,
+                      gap: 6, padding: '8px 12px', alignItems: 'center',
+                      borderBottom: '1px solid var(--md-outline-variant)',
+                    }}>
+                      <div style={{ height: 9, width: '80%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+                      <div style={{ height: 8, width: '70%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+                      <div style={{ height: 8, width: '75%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+                      <div style={{ height: 8, width: '60%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+                      <div style={{ height: 8, width: '80%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.25 }} />
+                      <div style={{ height: 8, width: '70%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3, marginLeft: 'auto' }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!loading && sortedAircraft.length === 0 && (
+                <div style={{ padding: '32px 16px', textAlign: 'center' }}>
+                  <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>
+                    flight_land
+                  </span>
+                  <div className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>CLEAR SKIES</div>
+                  <div className="rs-card-meta" style={{ fontSize: '0.62rem' }}>
+                    No aircraft in {radiusKm} km radius.
+                  </div>
+                </div>
+              )}
+              {!loading && sortedAircraft.map((a, i) => (
+                <AircraftRow key={a.icao24 + i} a={a} i={i} total={sortedAircraft.length} />
               ))}
             </div>
-          )}
-        </>
-      )}
-    </div>
-  )
-}
-
-function FlightsSkeleton() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      {[0,1,2,3,4].map(i => (
-        <div key={i} style={{
-          display: 'grid', gridTemplateColumns: '88px 80px 80px 60px 40px 72px',
-          gap: 8, padding: '10px 0',
-          borderBottom: '1px solid var(--md-outline-variant)', alignItems: 'center',
-        }}>
-          <div style={{ height: 10, width: 72, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
-          <div style={{ height: 8, width: 60, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-          <div style={{ height: 8, width: 64, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-          <div style={{ height: 8, width: 44, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-          <div style={{ height: 8, width: 20, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.25 }} />
-          <div style={{ height: 8, width: 56, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3, marginLeft: 'auto' }} />
+          </div>
         </div>
-      ))}
+      )}
+
+      {/* Footer: last updated */}
+      {!error && !loading && agoText && (
+        <div style={{ marginTop: 8, textAlign: 'right' }}>
+          <span className="rs-card-meta" style={{ fontSize: '0.6rem', opacity: 0.38 }}>
+            Updated {agoText}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
