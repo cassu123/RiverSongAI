@@ -1,14 +1,9 @@
-// Audit: GET /api/feeds/weather — Open-Meteo, no key required.
-// Response: { current, hourly[24], daily[7], air_quality, location_name, unit }.
-// Current: { temperature, feels_like, condition, weathercode, wind_speed,
-//            humidity, uv_index, visibility, unit }.
-// Hourly: { time, temperature, condition, weathercode, precip_prob, wind_speed }.
-// Daily: { date, condition, weathercode, temp_max, temp_min, precipitation,
-//           uv_index_max, sunrise, sunset }.
-// Cache: 10-min at provider level; no client-side cache needed.
-// Alerts: GET /api/feeds/weather/alerts → { alerts: [...] }.
+// Backend: GET /api/feeds/weather — Open-Meteo, no key.
+// Settings: PATCH /api/settings/page { weather: { lat, lon, location_query, units, wind_unit, alerts_enabled } }
+// units: 'metric' | 'imperial'   wind_unit: 'kmh' | 'mph'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import TabSettingsPanel, { SettingsRow, ToggleGroup, Toggle } from '../TabSettingsPanel.jsx'
 
 function wmoIcon(code) {
   if (code == null)  return 'wb_sunny'
@@ -25,36 +20,117 @@ function wmoIcon(code) {
 
 function fmtHour(iso) {
   if (!iso) return ''
-  const d = new Date(iso)
-  return d.toLocaleTimeString([], { hour: 'numeric', hour12: true })
+  return new Date(iso).toLocaleTimeString([], { hour: 'numeric', hour12: true })
 }
-
 function fmtDay(dateStr) {
-  const d = new Date(dateStr + 'T12:00:00')
-  return d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
 }
 
 const ALERT_COLORS = {
-  Extreme:  'oklch(50% 0.18 22)',
-  Severe:   'oklch(58% 0.20 40)',
-  Moderate: 'oklch(62% 0.18 75)',
-  Minor:    'oklch(65% 0.15 95)',
+  Extreme: 'oklch(50% 0.18 22)', Severe: 'oklch(58% 0.20 40)',
+  Moderate: 'oklch(62% 0.18 75)', Minor: 'oklch(65% 0.15 95)',
+}
+
+// Debounced Nominatim geocode search
+async function searchPlaces(q) {
+  if (!q || q.length < 2) return []
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5`,
+      { headers: { 'User-Agent': 'RiverSongAI/1.0' } }
+    )
+    if (!res.ok) return []
+    return await res.json()
+  } catch { return [] }
+}
+
+function LocationSearch({ onSelect, token }) {
+  const [q, setQ]             = useState('')
+  const [results, setResults] = useState([])
+  const [searching, setSrch]  = useState(false)
+  const debounce              = useRef(null)
+
+  useEffect(() => {
+    clearTimeout(debounce.current)
+    if (!q.trim()) { setResults([]); return }
+    setSrch(true)
+    debounce.current = setTimeout(async () => {
+      const r = await searchPlaces(q)
+      setResults(r)
+      setSrch(false)
+    }, 400)
+    return () => clearTimeout(debounce.current)
+  }, [q])
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        className="rs-input"
+        placeholder="Search city or place…"
+        value={q}
+        onChange={e => setQ(e.target.value)}
+        style={{ width: '100%', fontSize: '0.82rem', boxSizing: 'border-box' }}
+        autoFocus
+      />
+      {(results.length > 0 || searching) && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+          background: 'var(--md-surface-container-high)',
+          border: '1px solid var(--md-outline-variant)',
+          borderRadius: 8, marginTop: 4, overflow: 'hidden',
+        }}>
+          {searching && (
+            <div className="rs-card-meta" style={{ padding: '8px 14px', fontSize: '0.72rem' }}>Searching…</div>
+          )}
+          {results.map((r, i) => (
+            <button key={i} onClick={() => {
+              onSelect({ lat: parseFloat(r.lat), lon: parseFloat(r.lon), location_query: r.display_name })
+              setQ('')
+              setResults([])
+            }} style={{
+              display: 'block', width: '100%', textAlign: 'left',
+              padding: '9px 14px', background: 'none', border: 'none',
+              borderTop: i > 0 ? '1px solid var(--md-outline-variant)' : 'none',
+              cursor: 'pointer', fontSize: '0.75rem',
+            }}>
+              {r.display_name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function WeatherTab({ token, active }) {
-  const [weather, setWeather]   = useState(null)
-  const [alerts, setAlerts]     = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState(null)
+  const [weather, setWeather]     = useState(null)
+  const [alerts, setAlerts]       = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState(null)
+  const [settings, setSettings]   = useState(null)   // settings_json.weather
+  const [settingsOpen, setSOpen]  = useState(false)
+  const panelRef                  = useRef(null)
+  const authHeaders = { Authorization: `Bearer ${token}` }
 
-  const fetch_ = useCallback(async () => {
+  const patchSettings = useCallback(async (patch) => {
+    const next = { ...settings, ...patch }
+    setSettings(next)
+    await fetch('/api/settings/page', {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weather: next }),
+    }).catch(() => {})
+    return next
+  }, [settings, token])
+
+  const fetchWeather = useCallback(async () => {
     if (!active) return
     setLoading(true)
     setError(null)
     try {
       const [wRes, aRes] = await Promise.all([
-        fetch('/api/feeds/weather', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/api/feeds/weather/alerts', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/feeds/weather', { headers: authHeaders }),
+        fetch('/api/feeds/weather/alerts', { headers: authHeaders }),
       ])
       if (wRes.status === 404) { setError('location'); setLoading(false); return }
       if (!wRes.ok) throw new Error('Weather service unavailable')
@@ -70,182 +146,242 @@ export default function WeatherTab({ token, active }) {
     }
   }, [token, active])
 
-  useEffect(() => { fetch_() }, [fetch_])
+  // Load settings on mount, then fetch weather
+  useEffect(() => {
+    if (!active) return
+    fetch('/api/settings/page', { headers: authHeaders })
+      .then(r => r.ok ? r.json() : {})
+      .then(page => {
+        const wx = page?.weather || {}
+        setSettings(wx)
+        if (!wx.lat || !wx.lon) {
+          setError('location')
+          setLoading(false)
+          setSOpen(true)   // auto-expand settings when no location
+        } else {
+          fetchWeather()
+        }
+      })
+      .catch(() => { setSettings({}); fetchWeather() })
+  }, [token, active])
 
-  if (loading) return <WeatherSkeleton />
+  // Re-fetch when settings change (location/units/wind)
+  const handleSettingChange = useCallback(async (patch) => {
+    const next = await patchSettings(patch)
+    if (next.lat && next.lon) {
+      fetchWeather()
+    }
+  }, [patchSettings, fetchWeather])
 
-  if (error === 'location') return (
-    <div style={{ padding: '32px 0', textAlign: 'center' }}>
-      <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>location_off</span>
-      <div className="rs-card-label" style={{ marginBottom: 8 }}>NO LOCATION SET</div>
-      <div className="rs-card-meta">Go to Settings and add your location under the Feeds section.</div>
-    </div>
-  )
+  const handleLocationSelect = useCallback(async ({ lat, lon, location_query }) => {
+    await handleSettingChange({ lat, lon, location_query })
+    setError(null)
+    setSOpen(false)
+  }, [handleSettingChange])
 
-  if (error) return (
-    <div style={{ padding: '32px 0', textAlign: 'center' }}>
-      <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>cloud_off</span>
-      <div className="rs-card-meta" style={{ marginBottom: 12 }}>{error}</div>
-      <button className="rs-pill" onClick={fetch_}>RETRY</button>
-    </div>
-  )
+  if (loading && !settings) return <WeatherSkeleton />
 
-  if (!weather) return null
-
-  const { current, hourly = [], daily = [], air_quality = {}, location_name, unit } = weather
+  const noLocation = error === 'location'
+  const { current, hourly = [], daily = [], air_quality = {}, location_name, unit } = weather || {}
   const C = current || {}
+  const alertsEnabled = settings?.alerts_enabled !== false
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-
-      {/* Alerts banner */}
-      {alerts.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {alerts.slice(0, 2).map(a => (
-            <div
-              key={a.id}
-              style={{
-                background: (ALERT_COLORS[a.severity] || 'oklch(50% 0.10 50)') + '22',
-                border: `1px solid ${ALERT_COLORS[a.severity] || 'oklch(50% 0.10 50)'}55`,
-                borderRadius: 8,
-                padding: '12px 16px',
-                display: 'flex',
-                gap: 12,
-                alignItems: 'flex-start',
-              }}
-            >
-              <span className="material-symbols-rounded" style={{ color: ALERT_COLORS[a.severity], flexShrink: 0, marginTop: 2 }}>warning</span>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '0.78rem', marginBottom: 2, color: ALERT_COLORS[a.severity] }}>
-                  {a.event}
-                </div>
-                <div className="rs-card-meta" style={{ fontSize: '0.75rem' }}>{a.headline}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Current conditions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span
-            className="material-symbols-rounded"
-            style={{ fontSize: '3.5rem', color: 'var(--primary)', lineHeight: 1 }}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Header row — location name + gear */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span className="rs-card-meta" style={{ fontSize: '0.72rem', fontWeight: 700 }}>
+          {settings?.location_query?.split(',').slice(0, 2).join(',') || location_name || 'Weather'}
+        </span>
+        <div ref={panelRef} style={{ position: 'relative', flexShrink: 0 }}>
+          <button
+            className={`rs-pill ${settingsOpen ? 'is-active' : ''}`}
+            onClick={() => setSOpen(o => !o)}
+            style={{ padding: '5px 10px' }}
+            title="Weather settings"
           >
-            {wmoIcon(C.weathercode)}
-          </span>
-          <div>
-            <div style={{ fontSize: '3.5rem', fontWeight: 900, lineHeight: 1, letterSpacing: '-0.04em' }}>
-              {C.temperature != null ? Math.round(C.temperature) : '--'}{unit}
-            </div>
-            <div className="rs-card-meta" style={{ fontSize: '0.85rem', marginTop: 2 }}>
-              {C.condition}
-              {location_name ? ` · ${location_name}` : ''}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-          {[
-            { label: 'FEELS',    value: C.feels_like != null ? `${Math.round(C.feels_like)}${unit}` : '--' },
-            { label: 'HUMIDITY', value: C.humidity != null ? `${C.humidity}%` : '--' },
-            { label: 'WIND',     value: C.wind_speed != null ? `${Math.round(C.wind_speed)} km/h` : '--' },
-            { label: 'UV',       value: C.uv_index != null ? C.uv_index.toFixed(1) : '--' },
-          ].map(({ label, value }) => (
-            <div key={label}>
-              <div className="rs-card-label" style={{ fontSize: '0.52rem', opacity: 0.5 }}>{label}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.9rem' }}>{value}</div>
-            </div>
-          ))}
-          {air_quality?.aqi != null && (
-            <div>
-              <div className="rs-card-label" style={{ fontSize: '0.52rem', opacity: 0.5 }}>AQI</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.9rem', color: air_quality.color }}>
-                {air_quality.aqi} <span style={{ fontSize: '0.65rem', fontWeight: 400 }}>{air_quality.label}</span>
-              </div>
-            </div>
-          )}
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>tune</span>
+          </button>
+          <TabSettingsPanel open={settingsOpen} onClose={() => setSOpen(false)} panelRef={panelRef} title="WEATHER SETTINGS">
+            <SettingsRow label="LOCATION">
+              <LocationSearch onSelect={handleLocationSelect} token={token} />
+              {settings?.location_query && (
+                <div className="rs-card-meta" style={{ fontSize: '0.62rem', marginTop: 6, opacity: 0.6 }}>
+                  {settings.location_query.split(',').slice(0, 3).join(',')}
+                </div>
+              )}
+            </SettingsRow>
+            <SettingsRow label="TEMPERATURE">
+              <ToggleGroup
+                options={[{ value: 'metric', label: '°C' }, { value: 'imperial', label: '°F' }]}
+                value={settings?.units || 'metric'}
+                onChange={v => handleSettingChange({ units: v, wind_unit: v === 'imperial' ? 'mph' : 'kmh' })}
+              />
+            </SettingsRow>
+            <SettingsRow label="WIND SPEED">
+              <ToggleGroup
+                options={[{ value: 'kmh', label: 'km/h' }, { value: 'mph', label: 'mph' }]}
+                value={settings?.wind_unit || (settings?.units === 'imperial' ? 'mph' : 'kmh')}
+                onChange={v => handleSettingChange({ wind_unit: v })}
+              />
+            </SettingsRow>
+            <SettingsRow label="ALERTS">
+              <Toggle
+                checked={alertsEnabled}
+                onChange={v => handleSettingChange({ alerts_enabled: v })}
+                label="Severe weather alerts"
+              />
+            </SettingsRow>
+          </TabSettingsPanel>
         </div>
       </div>
 
-      {/* Hourly strip */}
-      {hourly.length > 0 && (
-        <div>
-          <div className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.5, marginBottom: 10 }}>NEXT 24 HOURS</div>
-          <div style={{
-            display: 'flex',
-            gap: 4,
-            overflowX: 'auto',
-            paddingBottom: 4,
-          }}>
-            {hourly.map((h, i) => (
-              <div
-                key={i}
-                style={{
-                  flexShrink: 0,
-                  textAlign: 'center',
-                  padding: '10px 10px',
-                  borderRadius: 8,
-                  background: i === 0 ? 'var(--md-surface-container-high)' : 'transparent',
-                  minWidth: 52,
-                }}
-              >
-                <div className="rs-card-label" style={{ fontSize: '0.5rem', opacity: 0.5, marginBottom: 6 }}>
-                  {fmtHour(h.time)}
-                </div>
-                <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', color: 'var(--primary)', display: 'block', marginBottom: 6 }}>
-                  {wmoIcon(h.weathercode)}
-                </span>
-                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.78rem' }}>
-                  {h.temperature != null ? Math.round(h.temperature) : '--'}°
-                </div>
-                {h.precip_prob != null && h.precip_prob > 0 && (
-                  <div style={{ fontSize: '0.5rem', color: 'oklch(65% 0.15 240)', marginTop: 3, fontWeight: 600 }}>
-                    {h.precip_prob}%
-                  </div>
-                )}
-              </div>
-            ))}
+      {/* No-location state — inline prompt */}
+      {noLocation && (
+        <div style={{ padding: '20px 0' }}>
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>location_off</span>
+            <div className="rs-card-label" style={{ marginBottom: 6 }}>NO LOCATION SET</div>
+            <div className="rs-card-meta">Search for your city below.</div>
           </div>
+          <LocationSearch onSelect={handleLocationSelect} token={token} />
         </div>
       )}
 
-      {/* 7-day forecast */}
-      {daily.length > 0 && (
-        <div>
-          <div className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.5, marginBottom: 12 }}>7-DAY FORECAST</div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {daily.map((d, i) => (
-              <div
-                key={d.date}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 16,
-                  padding: '10px 0',
-                  borderBottom: i < daily.length - 1 ? '1px solid var(--md-outline-variant)' : 'none',
-                }}
-              >
-                <span style={{ fontWeight: 800, fontSize: '0.78rem', width: 32 }}>
-                  {i === 0 ? 'TODAY' : fmtDay(d.date)}
-                </span>
-                <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', color: 'var(--primary)', width: 24, textAlign: 'center' }}>
-                  {wmoIcon(d.weathercode)}
-                </span>
-                <span className="rs-card-meta" style={{ flex: 1, fontSize: '0.75rem' }}>{d.condition}</span>
-                {d.precipitation != null && d.precipitation > 0 && (
-                  <span style={{ fontSize: '0.65rem', color: 'oklch(65% 0.15 240)', fontWeight: 600 }}>
-                    {d.precipitation.toFixed(1)} mm
-                  </span>
-                )}
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 700, textAlign: 'right', minWidth: 60 }}>
-                  {d.temp_max != null ? Math.round(d.temp_max) : '--'}° / {d.temp_min != null ? Math.round(d.temp_min) : '--'}°
-                </span>
-              </div>
-            ))}
-          </div>
+      {/* Generic error */}
+      {error && error !== 'location' && (
+        <div style={{ padding: '24px 0', textAlign: 'center' }}>
+          <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>cloud_off</span>
+          <div className="rs-card-meta" style={{ marginBottom: 12 }}>{error}</div>
+          <button className="rs-pill" onClick={fetchWeather}>RETRY</button>
         </div>
+      )}
+
+      {/* Loading skeleton after location is set */}
+      {loading && !noLocation && !error && <WeatherSkeleton />}
+
+      {/* Weather content */}
+      {!loading && !error && weather && (
+        <>
+          {/* Alerts */}
+          {alertsEnabled && alerts.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {alerts.slice(0, 2).map(a => (
+                <div key={a.id} style={{
+                  background: (ALERT_COLORS[a.severity] || '#88888822') + '22',
+                  border: `1px solid ${ALERT_COLORS[a.severity] || '#88888888'}55`,
+                  borderRadius: 8, padding: '12px 16px',
+                  display: 'flex', gap: 12, alignItems: 'flex-start',
+                }}>
+                  <span className="material-symbols-rounded" style={{ color: ALERT_COLORS[a.severity], flexShrink: 0, marginTop: 2 }}>warning</span>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.78rem', marginBottom: 2, color: ALERT_COLORS[a.severity] }}>{a.event}</div>
+                    <div className="rs-card-meta" style={{ fontSize: '0.75rem' }}>{a.headline}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Current conditions */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <span className="material-symbols-rounded" style={{ fontSize: '3.5rem', color: 'var(--primary)', lineHeight: 1 }}>
+                {wmoIcon(C.weathercode)}
+              </span>
+              <div>
+                <div style={{ fontSize: '3.5rem', fontWeight: 900, lineHeight: 1, letterSpacing: '-0.04em' }}>
+                  {C.temperature != null ? Math.round(C.temperature) : '--'}{unit}
+                </div>
+                <div className="rs-card-meta" style={{ fontSize: '0.85rem', marginTop: 2 }}>
+                  {C.condition}{location_name ? ` · ${location_name}` : ''}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+              {[
+                { label: 'FEELS',    value: C.feels_like    != null ? `${Math.round(C.feels_like)}${unit}` : '--' },
+                { label: 'HUMIDITY', value: C.humidity      != null ? `${C.humidity}%` : '--' },
+                { label: 'WIND',     value: C.wind_speed    != null ? `${Math.round(C.wind_speed)} ${C.wind_unit || 'km/h'}` : '--' },
+                { label: 'UV',       value: C.uv_index      != null ? C.uv_index.toFixed(1) : '--' },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <div className="rs-card-label" style={{ fontSize: '0.52rem', opacity: 0.5 }}>{label}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.9rem' }}>{value}</div>
+                </div>
+              ))}
+              {air_quality?.aqi != null && (
+                <div>
+                  <div className="rs-card-label" style={{ fontSize: '0.52rem', opacity: 0.5 }}>AQI</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.9rem', color: air_quality.color }}>
+                    {air_quality.aqi} <span style={{ fontSize: '0.65rem', fontWeight: 400 }}>{air_quality.label}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Hourly strip */}
+          {hourly.length > 0 && (
+            <div>
+              <div className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.5, marginBottom: 10 }}>NEXT 24 HOURS</div>
+              <div style={{ display: 'flex', gap: 4, overflowX: 'auto', paddingBottom: 4 }}>
+                {hourly.map((h, i) => (
+                  <div key={i} style={{
+                    flexShrink: 0, textAlign: 'center', padding: '10px',
+                    borderRadius: 8, minWidth: 52,
+                    background: i === 0 ? 'var(--md-surface-container-high)' : 'transparent',
+                  }}>
+                    <div className="rs-card-label" style={{ fontSize: '0.5rem', opacity: 0.5, marginBottom: 6 }}>{fmtHour(h.time)}</div>
+                    <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', color: 'var(--primary)', display: 'block', marginBottom: 6 }}>
+                      {wmoIcon(h.weathercode)}
+                    </span>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.78rem' }}>
+                      {h.temperature != null ? Math.round(h.temperature) : '--'}°
+                    </div>
+                    {h.precip_prob > 0 && (
+                      <div style={{ fontSize: '0.5rem', color: 'oklch(65% 0.15 240)', marginTop: 3, fontWeight: 600 }}>
+                        {h.precip_prob}%
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 7-day forecast */}
+          {daily.length > 0 && (
+            <div>
+              <div className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.5, marginBottom: 12 }}>7-DAY FORECAST</div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {daily.map((d, i) => (
+                  <div key={d.date} style={{
+                    display: 'flex', alignItems: 'center', gap: 16,
+                    padding: '10px 0',
+                    borderBottom: i < daily.length - 1 ? '1px solid var(--md-outline-variant)' : 'none',
+                  }}>
+                    <span style={{ fontWeight: 800, fontSize: '0.78rem', width: 32 }}>
+                      {i === 0 ? 'TODAY' : fmtDay(d.date)}
+                    </span>
+                    <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', color: 'var(--primary)', width: 24, textAlign: 'center' }}>
+                      {wmoIcon(d.weathercode)}
+                    </span>
+                    <span className="rs-card-meta" style={{ flex: 1, fontSize: '0.75rem' }}>{d.condition}</span>
+                    {d.precipitation > 0 && (
+                      <span style={{ fontSize: '0.65rem', color: 'oklch(65% 0.15 240)', fontWeight: 600 }}>
+                        {d.precipitation.toFixed(1)} mm
+                      </span>
+                    )}
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 700, textAlign: 'right', minWidth: 60 }}>
+                      {d.temp_max != null ? Math.round(d.temp_max) : '--'}° / {d.temp_min != null ? Math.round(d.temp_min) : '--'}°
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
@@ -260,12 +396,11 @@ function WeatherSkeleton() {
       <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
         <div style={{ width: 56, height: 56, borderRadius: 12, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {bar('80px', 40)}
-          {bar('120px', 10)}
+          {bar('80px', 40)}{bar('120px', 10)}
         </div>
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
-        {[0, 1, 2, 3, 4, 5].map(i => (
+        {[0,1,2,3,4,5].map(i => (
           <div key={i} style={{ width: 52, height: 80, borderRadius: 8, background: 'var(--md-outline-variant)', opacity: 0.25 }} />
         ))}
       </div>

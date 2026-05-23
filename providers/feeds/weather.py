@@ -53,6 +53,7 @@ async def fetch_weather(
     lat: float,
     lon: float,
     unit: str = "celsius",
+    wind_unit: str = "kmh",
 ) -> Dict[str, Any]:
     """
     Fetch current conditions and 7-day forecast for the given coordinates.
@@ -61,11 +62,12 @@ async def fetch_weather(
         lat: Latitude
         lon: Longitude
         unit: "celsius" or "fahrenheit"
+        wind_unit: "kmh" | "mph" | "kn" | "ms"
 
     Returns dict with keys: current, daily, unit
     """
     temp_unit = "celsius" if unit == "celsius" else "fahrenheit"
-    wind_unit = "kmh"
+    wind_unit = wind_unit if wind_unit in ("kmh", "mph", "kn", "ms") else "kmh"
 
     params = {
         "latitude": lat,
@@ -132,7 +134,7 @@ async def fetch_weather(
         "uv_index": current_raw.get("uv_index"),
         "visibility": current_raw.get("visibility"),  # metres
         "unit": unit_sym,
-        "wind_unit": "km/h",
+        "wind_unit": {"kmh": "km/h", "mph": "mph", "kn": "kn", "ms": "m/s"}.get(wind_unit, "km/h"),
     }
 
     # Hourly — next 24 hours only
@@ -218,7 +220,7 @@ async def get_weather_report(lat: float, lon: float, units: str = "celsius") -> 
     unit_sym = curr["unit"]
     
     report = f"The current weather is {curr['condition'].lower()} at {curr['temperature']}{unit_sym}. "
-    report += f"Wind speed is {curr['wind_speed']} km/h."
+    report += f"Wind speed is {curr['wind_speed']} {curr.get('wind_unit', 'km/h')}."
     
     if data["daily"]:
         today = data["daily"][0]

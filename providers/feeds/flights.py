@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 OPENSKY_URL = "https://opensky-network.org/api/states/all"
 
 
-async def fetch_overhead(lat: Optional[float], lon: Optional[float], radius_deg: float = 0.5) -> list[dict]:
+async def fetch_overhead(lat: Optional[float], lon: Optional[float], radius_deg: float = 0.5, **_) -> list[dict]:
     """
     Return flights within roughly `radius_deg` degrees of the given coordinates.
     Returns an empty list if coordinates are missing or the API call fails.

@@ -3,12 +3,14 @@ import NewsTab    from './tabs/NewsTab.jsx'
 import WeatherTab from './tabs/WeatherTab.jsx'
 import SportsTab  from './tabs/SportsTab.jsx'
 import StocksTab  from './tabs/StocksTab.jsx'
+import FlightsTab from './tabs/FlightsTab.jsx'
 
 const TABS = [
   { key: 'news',    label: 'NEWS',    icon: 'newspaper' },
   { key: 'weather', label: 'WEATHER', icon: 'cloud' },
   { key: 'sports',  label: 'SPORTS',  icon: 'sports_kabaddi' },
   { key: 'stocks',  label: 'STOCKS',  icon: 'trending_up' },
+  { key: 'flights', label: 'FLIGHTS', icon: 'flight' },
 ]
 
 function getTabFromUrl() {
@@ -71,6 +73,7 @@ export default function FeedTabsContainer({ token, defaultTab = 'news' }) {
         {active === 'weather' && <WeatherTab token={token} active={active === 'weather'} />}
         {active === 'sports'  && <SportsTab  token={token} active={active === 'sports'} />}
         {active === 'stocks'  && <StocksTab  token={token} active={active === 'stocks'} />}
+        {active === 'flights' && <FlightsTab token={token} active={active === 'flights'} />}
       </div>
 
     </div>

@@ -55,17 +55,26 @@ class FeedService:
     @staticmethod
     async def get_weather(store: Any, user_id: str) -> Dict[str, Any]:
         prefs = await store.get_feed_preferences(user_id)
-        lat = prefs.get("weather_lat")
-        lon = prefs.get("weather_lon")
-        if lat is None or lon is None:
-            raise HTTPException(
-                status_code=404, 
-                detail="No location saved. Set your location in Feed Settings."
-            )
+        page  = await store.get_page_settings(user_id)
+        wx    = page.get("weather", {})
 
-        unit = prefs.get("weather_unit", "celsius")
+        lat = wx.get("lat") or prefs.get("weather_lat")
+        lon = wx.get("lon") or prefs.get("weather_lon")
+        if lat is None or lon is None:
+            raise HTTPException(status_code=404, detail="No location saved.")
+
+        raw_units = wx.get("units")
+        if raw_units == "imperial":
+            unit = "fahrenheit"
+        elif raw_units == "metric":
+            unit = "celsius"
+        else:
+            unit = prefs.get("weather_unit", "celsius")
+
+        wind_unit = wx.get("wind_unit", "mph" if unit == "fahrenheit" else "kmh")
+
         try:
-            return await fetch_weather(lat, lon, unit)
+            return await fetch_weather(lat, lon, unit, wind_unit)
         except Exception as exc:
             logger.error("Weather fetch failed for user %s: %s", user_id, exc)
             raise HTTPException(status_code=502, detail=f"Weather fetch failed: {exc}")
@@ -149,8 +158,11 @@ class FeedService:
 
     @staticmethod
     async def get_stocks(store: Any, user_id: str) -> List[Dict[str, Any]]:
-        prefs = await store.get_feed_preferences(user_id)
-        tickers = prefs.get("stock_tickers") or []
+        page    = await store.get_page_settings(user_id)
+        tickers = page.get("markets", {}).get("watchlist")
+        if not tickers:
+            prefs   = await store.get_feed_preferences(user_id)
+            tickers = prefs.get("stock_tickers") or []
         if not tickers:
             return []
 
@@ -172,30 +184,42 @@ class FeedService:
         )
 
     @staticmethod
-    async def get_flights(store: Any, user_id: str) -> Dict[str, Any]:
+    async def get_flights(
+        store: Any,
+        user_id: str,
+        lat_override: Optional[float] = None,
+        lon_override: Optional[float] = None,
+        radius_override: Optional[float] = None,
+        filter_status: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        page  = await store.get_page_settings(user_id)
         prefs = await store.get_feed_preferences(user_id)
-        # Use feed preferences lat/lon if they exist
-        lat = prefs.get("weather_lat")
-        lon = prefs.get("weather_lon")
-        
-        # If not, fallback to admin_config
+        wx    = page.get("weather", {})
+        fl    = page.get("flights", {})
+
+        lat = lat_override or wx.get("lat") or prefs.get("weather_lat")
+        lon = lon_override or wx.get("lon") or prefs.get("weather_lon")
+
         if lat is None or lon is None:
             config = await store.get_admin_config()
-            lat = config.get("location_lat")
-            lon = config.get("location_lon")
-            
-        # If still none, fallback to env
+            lat = lat or config.get("location_lat")
+            lon = lon or config.get("location_lon")
+
         if lat is None or lon is None:
             settings = get_settings()
-            lat = getattr(settings, "location_lat", None)
-            lon = getattr(settings, "location_lon", None)
+            lat = lat or getattr(settings, "location_lat", None)
+            lon = lon or getattr(settings, "location_lon", None)
 
         if lat is None or lon is None:
-            raise HTTPException(
-                status_code=404,
-                detail="No location saved. Set your location in Feed Settings."
-            )
+            raise HTTPException(status_code=404, detail="No location saved.")
 
+        radius = radius_override or fl.get("radar_radius_deg", 0.5)
         from providers.feeds.flights import fetch_overhead
-        flights = await fetch_overhead(lat, lon)
+        flights = await fetch_overhead(lat, lon, radius_deg=radius)
+
+        if filter_status == "airborne":
+            flights = [f for f in flights if not f.get("on_ground")]
+        elif filter_status == "ground":
+            flights = [f for f in flights if f.get("on_ground")]
+
         return {"flights": flights, "lat": lat, "lon": lon}

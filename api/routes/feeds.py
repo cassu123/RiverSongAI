@@ -251,6 +251,14 @@ async def get_stocks(
 async def get_flights(
     request: Request,
     authorization: Optional[str] = Header(default=None),
+    lat: Optional[float] = Query(default=None),
+    lon: Optional[float] = Query(default=None),
+    radius: Optional[float] = Query(default=None),
+    filter_status: Optional[str] = Query(default=None),
 ):
     user_id = await _require_user(authorization)
-    return await FeedService.get_flights(_store(request), user_id)
+    return await FeedService.get_flights(
+        _store(request), user_id,
+        lat_override=lat, lon_override=lon,
+        radius_override=radius, filter_status=filter_status,
+    )
