@@ -5,16 +5,11 @@ import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { autocompletion } from '@codemirror/autocomplete'
 import { useAuth } from '../context/AuthContext.jsx'
-
-/**
- * ChronosPage — Phase 3 Rewrite
- * -----------------------------------------------------------------------------
- * Obsidian-style vault with a futuristic glass layout.
- */
+import VaultGraph from '../components/VaultGraph.jsx'
 
 export default function ChronosPage({ setAction }) {
   const { token } = useAuth()
-  
+
   const [activeRoot, setActiveRoot] = useState('personal')
   const [fileTree, setFileTree] = useState([])
   const [activeNote, setActiveNote] = useState(null)
@@ -27,7 +22,10 @@ export default function ChronosPage({ setAction }) {
   const [error, setError] = useState(null)
   const [showQuickSwitcher, setShowQuickSwitcher] = useState(false)
   const [isSummarizing, setIsSummarizing] = useState(false)
-  
+  const [viewMode, setViewMode] = useState('notes')   // 'notes' | 'graph'
+  const [graphData, setGraphData] = useState({ nodes: [], edges: [] })
+  const [graphLoading, setGraphLoading] = useState(false)
+
   const saveTimeoutRef = useRef(null)
 
   const fetchTree = useCallback(async (root) => {
@@ -44,6 +42,25 @@ export default function ChronosPage({ setAction }) {
   useEffect(() => {
     if (token) fetchTree(activeRoot)
   }, [token, activeRoot, fetchTree])
+
+  const fetchGraph = useCallback(async () => {
+    if (!token) return
+    setGraphLoading(true)
+    try {
+      const res = await fetch('/api/vault/graph', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) setGraphData(await res.json())
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setGraphLoading(false)
+    }
+  }, [token])
+
+  useEffect(() => {
+    if (viewMode === 'graph') fetchGraph()
+  }, [viewMode, fetchGraph])
 
   // Cross-page handoff: open a note someone wikilinked from Chat/Briefing.
   useEffect(() => {
@@ -70,6 +87,7 @@ export default function ChronosPage({ setAction }) {
   }, [token])
 
   const loadNote = async (path) => {
+    setViewMode('notes')
     setLoading(true)
     setError(null)
     try {
@@ -81,7 +99,7 @@ export default function ChronosPage({ setAction }) {
         setActiveNote({ path, content })
         setEditorContent(content)
         setEditMode(false)
-        
+
         const blRes = await fetch(`/api/vault/backlinks?path=${encodeURIComponent(path)}`, {
           headers: { Authorization: `Bearer ${token}` }
         })
@@ -247,13 +265,34 @@ export default function ChronosPage({ setAction }) {
         </div>
       </div>
 
-      {/* Center: Editor/Viewer */}
+      {/* Center: Editor/Viewer/Graph */}
       <div className="rs-card" style={{ display: 'flex', flexDirection: 'column', padding: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: '1px solid var(--md-outline-variant)' }}>
-          <div className="rs-card-label" style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {activeNote?.path || 'CHRONOS VAULT'}
+          {/* View mode toggle */}
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button
+              className={`rs-pill ${viewMode === 'notes' ? 'is-active' : ''}`}
+              onClick={() => setViewMode('notes')}
+              title="Note editor"
+            >
+              <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>edit_note</span>
+            </button>
+            <button
+              className={`rs-pill ${viewMode === 'graph' ? 'is-active' : ''}`}
+              onClick={() => setViewMode('graph')}
+              title="Knowledge graph"
+            >
+              <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>hub</span>
+            </button>
           </div>
-          {activeNote && (
+
+          <div className="rs-card-label" style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {viewMode === 'graph'
+              ? `GRAPH · ${graphData.nodes.filter(n => !n.ghost).length} notes · ${graphData.edges.length} links`
+              : (activeNote?.path || 'CHRONOS VAULT')}
+          </div>
+
+          {viewMode === 'notes' && activeNote && (
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="rs-pill" onClick={summarizeNote} disabled={isSummarizing}>
                 {isSummarizing ? 'SCRIBING...' : 'AI SUM'}
@@ -265,7 +304,31 @@ export default function ChronosPage({ setAction }) {
               </button>
             </div>
           )}
+
+          {viewMode === 'graph' && (
+            <button className="rs-pill" onClick={fetchGraph} disabled={graphLoading} title="Refresh graph">
+              <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>refresh</span>
+            </button>
+          )}
         </div>
+
+        {/* Graph view */}
+        {viewMode === 'graph' ? (
+          <div style={{ flex: 1, position: 'relative' }}>
+            {graphLoading ? (
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span className="rs-card-meta">LOADING GRAPH...</span>
+              </div>
+            ) : (
+              <VaultGraph
+                nodes={graphData.nodes}
+                edges={graphData.edges}
+                activeNodePath={activeNote?.path}
+                onNodeClick={(path) => loadNote(path)}
+              />
+            )}
+          </div>
+        ) : (
 
         <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
           {loading ? (
@@ -284,7 +347,7 @@ export default function ChronosPage({ setAction }) {
               </div>
             ) : (
               <div className="rs-markdown">
-                <ReactMarkdown 
+                <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
                     a: ({ node, href, children, ...props }) => {
@@ -292,8 +355,8 @@ export default function ChronosPage({ setAction }) {
                         const title = href.replace('wikilink:', '')
                         const targetPath = `${activeRoot}/${title}.md`
                         return (
-                          <button 
-                            className="rs-pill" 
+                          <button
+                            className="rs-pill"
                             style={{ padding: '0 8px', height: '1.4rem', fontSize: '0.85rem' }}
                             onClick={async () => {
                               const exists = await loadNote(targetPath)
@@ -324,6 +387,7 @@ export default function ChronosPage({ setAction }) {
              </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Right Rail: Backlinks */}

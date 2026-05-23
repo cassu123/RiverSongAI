@@ -46,12 +46,20 @@ _COST_PER_M: Dict[str, Dict[str, float]] = {
 
 
 def _db_path() -> Path:
-    return Path(__file__).parent.parent / "data" / "river_song.db"
+    from config.settings import get_settings
+    return Path(get_settings().db_path)
+
+
+def _connect() -> sqlite3.Connection:
+    """Open a connection and immediately close it after use via context manager."""
+    conn = sqlite3.connect(str(_db_path()))
+    return conn
 
 
 def ensure_table() -> None:
     """Create token_usage table if it doesn't exist. Safe to call repeatedly."""
-    with sqlite3.connect(_db_path()) as conn:
+    conn = _connect()
+    try:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS token_usage (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,6 +74,8 @@ def ensure_table() -> None:
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_token_usage_ts ON token_usage(ts)")
         conn.commit()
+    finally:
+        conn.close()
 
 
 def record_usage(
@@ -79,17 +89,21 @@ def record_usage(
     """Insert one token-usage row. Silently no-ops on any error."""
     if not input_tokens and not output_tokens:
         return
+    conn = None
     try:
         ensure_table()
-        with sqlite3.connect(_db_path()) as conn:
-            conn.execute(
-                "INSERT INTO token_usage (ts, provider, model, input_tokens, output_tokens, user_id, call_type) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (time.time(), provider, model, input_tokens, output_tokens, user_id, call_type),
-            )
-            conn.commit()
+        conn = _connect()
+        conn.execute(
+            "INSERT INTO token_usage (ts, provider, model, input_tokens, output_tokens, user_id, call_type) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (time.time(), provider, model, input_tokens, output_tokens, user_id, call_type),
+        )
+        conn.commit()
     except Exception as exc:
         logger.debug("token_tracker: write failed: %s", exc)
+    finally:
+        if conn:
+            conn.close()
 
 
 def _estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
@@ -129,24 +143,27 @@ def get_summary(days: int = 30) -> dict:
           ]
         }
     """
+    conn = None
     try:
         ensure_table()
         cutoff = time.time() - days * 86400
-        with sqlite3.connect(_db_path()) as conn:
-            conn.row_factory = sqlite3.Row
-            rows = conn.execute(
-                """
-                SELECT provider, model,
-                       SUM(input_tokens)  AS input_tokens,
-                       SUM(output_tokens) AS output_tokens,
-                       COUNT(*)           AS calls
-                FROM token_usage
-                WHERE ts >= ?
-                GROUP BY provider, model
-                ORDER BY (SUM(input_tokens) + SUM(output_tokens)) DESC
-                """,
-                (cutoff,),
-            ).fetchall()
+        conn = _connect()
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT provider, model,
+                   SUM(input_tokens)  AS input_tokens,
+                   SUM(output_tokens) AS output_tokens,
+                   COUNT(*)           AS calls
+            FROM token_usage
+            WHERE ts >= ?
+            GROUP BY provider, model
+            ORDER BY (SUM(input_tokens) + SUM(output_tokens)) DESC
+            """,
+            (cutoff,),
+        ).fetchall()
+        conn.close()
+        conn = None
 
         by_model: List[dict] = []
         total_in = total_out = total_cost = 0
@@ -179,6 +196,9 @@ def get_summary(days: int = 30) -> dict:
             "days": days, "total_input": 0, "total_output": 0,
             "estimated_cost_usd": 0.0, "by_model": [],
         }
+    finally:
+        if conn:
+            conn.close()
 
 
 def get_provider_rate(provider: str, window_seconds: int = 60) -> dict:
@@ -186,20 +206,23 @@ def get_provider_rate(provider: str, window_seconds: int = 60) -> dict:
     Return request count and token totals for a provider within the last
     `window_seconds`. Used by the NIM rate-limit monitor (40 req/min limit).
     """
+    conn = None
     try:
         ensure_table()
         cutoff = time.time() - window_seconds
-        with sqlite3.connect(_db_path()) as conn:
-            row = conn.execute(
-                """
-                SELECT COUNT(*) AS calls,
-                       SUM(input_tokens)  AS input_tokens,
-                       SUM(output_tokens) AS output_tokens
-                FROM token_usage
-                WHERE provider = ? AND ts >= ?
-                """,
-                (provider, cutoff),
-            ).fetchone()
+        conn = _connect()
+        row = conn.execute(
+            """
+            SELECT COUNT(*) AS calls,
+                   SUM(input_tokens)  AS input_tokens,
+                   SUM(output_tokens) AS output_tokens
+            FROM token_usage
+            WHERE provider = ? AND ts >= ?
+            """,
+            (provider, cutoff),
+        ).fetchone()
+        conn.close()
+        conn = None
         calls = row[0] or 0
         return {
             "provider":       provider,
@@ -212,3 +235,6 @@ def get_provider_rate(provider: str, window_seconds: int = 60) -> dict:
         logger.warning("token_tracker: rate query failed: %s", exc)
         return {"provider": provider, "window_seconds": window_seconds, "calls": 0,
                 "input_tokens": 0, "output_tokens": 0}
+    finally:
+        if conn:
+            conn.close()

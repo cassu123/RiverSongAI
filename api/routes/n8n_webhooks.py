@@ -46,14 +46,25 @@ async def n8n_webhook_receiver(
     payload = await request.json()
     logger.info("Received n8n webhook: %s", payload)
     
-    # Logic to route the payload to internal systems (e.g., smart home, notifications)
-    # This is a placeholder for dynamic routing
     action = payload.get("action")
     if action == "notify":
         message = payload.get("message", "n8n notification")
+        title = payload.get("title", "River Song Automation")
         logger.info("n8n notification: %s", message)
-        # TODO: Trigger internal notification system
-    
+        try:
+            settings = get_settings()
+            store = request.app.state.memory_manager._store
+            subs = await store.get_push_subscriptions(settings.default_user_id)
+            if subs:
+                from providers.push.sender import send_push
+                for sub_json in subs:
+                    try:
+                        await send_push(sub_json, title=title, body=message)
+                    except Exception as push_err:
+                        logger.warning("n8n push send failed: %s", push_err)
+        except Exception as e:
+            logger.error("n8n notify: failed to send push: %s", e)
+
     return {"ok": True, "message": "Webhook received"}
 
 @router.get("/status")

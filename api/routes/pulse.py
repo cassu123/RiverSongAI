@@ -48,14 +48,19 @@ async def get_latest(request: Request, user_id: str = Depends(_require_user)) ->
     news = await store.get_latest_pulse_snapshot("news")
     markets = await store.get_latest_pulse_snapshot("markets")
     flights = await store.get_latest_pulse_snapshot("flights")
+    config = await store.get_admin_config()
+    pulse_news_enabled = config.get("pulse_news_enabled", True)
+    pulse_markets_enabled = config.get("pulse_markets_enabled", True)
+    pulse_flights_enabled = config.get("pulse_flights_enabled", True)
+    
     return {
-        "news": news["data"] if news else {},
-        "markets": markets["data"] if markets else {},
-        "flights": flights["data"] if flights else {},
+        "news": news["data"] if news and pulse_news_enabled else None,
+        "markets": markets["data"] if markets and pulse_markets_enabled else None,
+        "flights": flights["data"] if flights and pulse_flights_enabled else None,
         "ts": {
-            "news": news["ts"] if news else None,
-            "markets": markets["ts"] if markets else None,
-            "flights": flights["ts"] if flights else None,
+            "news": news["ts"] if news and pulse_news_enabled else None,
+            "markets": markets["ts"] if markets and pulse_markets_enabled else None,
+            "flights": flights["ts"] if flights and pulse_flights_enabled else None,
         },
     }
 

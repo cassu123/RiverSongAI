@@ -376,7 +376,14 @@ class ConversationLoop:
         Check calendar and greet the user with upcoming events on first connect.
         Ambient, non-blocking, non-history briefing.
         """
-        if not self._settings.startup_briefing_enabled:
+        config = {}
+        try:
+            config = await self._memory._store.get_admin_config()
+        except Exception:
+            pass
+            
+        enabled = config.get("startup_briefing_enabled", self._settings.startup_briefing_enabled)
+        if not enabled:
             return
 
         try:
@@ -384,23 +391,44 @@ class ConversationLoop:
             from datetime import datetime
             import asyncio
 
-            # 1. Fetch events
+            # 1. Fetch events & pulse snapshots
             events = await get_upcoming_events(self._user_id, hours_ahead=self._settings.startup_briefing_hours_ahead)
-            if not events:
+            
+            store = self._memory._store
+            news_snap = await store.get_latest_pulse_snapshot("news")
+            markets_snap = await store.get_latest_pulse_snapshot("markets")
+            
+            if not events and not news_snap and not markets_snap:
                 return
 
             # 2. Build briefing prompt
-            event_list = "\n".join([
-                f"- {e['title']} at {datetime.fromisoformat(e['time']).strftime('%I:%M %p')}"
-                for e in events
-            ])
-            
-            prompt = (
-                "The user has just opened the app. Greet them warmly as River Song "
-                "and mention their upcoming calendar events naturally, as if you "
-                f"noticed. Events today:\n{event_list}\n\n"
-                "Be brief — 2 sentences max. No markdown."
+            prompt_parts = [
+                "The user has just opened the app. Greet them warmly as River Song and provide a quick startup briefing."
+            ]
+
+            if events:
+                event_list = "\n".join([
+                    f"- {e['title']} at {datetime.fromisoformat(e['time']).strftime('%I:%M %p')}"
+                    for e in events
+                ])
+                prompt_parts.append(f"Upcoming Calendar Events:\n{event_list}")
+                
+            if news_snap and "data" in news_snap:
+                n_data = news_snap["data"]
+                if n_data and n_data.get("headline"):
+                    prompt_parts.append(f"Top News Pulse: '{n_data.get('headline')}' (Source: {n_data.get('source')})")
+                    
+            if markets_snap and "data" in markets_snap:
+                m_data = markets_snap["data"]
+                if m_data and "error" not in m_data and m_data.get("symbol"):
+                    prompt_parts.append(f"Market Pulse for {m_data.get('symbol')}: {m_data}")
+
+            prompt_parts.append(
+                "Weave the available events, news, and market pulse naturally into a friendly greeting. "
+                "Do not read raw JSON or list it dryly. Be conversational and brief — 2 to 3 sentences max. No markdown."
             )
+            
+            prompt = "\n\n".join(prompt_parts)
 
             # 3. Generate greeting (10s timeout)
             try:

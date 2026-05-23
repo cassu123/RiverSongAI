@@ -276,6 +276,42 @@ TOOL_SCHEMAS = [
                 "show_completed": {"type": "boolean", "description": "Whether to include completed tasks. Defaults to false."},
             }
         }
+    },
+    {
+        "name": "save_vault_note",
+        "description": "Save a markdown note to the CHRONOS memory vault. Use for voice-to-note, capturing ideas, facts, recipes, anything the user wants to remember long-term. Creates the note if it doesn't exist, overwrites if it does.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "The note title (filename without .md extension)."},
+                "content": {"type": "string", "description": "Full markdown content to save."},
+                "root": {"type": "string", "enum": ["personal", "household"], "description": "Which vault section to save to. Defaults to personal."}
+            },
+            "required": ["title", "content"]
+        }
+    },
+    {
+        "name": "read_vault_note",
+        "description": "Read the contents of a note from the CHRONOS memory vault by its title.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "The note title (filename without .md extension)."},
+                "root": {"type": "string", "enum": ["personal", "household"], "description": "Which vault section to read from. Defaults to personal."}
+            },
+            "required": ["title"]
+        }
+    },
+    {
+        "name": "search_vault",
+        "description": "Search the CHRONOS memory vault for notes matching a query. Searches both note titles and full content.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The text to search for across all vault notes."}
+            },
+            "required": ["query"]
+        }
     }
 ]
 
@@ -361,6 +397,15 @@ async def execute_tool(tool_name: str, tool_input: Dict[str, Any], context: Dict
 
         elif tool_name == "list_google_tasks":
             return await _exec_list_google_tasks(tool_input, user_id)
+
+        elif tool_name == "save_vault_note":
+            return await _exec_save_vault_note(tool_input, user_id)
+
+        elif tool_name == "read_vault_note":
+            return await _exec_read_vault_note(tool_input, user_id)
+
+        elif tool_name == "search_vault":
+            return await _exec_search_vault(tool_input, user_id)
 
         else:
             return f"Unknown tool '{tool_name}' requested."
@@ -987,3 +1032,66 @@ async def get_upcoming_events(user_id: str, hours_ahead: int = 8) -> list[dict]:
     except Exception as exc:
         logger.debug("get_upcoming_events failed: %s", exc)
         return []
+
+
+def _get_vault_store():
+    """Best-effort: get the live store for vault indexing."""
+    try:
+        from main import get_app
+        app = get_app()
+        if app:
+            return app.state.memory_manager._store
+    except Exception:
+        pass
+    return None
+
+
+async def _exec_save_vault_note(args: dict, user_id: str) -> str:
+    try:
+        from providers.vault.vault_provider import VaultProvider
+        root = args.get("root", "personal")
+        title = args["title"]
+        content = args["content"]
+        if not title.endswith(".md"):
+            title += ".md"
+        virtual_path = f"{root}/{title}"
+        provider = VaultProvider(store=_get_vault_store())
+        await provider.write_note(user_id, virtual_path, content)
+        return f"Note '{args['title']}' saved to your {root} vault."
+    except Exception as exc:
+        logger.error("save_vault_note failed: %s", exc)
+        return f"Failed to save note '{args.get('title')}': {exc}"
+
+
+async def _exec_read_vault_note(args: dict, user_id: str) -> str:
+    try:
+        from providers.vault.vault_provider import VaultProvider
+        root = args.get("root", "personal")
+        title = args["title"]
+        if not title.endswith(".md"):
+            title += ".md"
+        virtual_path = f"{root}/{title}"
+        provider = VaultProvider()
+        content = await provider.read_note(user_id, virtual_path)
+        if len(content) > 3000:
+            content = content[:3000] + "\n\n[... note truncated ...]"
+        return content
+    except FileNotFoundError:
+        return f"No note named '{args['title']}' found in the {args.get('root', 'personal')} vault."
+    except Exception as exc:
+        logger.error("read_vault_note failed: %s", exc)
+        return f"Failed to read note '{args.get('title')}': {exc}"
+
+
+async def _exec_search_vault(args: dict, user_id: str) -> str:
+    try:
+        from providers.vault.vault_provider import VaultProvider
+        provider = VaultProvider(store=_get_vault_store())
+        results = await provider.search_text(user_id, args["query"])
+        if not results:
+            return f"No notes found matching '{args['query']}'."
+        lines = [f"- {r.get('title', r['virtual_path'])} ({r['virtual_path']})" for r in results[:10]]
+        return f"Found {len(results)} note(s):\n" + "\n".join(lines)
+    except Exception as exc:
+        logger.error("search_vault failed: %s", exc)
+        return f"Vault search failed: {exc}"

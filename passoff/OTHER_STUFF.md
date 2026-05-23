@@ -40,11 +40,6 @@ Cloud Mistral has only `mistral-small-latest` and `mistral-large-latest`. Thinki
 ### Desktop rail "River Song" label
 The Drawer's head still shows "River Song" text. At desktop (≥1200px) where the rail is permanent, this reads alongside the header's RsMark — possibly redundant. CSS tweak candidate: hide `.rs-drawer-head` at `@media (min-width: 1200px)`.
 
-### Pulse vs Garage aliasing
-Both menu entries point to the `vehicles` route since there is no dedicated `pulse` page yet. Two ways out:
-1. Build a Pulse page (maintenance/tasks dashboard) and split the routes.
-2. Collapse to one menu entry until Pulse content exists.
-
 ---
 
 ## Phase B — Admin model configuration (next)

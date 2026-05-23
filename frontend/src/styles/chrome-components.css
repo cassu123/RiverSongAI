@@ -341,7 +341,7 @@
 
 /* Widget wrappers */
 .rs-widget-pulse-wrapper {
-  height: 140px;
+  height: auto;
   margin-block: 12px;
 }
 
@@ -634,4 +634,27 @@
   border-left: 2px solid var(--border-bright);
   padding-left: 12px;
   max-width: 640px;
+}
+
+.settings-input {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 8px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 180ms;
+  min-width: 0;
+}
+
+.settings-input:focus {
+  border-color: var(--md-primary);
+  box-shadow: 0 0 0 1px var(--md-primary);
+}
+
+.settings-input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

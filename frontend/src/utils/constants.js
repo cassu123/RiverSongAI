@@ -38,7 +38,6 @@ export const NAV_GROUPS = [
     items: [
       { key: 'memory',      label: 'Memory',      icon: 'memory' },
       { key: 'chronos',     label: 'Notes',       icon: 'chronos' },
-      { key: 'vehicles',    label: 'Pulse',       icon: 'pulse' },
       { key: 'routines',    label: 'Routines',    icon: 'routines' },
       { key: 'inventory',   label: 'Stash',       icon: 'inventory' },
       { key: 'culinary',    label: 'Kitchen',     icon: 'culinary' },

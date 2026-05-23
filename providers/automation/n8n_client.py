@@ -55,7 +55,7 @@ class N8NClient:
         if not self.enabled or not self.api_key:
             return False
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 resp = await client.post(
                     f"{self.url}/api/v1/workflows/{workflow_id}/execute",
                     headers=self.headers,

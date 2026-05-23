@@ -49,6 +49,42 @@ const MOODS = {
                { key: 'smoke',            label: 'SMOKE',            primary: '#a0ffaa', bg: '#080c08' }],
 }
 
+const SERVICES = [
+  { 
+    key: 'google', 
+    name: 'Google Workspace', 
+    icon: 'account_circle',
+    authorizeUrl: '/api/auth/google/authorize'
+  },
+  { 
+    key: 'amazon_sp_api', 
+    name: 'Amazon Seller Central', 
+    icon: 'storefront',
+    authorizeUrl: '/api/auth/amazon_sp_api/authorize'
+  },
+  { 
+    key: 'shopify', 
+    name: 'Shopify Store', 
+    icon: 'shopping_bag',
+    requiresInput: true,
+    inputLabel: 'Store URL',
+    inputPlaceholder: 'your-store.myshopify.com',
+    authorizeUrl: (input) => `/api/shopify_auth/login?shop=${input}`
+  },
+  { 
+    key: 'walmart', 
+    name: 'Walmart Marketplace', 
+    icon: 'store',
+    authorizeUrl: '/api/auth/walmart/authorize'
+  },
+  { 
+    key: 'tiktok', 
+    name: 'TikTok Shop', 
+    icon: 'video_library',
+    authorizeUrl: '/api/auth/tiktok/authorize'
+  }
+]
+
 export default function ProfilePage({ 
   profile, onSave, 
   universe, environment, mood,
@@ -60,34 +96,47 @@ export default function ProfilePage({
   const [saveStatus, setSaveStatus] = useState(null)
   
   const [integrations, setIntegrations] = useState(null)
-  const [integrationsSaving, setIntegrationsSaving] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(null)
 
   useEffect(() => {
     if (user?.role === 'admin') {
-      fetch('/api/auth/integrations', { headers: { Authorization: `Bearer ${token}` } })
+      fetch('/api/integrations/status', { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
         .then(data => {
-          if (data && data.amazon_sp_api) {
-            setIntegrations(data)
-          }
+          if (data && data.integrations) setIntegrations(data.integrations)
         })
         .catch(err => console.error('Failed to load integrations', err))
     }
   }, [user, token])
 
-  const saveIntegrations = async () => {
-    if (!integrations) return
-    setIntegrationsSaving(true)
+  const handleConnect = (serviceKey) => {
+    const serviceConfig = SERVICES.find(s => s.key === serviceKey);
+    if (!serviceConfig) return;
+    
+    if (serviceConfig.requiresInput) {
+      const userInput = prompt(`Enter your ${serviceConfig.inputLabel} (${serviceConfig.inputPlaceholder}):`);
+      if (userInput) {
+        window.location.href = serviceConfig.authorizeUrl(userInput);
+      }
+    } else {
+      window.location.href = serviceConfig.authorizeUrl;
+    }
+  }
+
+  const handleDisconnect = async (service) => {
+    setDisconnecting(service);
     try {
-      await fetch('/api/auth/integrations', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(integrations)
-      })
+      await fetch(`/api/integrations/${service}/disconnect`, { 
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const res = await fetch('/api/integrations/status', { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setIntegrations(data);
     } catch (err) {
-      console.error('Failed to save integrations', err)
+      console.error('Disconnect failed', err);
     } finally {
-      setIntegrationsSaving(false)
+      setDisconnecting(null);
     }
   }
 
@@ -244,52 +293,71 @@ export default function ProfilePage({
         {user?.role === 'admin' && integrations && (
           <div className="rs-card is-wide">
             <div className="rs-card-head">
-              <span className="rs-card-label">EXTERNAL LINKS & INTEGRATIONS</span>
+              <span className="rs-card-label">CONNECTED ACCOUNTS</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <p className="rs-card-meta">Link your Amazon Seller Central, Walmart, or TikTok store APIs for global analytics.</p>
+              <p className="rs-card-meta">
+                Connect your personal accounts to enable analytics and integrations. 
+                Your credentials are securely stored and never shared.
+              </p>
               
-              <div className="rs-input-group">
-                <label>Amazon Seller ID</label>
-                <input 
-                  type="text" 
-                  className="rs-input" 
-                  value={integrations.amazon_sp_api?.seller_id || ''}
-                  onChange={e => setIntegrations(prev => ({...prev, amazon_sp_api: {...prev.amazon_sp_api, seller_id: e.target.value}}))}
-                  placeholder="A1B2C3D4E5F6G"
-                />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {SERVICES.map(service => {
+                  const isConnected = integrations?.[service.key];
+                  
+                  return (
+                    <div 
+                      key={service.key}
+                      className="rs-input-group"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 16px',
+                        background: 'var(--md-surface-container)',
+                        borderRadius: '8px',
+                        border: '1px solid var(--md-outline-variant)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <span className="material-symbols-rounded" style={{ fontSize: '24px', opacity: 0.8 }}>{service.icon}</span>
+                        <div>
+                          <div style={{ fontWeight: 600, color: 'var(--text-base)', fontSize: '0.95rem' }}>
+                            {service.name}
+                          </div>
+                          {isConnected && (
+                            <div style={{ fontSize: '0.75rem', color: '#4ade80', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span className="material-symbols-rounded" style={{ fontSize: '12px' }}>check_circle</span>
+                              Connected
+                              {isConnected.email && ` as ${isConnected.email}`}
+                              {isConnected.store_name && ` - ${isConnected.store_name}`}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {isConnected ? (
+                        <button
+                          className="rs-pill"
+                          onClick={() => handleDisconnect(service.key)}
+                          disabled={disconnecting === service.key}
+                          style={{ padding: '6px 16px', fontSize: '0.7rem', minWidth: '110px', justifyContent: 'center' }}
+                        >
+                          {disconnecting === service.key ? 'DISCONNECTING...' : 'DISCONNECT'}
+                        </button>
+                      ) : (
+                        <button
+                          className="rs-btn-primary"
+                          onClick={() => handleConnect(service.key)}
+                          style={{ padding: '8px 16px', fontSize: '0.75rem', minWidth: '110px', justifyContent: 'center', borderRadius: '4px' }}
+                        >
+                          CONNECT
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-
-              <div className="rs-input-group">
-                <label>Amazon LWA App ID</label>
-                <input 
-                  type="text" 
-                  className="rs-input" 
-                  value={integrations.amazon_sp_api?.lwa_app_id || ''}
-                  onChange={e => setIntegrations(prev => ({...prev, amazon_sp_api: {...prev.amazon_sp_api, lwa_app_id: e.target.value}}))}
-                  placeholder="amzn1.application-oa2-client.xyz..."
-                />
-              </div>
-
-              <div className="rs-input-group">
-                <label>Amazon LWA Client Secret</label>
-                <input 
-                  type="password" 
-                  className="rs-input" 
-                  value={integrations.amazon_sp_api?.lwa_client_secret || ''}
-                  onChange={e => setIntegrations(prev => ({...prev, amazon_sp_api: {...prev.amazon_sp_api, lwa_client_secret: e.target.value}}))}
-                  placeholder="Required for automated refresh..."
-                />
-              </div>
-              
-              <button 
-                className="rs-btn-primary" 
-                onClick={saveIntegrations} 
-                disabled={integrationsSaving}
-                style={{ alignSelf: 'flex-start', marginTop: 8 }}
-              >
-                {integrationsSaving ? 'SAVING LINKS...' : 'SAVE INTEGRATIONS'}
-              </button>
             </div>
           </div>
         )}

@@ -281,16 +281,13 @@ class VaultProvider:
         # 2. Augment with basic content grep
         results = {r["virtual_path"]: r for r in meta_results}
         
-        # Determine accessible roots
-        roots = [
-            (self.base_vault / "users" / user_id, VROOT_PERSONAL),
-            (self.base_vault / "households", VROOT_HOUSEHOLD),
-        ]
-        
-        for root_path, v_prefix in roots:
+        # Use the same roots resolution as the rest of the provider
+        user_roots = self._get_roots(user_id)
+
+        for v_prefix, root_path in user_roots.items():
             if not root_path.exists(): continue
             for p in root_path.rglob("*.md"):
-                v_path = "/".join([v_prefix] + list(p.relative_to(root_path).parts))
+                v_path = self._to_virtual(user_id, p)
                 if v_path in results: continue
                 
                 try:
@@ -327,6 +324,11 @@ class VaultProvider:
     async def list_vault_backlinks(self, title: str) -> list[dict]:
         if not self.store: return []
         return await self.store.list_vault_backlinks(title)
+
+    async def get_graph(self, user_id: str) -> dict:
+        if not self.store:
+            return {"nodes": [], "edges": []}
+        return await self.store.get_vault_graph(user_id)
 
 
 class VaultWatcher(FileSystemEventHandler):

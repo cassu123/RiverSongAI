@@ -267,11 +267,11 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
 
           <div className="rs-card-inner">
             <div className="rs-card-head">
-              <span className="rs-card-label">SECTOR PULSE</span>
+              <span className="rs-card-label">MARKET & NEWS PULSE</span>
               <span className="material-symbols-rounded" style={{ opacity: 0.2 }}>sensors</span>
             </div>
             <div className="rs-widget-pulse-wrapper">
-              <PulseWidget data={stats?.pulse} />
+              <PulseWidget token={token} />
             </div>
             <div className="rs-card-meta">Real-time activity reports</div>
 

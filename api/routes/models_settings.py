@@ -648,18 +648,20 @@ class OrchestrationSettingsBody(BaseModel):
     n8n_url: str
     n8n_api_key: str
     n8n_webhook_secret: str
+    daemon_scribe_enabled: Optional[bool] = None
 
 
 @router.get("/settings/orchestration")
 async def get_orchestration_settings(request: Request, authorization: Optional[str] = Header(default=None)):
-    """Return the current n8n orchestration settings."""
+    """Return the current n8n + daemon orchestration settings."""
     await _require_user(authorization)
     s = get_settings()
     return {
-        "n8n_enabled":        s.n8n_enabled,
-        "n8n_url":            s.n8n_url,
-        "n8n_api_key":        s.n8n_api_key,
-        "n8n_webhook_secret": s.n8n_webhook_secret,
+        "n8n_enabled":            s.n8n_enabled,
+        "n8n_url":                s.n8n_url,
+        "n8n_api_key":            s.n8n_api_key,
+        "n8n_webhook_secret":     s.n8n_webhook_secret,
+        "daemon_scribe_enabled":  s.daemon_scribe_enabled,
     }
 
 
@@ -670,20 +672,18 @@ async def save_orchestration_settings(
     authorization: Optional[str] = Header(default=None),
 ):
     user_id = await _require_user(authorization)
-    # Note: These are global server settings (Phase 9/10), 
-    # but we restrict saving to admins only for security.
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if payload.get("role") != "admin":
         raise forbidden("Only admins can modify orchestration settings.")
 
-    # In a real app we might persist these to .env or a DB. 
-    # For now, we update the runtime settings singleton.
     s = get_settings()
     s.n8n_enabled = body.n8n_enabled
     s.n8n_url = body.n8n_url
     s.n8n_api_key = body.n8n_api_key
     s.n8n_webhook_secret = body.n8n_webhook_secret
-    
+    if body.daemon_scribe_enabled is not None:
+        s.daemon_scribe_enabled = body.daemon_scribe_enabled
+
     logger.info("Orchestration settings saved by admin %s.", user_id)
     return {"status": "ok"}
 
@@ -930,3 +930,56 @@ def get_current_provider_rate(
         "rpm": rate["calls"],
         "window": window
     }
+
+
+# =============================================================================
+# Briefing Settings
+# =============================================================================
+
+@router.get("/settings/briefing")
+async def get_briefing_settings(
+    request: Request,
+    authorization: Optional[str] = Header(default=None)
+):
+    await _require_user(authorization)
+    store = request.app.state.memory_manager._store
+    config = await store.get_admin_config()
+    settings = get_settings()
+    
+    return {
+        "startup_briefing_enabled": config.get("startup_briefing_enabled", settings.startup_briefing_enabled),
+        "pulse_news_enabled": config.get("pulse_news_enabled", True),
+        "pulse_markets_enabled": config.get("pulse_markets_enabled", True),
+        "pulse_flights_enabled": config.get("pulse_flights_enabled", True),
+        "location_lat": config.get("location_lat", settings.location_lat),
+        "location_lon": config.get("location_lon", settings.location_lon),
+    }
+
+class BriefingSettingsBody(BaseModel):
+    startup_briefing_enabled: bool
+    pulse_news_enabled: bool = True
+    pulse_markets_enabled: bool = True
+    pulse_flights_enabled: bool = True
+    location_lat: Optional[float] = None
+    location_lon: Optional[float] = None
+
+@router.post("/settings/briefing")
+async def save_briefing_settings(
+    body: BriefingSettingsBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None)
+):
+    user_id = await _require_admin(authorization)
+    
+    store = request.app.state.memory_manager._store
+    config = await store.get_admin_config()
+    config["startup_briefing_enabled"] = body.startup_briefing_enabled
+    config["pulse_news_enabled"] = body.pulse_news_enabled
+    config["pulse_markets_enabled"] = body.pulse_markets_enabled
+    config["pulse_flights_enabled"] = body.pulse_flights_enabled
+    config["location_lat"] = body.location_lat
+    config["location_lon"] = body.location_lon
+    await store.set_admin_config(config)
+    
+    logger.info("Briefing settings updated by admin %s.", user_id)
+    return {"ok": True}

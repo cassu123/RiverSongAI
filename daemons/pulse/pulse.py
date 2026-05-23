@@ -48,18 +48,34 @@ class PulseDaemon(BaseDaemon):
 
     async def _tick_once(self) -> None:
         ts = time.time()
+        
+        from providers.memory.sqlite_store import SQLiteStore
+        store = SQLiteStore(self.settings.sqlite_db_path)
+        config = await store.get_admin_config()
+        
+        pulse_news_enabled = config.get("pulse_news_enabled", True)
+        pulse_markets_enabled = config.get("pulse_markets_enabled", True)
+        pulse_flights_enabled = config.get("pulse_flights_enabled", True)
+        
+        lat = config.get("location_lat")
+        lon = config.get("location_lon")
+        if lat is None: lat = getattr(self.settings, "location_lat", None)
+        if lon is None: lon = getattr(self.settings, "location_lon", None)
+
+        async def _dummy(): return {}
+
         results = await asyncio.gather(
-            self._fetch_news(),
-            self._fetch_markets(),
-            self._fetch_flights(),
+            self._fetch_news() if pulse_news_enabled else _dummy(),
+            self._fetch_markets() if pulse_markets_enabled else _dummy(),
+            self._fetch_flights(lat, lon) if pulse_flights_enabled else _dummy(),
             return_exceptions=True,
         )
         news_data, markets_data, flights_data = results
 
         # Save each snapshot, swallowing per-source failures
-        await self._save_or_log("news", news_data, ts)
-        await self._save_or_log("markets", markets_data, ts)
-        await self._save_or_log("flights", flights_data, ts)
+        if pulse_news_enabled: await self._save_or_log("news", news_data, ts)
+        if pulse_markets_enabled: await self._save_or_log("markets", markets_data, ts)
+        if pulse_flights_enabled: await self._save_or_log("flights", flights_data, ts)
 
         # Prune to last 100 per source
         await self._prune_all()
@@ -131,9 +147,7 @@ class PulseDaemon(BaseDaemon):
             logger.warning(f"Markets fetch failed: {e}")
             return {"symbol": symbol, "error": str(e)}
 
-    async def _fetch_flights(self) -> dict:
-        lat = getattr(self.settings, "location_lat", None)
-        lon = getattr(self.settings, "location_lon", None)
+    async def _fetch_flights(self, lat: float, lon: float) -> dict:
         if lat is None or lon is None:
             return {"flights": [], "reason": "location_not_set"}
         flights = await fetch_overhead(lat, lon)

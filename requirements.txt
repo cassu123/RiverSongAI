@@ -158,3 +158,4 @@ mcp>=1.0.0
 # Voice ID (speaker recognition, local)
 # -----------------------------------------------------------------------------
 resemblyzer>=0.1.4
+cryptography

@@ -96,17 +96,28 @@ class GoogleAuth:
     # -------------------------------------------------------------------------
 
     def get_authorization_url(self, redirect_uri: str, state: Optional[str] = None) -> str:
+        import urllib.parse
         flow = Flow.from_client_secrets_file(
             str(self._secrets_path),
             scopes=self._scopes,
             redirect_uri=redirect_uri
         )
-        auth_url, _ = flow.authorization_url(
-            access_type="offline",
-            include_granted_scopes="true",
-            state=state,
-            prompt="consent"
-        )
+        # We build the URL manually to avoid automatic PKCE (Proof Key for Code Exchange).
+        # google-auth-oauthlib 1.0+ automatically adds PKCE challenges to the URL,
+        # but since we are stateless and don't store the verifier, the exchange fails.
+        params = {
+            "client_id": flow.client_config["client_id"],
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": " ".join(self._scopes),
+            "access_type": "offline",
+            "include_granted_scopes": "true",
+            "prompt": "consent",
+        }
+        if state:
+            params["state"] = state
+
+        auth_url = f"{flow.client_config['auth_uri']}?{urllib.parse.urlencode(params)}"
         return auth_url
 
     def fetch_token_from_code(self, user_id: str, code: str, redirect_uri: str) -> Credentials:

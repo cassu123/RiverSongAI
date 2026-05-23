@@ -196,6 +196,19 @@ async def search_vault(
     provider = _get_provider(request)
     return await provider.search_text(user_id, q)
 
+@router.get("/graph")
+async def get_vault_graph(
+    request: Request,
+    authorization: Optional[str] = Header(default=None)
+):
+    user_id = await _require_user(authorization)
+    provider = _get_provider(request)
+    try:
+        return await provider.get_graph(user_id)
+    except Exception as e:
+        logger.error("Failed to get vault graph: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/backlinks")
 async def get_backlinks(
     request: Request,

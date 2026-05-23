@@ -52,6 +52,7 @@ async def fetch_overhead(lat: Optional[float], lon: Optional[float], radius_deg:
                 "lon": s[5],
                 "lat": s[6],
                 "baro_altitude_m": s[7],
+                "on_ground": bool(s[8]),
                 "velocity_mps": s[9],
                 "true_track_deg": s[10],
             })

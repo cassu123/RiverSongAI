@@ -170,3 +170,32 @@ class FeedService:
             status_code=503,
             detail="No stock data provider configured. Add FINNHUB_API_KEY or ALPHA_VANTAGE_API_KEY to .env."
         )
+
+    @staticmethod
+    async def get_flights(store: Any, user_id: str) -> Dict[str, Any]:
+        prefs = await store.get_feed_preferences(user_id)
+        # Use feed preferences lat/lon if they exist
+        lat = prefs.get("weather_lat")
+        lon = prefs.get("weather_lon")
+        
+        # If not, fallback to admin_config
+        if lat is None or lon is None:
+            config = await store.get_admin_config()
+            lat = config.get("location_lat")
+            lon = config.get("location_lon")
+            
+        # If still none, fallback to env
+        if lat is None or lon is None:
+            settings = get_settings()
+            lat = getattr(settings, "location_lat", None)
+            lon = getattr(settings, "location_lon", None)
+
+        if lat is None or lon is None:
+            raise HTTPException(
+                status_code=404,
+                detail="No location saved. Set your location in Feed Settings."
+            )
+
+        from providers.feeds.flights import fetch_overhead
+        flights = await fetch_overhead(lat, lon)
+        return {"flights": flights, "lat": lat, "lon": lon}

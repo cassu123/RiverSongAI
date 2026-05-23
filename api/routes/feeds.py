@@ -61,6 +61,11 @@ class PrefsUpdate(BaseModel):
     refresh_weather_min: int = 30
     refresh_sports_min: int = 60
     refresh_stocks_min: int = 60
+    feed_news_enabled: bool = True
+    feed_weather_enabled: bool = True
+    feed_sports_enabled: bool = True
+    feed_stocks_enabled: bool = True
+    feed_flights_enabled: bool = True
 
 
 @router.get("/preferences")
@@ -234,3 +239,16 @@ async def get_stocks(
 ):
     user_id = await _require_user(authorization)
     return await FeedService.get_stocks(_store(request), user_id)
+
+
+# ---------------------------------------------------------------------------
+# Flights
+# ---------------------------------------------------------------------------
+
+@router.get("/flights")
+async def get_flights(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    user_id = await _require_user(authorization)
+    return await FeedService.get_flights(_store(request), user_id)

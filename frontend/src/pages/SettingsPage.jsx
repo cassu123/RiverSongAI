@@ -74,8 +74,9 @@ function ModelCard({ model, isSelected, isDisabled, onSelect }) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
         {model.vram_gb != null && (
           <>
-            <span className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>
-              {model.vram_gb <= 4 ? '⚡ GPU' : 'RAM'} {model.vram_gb}GB
+            <span className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              {model.vram_gb <= 4 && <span className="material-symbols-rounded" style={{ fontSize: '0.85rem' }}>bolt</span>}
+              {model.vram_gb <= 4 ? 'GPU' : 'RAM'} {model.vram_gb}GB
             </span>
             {model.vram_gb <= 4 && (
               <span className="rs-pill is-active" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>SPEAK</span>
@@ -254,7 +255,7 @@ function NimSection({ enabled, token, llmRoutingFlags, saveLlmRoutingFlags }) {
       </p>
 
       {/* Rate monitor */}
-      <div className="rs-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>monitoring</span>
@@ -363,6 +364,7 @@ export default function SettingsPage({
   const [aiFeatures,       setAiFeatures]       = useState({})
   const [elevenLabsSettings, setElevenLabsSettings] = useState(null)
   const [personaSettings,    setPersonaSettings]    = useState(null)
+  const [briefingSettings,   setBriefingSettings]   = useState(null)
   const [daemonStatus,       setDaemonStatus]       = useState({})
   const [wakeWordRestart,    setWakeWordRestart]    = useState(false)
   const [orchestrationSettings, setOrchestrationSettings] = useState({
@@ -373,10 +375,11 @@ export default function SettingsPage({
   })
   const [intentRouterSettings, setIntentRouterSettings] = useState({ enabled: false, min_hits: 2 })
   const [llmRoutingFlags,      setLlmRoutingFlags]      = useState({ local_enabled: true, cloud_enabled: true, nvidia_enabled: true })
-  const [chronosSettings,      setChronosSettings]      = useState(null)
+  const [scribeEnabled,        setScribeEnabled]        = useState(false)
   const [modelFilter,          setModelFilter]          = useState('ALL')
   const [loading,          setLoading]          = useState(true)
   const [saveStatus,       setSaveStatus]       = useState('')
+  const [reloadPending,    setReloadPending]    = useState(false)
 
   // ---- Initial data load ----
   useEffect(() => {
@@ -386,7 +389,7 @@ export default function SettingsPage({
       const query = user?.id ? `?user_id=${user.id}` : ''
       try {
         const [modData, llmData, memData, voiceData, featData] = await Promise.all([
-          fetch(`${API_BASE}/api/models`).then(r => r.json()),
+          fetch(`${API_BASE}/api/models`, { headers }).then(r => r.json()),
           fetch(`${API_BASE}/api/settings/llm${query}`, { headers }).then(r => r.json()),
           fetch(`${API_BASE}/api/settings/memory${query}`, { headers }).then(r => r.json()),
           fetch(`${API_BASE}/api/settings/voice`, { headers }).then(r => r.json()).catch(() => null),
@@ -403,7 +406,7 @@ export default function SettingsPage({
         if (featData) setAiFeatures(featData.ai_features || {})
 
         if (user?.role === 'admin') {
-          const [visData, featVisData, familyRaw, familyGroupsRaw, orchData, elData, personaData, dStatus, intentRouterData, chronosData, routingFlags] = await Promise.all([
+          const [visData, featVisData, familyRaw, familyGroupsRaw, orchData, elData, personaData, briefingData, dStatus, intentRouterData, routingFlags] = await Promise.all([
             fetch(`${API_BASE}/api/admin/model-visibility`, { headers }).then(r => r.json()).catch(() => null),
             fetch(`${API_BASE}/api/admin/feature-visibility`, { headers }).then(r => r.json()).catch(() => null),
             fetch(`${API_BASE}/api/admin/family`, { headers }).then(r => r.json()).catch(() => null),
@@ -411,9 +414,9 @@ export default function SettingsPage({
             fetch(`${API_BASE}/api/settings/orchestration`, { headers }).then(r => r.json()).catch(() => null),
             fetch(`${API_BASE}/api/settings/elevenlabs`, { headers }).then(r => r.json()).catch(() => null),
             fetch(`${API_BASE}/api/settings/persona`, { headers }).then(r => r.json()).catch(() => null),
+            fetch(`${API_BASE}/api/settings/briefing`, { headers }).then(r => r.json()).catch(() => null),
             fetch(`${API_BASE}/api/daemon/status`, { headers }).then(r => r.json()).catch(() => null),
             fetch(`${API_BASE}/api/settings/intent-router`, { headers }).then(r => r.json()).catch(() => null),
-            fetch(`${API_BASE}/api/daemon/scribe/status`, { headers }).then(r => r.json()).catch(() => null),
             fetch(`${API_BASE}/api/admin/llm-routing-flags`, { headers }).then(r => r.json()).catch(() => null),
           ])
           if (!active) return
@@ -421,12 +424,15 @@ export default function SettingsPage({
           if (featVisData) setFeatureVis(featVisData)
           if (familyRaw) setFamilyData(familyRaw)
           if (familyGroupsRaw) setFamilyGroups(familyGroupsRaw)
-          if (orchData) setOrchestrationSettings(orchData)
+          if (orchData) {
+            setOrchestrationSettings(orchData)
+            if (orchData.daemon_scribe_enabled != null) setScribeEnabled(orchData.daemon_scribe_enabled)
+          }
           if (elData) setElevenLabsSettings(elData)
           if (personaData) setPersonaSettings(personaData)
+          if (briefingData) setBriefingSettings(briefingData)
           if (dStatus) setDaemonStatus(dStatus.daemons || {})
           if (intentRouterData) setIntentRouterSettings(intentRouterData)
-          if (chronosData) setChronosSettings(chronosData)
           if (routingFlags) setLlmRoutingFlags(routingFlags)
         } else if (user?.role === 'parent') {
           const [childrenRaw] = await Promise.all([
@@ -527,7 +533,7 @@ export default function SettingsPage({
     await fetch(`${API_BASE}/api/admin/llm-routing-flags`, {
       method: 'POST', headers, body: JSON.stringify(next),
     }).then(res => {
-      if (res.ok) window.location.reload()
+      if (res.ok) setReloadPending(true)
     }).catch(err => console.error('LLM routing flags save failed:', err))
   }, [llmRoutingFlags, token])
 
@@ -541,7 +547,27 @@ export default function SettingsPage({
       const res = await fetch(`${API_BASE}/api/settings/orchestration`, {
         method:  'POST',
         headers,
-        body:    JSON.stringify(next),
+        body:    JSON.stringify({ ...next, daemon_scribe_enabled: scribeEnabled }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2500)
+    } catch {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }, [orchestrationSettings, scribeEnabled, token])
+
+  const saveScribeEnabled = useCallback(async (enabled) => {
+    setScribeEnabled(enabled)
+    setSaveStatus('saving')
+    try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const res = await fetch(`${API_BASE}/api/settings/orchestration`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ...orchestrationSettings, daemon_scribe_enabled: enabled }),
       })
       if (!res.ok) throw new Error('Save failed')
       setSaveStatus('saved')
@@ -643,6 +669,27 @@ export default function SettingsPage({
     }
   }, [token])
 
+  const saveBriefingSettings = useCallback(async (patch) => {
+    const next = { ...briefingSettings, ...patch }
+    setBriefingSettings(next)
+    setSaveStatus('saving')
+    try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const res = await fetch(`${API_BASE}/api/settings/briefing`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(next)
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2500)
+    } catch {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }, [briefingSettings, token])
+
   const resetPersona = useCallback(async () => {
     setSaveStatus('saving')
     try {
@@ -739,21 +786,60 @@ export default function SettingsPage({
         </div>
       </header>
 
+      {/* Reload-pending banner for LLM routing flag changes */}
+      {reloadPending && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          padding: '10px 18px', marginBottom: 8,
+          background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--rs-status-warning) 40%, transparent)',
+          borderRadius: 'var(--md-shape-sm)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)' }}>warning</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
+              LLM routing change saved — reload required to take effect.
+            </span>
+          </div>
+          <button className="rs-btn-primary" style={{ fontSize: '0.75rem', padding: '6px 14px' }} onClick={() => window.location.reload()}>
+            RELOAD NOW
+          </button>
+        </div>
+      )}
+
       {/* Save status toast */}
       {saveStatus && (
-        <div 
-          className="rs-pill is-active" 
-          style={{ 
-            position: 'fixed', bottom: 32, right: 32, zIndex: 1000,
-            background: saveStatus === 'error' ? 'var(--md-error)' : 'var(--primary)',
-            color: saveStatus === 'error' ? 'white' : 'black',
-            boxShadow: 'var(--md-elevation-3)'
-          }}
+        <div
+          role="status"
           aria-live="polite"
+          style={{
+            position: 'fixed', bottom: 32, right: 32, zIndex: 1000,
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '10px 18px',
+            borderRadius: 'var(--md-shape-lg)',
+            background: saveStatus === 'error'
+              ? 'var(--md-error-container)'
+              : 'var(--md-primary-container)',
+            color: saveStatus === 'error'
+              ? 'var(--md-on-error-container)'
+              : 'var(--md-on-primary-container)',
+            fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.06em',
+            boxShadow: '0 8px 32px -8px rgba(0,0,0,0.5)',
+            border: '1px solid',
+            borderColor: saveStatus === 'error'
+              ? 'color-mix(in srgb, var(--md-error) 40%, transparent)'
+              : 'color-mix(in srgb, var(--primary) 40%, transparent)',
+          }}
         >
-          {saveStatus === 'saving' && '● SAVING…'}
-          {saveStatus === 'saved'  && '✓ SAVED'}
-          {saveStatus === 'error'  && '✗ ERROR — CHECK CONSOLE'}
+          {saveStatus === 'saving' && (
+            <><span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>sync</span>SAVING…</>
+          )}
+          {saveStatus === 'saved' && (
+            <><span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>check_circle</span>SAVED</>
+          )}
+          {saveStatus === 'error' && (
+            <><span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>error</span>ERROR — CHECK CONSOLE</>
+          )}
         </div>
       )}
 
@@ -839,7 +925,7 @@ export default function SettingsPage({
               { intent: 'Research',     model: 'Gemini',      icon: 'travel_explore', where: 'cloud' },
               { intent: 'General',      model: 'Llama 3B',    icon: 'chat',          where: 'local' },
             ].map(({ intent, model, icon, where }) => (
-              <div key={intent} className="rs-card" style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div key={intent} style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.75 }}>{icon}</span>
                   <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{intent}</span>
@@ -847,7 +933,7 @@ export default function SettingsPage({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span className="rs-card-meta" style={{ fontSize: '0.68rem' }}>{model}</span>
                   <span className="rs-pill" style={{
-                    fontSize: '0.55rem', padding: '1px 6px',
+                    fontSize: '0.65rem', padding: '1px 6px',
                     opacity: 0.7,
                     background: where === 'local' ? 'color-mix(in srgb, var(--primary) 12%, transparent)' :
                                 where === 'NIM'   ? 'color-mix(in srgb, var(--md-sys-color-tertiary) 12%, transparent)' :
@@ -872,7 +958,7 @@ export default function SettingsPage({
               <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Local markdown vault · Obsidian-style</div>
               <div className="rs-card-meta">Voice-to-note · Conversation memory · Editable facts · Backlinks</div>
             </div>
-            <span className="rs-pill" style={{ fontSize: '0.6rem', flexShrink: 0, opacity: 0.7 }}>PHASE 2</span>
+            <span className="rs-pill is-active" style={{ fontSize: '0.6rem', flexShrink: 0 }}>LIVE</span>
           </div>
 
           {/* Vault tree — 3-column, folder icons, monospace paths */}
@@ -882,7 +968,7 @@ export default function SettingsPage({
               { path: 'Household/',      desc: 'Shared with family',  icon: 'home',         color: 'var(--md-sys-color-tertiary)' },
               { path: 'Shared with me/', desc: 'Explicit invites',    icon: 'group',        color: 'var(--md-sys-color-secondary)' },
             ].map(({ path, desc, icon, color }) => (
-              <div key={path} className="rs-card" style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div key={path} style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span className="material-symbols-rounded" style={{ fontSize: '0.95rem', color }}>{icon}</span>
                   <code style={{ fontSize: '0.7rem', fontWeight: 600 }}>{path}</code>
@@ -893,22 +979,27 @@ export default function SettingsPage({
           </div>
 
           {/* Scribe daemon toggle */}
-          <Toggle
-            id="scribe-toggle"
-            label="Enable Scribe Daemon"
-            checked={daemonStatus?.scribe?.running || false}
-            onChange={() => triggerDaemonTask('scribe', daemonStatus?.scribe?.running ? 'stop' : 'start')}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Toggle
+              id="scribe-toggle"
+              label="Enable Scribe Daemon"
+              checked={scribeEnabled}
+              onChange={v => saveScribeEnabled(v)}
+            />
+            <span className="rs-pill" style={{ fontSize: '0.6rem', flexShrink: 0, color: daemonStatus?.scribe?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
+              {daemonStatus?.scribe?.alive ? '● ONLINE' : '○ OFFLINE'}
+            </span>
+          </div>
           <p className="rs-card-meta" style={{ marginTop: -8 }}>
-            Watches the vault, re-indexes notes, suggests backlinks, and generates weekly summaries.
+            Watches the vault, re-indexes notes, extracts facts, and logs conversation summaries to your daily note.
             Path: <code>data/vault/</code>
           </p>
 
-          {/* Phase notice */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'color-mix(in srgb, var(--md-sys-color-tertiary) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--md-sys-color-tertiary) 20%, transparent)' }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-sys-color-tertiary)', flexShrink: 0 }}>construction</span>
+          {/* Status */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'color-mix(in srgb, var(--primary) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)' }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--primary)', flexShrink: 0 }}>check_circle</span>
             <span className="rs-card-meta" style={{ fontSize: '0.72rem' }}>
-              CHRONOS page, editor, and graph view — Phase 2 build. Vault structure and Scribe daemon design are locked in.
+              CHRONOS page, CodeMirror editor, backlinks, search, and Scribe daemon are fully operational. Graph view is Phase 3.
             </span>
           </div>
         </Section>
@@ -946,8 +1037,9 @@ export default function SettingsPage({
         {/* RECOMMENDED STRIP */}
         {recommendedModels.length > 0 && (
           <div style={{ marginBottom: 24 }}>
-            <div className="rs-card-label" style={{ color: 'var(--md-tertiary)', marginBottom: 12 }}>
-              ⚡ RECOMMENDED FOR SPEAK
+            <div className="rs-card-label" style={{ color: 'var(--md-tertiary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>bolt</span>
+              RECOMMENDED FOR SPEAK
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               {recommendedModels.map(m => (
@@ -1031,7 +1123,7 @@ export default function SettingsPage({
                     </span>
                   )}
                   {enabled && (
-                    <span className="rs-card-label" style={{ fontSize: '0.6rem', color: '#4ade80' }}>ENABLED</span>
+                    <span className="rs-card-label" style={{ fontSize: '0.6rem', color: 'var(--rs-status-nominal)' }}>ENABLED</span>
                   )}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
@@ -1061,7 +1153,7 @@ export default function SettingsPage({
           Select the Whisper model size for real-time speech-to-text. Smaller models respond instantly, larger models are more accurate. Runs 100% locally.
         </p>
         <div style={{ marginTop: 8 }}>
-          <label className="settings-label">WHISPER MODEL SIZE</label>
+          <div className="rs-card-label" style={{ marginBottom: 6 }}>WHISPER MODEL SIZE</div>
           <select 
             className="settings-select"
             value={llmSettings?.whisper_model || 'base'}
@@ -1088,14 +1180,14 @@ export default function SettingsPage({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* WARDEN */}
-            <div className="rs-card" style={{ padding: 16, background: 'var(--md-surface-container-low)' }}>
+            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>WARDEN (Vision/Security)</div>
                   <div className="rs-card-meta" style={{ margin: 0 }}>RTSP Camera Monitoring</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                  <span className="rs-card-label" style={{ color: daemonStatus.warden?.alive ? '#4ade80' : 'var(--md-outline)' }}>
+                  <span className="rs-card-label" style={{ color: daemonStatus.warden?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
                     {daemonStatus.warden?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
                   <Toggle
@@ -1109,14 +1201,14 @@ export default function SettingsPage({
             </div>
 
             {/* MECHANIC */}
-            <div className="rs-card" style={{ padding: 16, background: 'var(--md-surface-container-low)' }}>
+            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>MECHANIC (Telemetry)</div>
                   <div className="rs-card-meta" style={{ margin: 0 }}>MAVLink / ArduRover Link</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                  <span className="rs-card-label" style={{ color: daemonStatus.mechanic?.alive ? '#4ade80' : 'var(--md-outline)' }}>
+                  <span className="rs-card-label" style={{ color: daemonStatus.mechanic?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
                     {daemonStatus.mechanic?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
                   <Toggle
@@ -1136,14 +1228,14 @@ export default function SettingsPage({
             </div>
 
             {/* HERALD */}
-            <div className="rs-card" style={{ padding: 16, background: 'var(--md-surface-container-low)' }}>
+            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>HERALD (Casting/Lip-Sync)</div>
                   <div className="rs-card-meta" style={{ margin: 0 }}>Google Home Hub Integration</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                  <span className="rs-card-label" style={{ color: daemonStatus.herald?.alive ? '#4ade80' : 'var(--md-outline)' }}>
+                  <span className="rs-card-label" style={{ color: daemonStatus.herald?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
                     {daemonStatus.herald?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
                   <Toggle
@@ -1162,14 +1254,14 @@ export default function SettingsPage({
             </div>
 
             {/* SIFTER */}
-            <div className="rs-card" style={{ padding: 16, background: 'var(--md-surface-container-low)' }}>
+            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>SIFTER (RAG)</div>
                   <div className="rs-card-meta" style={{ margin: 0 }}>Background Document Indexing</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                  <span className="rs-card-label" style={{ color: daemonStatus.sifter?.alive ? '#4ade80' : 'var(--md-outline)' }}>
+                  <span className="rs-card-label" style={{ color: daemonStatus.sifter?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
                     {daemonStatus.sifter?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
                   <Toggle
@@ -1195,7 +1287,7 @@ export default function SettingsPage({
           </p>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-            <div className="rs-card" style={{ background: 'var(--md-surface-container-low)' }}>
+            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <Toggle
                 id="feat-semantic"
                 label="Semantic Memory"
@@ -1205,7 +1297,7 @@ export default function SettingsPage({
               <p className="rs-card-meta">Use vector search for memory recall</p>
             </div>
 
-            <div className="rs-card" style={{ background: 'var(--md-surface-container-low)' }}>
+            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <Toggle
                 id="feat-vision"
                 label="Vision Analysis"
@@ -1215,7 +1307,7 @@ export default function SettingsPage({
               <p className="rs-card-meta">AI photo analysis for inventory & recipes</p>
             </div>
 
-            <div className="rs-card" style={{ background: 'var(--md-surface-container-low)' }}>
+            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <Toggle
                 id="feat-image"
                 label="Image Generation"
@@ -1228,7 +1320,7 @@ export default function SettingsPage({
               </div>
             </div>
 
-            <div className="rs-card" style={{ background: 'var(--md-surface-container-low)' }}>
+            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <Toggle
                 id="feat-rag"
                 label="RAG Documents"
@@ -1238,7 +1330,7 @@ export default function SettingsPage({
               <p className="rs-card-meta">Answer questions from documents</p>
             </div>
 
-            <div className="rs-card" style={{ background: 'var(--md-surface-container-low)' }}>
+            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <Toggle
                 id="feat-streaming"
                 label="LLM Streaming"
@@ -1248,7 +1340,7 @@ export default function SettingsPage({
               <p className="rs-card-meta">Stream AI responses token by token</p>
             </div>
 
-            <div className="rs-card" style={{ background: 'var(--md-surface-container-low)' }}>
+            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <Toggle
                 id="feat-chatterbox"
                 label="Chatterbox TTS"
@@ -1262,9 +1354,10 @@ export default function SettingsPage({
             </div>
           </div>
           
-          <div style={{ marginTop: 16, padding: '12px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid #ffaa00', borderRadius: 'var(--md-shape-sm)' }}>
-            <span style={{ fontSize: '0.8rem', color: '#ffaa00', fontWeight: 600 }}>
-              ⚠️ Backend restart required for changes to take effect.
+          <div style={{ marginTop: 16, padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)', flexShrink: 0 }}>warning</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
+              Backend restart required for changes to take effect.
             </span>
           </div>
         </Section>
@@ -1275,8 +1368,9 @@ export default function SettingsPage({
       {/* ================================================================ */}
       {showAdmin && personaSettings && (
         <Section title="PERSONALITY">
-          <div style={{ marginBottom: 12, padding: '12px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid #ffaa00', borderRadius: 'var(--md-shape-sm)', color: '#ffaa00', fontSize: '0.8rem' }}>
-            ⚠️ Advanced — Keep "River Song" references intact or she will lose her identity.
+          <div style={{ marginBottom: 12, padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)', flexShrink: 0 }}>warning</span>
+            <span style={{ color: 'var(--rs-status-warning)', fontSize: '0.8rem' }}>Advanced — Keep "River Song" references intact or she will lose her identity.</span>
           </div>
           
           <div style={{ position: 'relative' }}>
@@ -1309,6 +1403,85 @@ export default function SettingsPage({
       )}
 
       {/* ================================================================ */}
+      {/* BRIEFING — admin                                                 */}
+      {/* ================================================================ */}
+      {showAdmin && briefingSettings && (
+        <Section title="BRIEFING">
+          <Toggle
+            id="briefing-startup"
+            label="Enable Startup Briefing"
+            checked={!!briefingSettings.startup_briefing_enabled}
+            onChange={v => saveBriefingSettings({ startup_briefing_enabled: v })}
+          />
+          <p className="rs-card-meta">
+            When enabled, River will greet you with a morning briefing based on upcoming events and daily news when you start a session.
+          </p>
+          <div style={{ height: 16 }} />
+          <Toggle
+            id="briefing-news"
+            label="Enable News Pulse"
+            checked={!!briefingSettings.pulse_news_enabled}
+            onChange={v => saveBriefingSettings({ pulse_news_enabled: v })}
+          />
+          <p className="rs-card-meta">
+            Show the latest global headlines in the dashboard pulse widget.
+          </p>
+          <div style={{ height: 16 }} />
+          <Toggle
+            id="briefing-markets"
+            label="Enable Markets Pulse"
+            checked={!!briefingSettings.pulse_markets_enabled}
+            onChange={v => saveBriefingSettings({ pulse_markets_enabled: v })}
+          />
+          <p className="rs-card-meta">
+            Show the ticker quote in the dashboard pulse widget.
+          </p>
+          <div style={{ height: 16 }} />
+          <Toggle
+            id="briefing-flights"
+            label="Enable Flights Tracker"
+            checked={!!briefingSettings.pulse_flights_enabled}
+            onChange={v => saveBriefingSettings({ pulse_flights_enabled: v })}
+          />
+          <p className="rs-card-meta">
+            Show active aircraft detected overhead in the pulse widget.
+          </p>
+          <div style={{ height: 24 }} />
+          
+          <div className="rs-card-label" style={{ marginBottom: 12 }}>LOCATION (FOR WEATHER & FLIGHTS)</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div>
+              <div className="rs-card-meta" style={{ marginBottom: 8 }}>Latitude</div>
+              <input
+                type="number"
+                step="any"
+                className="rs-input"
+                value={briefingSettings.location_lat ?? ''}
+                onChange={e => setBriefingSettings(prev => ({ ...prev, location_lat: parseFloat(e.target.value) || null }))}
+                onBlur={e => saveBriefingSettings({ location_lat: parseFloat(e.target.value) || null })}
+                placeholder="e.g. 37.7749"
+              />
+            </div>
+            <div>
+              <div className="rs-card-meta" style={{ marginBottom: 8 }}>Longitude</div>
+              <input
+                type="number"
+                step="any"
+                className="rs-input"
+                value={briefingSettings.location_lon ?? ''}
+                onChange={e => setBriefingSettings(prev => ({ ...prev, location_lon: parseFloat(e.target.value) || null }))}
+                onBlur={e => saveBriefingSettings({ location_lon: parseFloat(e.target.value) || null })}
+                placeholder="e.g. -122.4194"
+              />
+            </div>
+          </div>
+          <p className="rs-card-meta" style={{ marginTop: 8 }}>
+            Setting coordinates here will override the .env defaults for Pulse features.
+          </p>
+        </Section>
+      )}
+
+      {/* ================================================================ */}
       {/* CLOUD FALLBACK — user                                            */}
       {/* ================================================================ */}
       {showUser && (
@@ -1329,8 +1502,8 @@ export default function SettingsPage({
             <div className="rs-card-meta">
               <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>Provider</span>
               <select
-                className="rs-pill"
-                style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px' }}
+                className="settings-select"
+                style={{ width: '100%' }}
                 value={llmSettings?.cloud_fallback_provider || ''}
                 onChange={e => saveFallback({ cloud_fallback_provider: e.target.value, cloud_fallback_model: '' })}
               >
@@ -1347,8 +1520,8 @@ export default function SettingsPage({
               <div className="rs-card-meta">
                 <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>Model</span>
                 <select
-                  className="rs-pill"
-                  style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px' }}
+                  className="settings-select"
+                  style={{ width: '100%' }}
                   value={llmSettings?.cloud_fallback_model || ''}
                   onChange={e => saveFallback({ cloud_fallback_model: e.target.value })}
                 >
@@ -1405,8 +1578,9 @@ export default function SettingsPage({
         <p className="rs-card-meta">Enable ambient detection. River will actively listen for your designated phrase.</p>
         
         {wakeWordRestart && (
-          <div style={{ marginTop: 12, padding: '12px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid #ffaa00', borderRadius: 'var(--md-shape-sm)' }}>
-            <span style={{ fontSize: '0.8rem', color: '#ffaa00', fontWeight: 600 }}>
+          <div style={{ marginTop: 12, padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)', flexShrink: 0 }}>warning</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
               System restart required to apply changes.
             </span>
           </div>
@@ -1416,7 +1590,7 @@ export default function SettingsPage({
           <div style={{ display: 'flex', gap: 16, fontSize: '0.75rem' }}>
             <span>Active Phrase: <strong>Hey River</strong></span>
           </div>
-          <span className="rs-card-label" style={{ color: aiFeatures.WAKE_WORD_ENABLED ? '#4ade80' : 'var(--md-outline)' }}>
+          <span className="rs-card-label" style={{ color: aiFeatures.WAKE_WORD_ENABLED ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
             {aiFeatures.WAKE_WORD_ENABLED ? 'ACTIVE' : 'OFF'}
           </span>
         </div>
@@ -1455,8 +1629,8 @@ export default function SettingsPage({
           <div className="rs-card-meta">
             <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>Retention Period</span>
             <select
-              className="rs-pill"
-              style={{ width: '100%', background: 'var(--md-surface-container-low)', padding: '10px 16px' }}
+              className="settings-select"
+              style={{ width: '100%' }}
               value={memSettings.default_ttl}
               onChange={e => saveMemory({ default_ttl: e.target.value })}
             >
@@ -1588,8 +1762,11 @@ function AdminWakeWordSection({ token }) {
   return (
     <Section title="AMBIENT LISTENING">
       {!installed && (
-        <div className="settings-hint" style={{ color: 'var(--md-error)', marginBottom: 16 }}>
-          The local ambient detection engine is currently offline. River cannot hear you until it is restored.
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'color-mix(in srgb, var(--md-error) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)', borderRadius: 8 }}>
+          <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-error)', flexShrink: 0 }}>cloud_off</span>
+          <span className="rs-card-meta" style={{ margin: 0, color: 'var(--md-error)' }}>
+            The local ambient detection engine is currently offline. River cannot hear you until it is restored.
+          </span>
         </div>
       )}
 
@@ -1601,8 +1778,8 @@ function AdminWakeWordSection({ token }) {
       />
 
       <div style={{ marginTop: 20 }}>
-        <label className="settings-label">WAKE PHRASE</label>
-        <select 
+        <div className="rs-card-label" style={{ marginBottom: 6 }}>WAKE PHRASE</div>
+        <select
           className="settings-select"
           value={form.phrase}
           onChange={e => setForm({ ...form, phrase: e.target.value })}
@@ -1612,25 +1789,27 @@ function AdminWakeWordSection({ token }) {
           <option value="hey_jarvis">Hey Jarvis</option>
           <option value="hey_mycroft">Hey Mycroft</option>
         </select>
-        <p className="settings-hint">Select the phrase River will listen for in ambient mode.</p>
+        <p className="rs-card-meta" style={{ marginTop: 6 }}>Select the phrase River will listen for in ambient mode.</p>
       </div>
 
       <div style={{ marginTop: 20 }}>
-        <label className="settings-label">SENSITIVITY: {form.sensitivity}</label>
-        <input 
+        <div className="rs-card-label" style={{ marginBottom: 6 }}>
+          SENSITIVITY: <span style={{ fontVariantNumeric: 'tabular-nums' }}>{form.sensitivity}</span>
+        </div>
+        <input
           type="range" min="0.1" max="0.95" step="0.05"
           value={form.sensitivity}
           onChange={e => setForm({ ...form, sensitivity: Number(e.target.value) })}
           style={{ width: '100%', marginTop: 8 }}
         />
-        <p className="settings-hint">Higher = more sensitive, but more false positives.</p>
+        <p className="rs-card-meta" style={{ marginTop: 6 }}>Higher = more sensitive, but more false positives.</p>
       </div>
 
-      <div className="profile-save-row" style={{ marginTop: 24 }}>
-        <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
-          {saving ? 'SAVING...' : 'SAVE WAKE WORD CONFIG'}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24 }}>
+        <button className="rs-btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'SAVING…' : 'SAVE WAKE WORD CONFIG'}
         </button>
-        {msg && <span className="profile-saved-msg">{msg}</span>}
+        {msg && <span className="rs-card-meta" style={{ margin: 0 }}>{msg}</span>}
       </div>
     </Section>
   )
@@ -1734,7 +1913,7 @@ function VoiceSection({ voiceSettings, token, user, elevenLabsSettings, onSaveEl
             <div className="rs-card-label" style={{ color: 'var(--md-primary)' }}>
               ELEVENLABS
             </div>
-            <span className="rs-card-label" style={{ color: elevenLabsSettings.api_key ? '#4ade80' : 'var(--md-outline)' }}>
+            <span className="rs-card-label" style={{ color: elevenLabsSettings.api_key ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
               {elevenLabsSettings.api_key ? '● KEY LOADED' : '○ NO KEY'}
             </span>
           </div>
@@ -1742,14 +1921,14 @@ function VoiceSection({ voiceSettings, token, user, elevenLabsSettings, onSaveEl
             Set <code>ELEVENLABS_API_KEY</code>, <code>ELEVENLABS_VOICE_ID</code>, and{' '}
             <code>ELEVENLABS_MODEL_ID</code> in <code>.env</code> to enable cloud voices.
             {voiceSettings.provider === 'elevenlabs' && (
-              <span style={{ color: '#4ade80', marginLeft: 8 }}>● ACTIVE</span>
+              <span style={{ color: 'var(--rs-status-nominal)', marginLeft: 8 }}>● ACTIVE</span>
             )}
           </p>
         </div>
       )}
 
       {switchMsg && (
-        <p className="rs-card-meta" style={{ color: switchMsg.startsWith('✓') ? '#4ade80' : 'var(--md-error)' }}>
+        <p className="rs-card-meta" style={{ color: switchMsg.startsWith('✓') ? 'var(--rs-status-nominal)' : 'var(--md-error)' }}>
           {switchMsg}
         </p>
       )}
@@ -1945,14 +2124,14 @@ function AdminFeatureSection({ featureVis, token, onChanged }) {
   }
 
   return (
-    <Section title="ADMIN — FEATURE VISIBILITY">
+    <Section title="FEATURE VISIBILITY">
       <p className="rs-card-meta" style={{ marginBottom: 16 }}>
         Hide features globally. Admin always sees everything.
         {saving && <span style={{ marginLeft: 8, color: 'var(--primary)' }}>SAVING…</span>}
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
         {(featureVis.all_features || []).map(f => (
-          <div key={f.key} className="rs-card" style={{ background: 'var(--md-surface-container-low)', padding: 12 }}>
+          <div key={f.key} style={{ background: 'var(--md-surface-container-low)', padding: 12, border: '1px solid var(--md-outline-variant)', borderRadius: 10 }}>
             <Toggle
               id={`feat-vis-${f.key}`}
               label={f.label}
@@ -1985,11 +2164,12 @@ function FamilyGroupsSection({ data, token, onChanged }) {
   const groups = data.groups || []
   const users  = data.users  || []
 
-  const [newName,    setNewName]    = useState('')
-  const [creating,   setCreating]   = useState(false)
-  const [working,    setWorking]    = useState(false)
-  const [err,        setErr]        = useState('')
-  const [expandedId, setExpandedId] = useState(null)
+  const [newName,      setNewName]      = useState('')
+  const [creating,     setCreating]     = useState(false)
+  const [working,      setWorking]      = useState(false)
+  const [err,          setErr]          = useState('')
+  const [expandedId,   setExpandedId]   = useState(null)
+  const [confirmDelId, setConfirmDelId] = useState(null)
 
   const reload = async () => {
     const r = await fetch('/api/admin/family-groups', {
@@ -2015,12 +2195,12 @@ function FamilyGroupsSection({ data, token, onChanged }) {
   }
 
   const deleteGroup = async (id) => {
-    if (!window.confirm('Delete this family group? Members will lose shared access.')) return
     setWorking(true); setErr('')
     try {
       await fetch(`/api/admin/family-groups/${id}`, {
         method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
       })
+      setConfirmDelId(null)
       await reload()
     } catch (e) { setErr(e.message) }
     finally { setWorking(false) }
@@ -2057,8 +2237,8 @@ function FamilyGroupsSection({ data, token, onChanged }) {
   }
 
   return (
-    <Section title="ADMIN — FAMILY GROUPS">
-      <p className="settings-hint" style={{ marginBottom: 16 }}>
+    <Section title="FAMILY GROUPS">
+      <p className="rs-card-meta" style={{ marginBottom: 16 }}>
         Family groups give multiple profiles shared data access to selected modules
         (culinary, inventory, store, maintenance). All members see and edit the
         same records. For controlling which features children can access, use
@@ -2073,25 +2253,42 @@ function FamilyGroupsSection({ data, token, onChanged }) {
           <p className="settings-hint">No family groups yet.</p>
         )}
         {groups.map(group => (
-          <FamilyGroupCard
-            key={group.id}
-            group={group}
-            users={users}
-            token={token}
-            expanded={expandedId === group.id}
-            onToggleExpand={() => setExpandedId(expandedId === group.id ? null : group.id)}
-            onDelete={() => deleteGroup(group.id)}
-            onToggleModule={(mod) => toggleModule(group, mod)}
-            onRename={(name) => renameGroup(group, name)}
-            onMemberChange={reload}
-            working={working}
-          />
+          <div key={group.id}>
+            <FamilyGroupCard
+              group={group}
+              users={users}
+              token={token}
+              expanded={expandedId === group.id}
+              onToggleExpand={() => setExpandedId(expandedId === group.id ? null : group.id)}
+              onDelete={() => setConfirmDelId(group.id)}
+              onToggleModule={(mod) => toggleModule(group, mod)}
+              onRename={(name) => renameGroup(group, name)}
+              onMemberChange={reload}
+              working={working}
+            />
+            {confirmDelId === group.id && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, padding: '10px 14px',
+                background: 'color-mix(in srgb, var(--md-error) 10%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)',
+                borderRadius: 8, fontSize: '0.8rem',
+              }}>
+                <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-error)', flexShrink: 0 }}>warning</span>
+                <span style={{ flex: 1, color: 'var(--md-on-surface)' }}>Delete <strong>{group.name}</strong>? Members will lose shared access.</span>
+                <button className="rs-pill" style={{ color: 'var(--md-error)', borderColor: 'color-mix(in srgb, var(--md-error) 50%, transparent)', cursor: 'pointer' }}
+                  onClick={() => deleteGroup(group.id)} disabled={working}>
+                  DELETE
+                </button>
+                <button className="rs-pill" style={{ cursor: 'pointer' }} onClick={() => setConfirmDelId(null)}>CANCEL</button>
+              </div>
+            )}
+          </div>
         ))}
       </div>
 
       {/* Create new group */}
       {creating ? (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <input
             className="settings-input"
             placeholder="Group name (e.g. Smith Family)"
@@ -2100,19 +2297,20 @@ function FamilyGroupsSection({ data, token, onChanged }) {
             onKeyDown={e => e.key === 'Enter' && createGroup()}
             autoFocus
           />
-          <button className="btn btn--primary" onClick={createGroup} disabled={working || !newName.trim()}
-            style={{ padding: '6px 16px', fontSize: '0.8rem' }}>
+          <button className="rs-btn-primary" onClick={createGroup} disabled={working || !newName.trim()}
+            style={{ fontSize: '0.8rem', padding: '8px 16px' }}>
             {working ? 'Creating…' : 'Create'}
           </button>
-          <button className="btn btn--ghost" onClick={() => { setCreating(false); setNewName('') }}
-            style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
+          <button className="rs-pill" onClick={() => { setCreating(false); setNewName('') }}
+            style={{ cursor: 'pointer' }}>
             Cancel
           </button>
         </div>
       ) : (
-        <button className="btn btn--secondary" onClick={() => setCreating(true)}
-          style={{ padding: '6px 18px', fontSize: '0.8rem' }}>
-          + New Family Group
+        <button className="rs-pill" onClick={() => setCreating(true)}
+          style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>add</span>
+          New Family Group
         </button>
       )}
     </Section>
@@ -2198,7 +2396,7 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
 
           {/* Rename */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <label style={{ fontSize: '0.78rem', color: 'var(--md-outline)', minWidth: 60 }}>Name</label>
+            <span className="rs-card-label" style={{ minWidth: 60 }}>NAME</span>
             <input className="settings-input" style={{ flex: 1 }} value={editName}
               onChange={e => setEditName(e.target.value)}
               onBlur={() => onRename(editName)}
@@ -2232,7 +2430,7 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
           <div>
             <div style={{ fontSize: '0.78rem', color: 'var(--md-outline)', marginBottom: 8 }}>Members</div>
             {(group.members || []).length === 0 && (
-              <p className="settings-hint" style={{ margin: '0 0 8px' }}>No members yet.</p>
+              <p className="rs-card-meta" style={{ margin: '0 0 8px' }}>No members yet.</p>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
               {(group.members || []).map(m => (
@@ -2265,7 +2463,7 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
               <select className="settings-select" value={addRelation} onChange={e => setAddRelation(e.target.value)}>
                 {RELATIONSHIPS.map(r => <option key={r}>{r}</option>)}
               </select>
-              <button className="btn btn--primary" onClick={addMember} disabled={addWorking || !addUserId}
+              <button className="rs-btn-primary" onClick={addMember} disabled={addWorking || !addUserId}
                 style={{ padding: '6px 14px', fontSize: '0.78rem' }}>
                 {addWorking ? 'Adding…' : 'Add'}
               </button>
@@ -2327,8 +2525,8 @@ function AdminFamilySection({ data, token, onChanged }) {
   }
 
   return (
-    <Section title="ADMIN — PARENTAL CONTROLS">
-      <p className="settings-hint" style={{ marginBottom: 16 }}>
+    <Section title="PARENTAL CONTROLS">
+      <p className="rs-card-meta" style={{ marginBottom: 16 }}>
         Link parent accounts to child accounts to control which features children
         can access. This is separate from Family Groups — parental controls manage
         feature visibility only, not shared data.
@@ -2350,7 +2548,7 @@ function AdminFamilySection({ data, token, onChanged }) {
           ))}
         </select>
         <button
-          className="btn btn--primary"
+          className="rs-btn-primary"
           onClick={addLink}
           disabled={!parentSel || !childSel || working}
           style={{ padding: '6px 16px', fontSize: '0.8rem' }}
@@ -2362,7 +2560,7 @@ function AdminFamilySection({ data, token, onChanged }) {
 
       {/* Existing links */}
       {links.length === 0 && (
-        <p className="settings-hint">No parent-child links yet.</p>
+        <p className="rs-card-meta">No parent-child links yet.</p>
       )}
       {links.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -2444,18 +2642,18 @@ function AdminVisibilitySection({ visibility, token, onChanged }) {
   const llmProviders = [...new Set(allLlms.map(m => m.provider))]
 
   return (
-    <Section title="ADMIN — MODEL VISIBILITY">
-      <p className="settings-hint" style={{ marginBottom: 16 }}>
+    <Section title="MODEL VISIBILITY">
+      <p className="rs-card-meta" style={{ marginBottom: 16 }}>
         Toggle models off to hide them globally for all users. Hidden models cannot
         be selected but their settings are preserved.
         {saving && <span style={{ marginLeft: 8, color: 'var(--md-primary)' }}>Saving…</span>}
       </p>
 
       {/* ── Voices ── */}
-      <h3 className="model-group-title" style={{ marginBottom: 8 }}>
-        <span className="model-group-badge model-group-badge--local">VOICE</span>
+      <div className="rs-card-label" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span className="rs-pill is-active" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>VOICE</span>
         Voice Models
-      </h3>
+      </div>
       {voiceAccents.map(accent => {
         const group = allVoices.filter(v => v.accent === accent)
         return (
@@ -2463,7 +2661,7 @@ function AdminVisibilitySection({ visibility, token, onChanged }) {
             <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
               {accent.toUpperCase()}
             </div>
-            <div className="settings-grid">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {group.map(v => {
                 const hidden = (visibility.hidden_voices || []).includes(v.voice_id)
                 return (
@@ -2492,10 +2690,10 @@ function AdminVisibilitySection({ visibility, token, onChanged }) {
       })}
 
       {/* ── LLM Models ── */}
-      <h3 className="model-group-title" style={{ marginTop: 20, marginBottom: 8 }}>
-        <span className="model-group-badge model-group-badge--cloud">AI</span>
+      <div className="rs-card-label" style={{ marginTop: 20, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px', background: 'var(--md-tertiary)', color: 'var(--md-on-tertiary)' }}>AI</span>
         AI Models
-      </h3>
+      </div>
       {llmProviders.map(provider => {
         const group = allLlms.filter(m => m.provider === provider)
         return (
@@ -2503,7 +2701,7 @@ function AdminVisibilitySection({ visibility, token, onChanged }) {
             <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
               {(PROVIDER_DISPLAY[provider] || provider).toUpperCase()}
             </div>
-            <div className="settings-grid">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {group.map(m => {
                 const hidden = (visibility.hidden_llms || []).includes(m.model_id)
                 return (
@@ -2588,8 +2786,8 @@ function AdminModelFamiliesSection({ token }) {
   if (loading) return null
 
   return (
-    <Section title="ADMIN — MODEL FAMILIES">
-      <p className="settings-hint" style={{ marginBottom: 12 }}>
+    <Section title="MODEL FAMILIES">
+      <p className="rs-card-meta" style={{ marginBottom: 12 }}>
         Toggle which families appear in the Chat picker, give them quirky names, and
         override the model_id each tier maps to. Leave any field blank to use the default.
         Overrides are not validated against the registry — invalid model_ids just show
@@ -2603,8 +2801,7 @@ function AdminModelFamiliesSection({ token }) {
           return (
             <div
               key={family.id}
-              className="rs-card"
-              style={{ padding: 12, opacity: enabled ? 1 : 0.55 }}
+              style={{ padding: 12, opacity: enabled ? 1 : 0.55, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <div>
@@ -2664,11 +2861,11 @@ function AdminModelFamiliesSection({ token }) {
         })}
       </div>
 
-      <div className="profile-save-row" style={{ marginTop: 16 }}>
-        <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
-          {saving ? 'SAVING...' : 'SAVE FAMILY OVERRIDES'}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
+        <button className="rs-btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'SAVING…' : 'SAVE FAMILY OVERRIDES'}
         </button>
-        {msg && <span className="profile-saved-msg">{msg}</span>}
+        {msg && <span className="rs-card-meta" style={{ margin: 0 }}>{msg}</span>}
       </div>
     </Section>
   )
@@ -2776,7 +2973,7 @@ function NotificationsSection({ token }) {
           >
             {working ? 'SENDING…' : 'TEST NOTIFICATION'}
           </button>
-          {testResult && <span className="rs-card-label" style={{ color: '#4ade80' }}>{testResult}</span>}
+          {testResult && <span className="rs-card-label" style={{ color: 'var(--rs-status-nominal)' }}>{testResult}</span>}
         </div>
       )}
     </Section>
@@ -2841,7 +3038,7 @@ function TokenUsageSection({ token }) {
             </div>
             <div>
               <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>EST. COST</div>
-              <div className="rs-card-value" style={{ color: data.estimated_cost_usd > 0 ? 'var(--primary)' : '#4ade80' }}>
+              <div className="rs-card-value" style={{ color: data.estimated_cost_usd > 0 ? 'var(--primary)' : 'var(--rs-status-nominal)' }}>
                 {fmtCostUsd(data.estimated_cost_usd)}
               </div>
             </div>
@@ -2850,7 +3047,7 @@ function TokenUsageSection({ token }) {
           {data.by_model.length === 0 ? (
             <p className="rs-card-meta">No usage recorded yet.</p>
           ) : (
-            <div className="rs-card" style={{ padding: 0, overflow: 'hidden', background: 'var(--md-surface-container-low)' }}>
+            <div style={{ padding: 0, overflow: 'hidden', background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                 <thead>
                   <tr style={{ background: 'var(--md-surface-container-high)' }}>
@@ -2867,7 +3064,7 @@ function TokenUsageSection({ token }) {
                         <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>{row.provider.toUpperCase()}</div>
                       </td>
                       <td style={{ textAlign: 'right', padding: '12px 16px', fontVariantNumeric: 'tabular-nums' }}>{row.calls}</td>
-                      <td style={{ textAlign: 'right', padding: '12px 16px', color: row.estimated_cost_usd > 0 ? 'var(--primary)' : '#4ade80', fontWeight: 600 }}>
+                      <td style={{ textAlign: 'right', padding: '12px 16px', color: row.estimated_cost_usd > 0 ? 'var(--primary)' : 'var(--rs-status-nominal)', fontWeight: 600 }}>
                         {fmtCostUsd(row.estimated_cost_usd)}
                       </td>
                     </tr>
@@ -2893,6 +3090,7 @@ function VoiceIDSection({ token }) {
   const [countdown, setCountdown] = useState(0)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -2965,7 +3163,7 @@ function VoiceIDSection({ token }) {
   }
 
   const deleteEnrollment = async () => {
-    if (!confirm('Delete your voice prints? River Song will no longer recognize your voice.')) return
+    setConfirmDelete(false)
     try {
       await fetch('/api/voice-id/me', {
         method: 'DELETE',
@@ -2984,10 +3182,15 @@ function VoiceIDSection({ token }) {
     <Section title="VOICE ID">
       <div style={{ marginBottom: 16 }}>
         {status.enrolled ? (
-          <div style={{ color: '#4ade80', fontSize: '0.875rem', fontWeight: 600 }}>
-            ✓ ENROLLED — {status.sample_count} SAMPLES
-            <div className="rs-card-meta">
-              Last updated: {new Date(status.last_updated).toLocaleString()}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', color: 'var(--rs-status-nominal)', flexShrink: 0, marginTop: 1 }}>check_circle</span>
+            <div>
+              <div style={{ color: 'var(--rs-status-nominal)', fontSize: '0.875rem', fontWeight: 600 }}>
+                ENROLLED — {status.sample_count} SAMPLES
+              </div>
+              <div className="rs-card-meta">
+                Last updated: {new Date(status.last_updated).toLocaleString()}
+              </div>
             </div>
           </div>
         ) : (
@@ -3008,15 +3211,29 @@ function VoiceIDSection({ token }) {
           {recording ? `RECORDING... ${countdown}S` : 'RECORD SAMPLE'}
         </button>
 
-        {status.sample_count > 0 && !recording && (
-          <button className="rs-pill" onClick={deleteEnrollment} style={{ color: 'var(--md-error)' }}>
+        {status.sample_count > 0 && !recording && !confirmDelete && (
+          <button className="rs-pill" onClick={() => setConfirmDelete(true)} style={{ color: 'var(--md-error)', cursor: 'pointer' }}>
             DELETE ENROLLMENT
           </button>
         )}
       </div>
 
+      {confirmDelete && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginTop: 8,
+          background: 'color-mix(in srgb, var(--md-error) 10%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)',
+          borderRadius: 8, fontSize: '0.8rem',
+        }}>
+          <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-error)', flexShrink: 0 }}>warning</span>
+          <span style={{ flex: 1 }}>Delete your voice prints? River Song will no longer recognize your voice.</span>
+          <button className="rs-pill" style={{ color: 'var(--md-error)', cursor: 'pointer' }} onClick={deleteEnrollment}>DELETE</button>
+          <button className="rs-pill" style={{ cursor: 'pointer' }} onClick={() => setConfirmDelete(false)}>CANCEL</button>
+        </div>
+      )}
+
       {error && <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>{error}</div>}
-      {success && <div className="rs-card-meta" style={{ color: '#4ade80' }}>{success}</div>}
+      {success && <div className="rs-card-meta" style={{ color: 'var(--rs-status-nominal)' }}>{success}</div>}
 
       <p className="rs-card-meta">
         Recommended: at least 3 samples of about 5 seconds each.
