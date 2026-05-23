@@ -10,9 +10,14 @@ const C = {
   sky:     'oklch(71% 0.13 238)',
 }
 
+const CYCLE_INTERVAL = 7000
+const FADE_DURATION  = 320
+
 export default function PulseWidget({ token }) {
-  const [data, setData] = useState(null)
+  const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
+  const [newsIdx, setNewsIdx] = useState(0)
+  const [visible, setVisible] = useState(true)
 
   const fetchData = useCallback(async () => {
     try {
@@ -31,35 +36,57 @@ export default function PulseWidget({ token }) {
     return () => clearInterval(id)
   }, [fetchData])
 
+  const newsItems = data
+    ? Array.isArray(data.news) ? data.news : (data.news ? [data.news] : [])
+    : []
+
+  useEffect(() => {
+    if (newsItems.length <= 1) return
+    const id = setInterval(() => {
+      setVisible(false)
+      setTimeout(() => {
+        setNewsIdx(i => (i + 1) % newsItems.length)
+        setVisible(true)
+      }, FADE_DURATION)
+    }, CYCLE_INTERVAL)
+    return () => clearInterval(id)
+  }, [newsItems.length])
+
   if (!data && loading) return <PulseSkeleton />
   if (!data) return null
 
-  const { news, markets, flights, ts } = data
+  const { markets, flights, ts } = data
+  const currentNews = newsItems[newsIdx] || null
 
   const fmtTs = (epoch) =>
     epoch
       ? new Date(epoch * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : '--:--'
 
-  const marketUp = (markets?.change ?? 0) >= 0
+  const marketUp    = (markets?.change ?? 0) >= 0
   const marketColor = markets?.error ? C.muted : (marketUp ? C.green : C.red)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-      {news && (
+      {currentNews && (
         <PulseRow
           icon="public"
           iconColor="var(--primary)"
           label="NEWS"
           time={fmtTs(ts?.news)}
+          badge={newsItems.length > 1 ? `${newsIdx + 1}/${newsItems.length}` : null}
         >
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            minWidth: 0,
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              minWidth: 0,
+              opacity: visible ? 1 : 0,
+              transition: `opacity ${FADE_DURATION}ms ease`,
+            }}
+          >
             <span style={{
               flex: 1,
               fontSize: '0.815rem',
@@ -71,9 +98,9 @@ export default function PulseWidget({ token }) {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}>
-              {news.headline || 'No headlines.'}
+              {currentNews.headline || 'No headlines.'}
             </span>
-            {news.source && (
+            {currentNews.source && (
               <span style={{
                 flexShrink: 0,
                 fontSize: '0.58rem',
@@ -86,7 +113,7 @@ export default function PulseWidget({ token }) {
                 borderRadius: 4,
                 whiteSpace: 'nowrap',
               }}>
-                {news.source}
+                {currentNews.source}
               </span>
             )}
           </div>
@@ -173,9 +200,7 @@ export default function PulseWidget({ token }) {
               }}>
                 {(flights.flights?.length ?? 0) === 0
                   ? 'clear skies'
-                  : (flights.flights?.length ?? 0) === 1
-                    ? 'aircraft overhead'
-                    : 'aircraft overhead'}
+                  : 'aircraft overhead'}
               </span>
             </div>
           </PulseRow>
@@ -186,7 +211,7 @@ export default function PulseWidget({ token }) {
   )
 }
 
-function PulseRow({ icon, iconColor, label, time, children }) {
+function PulseRow({ icon, iconColor, label, time, badge, children }) {
   return (
     <div style={{ padding: '11px 0' }}>
       <div style={{
@@ -217,6 +242,18 @@ function PulseRow({ icon, iconColor, label, time, children }) {
         }}>
           {label}
         </span>
+        {badge && (
+          <span style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '0.52rem',
+            letterSpacing: '0.04em',
+            color: C.dim,
+            opacity: 0.6,
+            marginRight: 4,
+          }}>
+            {badge}
+          </span>
+        )}
         <span style={{
           fontFamily: 'var(--font-mono)',
           fontSize: '0.58rem',

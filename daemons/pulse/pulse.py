@@ -54,6 +54,7 @@ class PulseDaemon(BaseDaemon):
         config = await store.get_admin_config()
         
         pulse_news_enabled = config.get("pulse_news_enabled", True)
+        pulse_news_categories = config.get("pulse_news_categories", ["world", "us"])
         pulse_markets_enabled = config.get("pulse_markets_enabled", True)
         pulse_flights_enabled = config.get("pulse_flights_enabled", True)
         
@@ -65,7 +66,7 @@ class PulseDaemon(BaseDaemon):
         async def _dummy(): return {}
 
         results = await asyncio.gather(
-            self._fetch_news() if pulse_news_enabled else _dummy(),
+            self._fetch_news(pulse_news_categories) if pulse_news_enabled else _dummy(),
             self._fetch_markets() if pulse_markets_enabled else _dummy(),
             self._fetch_flights(lat, lon) if pulse_flights_enabled else _dummy(),
             return_exceptions=True,
@@ -109,23 +110,27 @@ class PulseDaemon(BaseDaemon):
         except Exception as e:
             logger.warning(f"Pulse prune failed: {e}")
 
-    async def _fetch_news(self) -> dict:
+    async def _fetch_news(self, categories: list | None = None) -> list:
         try:
-            # signature: fetch_articles(sources, limit_per_source, newsapi_key)
             newsapi_key = getattr(self.settings, "newsapi_key", None)
-            articles = await fetch_articles(NEWS_SOURCES, limit_per_source=1, newsapi_key=newsapi_key)
-            if not articles:
-                return {}
-            top = articles[0]
-            return {
-                "headline": top.get("title", ""),
-                "source": top.get("source", ""),
-                "url": top.get("url", ""),
-                "published_at": top.get("published_at", ""),
-            }
+            sources = NEWS_SOURCES
+            if categories:
+                sources = [s for s in NEWS_SOURCES if s.get("category") in categories]
+            if not sources:
+                sources = NEWS_SOURCES
+            articles = await fetch_articles(sources, limit_per_source=3, newsapi_key=newsapi_key)
+            result = []
+            for a in articles[:5]:
+                result.append({
+                    "headline": a.get("title", ""),
+                    "source": a.get("source", ""),
+                    "url": a.get("url", ""),
+                    "published_at": a.get("published_at", ""),
+                })
+            return result
         except Exception as e:
             logger.warning(f"News fetch failed: {e}")
-            return {}
+            return []
 
     async def _fetch_markets(self) -> dict:
         symbol = self.settings.pulse_ticker_symbol

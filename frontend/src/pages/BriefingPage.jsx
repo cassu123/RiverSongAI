@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
-import PulseWidget from '../components/PulseWidget.jsx'
 import RsMarkdown from '../components/RsMarkdown.jsx'
 import { MusicDiscoveryCard } from '../components/widgets/MusicDiscoveryCard.jsx'
+import FeedTabsContainer from '../components/FeedTabsContainer.jsx'
 
 /**
  * BriefingPage — Daily Briefing
@@ -71,8 +71,6 @@ function fmtEventTime(event) {
 export default function BriefingPage({ onNavigate }) {
   const { user, token } = useAuth()
   const EMPTY_HINT = 'No entries yet today. Once you chat with River or save notes, they\'ll show up in your daily [[Daily/' + new Date().toISOString().slice(0, 10) + ']] log.'
-  const [weather, setWeather] = useState(null)
-  const [weatherError, setWeatherError] = useState(null)
   const [calendar, setCalendar] = useState([])
   const [calendarError, setCalendarError] = useState(null)
   const [summary, setSummary] = useState(EMPTY_HINT)
@@ -99,25 +97,6 @@ export default function BriefingPage({ onNavigate }) {
       console.error('Daily note fetch failed', e)
     } finally {
       setLoading(false)
-    }
-  }, [token])
-
-  // Fetch live weather from /api/feeds/weather
-  const fetchWeather = useCallback(async () => {
-    try {
-      const res = await fetch('/api/feeds/weather', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (res.ok) {
-        setWeather(await res.json())
-        setWeatherError(null)
-      } else if (res.status === 404) {
-        setWeatherError('location')  // No location configured
-      } else {
-        setWeatherError('offline')
-      }
-    } catch {
-      setWeatherError('offline')
     }
   }, [token])
 
@@ -191,21 +170,11 @@ export default function BriefingPage({ onNavigate }) {
 
   useEffect(() => {
     fetchData()
-    fetchWeather()
     fetchCalendar()
     fetchMusic()
-  }, [fetchData, fetchWeather, fetchCalendar, fetchMusic])
+  }, [fetchData, fetchCalendar, fetchMusic])
 
   const firstName = user?.display_name?.split(' ')[0] || 'Operator'
-
-  // Weather card render helpers
-  const weatherCurrent = weather?.current
-  const weatherTemp = weatherCurrent?.temperature != null
-    ? `${Math.round(weatherCurrent.temperature)}°`
-    : '—'
-  const weatherCondition = weatherCurrent?.condition || ''
-  const weatherLocation = weather?.location_name || ''
-  const weatherIconName = weatherIcon(weatherCurrent?.weathercode)
 
   return (
     <div className="rs-foyer animate-fade-in">
@@ -240,58 +209,17 @@ export default function BriefingPage({ onNavigate }) {
           </div>
         </div>
 
-        {/* Market & News Pulse */}
-        <div className="rs-card is-tappable is-wide" onClick={() => onNavigate('feeds')}>
-          <div className="rs-card-head">
-            <span className="rs-card-label">MARKET & NEWS PULSE</span>
-            <span className="material-symbols-rounded rs-card-chevron">chevron_right</span>
-          </div>
-          <PulseWidget token={token} />
-        </div>
+        {/* Live Feed Tabs — News / Weather / Sports / Stocks */}
+        <FeedTabsContainer token={token} />
 
         {/* Music Discovery */}
         {musicPrefs?.music_provider === 'youtube_music' && (
-          <MusicDiscoveryCard 
-            tracks={musicTracks} 
-            isLoading={musicLoading} 
-            onPlay={handlePlayMusic} 
+          <MusicDiscoveryCard
+            tracks={musicTracks}
+            isLoading={musicLoading}
+            onPlay={handlePlayMusic}
           />
         )}
-
-        {/* Weather — live from /api/feeds/weather */}
-        <div className="rs-card is-tappable" onClick={() => onNavigate('feeds')}>
-          <div className="rs-card-head">
-            <span className="rs-card-label">WEATHER</span>
-            {weatherLocation && <span className="rs-card-label">{weatherLocation.toUpperCase()}</span>}
-          </div>
-          {weatherError === 'location' ? (
-            <div className="rs-card-meta" style={{ padding: '8px 0' }}>
-              <span className="material-symbols-rounded" style={{ fontSize: '1.2rem', verticalAlign: 'middle', marginRight: 8, opacity: 0.5 }}>location_off</span>
-              Set your location in <button className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px', marginLeft: 4 }} onClick={(e) => { e.stopPropagation(); onNavigate('feeds') }}>FEED SETTINGS</button>
-            </div>
-          ) : weatherError === 'offline' ? (
-            <div className="rs-card-meta" style={{ padding: '8px 0' }}>
-              <span className="material-symbols-rounded" style={{ fontSize: '1.2rem', verticalAlign: 'middle', marginRight: 8, opacity: 0.5 }}>cloud_off</span>
-              Weather sensor offline.
-            </div>
-          ) : !weather ? (
-            <div className="rs-card-meta" style={{ padding: '8px 0', opacity: 0.5 }}>Syncing atmospheric data…</div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-              <span className="material-symbols-rounded" style={{ fontSize: '3rem', color: 'var(--primary)' }}>{weatherIconName}</span>
-              <div>
-                <div style={{ fontSize: '2rem', fontWeight: 600 }}>{weatherTemp}</div>
-                <div className="rs-card-meta">{weatherCondition}{weatherLocation ? ` · ${weatherLocation}` : ''}</div>
-              </div>
-              {weatherCurrent?.feels_like != null && (
-                <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                  <div className="rs-card-label" style={{ fontSize: '0.55rem' }}>FEELS</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{Math.round(weatherCurrent.feels_like)}°</div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
 
         {/* Calendar — live from /api/google/calendar/upcoming */}
         <div className="rs-card">

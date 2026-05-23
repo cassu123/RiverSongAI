@@ -115,16 +115,16 @@ class YouTubeMusicProvider:
     async def get_charts(self, country: str = "US") -> List[Dict[str, Any]]:
         """
         Fetches trending songs from public YouTube Music charts.
-        Returns a sanitized list of track dicts.
+        Falls back to a search for 'trending songs' if charts are unavailable.
         """
         def _do_charts() -> List[Dict[str, Any]]:
+            items = []
             try:
                 ytm = self._get_ytm()
                 charts = ytm.get_charts(country=country)
                 
                 # The structure varies: sometimes it's a dict with 'items' key,
                 # sometimes the section itself is the list of items.
-                items = []
                 for key in ["trending", "videos", "songs"]:
                     section = charts.get(key)
                     if isinstance(section, list):
@@ -134,33 +134,46 @@ class YouTubeMusicProvider:
                         items = section.get("items", [])
                         if items:
                             break
-                
-                sanitized = []
-                for track in items:
-                    # ytmusicapi often uses 'artists' as a list of dicts
-                    artists = track.get("artists", [])
-                    artist_name = "Unknown"
-                    if isinstance(artists, list) and len(artists) > 0:
-                        artist_name = artists[0].get("name", "Unknown")
-                    elif isinstance(artists, str):
-                        artist_name = artists
-
-                    # Thumbnail is often a list of dicts
-                    thumbnails = track.get("thumbnails", [])
-                    thumbnail_url = ""
-                    if isinstance(thumbnails, list) and len(thumbnails) > 0:
-                        thumbnail_url = thumbnails[-1].get("url", "")
-
-                    sanitized.append({
-                        "videoId": track.get("videoId"),
-                        "title": track.get("title", "Unknown"),
-                        "artist": artist_name,
-                        "thumbnail": thumbnail_url,
-                    })
-                return sanitized
             except Exception as e:
-                logger.error("Failed to fetch YouTube Music charts: %s", e)
-                return []
+                logger.warning("Failed to fetch standard YouTube Music charts: %s", e)
+
+            # Fallback: if no individual tracks found in charts, search for trending songs
+            if not any(item.get("videoId") for item in items):
+                try:
+                    ytm = self._get_ytm()
+                    search_results = ytm.search("trending songs", filter="songs", limit=20)
+                    if search_results:
+                        items = search_results
+                except Exception as e:
+                    logger.error("Music discovery fallback search failed: %s", e)
+
+            sanitized = []
+            for track in items:
+                video_id = track.get("videoId")
+                if not video_id:
+                    continue  # Only include playable tracks
+
+                # ytmusicapi often uses 'artists' as a list of dicts
+                artists = track.get("artists", [])
+                artist_name = "Unknown"
+                if isinstance(artists, list) and len(artists) > 0:
+                    artist_name = artists[0].get("name", "Unknown")
+                elif isinstance(artists, str):
+                    artist_name = artists
+
+                # Thumbnail is often a list of dicts
+                thumbnails = track.get("thumbnails", [])
+                thumbnail_url = ""
+                if isinstance(thumbnails, list) and len(thumbnails) > 0:
+                    thumbnail_url = thumbnails[-1].get("url", "")
+
+                sanitized.append({
+                    "videoId": video_id,
+                    "title": track.get("title", "Unknown"),
+                    "artist": artist_name,
+                    "thumbnail": thumbnail_url,
+                })
+            return sanitized
 
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(_executor, _do_charts)

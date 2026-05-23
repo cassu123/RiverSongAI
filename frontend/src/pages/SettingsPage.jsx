@@ -36,6 +36,67 @@ const TTL_LABELS = {
 }
 
 // ---------------------------------------------------------------------------
+// Stocks watchlist editor (needs local state, must be a real component)
+// ---------------------------------------------------------------------------
+function StocksWatchlistSetting({ tickers, onSave }) {
+  const [addSym, setAddSym] = useState('')
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+        {tickers.map(t => (
+          <div
+            key={t}
+            className="rs-pill is-active"
+            style={{ fontSize: '0.65rem', cursor: 'default', display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            {t}
+            <button
+              onClick={() => onSave(tickers.filter(x => x !== t))}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', opacity: 0.6, lineHeight: 1 }}
+            >
+              <span className="material-symbols-rounded" style={{ fontSize: '0.85rem' }}>close</span>
+            </button>
+          </div>
+        ))}
+        {tickers.length === 0 && (
+          <span className="rs-card-meta" style={{ fontSize: '0.72rem' }}>No tickers saved yet.</span>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          type="text"
+          className="rs-input"
+          placeholder="Add ticker (e.g. AAPL)"
+          value={addSym}
+          onChange={e => setAddSym(e.target.value.toUpperCase())}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && addSym.trim() && !tickers.includes(addSym.trim()) && tickers.length < 15) {
+              onSave([...tickers, addSym.trim()])
+              setAddSym('')
+            }
+          }}
+          style={{ flex: 1, fontSize: '0.85rem' }}
+        />
+        <button
+          className="rs-pill"
+          disabled={!addSym.trim() || tickers.includes(addSym.trim()) || tickers.length >= 15}
+          onClick={() => {
+            if (!addSym.trim() || tickers.includes(addSym.trim())) return
+            onSave([...tickers, addSym.trim()])
+            setAddSym('')
+          }}
+        >
+          ADD
+        </button>
+      </div>
+      <p className="rs-card-meta" style={{ marginTop: 8 }}>
+        Up to 15 symbols. Prices refresh every 30 seconds on the Stocks tab.
+      </p>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Section wrapper
 // ---------------------------------------------------------------------------
 function Section({ title, children }) {
@@ -377,6 +438,7 @@ export default function SettingsPage({
   const [intentRouterSettings, setIntentRouterSettings] = useState({ enabled: false, min_hits: 2 })
   const [llmRoutingFlags,      setLlmRoutingFlags]      = useState({ local_enabled: true, cloud_enabled: true, nvidia_enabled: true })
   const [scribeEnabled,        setScribeEnabled]        = useState(false)
+  const [feedPrefs,            setFeedPrefs]            = useState(null)
   const [modelFilter,          setModelFilter]          = useState('ALL')
   const [loading,          setLoading]          = useState(true)
   const [saveStatus,       setSaveStatus]       = useState('')
@@ -389,13 +451,14 @@ export default function SettingsPage({
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
       const query = user?.id ? `?user_id=${user.id}` : ''
       try {
-        const [modData, llmData, memData, voiceData, featData, prefData] = await Promise.all([
+        const [modData, llmData, memData, voiceData, featData, prefData, feedPrefsData] = await Promise.all([
           fetch(`${API_BASE}/api/models`, { headers }).then(r => r.json()),
           fetch(`${API_BASE}/api/settings/llm${query}`, { headers }).then(r => r.json()),
           fetch(`${API_BASE}/api/settings/memory${query}`, { headers }).then(r => r.json()),
           fetch(`${API_BASE}/api/settings/voice`, { headers }).then(r => r.json()).catch(() => null),
           fetch(`${API_BASE}/api/features`, { headers }).then(r => r.json()).catch(() => ({ ai_features: {} })),
           fetch(`${API_BASE}/api/settings`, { headers }).then(r => r.json()).catch(() => ({ music_provider: 'youtube_music' })),
+          fetch(`${API_BASE}/api/feeds/preferences`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
         ])
 
         if (!active) return
@@ -406,6 +469,7 @@ export default function SettingsPage({
         setMemSettings(memData)
         setVoiceSettings(voiceData)
         setUserPrefs(prefData)
+        if (feedPrefsData) setFeedPrefs(feedPrefsData)
         if (featData) setAiFeatures(featData.ai_features || {})
 
         if (user?.role === 'admin') {
@@ -713,6 +777,27 @@ export default function SettingsPage({
       setTimeout(() => setSaveStatus(''), 4000)
     }
   }, [briefingSettings, token])
+
+  const saveFeedPrefs = useCallback(async (patch) => {
+    const next = { ...feedPrefs, ...patch }
+    setFeedPrefs(next)
+    setSaveStatus('saving')
+    try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const res = await fetch(`${API_BASE}/api/feeds/preferences`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(next),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2500)
+    } catch {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }, [feedPrefs, token])
 
   const resetPersona = useCallback(async () => {
     setSaveStatus('saving')
@@ -1448,8 +1533,65 @@ export default function SettingsPage({
             onChange={v => saveBriefingSettings({ pulse_news_enabled: v })}
           />
           <p className="rs-card-meta">
-            Show the latest global headlines in the dashboard pulse widget.
+            Cycles up to 5 recent headlines in the dashboard pulse widget.
           </p>
+
+          {briefingSettings.pulse_news_enabled && (() => {
+            const PULSE_CATS = [
+              { key: 'world',         label: 'World' },
+              { key: 'us',            label: 'US National' },
+              { key: 'local',         label: 'Local · AR' },
+              { key: 'technology',    label: 'Technology' },
+              { key: 'business',      label: 'Business' },
+              { key: 'entertainment', label: 'Entertainment' },
+              { key: 'health',        label: 'Health' },
+              { key: 'science',       label: 'Science' },
+            ]
+            const active = Array.isArray(briefingSettings.pulse_news_categories)
+              ? briefingSettings.pulse_news_categories
+              : ['world', 'us']
+            const toggle = (key) => {
+              const next = active.includes(key)
+                ? active.filter(k => k !== key)
+                : [...active, key]
+              if (next.length > 0) saveBriefingSettings({ pulse_news_categories: next })
+            }
+            return (
+              <div style={{ marginTop: 10 }}>
+                <div className="rs-card-label" style={{ marginBottom: 8, fontSize: '0.6rem' }}>NEWS SOURCE CATEGORIES</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {PULSE_CATS.map(({ key, label }) => {
+                    const on = active.includes(key)
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => toggle(key)}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: 4,
+                          border: `1px solid ${on ? 'var(--primary)' : 'oklch(30% 0.01 265)'}`,
+                          background: on ? 'oklch(20% 0.06 265)' : 'transparent',
+                          color: on ? 'var(--primary)' : 'oklch(50% 0.01 265)',
+                          fontSize: '0.62rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="rs-card-meta" style={{ marginTop: 6 }}>
+                  Active categories feed the cycling ticker. Health and Entertainment excluded by default to avoid clickbait.
+                </p>
+              </div>
+            )
+          })()}
+
           <div style={{ height: 16 }} />
           <Toggle
             id="briefing-markets"
@@ -1502,6 +1644,131 @@ export default function SettingsPage({
           <p className="rs-card-meta" style={{ marginTop: 8 }}>
             Setting coordinates here will override the .env defaults for Pulse features.
           </p>
+        </Section>
+      )}
+
+      {/* ================================================================ */}
+      {/* FEEDS — user                                                     */}
+      {/* ================================================================ */}
+      {showUser && feedPrefs !== null && (
+        <Section title="FEEDS">
+
+          {/* ── Weather ───────────────────────────────────────────────── */}
+          <div className="rs-card-label" style={{ marginBottom: 12 }}>WEATHER</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 }}>
+            <div>
+              <div className="rs-card-meta" style={{ marginBottom: 8 }}>Latitude</div>
+              <input
+                type="number"
+                step="any"
+                className="rs-input"
+                value={feedPrefs.weather_lat ?? ''}
+                onChange={e => setFeedPrefs(p => ({ ...p, weather_lat: parseFloat(e.target.value) || null }))}
+                onBlur={e => saveFeedPrefs({ weather_lat: parseFloat(e.target.value) || null })}
+                placeholder="e.g. 34.7465"
+              />
+            </div>
+            <div>
+              <div className="rs-card-meta" style={{ marginBottom: 8 }}>Longitude</div>
+              <input
+                type="number"
+                step="any"
+                className="rs-input"
+                value={feedPrefs.weather_lon ?? ''}
+                onChange={e => setFeedPrefs(p => ({ ...p, weather_lon: parseFloat(e.target.value) || null }))}
+                onBlur={e => saveFeedPrefs({ weather_lon: parseFloat(e.target.value) || null })}
+                placeholder="e.g. -92.2896"
+              />
+            </div>
+          </div>
+
+          <button
+            className="rs-pill"
+            style={{ marginBottom: 16 }}
+            onClick={() => {
+              if (!navigator.geolocation) return
+              navigator.geolocation.getCurrentPosition(pos => {
+                const lat = parseFloat(pos.coords.latitude.toFixed(6))
+                const lon = parseFloat(pos.coords.longitude.toFixed(6))
+                saveFeedPrefs({ weather_lat: lat, weather_lon: lon })
+              })
+            }}
+          >
+            <span className="material-symbols-rounded">my_location</span>
+            USE MY LOCATION
+          </button>
+
+          <div style={{ marginBottom: 16 }}>
+            <div className="rs-card-label" style={{ marginBottom: 8, fontSize: '0.6rem' }}>TEMPERATURE UNIT</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {['celsius', 'fahrenheit'].map(u => (
+                <button
+                  key={u}
+                  className={`rs-pill ${feedPrefs.weather_unit === u ? 'is-active' : ''}`}
+                  onClick={() => saveFeedPrefs({ weather_unit: u })}
+                >
+                  {u === 'celsius' ? '°C' : '°F'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Toggle
+            id="weather-alerts"
+            label="Severe Weather Alerts"
+            checked={feedPrefs.weather_alerts_enabled !== false}
+            onChange={v => saveFeedPrefs({ weather_alerts_enabled: v })}
+          />
+          <p className="rs-card-meta" style={{ marginBottom: 24 }}>
+            Show NWS alerts in the Weather tab when active warnings are in effect.
+          </p>
+
+          {/* ── Sports ────────────────────────────────────────────────── */}
+          <div className="rs-card-label" style={{ marginBottom: 12 }}>SPORTS</div>
+
+          <div style={{ marginBottom: 8, fontSize: '0.6rem' }} className="rs-card-label">FAVORITE LEAGUES</div>
+          {(() => {
+            const ALL_LEAGUES = [
+              { id: 'nba',    label: 'NBA' },
+              { id: 'nfl',    label: 'NFL' },
+              { id: 'mlb',    label: 'MLB' },
+              { id: 'nhl',    label: 'NHL' },
+              { id: 'mls',    label: 'MLS' },
+              { id: 'wnba',   label: 'WNBA' },
+              { id: 'ncaaf',  label: 'NCAAF' },
+              { id: 'ncaab',  label: 'NCAAB' },
+              { id: 'epl',    label: 'EPL' },
+              { id: 'laliga', label: 'La Liga' },
+            ]
+            const active = feedPrefs.sports_favorite_leagues || ['nba', 'nfl', 'mlb']
+            const toggle = (id) => {
+              const next = active.includes(id) ? active.filter(x => x !== id) : [...active, id]
+              if (next.length > 0) saveFeedPrefs({ sports_favorite_leagues: next })
+            }
+            return (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 24 }}>
+                {ALL_LEAGUES.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    className={`rs-pill ${active.includes(id) ? 'is-active' : ''}`}
+                    onClick={() => toggle(id)}
+                    style={{ fontSize: '0.65rem' }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )
+          })()}
+
+          {/* ── Stocks ────────────────────────────────────────────────── */}
+          <div className="rs-card-label" style={{ marginBottom: 12 }}>STOCKS WATCHLIST</div>
+          <StocksWatchlistSetting
+            tickers={feedPrefs.stock_tickers || []}
+            onSave={next => saveFeedPrefs({ stock_tickers: next })}
+          />
+
         </Section>
       )}
 

@@ -26,7 +26,7 @@ import logging
 import urllib.request
 import urllib.error
 import json
-from typing import Optional, Set, Literal
+from typing import List, Optional, Set, Literal
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
@@ -987,6 +987,7 @@ async def get_briefing_settings(
     return {
         "startup_briefing_enabled": config.get("startup_briefing_enabled", settings.startup_briefing_enabled),
         "pulse_news_enabled": config.get("pulse_news_enabled", True),
+        "pulse_news_categories": config.get("pulse_news_categories", ["world", "us"]),
         "pulse_markets_enabled": config.get("pulse_markets_enabled", True),
         "pulse_flights_enabled": config.get("pulse_flights_enabled", True),
         "location_lat": config.get("location_lat", settings.location_lat),
@@ -996,6 +997,7 @@ async def get_briefing_settings(
 class BriefingSettingsBody(BaseModel):
     startup_briefing_enabled: bool
     pulse_news_enabled: bool = True
+    pulse_news_categories: List[str] = ["world", "us"]
     pulse_markets_enabled: bool = True
     pulse_flights_enabled: bool = True
     location_lat: Optional[float] = None
@@ -1008,11 +1010,12 @@ async def save_briefing_settings(
     authorization: Optional[str] = Header(default=None)
 ):
     user_id = await _require_admin(authorization)
-    
+
     store = request.app.state.memory_manager._store
     config = await store.get_admin_config()
     config["startup_briefing_enabled"] = body.startup_briefing_enabled
     config["pulse_news_enabled"] = body.pulse_news_enabled
+    config["pulse_news_categories"] = body.pulse_news_categories or ["world", "us"]
     config["pulse_markets_enabled"] = body.pulse_markets_enabled
     config["pulse_flights_enabled"] = body.pulse_flights_enabled
     config["location_lat"] = body.location_lat

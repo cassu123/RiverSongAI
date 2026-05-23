@@ -56,7 +56,9 @@ class PrefsUpdate(BaseModel):
     weather_unit: str = "celsius"
     sport_teams: list = []
     sports_news_sources: list = []
+    sports_favorite_leagues: list = ["nba", "nfl", "mlb"]
     stock_tickers: list = []
+    weather_alerts_enabled: bool = True
     refresh_news_min: int = 30
     refresh_weather_min: int = 30
     refresh_sports_min: int = 60
