@@ -112,6 +112,59 @@ class YouTubeMusicProvider:
         )
         return results
 
+    async def get_charts(self, country: str = "US") -> List[Dict[str, Any]]:
+        """
+        Fetches trending songs from public YouTube Music charts.
+        Returns a sanitized list of track dicts.
+        """
+        def _do_charts() -> List[Dict[str, Any]]:
+            try:
+                ytm = self._get_ytm()
+                charts = ytm.get_charts(country=country)
+                
+                # The structure varies: sometimes it's a dict with 'items' key,
+                # sometimes the section itself is the list of items.
+                items = []
+                for key in ["trending", "videos", "songs"]:
+                    section = charts.get(key)
+                    if isinstance(section, list):
+                        items = section
+                        break
+                    elif isinstance(section, dict):
+                        items = section.get("items", [])
+                        if items:
+                            break
+                
+                sanitized = []
+                for track in items:
+                    # ytmusicapi often uses 'artists' as a list of dicts
+                    artists = track.get("artists", [])
+                    artist_name = "Unknown"
+                    if isinstance(artists, list) and len(artists) > 0:
+                        artist_name = artists[0].get("name", "Unknown")
+                    elif isinstance(artists, str):
+                        artist_name = artists
+
+                    # Thumbnail is often a list of dicts
+                    thumbnails = track.get("thumbnails", [])
+                    thumbnail_url = ""
+                    if isinstance(thumbnails, list) and len(thumbnails) > 0:
+                        thumbnail_url = thumbnails[-1].get("url", "")
+
+                    sanitized.append({
+                        "videoId": track.get("videoId"),
+                        "title": track.get("title", "Unknown"),
+                        "artist": artist_name,
+                        "thumbnail": thumbnail_url,
+                    })
+                return sanitized
+            except Exception as e:
+                logger.error("Failed to fetch YouTube Music charts: %s", e)
+                return []
+
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(_executor, _do_charts)
+
     async def play_video_id(self, video_id: str) -> None:
         """
         Extract audio for a YouTube video ID and play it through the speakers.

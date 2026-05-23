@@ -207,3 +207,18 @@ class LLMSettings:
     cloud_fallback_model: Optional[str] = None
     voice_id: str = "river"   # active TTS voice from the voice registry
     whisper_model: str = "base" # active STT Whisper model size
+
+
+# =============================================================================
+# UserPreferences
+# =============================================================================
+
+@dataclass
+class UserPreferences:
+    """
+    Purpose:
+        General per-user preferences that are not specific to the LLM or Memory
+        engines. Currently handles the preferred music provider.
+    """
+    user_id: str
+    music_provider: str = "youtube_music"  # "youtube_music" | "spotify" | "none"

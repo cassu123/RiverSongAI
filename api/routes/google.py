@@ -253,6 +253,24 @@ async def music_search(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+@router.get("/music/home")
+async def get_music_home():
+    """
+    Returns trending tracks for the dashboard widget.
+    Auth: None required for public charts.
+    """
+    from providers.google.youtube_music import YouTubeMusicProvider
+    provider = YouTubeMusicProvider()
+    try:
+        tracks = await provider.get_charts(country="US")
+        if not tracks:
+            return {"success": True, "data": [], "message": "No charts available."}
+        return {"success": True, "data": tracks}
+    except Exception as exc:
+        logger.error("Failed to fetch music charts: %s", exc)
+        raise HTTPException(status_code=502, detail="Unable to fetch music charts.")
+
+
 @router.post("/music/play/{video_id}")
 async def music_play(video_id: str):
     from providers.google.youtube_music import YouTubeMusicProvider

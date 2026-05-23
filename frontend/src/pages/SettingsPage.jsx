@@ -360,6 +360,7 @@ export default function SettingsPage({
   const [enabledProviders, setEnabledProviders] = useState({})
   const [llmSettings,      setLlmSettings]      = useState(null)
   const [memSettings,      setMemSettings]      = useState(null)
+  const [userPrefs,        setUserPrefs]        = useState(null)
   const [voiceSettings,    setVoiceSettings]    = useState(null)
   const [aiFeatures,       setAiFeatures]       = useState({})
   const [elevenLabsSettings, setElevenLabsSettings] = useState(null)
@@ -388,12 +389,13 @@ export default function SettingsPage({
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
       const query = user?.id ? `?user_id=${user.id}` : ''
       try {
-        const [modData, llmData, memData, voiceData, featData] = await Promise.all([
+        const [modData, llmData, memData, voiceData, featData, prefData] = await Promise.all([
           fetch(`${API_BASE}/api/models`, { headers }).then(r => r.json()),
           fetch(`${API_BASE}/api/settings/llm${query}`, { headers }).then(r => r.json()),
           fetch(`${API_BASE}/api/settings/memory${query}`, { headers }).then(r => r.json()),
           fetch(`${API_BASE}/api/settings/voice`, { headers }).then(r => r.json()).catch(() => null),
           fetch(`${API_BASE}/api/features`, { headers }).then(r => r.json()).catch(() => ({ ai_features: {} })),
+          fetch(`${API_BASE}/api/settings`, { headers }).then(r => r.json()).catch(() => ({ music_provider: 'youtube_music' })),
         ])
 
         if (!active) return
@@ -403,6 +405,7 @@ export default function SettingsPage({
         setLlmSettings(llmData)
         setMemSettings(memData)
         setVoiceSettings(voiceData)
+        setUserPrefs(prefData)
         if (featData) setAiFeatures(featData.ai_features || {})
 
         if (user?.role === 'admin') {
@@ -627,6 +630,27 @@ export default function SettingsPage({
       setTimeout(() => setSaveStatus(''), 4000)
     }
   }, [memSettings, user?.id, token])
+
+  const saveUserPrefs = useCallback(async (patch) => {
+    const next = { ...userPrefs, ...patch }
+    setUserPrefs(next)
+    setSaveStatus('saving')
+    try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const res = await fetch(`${API_BASE}/api/settings`, {
+        method:  'POST',
+        headers,
+        body:    JSON.stringify(next),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2500)
+    } catch {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }, [userPrefs, token])
 
   const saveAiFeature = useCallback(async (flagName, enabled) => {
     setSaveStatus('saving')
@@ -1561,6 +1585,32 @@ export default function SettingsPage({
         ) : (
           <div className="rs-card-meta">Loading voices…</div>
         )}
+      </Section>
+      )}
+
+      {/* ================================================================ */}
+      {/* MUSIC & ENTERTAINMENT — user                                    */}
+      {/* ================================================================ */}
+      {showUser && (
+      <Section title="MUSIC & ENTERTAINMENT">
+        <p className="rs-card-meta" style={{ marginTop: -8 }}>
+          Select your preferred discovery and playback service.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="toggle-row" style={{ padding: 0 }}>
+            <span className="toggle-label">Preferred Provider</span>
+            <select
+              className="rs-input"
+              style={{ width: 'auto', minWidth: 180 }}
+              value={userPrefs?.music_provider || 'youtube_music'}
+              onChange={(e) => saveUserPrefs({ music_provider: e.target.value })}
+            >
+              <option value="youtube_music">YouTube Music</option>
+              <option value="spotify" disabled>Spotify (Coming Soon)</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+        </div>
       </Section>
       )}
 

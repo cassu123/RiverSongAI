@@ -3,9 +3,11 @@ from typing import Optional
 from pydantic import BaseModel
 import os
 import json
-from datetime import datetime
-
-from api.routes.auth import _require_admin
+import uuid
+import httpx
+from datetime import datetime, timedelta
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
+from fastapi.responses import RedirectResponse
 from providers.memory.sqlite_store import SQLiteStore
 from cryptography.fernet import Fernet
 
@@ -110,3 +112,110 @@ async def store_integration_tokens(service: str, token_data: IntegrationUpdateRe
     )
     
     return {"message": f"Successfully stored {service} tokens"}
+
+# =============================================================================
+# Google OAuth Integration Flow
+# =============================================================================
+
+def _load_google_client() -> dict:
+    from core.config import get_settings
+    from pathlib import Path
+    settings = get_settings()
+    path = Path(settings.google_client_secrets_path)
+    if not path.exists():
+        raise HTTPException(status_code=500, detail="Google client secrets not configured.")
+    data = json.loads(path.read_text())
+    return data.get("web") or data.get("installed") or {}
+
+@router.get("/google/authorize")
+async def google_authorize(request: Request, authorization: Optional[str] = Header(default=None)):
+    from providers.google.auth import DEFAULT_SCOPES
+    # Get current user ID
+    token = request.cookies.get("rs_token") or (authorization.removeprefix("Bearer ") if authorization else None)
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    # Simple decode for sub
+    import jwt
+    from core.config import get_settings
+    settings = get_settings()
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        user_id = payload.get("sub") or payload.get("id")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    client = _load_google_client()
+    client_id = client.get("client_id", "")
+    auth_uri = client.get("auth_uri", "https://accounts.google.com/o/oauth2/auth")
+    
+    # We require offline access and consent prompt for refresh token
+    scope = " ".join(DEFAULT_SCOPES)
+    redirect_uri = f"{request.url.scheme}://{request.url.netloc}/api/integrations/google/callback"
+    
+    # Create an isolated state token combining user_id and a random nonce
+    state_nonce = str(uuid.uuid4())
+    state = f"{user_id}::{state_nonce}"
+    
+    # Store state in DB (pulse_snapshots could work as a temp kv store, but for now we just pass user_id)
+    # A true robust implementation would store state_nonce in a session table
+    
+    import urllib.parse
+    params = urllib.parse.urlencode({
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": scope,
+        "access_type": "offline",
+        "prompt": "consent",
+        "state": state
+    })
+    
+    return RedirectResponse(f"{auth_uri}?{params}")
+
+
+@router.get("/google/callback")
+async def google_callback(request: Request, code: str, state: str, error: Optional[str] = None):
+    if error:
+        return RedirectResponse("/profile?error=google_auth_failed")
+    
+    try:
+        user_id, state_nonce = state.split("::")
+    except ValueError:
+        return RedirectResponse("/profile?error=invalid_state")
+        
+    client = _load_google_client()
+    store = _get_store(request)
+    redirect_uri = f"{request.url.scheme}://{request.url.netloc}/api/integrations/google/callback"
+
+    token_uri = client.get("token_uri", "https://oauth2.googleapis.com/token")
+    async with httpx.AsyncClient() as http:
+        token_resp = await http.post(token_uri, data={
+            "code": code,
+            "client_id": client["client_id"],
+            "client_secret": client["client_secret"],
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+        })
+        
+    if token_resp.status_code != 200:
+        return RedirectResponse("/profile?error=token_exchange_failed")
+        
+    tokens = token_resp.json()
+    access_token = encrypt_token(tokens.get("access_token"))
+    refresh_token = encrypt_token(tokens.get("refresh_token")) if tokens.get("refresh_token") else None
+    
+    expires_in = tokens.get("expires_in", 3600)
+    expires_at = (datetime.utcnow() + timedelta(seconds=expires_in)).isoformat()
+    
+    await store.upsert_user_integration(
+        user_id=user_id,
+        service="google",
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_expires_at=expires_at,
+        metadata={}
+    )
+    
+    return RedirectResponse("/profile?connected=google")
+

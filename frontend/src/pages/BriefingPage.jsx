@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import PulseWidget from '../components/PulseWidget.jsx'
 import RsMarkdown from '../components/RsMarkdown.jsx'
+import { MusicDiscoveryCard } from '../components/widgets/MusicDiscoveryCard.jsx'
 
 /**
  * BriefingPage — Daily Briefing
@@ -78,6 +79,10 @@ export default function BriefingPage({ onNavigate }) {
   const [dailyPath, setDailyPath] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  const [musicPrefs, setMusicPrefs] = useState({ music_provider: 'youtube_music' })
+  const [musicTracks, setMusicTracks] = useState([])
+  const [musicLoading, setMusicLoading] = useState(false)
+
   // Fetch daily note
   const fetchData = useCallback(async () => {
     try {
@@ -143,11 +148,53 @@ export default function BriefingPage({ onNavigate }) {
     }
   }, [token])
 
+  // Fetch music discovery
+  const fetchMusic = useCallback(async () => {
+    try {
+      const prefRes = await fetch('/api/settings', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (prefRes.ok) {
+        const prefData = await prefRes.json()
+        setMusicPrefs(prefData)
+
+        if (prefData.music_provider === 'youtube_music') {
+          setMusicLoading(true)
+          const res = await fetch('/api/google/music/home', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (res.ok) {
+            const data = await res.json()
+            if (data.success) {
+              setMusicTracks(data.data || [])
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Music fetch failed', e)
+    } finally {
+      setMusicLoading(false)
+    }
+  }, [token])
+
+  const handlePlayMusic = async (videoId) => {
+    try {
+      await fetch(`/api/google/music/play/${videoId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    } catch (e) {
+      console.error('Playback failed', e)
+    }
+  }
+
   useEffect(() => {
     fetchData()
     fetchWeather()
     fetchCalendar()
-  }, [fetchData, fetchWeather, fetchCalendar])
+    fetchMusic()
+  }, [fetchData, fetchWeather, fetchCalendar, fetchMusic])
 
   const firstName = user?.display_name?.split(' ')[0] || 'Operator'
 
@@ -201,6 +248,15 @@ export default function BriefingPage({ onNavigate }) {
           </div>
           <PulseWidget token={token} />
         </div>
+
+        {/* Music Discovery */}
+        {musicPrefs?.music_provider === 'youtube_music' && (
+          <MusicDiscoveryCard 
+            tracks={musicTracks} 
+            isLoading={musicLoading} 
+            onPlay={handlePlayMusic} 
+          />
+        )}
 
         {/* Weather — live from /api/feeds/weather */}
         <div className="rs-card is-tappable" onClick={() => onNavigate('feeds')}>

@@ -52,6 +52,7 @@ from providers.memory.models import (
     MemorySettings,
     Preference,
     TTLOption,
+    UserPreferences,
 )
 from providers.memory.ttl_engine import calculate_expires_at
 
@@ -350,6 +351,12 @@ CREATE TABLE IF NOT EXISTS family_memberships (
 );
 
 CREATE INDEX IF NOT EXISTS idx_fam_memberships_group ON family_memberships(family_group_id);
+
+CREATE TABLE IF NOT EXISTS user_preferences (
+    user_id        TEXT PRIMARY KEY,
+    music_provider TEXT NOT NULL DEFAULT 'youtube_music',
+    updated_at     TEXT NOT NULL DEFAULT ''
+);
 """
 
 
@@ -444,6 +451,7 @@ class SQLiteStore:
             "CREATE TABLE IF NOT EXISTS pulse_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT NOT NULL, data_json TEXT NOT NULL, ts REAL NOT NULL)",
             "CREATE TABLE IF NOT EXISTS voice_id_events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, identified_user_id TEXT, score REAL, runner_up_user_id TEXT, runner_up_score REAL, audio_duration_ms INTEGER, session_kind TEXT NOT NULL)",
             "CREATE TABLE IF NOT EXISTS user_integrations (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, service TEXT NOT NULL, access_token TEXT, refresh_token TEXT, token_expires_at TEXT, metadata TEXT NOT NULL DEFAULT '{}', is_active INTEGER NOT NULL DEFAULT 1, connected_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(user_id, service), FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)",
+            "CREATE TABLE IF NOT EXISTS user_preferences (user_id TEXT PRIMARY KEY, music_provider TEXT NOT NULL DEFAULT 'youtube_music', updated_at TEXT NOT NULL DEFAULT '')",
         ]:
             try:
                 conn.execute(migration)
@@ -983,17 +991,56 @@ class SQLiteStore:
                 whisper_model           = excluded.whisper_model
             """,
             {
-                "user_id":                 settings.user_id,
-                "provider":                settings.provider,
-                "model":                   settings.model,
-                "cloud_fallback_enabled":  int(settings.cloud_fallback_enabled),
+                "user_id": settings.user_id,
+                "provider": settings.provider,
+                "model": settings.model,
+                "cloud_fallback_enabled": int(settings.cloud_fallback_enabled),
                 "cloud_fallback_provider": settings.cloud_fallback_provider,
-                "cloud_fallback_model":    settings.cloud_fallback_model,
-                "voice_id":                settings.voice_id,
-                "whisper_model":           settings.whisper_model,
+                "cloud_fallback_model": settings.cloud_fallback_model,
+                "voice_id": settings.voice_id,
+                "whisper_model": settings.whisper_model,
             },
         )
         conn.commit()
+    # -------------------------------------------------------------------------
+    # User Preferences
+    # -------------------------------------------------------------------------
+
+    async def get_user_preferences(self, user_id: str) -> UserPreferences:
+        """Fetch general user preferences, or return defaults."""
+        return await self._run(self._sync_get_user_preferences, user_id)
+
+    def _sync_get_user_preferences(self, user_id: str) -> UserPreferences:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT * FROM user_preferences WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        if row is None:
+            return UserPreferences(user_id=user_id)
+        return UserPreferences(
+            user_id=row["user_id"],
+            music_provider=row["music_provider"],
+        )
+
+    async def save_user_preferences(self, prefs: UserPreferences) -> None:
+        """Persist general user preferences."""
+        await self._run(self._sync_save_user_preferences, prefs)
+
+    def _sync_save_user_preferences(self, prefs: UserPreferences) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            """
+            INSERT INTO user_preferences (user_id, music_provider, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                music_provider = excluded.music_provider,
+                updated_at     = excluded.updated_at
+            """,
+            (prefs.user_id, prefs.music_provider, _now_str()),
+        )
+        conn.commit()
+
 
     # -------------------------------------------------------------------------
     # JWT Revocation

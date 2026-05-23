@@ -54,7 +54,7 @@ const SERVICES = [
     key: 'google', 
     name: 'Google Workspace', 
     icon: 'account_circle',
-    authorizeUrl: '/api/auth/google/authorize'
+    authorizeUrl: '/api/integrations/google/authorize'
   },
   { 
     key: 'amazon_sp_api', 

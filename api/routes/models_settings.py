@@ -26,7 +26,7 @@ import logging
 import urllib.request
 import urllib.error
 import json
-from typing import Optional, Set
+from typing import Optional, Set, Literal
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
@@ -36,7 +36,7 @@ from core.auth import decode_token
 from core.errors import api_error, bad_request, forbidden, not_found, unauthorized
 from core.errors import api_error, bad_request, forbidden, not_found, unauthorized
 from providers.llm.registry import LLMRegistry, ModelEntry
-from providers.memory.models import LLMSettings, MemorySettings, TTLOption
+from providers.memory.models import LLMSettings, MemorySettings, TTLOption, UserPreferences
 
 
 logger = logging.getLogger(__name__)
@@ -196,6 +196,44 @@ async def list_models(
         "ollama_reachable":  bool(installed) or True,
         "family_overrides":  family_overrides,
     }
+
+
+# =============================================================================
+# User Preferences (General)
+# =============================================================================
+
+class UserPreferencesSchema(BaseModel):
+    music_provider: Literal["youtube_music", "spotify", "none"] = "youtube_music"
+
+
+@router.get("/settings", response_model=UserPreferencesSchema)
+async def get_user_preferences_route(request: Request, authorization: Optional[str] = Header(default=None)):
+    """Return the general user preferences (music provider, etc.)."""
+    user_id = await _require_user(authorization)
+    store = request.app.state.memory_manager._store
+    prefs = await store.get_user_preferences(user_id)
+    return UserPreferencesSchema(music_provider=prefs.music_provider)
+
+
+@router.post("/settings")
+async def save_user_preferences_route(
+    request: Request,
+    body: UserPreferencesSchema,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Save the general user preferences."""
+    user_id = await _require_user(authorization)
+    store = request.app.state.memory_manager._store
+
+    from providers.memory.models import UserPreferences as UserPrefsModel
+    prefs = UserPrefsModel(user_id=user_id, music_provider=body.music_provider)
+
+    try:
+        await store.save_user_preferences(prefs)
+        return {"success": True}
+    except Exception as exc:
+        logger.error("Failed to save user preferences: %s", exc)
+        raise HTTPException(status_code=500, detail="Failed to save preferences.")
 
 
 # =============================================================================
