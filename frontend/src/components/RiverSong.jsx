@@ -1,10 +1,7 @@
 import React, { useRef, useMemo, useEffect, useState } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-// NOTE: @react-three/postprocessing@3 requires @react-three/fiber@>=9; we are on
-// fiber@8, so EffectComposer/Bloom crash on init ("cannot read .length of undefined").
-// Bloom is cosmetic — orb renders fine without it. To restore: downgrade
-// @react-three/postprocessing to ^2.16.0 and re-add the imports/JSX below.
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 
 // ─ Constants pulled verbatim from prototypes/presence-orb.html ─────────────
 const PALETTES = {
@@ -63,12 +60,35 @@ const STATE_MAP = {
 // ─ Shaders — copy verbatim from prototype ──────────────────────────────────
 const VORTEX_VERT = `
   varying vec3 vNormal; varying vec3 vWorldPos; varying vec2 vUv;
-  uniform float uTime, uPulse;
+  uniform float uTime, uPulse, uAudio, uMorph, uError;
+
+  float hash(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,45.164))) * 43758.5453); }
+  float noise(vec3 p){
+    vec3 i=floor(p); vec3 f=fract(p); f=f*f*(3.0-2.0*f);
+    return mix(
+      mix(mix(hash(i),                hash(i+vec3(1,0,0)), f.x),
+          mix(hash(i+vec3(0,1,0)),    hash(i+vec3(1,1,0)), f.x), f.y),
+      mix(mix(hash(i+vec3(0,0,1)),    hash(i+vec3(1,0,1)), f.x),
+          mix(hash(i+vec3(0,1,1)),    hash(i+vec3(1,1,1)), f.x), f.y),
+      f.z);
+  }
+
   void main(){
     vNormal = normalize(normalMatrix * normal);
     vec3 p = position;
     float breath = sin(uTime * 0.8 + position.y * 2.0) * 0.012 + uPulse * 0.04;
-    p += normal * breath;
+    
+    // Audio FFT simulation
+    float audioDeform = sin(position.x * 12.0 + uTime * 8.0) * sin(position.z * 12.0 + uTime * 6.0) * (uAudio * 0.15);
+    
+    // Morphing / Shattering (Thinking)
+    float shatter = noise(position * 6.0 + vec3(uTime)) * uMorph * 0.25;
+    
+    // Jagged error
+    float jagged = noise(position * 15.0 - vec3(uTime * 2.0)) * uError * 0.15;
+    
+    p += normal * (breath + audioDeform + shatter + jagged);
+    
     vec4 wp = modelMatrix * vec4(p, 1.0);
     vWorldPos = wp.xyz; vUv = uv;
     gl_Position = projectionMatrix * viewMatrix * wp;
@@ -234,9 +254,18 @@ function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
   const silhouetteRef = useRef()
   const dotsRef = useRef()
   const trackRef = useRef()
+  const lightRef = useRef()
+
+  const { mouse } = useThree()
 
   const { home, cur, count } = useSilhouettePositions()
   const audioSim = useRef(0)
+  const audioVel = useRef(0)
+  
+  const morphSim = useRef(0)
+  const morphVel = useRef(0)
+  const errorSim = useRef(0)
+  const errorVel = useRef(0)
   
   const orbState = STATE_MAP[state] || 'idle'
   const palData = PALETTES[palette]
@@ -256,6 +285,8 @@ function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
       uCamPos:    { value: new THREE.Vector3(0, 0, 6) },
       uSpeed:     { value: 1.0 },
       uStyleSeed: { value: 1.0 },
+      uMorph:     { value: 0 },
+      uError:     { value: 0 },
     },
   }), [])
 
@@ -295,7 +326,26 @@ function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
     // If real audio is coming in, use it as a target floor/ceiling
     if (driver > 0) target = Math.max(target, driver * 0.8);
     
-    audioSim.current += (target - audioSim.current) * 0.22;
+    // Spring physics for audio
+    const stiffness = 0.15;
+    const damping = 0.75;
+    const accel = (target - audioSim.current) * stiffness;
+    audioVel.current = (audioVel.current + accel) * damping;
+    audioSim.current += audioVel.current;
+    
+    // Spring physics for morph (Thinking)
+    const targetMorph = currentOrbState === 'thinking' ? 1.0 : 0.0;
+    const mAccel = (targetMorph - morphSim.current) * 0.1;
+    morphVel.current = (morphVel.current + mAccel) * 0.8;
+    morphSim.current += morphVel.current;
+    vortexMat.uniforms.uMorph.value = morphSim.current;
+    
+    // Spring physics for error (Error)
+    const targetError = currentOrbState === 'error' ? 1.0 : 0.0;
+    const eAccel = (targetError - errorSim.current) * 0.15;
+    errorVel.current = (errorVel.current + eAccel) * 0.7;
+    errorSim.current += errorVel.current;
+    vortexMat.uniforms.uError.value = errorSim.current;
 
     // Apply Palette Lerps
     _tmpWarm.setHex(pal.warm);
@@ -382,15 +432,32 @@ function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
     }
 
     if (groupRef.current) {
+      // Spinning
       groupRef.current.rotation.y += 0.0008 * tint.speed;
+      
+      // Mouse magnetism
+      groupRef.current.rotation.x += (mouse.y * 0.4 - groupRef.current.rotation.x) * 0.08;
+      groupRef.current.rotation.y += (mouse.x * 0.4 - groupRef.current.rotation.y) * 0.08;
+    }
+
+    if (lightRef.current) {
+      lightRef.current.color.copy(_tmpWarm);
+      lightRef.current.intensity = 2.5 + audioSim.current * 3.0 + (currentOrbState === 'speaking' ? 1.5 : 0);
     }
   })
 
   return (
-    <group ref={groupRef}>
-      <mesh material={vortexMat}>
-        <icosahedronGeometry args={[1.45, 32]} />
+    <>
+      <pointLight ref={lightRef} position={[0, 0, 0]} intensity={2.5} distance={10} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.5, 0]}>
+        <planeGeometry args={[20, 20]} />
+        <meshStandardMaterial color={0x020202} roughness={0.15} metalness={0.9} transparent opacity={0.6} />
       </mesh>
+      
+      <group ref={groupRef}>
+        <mesh material={vortexMat}>
+          <icosahedronGeometry args={[1.45, 32]} />
+        </mesh>
       <mesh>
         <icosahedronGeometry args={[0.95, 2]} />
         <meshBasicMaterial color={0x1a0e06} transparent opacity={0.55} />
@@ -445,6 +512,7 @@ function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
         <meshBasicMaterial color={0xd4a040} transparent opacity={0.15} />
       </mesh>
     </group>
+    </>
   )
 }
 
@@ -469,6 +537,14 @@ export default function RiverSong({ state, audioLevel = 0, lipSyncOpen = 0, comp
         onCreated={({ gl }) => { gl.outputColorSpace = THREE.SRGBColorSpace }}
       >
         <OrbCore state={state} audioLevel={audioLevel} lipSyncOpen={lipSyncOpen} palette={palette} />
+        <EffectComposer disableNormalPass>
+          <Bloom
+            luminanceThreshold={0.2}
+            luminanceSmoothing={0.9}
+            intensity={1.5}
+            mipmapBlur
+          />
+        </EffectComposer>
       </Canvas>
     </div>
   )
