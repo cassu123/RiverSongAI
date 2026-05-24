@@ -27,8 +27,11 @@ She handles conversation, memory, home automation, routines, inventory, feeds, a
 | Home Assistant integration | ✅ Live |
 | Cloudflare Tunnel (no port forwarding) | ✅ Live |
 | Auto-deploy from GitHub (nightly 3am) | ✅ Live |
-| Google services | 🔜 Phase 2 |
-| Analytics | 🔜 Phase 2 |
+| Google services (Calendar, Gmail, Maps, Tasks, YouTube Music, Books) | ✅ Shipped |
+| Analytics (TikTok, Instagram, Amazon, Etsy, Facebook + AI summaries) | ✅ Shipped |
+| Voice ID (per-speaker biometric recognition) | ✅ Shipped |
+| Barcode scanner (camera + `@zxing`) | ✅ Shipped |
+| Local AI stack (vision, RAG, image gen, voice cloning, n8n) | ✅ Shipped |
 | Android app | 🔜 Phase 4 |
 
 ---
@@ -67,7 +70,9 @@ Browser (mic) → base64 WAV over WebSocket
 
 ```bash
 # 1. Clone
-git clone git@github.com:cassu123/RiverSongAI.git
+# NOTE: on this machine, default `git@github.com:` resolves to a deploy
+# key scoped to the Android repo. The main repo uses the SSH alias below.
+git clone git@github-riversongai:cassu123/RiverSongAI.git
 cd RiverSongAI
 
 # 2. Copy and fill in .env
@@ -213,7 +218,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 
 ### Exposed tools
 
-12 tools. Excluded for safety: `control_device`, `create_commerce_sale`, `trigger_n8n`. See `mcp_server.py::EXPOSED_TOOL_NAMES` for the current list.
+14 tools. Excluded for safety: `control_device`, `create_commerce_sale`, `trigger_n8n`. See `mcp_server.py::EXPOSED_TOOL_NAMES` for the current list, or `docs/MCP_SERVER.md` for the full tool catalog.
 
 ---
 

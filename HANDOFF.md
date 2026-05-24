@@ -14,20 +14,18 @@ River Song AI is **live in production** at `https://riversongai.com`.
 
 ---
 
-## In Flight (2026-05-16) — read this first
+## Recently Shipped — read this first
 
-Two parallel tracks are open. Do not start new work until you've read both.
+Two tracks that were in flight in May are now landed. Brief recap so you don't go hunting for a plan file that no longer exists.
 
-### Track A — Phase 2 build (Voice ID + camera barcode)
+### Track A — Phase 2 build (Voice ID + camera barcode) — ✅ shipped
 
-Plan file: `RIVER_SONG_BUILD_PLAN_2.md`. Sections **A and B only** are in scope for now; C (UPC bulk) and D (Walmart API) are gated until the user green-lights them.
+Plan completed — Voice ID and Barcode Scanner shipped. Sections A and B of the original build plan landed; Section C (UPC bulk) and D (Walmart API) were never green-lit and remain out of scope.
 
-- Brief was handed to **Gemini** to do the heavy lifting. Gemini's working tree shows:
-  - New: `api/routes/voice_id.py`, `providers/voice_id/`, `frontend/src/components/BarcodeScanner.{jsx,css}`
-  - Modified: `api/routes/__init__.py`, `core/conversation_loop.py`, `main.py`, `requirements.txt`, `frontend/package.json`, `frontend/src/pages/CulinaryPage.jsx`, `frontend/src/pages/InventoryPage.jsx`, `frontend/src/pages/SettingsPage.jsx`
-  - `voice_id_events` table added to `sqlite_store.py`
-- **Not yet committed.** Before committing, walk the §A.10 + §B.6 acceptance checks in the build plan.
-- Resemblyzer is the speaker-ID library; `@zxing/browser` + `@zxing/library` for barcode. User is on Python 3.14 — pip resolution may need attention.
+- Voice ID: `api/routes/voice_id.py`, `providers/voice_id/`, `voice_id_events` table in `sqlite_store.py`. Resemblyzer is the speaker-ID library.
+- Barcode scanner: `frontend/src/components/BarcodeScanner.{jsx,css}` (uses `@zxing/browser` + `@zxing/library`).
+- Settings exposed via the standard Settings UI; per-user feature flag `voice_id_enabled` in `config/settings.py`.
+- See `docs/VOICE_ID.md` for the full subsystem documentation.
 
 ### Track B — UI three-axis system (built, but chrome rework still open)
 
@@ -49,7 +47,9 @@ The presence theming was refactored from a single legacy theme picker into three
 
 **Backend on `:8000` likely needs a restart** to pick up the new validators + columns. Frontend HMR has the rest live.
 
-**Still open — the chrome rework.** User feedback: the three-axis system changed colors/materials/fonts/density but the *chrome itself* (sidebar + main + card grid) is still a SaaS dashboard. They want a layout that doesn't look like a website — Kimi-clean, futuristic without cluttered fake-JARVIS charts/graphs, with the chrome physically *rearranging per environment* (nav position, presence orb position, page frame shape) so each room embodies its universe. Sidebar should die. **This conversation has moved to the Claude/Gemini chat app** for faster visual iteration with screenshots and references. See the prompt at `RIVER_SONG_UI_BRAINSTORM.md` (top-level).
+**Still open — the chrome rework.** User feedback: the three-axis system changed colors/materials/fonts/density but the *chrome itself* (sidebar + main + card grid) is still a SaaS dashboard. They want a layout that doesn't look like a website — Kimi-clean, futuristic without cluttered fake-JARVIS charts/graphs, with the chrome physically *rearranging per environment* (nav position, presence orb position, page frame shape) so each room embodies its universe. Sidebar should die.
+
+The brainstorm conversation moved to external chat for faster visual iteration with screenshots; the original local brainstorm doc is no longer in the repo. Current work lives in the `/preview` route sandbox (see Claude memory `project_chrome_preview.md`). The first UI rework pass was completed per the external Gemini plan referenced below — the next session should compare the live `/preview` route against the visual quality bar (Claude memory `feedback_visual_quality_bar.md`) and decide what to land next.
 
 ---
 
@@ -107,15 +107,15 @@ The presence theming was refactored from a single legacy theme picker into three
 
 ---
 
-## Audit Remediation In Flight (2026-05 cycle)
+## Audit Remediation (2026-05 cycle) — ✅ closed
 
-Full architecture/trash/security audit produced three reports in repo root: `RIVER_SONG_AUDIT.md`, `RIVER_SONG_TRASH.md`, `RIVER_SONG_SECURITY.md`. Gemini executes; Claude verifies each round against actual code before accepting "done."
+Full architecture/trash/security audit. Gemini executed; Claude verified each round against actual code. The three working reports (`RIVER_SONG_AUDIT.md`, `RIVER_SONG_TRASH.md`, `RIVER_SONG_SECURITY.md`) were used during the cycle and archived externally — they are not in the repo and should not be expected here.
 
 - **Round 1 (32 fixes)** — ✅ committed `a81933a`, pushed to `origin/main`.
 - **Round 2 (9 gap-closure tasks)** — ✅ same commit.
-- **Round 3 (security sweep, 10 tasks)** — prompt staged at `~/.claude/plans/i-mchronos-chronological-heuristic-recor-majestic-pizza.md`. Scope: JWT revocation, daemon-secret boot validator, WebSocket ticket auth, LLM error scrub, auth gaps on `/api/models` + n8n + integrations, `.gitignore data/*.db`, voice cascade for child role, memory DELETE ownership filter. Not yet sent.
-- **Deferred:** C-1 (Google OAuth secret in git history) — needs Cloud Console rotation + `git filter-repo`, handled out-of-band.
-- **CHRONOS** (Obsidian-style local vault, page name = CHRONOS, daemon = Scribe) — design locked, build paused until Round 3 ships. Full intent + phasing captured in Claude memory.
+- **Round 3 (security sweep, 10 tasks)** — ✅ completed 2026-05-15 at commit `e93a322`. Scope: JWT revocation, daemon-secret boot validator, WebSocket ticket auth, LLM error scrub, auth gaps on `/api/models` + n8n + integrations, `.gitignore data/*.db`, voice cascade for child role, memory DELETE ownership filter. All rounds closed. See Claude memory `project_audit_cycle.md` for resolution detail.
+- **C-1 (Google OAuth secret in git history)** — ✅ secret rotated, history rewritten with `git filter-repo`, force-pushed, 34 stale branches deleted on origin.
+- **CHRONOS** (Obsidian-style local vault, page = CHRONOS, daemon = Scribe) — design locked. Build was paused until Round 3 shipped — now unblocked. See `docs/CHRONOS.md` for the design spec; Claude memory `project_chronos_parked.md` for additional history.
 
 Detailed state for any new Claude session lives in `~/.claude/projects/-home-riversong-RiverSongAI/memory/` — see `project_audit_cycle.md`, `project_chronos_parked.md`, `reference_git_ssh_origin.md`.
 
@@ -160,17 +160,17 @@ That alias is defined in `~/.ssh/config` and uses `~/.ssh/id_ed25519`. Verify wi
 - **Track A (Voice ID):** Infrastructure in place (`api/routes/voice_id.py`, `providers/voice_id/`). Verified that the backend compiles and routes are registered.
 - **Track B (3-axis UI backend):** Support for `universe`, `environment`, and `mood` in `api/routes/auth.py` and `sqlite_store.py` is present.
 
-### Next Steps: Chrome Rework (Plan Locked)
-The user has directed to **execute the UI rework** based on `RIVER_SONG_CHROME_PLAN.md`.
-- **Constraint:** Exclude the "Chat" and "Speak" pages from the rework for now.
-- **Plan File:** Refer to `/home/riversong/.gemini/tmp/riversongai/9c3bd89e-04e2-43bb-aa17-6e414f8c99bb/plans/chrome-rework-execution.md` for the step-by-step implementation.
-- **Current Task:** Start **Phase 1: CSS Infrastructure & Bones**. This involves establishing the 3-zone skeleton (Header, Content, Action Bar) and the CSS custom properties mapping.
+### Next Steps: Chrome Rework
+The first pass of the UI rework executed against an external Gemini plan; both that plan and the global chrome design doc lived outside version control and are no longer available on disk.
+
+- **Constraint:** "Chat" and "Speak" pages were intentionally excluded from the original rework pass.
+- **External plan (unavailable):** `/home/riversong/.gemini/tmp/riversongai/.../plans/chrome-rework-execution.md` is not under version control. If unavailable on this machine, the Chrome rework was completed in code — verify against `frontend/src/App.jsx` (3-zone layout) and `frontend/src/styles/themes.css` (CSS architecture).
+- **Continuation surface:** A `/preview` route sandbox for chrome iteration is documented in Claude memory (`project_chrome_preview.md`) but is not yet wired into `frontend/src/App.jsx` — that scaffolding is part of the next session's work.
 
 ### Key Files for Next Session
-- `RIVER_SONG_CHROME_PLAN.md`: Global design specification.
-- `chrome-rework-execution.md`: Implementation plan (in the plan folder).
-- `frontend/src/App.jsx`: Target for the 3-zone layout skeleton.
-- `frontend/src/styles/themes.css`: Target for the CSS architecture overhaul.
+- `frontend/src/App.jsx`: 3-zone layout skeleton; add `/preview` route here.
+- `frontend/src/styles/themes.css`: CSS architecture (Universe × Environment × Mood).
+- `docs/DAEMONS.md`, `docs/CHRONOS.md`, `docs/INTEGRATIONS.md`: New subsystem documentation as of 2026-05-23.
 
 ---
 

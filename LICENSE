@@ -1,0 +1,32 @@
+Proprietary License — All Rights Reserved
+
+Copyright (c) 2026 Cheryl (cassu123). All rights reserved.
+
+River Song AI is a private personal project. No public license is granted.
+Source code, configuration, documentation, models, prompts, and assets in
+this repository are provided for the sole, private use of the copyright
+holder and the household members explicitly authorized as users of the
+running system.
+
+Without prior written permission from the copyright holder you may NOT:
+
+  1. Copy, modify, distribute, publish, sublicense, sell, or otherwise
+     redistribute any part of this repository or its derivatives.
+  2. Use this repository, in whole or in part, to train, fine-tune, or
+     evaluate any machine learning model.
+  3. Reproduce the persona, voice, brand, or trademarks of "River Song AI"
+     in any product, service, or public-facing work.
+  4. Use any portion of this repository for commercial purposes.
+
+Third-party dependencies retain their own licenses. See `requirements.txt`,
+`frontend/package.json`, and the upstream projects of each dependency for
+the terms that govern those components.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+OTHER LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE
+OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+For licensing inquiries, contact the project owner directly.

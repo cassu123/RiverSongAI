@@ -1,3 +1,12 @@
+> **ARCHIVED — 2026-05-23**
+> All prompts in this document have been implemented. This file is retained as a historical design record.
+> For current settings documentation, see `config/settings.py` and `.env.example`.
+> The 3 RAG-chunk settings (Prompt 5) and 2 Analytics AI settings (Prompt 7) that were originally
+> missing from `settings.py` were added 2026-05-23 — see `DOCS_AUDIT_REPORT.md` issues C-3 and H-5,
+> plus the "Remediation Applied" section appended to that report.
+
+---
+
 # Gemini Implementation Prompts — River Song AI Local AI Integration
 *Copy and paste each prompt individually, in order. Each is self-contained.*
 

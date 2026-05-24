@@ -1,3 +1,13 @@
+> **ARCHIVED — 2026-05-23**
+> All 15 phases documented here are implemented. The "Implementation Order for Gemini" table
+> at the bottom is a pre-implementation planning artifact and no longer reflects active work.
+> For current architecture, see `README.md` and the actual codebase. For per-subsystem documentation,
+> see `docs/DAEMONS.md`, `docs/INTEGRATIONS.md`, `docs/VOICE_ID.md`, `docs/CHRONOS.md`, etc.
+> Note: phase numbering in this document differs from `docs/gemini_prompts.md` — see
+> `DOCS_AUDIT_REPORT.md` issue M-5 for the cross-reference.
+
+---
+
 # Local AI Integration Plan — River Song AI
 *Hardware: GTX 1050 Ti (4GB VRAM), 32GB RAM, AMD FX-8350*
 *Base: Ollama already installed, Whisper + Piper running, Claude/Gemini/OpenAI SDK present*

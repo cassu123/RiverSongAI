@@ -585,6 +585,24 @@ class Settings(BaseSettings):
         default=False,
         description="Enable retrieval-augmented generation for local documents.",
     )
+    rag_chunk_size: int = Field(
+        default=512,
+        description=(
+            "Word count per RAG chunk during document splitting. "
+            "Default matches providers/rag/chunker.py historical behavior."
+        ),
+    )
+    rag_chunk_overlap: int = Field(
+        default=64,
+        description=(
+            "Word overlap between adjacent RAG chunks. "
+            "Default matches providers/rag/chunker.py historical behavior."
+        ),
+    )
+    rag_top_k: int = Field(
+        default=5,
+        description="Number of chunks retrieved per RAG query.",
+    )
     llm_streaming_enabled: bool = Field(
         default=False,
         description="Enable real-time token streaming over WebSocket for the conversation UI.",
@@ -924,6 +942,23 @@ class Settings(BaseSettings):
     waps_documents_path: str = Field(
         default="/mnt/data/river-song/waps",
         description="Path to the directory containing documents for Sifter to index.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Analytics AI Summaries
+    # -------------------------------------------------------------------------
+    analytics_ai_enabled: bool = Field(
+        default=True,
+        description=(
+            "Feature flag for AI-powered analytics summaries on the "
+            "/api/analytics/{platform}/summary endpoint. When false, the "
+            "LLM call should be skipped (see docs/KNOWN_ISSUES.md for the "
+            "wiring gap)."
+        ),
+    )
+    analytics_llm_model: str = Field(
+        default="llama3",
+        description="Model name used for analytics summary generation.",
     )
 
     # Voice ID
