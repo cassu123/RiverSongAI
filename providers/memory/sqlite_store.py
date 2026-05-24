@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sqlite3
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -399,7 +400,10 @@ class SQLiteStore:
 
     def __init__(self, db_path: str = "river_song.db") -> None:
         self._db_path = db_path
-        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sqlite")
+        self._executor = ThreadPoolExecutor(
+            max_workers=min(4, os.cpu_count() or 1),
+            thread_name_prefix="sqlite",
+        )
         self._conn: Optional[sqlite3.Connection] = None
 
     # -------------------------------------------------------------------------
@@ -480,6 +484,10 @@ class SQLiteStore:
                 detect_types=sqlite3.PARSE_DECLTYPES,
             )
             self._conn.row_factory = sqlite3.Row
+            # WAL lets readers proceed while a writer holds the lock.
+            # busy_timeout retries for up to 5 s before raising SQLITE_BUSY.
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute("PRAGMA busy_timeout=5000")
         return self._conn
 
     async def _run(self, fn, *args):

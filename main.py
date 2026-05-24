@@ -27,8 +27,6 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request as StarletteRequest
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -252,18 +250,19 @@ def create_app() -> FastAPI:
     if settings.allowed_hosts != ["*"]:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 
-    # Forward real client IP from Cloudflare's CF-Connecting-IP header
+    # Forward real client IP from Cloudflare's CF-Connecting-IP header.
+    # Pure ASGI callable — no BaseHTTPMiddleware, no body buffering, zero head-of-line blocking.
     import ipaddress
     from datetime import datetime, timedelta
 
     _last_warning = datetime.min
-    
+
     def _is_cloudflare_ip(ip: str) -> bool:
         if not settings.trust_cloudflare_headers:
             return False
         try:
             addr = ipaddress.ip_address(ip)
-            ranges = (settings.cloudflare_ip_ranges_v4 if addr.version == 4 
+            ranges = (settings.cloudflare_ip_ranges_v4 if addr.version == 4
                       else settings.cloudflare_ip_ranges_v6)
             for r in ranges:
                 if addr in ipaddress.ip_network(r):
@@ -272,22 +271,28 @@ def create_app() -> FastAPI:
             pass
         return False
 
-    class _CloudflareIPMiddleware(BaseHTTPMiddleware):
-        async def dispatch(self, request: StarletteRequest, call_next):
-            cf_ip = request.headers.get("CF-Connecting-IP")
-            if cf_ip:
-                client_host = request.client.host if request.client else None
-                if client_host and _is_cloudflare_ip(client_host):
-                    request.scope["client"] = (cf_ip, 0)
-                else:
-                    nonlocal _last_warning
-                    if datetime.now() - _last_warning > timedelta(minutes=1):
+    class _CloudflareIPMiddleware:
+        def __init__(self, app):
+            self.app = app
+
+        async def __call__(self, scope, receive, send):
+            if scope.get("type") in ("http", "websocket"):
+                nonlocal _last_warning
+                headers = dict(scope.get("headers", []))
+                cf_ip = headers.get(b"cf-connecting-ip")
+                if cf_ip:
+                    client_host = (scope.get("client") or ("", 0))[0]
+                    if _is_cloudflare_ip(client_host):
+                        real_ip = cf_ip.decode("utf-8").split(",")[0].strip()
+                        scope["client"] = (real_ip, 0)
+                        scope.setdefault("state", {})["real_ip"] = real_ip
+                    elif datetime.now() - _last_warning > timedelta(minutes=1):
                         logger.warning(
-                            "Ignored CF-Connecting-IP from non-Cloudflare peer: %s", 
-                            client_host
+                            "Ignored CF-Connecting-IP from non-Cloudflare peer: %s",
+                            client_host,
                         )
                         _last_warning = datetime.now()
-            return await call_next(request)
+            await self.app(scope, receive, send)
 
     # Allow the Vite dev server (and any other configured origins) to connect
     app.add_middleware(

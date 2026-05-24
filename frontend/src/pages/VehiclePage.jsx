@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import MaintenancePulse from '../components/MaintenancePulse.jsx'
+import Sheet from '../chrome/Sheet.jsx'
+import ChatInterface from '../components/ChatInterface.jsx'
 
 /**
  * VehiclePage — Spatial Intelligence v2.0
@@ -16,6 +18,7 @@ export default function VehiclePage({ setAction }) {
   const [error, setError] = useState(null)
   const [selectedVehicleId, setSelectedVehicleId] = useState(null)
   const [uploadingDoc, setUploadingDoc] = useState(false)
+  const [activeAskVehicle, setActiveAskVehicle] = useState(null)
 
   const fetchVehicles = useCallback(async () => {
     setLoading(true)
@@ -157,8 +160,7 @@ export default function VehiclePage({ setAction }) {
                     style={{ marginLeft: 'auto', background: 'color-mix(in srgb, var(--primary) 10%, transparent)', border: '1px solid var(--primary)' }}
                     onClick={(e) => { 
                       e.stopPropagation(); 
-                      localStorage.setItem('rs-chat-intent', JSON.stringify({ text: `River, status on the ${v.nickname || v.model}.`, docId: `vehicle_${v.id}` }));
-                      window.dispatchEvent(new Event('rs-navigate-chat'));
+                      setActiveAskVehicle(v);
                     }}
                   >
                     <span className="material-symbols-rounded">psychology</span>
@@ -170,6 +172,24 @@ export default function VehiclePage({ setAction }) {
           ))
         )}
       </div>
+      {/* Ask Vehicle Drawer */}
+      <Sheet 
+        open={!!activeAskVehicle} 
+        onClose={() => setActiveAskVehicle(null)} 
+      >
+        {activeAskVehicle && (
+          <div style={{ height: '70vh' }}>
+            <ChatInterface 
+              embedded={true} 
+              onClose={() => setActiveAskVehicle(null)}
+              initialIntent={{ 
+                text: `River, status on the ${activeAskVehicle.nickname || activeAskVehicle.model}.`, 
+                docId: `vehicle_${activeAskVehicle.id}` 
+              }} 
+            />
+          </div>
+        )}
+      </Sheet>
     </div>
   )
 }
