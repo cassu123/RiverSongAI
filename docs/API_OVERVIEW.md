@@ -92,7 +92,6 @@ All routers live under `api/routes/` and are registered in
 |---|---|---|
 | Health | `/api/health` | `api/routes/health.py` |
 | Daemons | `/api/daemon` | `api/routes/daemons.py` — see `docs/DAEMONS.md` |
-| Broadcast | `/api/broadcast` | `api/routes/broadcast.py` — see `docs/BROADCAST.md` |
 | Push notifications | `/api/push` | `api/routes/push.py` — see `docs/PUSH_NOTIFICATIONS.md` |
 | Rover (MAVLink) | `/api/rover` | `api/routes/rover.py` |
 | Vault audit (under Vault) | `/api/vault` | `api/routes/vault.py` |
@@ -106,8 +105,7 @@ All routers live under `api/routes/` and are registered in
   `core.auth.decode_token`. The `sub` claim is the `user_id`; the
   `role` claim (`"admin"` or default) gates admin-only routes.
 - **Daemon internal secret.** A small set of endpoints (e.g.
-  `/api/broadcast/*`, `/api/pulse/_internal/*`,
-  `/api/daemon/heartbeat`) accept only
+  `/api/pulse/_internal/*`, `/api/daemon/heartbeat`) accept only
   `Authorization: Bearer ${DAEMON_INTERNAL_SECRET}`.
 - **WebSocket tickets.** WebSocket auth uses one-time tickets
   (`WS_TICKET_LIFETIME_SECONDS`). Legacy `?token=` query-string

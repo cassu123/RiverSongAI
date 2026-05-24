@@ -851,10 +851,6 @@ class Settings(BaseSettings):
         default=8011,
         description="Internal port for the Mechanic daemon (Telemetry/MAVLink).",
     )
-    daemon_herald_port: int = Field(
-        default=8012,
-        description="Internal port for the Herald daemon (Hub Casting/Lip-Sync).",
-    )
     daemon_sifter_port: int = Field(
         default=8013,
         description="Internal port for the Sifter daemon (Document Processing).",
@@ -914,23 +910,10 @@ class Settings(BaseSettings):
         description="Device for YOLO inference: 'cpu' or 'cuda:0'.",
     )
 
-    # Herald (Public Announcement / Casting)
-    herald_enabled: bool = Field(
-        default=False,
-        description="Enable the Herald daemon for display casting and announcements.",
-    )
-    hub_entities: str = Field(
-        default="[]",
-        description="JSON array of Home Assistant media_player entity IDs for Hub displays.",
-    )
-    kiosk_url: str = Field(
-        default="http://localhost:8000/kiosk",
-        description="The URL that Herald should cast to Hub displays.",
-    )
-    kiosk_token: str = Field(
-        default="change_me_kiosk_secret",
-        description="Secret token for unauthenticated kiosk access to WebSockets.",
-    )
+    # Herald daemon + kiosk URL/token were removed 2026-05-24 (archived in
+    # branch archive/kiosk-v3). The "cast a web page to a Google Home Hub"
+    # approach is being replaced by native device-app development. See
+    # docs/KNOWN_ISSUES.md (post-removal note) for context.
 
     # Mechanic (Telemetry)
     mechanic_enabled: bool = Field(
@@ -1026,21 +1009,6 @@ class Settings(BaseSettings):
             raise ValueError(
                 "DAEMON_INTERNAL_SECRET must be at least 24 characters. "
                 "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
-            )
-        return v
-
-    @field_validator("kiosk_token")
-    @classmethod
-    def validate_kiosk_token(cls, v: str) -> str:
-        """Refuse to start with the default or weak kiosk token."""
-        if v == "change_me_kiosk_secret":
-            raise ValueError(
-                "KIOSK_TOKEN must be changed in .env. "
-                "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
-            )
-        if not v or len(v) < 24:
-            raise ValueError(
-                "KIOSK_TOKEN must be at least 24 characters."
             )
         return v
 

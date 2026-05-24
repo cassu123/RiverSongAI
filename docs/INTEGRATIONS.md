@@ -110,10 +110,11 @@ records snapshots.
 |---|---|---|---|---|
 | Home Assistant | ✅ | long-lived token | `providers/smart_home/home_assistant.py` | `api/routes/home.py` |
 | Device registry | ✅ | local file | `providers/smart_home/device_registry.py` | home.py |
-| Google Home Hubs | ✅ via HA | (HA token) | (Herald daemon) | `api/routes/broadcast.py` (kiosk) |
 
-Herald (`daemons/herald/herald.py`) keeps configured Hub `media_player`
-entities locked to `KIOSK_URL`.
+Google Home Hub integration was previously planned as a kiosk-cast
+overlay (Herald daemon). That approach was archived 2026-05-24 to
+branch `archive/kiosk-v3`; native device-app development will replace
+it. See `docs/KNOWN_ISSUES.md` for context.
 
 ---
 
@@ -182,9 +183,10 @@ See `docs/VOICE_ID.md` for the Voice ID enrollment + verification flow.
 | Integration | Status | File | Setup |
 |---|---|---|---|
 | Web Push (VAPID) | ✅ | `providers/push/sender.py`, `api/routes/push.py` | `PUSH_NOTIFICATIONS_ENABLED=true` + VAPID keys |
-| Internal broadcast WebSocket | ✅ | `api/routes/broadcast.py` | Used by Herald (lip-sync), kiosk, Pulse |
 
-See `docs/PUSH_NOTIFICATIONS.md` and `docs/BROADCAST.md`.
+See `docs/PUSH_NOTIFICATIONS.md`. The internal broadcast WebSocket
+(`/api/broadcast/*`) was removed with the kiosk archive — its only
+consumer was Herald lip-sync.
 
 ---
 

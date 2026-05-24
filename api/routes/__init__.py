@@ -27,7 +27,6 @@ from .push import router as push_router
 from .rag import router as rag_router
 from .daemons import router as daemons_router
 from .context import router as context_router
-from .broadcast import router as broadcast_router
 from .rover import router as rover_router
 from .vault import router as vault_router
 from .pulse import router as pulse_router
@@ -67,7 +66,6 @@ __all__ = [
     "rag_router",
     "daemons_router",
     "context_router",
-    "broadcast_router",
     "rover_router",
     "vault_router",
     "pulse_router",

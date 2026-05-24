@@ -46,19 +46,6 @@ step "Downloading voice models (new voices only)"
 python scripts/download_voices.py
 
 step "Building frontend"
-# Vite inlines VITE_* env vars at build time. KIOSK_TOKEN must match the
-# backend value or Google Home Hubs will get 401 on /api/auth/ws-ticket/kiosk.
-# Read from .env so the bundle and backend always stay in sync.
-if [[ -f .env ]]; then
-    # shellcheck disable=SC1091
-    set -a
-    source <(grep -E '^(KIOSK_TOKEN)=' .env || true)
-    set +a
-fi
-export VITE_KIOSK_TOKEN="${KIOSK_TOKEN:-}"
-if [[ -z "$VITE_KIOSK_TOKEN" ]]; then
-    echo "    !! warning: KIOSK_TOKEN not in .env — kiosk page will use the placeholder fallback" >&2
-fi
 cd frontend
 PKG_HASH_FILE="../.npm_package.sha256"
 NEW_PKG_HASH="$(sha256sum package.json package-lock.json 2>/dev/null | sha256sum | awk '{print $1}')"

@@ -290,7 +290,6 @@ class ConversationLoop:
         fallback_provider: Optional[str] = None,
         fallback_model: Optional[str] = None,
         stt_model_override: Optional[str] = None,
-        is_kiosk: bool = False,
     ) -> None:
         settings = get_settings()
         self._settings = settings
@@ -303,7 +302,6 @@ class ConversationLoop:
         self._fallback_provider: Optional[str] = fallback_provider
         self._fallback_model: Optional[str] = fallback_model
         self._stt_model_override: Optional[str] = stt_model_override
-        self._is_kiosk: bool = is_kiosk
         self._stt: Optional[STTProvider] = None
         self._llm: Optional[LLMProvider] = None
         self._tts: Optional[TTSProvider] = None
@@ -591,26 +589,8 @@ class ConversationLoop:
                 import struct
                 header = struct.pack("<HH", self._gen_id, seq_id)
                 await on_event(header + pcm_data)
-                
+
                 seq_id += 1
-
-                # NEW: trigger Herald lip-sync in background (non-blocking)
-                self._spawn_background(
-                    self._trigger_herald_lip_sync(audio_data, fmt),
-                    "herald_lip_sync",
-                )
-
-    async def _trigger_herald_lip_sync(self, audio_bytes: bytes, fmt: str) -> None:
-        """Calls the Herald daemon to compute and broadcast lip-sync timings."""
-        import base64
-        try:
-            from daemons.registry import call_daemon
-            await call_daemon("herald", "lip_sync", {
-                "audio_b64": base64.b64encode(audio_bytes).decode("ascii"),
-                "format": fmt,
-            })
-        except Exception as e:
-            logger.debug("Lip-sync trigger skipped: %s", e)
 
     async def run_once(self, audio_bytes: bytes, on_event: EventCallback) -> None:
         """
@@ -688,42 +668,10 @@ class ConversationLoop:
             await on_event({"type": "idle"})
             return
 
-        # Voice ID — only override when session is anonymous kiosk
-        if self._is_kiosk and audio_bytes:
-            from providers.voice_id.voice_id_provider import VoiceIDProvider
-            from config.settings import get_settings
-            if get_settings().voice_id_enabled:
-                try:
-                    from providers.voice_id import _SINGLETON
-                    vid = _SINGLETON
-                except ImportError:
-                    vid = VoiceIDProvider()
-                try:
-                    ident = await vid.identify(audio_bytes, threshold=get_settings().voice_id_threshold)
-                    if ident and ident.get("user_id"):
-                        # Override anonymous kiosk identity with identified user
-                        self._user_id = ident["user_id"]
-                        logger.info(f"Voice ID: identified as {ident['user_id']} score={ident['score']:.3f}")
-                        # Log event
-                        if self._memory and hasattr(self._memory, "_store"):
-                            import time
-                            await self._memory._store.log_voice_id_event(
-                                ts=time.time(),
-                                identified_user_id=ident["user_id"],
-                                score=ident["score"],
-                                runner_up_user_id=ident.get("runner_up_user_id"),
-                                runner_up_score=ident.get("runner_up_score"),
-                                audio_duration_ms=int(len(audio_bytes) * 1000 / 32000),  # rough estimate
-                                session_kind="kiosk",
-                            )
-                        
-                        # Since user_id changed, we MUST rebuild the system prompt to pick up the new user's context
-                        if self._memory:
-                            await self._rebuild_system_prompt()
-                    else:
-                        logger.debug("Voice ID: no enrolled speaker matched")
-                except Exception as e:
-                    logger.warning(f"Voice ID failed (non-fatal): {e}")
+        # Voice-ID auto-identification block was here. It only fired in kiosk
+        # sessions to override an anonymous user with the speaker's identity.
+        # Removed alongside the kiosk archive. The VoiceIDProvider and its
+        # /api/voice-id/* routes remain for future device-pairing use.
 
         if not transcript.strip():
             logger.info("Empty transcript -- skipping LLM call.")

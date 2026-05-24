@@ -177,3 +177,34 @@ The first pass of the UI rework executed against an external Gemini plan; both t
 ## To Restore Claude Memory on a New Machine
 Copy this directory from the Chromebook:
 `~/.claude/projects/-home-river-song-RiverSongAI/memory/`
+
+---
+
+## Culinary Module Restoration (2026-05-23) — Gemini
+
+**Context for Claude:** You may have observed uncommitted edits to `CulinaryPage.jsx` during a previous turn. These were not a bug, but a deliberate **Deep-Tissue Restoration** executed by Gemini to reverse a catastrophic functional regression from commit `41340a2`.
+
+### 🛠 Work Completed
+
+**1. Functional Reconstruction:**
+- **Reversed Regressions:** Replaced aesthetic placeholders in `CulinaryPage.jsx` with full logic.
+- **API Reconnection:** Reconnected all 6 backend culinary silos (`recipes`, `stockroom`, `dinner`, `prep`, `equipment`, `banned`). Purged all `localStorage` fallbacks.
+- **Structured Filtering:** Library now has a full **Filter Bar** (Search + 3 Dropdowns: Meal, Dynamic Protein, Sort).
+- **Prep Deck:** Built dedicated **Shopping List** (with stockroom cross-ref) and **Staging Area** (per-recipe piles) modals. Restored the fractional math **Scaling Adjuster**.
+
+**2. Hardening & Accessibility:**
+- **Recipe Modal:** Centered, focus-trapped, and Esc-responsive. Top-right button collision fixed via explicit header padding.
+- **Dynamic Forms:** Brittle JSON textareas deleted. Editor now uses row-based inputs for Provisions and steps.
+- **Substitution Engine:** Wired the banned ingredient logic. Users can "Apply Substitute" to a recipe, which triggers a regex-based overhaul of ingredients and steps to ensure safety.
+- **AI Integration:** Wired the "AI Recommend" button in the Banned tab to local Ollama for reasoning-based substitute suggestions.
+
+**3. Performance & Polish:**
+- **snappy-blur:** Animation durations for page-in transitions reduced to `400ms` (cards) and `250ms` (modals) to eliminate perceived latency.
+- **Typography:** Enforced `line-height: 1.7` to prevent selection jitter.
+
+### 📂 File State
+- `frontend/src/pages/CulinaryPage.jsx` — **RECONSTRUCTED**
+- `frontend/src/pages/CulinaryPage.test.jsx` — **EXPANDED** (5 unit test flows)
+- `passoff/OTHER_STUFF.md` — Detailed turnover log appended.
+
+**Next for Culinary:** Finish the "ADJUST" button in stockroom (inline sheet needed) and monitor WebSocket events for reactive updates.

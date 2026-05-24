@@ -2,7 +2,7 @@
 
 River Song's daemon layer is a set of long-running background processes that
 sit alongside the main FastAPI app (`main.py`) on `:8000`. Each daemon owns
-one concern (telemetry, kiosk casting, ambient feeds, vault indexing, vision,
+one concern (telemetry, ambient feeds, vault indexing, vision,
 document RAG) and communicates with the app via a small shared protocol:
 
 - **Heartbeat:** every 30 s the daemon POSTs `{name, status, timestamp, port}`
@@ -46,7 +46,6 @@ returns "0 unit files listed", the copy didn't take.
 Each daemon is a templated instance of the unit file:
 
 ```
-sudo systemctl enable --now river-song-daemon@herald
 sudo systemctl enable --now river-song-daemon@pulse
 sudo systemctl enable --now river-song-daemon@scribe
 sudo systemctl enable --now river-song-daemon@sifter
@@ -98,7 +97,6 @@ stopping the service, flip the flag in `.env` and restart the unit.
 |---|---|---|
 | Warden | 8010 | `DAEMON_WARDEN_PORT` |
 | Mechanic | 8011 | `DAEMON_MECHANIC_PORT` |
-| Herald | 8012 | `DAEMON_HERALD_PORT` |
 | Sifter | 8013 | `DAEMON_SIFTER_PORT` |
 | Navigator | 8014 | `DAEMON_NAVIGATOR_PORT` *(reserved; no daemon yet)* |
 | Chemist | 8015 | `DAEMON_CHEMIST_PORT` *(reserved; no daemon yet)* |
@@ -112,24 +110,13 @@ exists for them yet.
 
 ## Daemons
 
-### Herald — Hub Casting + Lip-Sync
+### Herald — *removed 2026-05-24*
 
-- **File:** `daemons/herald/herald.py`
-- **Enable:** `HERALD_ENABLED=true`
-- **Inputs:** `HUB_ENTITIES` (JSON array of Home Assistant `media_player`
-  entity IDs), `KIOSK_URL`, Home Assistant URL + token.
-- **What it does:** every 45 s, for each Hub entity, queries Home Assistant
-  for current `media_content_id`. If the hub is idle or showing something
-  other than `KIOSK_URL`, re-casts the kiosk URL via
-  `media_player.play_media`.
-- **Task actions:**
-  - `lip_sync` — decode base64 audio (WAV or MP3), compute per-20 ms RMS
-    "mouth open" values, broadcast `lip_sync` event to
-    `/api/broadcast/lip_sync`.
-  - `recast_now` — force the kiosk re-cast loop to run immediately.
-- **Dependencies:** Home Assistant (`providers.smart_home.home_assistant`),
-  `ffmpeg` on PATH for MP3 lip-sync decoding, `numpy`.
-- **Health:** heartbeat every 30 s; visible at `/api/daemons` (registry).
+The Herald daemon (Hub casting + lip-sync computation) was archived to
+branch `archive/kiosk-v3` and removed from `main`. The "cast a web page
+to a Google Home Hub via Chromecast" approach is being superseded by
+native device-app development. Port 8012 is reserved if the daemon
+returns under a different responsibility.
 
 ### Pulse — Ambient Feeds
 

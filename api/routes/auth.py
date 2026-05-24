@@ -536,28 +536,8 @@ async def get_ws_ticket(request: Request, authorization: Optional[str] = Header(
     request.app.state.ws_tickets[ticket] = {
         "user_id":    user_id,
         "expires_at": datetime.now(tz=timezone.utc).timestamp() + settings.ws_ticket_lifetime_seconds,
-        "is_kiosk":   False
     }
-    
-    return {"ticket": ticket, "expires_in": settings.ws_ticket_lifetime_seconds}
 
-
-@router.post("/ws-ticket/kiosk")
-async def get_ws_ticket_kiosk(request: Request, x_kiosk_token: Optional[str] = Header(None, alias="X-Kiosk-Token")):
-    """
-    Exchange the kiosk secret for a one-time 60s WebSocket ticket.
-    """
-    settings = get_settings()
-    if not x_kiosk_token or x_kiosk_token != settings.kiosk_token:
-        raise unauthorized("Invalid kiosk token.")
-    
-    ticket = str(uuid.uuid4())
-    request.app.state.ws_tickets[ticket] = {
-        "user_id":    settings.default_user_id,
-        "expires_at": datetime.now(tz=timezone.utc).timestamp() + settings.ws_ticket_lifetime_seconds,
-        "is_kiosk":   True
-    }
-    
     return {"ticket": ticket, "expires_in": settings.ws_ticket_lifetime_seconds}
 
 

@@ -86,7 +86,6 @@ async def conversation_websocket(websocket: WebSocket) -> None:
     
     settings = get_settings()
     user_id: str | None = None
-    is_kiosk = False
 
     # 1. Try one-time ticket exchange (New Pattern)
     if ticket_id:
@@ -94,10 +93,9 @@ async def conversation_websocket(websocket: WebSocket) -> None:
         if ticket:
             now = datetime.now(tz=timezone.utc).timestamp()
             if now <= ticket["expires_at"]:
-                user_id  = ticket["user_id"]
-                is_kiosk = ticket["is_kiosk"]
-                logger.info("WebSocket connection via ticket from %s (user_id=%s, kiosk=%s).", 
-                            websocket.client, user_id, is_kiosk)
+                user_id = ticket["user_id"]
+                logger.info("WebSocket connection via ticket from %s (user_id=%s).",
+                            websocket.client, user_id)
             else:
                 logger.warning("WebSocket ticket expired: %s", ticket_id)
         else:
@@ -109,12 +107,8 @@ async def conversation_websocket(websocket: WebSocket) -> None:
             payload = await decode_token(token)
             if payload:
                 user_id = payload["sub"]
-                logger.warning("WebSocket connection via LEGACY token query param from %s (user_id=%s).", 
+                logger.warning("WebSocket connection via LEGACY token query param from %s (user_id=%s).",
                                websocket.client, user_id)
-            elif token == settings.kiosk_token:
-                user_id = settings.default_user_id
-                is_kiosk = True
-                logger.warning("WebSocket connection via LEGACY kiosk_token query param from %s.", websocket.client)
         else:
             logger.warning("WebSocket connection attempted via legacy token but LEGACY_WS_TOKEN_ACCEPT is False.")
 
@@ -165,7 +159,6 @@ async def conversation_websocket(websocket: WebSocket) -> None:
         fallback_provider=fb_provider,
         fallback_model=fb_model,
         stt_model_override=whisper_model if 'whisper_model' in locals() else None,
-        is_kiosk=is_kiosk,
     )
 
     await _send(websocket, {"type": "connected"})
@@ -431,7 +424,6 @@ async def chat_http(
         memory_manager=memory_manager,
         llm_provider_override=body.provider,
         llm_model_override=body.model_id,
-        is_kiosk=False,
     )
     loop._suppress_memory = body.forget_memory
     loop._web_search = body.web_search
