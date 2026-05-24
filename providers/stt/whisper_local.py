@@ -117,26 +117,27 @@ class WhisperLocalSTT(STTProvider):
 
     def _transcribe_blocking(self, audio_bytes: bytes) -> str:
         """
-        Decode WAV bytes, resample to 16 kHz, and run Whisper.
-
-        Resampling is done with scipy when the browser's AudioContext
-        captures at a different sample rate (commonly 44.1 kHz or 48 kHz).
+        Decode audio bytes (WAV or raw PCM), resample to 16 kHz, and run Whisper.
         """
-        try:
-            audio_np, sample_rate = sf.read(
-                io.BytesIO(audio_bytes), dtype="float32"
-            )
-        except Exception as exc:
-            raise RuntimeError(f"Failed to decode audio bytes: {exc}") from exc
+        if audio_bytes.startswith(b"RIFF"):
+            try:
+                audio_np, sample_rate = sf.read(
+                    io.BytesIO(audio_bytes), dtype="float32"
+                )
+            except Exception as exc:
+                raise RuntimeError(f"Failed to decode WAV bytes: {exc}") from exc
 
-        # Convert stereo to mono if needed
-        if audio_np.ndim > 1:
-            audio_np = audio_np.mean(axis=1)
+            # Convert stereo to mono if needed
+            if audio_np.ndim > 1:
+                audio_np = audio_np.mean(axis=1)
 
-        # Resample to 16 kHz if the browser sent a different rate
-        if sample_rate != WHISPER_SAMPLE_RATE:
-            target_length = int(len(audio_np) * WHISPER_SAMPLE_RATE / sample_rate)
-            audio_np = scipy.signal.resample(audio_np, target_length).astype(np.float32)
+            # Resample to 16 kHz if the browser sent a different rate
+            if sample_rate != WHISPER_SAMPLE_RATE:
+                target_length = int(len(audio_np) * WHISPER_SAMPLE_RATE / sample_rate)
+                audio_np = scipy.signal.resample(audio_np, target_length).astype(np.float32)
+        else:
+            # Assume raw 16-bit PCM at 16kHz from AudioWorklet
+            audio_np = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
 
         result = self._model.transcribe(audio_np, fp16=False, language="en")
         return result.get("text", "")

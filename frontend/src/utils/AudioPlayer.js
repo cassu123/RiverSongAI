@@ -1,80 +1,74 @@
 /**
  * frontend/src/utils/AudioPlayer.js
  * 
- * Handles streaming audio playback for "The Companion" experience.
- * Manages a queue of audio buffers and plays them seamlessly.
+ * Handles streaming raw PCM audio playback for "The Companion" experience.
+ * Uses an AudioWorkletProcessor (`playback-processor.js`) for gapless playback
+ * and eliminating the decodeAudioData latency overhead.
  */
 
 export class AudioPlayer {
-  constructor() {
+  constructor(onStateChange) {
     this.ctx = null
-    this.queue = []
+    this.worklet = null
     this.isPlaying = false
+    this.onStateChange = onStateChange
+    // Maintain state tracking for Avatar visemes
+    this.playbackState = { active: false, queued: 0 }
   }
 
-  _init() {
+  async _init() {
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)()
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 22050 })
     }
     if (this.ctx.state === 'suspended') {
-      this.ctx.resume()
+      await this.ctx.resume()
+    }
+
+    if (!this.worklet) {
+      try {
+        await this.ctx.audioWorklet.addModule('/playback-processor.js')
+        this.worklet = new AudioWorkletNode(this.ctx, 'playback-processor')
+        this.worklet.connect(this.ctx.destination)
+        
+        this.worklet.port.onmessage = (e) => {
+          if (e.data.type === 'playback_state') {
+            const wasPlaying = this.isPlaying
+            this.playbackState = { active: e.data.active, queued: e.data.queued }
+            this.isPlaying = e.data.active
+            if (wasPlaying !== this.isPlaying && this.onStateChange) {
+               this.onStateChange(this.isPlaying)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[AudioPlayer] Failed to load playback worklet:', err)
+      }
     }
   }
 
   /**
-   * Add a base64 audio chunk to the playback queue.
+   * Add a raw PCM audio chunk to the playback ring buffer.
+   * @param {Int16Array} int16Array - The raw PCM audio data.
    */
-  async playBase64(b64, format = 'wav') {
-    this._init()
-    const binary = atob(b64)
-    const bytes = new Uint8Array(binary.length)
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-    
-    try {
-      const buffer = await this.ctx.decodeAudioData(bytes.buffer)
-      this.queue.push(buffer)
-      if (!this.isPlaying) {
-        this._playNext()
-      }
-    } catch (err) {
-      console.warn('[AudioPlayer] decodeAudioData failed, trying fallback:', err)
-      // Fallback: create an Audio element (works for MP3 even in strict environments)
-      await this._playViaAudioElement(b64, format)
+  async playChunk(int16Array) {
+    await this._init()
+    if (this.worklet) {
+      this.worklet.port.postMessage({ type: 'audio_chunk', data: int16Array })
     }
   }
 
-  async _playViaAudioElement(b64, format) {
-    return new Promise(resolve => {
-      const mimeType = format === 'mp3' ? 'audio/mpeg' : 'audio/wav'
-      const audio = new Audio(`data:${mimeType};base64,${b64}`)
-      audio.onended = resolve
-      audio.onerror = resolve  // don't block queue on error
-      audio.play().catch(resolve)
-    })
-  }
-
-  _playNext() {
-    if (this.queue.length === 0) {
-      this.isPlaying = false
-      return
+  /**
+   * Instantly stops playback and flushes the ring buffer.
+   */
+  interrupt() {
+    if (this.worklet) {
+      this.worklet.port.postMessage({ type: 'flush' })
     }
-
-    this.isPlaying = true
-    const buffer = this.queue.shift()
-    const source = this.ctx.createBufferSource()
-    source.buffer = buffer
-    source.connect(this.ctx.destination)
-    
-    source.onended = () => {
-      this._playNext()
-    }
-    
-    source.start(0)
+    this.isPlaying = false
+    this.playbackState = { active: false, queued: 0 }
   }
 
   stop() {
-    this.queue = []
-    this.isPlaying = false
-    // We don't close the context, just stop playback if needed
+    this.interrupt()
   }
 }

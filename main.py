@@ -395,7 +395,10 @@ def create_app() -> FastAPI:
             if full_path and os.path.isfile(static_file):
                 return FileResponse(static_file)
             index = os.path.join(_dist, "index.html")
-            return FileResponse(index)
+            return FileResponse(
+                index,
+                headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+            )
 
     return app
 

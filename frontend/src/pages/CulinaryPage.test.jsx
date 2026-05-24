@@ -76,29 +76,55 @@ describe('CulinaryPage Hardening Verification', () => {
     )
   })
 
-  it('opens recipe detail and enters edit mode', async () => {
+  it('renders recipe detail and applies substitute', async () => {
+    const recipeWithBanned = { ...mockRecipes[0], blacklisted: [{ name: 'Chicken', substitute: 'Tofu' }] }
+    global.fetch = vi.fn((url) => {
+      if (url.includes('/api/culinary/recipes/r1')) return Promise.resolve({ ok: true, json: () => Promise.resolve(recipeWithBanned) })
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+    })
+
     await act(async () => { render(<CulinaryPage setAction={() => {}} />) })
     
-    const recipeCard = screen.getByText('Chicken Pasta')
-    await act(async () => { fireEvent.click(recipeCard) })
-
-    expect(screen.getByText('PROVISIONS')).toBeDefined()
-    const editBtn = screen.getByText('EDIT')
+    await act(async () => { fireEvent.click(screen.getByText('Chicken Pasta')) })
     
-    await act(async () => { fireEvent.click(editBtn) })
+    expect(screen.getByText('BANNED INGREDIENTS DETECTED')).toBeDefined()
+    const applyBtn = screen.getByText('APPLY SUBSTITUTE')
     
-    expect(screen.getByPlaceholderText('RECIPE TITLE')).toBeDefined()
-    expect(screen.getByText('SAVE CHANGES')).toBeDefined()
-    
-    const titleInput = screen.getByPlaceholderText('RECIPE TITLE')
-    await act(async () => { fireEvent.change(titleInput, { target: { value: 'Updated Pasta' } }) })
-
-    const saveBtn = screen.getByText('SAVE CHANGES')
-    await act(async () => { fireEvent.click(saveBtn) })
+    await act(async () => { fireEvent.click(applyBtn) })
 
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/culinary/recipes/r1'),
       expect.objectContaining({ method: 'PUT' })
     )
+  })
+
+  it('opens shopping list and staging area modals in prep tab', async () => {
+    let actions;
+    const setAction = (el) => { actions = el };
+    
+    const mockPrep = { id: 's1', label: 'Prep Session', recipes: [{ entry_id: 'e1', recipe_id: 'r1', recipe_title: 'Pasta' }] }
+    global.fetch = vi.fn((url) => {
+      if (url.includes('/api/culinary/prep')) {
+         if (url.endsWith('/shopping-list')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ shopping_list: [{ name: 'Eggs', qty: '2', unit: '' }] }) })
+         if (url.endsWith('/staging')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ piles: [{ recipe_title: 'Pasta', ingredients: [] }] }) })
+         return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPrep) })
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) })
+    })
+
+    await act(async () => { render(<CulinaryPage setAction={setAction} />) })
+    const tabs = render(<div>{actions}</div>)
+    await act(async () => { fireEvent.click(tabs.getByText('PREP')) })
+
+    const shopBtn = screen.getByText('SHOPPING LIST')
+    await act(async () => { fireEvent.click(shopBtn) })
+    expect(screen.getByText('MASTER SHOPPING LIST')).toBeDefined()
+    expect(screen.getByText('Eggs')).toBeDefined()
+
+    await act(async () => { fireEvent.click(screen.getByText('close')) })
+
+    const stageBtn = screen.getByText('STAGING AREA')
+    await act(async () => { fireEvent.click(stageBtn) })
+    expect(screen.getByText('STAGING AREA')).toBeDefined()
   })
 })

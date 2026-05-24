@@ -33,6 +33,94 @@ function StarRating({ value, size = 14, onChange }) {
   )
 }
 
+function ShoppingListModal({ items, onClose }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)' }} onClick={onClose}>
+       <div className="rs-card is-elev animate-page-in" style={{ width: 'min(95%, 500px)', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+          <div className="rs-card-inner" style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
+             <div className="rs-card-head" style={{ marginBottom: 24 }}>
+                <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>MASTER SHOPPING LIST</span>
+                <button className="rs-pill" onClick={onClose}><span className="material-symbols-rounded">close</span></button>
+             </div>
+             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {items.length === 0 ? (
+                  <div className="rs-card-meta">No provisions required. Stock nominal.</div>
+                ) : items.map((it, idx) => (
+                  <div key={idx} className="rs-pill" style={{ justifyContent: 'flex-start', background: it._from_stockroom ? 'rgba(255,184,108,0.1)' : 'var(--md-surface-container-low)' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, minWidth: 60, color: 'var(--primary)' }}>{it.qty} {it.unit}</span>
+                    <span style={{ flex: 1 }}>{it.name}</span>
+                    {it._from_stockroom && <span className="rs-card-label" style={{ fontSize: '0.6rem', color: '#FFB86C' }}>STOCK LOW</span>}
+                  </div>
+                ))}
+             </div>
+          </div>
+       </div>
+    </div>
+  )
+}
+
+function StagingAreaModal({ piles, onClose }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)' }} onClick={onClose}>
+       <div className="rs-card is-elev animate-page-in" style={{ width: 'min(95%, 800px)', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+          <div className="rs-card-inner" style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
+             <div className="rs-card-head" style={{ marginBottom: 24 }}>
+                <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>STAGING AREA</span>
+                <button className="rs-pill" onClick={onClose}><span className="material-symbols-rounded">close</span></button>
+             </div>
+             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
+                {piles.map((pile, idx) => (
+                  <div key={idx} className="rs-card" style={{ border: '1px solid var(--md-outline-variant)' }}>
+                     <div className="rs-card-inner">
+                        <div className="rs-card-label" style={{ marginBottom: 12 }}>{pile.recipe_title.toUpperCase()}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                           {pile.ingredients.map((ing, i) => (
+                             <div key={i} className="rs-pill" style={{ justifyContent: 'flex-start', fontSize: '0.85rem' }}>
+                                <span style={{ opacity: 0.6, marginRight: 8 }}>{ing.qty} {ing.unit}</span>
+                                <span>{ing.name}</span>
+                             </div>
+                           ))}
+                        </div>
+                     </div>
+                  </div>
+                ))}
+             </div>
+          </div>
+       </div>
+    </div>
+  )
+}
+
+function PrepAdjuster({ entry, recipe, api, onUpdate }) {
+  const [scaling, setScaling] = useState(false)
+  const [target, setTarget] = useState(entry.servings_target || recipe?.servings || 4)
+  const [system, setSystem] = useState('')
+
+  const handleScale = async () => {
+    setScaling(true)
+    try {
+      const result = await api.post(`/recipes/${entry.recipe_id}/scale`, { target_servings: parseInt(target), prefer_system: system || null })
+      await api.put(`/prep/${entry.session_id}/recipes/${entry.id}/scale`, { target_servings: result.target_servings, scaled_ingredients: result.scaled_ingredients })
+      onUpdate()
+    } finally {
+      setScaling(false)
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 12, padding: '12px 16px', background: 'var(--md-surface-container-low)', borderRadius: 12, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+       <span className="rs-card-label">SCALE TO</span>
+       <input className="rs-pill" type="number" style={{ width: 60, border: 'none', background: 'rgba(0,0,0,0.2)', textAlign: 'center' }} value={target} onChange={e => setTarget(e.target.value)} />
+       <select className="rs-pill" style={{ border: 'none', background: 'rgba(0,0,0,0.2)' }} value={system} onChange={e => setSystem(e.target.value)}>
+          <option value="">ORIGINAL</option>
+          <option value="imperial">IMPERIAL</option>
+          <option value="metric">METRIC</option>
+       </select>
+       <button className="rs-btn-primary" style={{ height: 32, fontSize: '0.7rem' }} onClick={handleScale} disabled={scaling}>{scaling ? 'SCALING...' : 'APPLY'}</button>
+    </div>
+  )
+}
+
 function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
   const [isEditing, setIsEditing] = useState(false)
   const [edited, setEdited] = useState({ ...recipe })
@@ -77,6 +165,20 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
     }
   }
 
+  const applySubstitute = async (bannedName, sub) => {
+    const newIngredients = edited.ingredients.map(ing => {
+      if (ing.name.toLowerCase().includes(bannedName.toLowerCase())) {
+        return { ...ing, name: sub }
+      }
+      return ing
+    })
+    const newSteps = edited.steps.map(step => step.replace(new RegExp(bannedName, 'gi'), sub))
+    const updated = { ...edited, ingredients: newIngredients, steps: newSteps }
+    setEdited(updated)
+    const saved = await api.put(`/recipes/${recipe.id}`, updated)
+    onSave(saved)
+  }
+
   const addIngredient = () => setEdited({ ...edited, ingredients: [...(edited.ingredients || []), { qty: '', unit: '', name: '' }] })
   const updateIngredient = (index, field, value) => {
     const updated = [...(edited.ingredients || [])]
@@ -103,7 +205,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(20px)' }} onClick={onClose}>
-       <div ref={modalRef} tabIndex="-1" className="rs-card is-elev animate-page-in" style={{ width: 'min(95%, 800px)', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', animationDuration: '300ms' }} onClick={e => e.stopPropagation()}>
+       <div ref={modalRef} tabIndex="-1" className="rs-card is-elev animate-page-in" style={{ width: 'min(95%, 720px)', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', animationDuration: '250ms', transformOrigin: 'center' }} onClick={e => e.stopPropagation()}>
           <div className="rs-card-inner" style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
              <div className="rs-card-head" style={{ marginBottom: 24, padding: '8px 8px 0 8px' }}>
                 <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>{isEditing ? 'EDITING ARCHIVE' : recipe.meal_type.toUpperCase()}</span>
@@ -184,6 +286,28 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                     onSave(updated);
                  }} /></div>
 
+                 {recipe.blacklisted?.length > 0 && (
+                   <div className="rs-card" style={{ borderColor: 'var(--md-error)', background: 'rgba(239,68,68,0.05)', marginBottom: 32 }}>
+                      <div className="rs-card-inner">
+                         <div className="rs-card-label" style={{ color: 'var(--md-error)', marginBottom: 12 }}>BANNED INGREDIENTS DETECTED</div>
+                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {recipe.blacklisted.map((b, i) => (
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: '0.88rem' }}>
+                                 <span style={{ color: 'var(--md-error)', fontWeight: 700 }}>{b.name}</span>
+                                 {b.substitute && (
+                                   <>
+                                     <span style={{ opacity: 0.5 }}>→</span>
+                                     <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{b.substitute}</span>
+                                     <button className="rs-pill" style={{ padding: '2px 10px', fontSize: '0.6rem' }} onClick={() => applySubstitute(b.name, b.substitute)}>APPLY SUBSTITUTE</button>
+                                   </>
+                                 )}
+                              </div>
+                            ))}
+                         </div>
+                      </div>
+                   </div>
+                 )}
+
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 48 }}>
                    <div>
                      <div className="rs-card-label" style={{ marginBottom: 16 }}>PROVISIONS</div>
@@ -259,7 +383,7 @@ export default function CulinaryPage({ setAction }) {
   const { token } = useAuth()
   const api = useApi(token)
   
-  const [activeTab, setActiveTab] = useState('library') // library, stockroom, grocery, equipment, banned
+  const [activeTab, setActiveTab] = useState('library')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   
@@ -274,8 +398,20 @@ export default function CulinaryPage({ setAction }) {
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState('ALL')
   const [filterProtein, setFilterProtein] = useState('ALL')
+  const [sortMode, setSortMode] = useState('NEWEST') // NEWEST, RATING
+  
   const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [showScanner, setShowScanner] = useState(false)
+  const [showShoppingList, setShowShoppingList] = useState(null) // items
+  const [showStagingArea, setShowStagingArea] = useState(null) // piles
+
+  const [recommendations, setRecommendations] = useState({}) // bannedId -> recs[]
+  const [recLoading, setRecLoading] = useState({}) // bannedId -> bool
+
+  // Dynamic Proteins
+  const uniqueProteins = useMemo(() => {
+    return ['ALL', ...new Set(recipes.map(r => r.primary_protein).filter(Boolean))].sort()
+  }, [recipes])
 
   // Fetch Logic
   const fetchData = useCallback(async (tab) => {
@@ -305,6 +441,16 @@ export default function CulinaryPage({ setAction }) {
 
   useEffect(() => { fetchData(activeTab) }, [activeTab, fetchData])
 
+  const getRecommendations = async (id, name) => {
+    setRecLoading(prev => ({ ...prev, [id]: true }))
+    try {
+      const res = await api.post('/household/banned/recommend', { ingredient: name })
+      setRecommendations(prev => ({ ...prev, [id]: res }))
+    } finally {
+      setRecLoading(prev => ({ ...prev, [id]: false }))
+    }
+  }
+
   // Contextual Action Bar
   useEffect(() => {
     setAction(
@@ -324,34 +470,6 @@ export default function CulinaryPage({ setAction }) {
               <span className="rs-speak-actions-label">{t.label}</span>
             </button>
           ))}
-          <div style={{ width: 1, height: 24, background: 'var(--md-outline-variant)', margin: '0 4px' }} />
-          {(activeTab === 'library' || activeTab === 'stockroom') && (
-            <div className="rs-chat-input-container" style={{ flex: 1, padding: '4px 12px', minWidth: 160, background: 'color-mix(in srgb, var(--md-surface-container-low) 40%, transparent)' }}>
-               <input 
-                 style={{ all: 'unset', width: '100%', fontSize: '0.85rem', fontWeight: 600 }} 
-                 placeholder={activeTab === 'library' ? "FILTER RECIPES..." : "IDENTIFY STOCK..."}
-                 value={search}
-                 onChange={e => setSearch(e.target.value)}
-               />
-            </div>
-          )}
-          {activeTab === 'library' && (
-            <>
-              <select className="rs-pill" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ border: 'none', background: 'var(--md-surface-container-low)', fontSize: '0.75rem', fontWeight: 700 }}>
-                <option value="ALL">ALL TYPES</option>
-                {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'].map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
-              </select>
-              <select className="rs-pill" value={filterProtein} onChange={e => setFilterProtein(e.target.value)} style={{ border: 'none', background: 'var(--md-surface-container-low)', fontSize: '0.75rem', fontWeight: 700 }}>
-                <option value="ALL">ALL PROTEINS</option>
-                {['Chicken', 'Beef', 'Pork', 'Fish', 'Seafood', 'Turkey', 'Lamb', 'Vegetarian'].map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
-              </select>
-            </>
-          )}
-          {activeTab === 'stockroom' && (
-            <button className="rs-pill" onClick={() => setShowScanner(true)}>
-              <span className="material-symbols-rounded">barcode_scanner</span>
-            </button>
-          )}
           <button className="rs-pill" onClick={() => fetchData(activeTab)}>
             <span className="material-symbols-rounded">sync</span>
           </button>
@@ -359,42 +477,68 @@ export default function CulinaryPage({ setAction }) {
       </div>
     )
     return () => setAction(null)
-  }, [activeTab, setAction, fetchData, search, filterType, filterProtein])
+  }, [activeTab, setAction, fetchData])
 
   const renderLibrary = () => (
-    <div className="rs-card-flow" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))' }}>
-      {recipes
-        .filter(r => r.title.toLowerCase().includes(search.toLowerCase()))
-        .filter(r => filterType === 'ALL' || r.meal_type === filterType)
-        .filter(r => filterProtein === 'ALL' || r.primary_protein === filterProtein)
-        .map(r => (
-        <div key={r.id} className="rs-card is-tappable animate-page-in" style={{ padding: 0, overflow: 'hidden', animationDuration: '400ms' }} onClick={() => setSelectedRecipe(r)}>
-           <div className="rs-card-inner" style={{ padding: 0, border: 'none', background: 'transparent' }}>
-             <div style={{ position: 'relative', width: '100%', aspectRatio: '16/10', overflow: 'hidden', background: 'var(--md-surface-container-highest)' }}>
-                {r.image_url ? (
-                  <img src={r.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.1 }}>
-                     <span className="material-symbols-rounded" style={{ fontSize: '4rem' }}>restaurant</span>
-                  </div>
-                )}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, var(--bg-base) 0%, transparent 60%)' }} />
-                <div style={{ position: 'absolute', bottom: 16, left: 16 }}>
-                  <StarRating value={r.rating} size={16} />
-                </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+       {/* Structured Filter Bar */}
+       <div className="rs-card is-wide" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)' }}>
+          <div className="rs-card-inner" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+             <div className="rs-chat-input-container" style={{ flex: 2, minWidth: 200, padding: '4px 16px', background: 'rgba(0,0,0,0.2)' }}>
+                <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
+                <input style={{ all: 'unset', width: '100%', fontSize: '0.85rem' }} placeholder="SEARCH ARCHIVES..." value={search} onChange={e => setSearch(e.target.value)} />
              </div>
-             <div style={{ padding: 24 }}>
-               <div className="rs-card-label" style={{ color: 'var(--primary)', fontWeight: 900, marginBottom: 12 }}>{r.meal_type.toUpperCase()}</div>
-               <div className="rs-card-value" style={{ fontSize: '1.25rem', fontWeight: 800 }}>{r.title}</div>
-               <div className="rs-card-meta" style={{ marginTop: 16, display: 'flex', gap: 16 }}>
-                  <span>{r.primary_protein?.toUpperCase()}</span>
-                  <span>·</span>
-                  <span style={{ fontFamily: 'var(--font-mono)' }}>{r.servings} SERVINGS</span>
+             <div style={{ display: 'flex', gap: 8 }}>
+                <select className="rs-pill" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ border: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.75rem' }}>
+                  <option value="ALL">ALL MEALS</option>
+                  {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'].map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+                </select>
+                <select className="rs-pill" value={filterProtein} onChange={e => setFilterProtein(e.target.value)} style={{ border: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.75rem' }}>
+                  {uniqueProteins.map(p => <option key={p} value={p}>{p === 'ALL' ? 'ALL PROTEINS' : p.toUpperCase()}</option>)}
+                </select>
+                <select className="rs-pill" value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ border: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.75rem' }}>
+                   <option value="NEWEST">NEWEST</option>
+                   <option value="RATING">TOP RATED</option>
+                </select>
+             </div>
+          </div>
+       </div>
+
+       <div className="rs-card-flow" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))' }}>
+        {recipes
+          .filter(r => r.title.toLowerCase().includes(search.toLowerCase()))
+          .filter(r => filterType === 'ALL' || r.meal_type === filterType)
+          .filter(r => filterProtein === 'ALL' || r.primary_protein === filterProtein)
+          .sort((a, b) => sortMode === 'RATING' ? (b.rating || 0) - (a.rating || 0) : new Date(b.created_at || 0) - new Date(a.created_at || 0))
+          .map(r => (
+          <div key={r.id} className="rs-card is-tappable animate-page-in" style={{ padding: 0, overflow: 'hidden', animationDuration: '400ms' }} onClick={() => setSelectedRecipe(r)}>
+             <div className="rs-card-inner" style={{ padding: 0, border: 'none', background: 'transparent' }}>
+               <div style={{ position: 'relative', width: '100%', aspectRatio: '16/10', overflow: 'hidden', background: 'var(--md-surface-container-highest)' }}>
+                  {r.image_url ? (
+                    <img src={r.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.1 }}>
+                       <span className="material-symbols-rounded" style={{ fontSize: '4rem' }}>restaurant</span>
+                    </div>
+                  )}
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, var(--bg-base) 0%, transparent 60%)' }} />
+                  <div style={{ position: 'absolute', bottom: 16, left: 16 }}>
+                    <StarRating value={r.rating} size={16} />
+                  </div>
+               </div>
+               <div style={{ padding: 24 }}>
+                 <div className="rs-card-label" style={{ color: 'var(--primary)', fontWeight: 900, marginBottom: 12 }}>{r.meal_type.toUpperCase()}</div>
+                 <div className="rs-card-value" style={{ fontSize: '1.25rem', fontWeight: 800 }}>{r.title}</div>
+                 <div className="rs-card-meta" style={{ marginTop: 16, display: 'flex', gap: 16 }}>
+                    <span>{r.primary_protein?.toUpperCase()}</span>
+                    <span>·</span>
+                    <span style={{ fontFamily: 'var(--font-mono)' }}>{r.servings} SERVINGS</span>
+                 </div>
                </div>
              </div>
-           </div>
-        </div>
-      ))}
+          </div>
+        ))}
+      </div>
     </div>
   )
 
@@ -480,29 +624,37 @@ export default function CulinaryPage({ setAction }) {
                      }
                   }}>FINISH</button>
                </div>
-               <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 24 }}>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 24 }}>
                   {activePrep.recipes.map((pr, i) => (
-                    <div key={i} className="rs-pill" style={{ justifyContent: 'flex-start', background: 'var(--md-surface-container-low)', padding: '12px 20px' }}>
-                       <span style={{ flex: 1, fontWeight: 700 }}>{pr.recipe_title}</span>
-                       <span className="rs-card-label">{pr.servings_target || 'ORIGINAL'} SERVINGS</span>
-                       <button className="rs-pill" style={{ padding: 4, marginLeft: 12, color: 'var(--md-error)' }} onClick={async () => {
-                          await api.delete(`/prep/${activePrep.id}/recipes/${pr.entry_id}`);
-                          fetchData('prep');
-                       }}>
-                          <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>remove_circle</span>
-                       </button>
+                    <div key={i} className="rs-card" style={{ background: 'rgba(0,0,0,0.1)', border: '1px solid var(--md-outline-variant)' }}>
+                       <div className="rs-card-inner">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                             <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{pr.recipe_title}</div>
+                             <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={async () => {
+                                await api.delete(`/prep/${activePrep.id}/recipes/${pr.entry_id}`);
+                                fetchData('prep');
+                             }}><span className="material-symbols-rounded">remove_circle</span></button>
+                          </div>
+                          <PrepAdjuster entry={pr} api={api} onUpdate={() => fetchData('prep')} />
+                       </div>
                     </div>
                   ))}
                </div>
-               <div style={{ marginTop: 32, display: 'flex', gap: 12 }}>
+               <div style={{ marginTop: 40, display: 'flex', gap: 12 }}>
+                  <button className="rs-btn-primary" style={{ flex: 1 }} onClick={async () => {
+                     const res = await api.get(`/prep/${activePrep.id}/shopping-list`);
+                     setShowShoppingList(res.shopping_list);
+                  }}>
+                    <span className="material-symbols-rounded">shopping_cart</span>
+                    SHOPPING LIST
+                  </button>
                   <button className="rs-pill" style={{ flex: 1 }} onClick={async () => {
-                     const list = await api.get(`/prep/${activePrep.id}/shopping-list`);
-                     alert(`Shopping List: ${list.shopping_list.map(i => `${i.qty} ${i.unit} ${i.name}`).join(', ')}`);
-                  }}>SHOPPING LIST</button>
-                  <button className="rs-pill" style={{ flex: 1 }} onClick={async () => {
-                     const staging = await api.get(`/prep/${activePrep.id}/staging`);
-                     alert(`Staging: ${staging.piles.length} recipes ready.`);
-                  }}>STAGING AREA</button>
+                     const res = await api.get(`/prep/${activePrep.id}/staging`);
+                     setShowStagingArea(res.piles);
+                  }}>
+                    <span className="material-symbols-rounded">view_column</span>
+                    STAGING AREA
+                  </button>
                </div>
             </div>
          </div>
@@ -528,7 +680,7 @@ export default function CulinaryPage({ setAction }) {
             <div className="rs-card-meta">{error}</div>
           </div>
         </div>
-      ) : loading && !['equipment', 'prep', 'dinner'].includes(activeTab) ? (
+      ) : loading && !['equipment', 'prep', 'dinner', 'library', 'banned'].includes(activeTab) ? (
         <div className="rs-card-meta" style={{ padding: 64, textAlign: 'center' }}>ACCESSING {activeTab.toUpperCase()} ARCHIVES...</div>
       ) : (
         <div className="animate-page-in" style={{ animationDuration: '400ms' }}>
@@ -577,10 +729,37 @@ export default function CulinaryPage({ setAction }) {
           {activeTab === 'banned' && (
             <div className="rs-card-flow">
                {banned.map(item => (
-                 <div key={item.id} className="rs-card animate-page-in" style={{ animationDuration: '400ms' }}>
+                 <div key={item.id} className="rs-card animate-page-in" style={{ animationDuration: '400ms', padding: 32 }}>
                     <div className="rs-card-inner">
-                      <div className="rs-card-head"><span className="rs-card-label" style={{ color: 'var(--md-error)', fontWeight: 900 }}>BANNED</span></div>
-                      <div className="rs-card-value">{item.name}</div>
+                      <div className="rs-card-head">
+                        <span className="rs-card-label" style={{ color: 'var(--md-error)', fontWeight: 900 }}>BANNED</span>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                           <button className="rs-pill" onClick={() => getRecommendations(item.id, item.name)} disabled={recLoading[item.id]}>
+                             <span className="material-symbols-rounded">psychology</span>
+                             {recLoading[item.id] ? 'REASONING...' : 'AI RECOMMEND'}
+                           </button>
+                           <button className="rs-pill" onClick={async () => { await api.delete(`/household/banned/${item.id}`); fetchData('banned'); }}>
+                             <span className="material-symbols-rounded">delete</span>
+                           </button>
+                        </div>
+                      </div>
+                      <div className="rs-card-value" style={{ fontSize: '1.8rem' }}>{item.name}</div>
+                      {item.substitute && <div className="rs-card-meta" style={{ marginTop: 8 }}>PREFEERED SUBSTITUTE: <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{item.substitute.toUpperCase()}</span></div>}
+                      
+                      {recommendations[item.id] && (
+                        <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                           <div className="rs-card-label">AI RECOMMENDATIONS</div>
+                           {recommendations[item.id].map((rec, idx) => (
+                             <div key={idx} className="rs-pill" style={{ justifyContent: 'flex-start', background: 'rgba(0,0,0,0.1)', cursor: 'pointer' }} onClick={async () => {
+                                await api.patch(`/household/banned/${item.id}`, { substitute: rec.name });
+                                fetchData('banned');
+                             }}>
+                                <span style={{ fontWeight: 700, color: 'var(--primary)', marginRight: 12 }}>{rec.name}</span>
+                                <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>{rec.reason}</span>
+                             </div>
+                           ))}
+                        </div>
+                      )}
                     </div>
                  </div>
                ))}
@@ -605,6 +784,9 @@ export default function CulinaryPage({ setAction }) {
           }}
         />
       )}
+
+      {showShoppingList && <ShoppingListModal items={showShoppingList} onClose={() => setShowShoppingList(null)} />}
+      {showStagingArea && <StagingAreaModal piles={showStagingArea} onClose={() => setShowStagingArea(null)} />}
     </div>
   )
 }

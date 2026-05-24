@@ -76,6 +76,7 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
       }
 
       const ws = new WebSocket(url.toString())
+      ws.binaryType = 'arraybuffer'
       wsRef.current = ws
 
       ws.onopen = () => {
@@ -87,6 +88,12 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
 
       ws.onmessage = (event) => {
         if (!isMountedRef.current) return
+        
+        if (event.data instanceof ArrayBuffer) {
+          onMessage({ type: 'audio_chunk', data: event.data })
+          return
+        }
+
         try {
           const data = JSON.parse(event.data)
           if (typeof data !== 'object' || data === null || Array.isArray(data)) {
@@ -145,9 +152,16 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
     isMountedRef.current = true
     connect()
 
+    const pingInterval = setInterval(() => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'ping' }))
+      }
+    }, 20000)
+
     return () => {
       isMountedRef.current = false
       clearTimeout(reconnectTimerRef.current)
+      clearInterval(pingInterval)
 
       if (wsRef.current) {
         // Null the onclose handler so the cleanup close does not trigger reconnect
@@ -159,7 +173,11 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
 
   const sendMessage = useCallback((payload) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(payload))
+      if (payload instanceof Int16Array || payload instanceof ArrayBuffer) {
+        wsRef.current.send(payload)
+      } else {
+        wsRef.current.send(JSON.stringify(payload))
+      }
     } else {
       console.warn('[useWebSocket] Cannot send -- socket is not open. State:', wsRef.current?.readyState)
     }

@@ -16,6 +16,41 @@ import {
   TIER_ORDER,
 } from '../utils/modelFamilies.js'
 
+function fmtCost(v) {
+  if (v == null) return null
+  return `$${(v * 1000000).toFixed(2)}/M`
+}
+
+/* ── Model picker micro-components ─────────────────────────────────────────── */
+function MpopRow({ icon, title, sub, active, dimmed, chevron, badge, onClick }) {
+  return (
+    <button
+      className={`rs-mpop-row${active ? ' is-active' : ''}${dimmed ? ' is-dimmed' : ''}`}
+      onClick={onClick}
+    >
+      <span className="material-symbols-rounded rs-mpop-icon">{icon}</span>
+      <span className="rs-mpop-body">
+        <span className="rs-mpop-title">
+          {title}
+          {badge && <span className="rs-mpop-badge">{badge}</span>}
+        </span>
+        {sub && <span className="rs-mpop-sub">{sub}</span>}
+      </span>
+      {active  && <span className="material-symbols-rounded rs-mpop-check">check</span>}
+      {chevron && !active && <span className="material-symbols-rounded rs-mpop-chevron">chevron_right</span>}
+    </button>
+  )
+}
+
+function MpopBack({ label, onClick }) {
+  return (
+    <button className="rs-mpop-back" onClick={onClick}>
+      <span className="material-symbols-rounded">arrow_back</span>
+      {label}
+    </button>
+  )
+}
+
 // NOTE: Future avatar work loads from /avatar.glb (frontend/public/avatar.glb).
 // Swap the <RiverSong> orb below for an <AvatarModel> component once the rig
 // is wired with facial + body animation.
@@ -53,10 +88,12 @@ export default function ConversationPage({ setAction }) {
   const [memoryMuted,       setMemoryMuted]       = useState(false)
   const [muted,             setMuted]             = useState(false)
   const [showTranscript,    setShowTranscript]    = useState(false)
-  const [familySheetOpen,   setFamilySheetOpen]   = useState(false)
-  const [nimSheetOpen,      setNimSheetOpen]      = useState(false)
+  const [modelPickerOpen,   setModelPickerOpen]   = useState(false)
+  const [pickerView,        setPickerView]        = useState('home')
+  const [popoverPos,        setPopoverPos]        = useState({ bottom: 100, right: 20 })
 
   const streamTimeoutRef = useRef(null)
+  const expectedGenIdRef = useRef(0)
 
   const finalizeStream = useCallback(() => {
     setStreamingContent(current => {
@@ -79,7 +116,11 @@ export default function ConversationPage({ setAction }) {
   const [history,         setHistory]         = useState([])
   const [toolEvents,      setToolEvents]      = useState([])
 
-  const audioPlayer = useMemo(() => new AudioPlayer(), [])
+  const audioPlayer = useMemo(() => new AudioPlayer((isPlaying) => {
+    if (!isPlaying) {
+      setConvState(s => (s === 'speaking' ? 'idle' : s))
+    }
+  }), [])
   const isPlayingRef = useRef(false)
 
   const handleMessage = useCallback((event) => {
@@ -117,17 +158,24 @@ export default function ConversationPage({ setAction }) {
         setConvState('speaking')
         audioPlayer.stop()
         break
-      case 'audio':
-        if (data) {
-          isPlayingRef.current = true
-          setConvState('speaking')
-          audioPlayer.playBase64(data, event.format || 'wav').then(() => {
-            isPlayingRef.current = false
-          })
+      case 'audio_chunk': {
+        const buffer = data // ArrayBuffer
+        if (buffer.byteLength < 4) return
+        const header = new DataView(buffer, 0, 4)
+        const gen_id = header.getUint16(0, true) // little endian
+        
+        if (gen_id < expectedGenIdRef.current) {
+          return // stale chunk from cancelled generation
         }
+        
+        const pcm = new Int16Array(buffer, 4)
+        isPlayingRef.current = true
+        setConvState('speaking')
+        audioPlayer.playChunk(pcm).catch(console.error)
         break
+      }
       case 'idle':
-        if (!isPlayingRef.current) setConvState('idle')
+        if (!audioPlayer.isPlaying) setConvState('idle')
         break
       case 'error':   setError(message || 'An unknown error occurred.'); break
       default: break
@@ -149,7 +197,7 @@ export default function ConversationPage({ setAction }) {
   }, [connectionStatus])
 
   const { startRecording, stopRecording, audioLevel } = useAudioRecorder({
-    onComplete: wavB64 => sendMessage({ type: 'audio_data', data: wavB64 }),
+    onComplete: pcm => sendMessage(pcm),
     onNoSpeech: () => setConvState(s => (s === 'listening' ? 'idle' : s)),
   })
 
@@ -158,7 +206,17 @@ export default function ConversationPage({ setAction }) {
   const visualLvl = (convState === 'listening' || convState === 'speaking') ? audioLevel : 0
 
   const handleStartListening = useCallback(async () => {
-    if (!canSpeak || muted) return
+    if (muted) return
+    if (convState === 'speaking' || convState === 'thinking') {
+      // Barge-in (Interrupt)
+      audioPlayer.interrupt()
+      expectedGenIdRef.current += 1
+      sendMessage({ type: 'interrupt' })
+      setConvState('idle')
+    }
+    
+    if (!canSpeak && convState !== 'speaking' && convState !== 'thinking') return
+    
     setError(null)
     setConvState('listening')
     const granted = await startRecording()
@@ -168,7 +226,7 @@ export default function ConversationPage({ setAction }) {
       setConvState('idle')
       setError('Microphone access denied.')
     }
-  }, [canSpeak, muted, startRecording, sendMessage])
+  }, [canSpeak, muted, startRecording, sendMessage, convState, audioPlayer])
 
   const handleToggleMute = useCallback(() => {
     setMuted(prev => {
@@ -240,38 +298,46 @@ export default function ConversationPage({ setAction }) {
       .catch(() => {})
   }, [token])
 
-  const visibleFamilies = useMemo(
-    () => applyFamilyOverrides(MODEL_FAMILIES, familyOverrides),
-    [familyOverrides],
-  )
+  const localModels  = useMemo(() => models.local, [models.local])
+  const nimModels    = useMemo(() => models.cloud.filter(m => m.provider === 'nvidia_nim'), [models.cloud])
+  const cloudModels  = useMemo(() => models.cloud.filter(m => m.provider !== 'nvidia_nim'), [models.cloud])
 
-  const availabilitySet = useMemo(() => buildAvailabilitySet(models), [models])
+  const hasNvidia    = nimModels.length > 0
+  const hasCloud     = cloudModels.some(m => m.available)
 
-  const currentMapping = useMemo(
-    () => findFamilyForModel(activeModel?.provider, activeModel?.model_id, visibleFamilies),
-    [activeModel?.provider, activeModel?.model_id, visibleFamilies],
-  )
+  const closeModelPicker = () => { setModelPickerOpen(false); setPickerView('home') }
 
-  const pickerLabel = currentMapping?.family?.displayName
-    || activeModel?.display_name
-    || 'Model'
+  const openModelPicker = useCallback((e) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setPopoverPos({
+      bottom: window.innerHeight - rect.top + 8,
+      right:  window.innerWidth  - rect.right,
+    })
+    setPickerView('home')
+    setModelPickerOpen(true)
+  }, [])
 
-  const handlePickFamily = useCallback(async (family) => {
-    const tier = pickVoiceTier(family)
-    const model_id = tier ? family.tiers[tier] : null
-    if (!model_id) return
-    setFamilySheetOpen(false)
+  const selectedModelLabel = useMemo(() => {
+    if (!activeModel) return 'Model'
+    if (activeModel.provider === 'auto') return 'Auto'
+    const all = [...models.local, ...models.cloud]
+    const found = all.find(m => m.model_id === activeModel.model_id && m.provider === activeModel.provider)
+    if (!found) return activeModel.model_id?.split('/').pop() || 'Model'
+    return found.display_name.replace(/\s*\([^)]+\)/g, '').trim()
+  }, [activeModel, models])
+
+  const handleModelSelect = async (provider, model_id) => {
+    setActiveModel({ provider, model_id, display_name: model_id })
     setSavingModel(true)
-    setActiveModel({ provider: family.provider, model_id, display_name: family.displayName })
     try {
       await fetch(`/api/settings/llm?user_id=${user?.id || ''}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ provider: family.provider, model_id, cloud_fallback_enabled: false }),
+        body: JSON.stringify({ provider, model_id, cloud_fallback_enabled: false }),
       })
     } catch {}
     setSavingModel(false)
-  }, [user?.id, token])
+  }
 
   // ---- Bottom action slot --------------------------------------------------
   useEffect(() => {
@@ -315,25 +381,27 @@ export default function ConversationPage({ setAction }) {
           <div className="rs-chat-input-right">
             <button
               className="rs-pill"
-              onClick={() => setFamilySheetOpen(true)}
+              onClick={openModelPicker}
               title="Choose AI model"
               disabled={savingModel}
             >
-              <span className="material-symbols-rounded">smart_toy</span>
-              <span className="rs-speak-actions-label">{savingModel ? 'Syncing…' : pickerLabel}</span>
+              <span className="material-symbols-rounded">
+                {activeModel?.provider === 'auto' ? 'auto_awesome' : activeModel?.provider === 'nvidia_nim' ? 'memory_alt' : activeModel?.provider === 'ollama' ? 'memory' : 'cloud'}
+              </span>
+              <span className="rs-speak-actions-label">{savingModel ? 'Syncing…' : selectedModelLabel}</span>
             </button>
 
             <button
               className="rs-btn-primary rs-icon-btn rs-send-btn"
-              onClick={isActive ? undefined : handleStartListening}
-              disabled={!canSpeak || muted}
+              onClick={handleStartListening}
+              disabled={muted || (isActive && convState !== 'speaking' && convState !== 'thinking')}
               aria-label={isActive ? convState : 'Tap to speak'}
               style={{ background: 'var(--primary)', color: 'var(--bg-base)' }}
             >
               <span className="material-symbols-rounded" style={{ fontSize: '1.4rem' }}>
                 {convState === 'listening' ? 'stop'
-                 : convState === 'speaking'  ? 'volume_up'
-                 : convState === 'thinking'  ? 'hourglass_top'
+                 : convState === 'speaking'  ? 'front_hand' // interrupt icon
+                 : convState === 'thinking'  ? 'front_hand' // interrupt icon
                  : 'mic'}
               </span>
             </button>
@@ -352,8 +420,8 @@ export default function ConversationPage({ setAction }) {
   }, [
     muted, handleToggleMute,
     handleStartListening, canSpeak, isActive, convState,
-    pickerLabel, savingModel,
-    showTranscript, handleReset, setAction, activeVoice,
+    selectedModelLabel, savingModel,
+    showTranscript, handleReset, setAction, activeVoice, openModelPicker, activeModel
   ])
 
   return (
@@ -413,43 +481,46 @@ export default function ConversationPage({ setAction }) {
         </div>
       )}
 
-      {/* Model family picker — single step, no tier (voice = Fast default). */}
-      <Sheet open={familySheetOpen} onClose={() => setFamilySheetOpen(false)} title="AI model">
-        {visibleFamilies.map(family => {
-          const anyAvail = family.isAuto || family.isFullList || familyHasAnyTier(family, availabilitySet)
-          const isActiveFam = currentMapping?.family?.id === family.id ||
-            (family.isAuto && activeModel?.provider === 'auto')
-          return (
-            <SheetRow
-              key={family.id}
-              icon={family.icon || 'chat'}
-              title={family.displayName}
-              sub={anyAvail ? family.blurb : `${family.blurb} — unavailable`}
-              active={isActiveFam}
-              onClick={() => {
-                if (!anyAvail) return
-                setFamilySheetOpen(false)
-                if (family.isAuto) { handlePickFamily(family); return }
-                if (family.isFullList) { setNimSheetOpen(true); return }
-                handlePickFamily(family)
-              }}
-            />
-          )
-        })}
-      </Sheet>
+      {/* Model picker — floating popover near the button */}
+      {modelPickerOpen && (
+        <>
+          {/* Click-outside dismissal */}
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9990 }} onClick={closeModelPicker} />
 
-      <Sheet open={nimSheetOpen} onClose={() => setNimSheetOpen(false)} title="NVIDIA NIM Models">
-        {(models?.cloud || []).filter(m => m.provider === 'nvidia_nim').map(m => (
-          <SheetRow
-            key={m.model_id}
-            icon="memory_alt"
-            title={m.display_name}
-            sub={m.notes || 'Free · NVIDIA NIM'}
-            active={activeModel?.model_id === m.model_id}
-            onClick={() => { setNimSheetOpen(false); handlePickFamily({ provider: 'nvidia_nim', tiers: { fast: m.model_id }, id: 'nvidia-nim' }, m.model_id) }}
-          />
-        ))}
-      </Sheet>
+          <div className="rs-mpop" style={{ bottom: popoverPos.bottom, right: popoverPos.right }}>
+
+            {/* HOME */}
+            {pickerView === 'home' && <>
+              <MpopRow icon="auto_awesome" title="River Decides" sub="Auto-routes to the best model" active={activeModel?.provider === 'auto'} onClick={() => { closeModelPicker(); handleModelSelect('auto', 'auto') }} />
+              <MpopRow icon="memory" title="Local" sub={localModels.filter(m => m.available).length > 0 ? `${localModels.filter(m => m.available).length} ready · Ollama` : 'No models installed'} active={activeModel?.provider === 'ollama'} chevron onClick={() => setPickerView('local')} />
+              {hasNvidia && <MpopRow icon="memory_alt" title="NVIDIA NIM" sub="Free cloud inference" active={activeModel?.provider === 'nvidia_nim'} chevron onClick={() => setPickerView('nvidia')} />}
+              {hasCloud  && <MpopRow icon="cloud" title="Cloud" sub="Claude · Gemini · GPT" active={!!activeModel && !['auto','ollama','nvidia_nim'].includes(activeModel.provider)} chevron onClick={() => setPickerView('cloud')} />}
+            </>}
+
+            {/* LOCAL */}
+            {pickerView === 'local' && <>
+              <MpopBack label="Local Models" onClick={() => setPickerView('home')} />
+              {localModels.length === 0
+                ? <p className="rs-mpop-empty">Pull a model via Ollama first.</p>
+                : localModels.map(m => <MpopRow key={m.model_id} icon="memory" title={m.display_name} sub={m.notes || (m.vram_gb ? `${m.vram_gb} GB VRAM` : m.model_id)} active={activeModel?.model_id === m.model_id && activeModel?.provider === 'ollama'} dimmed={!m.available} onClick={() => { closeModelPicker(); handleModelSelect('ollama', m.model_id) }} />)
+              }
+            </>}
+
+            {/* NVIDIA */}
+            {pickerView === 'nvidia' && <>
+              <MpopBack label="NVIDIA NIM" onClick={() => setPickerView('home')} />
+              {nimModels.map(m => <MpopRow key={m.model_id} icon="memory_alt" title={m.display_name} sub={m.available ? (m.notes || 'Free · NIM') : 'Enable NIM in .env'} badge={m.available ? 'FREE' : null} active={activeModel?.model_id === m.model_id && activeModel?.provider === 'nvidia_nim'} dimmed={!m.available} onClick={() => { closeModelPicker(); handleModelSelect('nvidia_nim', m.model_id) }} />)}
+            </>}
+
+            {/* CLOUD */}
+            {pickerView === 'cloud' && <>
+              <MpopBack label="Cloud Providers" onClick={() => setPickerView('home')} />
+              {cloudModels.map(m => <MpopRow key={`${m.provider}::${m.model_id}`} icon="cloud" title={m.display_name} sub={m.available ? (m.cost_per_1k_input_usd != null ? fmtCost(m.cost_per_1k_input_usd) : m.provider) : 'Enable in admin settings'} active={activeModel?.model_id === m.model_id && activeModel?.provider === m.provider} dimmed={!m.available} onClick={() => { closeModelPicker(); handleModelSelect(m.provider, m.model_id) }} />)}
+            </>}
+
+          </div>
+        </>
+      )}
     </div>
   )
 }

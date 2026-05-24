@@ -205,8 +205,38 @@ async def conversation_websocket(websocket: WebSocket) -> None:
 
     try:
         while True:
-            raw = await websocket.receive_text()
-            # ... existing JSON parse ...
+            ws_msg = await websocket.receive()
+            
+            if "bytes" in ws_msg and ws_msg["bytes"]:
+                audio_bytes = ws_msg["bytes"]
+                if not waiting_for_audio:
+                    continue
+                waiting_for_audio = False
+                
+                # Run the turn in the background so we can receive interrupts
+                async def _background_turn(b):
+                    try:
+                        await loop.run_once(
+                            audio_bytes=b,
+                            on_event=lambda evt: asyncio.create_task(_send(websocket, evt)),
+                        )
+                    except asyncio.CancelledError:
+                        pass
+                    except Exception as e:
+                        logger.error("Turn failed: %s", e)
+                    
+                    if get_settings().llm_streaming_enabled:
+                        await _send(websocket, {"type": "stream_done"})
+                        
+                asyncio.create_task(_background_turn(audio_bytes))
+                continue
+
+            if "text" not in ws_msg or not ws_msg["text"]:
+                if ws_msg.get("type") == "websocket.disconnect":
+                    break
+                continue
+
+            raw = ws_msg["text"]
             try:
                 message = json.loads(raw)
             except json.JSONDecodeError:
@@ -246,6 +276,7 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                 await _send(websocket, {"type": "listening"})
 
             elif msg_type == "audio_data":
+                # Fallback for base64
                 if not waiting_for_audio:
                     await _send(websocket, {
                         "type": "error",
@@ -274,12 +305,25 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                     await _send(websocket, {"type": "idle"})
                     continue
 
-                await loop.run_once(
-                    audio_bytes=audio_bytes,
-                    on_event=lambda evt: _send(websocket, evt),
-                )
-                if get_settings().llm_streaming_enabled:
-                    await _send(websocket, {"type": "stream_done"})
+                async def _background_turn_b64(b):
+                    try:
+                        await loop.run_once(
+                            audio_bytes=b,
+                            on_event=lambda evt: asyncio.create_task(_send(websocket, evt)),
+                        )
+                    except asyncio.CancelledError:
+                        pass
+                    except Exception as e:
+                        logger.error("Turn failed: %s", e)
+                        
+                    if get_settings().llm_streaming_enabled:
+                        await _send(websocket, {"type": "stream_done"})
+                asyncio.create_task(_background_turn_b64(audio_bytes))
+
+            elif msg_type == "interrupt":
+                waiting_for_audio = False
+                loop.cancel_generation()
+                await _send(websocket, {"type": "idle"})
 
             elif msg_type == "text_input":
                 text = message.get("text", "").strip()
@@ -333,13 +377,16 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                 logger.debug("Failed to unregister active connection (user=%s): %s", user_id, exc)
 
 
-async def _send(websocket: WebSocket, payload: dict) -> None:
-    """Send a JSON payload, absorbing errors if the client already disconnected."""
+async def _send(websocket: WebSocket, payload: dict | bytes) -> None:
+    """Send a JSON payload or binary data, absorbing errors if the client already disconnected."""
     try:
         if websocket.client_state == WebSocketState.CONNECTED:
-            await websocket.send_json(payload)
+            if isinstance(payload, bytes):
+                await websocket.send_bytes(payload)
+            else:
+                await websocket.send_json(payload)
     except Exception as exc:
-        logger.debug("Failed to send WebSocket message (%s): %s", payload.get("type"), exc)
+        logger.debug("Failed to send WebSocket message: %s", exc)
 
 
 # ---------------------------------------------------------------------------
