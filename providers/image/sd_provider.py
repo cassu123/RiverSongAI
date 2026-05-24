@@ -97,7 +97,7 @@ class SDProvider:
             self._process.terminate()
             try:
                 # Give it a few seconds to exit gracefully
-                await asyncio.get_event_loop().run_in_executor(None, self._process.wait, 10)
+                await asyncio.get_running_loop().run_in_executor(None, self._process.wait, 10)
             except Exception:
                 self._process.kill()
             self._process = None

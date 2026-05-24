@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextvars
 import json
 import logging
 import os
@@ -92,8 +93,13 @@ async def list_tools() -> list[Tool]:
     ]
 
 
-# Bearer token cache — set on connection, used for every tool call in the session.
-_session_token: dict[str, str] = {"value": ""}
+# Bearer token — stored per-async-context so concurrent SSE clients cannot
+# stomp on each other's credentials. The previous module-level dict caused a
+# privilege-escalation race when two clients connected simultaneously
+# (audit SEC-004).
+_session_token: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "session_token", default=""
+)
 
 
 async def _resolve_user_id(token: str) -> str:
@@ -110,7 +116,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     if name not in EXPOSED_TOOL_NAMES:
         return [TextContent(type="text", text=f"Tool '{name}' is not exposed via MCP.")]
 
-    token = _session_token["value"]
+    token = _session_token.get()
     if not token:
         return [TextContent(type="text", text="Not authenticated — set Bearer token at connection.")]
 
@@ -138,7 +144,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
 
 # --- Transports ----------------------------------------------------------------
 async def run_stdio(token: str):
-    _session_token["value"] = token
+    _session_token.set(token)
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, initialization_options=server.create_initialization_options())
 
@@ -158,10 +164,12 @@ async def run_sse(host: str, port: int):
         auth = request.headers.get("authorization", "")
         if not auth.startswith("Bearer "):
             return Response(status_code=401, content="Missing Bearer token")
-        _session_token["value"] = auth.removeprefix("Bearer ")
+        token = auth.removeprefix("Bearer ")
+        # Bind to THIS request's async context only — never leaks across clients.
+        _session_token.set(token)
         # Validate eagerly
         try:
-            await _resolve_user_id(_session_token["value"])
+            await _resolve_user_id(token)
         except Exception:
             return Response(status_code=401, content="Invalid or expired token")
 

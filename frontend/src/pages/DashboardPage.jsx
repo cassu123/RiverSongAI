@@ -373,7 +373,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
             ) : (
               <div className="rs-archives-grid">
                 {(expandedCard === 'archives' ? sessions : sessions.slice(0, 3)).map((s, i) => (
-                  <div key={i} className="rs-archive-item">
+                  <div key={s.id ?? s.date ?? `session-${i}`} className="rs-archive-item">
                     <div className="rs-card-label">{new Date(s.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                     <div className="rs-archive-message">{s.messages?.[0]?.text || 'Voice interaction'}</div>
                     <div className="rs-card-meta">{s.messages?.length || 0} MSG</div>
@@ -388,7 +388,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
                 <div className="rs-archives-grid" style={{ marginTop: 16 }}>
                   {stats?.memory?.recent_facts?.length > 0 ? (
                     stats.memory.recent_facts.map((fact, idx) => (
-                      <div key={idx} className="rs-archive-item">
+                      <div key={`fact-${idx}-${String(fact).slice(0, 32)}`} className="rs-archive-item">
                         <div className="rs-card-label">FACT RECORD #{idx + 1}</div>
                         <div className="rs-archive-message" style={{ WebkitLineClamp: 2 }}>{fact}</div>
                       </div>

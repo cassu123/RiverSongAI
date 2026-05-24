@@ -60,7 +60,7 @@ export default function MemoryPage({ setAction }) {
           <div className="rs-card-meta">No matching memories found.</div>
         ) : (
           filtered.map((m, i) => (
-            <div key={i} className="rs-card is-wide">
+            <div key={m.id ?? `${m.type}-${m.timestamp}-${i}`} className="rs-card is-wide">
               <div className="rs-card-head">
                 <span className="rs-card-label">{m.type}</span>
                 <span className="rs-card-label" style={{ opacity: 0.4 }}>{new Date(m.timestamp).toLocaleDateString()}</span>

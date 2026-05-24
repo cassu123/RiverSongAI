@@ -30,7 +30,7 @@ async def send_push(subscription_json: str, title: str, body: str,
     payload = json.dumps({"title": title, "body": body, "icon": icon})
     
     try:
-        await asyncio.get_event_loop().run_in_executor(
+        await asyncio.get_running_loop().run_in_executor(
             None,
             lambda: webpush(
                 subscription_info=subscription,

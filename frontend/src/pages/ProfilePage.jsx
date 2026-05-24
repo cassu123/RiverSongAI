@@ -126,13 +126,17 @@ export default function ProfilePage({
   const handleDisconnect = async (service) => {
     setDisconnecting(service);
     try {
-      await fetch(`/api/integrations/${service}/disconnect`, { 
+      await fetch(`/api/integrations/${service}/disconnect`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
       const res = await fetch('/api/integrations/status', { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
-      setIntegrations(data);
+      // Normalize: initial load unwraps .integrations; do the same here so
+      // state shape stays consistent across the page lifetime.
+      if (data && typeof data === 'object') {
+        setIntegrations(data.integrations ?? data);
+      }
     } catch (err) {
       console.error('Disconnect failed', err);
     } finally {

@@ -11,7 +11,9 @@ import io
 import json
 import logging
 import os
+import tempfile
 import time
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Optional
@@ -24,6 +26,22 @@ logger = logging.getLogger(__name__)
 VOICE_PRINTS_ROOT = "data/voice_prints"
 
 
+def _atomic_write_json(path: str, data: dict) -> None:
+    """Write JSON atomically: tmp file + os.replace. Safe against partial writes."""
+    dirname = os.path.dirname(path) or "."
+    fd, tmp_path = tempfile.mkstemp(dir=dirname, suffix=".tmp", text=True)
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(data, f, indent=2)
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
 class VoiceIDProvider:
     def __init__(self):
         self._encoder = None  # lazy-loaded Resemblyzer encoder
@@ -31,6 +49,10 @@ class VoiceIDProvider:
         # In-memory cache: user_id -> list[np.ndarray] of embeddings
         self._cache: dict[str, list[np.ndarray]] = {}
         self._cache_loaded = False
+        # Per-user async lock to serialize read-modify-write of manifest.json
+        # (audit LOGIC-001). asyncio.Lock is fine here — enroll runs once per
+        # HTTP request and the lock is held only across the executor call.
+        self._user_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
     def _ensure_encoder(self):
         if self._encoder is None:
@@ -90,17 +112,26 @@ class VoiceIDProvider:
             # Update cache
             self._cache.setdefault(user_id, []).append(embedding)
 
-            # Update manifest
+            # Update manifest atomically: read existing (if any), increment,
+            # write to a tmp file, os.replace into place. The per-user
+            # asyncio.Lock surrounding this call prevents the read-modify-write
+            # interleaving that caused sample_count to go backwards
+            # under concurrent enroll requests (audit LOGIC-001).
             manifest_path = os.path.join(user_dir, "manifest.json")
             now_iso = datetime.now(timezone.utc).isoformat()
+            manifest = {"enrolled_at": now_iso}
             if os.path.exists(manifest_path):
-                manifest = json.load(open(manifest_path))
-            else:
-                manifest = {"enrolled_at": now_iso}
+                try:
+                    with open(manifest_path) as fh:
+                        existing_manifest = json.load(fh)
+                    # Preserve enrolled_at across rewrites
+                    if "enrolled_at" in existing_manifest:
+                        manifest["enrolled_at"] = existing_manifest["enrolled_at"]
+                except (OSError, json.JSONDecodeError) as exc:
+                    logger.warning("voice_id: manifest unreadable for %s, recreating: %s", user_id, exc)
             manifest["sample_count"] = n
             manifest["last_updated"] = now_iso
-            with open(manifest_path, "w") as f:
-                json.dump(manifest, f, indent=2)
+            _atomic_write_json(manifest_path, manifest)
 
             # Compute mean self-similarity for the response
             embs = self._cache[user_id]
@@ -116,13 +147,14 @@ class VoiceIDProvider:
 
             return {"sample_count": n, "mean_self_similarity": mean_sim}
 
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(self._executor, _sync)
+        async with self._user_locks[user_id]:
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(self._executor, _sync)
 
     async def identify(self, wav_bytes: bytes, threshold: float = 0.75) -> Optional[dict]:
         """Return {user_id, score, runner_up_user_id, runner_up_score} or None below threshold."""
         if not self._cache_loaded:
-            await asyncio.get_event_loop().run_in_executor(self._executor, self._load_cache)
+            await asyncio.get_running_loop().run_in_executor(self._executor, self._load_cache)
         if not self._cache:
             return None
 
@@ -160,7 +192,7 @@ class VoiceIDProvider:
                 "runner_up_score": second_score if second_user else None,
             }
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(self._executor, _sync)
 
     async def delete_enrollment(self, user_id: str) -> None:
@@ -171,7 +203,7 @@ class VoiceIDProvider:
             import shutil
             shutil.rmtree(user_dir)
             self._cache.pop(user_id, None)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(self._executor, _sync)
 
     async def get_status(self, user_id: str) -> dict:
@@ -186,5 +218,5 @@ class VoiceIDProvider:
                 return {"enrolled": True, **manifest}
             except Exception:
                 return {"enrolled": False, "sample_count": 0}
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(self._executor, _sync)

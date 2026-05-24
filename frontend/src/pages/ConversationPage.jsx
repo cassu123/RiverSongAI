@@ -282,7 +282,7 @@ export default function ConversationPage({ setAction }) {
         <div className="rs-chat-textarea" style={{ display: 'flex', alignItems: 'center', minHeight: 40, opacity: 0.8 }}>
           <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#6b7280', marginRight: 12 }} />
           <span style={{ fontWeight: 600, letterSpacing: '0.1em', fontSize: '0.85rem' }}>{convState.toUpperCase()}</span>
-          {activeVoice && (
+          {activeVoice?.active_voice && (
             <span className="rs-pill" style={{ fontSize: '0.65rem', marginLeft: 12 }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4 }}>settings_voice</span>
               {activeVoice.active_voice}

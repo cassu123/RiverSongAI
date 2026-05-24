@@ -305,6 +305,30 @@ def create_app() -> FastAPI:
 
     app.add_middleware(_CloudflareIPMiddleware)
 
+    # Baseline HTTP security headers. CSP intentionally omitted here — the
+    # frontend uses inline styles from CSS-in-JS / Three.js shaders, and an
+    # aggressive CSP would need per-route tuning. HSTS is production-only.
+    @app.middleware("http")
+    async def _security_headers(request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "geolocation=(self), microphone=(self), camera=(self)")
+        if not is_dev:
+            response.headers.setdefault(
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains",
+            )
+        return response
+
+    if settings.legacy_ws_token_accept:
+        logger.warning(
+            "LEGACY_WS_TOKEN_ACCEPT=True — accepting JWT-in-query-string for WebSockets. "
+            "This leaks tokens via access logs / browser history. Migrate to the "
+            "ticket flow at /api/auth/ws-ticket and set LEGACY_WS_TOKEN_ACCEPT=False."
+        )
+
     # Register API routers
     from api.routes import (
         auth_router, health_router, dashboard_router, memory_router,

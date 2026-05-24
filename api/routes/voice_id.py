@@ -5,8 +5,11 @@ Voice enrollment + identification API.
 """
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Header, Request
+from pydantic import BaseModel
 from core.auth import decode_token
 from core.errors import bad_request, forbidden, not_found, unauthorized
+from core.limiter import limiter
+from config.settings import get_settings
 from providers.voice_id.voice_id_provider import VoiceIDProvider
 
 router = APIRouter(prefix="/api/voice-id", tags=["voice-id"])
@@ -18,6 +21,25 @@ def _get_provider() -> VoiceIDProvider:
     if _provider is None:
         _provider = VoiceIDProvider()
     return _provider
+
+
+class VoiceStatusResponse(BaseModel):
+    enrolled: bool
+    sample_count: int = 0
+    enrolled_at: Optional[str] = None
+    last_updated: Optional[str] = None
+
+
+class EnrollResponse(BaseModel):
+    sample_count: int
+    mean_self_similarity: float
+
+
+class IdentifyResponse(BaseModel):
+    user_id: Optional[str] = None
+    score: Optional[float] = None
+    runner_up_user_id: Optional[str] = None
+    runner_up_score: Optional[float] = None
 
 
 async def _require_user(authorization: Optional[str] = Header(default=None)) -> str:
@@ -38,8 +60,10 @@ async def _require_admin(authorization: Optional[str] = Header(default=None)) ->
     return payload["sub"]
 
 
-@router.post("/enroll")
+@router.post("/enroll", response_model=EnrollResponse)
+@limiter.limit(get_settings().rate_limit_voice_enroll)
 async def enroll(
+    request: Request,
     file: UploadFile = File(...),
     user_id: str = Depends(_require_user),
 ):
@@ -50,7 +74,7 @@ async def enroll(
     return result
 
 
-@router.get("/me")
+@router.get("/me", response_model=VoiceStatusResponse)
 async def get_my_status(user_id: str = Depends(_require_user)):
     return await _get_provider().get_status(user_id)
 
@@ -63,12 +87,11 @@ async def delete_my_enrollment(user_id: str = Depends(_require_user)):
 
 # Admin-only: used by the conversation pipeline (via internal helper, not HTTP).
 # Also exposed for debugging via curl.
-@router.post("/identify")
+@router.post("/identify", response_model=IdentifyResponse)
 async def identify(
     file: UploadFile = File(...),
     _: str = Depends(_require_admin),
 ):
-    from config.settings import get_settings
     wav_bytes = await file.read()
     threshold = get_settings().voice_id_threshold
     result = await _get_provider().identify(wav_bytes, threshold=threshold)

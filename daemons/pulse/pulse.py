@@ -48,9 +48,10 @@ class PulseDaemon(BaseDaemon):
 
     async def _tick_once(self) -> None:
         ts = time.time()
-        
+
         from providers.memory.sqlite_store import SQLiteStore
-        store = SQLiteStore(self.settings.sqlite_db_path)
+        # Settings has `db_path`, not `sqlite_db_path` — audit LOGIC-004.
+        store = SQLiteStore(self.settings.db_path)
         config = await store.get_admin_config()
         
         pulse_news_enabled = config.get("pulse_news_enabled", True)
@@ -72,6 +73,17 @@ class PulseDaemon(BaseDaemon):
             return_exceptions=True,
         )
         news_data, markets_data, flights_data = results
+
+        # Surface systemic outages: if EVERY enabled source failed in this tick,
+        # log loudly. Otherwise per-source failures get logged by _save_or_log.
+        all_enabled = [
+            (pulse_news_enabled, news_data),
+            (pulse_markets_enabled, markets_data),
+            (pulse_flights_enabled, flights_data),
+        ]
+        active = [d for enabled, d in all_enabled if enabled]
+        if active and all(isinstance(d, Exception) for d in active):
+            logger.error("Pulse: all enabled sources failed this tick: %s", active)
 
         # Save each snapshot, swallowing per-source failures
         if pulse_news_enabled: await self._save_or_log("news", news_data, ts)

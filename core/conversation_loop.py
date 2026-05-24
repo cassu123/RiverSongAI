@@ -314,6 +314,28 @@ class ConversationLoop:
         self._web_search: bool = False
         self._thinking_mode: Optional[str] = "fast" # "fast" | "thinking" | "pro"
         self._suppress_memory: bool = False
+        # Track fire-and-forget tasks so their exceptions get logged instead
+        # of silently dropped, and so they can be awaited at shutdown.
+        # (audit LOGIC-002)
+        self._background_tasks: "set[asyncio.Task]" = set()
+
+    def _spawn_background(self, coro, label: str) -> "asyncio.Task":
+        """
+        Schedule ``coro`` as a tracked background task.
+
+        Wraps ``coro`` so unhandled exceptions are logged with traceback
+        instead of silently raising "Task exception was never retrieved" at
+        garbage-collection time.
+        """
+        async def _runner():
+            try:
+                await coro
+            except Exception as exc:
+                logger.error("Background task %s failed: %s", label, exc, exc_info=True)
+        task = asyncio.create_task(_runner())
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
 
 
     async def initialize(self) -> None:
@@ -556,8 +578,9 @@ class ConversationLoop:
                     "format": fmt,
                 })
                 # NEW: trigger Herald lip-sync in background (non-blocking)
-                asyncio.create_task(
-                    self._trigger_herald_lip_sync(audio_data, fmt)
+                self._spawn_background(
+                    self._trigger_herald_lip_sync(audio_data, fmt),
+                    "herald_lip_sync",
                 )
 
     async def _trigger_herald_lip_sync(self, audio_bytes: bytes, fmt: str) -> None:
@@ -796,7 +819,10 @@ class ConversationLoop:
                 await self._memory.record_summary(self._user_id, summary_text)
                 
                 # Phase 15: Habit Inference
-                asyncio.create_task(self._infer_habits(transcript, full_response))
+                self._spawn_background(
+                    self._infer_habits(transcript, full_response),
+                    "infer_habits",
+                )
             except Exception as exc:
                 logger.warning("Summary recording failed (user=%s): %s", self._user_id, exc)
 

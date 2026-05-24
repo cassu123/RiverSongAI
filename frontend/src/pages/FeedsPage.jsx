@@ -39,7 +39,9 @@ export default function FeedsPage({ setAction }) {
         setAllSources(data.sources || [])
         setCatMeta(data.categories || {})
       }
-    } catch {}
+    } catch (err) {
+      console.warn('[FeedsPage] fetchPrefs failed:', err)
+    }
   }, [token])
 
   const fetchFeed = useCallback(async (tab) => {
@@ -72,7 +74,7 @@ export default function FeedsPage({ setAction }) {
           const frames = d?.radar?.past || []
           if (frames.length) setRadarTs(frames[frames.length - 1].path)
         })
-        .catch(() => {})
+        .catch(err => console.warn('[FeedsPage] radar fetch failed:', err))
     }
   }, [activeTab, prefs])
 

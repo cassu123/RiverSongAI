@@ -18,7 +18,9 @@ export default function RoutinesPage({ setAction }) {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (res.ok) setRoutines(await res.json())
-    } catch {} finally { setLoading(false) }
+    } catch (err) {
+      console.warn('[RoutinesPage] fetch failed:', err)
+    } finally { setLoading(false) }
   }
 
   useEffect(() => { fetchRoutines() }, [token])
@@ -31,7 +33,9 @@ export default function RoutinesPage({ setAction }) {
         body: JSON.stringify({ enabled: !enabled })
       })
       fetchRoutines()
-    } catch {}
+    } catch (err) {
+      console.warn('[RoutinesPage] toggle failed:', err)
+    }
   }
 
   useEffect(() => {

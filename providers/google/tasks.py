@@ -43,7 +43,7 @@ class GoogleTasksProvider:
             return results.get("items", [])
 
         import asyncio
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, _sync)
 
     async def get_tasks(self, tasklist_id: str = "@default", show_completed: bool = False) -> List[Dict[str, Any]]:
@@ -58,7 +58,7 @@ class GoogleTasksProvider:
             return results.get("items", [])
 
         import asyncio
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, _sync)
 
     async def create_task(self, title: str, notes: Optional[str] = None, tasklist_id: str = "@default") -> Dict[str, Any]:
@@ -72,7 +72,7 @@ class GoogleTasksProvider:
             return service.tasks().insert(tasklist=tasklist_id, body=task).execute()
 
         import asyncio
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, _sync)
 
 

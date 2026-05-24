@@ -13,15 +13,40 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+import threading
 
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# Per-thread cached connection. Opens once per thread instead of once per
+# call, eliminating the per-call connect overhead the audit flagged in
+# LOGIC-006. Sync API is preserved so the 5+ existing callers remain
+# unchanged.
+_local = threading.local()
+
 
 def _db_path() -> str:
     from config.settings import get_settings
     return get_settings().db_path
+
+
+def _get_conn() -> sqlite3.Connection:
+    conn = getattr(_local, "conn", None)
+    if conn is not None:
+        return conn
+    conn = sqlite3.connect(
+        _db_path(),
+        timeout=10.0,
+        check_same_thread=False,
+    )
+    conn.row_factory = sqlite3.Row
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+    except sqlite3.Error:
+        pass
+    _local.conn = conn
+    return conn
 
 
 def resolve_module_owner(user_id: str, module: str) -> str:
@@ -34,8 +59,7 @@ def resolve_module_owner(user_id: str, module: str) -> str:
     not in a group or the module is not shared.
     """
     try:
-        conn = sqlite3.connect(_db_path())
-        conn.row_factory = sqlite3.Row
+        conn = _get_conn()
         row = conn.execute(
             """
             SELECT fg.id, fg.shared_modules
@@ -45,7 +69,6 @@ def resolve_module_owner(user_id: str, module: str) -> str:
             """,
             (user_id,),
         ).fetchone()
-        conn.close()
         if row:
             modules = json.loads(row["shared_modules"] or "[]")
             if module in modules:

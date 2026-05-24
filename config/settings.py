@@ -56,8 +56,11 @@ class Settings(BaseSettings):
         description="Allowed CORS origins",
     )
     allowed_hosts: List[str] = Field(
-        default=["*"],
-        description="Trusted hostnames for TrustedHostMiddleware. Set to your domain in production.",
+        default=["localhost", "127.0.0.1"],
+        description=(
+            "Trusted hostnames for TrustedHostMiddleware. Set to your domain(s) in production. "
+            "Wildcard ['*'] is rejected in production by validator (see reject_wildcard_in_production)."
+        ),
     )
 
     # -------------------------------------------------------------------------
@@ -117,13 +120,22 @@ class Settings(BaseSettings):
         default="5/minute",
         description="Rate limit for signup attempts.",
     )
+    rate_limit_voice_enroll: str = Field(
+        default="5/minute",
+        description="Rate limit for /api/voice-id/enroll. Prevents disk exhaustion via spam.",
+    )
 
     # -------------------------------------------------------------------------
     # WebSocket Security (Task 3)
     # -------------------------------------------------------------------------
     legacy_ws_token_accept: bool = Field(
-        default=True,
-        description="TEMPORARY: Allow ?token= query param for WebSockets. Plan to disable.",
+        default=False,
+        description=(
+            "DEPRECATED: Accept JWT in ?token= WebSocket query param. "
+            "Leak-prone (logged in access logs, browser history, Referer). "
+            "Ticket-based auth at /api/auth/ws-ticket is the safe path. "
+            "Set to True only for temporary backward-compat during migration."
+        ),
     )
     ws_ticket_lifetime_seconds: int = Field(
         default=60,
@@ -1014,6 +1026,33 @@ class Settings(BaseSettings):
             raise ValueError(
                 "DAEMON_INTERNAL_SECRET must be at least 24 characters. "
                 "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+            )
+        return v
+
+    @field_validator("kiosk_token")
+    @classmethod
+    def validate_kiosk_token(cls, v: str) -> str:
+        """Refuse to start with the default or weak kiosk token."""
+        if v == "change_me_kiosk_secret":
+            raise ValueError(
+                "KIOSK_TOKEN must be changed in .env. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+            )
+        if not v or len(v) < 24:
+            raise ValueError(
+                "KIOSK_TOKEN must be at least 24 characters."
+            )
+        return v
+
+    @field_validator("allowed_hosts")
+    @classmethod
+    def reject_wildcard_in_production(cls, v, info) -> List[str]:
+        """Block ['*'] in production — it disables TrustedHostMiddleware."""
+        env = (info.data.get("environment") or "production").lower()
+        if env == "production" and "*" in v:
+            raise ValueError(
+                "ALLOWED_HOSTS must not contain '*' in production. "
+                "Set it to your domain(s), e.g. ALLOWED_HOSTS=[\"riversongai.com\"]."
             )
         return v
 

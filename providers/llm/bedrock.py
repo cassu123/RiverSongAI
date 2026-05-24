@@ -131,7 +131,7 @@ class BedrockLLM(LLMProvider):
 
         # boto3 is synchronous — run in thread pool to avoid blocking the event loop
         queue: asyncio.Queue[str | None] = asyncio.Queue()
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         def _stream_sync():
             try:
@@ -167,7 +167,7 @@ class BedrockLLM(LLMProvider):
             finally:
                 loop.call_soon_threadsafe(queue.put_nowait, None)
 
-        thread = asyncio.get_event_loop().run_in_executor(None, _stream_sync)
+        thread = asyncio.get_running_loop().run_in_executor(None, _stream_sync)
 
         try:
             while True:

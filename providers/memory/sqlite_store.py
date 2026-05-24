@@ -107,6 +107,12 @@ CREATE TABLE IF NOT EXISTS conversation_summaries (
 CREATE INDEX IF NOT EXISTS idx_summaries_user_expires
     ON conversation_summaries(user_id, expires_at);
 
+CREATE INDEX IF NOT EXISTS idx_summaries_user_id
+    ON conversation_summaries(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_facts_user_id ON facts(user_id);
+CREATE INDEX IF NOT EXISTS idx_preferences_user_id ON preferences(user_id);
+
 CREATE TABLE IF NOT EXISTS memory_settings (
     user_id            TEXT PRIMARY KEY,
     summaries_enabled  INTEGER NOT NULL DEFAULT 1,
@@ -223,6 +229,16 @@ CREATE TABLE IF NOT EXISTS user_integrations (
 
 CREATE INDEX IF NOT EXISTS idx_user_integrations_user ON user_integrations(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_integrations_service ON user_integrations(service);
+
+CREATE TABLE IF NOT EXISTS oauth_nonces (
+    nonce       TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL,
+    service     TEXT NOT NULL,
+    created_at  REAL NOT NULL,
+    expires_at  REAL NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_oauth_nonces_expires ON oauth_nonces(expires_at);
 
 CREATE TABLE IF NOT EXISTS voice_id_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -458,6 +474,13 @@ class SQLiteStore:
             "CREATE TABLE IF NOT EXISTS user_preferences (user_id TEXT PRIMARY KEY, music_provider TEXT NOT NULL DEFAULT 'youtube_music', updated_at TEXT NOT NULL DEFAULT '')",
             "ALTER TABLE feed_preferences ADD COLUMN sports_favorite_leagues TEXT NOT NULL DEFAULT '[\"nba\",\"nfl\",\"mlb\"]'",
             "ALTER TABLE feed_preferences ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}'",
+            # OAuth CSRF nonce store (for /api/integrations/google/callback validation).
+            "CREATE TABLE IF NOT EXISTS oauth_nonces (nonce TEXT PRIMARY KEY, user_id TEXT NOT NULL, service TEXT NOT NULL, created_at REAL NOT NULL, expires_at REAL NOT NULL)",
+            "CREATE INDEX IF NOT EXISTS idx_oauth_nonces_expires ON oauth_nonces(expires_at)",
+            # Hot-path indexes for per-user lookups (audit DATA-001).
+            "CREATE INDEX IF NOT EXISTS idx_facts_user_id ON facts(user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_preferences_user_id ON preferences(user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_summaries_user_id ON conversation_summaries(user_id)",
         ]:
             try:
                 conn.execute(migration)
@@ -596,6 +619,57 @@ class SQLiteStore:
             (_now_str(), user_id, service)
         )
         conn.commit()
+
+    # -------------------------------------------------------------------------
+    # OAuth nonces (CSRF protection for OAuth state parameter)
+    # -------------------------------------------------------------------------
+
+    async def put_oauth_nonce(
+        self, nonce: str, user_id: str, service: str, ttl_seconds: int = 600
+    ) -> None:
+        """Store a one-time-use OAuth state nonce. Default TTL 10 minutes."""
+        await self._run(self._sync_put_oauth_nonce, nonce, user_id, service, ttl_seconds)
+
+    def _sync_put_oauth_nonce(
+        self, nonce: str, user_id: str, service: str, ttl_seconds: int
+    ) -> None:
+        import time
+        conn = self._get_conn()
+        now = time.time()
+        conn.execute(
+            "INSERT INTO oauth_nonces (nonce, user_id, service, created_at, expires_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (nonce, user_id, service, now, now + ttl_seconds),
+        )
+        # Opportunistic GC of expired nonces.
+        conn.execute("DELETE FROM oauth_nonces WHERE expires_at < ?", (now,))
+        conn.commit()
+
+    async def consume_oauth_nonce(self, nonce: str, service: str) -> Optional[str]:
+        """
+        Validate, consume (delete), and return the user_id bound to ``nonce``
+        for ``service``. Returns None if the nonce is missing, expired, or
+        bound to a different service.
+        """
+        return await self._run(self._sync_consume_oauth_nonce, nonce, service)
+
+    def _sync_consume_oauth_nonce(self, nonce: str, service: str) -> Optional[str]:
+        import time
+        conn = self._get_conn()
+        now = time.time()
+        row = conn.execute(
+            "SELECT user_id, service, expires_at FROM oauth_nonces WHERE nonce = ?",
+            (nonce,),
+        ).fetchone()
+        if row is None:
+            return None
+        user_id, row_service, expires_at = row
+        # Always delete first — single-use semantics, even on mismatch/expiry.
+        conn.execute("DELETE FROM oauth_nonces WHERE nonce = ?", (nonce,))
+        conn.commit()
+        if row_service != service or expires_at < now:
+            return None
+        return user_id
 
 
     # -------------------------------------------------------------------------

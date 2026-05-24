@@ -23,8 +23,13 @@ const STATUSES = [
 ]
 
 function authHeaders() {
-  const token = localStorage.getItem('rs-auth-token')
-  return token ? { Authorization: `Bearer ${token}` } : {}
+  try {
+    const token = localStorage.getItem('rs-auth-token')
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  } catch {
+    // Private browsing / Safari ITP / SSR — localStorage can throw.
+    return {}
+  }
 }
 
 async function apiFetch(path, opts = {}) {

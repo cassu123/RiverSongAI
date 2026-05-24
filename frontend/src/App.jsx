@@ -135,38 +135,35 @@ export default function App() {
   useEffect(() => {
     save(universeKey, universe)
     document.documentElement.setAttribute('data-universe', universe)
-    if (user && token) {
-      fetch('/api/auth/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ universe }),
-      }).catch(() => {})
-    }
-  }, [universe, universeKey, user, token])
+    if (!user || !token) return
+    fetch('/api/auth/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ universe }),
+    }).catch(err => console.warn('[App] persist universe failed:', err))
+  }, [universe, universeKey, user?.id, token])
 
   useEffect(() => {
     save(envKey, environment)
     document.documentElement.setAttribute('data-env', environment)
-    if (user && token) {
-      fetch('/api/auth/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ environment }),
-      }).catch(() => {})
-    }
-  }, [environment, envKey, user, token])
+    if (!user || !token) return
+    fetch('/api/auth/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ environment }),
+    }).catch(err => console.warn('[App] persist environment failed:', err))
+  }, [environment, envKey, user?.id, token])
 
   useEffect(() => {
     save(moodKey, mood)
     document.documentElement.setAttribute('data-mood', mood)
-    if (user && token) {
-      fetch('/api/auth/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ mood }),
-      }).catch(() => {})
-    }
-  }, [mood, moodKey, user, token])
+    if (!user || !token) return
+    fetch('/api/auth/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ mood }),
+    }).catch(err => console.warn('[App] persist mood failed:', err))
+  }, [mood, moodKey, user?.id, token])
 
   useEffect(() => {
     if (!token) { setEnabledFeatures(null); return }
