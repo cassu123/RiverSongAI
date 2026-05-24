@@ -37,6 +37,32 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
   const [isEditing, setIsEditing] = useState(false)
   const [edited, setEdited] = useState({ ...recipe })
   const [saving, setSaving] = useState(false)
+  const modalRef = React.useRef(null)
+
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    if (modalRef.current) {
+      const focusable = modalRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (focusable.length) focusable[0].focus();
+    }
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handleSave = async () => {
     setSaving(true)
@@ -51,11 +77,35 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
     }
   }
 
+  const addIngredient = () => setEdited({ ...edited, ingredients: [...(edited.ingredients || []), { qty: '', unit: '', name: '' }] })
+  const updateIngredient = (index, field, value) => {
+    const updated = [...(edited.ingredients || [])]
+    updated[index] = { ...updated[index], [field]: value }
+    setEdited({ ...edited, ingredients: updated })
+  }
+  const removeIngredient = (index) => {
+    const updated = [...(edited.ingredients || [])]
+    updated.splice(index, 1)
+    setEdited({ ...edited, ingredients: updated })
+  }
+
+  const addStep = () => setEdited({ ...edited, steps: [...(edited.steps || []), ''] })
+  const updateStep = (index, value) => {
+    const updated = [...(edited.steps || [])]
+    updated[index] = value
+    setEdited({ ...edited, steps: updated })
+  }
+  const removeStep = (index) => {
+    const updated = [...(edited.steps || [])]
+    updated.splice(index, 1)
+    setEdited({ ...edited, steps: updated })
+  }
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(20px)' }} onClick={onClose}>
-       <div className="rs-card is-elev animate-page-in" style={{ width: 'min(95%, 800px)', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+       <div ref={modalRef} tabIndex="-1" className="rs-card is-elev animate-page-in" style={{ width: 'min(95%, 800px)', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', animationDuration: '300ms' }} onClick={e => e.stopPropagation()}>
           <div className="rs-card-inner" style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
-             <div className="rs-card-head" style={{ marginBottom: 24 }}>
+             <div className="rs-card-head" style={{ marginBottom: 24, padding: '8px 8px 0 8px' }}>
                 <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>{isEditing ? 'EDITING ARCHIVE' : recipe.meal_type.toUpperCase()}</span>
                 <div style={{ display: 'flex', gap: 12 }}>
                    <button className="rs-pill" onClick={() => setIsEditing(!isEditing)}>
@@ -71,7 +121,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
              {isEditing ? (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   <div className="rs-chat-input-container" style={{ background: 'var(--md-surface-container-low)' }}>
-                     <input className="rs-chat-input" value={edited.title} onChange={e => setEdited({ ...edited, title: e.target.value })} placeholder="RECIPE TITLE" />
+                     <input className="rs-chat-input" value={edited.title} onChange={e => setEdited({ ...edited, title: e.target.value })} placeholder="RECIPE TITLE" style={{ lineHeight: 1.7 }} />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                      <select className="rs-pill" value={edited.meal_type} onChange={e => setEdited({ ...edited, meal_type: e.target.value })} style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: '12px 16px' }}>
@@ -82,24 +132,45 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                         {['Chicken', 'Beef', 'Pork', 'Fish', 'Seafood', 'Turkey', 'Lamb', 'Vegetarian'].map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
                      </select>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                     <div>
-                        <div className="rs-card-label" style={{ marginBottom: 12 }}>PROVISIONS (JSON)</div>
-                        <textarea 
-                          style={{ all: 'unset', width: '100%', minHeight: 160, padding: 16, background: 'var(--md-surface-container-low)', borderRadius: 12, fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }} 
-                          value={JSON.stringify(edited.ingredients, null, 2)} 
-                          onChange={e => { try { setEdited({ ...edited, ingredients: JSON.parse(e.target.value) }) } catch {} }} 
-                        />
-                     </div>
-                     <div>
-                        <div className="rs-card-label" style={{ marginBottom: 12 }}>EXECUTION (JSON)</div>
-                        <textarea 
-                          style={{ all: 'unset', width: '100%', minHeight: 160, padding: 16, background: 'var(--md-surface-container-low)', borderRadius: 12, fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }} 
-                          value={JSON.stringify(edited.steps, null, 2)} 
-                          onChange={e => { try { setEdited({ ...edited, steps: JSON.parse(e.target.value) }) } catch {} }} 
-                        />
-                     </div>
+                  
+                  <div>
+                    <div className="rs-card-label" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                      PROVISIONS
+                      <button className="rs-pill" style={{ fontSize: '0.65rem' }} onClick={addIngredient}>ADD PROVISION</button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {edited.ingredients?.map((ing, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 8 }}>
+                          <input className="rs-pill" style={{ width: 60, background: 'var(--md-surface-container-low)', border: 'none', textAlign: 'center' }} placeholder="QTY" value={ing.qty} onChange={e => updateIngredient(i, 'qty', e.target.value)} />
+                          <input className="rs-pill" style={{ width: 80, background: 'var(--md-surface-container-low)', border: 'none' }} placeholder="UNIT" value={ing.unit} onChange={e => updateIngredient(i, 'unit', e.target.value)} />
+                          <input className="rs-pill" style={{ flex: 1, background: 'var(--md-surface-container-low)', border: 'none' }} placeholder="INGREDIENT NAME" value={ing.name} onChange={e => updateIngredient(i, 'name', e.target.value)} />
+                          <button className="rs-pill" style={{ padding: 8, color: 'var(--md-error)' }} onClick={() => removeIngredient(i)}><span className="material-symbols-rounded">delete</span></button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+
+                  <div>
+                    <div className="rs-card-label" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                      EXECUTION SEQUENCE
+                      <button className="rs-pill" style={{ fontSize: '0.65rem' }} onClick={addStep}>ADD STEP</button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {edited.steps?.map((step, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                          <span style={{ marginTop: 12, fontFamily: 'var(--font-mono)', opacity: 0.4, fontWeight: 900 }}>{String(i+1).padStart(2, '0')}</span>
+                          <textarea 
+                            className="rs-pill" 
+                            style={{ flex: 1, minHeight: 60, borderRadius: 16, background: 'var(--md-surface-container-low)', border: 'none', padding: '12px 16px', lineHeight: 1.7, resize: 'vertical' }} 
+                            value={step} 
+                            onChange={e => updateStep(i, e.target.value)} 
+                          />
+                          <button className="rs-pill" style={{ padding: 8, color: 'var(--md-error)', marginTop: 8 }} onClick={() => removeStep(i)}><span className="material-symbols-rounded">delete</span></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
                      <button className="rs-btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={saving}>{saving ? 'PERSISTING...' : 'SAVE CHANGES'}</button>
                      <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={() => { if(confirm('Erase this archive?')) onDelete(recipe.id) }}>DELETE</button>
@@ -129,7 +200,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                      <div className="rs-card-label" style={{ marginBottom: 16 }}>EXECUTION SEQUENCE</div>
                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                        {recipe.steps?.map((s, i) => (
-                         <div key={i} style={{ fontSize: '0.95rem', lineHeight: 1.6, display: 'flex', gap: 16 }}>
+                         <div key={i} style={{ fontSize: '0.95rem', lineHeight: 1.7, display: 'flex', gap: 16 }}>
                             <span style={{ fontWeight: 900, color: 'var(--primary)', opacity: 0.4, fontFamily: 'var(--font-mono)' }}>{String(i+1).padStart(2,'0')}</span>
                             <span style={{ opacity: 0.9 }}>{s}</span>
                          </div>
@@ -180,7 +251,7 @@ function useApi(token) {
     get: (p) => fetch(`/api/culinary${p}`, { headers: headers() }).then(_handle),
     post: (p, b) => fetch(`/api/culinary${p}`, { method: 'POST', headers: headers(), body: JSON.stringify(b) }).then(_handle),
     patch: (p, b) => fetch(`/api/culinary${p}`, { method: 'PATCH', headers: headers(), body: JSON.stringify(b) }).then(_handle),
-    del: (p) => fetch(`/api/culinary${p}`, { method: 'DELETE', headers: headers() }),
+    delete: (p) => fetch(`/api/culinary${p}`, { method: 'DELETE', headers: headers() }),
   }), [headers])
 }
 
@@ -297,7 +368,7 @@ export default function CulinaryPage({ setAction }) {
         .filter(r => filterType === 'ALL' || r.meal_type === filterType)
         .filter(r => filterProtein === 'ALL' || r.primary_protein === filterProtein)
         .map(r => (
-        <div key={r.id} className="rs-card is-tappable animate-page-in" style={{ padding: 0, overflow: 'hidden' }} onClick={() => setSelectedRecipe(r)}>
+        <div key={r.id} className="rs-card is-tappable animate-page-in" style={{ padding: 0, overflow: 'hidden', animationDuration: '400ms' }} onClick={() => setSelectedRecipe(r)}>
            <div className="rs-card-inner" style={{ padding: 0, border: 'none', background: 'transparent' }}>
              <div style={{ position: 'relative', width: '100%', aspectRatio: '16/10', overflow: 'hidden', background: 'var(--md-surface-container-highest)' }}>
                 {r.image_url ? (
@@ -330,7 +401,7 @@ export default function CulinaryPage({ setAction }) {
   const renderStockroom = () => (
     <div className="rs-card-flow">
       {stock.filter(i => i.name.toLowerCase().includes(search.toLowerCase())).map(item => (
-        <div key={item.id} className="rs-card is-wide animate-page-in">
+        <div key={item.id} className="rs-card is-wide animate-page-in" style={{ animationDuration: '400ms' }}>
            <div className="rs-card-inner">
              <div className="rs-card-head">
                 <span className="rs-card-label" style={{ opacity: 1, color: item.quantity <= item.min_quantity ? '#f87171' : '#4ade80', fontWeight: 900 }}>
@@ -357,7 +428,7 @@ export default function CulinaryPage({ setAction }) {
        {proposals.length === 0 ? (
          <div className="rs-card-meta" style={{ padding: 64, textAlign: 'center' }}>NO DINNER PROPOSALS ACTIVE.</div>
        ) : proposals.map(p => (
-         <div key={p.id} className={`rs-card is-wide animate-page-in ${p.status === 'approved' ? 'is-elev' : ''}`} style={{ borderColor: p.status === 'approved' ? 'var(--primary)' : 'var(--md-outline)' }}>
+         <div key={p.id} className={`rs-card is-wide animate-page-in ${p.status === 'approved' ? 'is-elev' : ''}`} style={{ borderColor: p.status === 'approved' ? 'var(--primary)' : 'var(--md-outline)', animationDuration: '400ms' }}>
             <div className="rs-card-inner">
                <div className="rs-card-head">
                   <span className="rs-card-label" style={{ color: p.status === 'approved' ? 'var(--primary)' : 'inherit', fontWeight: 900 }}>{p.status.toUpperCase()} PROPOSAL</span>
@@ -377,7 +448,7 @@ export default function CulinaryPage({ setAction }) {
                      fetchData('dinner');
                   }}>VETO</button>
                   <button className="rs-pill" onClick={async () => {
-                     await api.del(`/dinner/${p.id}`);
+                     await api.delete(`/dinner/${p.id}`);
                      fetchData('dinner');
                   }}><span className="material-symbols-rounded">close</span></button>
                </div>
@@ -398,7 +469,7 @@ export default function CulinaryPage({ setAction }) {
             }}>START PREP SESSION</button>
          </div>
        ) : (
-         <div className="rs-card is-wide animate-page-in" style={{ border: '1px solid var(--primary)' }}>
+         <div className="rs-card is-wide animate-page-in" style={{ border: '1px solid var(--primary)', animationDuration: '400ms' }}>
             <div className="rs-card-inner">
                <div className="rs-card-head">
                   <span className="rs-card-label" style={{ color: 'var(--primary)', fontWeight: 900 }}>ACTIVE PREP: {activePrep.label?.toUpperCase()}</span>
@@ -415,7 +486,7 @@ export default function CulinaryPage({ setAction }) {
                        <span style={{ flex: 1, fontWeight: 700 }}>{pr.recipe_title}</span>
                        <span className="rs-card-label">{pr.servings_target || 'ORIGINAL'} SERVINGS</span>
                        <button className="rs-pill" style={{ padding: 4, marginLeft: 12, color: 'var(--md-error)' }} onClick={async () => {
-                          await api.del(`/prep/${activePrep.id}/recipes/${pr.entry_id}`);
+                          await api.delete(`/prep/${activePrep.id}/recipes/${pr.entry_id}`);
                           fetchData('prep');
                        }}>
                           <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>remove_circle</span>
@@ -460,14 +531,14 @@ export default function CulinaryPage({ setAction }) {
       ) : loading && !['equipment', 'prep', 'dinner'].includes(activeTab) ? (
         <div className="rs-card-meta" style={{ padding: 64, textAlign: 'center' }}>ACCESSING {activeTab.toUpperCase()} ARCHIVES...</div>
       ) : (
-        <div className="animate-page-in">
+        <div className="animate-page-in" style={{ animationDuration: '400ms' }}>
           {activeTab === 'library' && renderLibrary()}
           {activeTab === 'stockroom' && renderStockroom()}
           {activeTab === 'dinner' && renderDinner()}
           {activeTab === 'prep' && renderPrep()}
           {activeTab === 'grocery' && (
              <div className="rs-card-flow">
-               <div className="rs-card is-wide is-elev" style={{ border: '1px solid var(--md-error)', background: 'color-mix(in srgb, var(--md-error) 4%, var(--bg-base))' }}>
+               <div className="rs-card is-wide is-elev animate-page-in" style={{ border: '1px solid var(--md-error)', background: 'color-mix(in srgb, var(--md-error) 4%, var(--bg-base))', animationDuration: '400ms' }}>
                   <div className="rs-card-inner">
                     <div className="rs-card-head">
                        <span className="rs-card-label" style={{ color: 'var(--md-error)', fontWeight: 900 }}>PROCUREMENT REQUIRED</span>
@@ -490,7 +561,7 @@ export default function CulinaryPage({ setAction }) {
           {activeTab === 'equipment' && (
              <div className="rs-card-flow">
                {equipment.map((eq, i) => (
-                 <div key={i} className="rs-card">
+                 <div key={i} className="rs-card animate-page-in" style={{ animationDuration: '400ms' }}>
                    <div className="rs-card-inner">
                      <div className="rs-card-head">
                        <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>{(eq.equipment_type || 'HARDWARE').toUpperCase()}</span>
@@ -506,7 +577,7 @@ export default function CulinaryPage({ setAction }) {
           {activeTab === 'banned' && (
             <div className="rs-card-flow">
                {banned.map(item => (
-                 <div key={item.id} className="rs-card">
+                 <div key={item.id} className="rs-card animate-page-in" style={{ animationDuration: '400ms' }}>
                     <div className="rs-card-inner">
                       <div className="rs-card-head"><span className="rs-card-label" style={{ color: 'var(--md-error)', fontWeight: 900 }}>BANNED</span></div>
                       <div className="rs-card-value">{item.name}</div>
@@ -528,7 +599,7 @@ export default function CulinaryPage({ setAction }) {
             setSelectedRecipe(updated);
           }}
           onDelete={async (id) => {
-            await api.del(`/recipes/${id}`);
+            await api.delete(`/recipes/${id}`);
             setRecipes(recipes.filter(r => r.id !== id));
             setSelectedRecipe(null);
           }}
