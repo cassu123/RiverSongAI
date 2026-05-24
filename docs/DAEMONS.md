@@ -25,7 +25,25 @@ optional `_handle_task(action, payload)`.
 
 ### systemd (production)
 
-Each daemon is a templated instance of `daemons/river-song-daemon@.service`:
+#### Initial install (once per machine)
+
+The repo ships the templated unit file at
+`daemons/river-song-daemon@.service`. Before any of the per-instance
+`enable` commands below will work, that template has to be copied into
+`/etc/systemd/system/`:
+
+```
+sudo cp /home/riversong/RiverSongAI/daemons/river-song-daemon@.service \
+        /etc/systemd/system/
+sudo systemctl daemon-reload
+```
+
+Verify with `systemctl list-unit-files 'river-song-daemon@*'`. If it
+returns "0 unit files listed", the copy didn't take.
+
+#### Enable + start the daemons you want
+
+Each daemon is a templated instance of the unit file:
 
 ```
 sudo systemctl enable --now river-song-daemon@herald

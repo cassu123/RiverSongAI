@@ -46,6 +46,19 @@ step "Downloading voice models (new voices only)"
 python scripts/download_voices.py
 
 step "Building frontend"
+# Vite inlines VITE_* env vars at build time. KIOSK_TOKEN must match the
+# backend value or Google Home Hubs will get 401 on /api/auth/ws-ticket/kiosk.
+# Read from .env so the bundle and backend always stay in sync.
+if [[ -f .env ]]; then
+    # shellcheck disable=SC1091
+    set -a
+    source <(grep -E '^(KIOSK_TOKEN)=' .env || true)
+    set +a
+fi
+export VITE_KIOSK_TOKEN="${KIOSK_TOKEN:-}"
+if [[ -z "$VITE_KIOSK_TOKEN" ]]; then
+    echo "    !! warning: KIOSK_TOKEN not in .env — kiosk page will use the placeholder fallback" >&2
+fi
 cd frontend
 PKG_HASH_FILE="../.npm_package.sha256"
 NEW_PKG_HASH="$(sha256sum package.json package-lock.json 2>/dev/null | sha256sum | awk '{print $1}')"
@@ -58,6 +71,25 @@ else
 fi
 npm run build
 cd ..
+
+step "Evicting any orphan process holding :8000"
+# systemctl restart can't reclaim port 8000 if a non-systemd `python main.py`
+# is still bound (happens when someone runs the app manually for testing).
+# Find the listening PID and ask the systemd cgroup which PID(s) the service
+# legitimately owns; kill anything else.
+PORT_PID="$(ss -ltnp 2>/dev/null | grep ':8000 ' | grep -oP 'pid=\K\d+' | head -1)"
+if [[ -n "$PORT_PID" ]]; then
+    SVC_PIDS="$(systemctl show -p MainPID --value river-song 2>/dev/null || echo '')"
+    if [[ "$PORT_PID" != "$SVC_PIDS" ]]; then
+        echo "    Found orphan PID $PORT_PID on :8000 (systemd MainPID=$SVC_PIDS) — sending TERM"
+        kill -TERM "$PORT_PID" 2>/dev/null || sudo kill -TERM "$PORT_PID"
+        # Give it ~5s to release the port
+        for _ in 1 2 3 4 5; do
+            sleep 1
+            ss -ltnp 2>/dev/null | grep -q ":8000 " || break
+        done
+    fi
+fi
 
 step "Restarting service"
 sudo systemctl restart river-song
