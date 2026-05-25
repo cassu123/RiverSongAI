@@ -843,6 +843,18 @@ class Settings(BaseSettings):
         default="change_me_in_production",
         description="Shared secret for daemon-to-app authentication.",
     )
+    willow_device_token: str = Field(
+        default="",
+        description="Shared secret required by every Willow hardware device "
+                    "to authenticate against /api/willow/ws. Empty disables "
+                    "the endpoint entirely.",
+    )
+    code_interpreter_enabled: bool = Field(
+        default=False,
+        description="Hard kill switch for the code_interpreter LLM tool. "
+                    "Defaults to False so a fresh install never executes "
+                    "LLM-decided code without an explicit opt-in.",
+    )
     daemon_warden_port: int = Field(
         default=8010,
         description="Internal port for the Warden daemon (Vision/Security).",

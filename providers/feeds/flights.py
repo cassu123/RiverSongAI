@@ -1,13 +1,8 @@
 """
 providers/feeds/flights.py
 
-OpenSky Network ADS-B flight tracking — free anonymous API.
-No key required, rate-limited to ~400 queries/day for anonymous users.
-
-API: https://opensky-network.org/api/states/all?lamin=...&lamax=...&lomin=...&lomax=...
-
-60-second in-process cache prevents cap exhaustion at polling intervals.
-Cache key: (lat_rounded, lon_rounded, radius_rounded) — filter_status applied after.
+ADS-B Exchange flight tracking via RapidAPI.
+Replaces OpenSky Network implementation.
 """
 from __future__ import annotations
 
@@ -15,15 +10,14 @@ import logging
 import time
 from datetime import datetime, timezone
 from typing import Any, Optional
+import os
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
-OPENSKY_URL = "https://opensky-network.org/api/states/all"
+ADSBX_URL = "https://adsbexchange-com1.p.rapidapi.com/v2/lat/{lat}/lon/{lon}/dist/{nm}/"
 
-_MPS_TO_KTS = 1.94384
-_M_TO_FT    = 3.28084
 _CACHE_TTL  = 60  # seconds
 
 _cache: dict[tuple, tuple[dict, float]] = {}  # key → (result, expires_at)
@@ -41,7 +35,18 @@ def _get_cached(key: tuple) -> Optional[dict]:
 
 
 def _set_cached(key: tuple, value: dict) -> None:
+    if len(_cache) > 1000:
+        now = time.monotonic()
+        expired = [k for k, v in _cache.items() if v[1] <= now]
+        for k in expired:
+            del _cache[k]
+        if len(_cache) > 1000:
+            _cache.clear()
     _cache[key] = (value, time.monotonic() + _CACHE_TTL)
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 async def fetch_overhead(
@@ -52,8 +57,8 @@ async def fetch_overhead(
 ) -> dict[str, Any]:
     """
     Return aircraft within `radius_deg` degrees of the given coordinates.
-    Normalises the raw OpenSky states array into clean field names.
-    Caches results for 60 s to protect the anonymous quota (~400/day).
+    Normalises the raw ADS-B Exchange states array into clean field names.
+    Caches results for 60 s.
 
     Returns:
         { aircraft: [...], cached: bool, timestamp: str }
@@ -64,49 +69,89 @@ async def fetch_overhead(
     key = _cache_key(lat, lon, radius_deg)
     cached = _get_cached(key)
     if cached is not None:
-        logger.debug("OpenSky cache hit for key %s", key)
+        logger.debug("ADSBx cache hit for key %s", key)
         return {**cached, "cached": True}
 
-    params = {
-        "lamin": lat - radius_deg,
-        "lamax": lat + radius_deg,
-        "lomin": lon - radius_deg,
-        "lomax": lon + radius_deg,
+    # Load key from settings/env
+    from config.settings import get_settings
+    settings = get_settings()
+    api_key = getattr(settings, "adsbx_rapidapi_key", os.getenv("ADSBX_RAPIDAPI_KEY"))
+    
+    if not api_key:
+        return {"aircraft": [], "cached": False, "timestamp": _now_iso()}
+
+    nm = max(1, int(round(radius_deg * 60)))
+    url = ADSBX_URL.format(lat=lat, lon=lon, nm=nm)
+    headers = {
+        "X-RapidAPI-Key": api_key,
+        "X-RapidAPI-Host": "adsbexchange-com1.p.rapidapi.com"
     }
+
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(OPENSKY_URL, params=params)
+            resp = await client.get(url, headers=headers)
             resp.raise_for_status()
             data = resp.json()
     except Exception as exc:
-        logger.warning("OpenSky fetch failed: %s", exc)
+        logger.warning("ADSBx fetch failed: %s", exc)
         return {"aircraft": [], "cached": False, "timestamp": _now_iso()}
 
-    states = data.get("states") or []
+    ac_list = data.get("ac") or []
     aircraft: list[dict] = []
-    for s in states[:50]:  # cap at 50 to bound memory
-        try:
-            alt_m = s[7]
-            vel_mps = s[9]
-            aircraft.append({
-                "icao24":         s[0],
-                "callsign":       (s[1] or "").strip() or None,
-                "origin_country": s[2],
-                "longitude":      s[5],
-                "latitude":       s[6],
-                "altitude_ft":    round(alt_m * _M_TO_FT) if alt_m is not None else None,
-                "on_ground":      bool(s[8]),
-                "velocity_kts":   round(vel_mps * _MPS_TO_KTS, 1) if vel_mps is not None else None,
-                "heading_deg":    s[10],
-            })
-        except (IndexError, TypeError):
-            continue
+    for s in ac_list[:50]:
+        callsign = (s.get("flight") or "").strip()
+        reg = (s.get("r") or "").strip()
+        type_name = (s.get("desc") or "").strip()   # e.g. "BOEING 737-800"
+        operator = (s.get("ownOp") or "").strip()    # owner/operator when ADSBx has it
+
+        mil = bool(s.get("mil"))
+        if mil:
+            cat = "military"
+        elif callsign.startswith(("LE", "POL")):
+            cat = "government"
+        elif reg.startswith("N") and not operator:
+            cat = "private"
+        elif operator:
+            cat = "commercial"
+        else:
+            cat = "unknown"
+
+        alt_raw = s.get("alt_baro")
+        if isinstance(alt_raw, str) and alt_raw.lower() == "ground":
+            alt_val = 0
+            on_ground = True
+        else:
+            on_ground = False
+            try:
+                alt_val = int(alt_raw) if alt_raw is not None else None
+            except (TypeError, ValueError):
+                alt_val = None
+
+        vel = s.get("gs")
+        heading = s.get("track")
+
+        aircraft.append({
+            "icao24":         s.get("hex"),
+            "callsign":       callsign or None,
+            "origin_country": None,                   # ADSBx does not expose this directly
+            "longitude":      s.get("lon"),
+            "latitude":       s.get("lat"),
+            "altitude_ft":    alt_val,
+            "on_ground":      on_ground,
+            "velocity_kts":   float(vel) if vel is not None else None,
+            "heading_deg":    float(heading) if heading is not None else None,
+
+            "registration":   reg or None,
+            "operator":       operator or None,
+            "type_code":      s.get("t"),
+            "type_name":      type_name or None,
+            "category":       cat,
+            "squawk":         s.get("squawk"),
+            "emergency":      bool(s.get("emergency")),
+            "interesting":    mil or cat in ("military", "government"),
+        })
 
     ts = _now_iso()
     result = {"aircraft": aircraft, "timestamp": ts}
     _set_cached(key, result)
     return {**result, "cached": False}
-
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

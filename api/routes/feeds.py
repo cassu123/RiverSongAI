@@ -69,6 +69,30 @@ class PrefsUpdate(BaseModel):
     feed_stocks_enabled: bool = True
     feed_flights_enabled: bool = True
 
+    # --- Phase 1 ---
+    feed_space_enabled:       bool = True
+    refresh_space_min:        int  = 30
+    space_show_solar:         bool = True
+    space_show_aurora:        bool = True
+    space_show_launches:      bool = True
+    aqi_source:               str  = "purpleair"
+
+    # --- Phase 2 ---
+    feed_earth_enabled:       bool = True
+    refresh_earth_min:        int  = 60
+    earth_show_eonet:         bool = True
+    earth_show_neows:         bool = True
+    earth_show_ocearch:       bool = True
+
+    feed_happenings_enabled:  bool = True
+    refresh_happenings_min:   int  = 15
+    happenings_show_hn:       bool = True
+    happenings_show_reddit:   bool = True
+    happenings_show_events:   bool = True
+    happenings_reddit_subs:   list = ["all"]
+    happenings_event_radius_mi: int = 25
+
+
 
 @router.get("/preferences")
 async def get_preferences(
@@ -262,3 +286,21 @@ async def get_flights(
         lat_override=lat, lon_override=lon,
         radius_override=radius, filter_status=filter_status,
     )
+
+@router.get("/space")
+async def get_space(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    user_id = await _require_user(authorization)
+    return await FeedService.get_space(_store(request), user_id)
+
+@router.get("/earth")
+async def get_earth(request: Request, authorization: Optional[str] = Header(default=None)):
+    user_id = await _require_user(authorization)
+    return await FeedService.get_earth(_store(request), user_id)
+
+@router.get("/happenings")
+async def get_happenings(request: Request, authorization: Optional[str] = Header(default=None)):
+    user_id = await _require_user(authorization)
+    return await FeedService.get_happenings(_store(request), user_id)

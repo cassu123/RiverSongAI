@@ -1,0 +1,369 @@
+# docker-compose.yml — sidecar services for RiverSongAI
+#
+# Bring up nothing by default: `docker compose up -d` starts nothing because
+# every service is gated behind a profile.
+#
+#   docker compose --profile core up -d     # Phase 2 home-lab services
+#   docker compose --profile ai   up -d     # Phase 3 heavy AI services
+#
+# ──────────────────────────────────────────────────────────────────────────────
+# SECURITY DEFAULTS — read before flipping anything
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. 127.0.0.1 (Localhost) Port Bindings:
+#    Every published port is bound to "127.0.0.1". This means the service is ONLY
+#    reachable from the computer running Docker. Nothing on your WiFi or LAN can
+#    access it directly. To expose a service to your phones/tablets, put it behind
+#    a Reverse Proxy (like Caddy or Nginx) with HTTPS and Auth. Do NOT just drop
+#    the 127.0.0.1 prefix.
+#
+# 2. Database passwords pull from the corresponding *_DB_PASSWORD env vars.
+#    Defaults are blank — set them in .env before you start core services.
+#
+# 3. Network Isolation (New):
+#    Services are now strictly isolated into Docker networks:
+#    - `core_net`: General applications.
+#    - `db_net`: Databases (cannot be reached by AI tools).
+#    - `ai_net`: AI sandboxes (cannot reach your core data or databases).
+#
+# 4. Host Network Disabled (New):
+#    Home Assistant and Glances have been removed from `network_mode: host` to
+#    prevent them from acting as a backdoor to your local machine if compromised.
+# ──────────────────────────────────────────────────────────────────────────────
+version: "3.9"
+
+networks:
+  core_net:
+    name: core_net
+    driver: bridge
+  db_net:
+    name: db_net
+    driver: bridge
+  ai_net:
+    name: ai_net
+    driver: bridge
+
+services:
+  # --- Phase 2: Core Services ---
+
+  paperless:
+    profiles: ["core"]
+    image: ghcr.io/paperless-ngx/paperless-ngx:2.10
+    container_name: paperless
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8010:8000"
+    networks:
+      - core_net
+      - db_net
+    volumes:
+      - ./infra/paperless/data:/usr/src/paperless/data
+      - ./infra/paperless/media:/usr/src/paperless/media
+      - ./infra/paperless/export:/usr/src/paperless/export
+      - ./infra/paperless/consume:/usr/src/paperless/consume
+    environment:
+      PAPERLESS_REDIS: redis://redis:6379
+      PAPERLESS_DBHOST: db
+      PAPERLESS_DBUSER: paperless
+      PAPERLESS_DBPASS: ${PAPERLESS_DB_PASSWORD}
+      PAPERLESS_URL: ${PAPERLESS_URL:-http://localhost:8010}
+
+  immich-server:
+    profiles: ["core"]
+    image: ghcr.io/immich-app/immich-server:v1.106.4
+    container_name: immich_server
+    command: [ "start.sh", "immich" ]
+    networks:
+      - core_net
+      - db_net
+    volumes:
+      - ${UPLOAD_LOCATION}:/usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - ./infra/immich/.env
+    ports:
+      - "127.0.0.1:2283:2283"
+    depends_on:
+      - redis
+      - db
+    restart: unless-stopped
+
+  homeassistant:
+    profiles: ["core"]
+    image: ghcr.io/home-assistant/home-assistant:2026.5
+    container_name: homeassistant
+    restart: unless-stopped
+    networks:
+      - core_net
+    volumes:
+      - ./infra/homeassistant:/config
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "127.0.0.1:8123:8123"
+
+  zigbee2mqtt:
+    profiles: ["core"]
+    image: koenkk/zigbee2mqtt:1.36.1
+    container_name: zigbee2mqtt
+    restart: unless-stopped
+    networks:
+      - core_net
+      - db_net
+    volumes:
+      - ./infra/zigbee2mqtt/data:/app/data
+      - /run/udev:/run/udev:ro
+    ports:
+      - "127.0.0.1:8081:8080"
+    environment:
+      - TZ=UTC
+    depends_on:
+      - mosquitto
+
+  firefly:
+    profiles: ["core"]
+    image: fireflyiii/core:version-6.1.16
+    container_name: firefly_core
+    restart: unless-stopped
+    networks:
+      - core_net
+      - db_net
+    volumes:
+      - ./infra/firefly/export:/var/www/html/storage/export
+    env_file:
+      - ./infra/firefly/.env
+    ports:
+      - "127.0.0.1:8082:8080"
+    depends_on:
+      - firefly-db
+
+  grocy:
+    profiles: ["core"]
+    image: lscr.io/linuxserver/grocy:4.1.0
+    container_name: grocy
+    restart: unless-stopped
+    networks:
+      - core_net
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    volumes:
+      - ./infra/grocy/data:/config
+    ports:
+      - "127.0.0.1:9283:80"
+
+  tandoor:
+    profiles: ["core"]
+    image: vabene1111/recipes:1.5.21
+    container_name: tandoor
+    restart: unless-stopped
+    networks:
+      - core_net
+      - db_net
+    env_file:
+      - ./infra/tandoor/.env
+    volumes:
+      - ./infra/tandoor/media:/opt/recipes/mediafiles
+      - ./infra/tandoor/static:/opt/recipes/staticfiles
+    ports:
+      - "127.0.0.1:8085:8080"
+    depends_on:
+      - tandoor-db
+
+  homebox:
+    profiles: ["core"]
+    image: ghcr.io/sysadminsmedia/homebox:v0.18.0
+    container_name: homebox
+    restart: unless-stopped
+    networks:
+      - core_net
+    environment:
+      - HBOX_MODE=production
+    volumes:
+      - ./infra/homebox/data:/data
+    ports:
+      - "127.0.0.1:7745:7745"
+
+  searxng:
+    profiles: ["core"]
+    image: searxng/searxng:2026.5.20
+    container_name: searxng
+    restart: unless-stopped
+    networks:
+      - core_net
+    volumes:
+      - ./infra/searxng/settings.yml:/etc/searxng/settings.yml
+    ports:
+      - "127.0.0.1:8888:8080"
+
+  # --- Phase 5: Observability & Health ---
+
+  glances:
+    profiles: ["core"]
+    image: nicolargo/glances:latest-full
+    container_name: glances
+    restart: unless-stopped
+    networks:
+      - core_net
+    ports:
+      - "127.0.0.1:61208:61208"
+    environment:
+      - GLANCES_OPT=-w
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  uptime-kuma:
+    profiles: ["core"]
+    image: louislam/uptime-kuma:1.23.11
+    container_name: uptime_kuma
+    restart: unless-stopped
+    networks:
+      - core_net
+    volumes:
+      - ./infra/uptime-kuma:/app/data
+    ports:
+      - "127.0.0.1:3001:3001"
+
+  scrutiny:
+    profiles: ["core"]
+    image: ghcr.io/analogj/scrutiny:v0.8.1-omnibus
+    container_name: scrutiny
+    restart: unless-stopped
+    networks:
+      - core_net
+    cap_add:
+      - SYS_RAWIO
+      - SYS_ADMIN
+    devices:
+      - "/dev/sda:/dev/sda"
+      - "/dev/sdb:/dev/sdb"
+    ports:
+      - "127.0.0.1:8086:8080"
+      - "127.0.0.1:8087:8086"
+    volumes:
+      - /run/udev:/run/udev:ro
+      - ./infra/scrutiny/config:/opt/scrutiny/config
+      - ./infra/scrutiny/influxdb:/opt/scrutiny/influxdb
+
+  # --- Phase 3: Heavy AI Sidecars ---
+
+  memgpt:
+    profiles: ["ai"]
+    image: cpacker/memgpt:0.5.6
+    container_name: memgpt
+    restart: unless-stopped
+    networks:
+      - ai_net
+    ports:
+      - "127.0.0.1:8283:8283"
+    volumes:
+      - ./infra/memgpt:/root/.memgpt
+    depends_on:
+      - memgpt-db
+
+  gpt-sovits:
+    profiles: ["ai"]
+    image: breakcast/gpt-sovits:latest
+    container_name: gpt_sovits
+    restart: unless-stopped
+    networks:
+      - ai_net
+    ports:
+      - "127.0.0.1:9880:9880"
+    volumes:
+      - ./infra/gpt-sovits/output:/workspace/output
+      - ./config/voices:/workspace/reference_voices
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  comfyui:
+    profiles: ["ai"]
+    image: yanwk/comfyui-boot:latest
+    container_name: comfyui
+    restart: unless-stopped
+    networks:
+      - ai_net
+    ports:
+      - "127.0.0.1:8188:8188"
+    volumes:
+      - ./infra/comfyui/models:/workspace/ComfyUI/models
+      - ./infra/comfyui/output:/workspace/ComfyUI/output
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # --- Infrastructure Dependencies ---
+
+  redis:
+    image: docker.io/library/redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - db_net
+
+  db:
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    networks:
+      - db_net
+    environment:
+      - POSTGRES_DB=paperless
+      - POSTGRES_USER=paperless
+      - POSTGRES_PASSWORD=${PAPERLESS_DB_PASSWORD}
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0.18
+    restart: unless-stopped
+    networks:
+      - db_net
+    ports:
+      - "127.0.0.1:1883:1883"
+    volumes:
+      - ./infra/mosquitto/config:/mosquitto/config
+      - ./infra/mosquitto/data:/mosquitto/data
+      - ./infra/mosquitto/log:/mosquitto/log
+
+  firefly-db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    networks:
+      - db_net
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+      - MYSQL_DATABASE=firefly
+      - MYSQL_USER=firefly
+      - MYSQL_PASSWORD=${FIREFLY_DB_PASSWORD}
+    volumes:
+      - ./infra/firefly/db:/var/lib/mysql
+
+  tandoor-db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    networks:
+      - db_net
+    environment:
+      - POSTGRES_DB=recipes
+      - POSTGRES_USER=recipes
+      - POSTGRES_PASSWORD=${TANDOOR_DB_PASSWORD}
+    volumes:
+      - ./infra/tandoor/db:/var/lib/postgresql/data
+
+  memgpt-db:
+    profiles: ["ai"]
+    image: postgres:16-alpine
+    restart: unless-stopped
+    networks:
+      - ai_net
+    environment:
+      - POSTGRES_DB=memgpt
+      - POSTGRES_USER=memgpt
+      - POSTGRES_PASSWORD=${MEMGPT_DB_PASSWORD}
+    volumes:
+      - ./infra/memgpt/db:/var/lib/postgresql/data

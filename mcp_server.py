@@ -63,6 +63,7 @@ EXPOSED_TOOL_NAMES = {
     "web_search",
     "search_emails",
     "get_weather",
+    "code_interpreter",
 }
 
 # River Song HTTP base — the MCP server calls back into the live FastAPI app

@@ -201,3 +201,7 @@ CLAUDE.md
 
 # Voice biometric data — local only, never sync
 data/voice_prints/
+
+# Session turnover logs
+passover/
+passoff/

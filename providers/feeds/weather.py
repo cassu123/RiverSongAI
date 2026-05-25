@@ -250,7 +250,73 @@ async def _reverse_geocode(lat: float, lon: float) -> str:
         return ""
 
 
-async def fetch_air_quality(lat: float, lon: float) -> Dict[str, Any]:
+_PURPLEAIR_BASE = "https://api.purpleair.com/v1/sensors"
+
+def _pm25_to_aqi(pm: float) -> int:
+    # EPA breakpoint formula
+    c = [(0.0, 12.0, 0, 50), (12.1, 35.4, 51, 100), (35.5, 55.4, 101, 150),
+         (55.5, 150.4, 151, 200), (150.5, 250.4, 201, 300), (250.5, 350.4, 301, 400),
+         (350.5, 500.4, 401, 500)]
+    for low, high, aqilow, aqihigh in c:
+        if low <= pm <= high:
+            return round(((aqihigh - aqilow) / (high - low)) * (pm - low) + aqilow)
+    return 500
+
+async def _fetch_purpleair_aqi(lat: float, lon: float) -> Optional[Dict[str, Any]]:
+    import os
+    from config.settings import get_settings
+    settings = get_settings()
+    api_key = getattr(settings, "purpleair_api_key", os.getenv("PURPLEAIR_API_KEY"))
+    if not api_key:
+        return None
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                _PURPLEAIR_BASE,
+                params={
+                    "fields": "pm2.5_atm,pm2.5_60minute,humidity,latitude,longitude,last_seen",
+                    "nwlng": lon - 0.05,
+                    "nwlat": lat + 0.05,
+                    "selng": lon + 0.05,
+                    "selat": lat - 0.05,
+                    "max_age": 3600
+                },
+                headers={"X-API-Key": api_key}
+            )
+            if resp.status_code != 200:
+                return None
+            data = resp.json()
+            if not data.get("data"):
+                return None
+            
+            # Simple fallback to first sensor
+            sensor = data["data"][0]
+            pm25 = sensor[1] if len(sensor) > 1 else 0
+            if pm25 is None: return None
+            
+            aqi = _pm25_to_aqi(pm25)
+            label, color = "Unknown", "#888"
+            for threshold, lbl, col in _AQI_LEVELS:
+                if aqi <= threshold:
+                    label, color = lbl, col
+                    break
+
+            return {
+                "aqi": aqi,
+                "label": label,
+                "color": color,
+                "pm2_5": pm25,
+                "pm10": None,
+                "ozone": None,
+                "nitrogen_dioxide": None,
+                "carbon_monoxide": None
+            }
+    except Exception as exc:
+        logger.warning("PurpleAir fetch failed: %s", exc)
+        return None
+
+async def _fetch_openmeteo_aqi(lat: float, lon: float) -> Dict[str, Any]:
     """Fetch current air quality from Open-Meteo air quality API (no key needed)."""
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -285,6 +351,15 @@ async def fetch_air_quality(lat: float, lon: float) -> Dict[str, Any]:
         "nitrogen_dioxide": c.get("nitrogen_dioxide"),
         "carbon_monoxide": c.get("carbon_monoxide"),
     }
+
+async def fetch_air_quality(lat: float, lon: float) -> Dict[str, Any]:
+    purpleair = await _fetch_purpleair_aqi(lat, lon)
+    if purpleair:
+        purpleair["source"] = "purpleair"
+        return purpleair
+    om = await _fetch_openmeteo_aqi(lat, lon)
+    om["source"] = "openmeteo"
+    return om
 
 
 async def fetch_nws_alerts(lat: float, lon: float) -> List[Dict[str, Any]]:

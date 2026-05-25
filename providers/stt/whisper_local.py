@@ -34,7 +34,6 @@ from typing import Optional
 import numpy as np
 import scipy.signal
 import soundfile as sf
-import whisper
 
 from config.settings import get_settings
 from providers.base import STTProvider
@@ -77,17 +76,29 @@ class WhisperLocalSTT(STTProvider):
         )
 
         logger.info(
-            "Loading Whisper model '%s' -- this may take a moment on first run.",
+            "Loading Faster-Whisper model '%s' -- this may take a moment on first run.",
             self._model_size,
         )
         try:
+            # Lazy-import the heavy dep so module-load doesn't require it.
+            from faster_whisper import WhisperModel
             import torch
             device = "cuda" if torch.cuda.is_available() and _cuda_usable() else "cpu"
-            self._model = whisper.load_model(self._model_size, device=device)
-            logger.info("Whisper model '%s' loaded on %s.", self._model_size, device)
+            # Faster-Whisper uses CTranslate2. Recommended compute_type:
+            # - float16 for CUDA
+            # - int8 for CPU
+            compute_type = "float16" if device == "cuda" else "int8"
+
+            self._model = WhisperModel(
+                self._model_size,
+                device=device,
+                compute_type=compute_type
+            )
+            logger.info("Faster-Whisper model '%s' loaded on %s (%s).", 
+                        self._model_size, device, compute_type)
         except Exception as exc:
             raise RuntimeError(
-                f"Failed to load Whisper model '{self._model_size}': {exc}"
+                f"Failed to load Faster-Whisper model '{self._model_size}': {exc}"
             ) from exc
 
     async def transcribe(self, audio_bytes: bytes) -> str:
@@ -110,14 +121,15 @@ class WhisperLocalSTT(STTProvider):
                 partial(self._transcribe_blocking, audio_bytes),
             )
             stripped = text.strip()
-            logger.info("Transcription result: '%s'", stripped)
+            if stripped:
+                logger.info("Transcription result: '%s'", stripped)
             return stripped
         except Exception as exc:
             raise RuntimeError(f"Whisper transcription failed: {exc}") from exc
 
     def _transcribe_blocking(self, audio_bytes: bytes) -> str:
         """
-        Decode audio bytes (WAV or raw PCM), resample to 16 kHz, and run Whisper.
+        Decode audio bytes (WAV or raw PCM), resample to 16 kHz, and run Faster-Whisper.
         """
         if audio_bytes.startswith(b"RIFF"):
             try:
@@ -139,5 +151,5 @@ class WhisperLocalSTT(STTProvider):
             # Assume raw 16-bit PCM at 16kHz from AudioWorklet
             audio_np = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
 
-        result = self._model.transcribe(audio_np, fp16=False, language="en")
-        return result.get("text", "")
+        segments, _ = self._model.transcribe(audio_np, beam_size=5, language="en")
+        return " ".join(s.text.strip() for s in segments)

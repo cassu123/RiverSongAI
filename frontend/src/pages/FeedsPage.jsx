@@ -24,7 +24,7 @@ export default function FeedsPage({ setAction }) {
       <div className="rs-foyer-head" style={{ marginBottom: 24 }}>
         <h1 className="rs-greeting">Global Intelligence</h1>
         <div className="rs-greeting-sub">
-          Live feeds, weather, sports, markets, and air traffic.
+          Live feeds across weather, markets, air traffic, space, earth, and whats happening right now.
         </div>
       </div>
       <FeedTabsContainer token={token} />

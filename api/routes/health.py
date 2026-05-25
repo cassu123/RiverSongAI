@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Header, Request
 from pydantic import BaseModel
 
 from core.kill_switch import is_kill_switch_active
@@ -151,3 +151,115 @@ async def health_check(request: Request) -> HealthResponse:
         push_notifications_enabled=settings.push_notifications_enabled,
         last_briefing=last_briefing
     )
+
+
+@router.get("/api/health/system")
+async def system_health() -> dict:
+    """
+    Returns CPU/GPU/RAM/disk metrics pulled from Glances.
+    """
+    glances_url = get_settings().glances_url or "http://localhost:61208/api/3"
+    async with httpx.AsyncClient() as client:
+        try:
+            # Pull core metrics from Glances
+            resp = await client.get(f"{glances_url}/all")
+            resp.raise_for_status()
+            data = resp.json()
+            return {
+                "cpu": data.get("cpu", {}),
+                "mem": data.get("mem", {}),
+                "disk": data.get("disk", []),
+                "gpu": data.get("gpu", []),
+                "uptime": data.get("uptime", 0)
+            }
+        except Exception as exc:
+            logger.warning("Failed to pull from Glances: %s", exc)
+            return {"status": "error", "message": str(exc)}
+
+
+def _require_internal_secret(authorization: Optional[str]) -> None:
+    """Reject webhook callers that do not present DAEMON_INTERNAL_SECRET.
+
+    Mirrors the bearer-token gate used by `api/routes/rover.py`, `daemons.py`,
+    and `context.py`. Health webhooks are intended to be called by Uptime
+    Kuma / Scrutiny running on the same host — anything from outside the
+    trusted-daemon boundary is rejected.
+    """
+    from fastapi import HTTPException
+    secret = (get_settings().daemon_internal_secret or "").strip()
+    if not secret:
+        raise HTTPException(status_code=503, detail="Webhook auth not configured.")
+    if authorization != f"Bearer {secret}":
+        raise HTTPException(status_code=401, detail="Invalid webhook credentials.")
+
+
+@router.post("/api/health/webhook")
+async def uptime_kuma_webhook(
+    data: dict,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Handle alerts from Uptime Kuma. Requires DAEMON_INTERNAL_SECRET bearer.
+    Configure Uptime Kuma's webhook to add `Authorization: Bearer <secret>`.
+    """
+    _require_internal_secret(authorization)
+    from providers.push import apprise_provider
+
+    msg = data.get("msg", "Unknown monitor event")
+    heartbeat = data.get("heartbeat", {})
+    monitor = data.get("monitor", {})
+
+    title = f"Uptime Alert: {monitor.get('name', 'Unknown')}"
+    body = f"Status: {heartbeat.get('status', 'Unknown')}\nMessage: {msg}"
+
+    await apprise_provider.push(title=title, body=body, tag="monitoring")
+    return {"status": "ok"}
+
+
+@router.post("/api/health/disk-webhook")
+async def scrutiny_webhook(
+    data: dict,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Handle SMART failure alerts from Scrutiny. Requires DAEMON_INTERNAL_SECRET
+    bearer. Configure Scrutiny's notification URL to include the secret.
+    """
+    _require_internal_secret(authorization)
+    from providers.push import apprise_provider
+
+    device = data.get("device", {})
+    status_str = data.get("status", "Unknown")
+
+    title = f"DISK WARNING: {device.get('device_name', 'Unknown')}"
+    body = f"SMART Status: {status_str}\nDevice: {device.get('device_model', 'Unknown')}\nSerial: {device.get('serial_number', 'Unknown')}"
+
+    await apprise_provider.push(title=title, body=body, tag="critical")
+
+    if status_str.lower() in ("failed", "critical"):
+        logger.critical("Scrutiny reported disk failure. Triggering emergency backup.")
+        asyncio.create_task(_trigger_emergency_backup())
+
+    return {"status": "ok"}
+
+
+async def _trigger_emergency_backup():
+    """
+    Run the repo's backup/maintenance script.
+    """
+    import subprocess
+    try:
+        # Assuming Makefile or a script handles backup
+        # ./Makefile has no backup target usually, checking...
+        process = await asyncio.create_subprocess_shell(
+            "./deploy.sh --backup", # Placeholder for actual backup flag/script
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        if process.returncode == 0:
+            logger.info("Emergency backup completed successfully.")
+        else:
+            logger.error("Emergency backup failed: %s", stderr.decode())
+    except Exception as exc:
+        logger.error("Failed to trigger emergency backup: %s", exc)

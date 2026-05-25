@@ -156,33 +156,34 @@ class MemoryManager:
 
     async def get_context_for_prompt(self, user_id: str, query_text: str) -> str:
         """
-        Retrieves relevant context using semantic search and merges it with
-        core SQLite results.
+        Retrieves relevant context using semantic search, augmented by MemGPT long-term recall.
         """
         try:
-            # Get semantic results
+            # 1. Local Semantic results (ChromaDB)
             semantic_results = await self._vector_store.search(
                 query_text,
                 n_results=8,
                 where={"user_id": user_id}
             )
 
-            # Get core SQLite results (fall back if vector search fails or is empty)
+            # 2. Archival Recall (MemGPT)
+            from providers.memory import memgpt_provider
+            memgpt_results = await memgpt_provider.recall(user_id, query_text)
+
+            # 3. Core SQLite results
             facts = await self._store.get_facts(user_id)
             prefs = await self._store.get_preferences(user_id)
 
-            # Deduplicate facts: semantic might have found some, merge with SQLite
-            # In this simple implementation, we just use semantic results to augment context
-            # but keep the structure similar to build_context_block.
-
             parts: list[str] = []
 
-            # Use semantic results to build a specific "Relevant Memories" block
             if semantic_results:
                 lines = [f"  - {r['text']}" for r in semantic_results]
-                parts.append("RELEVANT MEMORIES (Semantically Related):\n" + "\n".join(lines))
+                parts.append("RELEVANT MEMORIES (Local):\n" + "\n".join(lines))
 
-            # Still include facts and prefs as they are considered 'core' context
+            if memgpt_results:
+                lines = [f"  - {text}" for text in memgpt_results]
+                parts.append("LONG-TERM ARCHIVAL RECALL:\n" + "\n".join(lines))
+
             if facts:
                 lines = [f"  - {f.key}: {f.value}" for f in facts]
                 parts.append("KNOWN FACTS ABOUT THE USER:\n" + "\n".join(lines))

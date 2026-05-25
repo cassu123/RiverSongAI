@@ -1714,6 +1714,21 @@ export default function SettingsPage({
             </div>
           </div>
 
+          <div style={{ marginBottom: 16 }}>
+            <div className="rs-card-label" style={{ marginBottom: 8, fontSize: '0.6rem' }}>AQI SOURCE</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {['purpleair', 'openmeteo'].map(src => (
+                <button
+                  key={src}
+                  className={`rs-pill ${feedPrefs.aqi_source === src ? 'is-active' : (feedPrefs.aqi_source === undefined && src === 'purpleair' ? 'is-active' : '')}`}
+                  onClick={() => saveFeedPrefs({ aqi_source: src })}
+                >
+                  {src === 'purpleair' ? 'PurpleAir' : 'Open-Meteo'}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Toggle
             id="weather-alerts"
             label="Severe Weather Alerts"
@@ -1768,6 +1783,54 @@ export default function SettingsPage({
             tickers={feedPrefs.stock_tickers || []}
             onSave={next => saveFeedPrefs({ stock_tickers: next })}
           />
+
+          {/* ── Space ────────────────────────────────────────────────── */}
+          <div className="rs-card-label" style={{ marginBottom: 12, marginTop: 32 }}>SPACE</div>
+          <Toggle id="space-enabled" label="Enable Space Tab" checked={feedPrefs.feed_space_enabled !== false} onChange={v => saveFeedPrefs({ feed_space_enabled: v })} />
+          {feedPrefs.feed_space_enabled !== false && (
+            <div style={{ paddingLeft: 16, marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Toggle id="space-solar" label="Show Solar Weather" checked={feedPrefs.space_show_solar !== false} onChange={v => saveFeedPrefs({ space_show_solar: v })} />
+              <Toggle id="space-aurora" label="Show Aurora Forecast" checked={feedPrefs.space_show_aurora !== false} onChange={v => saveFeedPrefs({ space_show_aurora: v })} />
+              <Toggle id="space-launches" label="Show Rocket Launches" checked={feedPrefs.space_show_launches !== false} onChange={v => saveFeedPrefs({ space_show_launches: v })} />
+            </div>
+          )}
+
+          {/* ── Earth ────────────────────────────────────────────────── */}
+          <div className="rs-card-label" style={{ marginBottom: 12, marginTop: 32 }}>EARTH</div>
+          <Toggle id="earth-enabled" label="Enable Earth Tab" checked={feedPrefs.feed_earth_enabled !== false} onChange={v => saveFeedPrefs({ feed_earth_enabled: v })} />
+          {feedPrefs.feed_earth_enabled !== false && (
+            <div style={{ paddingLeft: 16, marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Toggle id="earth-eonet" label="Show NASA EONET" checked={feedPrefs.earth_show_eonet !== false} onChange={v => saveFeedPrefs({ earth_show_eonet: v })} />
+              <Toggle id="earth-neows" label="Show NASA NeoWs" checked={feedPrefs.earth_show_neows !== false} onChange={v => saveFeedPrefs({ earth_show_neows: v })} />
+              <Toggle id="earth-ocearch" label="Show OCEARCH Sharks" checked={feedPrefs.earth_show_ocearch !== false} onChange={v => saveFeedPrefs({ earth_show_ocearch: v })} />
+            </div>
+          )}
+
+          {/* ── Happenings ────────────────────────────────────────────── */}
+          <div className="rs-card-label" style={{ marginBottom: 12, marginTop: 32 }}>HAPPENINGS</div>
+          <Toggle id="happenings-enabled" label="Enable Happenings Tab" checked={feedPrefs.feed_happenings_enabled !== false} onChange={v => saveFeedPrefs({ feed_happenings_enabled: v })} />
+          {feedPrefs.feed_happenings_enabled !== false && (
+            <div style={{ paddingLeft: 16, marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Toggle id="happenings-hn" label="Show HackerNews" checked={feedPrefs.happenings_show_hn !== false} onChange={v => saveFeedPrefs({ happenings_show_hn: v })} />
+              <Toggle id="happenings-reddit" label="Show Reddit" checked={feedPrefs.happenings_show_reddit !== false} onChange={v => saveFeedPrefs({ happenings_show_reddit: v })} />
+              <Toggle id="happenings-events" label="Show Local Events" checked={feedPrefs.happenings_show_events !== false} onChange={v => saveFeedPrefs({ happenings_show_events: v })} />
+              
+              {feedPrefs.happenings_show_events !== false && (
+                <div style={{ marginTop: 8 }}>
+                  <div className="rs-card-meta" style={{ marginBottom: 8 }}>Event Search Radius: {feedPrefs.happenings_event_radius_mi || 25} mi</div>
+                  <input 
+                    type="range" 
+                    min="5" max="100" step="5"
+                    value={feedPrefs.happenings_event_radius_mi || 25}
+                    onChange={e => setFeedPrefs(p => ({ ...p, happenings_event_radius_mi: parseInt(e.target.value) }))}
+                    onMouseUp={e => saveFeedPrefs({ happenings_event_radius_mi: parseInt(e.target.value) })}
+                    onTouchEnd={e => saveFeedPrefs({ happenings_event_radius_mi: parseInt(e.target.value) })}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
         </Section>
       )}

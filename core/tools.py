@@ -312,6 +312,17 @@ TOOL_SCHEMAS = [
             },
             "required": ["query"]
         }
+    },
+    {
+        "name": "code_interpreter",
+        "description": "Execute Python code locally to move files, process data, or perform system tasks. Requires manual confirmation.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "code": {"type": "string", "description": "The Python code to execute."}
+            },
+            "required": ["code"]
+        }
     }
 ]
 
@@ -406,6 +417,9 @@ async def execute_tool(tool_name: str, tool_input: Dict[str, Any], context: Dict
 
         elif tool_name == "search_vault":
             return await _exec_search_vault(tool_input, user_id)
+
+        elif tool_name == "code_interpreter":
+            return await _exec_code_interpreter(tool_input, user_id)
 
         else:
             return f"Unknown tool '{tool_name}' requested."
@@ -1148,3 +1162,12 @@ async def _exec_search_vault(args: dict, user_id: str) -> str:
     except Exception as exc:
         logger.error("search_vault failed: %s", exc)
         return f"Vault search failed: {exc}"
+
+
+async def _exec_code_interpreter(args: dict, user_id: str) -> str:
+    try:
+        from core.code_interpreter import run_code
+        return await run_code(args["code"])
+    except Exception as exc:
+        logger.error("code_interpreter failed: %s", exc)
+        return f"Failed to run code: {exc}"

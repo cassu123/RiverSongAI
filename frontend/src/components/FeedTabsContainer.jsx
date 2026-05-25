@@ -4,6 +4,9 @@ import WeatherTab from './tabs/WeatherTab.jsx'
 import SportsTab  from './tabs/SportsTab.jsx'
 import StocksTab  from './tabs/StocksTab.jsx'
 import FlightsTab from './tabs/FlightsTab.jsx'
+import SpaceTab   from './tabs/SpaceTab.jsx'
+import EarthTab   from './tabs/EarthTab.jsx'
+import HappeningsTab from './tabs/HappeningsTab.jsx'
 
 const TABS = [
   { key: 'news',    label: 'NEWS',    icon: 'newspaper' },
@@ -11,6 +14,9 @@ const TABS = [
   { key: 'sports',  label: 'SPORTS',  icon: 'sports_kabaddi' },
   { key: 'stocks',  label: 'STOCKS',  icon: 'trending_up' },
   { key: 'flights', label: 'FLIGHTS', icon: 'flight' },
+  { key: 'space',   label: 'SPACE',   icon: 'rocket_launch' },
+  { key: 'earth',   label: 'EARTH',   icon: 'public' },
+  { key: 'happenings', label: 'HAPPENINGS', icon: 'whatshot' },
 ]
 
 function getTabFromUrl() {
@@ -80,6 +86,9 @@ export default function FeedTabsContainer({ token, defaultTab = 'news' }) {
         {active === 'sports'  && <SportsTab  token={token} active={active === 'sports'} />}
         {active === 'stocks'  && <StocksTab  token={token} active={active === 'stocks'} />}
         {active === 'flights' && <FlightsTab token={token} active={active === 'flights'} />}
+        {active === 'space'   && <SpaceTab   token={token} active={active === 'space'} />}
+        {active === 'earth'   && <EarthTab   token={token} active={active === 'earth'} />}
+        {active === 'happenings' && <HappeningsTab token={token} active={active === 'happenings'} />}
       </div>
 
     </div>

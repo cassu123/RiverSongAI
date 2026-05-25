@@ -11,6 +11,7 @@
 # -----------------------------------------------------------------------------
 fastapi==0.136.0
 uvicorn[standard]==0.44.0       # ASGI server; [standard] pulls websockets + uvloop
+websockets==14.0                # for Home Assistant WS events
 starlette==1.0.0                # WebSocket state management (directly imported)
 python-multipart==0.0.27        # Form data parsing for FastAPI
 pypdf==6.10.2                   # PDF text extraction for vehicle manual uploads
@@ -28,10 +29,10 @@ python-dotenv==1.2.2            # .env file support
 
 
 # -----------------------------------------------------------------------------
-# STT — Whisper (local, server-side transcription)
+# STT — Faster-Whisper (CTranslate2 backend)
 # Audio capture happens in the browser; server receives WAV bytes over WebSocket
 # -----------------------------------------------------------------------------
-openai-whisper==20250625
+faster-whisper==1.0.3
 torch>=2.6.0                    # security floor: multiple CVEs in older versions
 numpy>=2.1.0                    # 2.x required for Python 3.13+
 scipy>=1.14.0                   # Resampling browser audio to 16 kHz for Whisper
@@ -53,6 +54,7 @@ boto3==1.38.0                   # Amazon Bedrock (and AWS SDK)
 # TTS — Multi-engine (Piper + Kokoro + ElevenLabs)
 # Note: elevenlabs SDK not needed — provider calls REST API directly via httpx
 # -----------------------------------------------------------------------------
+apprise==1.8.0
 pywebpush>=2.0.0                # Web Push notifications (push.py route)
 
 # Wake word — "Hey River" (openWakeWord)
@@ -60,7 +62,8 @@ pywebpush>=2.0.0                # Web Push notifications (push.py route)
 #   pip install tflite-runtime --find-links \
 #     https://github.com/google-coral/pycoral/releases/download/v2.0.0/\
 #     tflite_runtime-2.5.0.post1-cp39-cp39-linux_x86_64.whl
-#   pip install openwakeword==0.6.0
+openwakeword==0.7.0
+speexdsp==0.1.3                 # required for openwakeword audio processing
 # The app fails gracefully if not installed — wake word simply won't trigger.
 
 # Piper TTS (local binary, zero Python deps):
@@ -114,7 +117,8 @@ python-amazon-sp-api==2.1.8          # Amazon Selling Partner API
 # -----------------------------------------------------------------------------
 chromadb==1.5.9                      # Local vector database for semantic memory
 pybind11==2.13.6                     # C++ bindings required by chroma-hnswlib
-
+unstructured[all-docs]==0.14.0
+pymemgpt==0.5.6
 
 # -----------------------------------------------------------------------------
 # Inventory System
@@ -153,6 +157,7 @@ watchdog>=4.0.0
 # MCP server (Model Context Protocol — exposes tools to external clients)
 # -----------------------------------------------------------------------------
 mcp>=1.0.0
+open-interpreter==0.4.3
 
 # -----------------------------------------------------------------------------
 # Voice ID (speaker recognition, local)

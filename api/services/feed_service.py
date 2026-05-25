@@ -14,6 +14,7 @@ from fastapi import HTTPException
 
 from config.settings import get_settings
 from providers.feeds.news import fetch_articles
+from providers.feeds import news, sports, stocks, weather, flights, space, earth, happenings
 from providers.feeds.weather import fetch_weather, fetch_nws_alerts
 from providers.feeds.sports import (
     search_teams, fetch_teams_feed, fetch_standings, fetch_event_stats
@@ -89,6 +90,31 @@ class FeedService:
         
         alerts = await fetch_nws_alerts(lat, lon)
         return {"alerts": alerts, "count": len(alerts)}
+
+    @staticmethod
+    async def get_earth(store: Any, user_id: str) -> Dict[str, Any]:
+        prefs = await store.get_feed_preferences(user_id)
+        page  = await store.get_page_settings(user_id)
+        wx    = page.get("weather", {})
+        lat = wx.get("lat") or prefs.get("weather_lat")
+        lon = wx.get("lon") or prefs.get("weather_lon")
+        if lat is None or lon is None:
+            raise HTTPException(status_code=404, detail="No location saved.")
+
+        return await earth.fetch_earth(lat, lon)
+
+    @staticmethod
+    async def get_happenings(store: Any, user_id: str) -> Dict[str, Any]:
+        prefs = await store.get_feed_preferences(user_id)
+        page  = await store.get_page_settings(user_id)
+        wx    = page.get("weather", {})
+        lat = wx.get("lat") or prefs.get("weather_lat")
+        lon = wx.get("lon") or prefs.get("weather_lon")
+        # lat/lon optional for happenings — HN/Reddit still work without them.
+
+        subs = prefs.get("happenings_reddit_subs", ["all"])
+        radius = prefs.get("happenings_event_radius_mi", 25)
+        return await happenings.fetch_happenings(lat, lon, subs, radius)
 
     @staticmethod
     async def get_sports_news(
@@ -230,3 +256,17 @@ class FeedService:
             "lat":       lat,
             "lon":       lon,
         }
+
+    @staticmethod
+    async def get_space(store: Any, user_id: str) -> Dict[str, Any]:
+        prefs = await store.get_feed_preferences(user_id)
+        page  = await store.get_page_settings(user_id)
+        wx    = page.get("weather", {})
+        
+        lat = wx.get("lat") or prefs.get("weather_lat")
+        lon = wx.get("lon") or prefs.get("weather_lon")
+        if lat is None or lon is None:
+            raise HTTPException(status_code=404, detail="No location saved.")
+
+        from providers.feeds.space import fetch_space
+        return await fetch_space(lat, lon)

@@ -383,10 +383,17 @@ function HeroCard({ current, today, location_name, unit }) {
 // Details row — wind / humidity / UV / AQI
 // ──────────────────────────────────────────────────────────────────────────────
 
-function DetailCard({ label, value, sub, color }) {
+function DetailCard({ label, value, sub, color, badge }) {
   return (
     <div className="rs-card" style={{ padding: '14px 16px', flex: 1, minWidth: 0 }}>
-      <div className="rs-card-label" style={{ fontSize: '0.52rem', opacity: 0.5, marginBottom: 4 }}>{label}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div className="rs-card-label" style={{ fontSize: '0.52rem', opacity: 0.5, marginBottom: 4 }}>{label}</div>
+        {badge && (
+          <div style={{ fontSize: '0.45rem', padding: '2px 4px', background: 'var(--md-surface-container-highest)', borderRadius: 4, opacity: 0.7, whiteSpace: 'nowrap' }}>
+            {badge}
+          </div>
+        )}
+      </div>
       <div style={{
         fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: '1.15rem', color: color || 'var(--md-on-surface)',
       }}>
@@ -423,6 +430,7 @@ function DetailsRow({ current, aqi }) {
       value: String(aqi.aqi),
       sub: aqi.label,
       color: aqi.color,
+      badge: aqi.source === 'purpleair' ? 'via PurpleAir' : 'via Open-Meteo',
     })
   }
   return (
