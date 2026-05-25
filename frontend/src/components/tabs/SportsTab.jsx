@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { InlineSettingsSection } from '../TabSettingsPanel.jsx'
 
 // All non-stub leagues available in the picker
 const ALL_LEAGUES = [
@@ -139,22 +140,9 @@ const PICKER_GROUPS = ALL_LEAGUES.reduce((acc, l) => {
   return acc
 }, {})
 
-function LeaguePicker({ favorites, onToggle, onClose }) {
+function LeagueGrid({ favorites, onToggle }) {
   return (
-    <div style={{
-      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
-      background: 'var(--md-surface-container)', border: '1px solid var(--md-outline-variant)',
-      borderRadius: 12, padding: '16px 18px', marginTop: 8,
-      boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <span style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.1em', opacity: 0.6 }}>
-          FAVORITE LEAGUES
-        </span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--md-on-surface-variant)', display: 'flex' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>close</span>
-        </button>
-      </div>
+    <div>
       {Object.entries(PICKER_GROUPS).map(([cat, leagues]) => (
         <div key={cat} style={{ marginBottom: 14 }}>
           <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.12em', opacity: 0.4, marginBottom: 8 }}>
@@ -201,10 +189,8 @@ export default function SportsTab({ token, active }) {
   const [fixtures, setFixtures]         = useState([])
   const [loading, setLoading]           = useState(true)
   const [error, setError]               = useState(null)
-  const [pickerOpen, setPickerOpen]     = useState(false)
   const abortRef                        = useRef(null)
   const pollRef                         = useRef(null)
-  const pickerRef                       = useRef(null)
 
   const authHeaders = { Authorization: `Bearer ${token}` }
 
@@ -293,16 +279,6 @@ export default function SportsTab({ token, active }) {
     return () => clearInterval(pollRef.current)
   }, [games, active, activeLeague, myTeamsMode, fetchScoreboard, fetchMyTeamsFeed])
 
-  // Close picker on outside click
-  useEffect(() => {
-    if (!pickerOpen) return
-    const handler = (e) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [pickerOpen])
-
   const saveFavorites = async (newFavs) => {
     await fetch('/api/settings/page', {
       method: 'PATCH',
@@ -326,7 +302,15 @@ export default function SportsTab({ token, active }) {
 
   return (
     <div>
-      {/* Header row: league pills + My Teams toggle + settings gear */}
+      <InlineSettingsSection
+        title="FAVORITE LEAGUES"
+        icon="tune"
+        subtitle={`${favorites.length} selected`}
+      >
+        <LeagueGrid favorites={favorites} onToggle={handleToggleLeague} />
+      </InlineSettingsSection>
+
+      {/* Header row: league pills + My Teams toggle */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
 
         {/* League pills (hidden in My Teams mode) */}
@@ -362,7 +346,7 @@ export default function SportsTab({ token, active }) {
           </div>
         )}
 
-        {/* Right side: My Teams toggle + gear */}
+        {/* Right side: My Teams toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {myTeams.length > 0 && (
             <button
@@ -384,27 +368,6 @@ export default function SportsTab({ token, active }) {
               boxShadow: '0 0 6px #f87171', flexShrink: 0,
             }} />
           )}
-
-          {/* Settings gear */}
-          <div ref={pickerRef} style={{ position: 'relative' }}>
-            <button
-              className={`rs-pill ${pickerOpen ? 'is-active' : ''}`}
-              onClick={() => setPickerOpen(o => !o)}
-              style={{ padding: '5px 10px' }}
-              title="Choose leagues"
-            >
-              <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>
-                tune
-              </span>
-            </button>
-            {pickerOpen && (
-              <LeaguePicker
-                favorites={favorites}
-                onToggle={handleToggleLeague}
-                onClose={() => setPickerOpen(false)}
-              />
-            )}
-          </div>
         </div>
       </div>
 

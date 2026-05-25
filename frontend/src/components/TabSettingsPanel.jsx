@@ -1,4 +1,90 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
+
+/**
+ * InlineSettingsSection — collapsible settings card rendered inside a tab's
+ * content area (not a floating popover). Used by News/Weather/Sports/Stocks/
+ * Flights tabs so per-tab configuration is discoverable without leaving the
+ * tab body.
+ */
+export function InlineSettingsSection({
+  title,
+  subtitle,
+  defaultOpen = false,
+  open: controlledOpen,
+  onOpenChange,
+  icon,
+  children,
+}) {
+  const [internalOpen, setInternalOpen] = useState(defaultOpen)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = (next) => {
+    if (isControlled) onOpenChange?.(next)
+    else setInternalOpen(next)
+  }
+  return (
+    <div className="rs-card" style={{ marginBottom: 20, overflow: 'hidden' }}>
+      <div
+        onClick={() => setOpen(!open)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 16px',
+          cursor: 'pointer',
+          userSelect: 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {icon && (
+            <span
+              className="material-symbols-rounded"
+              style={{ fontSize: '1rem', opacity: 0.55 }}
+            >
+              {icon}
+            </span>
+          )}
+          <span
+            className="rs-card-label"
+            style={{ fontSize: '0.62rem', letterSpacing: '0.12em' }}
+          >
+            {title}
+          </span>
+          {subtitle && (
+            <span
+              className="rs-card-meta"
+              style={{ fontSize: '0.6rem', opacity: 0.5, marginLeft: 6 }}
+            >
+              {subtitle}
+            </span>
+          )}
+        </div>
+        <span
+          className="material-symbols-rounded"
+          style={{
+            fontSize: '1.1rem',
+            color: 'var(--md-on-surface-variant)',
+            transition: 'transform 0.22s ease',
+            transform: open ? 'rotate(180deg)' : 'none',
+          }}
+        >
+          expand_more
+        </span>
+      </div>
+      {open && (
+        <div
+          className="animate-fade-in"
+          style={{
+            borderTop: '1px solid var(--md-outline-variant)',
+            padding: '16px',
+          }}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function SettingsRow({ label, children }) {
   return (

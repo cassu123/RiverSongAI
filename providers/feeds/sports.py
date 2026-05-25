@@ -38,14 +38,6 @@ ESPN_LEAGUES = {
     "wta":        {"sport": "tennis",      "league": "wta",                      "label": "WTA Tennis",       "icon": "🎾", "category": "Racket"},
     "pga":        {"sport": "golf",        "league": "pga",                      "label": "PGA Tour",         "icon": "⛳", "category": "Golf"},
     "lpga":       {"sport": "golf",        "league": "lpga",                     "label": "LPGA",             "icon": "⛳", "category": "Golf"},
-    "f1":         {"sport": "racing",      "league": "f1",                       "label": "Formula 1",        "icon": "🏎️ ", "category": "Racing",    "stub": True},
-    "nascar":     {"sport": "racing",      "league": "nascar",                   "label": "NASCAR",           "icon": "🏎️ ", "category": "Racing",    "stub": True},
-    "ufc":        {"sport": "mma",         "league": "ufc",                      "label": "UFC/MMA",          "icon": "🥊", "category": "Combat",    "stub": True},
-    "boxing":     {"sport": "boxing",      "league": "boxing",                   "label": "Boxing",           "icon": "🥊", "category": "Combat",    "stub": True},
-    "rugby":      {"sport": "rugby",       "league": "rugby",                    "label": "Rugby Union",      "icon": "🏉", "category": "Global",    "stub": True},
-    "cricket":    {"sport": "cricket",     "league": "cricket",                  "label": "Cricket",          "icon": "🏏", "category": "Global",    "stub": True},
-    "afl":        {"sport": "afl",         "league": "afl",                      "label": "AFL",              "icon": "🏉", "category": "Global",    "stub": True},
-    "esports":    {"sport": "esports",     "league": "esports",                  "label": "Esports",          "icon": "🎮", "category": "Esports",   "stub": True},
 }
 
 BASE_URL = "https://site.api.espn.com/apis/site/v2/sports"
@@ -70,7 +62,7 @@ async def get_teams(league_id: str) -> list[dict]:
     if cached: return cached
 
     info = ESPN_LEAGUES.get(league_id)
-    if not info or info.get("stub"):
+    if not info:
         return []
 
     try:
@@ -280,7 +272,7 @@ async def search_teams(q: str) -> list[dict]:
     if cached is not None:
         return cached
 
-    active_leagues = [lid for lid, info in ESPN_LEAGUES.items() if not info.get("stub")]
+    active_leagues = list(ESPN_LEAGUES.keys())
     all_results = await asyncio.gather(
         *[get_teams(lid) for lid in active_leagues],
         return_exceptions=True,
@@ -365,7 +357,7 @@ async def fetch_event_stats(event_id: str) -> dict:
                 return await get_boxscore(event_id, lid)
 
     # Not in any cached scoreboard — try active leagues' live scoreboards
-    active_leagues = [lid for lid, info in ESPN_LEAGUES.items() if not info.get("stub")]
+    active_leagues = list(ESPN_LEAGUES.keys())
     boards = await asyncio.gather(
         *[get_scoreboard(lid) for lid in active_leagues], return_exceptions=True
     )

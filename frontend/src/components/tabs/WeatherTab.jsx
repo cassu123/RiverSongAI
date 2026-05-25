@@ -3,7 +3,8 @@
 // units: 'metric' | 'imperial'   wind_unit: 'kmh' | 'mph'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import TabSettingsPanel, { SettingsRow, ToggleGroup, Toggle } from '../TabSettingsPanel.jsx'
+import 'leaflet/dist/leaflet.css'
+import { InlineSettingsSection, SettingsRow, ToggleGroup, Toggle } from '../TabSettingsPanel.jsx'
 
 function wmoIcon(code) {
   if (code == null)  return 'wb_sunny'
@@ -109,7 +110,7 @@ export default function WeatherTab({ token, active }) {
   const [error, setError]         = useState(null)
   const [settings, setSettings]   = useState(null)   // settings_json.weather
   const [settingsOpen, setSOpen]  = useState(false)
-  const panelRef                  = useRef(null)
+  const [radarTs, setRadarTs]     = useState(null)
   const authHeaders = { Authorization: `Bearer ${token}` }
 
   const patchSettings = useCallback(async (patch) => {
@@ -165,6 +166,22 @@ export default function WeatherTab({ token, active }) {
       .catch(() => { setSettings({}); fetchWeather() })
   }, [token, active])
 
+  // Fetch latest RainViewer radar frame when this tab is active and we
+  // have a location. The frame path is appended to the tile URL below.
+  useEffect(() => {
+    if (!active || !settings?.lat || !settings?.lon) return
+    let cancelled = false
+    fetch('https://api.rainviewer.com/public/weather-maps.json')
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return
+        const frames = d?.radar?.past || []
+        if (frames.length) setRadarTs(frames[frames.length - 1].path)
+      })
+      .catch(() => {/* radar is supplemental; ignore failure */})
+    return () => { cancelled = true }
+  }, [active, settings?.lat, settings?.lon])
+
   // Re-fetch when settings change (location/units/wind)
   const handleSettingChange = useCallback(async (patch) => {
     const next = await patchSettings(patch)
@@ -186,55 +203,49 @@ export default function WeatherTab({ token, active }) {
   const C = current || {}
   const alertsEnabled = settings?.alerts_enabled !== false
 
+  // Auto-open the inline settings panel when the user has no saved location
+  // so the next step (search and select a city) is obvious.
+  const locationLabel = settings?.location_query?.split(',').slice(0, 2).join(',') || location_name || 'no location set'
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Header row — location name + gear */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <span className="rs-card-meta" style={{ fontSize: '0.72rem', fontWeight: 700 }}>
-          {settings?.location_query?.split(',').slice(0, 2).join(',') || location_name || 'Weather'}
-        </span>
-        <div ref={panelRef} style={{ position: 'relative', flexShrink: 0 }}>
-          <button
-            className={`rs-pill ${settingsOpen ? 'is-active' : ''}`}
-            onClick={() => setSOpen(o => !o)}
-            style={{ padding: '5px 10px' }}
-            title="Weather settings"
-          >
-            <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>tune</span>
-          </button>
-          <TabSettingsPanel open={settingsOpen} onClose={() => setSOpen(false)} panelRef={panelRef} title="WEATHER SETTINGS">
-            <SettingsRow label="LOCATION">
-              <LocationSearch onSelect={handleLocationSelect} token={token} />
-              {settings?.location_query && (
-                <div className="rs-card-meta" style={{ fontSize: '0.62rem', marginTop: 6, opacity: 0.6 }}>
-                  {settings.location_query.split(',').slice(0, 3).join(',')}
-                </div>
-              )}
-            </SettingsRow>
-            <SettingsRow label="TEMPERATURE">
-              <ToggleGroup
-                options={[{ value: 'metric', label: '°C' }, { value: 'imperial', label: '°F' }]}
-                value={settings?.units || 'metric'}
-                onChange={v => handleSettingChange({ units: v, wind_unit: v === 'imperial' ? 'mph' : 'kmh' })}
-              />
-            </SettingsRow>
-            <SettingsRow label="WIND SPEED">
-              <ToggleGroup
-                options={[{ value: 'kmh', label: 'km/h' }, { value: 'mph', label: 'mph' }]}
-                value={settings?.wind_unit || (settings?.units === 'imperial' ? 'mph' : 'kmh')}
-                onChange={v => handleSettingChange({ wind_unit: v })}
-              />
-            </SettingsRow>
-            <SettingsRow label="ALERTS">
-              <Toggle
-                checked={alertsEnabled}
-                onChange={v => handleSettingChange({ alerts_enabled: v })}
-                label="Severe weather alerts"
-              />
-            </SettingsRow>
-          </TabSettingsPanel>
-        </div>
-      </div>
+      <InlineSettingsSection
+        title="WEATHER SETTINGS"
+        icon="tune"
+        subtitle={locationLabel}
+        open={settingsOpen || noLocation}
+        onOpenChange={setSOpen}
+      >
+        <SettingsRow label="LOCATION">
+          <LocationSearch onSelect={handleLocationSelect} token={token} />
+          {settings?.location_query && (
+            <div className="rs-card-meta" style={{ fontSize: '0.62rem', marginTop: 6, opacity: 0.6 }}>
+              {settings.location_query.split(',').slice(0, 3).join(',')}
+            </div>
+          )}
+        </SettingsRow>
+        <SettingsRow label="TEMPERATURE">
+          <ToggleGroup
+            options={[{ value: 'metric', label: '°C' }, { value: 'imperial', label: '°F' }]}
+            value={settings?.units || 'metric'}
+            onChange={v => handleSettingChange({ units: v, wind_unit: v === 'imperial' ? 'mph' : 'kmh' })}
+          />
+        </SettingsRow>
+        <SettingsRow label="WIND SPEED">
+          <ToggleGroup
+            options={[{ value: 'kmh', label: 'km/h' }, { value: 'mph', label: 'mph' }]}
+            value={settings?.wind_unit || (settings?.units === 'imperial' ? 'mph' : 'kmh')}
+            onChange={v => handleSettingChange({ wind_unit: v })}
+          />
+        </SettingsRow>
+        <SettingsRow label="ALERTS">
+          <Toggle
+            checked={alertsEnabled}
+            onChange={v => handleSettingChange({ alerts_enabled: v })}
+            label="Severe weather alerts"
+          />
+        </SettingsRow>
+      </InlineSettingsSection>
 
       {/* No-location state — inline prompt */}
       {noLocation && (
@@ -381,10 +392,80 @@ export default function WeatherTab({ token, active }) {
               </div>
             </div>
           )}
+
+          {/* Live radar */}
+          {settings?.lat && settings?.lon && (
+            <div>
+              <div className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.5, marginBottom: 12 }}>
+                LIVE RADAR
+              </div>
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: 320,
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                  border: '1px solid var(--md-outline-variant)',
+                }}
+              >
+                <RadarMap lat={settings.lat} lon={settings.lon} radarTs={radarTs} />
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
   )
+}
+
+function RadarMap({ lat, lon, radarTs }) {
+  const mapRef        = useRef(null)
+  const instanceRef   = useRef(null)
+  const radarLayerRef = useRef(null)
+
+  // Initialize map once per (lat, lon) — base tile layer + framing
+  useEffect(() => {
+    if (!mapRef.current || lat == null || lon == null) return
+    let disposed = false
+    import('leaflet').then(L => {
+      if (disposed || instanceRef.current) return
+      const map = L.map(mapRef.current, {
+        center: [lat, lon],
+        zoom: 8,
+        zoomControl: false,
+        attributionControl: false,
+      })
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map)
+      instanceRef.current = map
+    })
+    return () => {
+      disposed = true
+      if (instanceRef.current) {
+        instanceRef.current.remove()
+        instanceRef.current = null
+        radarLayerRef.current = null
+      }
+    }
+  }, [lat, lon])
+
+  // Swap the radar overlay when the latest RainViewer frame changes
+  useEffect(() => {
+    if (!instanceRef.current || !radarTs) return
+    let disposed = false
+    import('leaflet').then(L => {
+      if (disposed || !instanceRef.current) return
+      if (radarLayerRef.current) instanceRef.current.removeLayer(radarLayerRef.current)
+      radarLayerRef.current = L.tileLayer(
+        `https://tilecache.rainviewer.com${radarTs}/256/{z}/{x}/{y}/2/1_1.png`,
+        { opacity: 0.6 },
+      )
+      radarLayerRef.current.addTo(instanceRef.current)
+    })
+    return () => { disposed = true }
+  }, [radarTs])
+
+  return <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
 }
 
 function WeatherSkeleton() {

@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import 'leaflet/dist/leaflet.css'
-import TabSettingsPanel, { SettingsRow, ToggleGroup } from '../TabSettingsPanel.jsx'
+import { InlineSettingsSection, SettingsRow, ToggleGroup } from '../TabSettingsPanel.jsx'
 
 const LIST_COLS = '1.7fr 1.4fr 1.6fr 0.9fr 0.55fr 1fr'
 
@@ -200,7 +200,6 @@ export default function FlightsTab({ token, active }) {
   const [agoText, setAgoText]     = useState('')
   const intervalRef               = useRef(null)
   const agoTimerRef               = useRef(null)
-  const panelRef                  = useRef(null)
   const authHeaders = { Authorization: `Bearer ${token}` }
 
   const flDef = { radar_radius_deg: 0.5, filter: 'all', refresh_interval_sec: 30 }
@@ -315,9 +314,62 @@ export default function FlightsTab({ token, active }) {
     (a, b) => (b.altitude_ft ?? -1) - (a.altitude_ft ?? -1)
   )
 
+  const noLocation = error === 'location'
+
   return (
     <div>
-      {/* Header */}
+      <InlineSettingsSection
+        title="RADAR SETTINGS"
+        icon="tune"
+        subtitle={wxSettings?.location_query?.split(',').slice(0, 2).join(',') || 'no origin set'}
+        open={settingsOpen || noLocation}
+        onOpenChange={setSOpen}
+      >
+        <SettingsRow label={`RADIUS — ${radiusDeg}° ≈ ${radiusKm} km`}>
+          <input
+            type="range" min={0.1} max={2.0} step={0.1}
+            value={radiusDeg}
+            onChange={e => handleRadiusChange(e.target.value)}
+            style={{ width: '100%', accentColor: 'var(--primary)' }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span className="rs-card-meta" style={{ fontSize: '0.58rem', opacity: 0.5 }}>~11 km</span>
+            <span className="rs-card-meta" style={{ fontSize: '0.58rem', opacity: 0.5 }}>~222 km</span>
+          </div>
+        </SettingsRow>
+        <SettingsRow label="FILTER">
+          <ToggleGroup
+            options={[
+              { value: 'all',      label: 'All'      },
+              { value: 'airborne', label: 'Airborne' },
+              { value: 'ground',   label: 'Ground'   },
+            ]}
+            value={fl.filter || 'all'}
+            onChange={handleFilterChange}
+          />
+        </SettingsRow>
+        <SettingsRow label="AUTO-REFRESH">
+          <ToggleGroup
+            options={[
+              { value: '10', label: '10s' },
+              { value: '30', label: '30s' },
+              { value: '60', label: '60s' },
+            ]}
+            value={String(fl.refresh_interval_sec || 30)}
+            onChange={handleRefreshChange}
+          />
+        </SettingsRow>
+        <SettingsRow label="RADAR ORIGIN">
+          <LocationSearch onSelect={handleLocationSelect} />
+          {wxSettings?.location_query && (
+            <div className="rs-card-meta" style={{ fontSize: '0.62rem', marginTop: 6, opacity: 0.6 }}>
+              {wxSettings.location_query.split(',').slice(0, 2).join(',')}
+            </div>
+          )}
+        </SettingsRow>
+      </InlineSettingsSection>
+
+      {/* Status row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span className="rs-card-meta" style={{ fontSize: '0.72rem', fontWeight: 700 }}>
@@ -329,69 +381,14 @@ export default function FlightsTab({ token, active }) {
             </span>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <button
-            className="rs-pill"
-            onClick={() => { setLoading(true); fetchFlights(flSettings, wxSettings) }}
-            style={{ padding: '5px 10px' }}
-            title="Refresh"
-          >
-            <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>refresh</span>
-          </button>
-          <div ref={panelRef} style={{ position: 'relative' }}>
-            <button
-              className={`rs-pill ${settingsOpen ? 'is-active' : ''}`}
-              onClick={() => setSOpen(o => !o)}
-              style={{ padding: '5px 10px' }}
-            >
-              <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>tune</span>
-            </button>
-            <TabSettingsPanel open={settingsOpen} onClose={() => setSOpen(false)} panelRef={panelRef} title="RADAR SETTINGS">
-              <SettingsRow label={`RADIUS — ${radiusDeg}° ≈ ${radiusKm} km`}>
-                <input
-                  type="range" min={0.1} max={2.0} step={0.1}
-                  value={radiusDeg}
-                  onChange={e => handleRadiusChange(e.target.value)}
-                  style={{ width: '100%', accentColor: 'var(--primary)' }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="rs-card-meta" style={{ fontSize: '0.58rem', opacity: 0.5 }}>~11 km</span>
-                  <span className="rs-card-meta" style={{ fontSize: '0.58rem', opacity: 0.5 }}>~222 km</span>
-                </div>
-              </SettingsRow>
-              <SettingsRow label="FILTER">
-                <ToggleGroup
-                  options={[
-                    { value: 'all',      label: 'All'      },
-                    { value: 'airborne', label: 'Airborne' },
-                    { value: 'ground',   label: 'Ground'   },
-                  ]}
-                  value={fl.filter || 'all'}
-                  onChange={handleFilterChange}
-                />
-              </SettingsRow>
-              <SettingsRow label="AUTO-REFRESH">
-                <ToggleGroup
-                  options={[
-                    { value: '10', label: '10s' },
-                    { value: '30', label: '30s' },
-                    { value: '60', label: '60s' },
-                  ]}
-                  value={String(fl.refresh_interval_sec || 30)}
-                  onChange={handleRefreshChange}
-                />
-              </SettingsRow>
-              <SettingsRow label="RADAR ORIGIN">
-                <LocationSearch onSelect={handleLocationSelect} />
-                {wxSettings?.location_query && (
-                  <div className="rs-card-meta" style={{ fontSize: '0.62rem', marginTop: 6, opacity: 0.6 }}>
-                    {wxSettings.location_query.split(',').slice(0, 2).join(',')}
-                  </div>
-                )}
-              </SettingsRow>
-            </TabSettingsPanel>
-          </div>
-        </div>
+        <button
+          className="rs-pill"
+          onClick={() => { setLoading(true); fetchFlights(flSettings, wxSettings) }}
+          style={{ padding: '5px 10px' }}
+          title="Refresh"
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>refresh</span>
+        </button>
       </div>
 
       {/* No-location state */}

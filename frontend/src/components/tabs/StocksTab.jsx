@@ -6,7 +6,7 @@
 // Settings: PATCH /api/settings/page { markets: { watchlist, show_charts, show_news } }
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import TabSettingsPanel, { SettingsRow, Toggle } from '../TabSettingsPanel.jsx'
+import { InlineSettingsSection, SettingsRow, Toggle } from '../TabSettingsPanel.jsx'
 
 const MAX_SYMBOLS = 15
 
@@ -157,10 +157,8 @@ export default function StocksTab({ token, active }) {
   const [chartLoading, setChartL]   = useState(false)
   const [news, setNews]             = useState([])
   const [newsLoading, setNewsL]     = useState(false)
-  const [settingsOpen, setSOpen]    = useState(false)
   const intervalRef                 = useRef(null)
   const debounceRef                 = useRef(null)
-  const panelRef                    = useRef(null)
   const authHeaders = { Authorization: `Bearer ${token}` }
 
   const patchMarkets = useCallback(async (patch) => {
@@ -277,9 +275,30 @@ export default function StocksTab({ token, active }) {
 
   return (
     <div>
-      {/* Search row + gear */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, alignItems: 'flex-start' }}>
-        <div style={{ flex: 1, position: 'relative' }}>
+      <InlineSettingsSection
+        title="MARKETS SETTINGS"
+        icon="tune"
+        subtitle={`${watchlist.length}/${MAX_SYMBOLS} symbols`}
+      >
+        <SettingsRow label="CHART">
+          <Toggle
+            checked={!!settings?.show_charts}
+            onChange={v => patchMarkets({ show_charts: v })}
+            label="Show 30-day price chart"
+          />
+        </SettingsRow>
+        <SettingsRow label="NEWS">
+          <Toggle
+            checked={!!settings?.show_news}
+            onChange={v => patchMarkets({ show_news: v })}
+            label="Show company news"
+          />
+        </SettingsRow>
+      </InlineSettingsSection>
+
+      {/* Search row */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ position: 'relative' }}>
           <input
             type="text" className="rs-input"
             placeholder="Search symbol or company…"
@@ -315,31 +334,6 @@ export default function StocksTab({ token, active }) {
             </div>
           )}
           {addError && <div style={{ color: 'oklch(64% 0.17 22)', fontSize: '0.72rem', marginTop: 6, fontWeight: 600 }}>{addError}</div>}
-          <div className="rs-card-meta" style={{ fontSize: '0.62rem', marginTop: 6, opacity: 0.5 }}>{watchlist.length}/{MAX_SYMBOLS} symbols</div>
-        </div>
-
-        {/* Settings gear */}
-        <div ref={panelRef} style={{ position: 'relative', flexShrink: 0 }}>
-          <button className={`rs-pill ${settingsOpen ? 'is-active' : ''}`} onClick={() => setSOpen(o => !o)}
-            style={{ padding: '5px 10px' }} title="Markets settings">
-            <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>tune</span>
-          </button>
-          <TabSettingsPanel open={settingsOpen} onClose={() => setSOpen(false)} panelRef={panelRef} title="MARKETS SETTINGS">
-            <SettingsRow label="CHART">
-              <Toggle
-                checked={!!settings?.show_charts}
-                onChange={v => patchMarkets({ show_charts: v })}
-                label="Show 30-day price chart"
-              />
-            </SettingsRow>
-            <SettingsRow label="NEWS">
-              <Toggle
-                checked={!!settings?.show_news}
-                onChange={v => patchMarkets({ show_news: v })}
-                label="Show company news"
-              />
-            </SettingsRow>
-          </TabSettingsPanel>
         </div>
       </div>
 

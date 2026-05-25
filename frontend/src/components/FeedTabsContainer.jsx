@@ -36,11 +36,17 @@ export default function FeedTabsContainer({ token, defaultTab = 'news' }) {
     setTabInUrl(key)
   }
 
-  // Sync on external navigation (e.g., visiting /briefing?tab=stocks directly)
+  // Sync when the browser URL changes externally — back/forward navigation,
+  // or another component calling history.pushState. The original effect ran
+  // only once on mount, so back/forward had no effect on the active tab.
   useEffect(() => {
-    const synced = getTabFromUrl()
-    if (synced && synced !== active) setActive(synced)
-  }, [])
+    const sync = () => {
+      const tab = getTabFromUrl()
+      if (tab && tab !== active) setActive(tab)
+    }
+    window.addEventListener('popstate', sync)
+    return () => window.removeEventListener('popstate', sync)
+  }, [active])
 
   return (
     <div className="rs-card is-wide" style={{ overflow: 'hidden' }}>

@@ -25,9 +25,7 @@ logger = logging.getLogger(__name__)
 CURATED_SOURCES: List[Dict[str, str]] = [
     # ── World / General ──────────────────────────────────────────────────────
     {"name": "BBC News",         "url": "https://feeds.bbci.co.uk/news/rss.xml",                    "category": "world"},
-    {"name": "Reuters",          "url": "https://feeds.reuters.com/reuters/topNews",                  "category": "world"},
     {"name": "Al Jazeera",       "url": "https://www.aljazeera.com/xml/rss/all.xml",                 "category": "world"},
-    {"name": "AP News",          "url": "https://feeds.apnews.com/rss/apf-topnews",                  "category": "world"},
     {"name": "NPR",              "url": "https://feeds.npr.org/1001/rss.xml",                        "category": "world"},
     {"name": "FOX News",         "url": "https://moxie.foxnews.com/google-publisher/latest.xml",     "category": "world"},
 
@@ -38,9 +36,7 @@ CURATED_SOURCES: List[Dict[str, str]] = [
     {"name": "PBS NewsHour",     "url": "https://www.pbs.org/newshour/feeds/rss/headlines",          "category": "us"},
 
     # ── Local — Central Arkansas ──────────────────────────────────────────────
-    {"name": "THV11 (CBS AR)",   "url": "https://www.thv11.com/feeds/syndication/rss",              "category": "local"},
     {"name": "KARK 4 (NBC AR)",  "url": "https://www.kark.com/feed/",                               "category": "local"},
-    {"name": "KATV (ABC AR)",    "url": "https://www.katv.com/feed/",                               "category": "local"},
     {"name": "Arkansas Online",  "url": "https://www.arkansasonline.com/rss/headlines/",            "category": "local"},
 
     # ── Technology ────────────────────────────────────────────────────────────
@@ -53,7 +49,6 @@ CURATED_SOURCES: List[Dict[str, str]] = [
 
     # ── Business / Finance ────────────────────────────────────────────────────
     {"name": "BBC Business",     "url": "https://feeds.bbci.co.uk/news/business/rss.xml",            "category": "business"},
-    {"name": "Reuters Business", "url": "https://feeds.reuters.com/reuters/businessNews",            "category": "business"},
     {"name": "Financial Times",  "url": "https://www.ft.com/rss/home",                             "category": "business"},
     {"name": "CNBC",             "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",    "category": "business"},
     {"name": "MarketWatch",      "url": "https://feeds.marketwatch.com/marketwatch/topstories/",    "category": "business"},
@@ -93,8 +88,6 @@ CURATED_SOURCES: List[Dict[str, str]] = [
 
     # ── Health ────────────────────────────────────────────────────────────────
     {"name": "BBC Health",       "url": "https://feeds.bbci.co.uk/news/health/rss.xml",             "category": "health"},
-    {"name": "Reuters Health",   "url": "https://feeds.reuters.com/reuters/healthNews",             "category": "health"},
-    {"name": "WebMD",            "url": "https://rssfeeds.webmd.com/rss/rss.aspx?RSSSource=RSS_PUBLIC", "category": "health"},
 
     # ── Science ───────────────────────────────────────────────────────────────
     {"name": "New Scientist",    "url": "https://www.newscientist.com/feed/home/",                  "category": "science"},

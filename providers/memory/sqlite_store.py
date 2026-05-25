@@ -1972,7 +1972,7 @@ class SQLiteStore:
                 "refresh_sports_min": 60,
                 "refresh_stocks_min": 60,
             }
-        return {
+        base = {
             "user_id": row["user_id"],
             "news_sources": json.loads(row["news_sources"] or "[]"),
             "weather_lat": row["weather_lat"],
@@ -1986,6 +1986,26 @@ class SQLiteStore:
             "refresh_sports_min": row["refresh_sports_min"],
             "refresh_stocks_min": row["refresh_stocks_min"],
         }
+
+        # Merge fields that have no dedicated column. They live under
+        # settings_json.feeds.* so new pref flags can be added without DDL.
+        try:
+            settings = json.loads(row["settings_json"] or "{}") or {}
+        except (json.JSONDecodeError, ValueError, IndexError):
+            settings = {}
+        feeds_extra = settings.get("feeds") or {}
+        for key in (
+            "feed_news_enabled",
+            "feed_weather_enabled",
+            "feed_sports_enabled",
+            "feed_stocks_enabled",
+            "feed_flights_enabled",
+            "weather_alerts_enabled",
+            "sports_news_sources",
+        ):
+            if key in feeds_extra:
+                base[key] = feeds_extra[key]
+        return base
 
     async def save_feed_preferences(self, user_id: str, prefs: dict) -> None:
         await self._run(self._sync_save_feed_preferences, user_id, prefs)
@@ -2186,6 +2206,41 @@ class SQLiteStore:
                 "updated_at":                _now_str(),
             },
         )
+
+        # Persist non-column-backed fields under settings_json.feeds.
+        # The `feed_preferences` table only has columns for the 12 prefs above,
+        # so master toggles + alerts + sports-news sources used to silently
+        # vanish on save. Storing them as JSON keeps the schema stable when
+        # future pref flags are added.
+        feeds_patch = {
+            k: prefs[k]
+            for k in (
+                "feed_news_enabled",
+                "feed_weather_enabled",
+                "feed_sports_enabled",
+                "feed_stocks_enabled",
+                "feed_flights_enabled",
+                "weather_alerts_enabled",
+                "sports_news_sources",
+            )
+            if k in prefs
+        }
+        if feeds_patch:
+            row = conn.execute(
+                "SELECT settings_json FROM feed_preferences WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+            try:
+                current = json.loads(row["settings_json"] or "{}") or {} if row else {}
+            except (json.JSONDecodeError, ValueError):
+                current = {}
+            existing_feeds = current.get("feeds") if isinstance(current.get("feeds"), dict) else {}
+            current["feeds"] = {**existing_feeds, **feeds_patch}
+            conn.execute(
+                "UPDATE feed_preferences SET settings_json = ? WHERE user_id = ?",
+                (json.dumps(current), user_id),
+            )
+
         conn.commit()
 
     # =========================================================================
