@@ -21,7 +21,7 @@ source venv/bin/activate
 
 step "Installing Python dependencies"
 # Build-time prereqs (idempotent; pip skips if already satisfied)
-pip install --quiet "setuptools<71" pybind11
+pip install --quiet pybind11
 # Only reinstall requirements when the lockfile changed
 REQ_HASH_FILE=".venv_requirements.sha256"
 NEW_HASH="$(sha256sum requirements.txt | awk '{print $1}')"

@@ -9,10 +9,10 @@
 # -----------------------------------------------------------------------------
 # Web framework
 # -----------------------------------------------------------------------------
-fastapi>=0.111.0
+fastapi>=0.130.0
 uvicorn[standard]==0.44.0       # ASGI server; [standard] pulls websockets + uvloop
 websockets==14.0                # for Home Assistant WS events
-starlette>=0.37.2,<0.38.0                # WebSocket state management (directly imported)
+starlette>=0.46.0               # WebSocket state management (directly imported)
 python-multipart==0.0.27        # Form data parsing for FastAPI
 pypdf==6.10.2                   # PDF text extraction for vehicle manual uploads
 pymupdf==1.27.2.3               # Culinary: PDF ingestion + image ripping
@@ -148,7 +148,7 @@ watchdog>=4.0.0
 # MCP server (Model Context Protocol — exposes tools to external clients)
 # -----------------------------------------------------------------------------
 mcp>=1.0.0
-open-interpreter==0.4.3
+# open-interpreter==0.4.3  # excluded: pins starlette<0.38 which conflicts with fastapi>=0.130
 
 # -----------------------------------------------------------------------------
 # Voice ID (speaker recognition, local)
