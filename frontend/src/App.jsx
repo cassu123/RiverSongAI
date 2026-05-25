@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth }        from './context/AuthContext.jsx'
 import Shell              from './chrome/Shell.jsx'
 import Drawer             from './chrome/Drawer.jsx'
@@ -43,6 +44,46 @@ const ReadingOAuthCallbackPage = lazy(() => import('./pages/ReadingOAuthCallback
 const ForcePasswordChangePage  = lazy(() => import('./pages/ForcePasswordChangePage.jsx'))
 
 import { ADMIN_PAGES, ALWAYS_VISIBLE } from './utils/constants.js'
+
+// ── Route table ─────────────────────────────────────────────────────────────
+// The drawer/components still speak in "page keys" (e.g. 'feeds', 'chronos').
+// The URL is the source of truth, so we map both directions.
+const PAGE_TO_PATH = {
+  briefing:         '/briefing',
+  dashboard:        '/dashboard',
+  speak:            '/speak',
+  chat:             '/chat',
+  memory:           '/memory',
+  routines:         '/routines',
+  home:             '/home',
+  users:            '/users',
+  killswitch:       '/killswitch',
+  profile:          '/profile',
+  settings:         '/settings',
+  admin_settings:   '/admin/settings',
+  feeds:            '/feeds',
+  google:           '/google',
+  commerce:         '/commerce',
+  reading:          '/reading',
+  analytics:        '/analytics',
+  inventory:        '/inventory',
+  chronos:          '/chronos',
+  vehicles:         '/vehicles',
+  environment:      '/environment',
+  culinary:         '/culinary',
+  google_callback:  '/callback',
+  reading_callback: '/reading-oauth-callback',
+}
+
+function pageKeyFromPath(pathname) {
+  if (!pathname || pathname === '/' || pathname === '') return 'briefing'
+  if (pathname === '/callback')                return 'google_callback'
+  if (pathname === '/reading-oauth-callback')  return 'reading_callback'
+  if (pathname.startsWith('/admin/settings'))  return 'admin_settings'
+  // /feeds, /feeds/sports/boxscore/123 → 'feeds'
+  const top = pathname.split('/').filter(Boolean)[0] || 'briefing'
+  return top
+}
 
 // Environment display names — used as header context outside of dashboard/briefing.
 const ENV_LABELS = {
@@ -95,14 +136,31 @@ const ENV_MOODS = {
 
 export default function App() {
   const { user, token, loading, logout, setupRequired, isAdminImpersonating, revertImpersonation } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [authView,      setAuthView]      = useState('login')
   const [enabledFeatures, setEnabledFeatures] = useState(null)
-  const [currentPage,   setCurrentPage]   = useState(() => {
-    const path = window.location.pathname
-    if (path === '/callback') return 'google_callback'
-    if (path === '/reading-oauth-callback') return 'reading_callback'
-    return load('rs-page', 'briefing')
-  })
+
+  // currentPage is now URL-derived. setCurrentPage is a navigate() wrapper so
+  // every existing call site keeps working without churn. URLs are the source
+  // of truth — back/forward and bookmarking just work.
+  const currentPage = pageKeyFromPath(location.pathname)
+  const setCurrentPage = useCallback((page) => {
+    const path = PAGE_TO_PATH[page]
+    if (path) navigate(path)
+  }, [navigate])
+
+  // One-time redirect: if the user lands on "/" or an unknown path, send them
+  // to their previously-remembered page (or briefing). Only on first mount —
+  // after that the URL is canonical.
+  useEffect(() => {
+    if (location.pathname === '/' || location.pathname === '') {
+      const remembered = load('rs-page', 'briefing')
+      const path = PAGE_TO_PATH[remembered] || '/briefing'
+      navigate(path, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const [adminMode,     setAdminMode]     = useState(false)
   const [drawerOpen,    setDrawerOpen]    = useState(false)
@@ -127,6 +185,9 @@ export default function App() {
     return () => document.body.classList.remove('rs-stage-active')
   }, [])
 
+  // URL is the source of truth, but we mirror the page key into localStorage
+  // so a user who returns to the root '/' lands on their last-used page.
+  // The action slot resets every page change.
   useEffect(() => { save('rs-page', currentPage); setPageAction(null); }, [currentPage])
   useEffect(() => { save('rs-admin', adminMode) }, [adminMode])
   useEffect(() => { save('rs-profile', profile) }, [profile])
