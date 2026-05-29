@@ -109,6 +109,18 @@ python-amazon-sp-api==2.1.8          # Amazon Selling Partner API
 # -----------------------------------------------------------------------------
 chromadb==1.5.9                      # Local vector database for semantic memory
 pybind11==2.13.6                     # C++ bindings required by chroma-hnswlib
+# chromadb pulls in opentelemetry + protobuf. Pin them here to avoid the Python
+# 3.14 crash: protobuf 4.x C extension raises TypeError (not ImportError) on
+# Python 3.14, causing a boot-time crash. Protobuf 5.x fixes this natively.
+protobuf>=5.29.0,<6.0
+opentelemetry-proto>=1.29.0
+opentelemetry-exporter-otlp-proto-grpc>=1.29.0
+opentelemetry-exporter-otlp-proto-common>=1.29.0
+opentelemetry-api>=1.29.0
+opentelemetry-sdk>=1.29.0
+opentelemetry-instrumentation>=0.63b1
+opentelemetry-instrumentation-fastapi>=0.63b1
+opentelemetry-instrumentation-asgi>=0.63b1
 # unstructured and pymemgpt have strict Python <3.13 limits. Skipping for 3.14.
 # unstructured[all-docs]==0.14.0
 # pymemgpt==0.5.6
