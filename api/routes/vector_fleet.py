@@ -119,7 +119,7 @@ class RegisterBody(BaseModel):
     unit_id: str
     unit_name: str = ""
     platform_type: str = "unknown"
-    model_config: Dict[str, Any] = {}   # full voyager.json config blob
+    unit_config: Dict[str, Any] = {}   # full voyager.json config blob
 
 
 class StatusBody(BaseModel):

@@ -2,11 +2,11 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 
 const COMMANDS = [
-  { key: 'mow_start',    label: 'Start Mowing',  icon: 'grass',          variant: 'primary' },
-  { key: 'mow_stop',     label: 'Stop',           icon: 'stop_circle',    variant: 'secondary' },
-  { key: 'return_home',  label: 'Return Home',    icon: 'home',           variant: 'secondary' },
-  { key: 'estop',        label: 'E-STOP',         icon: 'emergency_home', variant: 'danger' },
-  { key: 'estop_reset',  label: 'Reset E-Stop',   icon: 'restart_alt',    variant: 'ghost' },
+  { key: 'mow_start',    label: 'Start Mowing',  icon: 'grass',          primary: true },
+  { key: 'mow_stop',     label: 'Stop',           icon: 'stop_circle',    primary: false },
+  { key: 'return_home',  label: 'Return Home',    icon: 'home',           primary: false },
+  { key: 'estop',        label: 'E-STOP',         icon: 'emergency_home', danger: true },
+  { key: 'estop_reset',  label: 'Reset E-Stop',   icon: 'restart_alt',    ghost: true },
 ]
 
 const MODE_COLOR = {
@@ -176,8 +176,22 @@ function UnitCard({ unit, onCommand, sending }) {
           {COMMANDS.map(cmd => (
             <button
               key={cmd.key}
-              className={`rs-btn rs-btn--${cmd.variant}`}
-              style={cmd.variant === 'danger' ? { background: 'rgba(248,113,113,0.15)', color: '#f87171', border: '1px solid rgba(248,113,113,0.4)' } : {}}
+              className={cmd.primary ? 'rs-btn-primary' : undefined}
+              style={{
+                all: cmd.primary ? undefined : 'unset',
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px',
+                borderRadius: 20,
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: sending === cmd.key ? 'not-allowed' : 'pointer',
+                opacity: sending === cmd.key ? 0.5 : 1,
+                transition: 'opacity 0.15s',
+                ...(cmd.primary ? { fontSize: '0.8rem', padding: '8px 14px', gap: 6 } :
+                    cmd.danger  ? { background: 'rgba(248,113,113,0.12)', color: '#f87171', border: '1px solid rgba(248,113,113,0.35)' } :
+                    cmd.ghost   ? { background: 'transparent', color: 'var(--on-surface-variant)', border: '1px solid rgba(255,255,255,0.12)' } :
+                                  { background: 'var(--md-surface-container-highest, rgba(255,255,255,0.07))', color: 'var(--on-surface)', border: '1px solid rgba(255,255,255,0.1)' }),
+              }}
               disabled={sending === cmd.key}
               onClick={() => onCommand(unit.unit_id, cmd.key)}
               title={cmd.key}
