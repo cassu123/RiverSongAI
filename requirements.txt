@@ -12,7 +12,7 @@
 fastapi>=0.130.0
 uvicorn[standard]==0.44.0       # ASGI server; [standard] pulls websockets + uvloop
 websockets==14.0                # for Home Assistant WS events
-starlette>=0.46.0               # WebSocket state management (directly imported)
+starlette>=0.50.0               # WebSocket state management; >=0.50.0 clears CVE range headers DoS (<=0.49.0)
 python-multipart==0.0.27        # Form data parsing for FastAPI
 pypdf==6.10.2                   # PDF text extraction for vehicle manual uploads
 pymupdf==1.27.2.3               # Culinary: PDF ingestion + image ripping
@@ -147,10 +147,18 @@ pymavlink>=2.4.41                    # MAVLink telemetry for ArduRover
 # Security floors — explicit safe minimums for transitive dependencies
 # -----------------------------------------------------------------------------
 setuptools>=78.1.1                   # CVE-2025-47273 path traversal
-requests>=2.32.0                     # CVE-2024-35195
-urllib3>=2.2.2                       # CVE-2024-37891
+requests>=2.33.0                     # CVE-2024-35195 + CVE-2025-23159 temp-file reuse
+urllib3>=2.7.0                       # CVE-2024-37891 + decompression bomb chain (several CVEs)
 certifi>=2024.7.4                    # stale certificate bundle
 cryptography>=43.0.1                 # CVE-2024-26130
+h11>=0.16.0                          # CRITICAL: malformed chunked-encoding bypass
+Pillow>=12.2.0                       # HIGH: FITS decompression bomb + PSD out-of-bounds write
+tornado>=6.5.5                       # HIGH: cookie injection + multipart DoS
+nltk>=3.9.4                          # CRITICAL: zip-slip + path traversal + XSS (<=3.9.3)
+orjson>=3.11.6                       # HIGH: unbounded recursion DoS
+filelock>=3.20.3                     # MEDIUM: TOCTOU symlink race
+fonttools>=4.60.2                    # MEDIUM: arbitrary file write + XML injection
+Pygments>=2.20.0                     # LOW: ReDoS in GUID regex
 slowapi==0.1.9
 
 # Filesystem watcher (CHRONOS vault re-indexing)
