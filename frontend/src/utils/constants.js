@@ -47,6 +47,7 @@ export const NAV_GROUPS = [
       { key: 'reading',     label: 'Reading',     icon: 'reading' },
       { key: 'google',      label: 'Google',      icon: 'google' },
       { key: 'environment', label: 'Environment', icon: 'environment' },
+      { key: 'fleet',       label: 'Fleet',       icon: 'fleet' },
     ]
   },
   {

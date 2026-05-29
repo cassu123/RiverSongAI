@@ -374,6 +374,15 @@ CREATE TABLE IF NOT EXISTS user_preferences (
     music_provider TEXT NOT NULL DEFAULT 'youtube_music',
     updated_at     TEXT NOT NULL DEFAULT ''
 );
+
+CREATE TABLE IF NOT EXISTS vector_units (
+    unit_id        TEXT PRIMARY KEY,
+    unit_name      TEXT NOT NULL DEFAULT '',
+    platform_type  TEXT NOT NULL DEFAULT 'unknown',
+    config_json    TEXT NOT NULL DEFAULT '{}',
+    registered_at  TEXT NOT NULL,
+    updated_at     TEXT NOT NULL
+);
 """
 
 
@@ -481,6 +490,8 @@ class SQLiteStore:
             "CREATE INDEX IF NOT EXISTS idx_facts_user_id ON facts(user_id)",
             "CREATE INDEX IF NOT EXISTS idx_preferences_user_id ON preferences(user_id)",
             "CREATE INDEX IF NOT EXISTS idx_summaries_user_id ON conversation_summaries(user_id)",
+            # Vector fleet units table (river-vector integration)
+            "CREATE TABLE IF NOT EXISTS vector_units (unit_id TEXT PRIMARY KEY, unit_name TEXT NOT NULL DEFAULT '', platform_type TEXT NOT NULL DEFAULT 'unknown', config_json TEXT NOT NULL DEFAULT '{}', registered_at TEXT NOT NULL, updated_at TEXT NOT NULL)",
         ]:
             try:
                 conn.execute(migration)
@@ -2547,4 +2558,81 @@ class SQLiteStore:
             (user_id, endpoint),
         )
         conn.commit()
+
+    # -------------------------------------------------------------------------
+    # Vector fleet units
+    # -------------------------------------------------------------------------
+
+    async def upsert_vector_unit(
+        self,
+        unit_id: str,
+        unit_name: str,
+        platform_type: str,
+        config_json: str,
+    ) -> None:
+        await self._run(
+            self._sync_upsert_vector_unit, unit_id, unit_name, platform_type, config_json
+        )
+
+    def _sync_upsert_vector_unit(
+        self,
+        unit_id: str,
+        unit_name: str,
+        platform_type: str,
+        config_json: str,
+    ) -> None:
+        conn = self._get_conn()
+        now = _now_str()
+        conn.execute(
+            """
+            INSERT INTO vector_units (unit_id, unit_name, platform_type, config_json, registered_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(unit_id) DO UPDATE SET
+                unit_name     = excluded.unit_name,
+                platform_type = excluded.platform_type,
+                config_json   = excluded.config_json,
+                updated_at    = excluded.updated_at
+            """,
+            (unit_id, unit_name, platform_type, config_json, now, now),
+        )
         conn.commit()
+
+    async def get_vector_units(self) -> list[dict]:
+        return await self._run(self._sync_get_vector_units)
+
+    def _sync_get_vector_units(self) -> list[dict]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT unit_id, unit_name, platform_type, config_json, registered_at, updated_at FROM vector_units"
+        ).fetchall()
+        return [
+            {
+                "unit_id": r[0],
+                "unit_name": r[1],
+                "platform_type": r[2],
+                "config_json": r[3],
+                "registered_at": r[4],
+                "updated_at": r[5],
+            }
+            for r in rows
+        ]
+
+    async def get_vector_unit(self, unit_id: str) -> Optional[dict]:
+        return await self._run(self._sync_get_vector_unit, unit_id)
+
+    def _sync_get_vector_unit(self, unit_id: str) -> Optional[dict]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT unit_id, unit_name, platform_type, config_json, registered_at, updated_at FROM vector_units WHERE unit_id=?",
+            (unit_id,),
+        ).fetchone()
+        if not row:
+            return None
+        return {
+            "unit_id": row[0],
+            "unit_name": row[1],
+            "platform_type": row[2],
+            "config_json": row[3],
+            "registered_at": row[4],
+            "updated_at": row[5],
+        }

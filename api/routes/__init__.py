@@ -36,6 +36,7 @@ from . import n8n_webhooks
 from .legal import router as legal_router
 from .usage import router as usage_router
 from .integrations import router as integrations_router
+from .vector_fleet import router as vector_fleet_router
 
 __all__ = [
     "health_router",
@@ -76,4 +77,5 @@ __all__ = [
     "legal_router",
     "usage_router",
     "integrations_router",
+    "vector_fleet_router",
 ]

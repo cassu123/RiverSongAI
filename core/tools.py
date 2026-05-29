@@ -323,6 +323,34 @@ TOOL_SCHEMAS = [
             },
             "required": ["code"]
         }
+    },
+    {
+        "name": "mow_command",
+        "description": (
+            "Send a command to the autonomous mower (Vector/Voyager). "
+            "Use this when the user wants to start mowing, stop mowing, send the mower home, "
+            "or trigger an emergency stop. "
+            "Commands: mow_start — begin autonomous mowing session; "
+            "mow_stop — stop the current session; "
+            "return_home — navigate back to the dock; "
+            "estop — immediate emergency stop; "
+            "estop_reset — clear E-stop state after operator inspection."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "enum": ["mow_start", "mow_stop", "return_home", "estop", "estop_reset"],
+                    "description": "The command to send to the mower."
+                },
+                "unit_id": {
+                    "type": "string",
+                    "description": "Unit ID of the mower. Omit to target the first registered unit."
+                }
+            },
+            "required": ["command"]
+        }
     }
 ]
 
@@ -420,6 +448,9 @@ async def execute_tool(tool_name: str, tool_input: Dict[str, Any], context: Dict
 
         elif tool_name == "code_interpreter":
             return await _exec_code_interpreter(tool_input, user_id)
+
+        elif tool_name == "mow_command":
+            return await _exec_mow_command(tool_input, user_id)
 
         else:
             return f"Unknown tool '{tool_name}' requested."
@@ -1171,3 +1202,48 @@ async def _exec_code_interpreter(args: dict, user_id: str) -> str:
     except Exception as exc:
         logger.error("code_interpreter failed: %s", exc)
         return f"Failed to run code: {exc}"
+
+
+async def _exec_mow_command(args: dict, user_id: str) -> str:
+    try:
+        from api.routes.vector_fleet import queue_command, get_fleet_state, get_first_unit_id
+
+        command = args["command"]
+        unit_id = args.get("unit_id") or get_first_unit_id()
+
+        if not unit_id:
+            return (
+                "No mower units are registered yet. "
+                "Make sure Voyager is running and has connected to River Song."
+            )
+
+        fleet = get_fleet_state()
+        state = fleet.get(unit_id, {})
+        last_seen = state.get("last_seen")
+        import time
+        online = last_seen and (time.time() - last_seen) < 30
+
+        queued = queue_command(unit_id, command)
+        if not queued:
+            return f"Could not queue '{command}' — unit '{unit_id}' is unknown."
+
+        label = {
+            "mow_start":    "start mowing",
+            "mow_stop":     "stop mowing",
+            "return_home":  "return to dock",
+            "estop":        "EMERGENCY STOP",
+            "estop_reset":  "reset the E-stop",
+        }.get(command, command)
+
+        if online:
+            return f"Command queued: {label}. Voyager will execute it on the next poll (within 100 ms)."
+        else:
+            ago = f"{round(time.time() - last_seen)}s ago" if last_seen else "never"
+            return (
+                f"Command queued: {label}. "
+                f"Note: Voyager was last seen {ago} and may be offline. "
+                "It will pick up the command when it reconnects."
+            )
+    except Exception as exc:
+        logger.error("mow_command failed: %s", exc)
+        return f"Failed to send mower command: {exc}"

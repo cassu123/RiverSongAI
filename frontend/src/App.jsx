@@ -39,6 +39,7 @@ const ChronosPage             = lazy(() => import('./pages/ChronosPage.jsx'))
 const VehiclePage             = lazy(() => import('./pages/VehiclePage.jsx'))
 const CulinaryPage            = lazy(() => import('./pages/CulinaryPage.jsx'))
 const EnvironmentPage         = lazy(() => import('./pages/EnvironmentPage.jsx'))
+const VectorFleetPage         = lazy(() => import('./pages/VectorFleetPage.jsx'))
 const GoogleCallbackPage      = lazy(() => import('./pages/GoogleCallbackPage.jsx'))
 const ReadingOAuthCallbackPage = lazy(() => import('./pages/ReadingOAuthCallbackPage.jsx'))
 const ForcePasswordChangePage  = lazy(() => import('./pages/ForcePasswordChangePage.jsx'))
@@ -71,6 +72,7 @@ const PAGE_TO_PATH = {
   vehicles:         '/vehicles',
   environment:      '/environment',
   culinary:         '/culinary',
+  fleet:            '/fleet',
   google_callback:  '/callback',
   reading_callback: '/reading-oauth-callback',
 }
@@ -440,6 +442,7 @@ export default function App() {
               {currentPage === 'vehicles'   && <VehiclePage onNavigate={handleNavigate} setAction={setPageAction} />}
               {currentPage === 'environment'&& <EnvironmentPage setAction={setPageAction} />}
               {currentPage === 'culinary'   && <CulinaryPage setAction={setPageAction} />}
+              {currentPage === 'fleet'      && <VectorFleetPage setAction={setPageAction} />}
             </div>
           </Suspense>
         </ErrorBoundary>
