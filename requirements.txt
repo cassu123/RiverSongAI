@@ -108,7 +108,7 @@ python-amazon-sp-api==2.1.8          # Amazon Selling Partner API
 # Memory / Vector Store
 # -----------------------------------------------------------------------------
 chromadb==1.5.9                      # Local vector database for semantic memory
-pybind11==2.13.6                     # C++ bindings required by chroma-hnswlib
+pybind11==3.0.4                     # C++ bindings required by chroma-hnswlib
 # chromadb pulls in opentelemetry + protobuf. Pin them here to avoid the Python
 # 3.14 crash: protobuf 4.x C extension raises TypeError (not ImportError) on
 # Python 3.14, causing a boot-time crash. Protobuf 5.x fixes this natively.
