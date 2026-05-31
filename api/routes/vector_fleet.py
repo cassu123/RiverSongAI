@@ -9,10 +9,11 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
-from core.auth import decode_token
+from core.auth import decode_token, require_role
+from config.settings import get_settings
 from providers.memory.sqlite_store import SQLiteStore
 from providers.push.sender import send_push
 
@@ -71,6 +72,11 @@ async def _verify_unit_token(unit_id: str, x_unit_token: Optional[str] = Header(
 
 @router.post("/internal/wake/{unit_id}")
 async def internal_wake_queue(unit_id: str, request: Request):
+    auth_header = request.headers.get("Authorization")
+    settings = get_settings()
+    expected = f"Bearer {settings.daemon_internal_secret}"
+    if not auth_header or auth_header != expected:
+        raise HTTPException(status_code=401, detail="Invalid internal secret")
     event = _get_command_event(unit_id)
     event.set()
     return {"status": "ok"}
@@ -81,55 +87,122 @@ async def internal_wake_queue(unit_id: str, request: Request):
 
 class RegisterBody(BaseModel):
     unit_id: str
-    name: str = ""
-    platform: str = "unknown"
     firmware_version: Optional[str] = None
-    hardware: Dict[str, Any] = {}
+    boot_time: Optional[str] = None
+    ip_address: Optional[str] = None
     connectivity_tier: str = "lan"
-    last_ip: Optional[str] = None
 
 @router.post("/register")
-async def register_unit(body: RegisterBody):
+async def register_unit(body: RegisterBody, request: Request):
     store = SQLiteStore()
     unit = await store.get_vector_unit(body.unit_id)
-    now = datetime.now(timezone.utc).isoformat()
     if not unit:
-        import secrets
-        token = secrets.token_hex(16)
-        await store.insert_vector_unit(body.unit_id, body.name, body.platform, token, now, "")
-        return {"status": "registered", "unit_token": token}
-    else:
-        await store.update_vector_unit(body.unit_id, {
-            "firmware_version": body.firmware_version,
-            "last_ip": body.last_ip,
-            "connectivity_tier": body.connectivity_tier,
-            "last_seen": now,
-            "online": 1
-        })
-        return {"status": "ok", "unit_token": unit["unit_token"]}
+        raise HTTPException(status_code=401, detail="Unit not claimed")
+    
+    x_unit_token = request.headers.get("X-Unit-Token")
+    if not x_unit_token or x_unit_token != unit.get("unit_token"):
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    now = datetime.now(timezone.utc).isoformat()
+    await store.update_vector_unit(body.unit_id, {
+        "firmware_version": body.firmware_version,
+        "last_ip": body.ip_address,
+        "connectivity_tier": body.connectivity_tier,
+        "last_seen": now,
+        "online": 1
+    })
+    return {"status": "ok"}
+
+@router.get("/config/{unit_id}")
+async def get_config(unit_id: str, x_unit_token: str = Header(default=None)):
+    await _verify_unit_token(unit_id, x_unit_token)
+    store = SQLiteStore()
+    unit = await store.get_vector_unit(unit_id)
+    if not unit:
+        raise HTTPException(status_code=404, detail="Unit not found")
+        
+    revision_row = await store.execute_read_one_async("SELECT revision FROM vector_config_revisions WHERE unit_id=?", (unit_id,))
+    revision = revision_row["revision"] if revision_row else 1
+    
+    hardware = json.loads(unit.get("hardware") or "{}")
+    safety_floors = json.loads(unit.get("safety_floors") or "{}")
+    home_position = json.loads(unit.get("home_position") or "{}")
+    
+    prog = await store.execute_read_one_async("SELECT * FROM vector_programs WHERE assigned_unit_id=?", (unit_id,))
+    assigned_program = None
+    if prog:
+        zone_ids = json.loads(prog["zone_ids"] or "[]")
+        zones = []
+        for zid in zone_ids:
+            z = await store.execute_read_one_async("SELECT * FROM vector_zones WHERE zone_id=?", (zid,))
+            if z:
+                zones.append({
+                    "zone_id": z["zone_id"],
+                    "name": z["name"],
+                    "boundary": json.loads(z["boundary"] or "[]"),
+                    "no_go_areas": json.loads(z["no_go_areas"] or "[]"),
+                    "area_sqm": z["area_sqm"]
+                })
+        assigned_program = {
+            "program_id": prog["program_id"],
+            "name": prog["name"],
+            "pattern": prog["pattern"],
+            "direction_deg": prog["direction_deg"],
+            "overlap_pct": prog["overlap_pct"],
+            "obstacle_clearance_m": prog["obstacle_clearance_m"],
+            "edge_distance_m": prog["edge_distance_m"],
+            "speed_profile": prog["speed_profile"],
+            "zones": zones
+        }
+        
+    absolute_floors = {
+        "min_obstacle_clearance_m": 0.10,
+        "min_imu_tilt_cutoff_deg": 10.0,
+        "max_imu_tilt_cutoff_deg": 25.0,
+        "min_watchdog_timeout_ms": 250,
+        "max_watchdog_timeout_ms": 2000
+    }
+    
+    config = {
+        "unit_id": unit_id,
+        "name": unit["name"],
+        "config_version": revision,
+        "hardware": hardware,
+        "safety_floors": safety_floors,
+        "home_position": home_position,
+        "assigned_program": assigned_program,
+        "absolute_floors": absolute_floors
+    }
+    
+    return JSONResponse(config, headers={"X-Config-Version": str(revision)})
 
 @router.get("/command/stream/{unit_id}")
 async def command_stream(unit_id: str, x_unit_token: str = Header(default=None)):
     await _verify_unit_token(unit_id, x_unit_token)
     store = SQLiteStore()
     
+    revision_row = await store.execute_read_one_async("SELECT revision FROM vector_config_revisions WHERE unit_id=?", (unit_id,))
+    revision = revision_row["revision"] if revision_row else 1
+    headers = {"X-Config-Version": str(revision)}
+    
     cmd = await store.get_oldest_pending_command(unit_id)
     if cmd:
         await store.update_command_status(cmd["command_id"], "dispatched")
-        return {"command": cmd}
+        return JSONResponse(dict(cmd), headers=headers)
         
     event = _get_command_event(unit_id)
     event.clear()
     
     try:
-        await asyncio.wait_for(event.wait(), timeout=50.0)
+        await asyncio.wait_for(event.wait(), timeout=30.0)
         cmd = await store.get_oldest_pending_command(unit_id)
         if cmd:
             await store.update_command_status(cmd["command_id"], "dispatched")
-            return {"command": cmd}
+            return JSONResponse(dict(cmd), headers=headers)
     except asyncio.TimeoutError:
-        return {"command": None}
-    return {"command": None}
+        pass
+        
+    return Response(status_code=204, headers=headers)
 
 class AckBody(BaseModel):
     status: str
@@ -150,8 +223,8 @@ class ResultBody(BaseModel):
     status: str
     result: Optional[str] = None
 
-@router.post("/command/{command_id}/result")
-async def command_result(command_id: str, body: ResultBody, x_unit_token: str = Header(default=None)):
+@router.post("/command/{command_id}/complete")
+async def command_complete(command_id: str, body: ResultBody, x_unit_token: str = Header(default=None)):
     store = SQLiteStore()
     cmd = await store.execute_read_one_async("SELECT unit_id FROM vector_commands WHERE command_id=?", (command_id,))
     if not cmd:
@@ -162,9 +235,103 @@ async def command_result(command_id: str, body: ResultBody, x_unit_token: str = 
     await store.execute_write_async(sql, (body.status, datetime.now(timezone.utc).isoformat(), body.result, command_id))
     return {"status": "ok"}
 
-class TelemetryBody(BaseModel):
+class StatusBody(BaseModel):
     unit_id: str
-    session_id: Optional[str] = None
+    operating_mode: Optional[str] = None
+    session_state: Optional[str] = None
+
+@router.post("/status")
+async def post_status(body: StatusBody, x_unit_token: str = Header(default=None)):
+    await _verify_unit_token(body.unit_id, x_unit_token)
+    store = SQLiteStore()
+    now = datetime.now(timezone.utc).isoformat()
+    await store.update_vector_unit(body.unit_id, {
+        "operating_mode": body.operating_mode,
+        "session_state": body.session_state,
+        "last_seen": now
+    })
+    _get_telemetry_event(body.unit_id).set()
+    _get_telemetry_event(body.unit_id).clear()
+    return {"status": "ok"}
+
+class SessionStartBody(BaseModel):
+    unit_id: str
+    program_id: Optional[str] = None
+    config_version: int
+    started_at: str
+
+@router.post("/session/start")
+async def session_start(body: SessionStartBody, x_unit_token: str = Header(default=None)):
+    await _verify_unit_token(body.unit_id, x_unit_token)
+    store = SQLiteStore()
+    import uuid
+    session_id = uuid.uuid4().hex
+    sql = """
+    INSERT INTO vector_sessions (session_id, unit_id, program_id, config_version, started_at, status)
+    VALUES (?, ?, ?, ?, ?, 'active')
+    """
+    await store.execute_write_async(sql, (session_id, body.unit_id, body.program_id, body.config_version, body.started_at))
+    return {"session_id": session_id}
+
+class SessionEndBody(BaseModel):
+    unit_id: str
+    session_id: str
+    ended_at: str
+    status: str
+    area_mowed_sqm: Optional[float] = None
+    battery_used_pct: Optional[float] = None
+    fuel_used_pct: Optional[float] = None
+    abort_reason: Optional[str] = None
+
+@router.post("/session/end")
+async def session_end(body: SessionEndBody, x_unit_token: str = Header(default=None)):
+    await _verify_unit_token(body.unit_id, x_unit_token)
+    store = SQLiteStore()
+    sql = """
+    UPDATE vector_sessions
+    SET ended_at=?, status=?, area_mowed_sqm=?, battery_used_pct=?, fuel_used_pct=?, abort_reason=?
+    WHERE session_id=? AND unit_id=?
+    """
+    await store.execute_write_async(sql, (body.ended_at, body.status, body.area_mowed_sqm, body.battery_used_pct, body.fuel_used_pct, body.abort_reason, body.session_id, body.unit_id))
+    return {"status": "ok"}
+
+_TEACH_WAYPOINTS = {}
+
+class TeachBody(BaseModel):
+    unit_id: str
+    zone_name: str
+    waypoints: List[Dict[str, float]]
+    finalize: bool
+
+@router.post("/zones/teach")
+async def zones_teach(body: TeachBody, x_unit_token: str = Header(default=None)):
+    await _verify_unit_token(body.unit_id, x_unit_token)
+    key = (body.unit_id, body.zone_name)
+    if key not in _TEACH_WAYPOINTS:
+        _TEACH_WAYPOINTS[key] = []
+    _TEACH_WAYPOINTS[key].extend(body.waypoints)
+    
+    if body.finalize:
+        store = SQLiteStore()
+        import uuid
+        zone_id = uuid.uuid4().hex
+        boundary = _TEACH_WAYPOINTS.pop(key, [])
+        now = datetime.now(timezone.utc).isoformat()
+        
+        # simple area calculation approximation
+        area_sqm = len(boundary) * 0.1
+        
+        sql = """
+        INSERT INTO vector_zones (zone_id, name, created_by, created_at, updated_at, boundary, no_go_areas, area_sqm, capture_method)
+        VALUES (?, ?, 'system', ?, ?, ?, '[]', ?, 'taught')
+        """
+        await store.execute_write_async(sql, (zone_id, body.zone_name, now, now, json.dumps(boundary), area_sqm))
+        return {"status": "ok", "zone_id": zone_id}
+    
+    return {"status": "ok"}
+
+class TelemetrySnapshot(BaseModel):
+    timestamp: str
     lat: Optional[float] = None
     lng: Optional[float] = None
     heading_deg: Optional[float] = None
@@ -179,22 +346,42 @@ class TelemetryBody(BaseModel):
     active_faults: Optional[List[str]] = None
     connectivity_tier: Optional[str] = None
 
+class TelemetryBatchBody(BaseModel):
+    unit_id: str
+    snapshots: List[TelemetrySnapshot]
+
 @router.post("/telemetry")
-async def post_telemetry(body: TelemetryBody, x_unit_token: str = Header(default=None)):
+async def post_telemetry(body: TelemetryBatchBody, x_unit_token: str = Header(default=None)):
     await _verify_unit_token(body.unit_id, x_unit_token)
+    if len(body.snapshots) > 50:
+        raise HTTPException(status_code=413, detail="Batch size limit exceeded (max 50)")
+        
     store = SQLiteStore()
     now = datetime.now(timezone.utc).isoformat()
-    fields = body.model_dump()
-    if fields["active_faults"] is not None:
-        fields["active_faults"] = json.dumps(fields["active_faults"])
-    fields["timestamp"] = now
-    await store.insert_telemetry(fields)
+    
+    latest_mode = None
+    latest_faults = None
+    latest_tier = None
+    
+    for snap in body.snapshots:
+        fields = snap.model_dump()
+        fields["unit_id"] = body.unit_id
+        if fields["active_faults"] is not None:
+            fields["active_faults"] = json.dumps(fields["active_faults"])
+        await store.insert_telemetry(fields)
+        
+        if fields.get("operating_mode") is not None:
+            latest_mode = fields["operating_mode"]
+        if fields.get("active_faults") is not None:
+            latest_faults = fields["active_faults"]
+        if fields.get("connectivity_tier") is not None:
+            latest_tier = fields["connectivity_tier"]
     
     await store.update_vector_unit(body.unit_id, {
         "last_seen": now,
-        "operating_mode": body.operating_mode,
-        "active_faults": fields["active_faults"],
-        "connectivity_tier": body.connectivity_tier
+        "operating_mode": latest_mode,
+        "active_faults": latest_faults,
+        "connectivity_tier": latest_tier
     })
     
     _get_telemetry_event(body.unit_id).set()
@@ -262,6 +449,65 @@ async def list_discovered():
         logger.error(f"Failed to fetch discovered units: {e}")
         return []
 
+
+
+class ClaimBody(BaseModel):
+    claim_code: str
+
+@router.post("/units/{unit_id}/claim", dependencies=[Depends(require_role("admin"))])
+async def claim_unit(unit_id: str, body: ClaimBody):
+    # 1. Lookup IP from mDNS
+    try:
+        from daemons.registry import call_daemon
+        res = await call_daemon("vector_discovery", "get_discovered")
+        discovered = res.get("discovered", [])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Discovery daemon offline")
+
+    target_ip = None
+    for d in discovered:
+        if d.get("unit_id") == unit_id:
+            target_ip = d.get("ip_address")
+            break
+            
+    if not target_ip:
+        raise HTTPException(status_code=404, detail="Unit not found on LAN")
+
+    # 2. Generate token
+    import secrets
+    import base64
+    raw_token = secrets.token_bytes(32)
+    unit_token = base64.b64encode(raw_token).decode('utf-8')
+
+    # 3. Call device
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"http://{target_ip}:8765/verify-claim",
+                json={"claim_code": body.claim_code, "unit_token": unit_token}
+            )
+            if resp.status_code != 200 or resp.json().get("status") != "claimed":
+                raise HTTPException(status_code=400, detail="Device rejected claim code")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="Failed to reach device claim server")
+
+    # 4. Insert into DB
+    store = SQLiteStore()
+    now = datetime.now(timezone.utc).isoformat()
+    # insert_vector_unit needs unit_id, name, platform, unit_token, registered_at, claimed_at
+    await store.insert_vector_unit(
+        unit_id=unit_id,
+        name="New Unit",
+        platform="unknown",
+        unit_token=unit_token,
+        registered_at=now,
+        claimed_at=now
+    )
+    # init config revision
+    await store.execute_write_async("INSERT INTO vector_config_revisions (unit_id, revision, updated_at) VALUES (?, 1, ?)", (unit_id, now))
+    
+    return {"status": "claimed", "unit_id": unit_id}
+
 @router.get("/units/{id}", dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_unit(id: str):
     unit = await SQLiteStore().get_vector_unit(id)
@@ -298,6 +544,17 @@ def queue_command(unit_id: str, action: str, params: dict):
     asyncio.create_task(store.execute_write_async(sql, (cmd_id, unit_id, now, action, json.dumps(params))))
     _get_command_event(unit_id).set()
 
+@router.get("/units", dependencies=[Depends(require_role("operator", "viewer"))])
+async def list_units():
+    return await SQLiteStore().get_vector_units()
+
+@router.get("/units/{unit_id}", dependencies=[Depends(require_role("operator", "viewer"))])
+async def get_unit(unit_id: str):
+    unit = await SQLiteStore().get_vector_unit(unit_id)
+    if not unit:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    return unit
+
 @router.get("/zones", dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_zones():
     return await SQLiteStore().get_zones()
@@ -313,3 +570,117 @@ async def get_schedules():
 @router.get("/sessions", dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_sessions():
     return await SQLiteStore().get_sessions()
+from sse_starlette.sse import EventSourceResponse
+
+class CommandBody(BaseModel):
+    action: str
+    params: Dict[str, Any] = {}
+    idempotency_key: Optional[str] = None
+
+@router.post("/units/{unit_id}/command", dependencies=[Depends(require_role("operator", "admin"))])
+async def post_command(unit_id: str, body: CommandBody, request: Request):
+    store = SQLiteStore()
+    user = getattr(request.state, "user", None)
+    user_id = user["sub"] if user else "system"
+    
+    if body.idempotency_key:
+        cmd = await store.execute_read_one_async("SELECT * FROM vector_commands WHERE unit_id=? AND idempotency_key=?", (unit_id, body.idempotency_key))
+        if cmd:
+            return {"command_id": cmd["command_id"]}
+            
+    cmd_id = uuid.uuid4().hex
+    now = datetime.now(timezone.utc).isoformat()
+    # 30s ttl
+    ttl_seconds = 30
+
+    sql = """
+    INSERT INTO vector_commands (command_id, unit_id, issued_by, issued_at, idempotency_key, action, params, status, ttl_seconds)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+    """
+    await store.execute_write_async(sql, (cmd_id, unit_id, user_id, now, body.idempotency_key, body.action, json.dumps(body.params), ttl_seconds))
+    
+    from api.routes.vector_fleet import _get_command_event
+    _get_command_event(unit_id).set()
+    _get_command_event(unit_id).clear()
+    
+    return {"command_id": cmd_id}
+
+class UnitPatchBody(BaseModel):
+    name: Optional[str] = None
+    platform: Optional[str] = None
+    timezone: Optional[str] = None
+    hardware: Optional[Dict[str, Any]] = None
+    safety_floors: Optional[Dict[str, Any]] = None
+    home_position: Optional[Dict[str, Any]] = None
+
+@router.patch("/units/{id}", dependencies=[Depends(require_role("operator", "admin"))])
+async def patch_unit(id: str, body: UnitPatchBody):
+    store = SQLiteStore()
+    unit = await store.get_vector_unit(id)
+    if not unit:
+        raise HTTPException(404)
+
+    updates = {}
+    bump = False
+    if body.name is not None:
+        updates["name"] = body.name
+    if body.platform is not None:
+        updates["platform"] = body.platform
+    if body.timezone is not None:
+        updates["timezone"] = body.timezone
+    if body.hardware is not None:
+        updates["hardware"] = json.dumps(body.hardware)
+        bump = True
+    if body.safety_floors is not None:
+        absolute_floors = {"min_obstacle_clearance_m": 0.10}
+        if body.safety_floors.get("min_obstacle_clearance_m", 1.0) < absolute_floors["min_obstacle_clearance_m"]:
+            raise HTTPException(400, detail="Safety floor min_obstacle_clearance_m too low")
+        updates["safety_floors"] = json.dumps(body.safety_floors)
+        bump = True
+    if body.home_position is not None:
+        updates["home_position"] = json.dumps(body.home_position)
+        bump = True
+
+    if updates:
+        await store.update_vector_unit(id, updates)
+    if bump:
+        revision_row = await store.execute_read_one_async("SELECT revision FROM vector_config_revisions WHERE unit_id=?", (id,))
+        new_rev = (revision_row["revision"] + 1) if revision_row else 1
+        now = datetime.now(timezone.utc).isoformat()
+        await store.execute_write_async(
+            "INSERT INTO vector_config_revisions (unit_id, revision, updated_at) VALUES (?, ?, ?) ON CONFLICT(unit_id) DO UPDATE SET revision=?, updated_at=?",
+            (id, new_rev, now, new_rev, now)
+        )
+        
+        # Queue push config command
+        import uuid
+        cmd_id = uuid.uuid4().hex
+        cmd_sql = """
+        INSERT INTO vector_commands (command_id, unit_id, issued_by, action, params, status, created_at)
+        VALUES (?, ?, 'system', 'pull_config', '{}', 'pending', ?)
+        """
+        await store.execute_write_async(cmd_sql, (cmd_id, id, now))
+
+        from api.routes.vector_fleet import _get_command_event
+        _get_command_event(id).set()
+        _get_command_event(id).clear()
+
+    return {"status": "ok"}
+
+@router.delete("/units/{id}", dependencies=[Depends(require_role("admin"))])
+async def delete_unit(id: str):
+    store = SQLiteStore()
+    await store.execute_write_async("DELETE FROM vector_units WHERE unit_id=?", (id,))
+    return {"status": "ok"}
+
+@router.get("/units/stream", dependencies=[Depends(require_role("operator", "viewer"))])
+async def fleet_stream(request: Request):
+    async def event_generator():
+        store = SQLiteStore()
+        while True:
+            if await request.is_disconnected():
+                break
+            units = await store.get_vector_units()
+            yield {"event": "update", "data": json.dumps(units)}
+            await asyncio.sleep(2)
+    return EventSourceResponse(event_generator())

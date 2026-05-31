@@ -570,7 +570,10 @@ class SQLiteStore:
     so the FastAPI event loop is never blocked.
     """
 
-    def __init__(self, db_path: str = "river_song.db") -> None:
+    def __init__(self, db_path: Optional[str] = None) -> None:
+        if db_path is None:
+            from config.settings import get_settings
+            db_path = get_settings().db_path
         self._db_path = db_path
         self._executor = ThreadPoolExecutor(
             max_workers=min(4, os.cpu_count() or 1),

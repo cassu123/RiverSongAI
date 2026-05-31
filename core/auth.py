@@ -65,3 +65,31 @@ async def decode_token(token: str) -> Optional[dict]:
         return payload
     except jwt.PyJWTError:
         return None
+
+from fastapi import Request, HTTPException
+
+def require_role(*roles: str):
+    async def role_checker(request: Request):
+        # We assume middleware has set request.state.user
+        user = getattr(request.state, "user", None)
+        if not user:
+            # check header
+            auth = request.headers.get("Authorization")
+            if auth and auth.startswith("Bearer "):
+                token = auth.split(" ")[1]
+                user = await decode_token(token)
+                if user:
+                    request.state.user = user
+                    
+        if not user:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+            
+        user_role = user.get("role", "viewer")
+        if user_role == "admin":
+            return user
+            
+        if roles and user_role not in roles:
+            raise HTTPException(status_code=403, detail="Forbidden")
+            
+        return user
+    return role_checker
