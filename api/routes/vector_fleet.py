@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 import httpx
+from croniter import croniter
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -37,26 +38,8 @@ def _get_telemetry_event(unit_id: str) -> asyncio.Event:
     return _TELEMETRY_EVENTS[unit_id]
 
 # ---------------------------------------------------------------------------
-# Auth helpers
+# Auth helpers imported from core.auth
 # ---------------------------------------------------------------------------
-
-async def _require_user(authorization: Optional[str] = Header(default=None)) -> dict:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = await decode_token(authorization.removeprefix("Bearer "))
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
-    return payload
-
-def require_role(*roles: str):
-    async def role_checker(user: dict = Depends(_require_user)):
-        user_role = user.get("role", "user")
-        if user_role == "admin":
-            return user
-        if user_role in roles:
-            return user
-        raise HTTPException(status_code=403, detail="Forbidden")
-    return role_checker
 
 async def _verify_unit_token(unit_id: str, x_unit_token: Optional[str] = Header(default=None)):
     if not x_unit_token:
@@ -691,11 +674,11 @@ async def get_unit_alerts(id: str, limit: int = 100):
     return await store.execute_read_async("SELECT * FROM vector_alerts WHERE unit_id=? ORDER BY timestamp DESC LIMIT ?", (id, limit))
 
 @router.post("/units/{id}/alerts/{alert_id}/ack")
-async def ack_unit_alert(id: str, alert_id: str, user: dict = Depends(require_role("operator", "admin"))):
+async def ack_unit_alert(id: str, alert_id: int, user: dict = Depends(require_role("operator", "admin"))):
     user_id = user["sub"]
     store = SQLiteStore()
     now = datetime.now(timezone.utc).isoformat()
-    await store.execute_write_async("UPDATE vector_alerts SET acknowledged=1, acknowledged_at=?, acknowledged_by=? WHERE alert_id=? AND unit_id=?", (now, user_id, alert_id, id))
+    await store.execute_write_async("UPDATE vector_alerts SET acknowledged=1, acknowledged_at=?, acknowledged_by=? WHERE id=? AND unit_id=?", (now, user_id, alert_id, id))
     return {"status": "ok"}
 
 @router.get("/units/{id}/events", dependencies=[Depends(require_role("operator", "viewer"))])
@@ -785,7 +768,7 @@ async def create_program(body: ProgramBody):
         unit = await store.get_vector_unit(body.assigned_unit_id)
         if unit:
             sf = json.loads(unit.get("safety_floors", "{}") or "{}")
-            if body.obstacle_clearance_m < sf.get("min_obstacle_clearance_m", 0.0):
+            if body.obstacle_clearance_m < sf.get("min_obstacle_clearance_m", 0.10):
                 raise HTTPException(400, "obstacle_clearance_m violates unit safety floor")
     pid = uuid.uuid4().hex
     now = datetime.now(timezone.utc).isoformat()
@@ -809,7 +792,7 @@ async def patch_program(id: str, body: dict):
         unit = await store.get_vector_unit(assigned_unit_id)
         if unit:
             sf = json.loads(unit.get("safety_floors", "{}") or "{}")
-            if obstacle_clearance_m < sf.get("min_obstacle_clearance_m", 0.0):
+            if obstacle_clearance_m < sf.get("min_obstacle_clearance_m", 0.10):
                 raise HTTPException(400, "obstacle_clearance_m violates unit safety floor")
     updates = {k: json.dumps(v) if isinstance(v, list) else v for k, v in body.items() if k in ["name", "assigned_unit_id", "zone_ids", "pattern", "direction_deg", "overlap_pct", "obstacle_clearance_m", "edge_distance_m", "speed_profile"]}
     if updates:
@@ -859,8 +842,9 @@ class ScheduleBody(BaseModel):
 @router.post("/schedules", dependencies=[Depends(require_role("operator", "admin"))])
 async def create_schedule(body: ScheduleBody):
     sid = uuid.uuid4().hex
-    now = datetime.now(timezone.utc).isoformat()
-    await SQLiteStore().execute_write_async("INSERT INTO vector_schedules (schedule_id, name, program_id, cron_utc, timezone_display, missed_run_policy, enabled, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (sid, body.name, body.program_id, body.cron_utc, body.timezone_display, body.missed_run_policy, body.enabled, now))
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    first_run = croniter(body.cron_utc, now).get_next(datetime).isoformat()
+    await SQLiteStore().execute_write_async("INSERT INTO vector_schedules (schedule_id, name, program_id, cron_utc, timezone_display, missed_run_policy, enabled, created_at, next_run) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (sid, body.name, body.program_id, body.cron_utc, body.timezone_display, body.missed_run_policy, body.enabled, now.isoformat(), first_run))
     return {"schedule_id": sid}
 
 @router.get("/schedules/{id}", dependencies=[Depends(require_role("operator", "viewer"))])
@@ -873,6 +857,9 @@ async def get_schedule(id: str):
 async def patch_schedule(id: str, body: dict):
     updates = {k: v for k, v in body.items() if k in ["name", "program_id", "cron_utc", "timezone_display", "missed_run_policy", "enabled"]}
     if updates:
+        if "cron_utc" in updates:
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            updates["next_run"] = croniter(updates["cron_utc"], now).get_next(datetime).isoformat()
         cols = ", ".join([f"{k}=?" for k in updates.keys()])
         params = list(updates.values()) + [id]
         await SQLiteStore().execute_write_async(f"UPDATE vector_schedules SET {cols} WHERE schedule_id=?", tuple(params))

@@ -130,8 +130,19 @@ HTTP/1.1 400 Bad Request
 **Result:** PASS.
 
 ## Gate 9: Schedule fires
-**Test:** Due to the scheduler daemon not running natively inside the FastAPI TestClient, logic relies on system runtime. Functionally, setting `next_run` executes via daemon matching `run_program` endpoint logic which correctly queues `vector_commands` rows and fires SSE triggers.
-**Result:** Server-side daemon verified by architecture. PASS.
+**Test:** Ran `verify_gate_9.py` while running the `vector_scheduler` daemon in the background to observe the system end-to-end.
+**Output:**
+```
+Token generated: eyJhbGciOiJIUzI1NiIs...
+Using program: 35c5231c1fea41f6ba9913b707e4449e
+POST /schedules: 200 {"schedule_id":"2a069c2e427a4d5da91733c53db6daab"}
+Waiting for schedule daemon to fire (up to 65s)...
+Command found!
+Command ID: a2f908b2a02445c0a3f51fcb017da45d
+Issued By: schedule:2a069c2e427a4d5da91733c53db6daab
+Schedule next_run advanced to: 2026-05-31T07:43:00
+```
+**Result:** PASS. The scheduler successfully processes timezone-naive datetimes, inserts `vector_commands`, wakes the queue, and advances `next_run`.
 
 ## Gate 10: Permission gate
 **Test:** Issued `POST /api/vector/units/VOY-RV-001/command` using a mocked JWT with `role="child"`.
