@@ -10,9 +10,9 @@ export default function Schedules() {
   const [editingId, setEditingId] = useState(null)
   
   const [formData, setFormData] = useState({
-    name: '', program_id: '', cron_expression: '0 7 * * *',
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    missed_run_policy: 'skip', is_enabled: 1
+    name: '', program_id: '', cron_utc: '0 7 * * *',
+    timezone_display: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    missed_run_policy: 'skip', enabled: 1
   })
 
   useEffect(() => {
@@ -66,7 +66,7 @@ export default function Schedules() {
       const res = await fetch(`/api/vector/schedules/${s.schedule_id || s.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ is_enabled: s.is_enabled ? 0 : 1 })
+        body: JSON.stringify({ enabled: s.enabled ? 0 : 1 })
       })
       if (res.ok) fetchSchedules()
     } catch (e) { console.error(e) }
@@ -75,9 +75,9 @@ export default function Schedules() {
   const openCreate = () => {
     setEditingId(null)
     setFormData({
-      name: '', program_id: '', cron_expression: '0 7 * * *',
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      missed_run_policy: 'skip', is_enabled: 1
+      name: '', program_id: '', cron_utc: '0 7 * * *',
+      timezone_display: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      missed_run_policy: 'skip', enabled: 1
     })
     setShowModal(true)
   }
@@ -85,9 +85,9 @@ export default function Schedules() {
   const openEdit = (s) => {
     setEditingId(s.schedule_id || s.id)
     setFormData({
-      name: s.name || '', program_id: s.program_id || '', cron_expression: s.cron_expression || '0 7 * * *',
-      timezone: s.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-      missed_run_policy: s.missed_run_policy || 'skip', is_enabled: s.is_enabled !== undefined ? s.is_enabled : 1
+      name: s.name || '', program_id: s.program_id || '', cron_utc: s.cron_utc || '0 7 * * *',
+      timezone_display: s.timezone_display || Intl.DateTimeFormat().resolvedOptions().timeZone,
+      missed_run_policy: s.missed_run_policy || 'skip', enabled: s.enabled !== undefined ? s.enabled : 1
     })
     setShowModal(true)
   }
@@ -122,11 +122,11 @@ export default function Schedules() {
               return (
                 <tr key={s.schedule_id || s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <td style={{ padding: 10 }}>
-                    <input type="checkbox" checked={s.is_enabled} onChange={() => toggleEnabled(s)} />
+                    <input type="checkbox" checked={s.enabled} onChange={() => toggleEnabled(s)} />
                   </td>
                   <td style={{ padding: 10 }}>{s.name}</td>
                   <td style={{ padding: 10 }}>{p ? p.name : 'Unknown'}</td>
-                  <td style={{ padding: 10 }}>{renderCron(s.cron_expression)}<br/><small style={{color:'grey'}}>{s.timezone}</small></td>
+                  <td style={{ padding: 10 }}>{renderCron(s.cron_utc)}<br/><small style={{color:'grey'}}>{s.timezone_display}</small></td>
                   <td style={{ padding: 10 }}>{s.next_run ? new Date(s.next_run + 'Z').toLocaleString() : 'Pending'}</td>
                   <td style={{ padding: 10 }}>
                     <button className="rs-btn-ghost" style={{ marginRight: 5 }} onClick={() => openEdit(s)}>Edit</button>
@@ -160,13 +160,13 @@ export default function Schedules() {
 
               <div>
                 <label>Cron Expression (e.g., 0 7 * * * for 7 AM)</label><br/>
-                <input type="text" className="rs-input" value={formData.cron_expression} onChange={e => setFormData({...formData, cron_expression: e.target.value})} style={{ width: '100%' }} />
-                <div style={{ marginTop: 5, color: '#00d4b2', fontSize: '0.9em' }}>{renderCron(formData.cron_expression)}</div>
+                <input type="text" className="rs-input" value={formData.cron_utc} onChange={e => setFormData({...formData, cron_utc: e.target.value})} style={{ width: '100%' }} />
+                <div style={{ marginTop: 5, color: '#00d4b2', fontSize: '0.9em' }}>{renderCron(formData.cron_utc)}</div>
               </div>
 
               <div>
                 <label>Timezone</label><br/>
-                <input type="text" className="rs-input" value={formData.timezone} onChange={e => setFormData({...formData, timezone: e.target.value})} style={{ width: '100%' }} />
+                <input type="text" className="rs-input" value={formData.timezone_display} onChange={e => setFormData({...formData, timezone_display: e.target.value})} style={{ width: '100%' }} />
               </div>
 
               <div>

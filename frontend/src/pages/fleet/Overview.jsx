@@ -58,6 +58,16 @@ export default function Overview({ setAction }) {
     }
   }, [token])
 
+  const sendCommand = async (unitId, action, payload = {}) => {
+    try {
+      await fetch(`/api/vector/units/${unitId}/command`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action, payload })
+      })
+    } catch (e) { console.error(e) }
+  }
+
   useEffect(() => {
     fetchUnits()
     
@@ -109,14 +119,19 @@ export default function Overview({ setAction }) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '600px', overflowY: 'auto' }}>
           {units.map(u => (
-             <div key={u.unit_id} className="rs-card">
-               <h3><Link to={`/fleet/units/${u.unit_id}`}>{u.name || u.unit_id}</Link></h3>
-               <p>Platform: {u.platform} | Status: {u.online ? 'Online' : 'Offline'}</p>
-               <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+              <div key={u.unit_id} className="rs-card">
+                <h3><Link to={`/fleet/units/${u.unit_id}`}>{u.name || u.unit_id}</Link></h3>
+                <p>Platform: {u.platform} | Status: {u.online ? 'Online' : 'Offline'}</p>
+                <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'center' }}>
                   <span style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.1)' }}>{u.operating_mode || 'idle'}</span>
                   <span>🔋 {u.last_battery_pct ?? '--'}%</span>
-               </div>
-             </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                  <Link to={`/fleet/units/${u.unit_id}`} className="rs-btn-ghost" style={{textDecoration: 'none'}}>Details</Link>
+                  <Link to={`/fleet/units/${u.unit_id}/setup`} className="rs-btn-ghost" style={{textDecoration: 'none'}}>Configure</Link>
+                  <button className="rs-btn-primary" onClick={() => sendCommand(u.unit_id, 'mow_start')}>Start</button>
+                </div>
+              </div>
           ))}
         </div>
         {discovered.length > 0 && (

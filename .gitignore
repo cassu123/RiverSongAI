@@ -16,6 +16,11 @@
 .flaskenv
 instance/
 
+# Databases
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
 # OAuth credentials and tokens
 *client_secrets.json
 config_files/google_client_secrets.json

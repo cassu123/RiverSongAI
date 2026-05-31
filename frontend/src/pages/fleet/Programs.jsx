@@ -14,7 +14,7 @@ export default function Programs() {
   
   const [formData, setFormData] = useState({
     name: '', assigned_unit_id: '', zone_ids: [],
-    pattern: 'stripes', direction_degrees: 0,
+    pattern: 'stripes', direction_deg: 0,
     overlap_pct: 15, edge_distance_m: 0.15,
     obstacle_clearance_m: 0.20, speed_profile: 'normal'
   })
@@ -101,7 +101,7 @@ export default function Programs() {
     setEditingId(null)
     setFormData({
       name: '', assigned_unit_id: '', zone_ids: [],
-      pattern: 'stripes', direction_degrees: 0,
+      pattern: 'stripes', direction_deg: 0,
       overlap_pct: 15, edge_distance_m: 0.15,
       obstacle_clearance_m: 0.20, speed_profile: 'normal'
     })
@@ -113,7 +113,7 @@ export default function Programs() {
     setFormData({
       name: p.name || '', assigned_unit_id: p.assigned_unit_id || '',
       zone_ids: typeof p.zone_ids === 'string' ? JSON.parse(p.zone_ids) : (p.zone_ids || []),
-      pattern: p.pattern || 'stripes', direction_degrees: p.direction_degrees || 0,
+      pattern: p.pattern || 'stripes', direction_deg: p.direction_deg || 0,
       overlap_pct: p.overlap_pct || 15, edge_distance_m: p.edge_distance_m || 0.15,
       obstacle_clearance_m: p.obstacle_clearance_m || 0.20, speed_profile: p.speed_profile || 'normal'
     })
@@ -212,7 +212,7 @@ export default function Programs() {
               </div>
               <div>
                 <label>Direction (&deg;)</label><br/>
-                <input type="number" className="rs-input" value={formData.direction_degrees} onChange={e => setFormData({...formData, direction_degrees: parseFloat(e.target.value)})} style={{ width: '100%' }} />
+                <input type="number" className="rs-input" value={formData.direction_deg} onChange={e => setFormData({...formData, direction_deg: parseFloat(e.target.value)})} style={{ width: '100%' }} />
               </div>
 
               <div>

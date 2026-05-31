@@ -100,15 +100,17 @@ export default function UnitDetail() {
     } catch (e) { console.error(e) }
   }
 
-  const useManualKey = (keyAction) => {
-    const timer = useRef(null)
+  const manualTimer = useRef(null)
+
+  const bindManualKey = (action, payload = {}) => {
     const start = () => {
       if (!manualMode) return
-      sendCommand(keyAction)
-      timer.current = setInterval(() => sendCommand(keyAction), 500)
+      sendCommand(action, payload)
+      if (manualTimer.current) clearInterval(manualTimer.current)
+      manualTimer.current = setInterval(() => sendCommand(action, payload), 500)
     }
     const stop = () => {
-      if (timer.current) clearInterval(timer.current)
+      if (manualTimer.current) clearInterval(manualTimer.current)
     }
     return { onMouseDown: start, onMouseUp: stop, onMouseLeave: stop, onTouchStart: start, onTouchEnd: stop }
   }
@@ -214,17 +216,17 @@ export default function UnitDetail() {
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 20, opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }}>
                 <div />
-                <button className="rs-btn-ghost" {...useManualKey('manual.drive_fwd')}>&#8593;</button>
+                <button className="rs-btn-ghost" {...bindManualKey('manual.drive', { direction: 'fwd' })}>&#8593;</button>
                 <div />
-                <button className="rs-btn-ghost" {...useManualKey('manual.steer_left')}>&#8592;</button>
-                <button className="rs-btn-danger" {...useManualKey('manual.brake')}>Brake</button>
-                <button className="rs-btn-ghost" {...useManualKey('manual.steer_right')}>&#8594;</button>
+                <button className="rs-btn-ghost" {...bindManualKey('manual.steer', { angle_deg: -15 })}>&#8592;</button>
+                <button className="rs-btn-danger" {...bindManualKey('manual.brake', { force: 100 })}>Brake</button>
+                <button className="rs-btn-ghost" {...bindManualKey('manual.steer', { angle_deg: 15 })}>&#8594;</button>
                 <div />
-                <button className="rs-btn-ghost" {...useManualKey('manual.drive_rev')}>&#8595;</button>
+                <button className="rs-btn-ghost" {...bindManualKey('manual.drive', { direction: 'rev' })}>&#8595;</button>
                 <div />
               </div>
               <div style={{ marginTop: 20 }}>
-                <button className="rs-btn-primary" style={{ width: '100%', opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }} {...useManualKey('manual.blades_toggle')}>Toggle Blades</button>
+                <button className="rs-btn-primary" style={{ width: '100%', opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }} {...bindManualKey('manual.blades', { engage: true })}>Engage Blades</button>
               </div>
             </div>
           </div>
