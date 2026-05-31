@@ -26,6 +26,7 @@ router = APIRouter(prefix="/api/vector", tags=["vector-fleet"])
 # unit_id -> asyncio.Event
 _COMMAND_EVENTS: Dict[str, asyncio.Event] = {}
 _TELEMETRY_EVENTS: Dict[str, asyncio.Event] = {}
+_FLEET_UPDATE_EVENT = asyncio.Event()
 
 def _get_command_event(unit_id: str) -> asyncio.Event:
     if unit_id not in _COMMAND_EVENTS:
@@ -236,6 +237,8 @@ async def post_status(body: StatusBody, x_unit_token: str = Header(default=None)
     })
     _get_telemetry_event(body.unit_id).set()
     _get_telemetry_event(body.unit_id).clear()
+    _FLEET_UPDATE_EVENT.set()
+    _FLEET_UPDATE_EVENT.clear()
     return {"status": "ok"}
 
 class SessionStartBody(BaseModel):
@@ -368,6 +371,8 @@ async def post_telemetry(body: TelemetryBatchBody, x_unit_token: str = Header(de
     
     _get_telemetry_event(body.unit_id).set()
     _get_telemetry_event(body.unit_id).clear()
+    _FLEET_UPDATE_EVENT.set()
+    _FLEET_UPDATE_EVENT.clear()
     
     return {"status": "ok"}
 
@@ -646,12 +651,27 @@ async def delete_unit(id: str):
 async def fleet_stream(request: Request):
     async def event_generator():
         store = SQLiteStore()
+        # Send initial state immediately
+        units = await store.get_vector_units()
+        yield {"event": "update", "data": json.dumps(units)}
+        
         while True:
             if await request.is_disconnected():
                 break
+            
+            try:
+                await asyncio.wait_for(_FLEET_UPDATE_EVENT.wait(), timeout=15.0)
+            except asyncio.TimeoutError:
+                # Keep-alive ping
+                yield {"event": "ping", "data": "{}"}
+                continue
+
             units = await store.get_vector_units()
             yield {"event": "update", "data": json.dumps(units)}
-            await asyncio.sleep(2)
+            
+            # Debounce rapid updates
+            await asyncio.sleep(0.5)
+
     return EventSourceResponse(event_generator())
 
 @router.post("/units/{id}/rotate-token", dependencies=[Depends(require_role("admin"))])

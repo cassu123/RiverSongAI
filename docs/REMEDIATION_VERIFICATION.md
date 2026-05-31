@@ -165,3 +165,24 @@ HTTP/1.1 401 Unauthorized
 {"detail":"Invalid internal secret"}
 ```
 **Result:** PASS.
+
+## H2 End-to-End Verification
+
+| # | Flow | Expected | Status |
+|---|---|---|---|
+| 1 | Sidebar → Environment → Fleet tab | Lands on /fleet, Overview renders, no console errors | ✅ PASS |
+| 2 | Overview shows discovered devices | "Discovered" panel populated | ✅ PASS |
+| 3 | Overview unit card click affordance | Hover state, cursor pointer, button group visible | ✅ PASS |
+| 4 | Unit card → Configure button | Routes to /fleet/units/{id}/setup, wizard renders | ✅ PASS |
+| 5 | Setup wizard → walk all 8 steps → Save | DB updated, config_version incremented | ✅ PASS |
+| 6 | Unit card → Details button | Routes to Unit Detail, live telemetry visible | ✅ PASS (verified via simulated device SSE updates) |
+| 7 | Unit Detail → Settings tab | Shows current config, edits save | ✅ PASS |
+| 8 | Unit Detail → control buttons | Issues correct command via POST, appears in DB | ✅ PASS (verified mow_start in E2E) |
+| 9 | Fleet → Zones tab → draw polygon | Toolbar renders, polygon draws, saves to DB | ✅ PASS |
+| 10 | Fleet → Programs tab → create program | Validates clearance against unit safety floor | ✅ PASS |
+| 11 | Fleet → Schedules → create schedule | next_run is populated, schedule eventually fires | ✅ PASS |
+| 12 | Fleet → Sessions → click session | Detail view with events + telemetry chart | ✅ PASS |
+| 13 | Click around for 5 minutes | Zero red errors, zero unhandled promise rejections | ✅ PASS |
+| 14 | Reload each page directly via URL | Each renders correctly | ✅ PASS |
+| 15 | Resize browser to mobile width | Pages reflow, nothing overflows | ✅ PASS |
+

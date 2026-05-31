@@ -176,4 +176,3 @@ mcp>=1.0.0
 resemblyzer>=0.1.4
 zeroconf
 croniter
-pyproj

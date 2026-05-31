@@ -12,14 +12,31 @@ export default function VectorFleetPage({ setAction }) {
   const loc = useLocation()
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px' }}>
-      <div style={{ marginBottom: 24, display: 'flex', gap: 16, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 16 }}>
-        <Link to="/fleet" style={{ fontWeight: loc.pathname === '/fleet' ? 700 : 400, color: 'var(--on-surface)' }}>Overview</Link>
-        <Link to="/fleet/zones" style={{ fontWeight: loc.pathname === '/fleet/zones' ? 700 : 400, color: 'var(--on-surface)' }}>Zones</Link>
-        <Link to="/fleet/programs" style={{ fontWeight: loc.pathname === '/fleet/programs' ? 700 : 400, color: 'var(--on-surface)' }}>Programs</Link>
-        <Link to="/fleet/schedules" style={{ fontWeight: loc.pathname === '/fleet/schedules' ? 700 : 400, color: 'var(--on-surface)' }}>Schedules</Link>
-        <Link to="/fleet/sessions" style={{ fontWeight: loc.pathname === '/fleet/sessions' ? 700 : 400, color: 'var(--on-surface)' }}>Sessions</Link>
-      </div>
+    <div className="rs-foyer animate-fade-in" style={{ padding: '0', maxWidth: '100%' }}>
+      <header className="rs-foyer-head" style={{ padding: '24px 24px 0 24px' }}>
+        <div className="rs-card-label">COMMAND / ENVIRONMENT</div>
+        <h1 className="rs-greeting">Environment</h1>
+        <div className="rs-status-strip">
+          <span className="rs-status-dot" style={{ background: 'var(--secondary)' }} />
+          <span>FLEET ACTIVE</span>
+        </div>
+      </header>
+
+      <div style={{ padding: '0 24px' }}>
+        <div style={{ display: 'flex', gap: 24, borderBottom: '1px solid var(--border)', marginBottom: 24, paddingBottom: 8 }}>
+          <Link to="/environment" style={{ fontWeight: 400, color: 'var(--text-secondary)', textDecoration: 'none' }}>Property / Home</Link>
+          <Link to="/fleet" style={{ fontWeight: 600, color: 'var(--accent-primary)', textDecoration: 'none', borderBottom: '2px solid var(--accent-primary)', paddingBottom: 8, marginBottom: -9 }}>Fleet</Link>
+        </div>
+
+        <div style={{ marginBottom: 24, display: 'flex', gap: 16, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
+          <Link to="/fleet" style={{ fontWeight: loc.pathname === '/fleet' ? 700 : 400, color: 'var(--text-primary)', textDecoration: 'none' }}>Overview</Link>
+          <Link to="/fleet/zones" style={{ fontWeight: loc.pathname === '/fleet/zones' ? 700 : 400, color: 'var(--text-primary)', textDecoration: 'none' }}>Zones</Link>
+          <Link to="/fleet/programs" style={{ fontWeight: loc.pathname === '/fleet/programs' ? 700 : 400, color: 'var(--text-primary)', textDecoration: 'none' }}>Programs</Link>
+          <Link to="/fleet/schedules" style={{ fontWeight: loc.pathname === '/fleet/schedules' ? 700 : 400, color: 'var(--text-primary)', textDecoration: 'none' }}>Schedules</Link>
+          <Link to="/fleet/sessions" style={{ fontWeight: loc.pathname === '/fleet/sessions' ? 700 : 400, color: 'var(--text-primary)', textDecoration: 'none' }}>Sessions</Link>
+        </div>
+
+
 
       <Routes>
         <Route path="/fleet" element={<Overview setAction={setAction} />} />
@@ -31,6 +48,7 @@ export default function VectorFleetPage({ setAction }) {
         <Route path="/fleet/sessions" element={<Sessions />} />
         <Route path="*" element={<Navigate to="/fleet" replace />} />
       </Routes>
+      </div>
     </div>
   )
 }

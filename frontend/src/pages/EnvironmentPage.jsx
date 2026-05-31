@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { Link } from 'react-router-dom'
 
 function authHeaders(token) {
   return { Authorization: `Bearer ${token}` }
@@ -142,6 +143,11 @@ export default function EnvironmentPage({ setAction }) {
           <span>{loading ? 'POLLING SENSORS…' : `${roomEntries.length} ROOMS TRACKED`}</span>
         </div>
       </header>
+
+      <div style={{ display: 'flex', gap: 24, borderBottom: '1px solid var(--border)', marginBottom: 24, paddingBottom: 8 }}>
+        <Link to="/environment" style={{ fontWeight: 600, color: 'var(--accent-primary)', textDecoration: 'none', borderBottom: '2px solid var(--accent-primary)', paddingBottom: 8, marginBottom: -9 }}>Property / Home</Link>
+        <Link to="/fleet" style={{ fontWeight: 400, color: 'var(--text-secondary)', textDecoration: 'none' }}>Fleet</Link>
+      </div>
 
       {flash && (
         <div className="rs-card" style={{ 
