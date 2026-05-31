@@ -47,6 +47,8 @@ class VectorSchedulerDaemon(BaseDaemon):
             next_run_str = s.get("next_run")
             if next_run_str:
                 next_run_dt = datetime.fromisoformat(next_run_str)
+                if next_run_dt.tzinfo is not None:
+                    next_run_dt = next_run_dt.astimezone(timezone.utc).replace(tzinfo=None)
                 if next_run_dt <= now:
                     program = await self.store.execute_read_one_async("SELECT assigned_unit_id FROM vector_programs WHERE program_id=?", (s["program_id"],))
                     if program and program.get("assigned_unit_id"):

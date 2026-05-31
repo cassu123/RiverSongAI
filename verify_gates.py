@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 from main import app
-from api.routes.vector_fleet import _require_user
+from core.auth import create_access_token
 from datetime import datetime, timezone
 import json
 
@@ -8,37 +8,37 @@ client = TestClient(app, base_url="http://localhost:8000")
 
 def run_gate_7():
     print("--- GATE 7: Zone Editor ---")
-    app.dependency_overrides[_require_user] = lambda: {"sub": "test_user", "role": "admin"}
+    token = create_access_token("test_user", "test@test.com", "admin")
+    headers = {"Authorization": f"Bearer {token}"}
     res = client.post("/api/vector/zones", json={
         "name": "Test Zone",
         "boundary": [[40.0, -74.0], [40.1, -74.0], [40.1, -74.1], [40.0, -74.1]],
         "area_sqm": 100.5,
         "capture_method": "drawn"
-    })
+    }, headers=headers)
     print("POST /zones:", res.status_code, res.json())
     zone_id = res.json()["zone_id"]
-    res2 = client.get(f"/api/vector/zones/{zone_id}")
+    res2 = client.get(f"/api/vector/zones/{zone_id}", headers=headers)
     print("GET /zones/id:", res2.status_code, res2.json())
-    app.dependency_overrides.clear()
     return res2.json()["capture_method"] == "drawn" and res2.json()["area_sqm"] > 0
 
 def run_gate_8():
     print("\n--- GATE 8: Program Clearance Validation ---")
-    app.dependency_overrides[_require_user] = lambda: {"sub": "test_user", "role": "admin"}
+    token = create_access_token("test_user", "test@test.com", "admin")
+    headers = {"Authorization": f"Bearer {token}"}
     # Insert a unit with min_obstacle_clearance_m = 0.20
     # To do this safely, we will just use internal SQLiteStore or hit patch
     # First, let's register one or assume VOY-RV-001 exists. Let's patch VOY-RV-001 to have 0.20 clearance.
     client.patch("/api/vector/units/VOY-RV-001", json={
         "safety_floors": {"min_obstacle_clearance_m": 0.20}
-    })
+    }, headers=headers)
     res = client.post("/api/vector/programs", json={
         "name": "Crash Program",
         "assigned_unit_id": "VOY-RV-001",
         "zone_ids": ["test-zone"],
         "obstacle_clearance_m": 0.05
-    })
+    }, headers=headers)
     print("POST /programs with 0.05 clearance:", res.status_code, res.text)
-    app.dependency_overrides.clear()
     return res.status_code == 400
 
 def run_gate_9():
@@ -50,13 +50,13 @@ def run_gate_9():
 
 def run_gate_10():
     print("\n--- GATE 10: Permission gate ---")
-    app.dependency_overrides[_require_user] = lambda: {"sub": "test_child", "role": "child"}
+    token = create_access_token("test_child", "child@test.com", "child")
+    headers = {"Authorization": f"Bearer {token}"}
     res = client.post("/api/vector/units/VOY-RV-001/command", json={
         "action": "mow_start",
         "params": {}
-    })
+    }, headers=headers)
     print("POST /command with child role:", res.status_code, res.text)
-    app.dependency_overrides.clear()
     return res.status_code == 403
 
 def run_gate_11():
