@@ -56,13 +56,13 @@ export default function SetupWizard() {
     platform: 'robot',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     hardware: {
-      drive: { type: 'skid_steer', gears: 1, max_speed_kmh: 5.0, turn_radius_m: 0, speed_control: 'pwm' },
+      drive: { type: 'differential', gears: 1, max_speed_kmh: 5.0, turn_radius_m: 0, speed_control: 'pwm' },
       deck: { width_inches: 22, engagement: 'electric', height_adjustable: false },
       cameras: { count: 0, config: [] },
       sensors: {
         gps: 'none',
         imu: false,
-        obstacle: false,
+        obstacle: 'none',
         fuel: false,
         temperature: false,
         rpm: false,
@@ -192,9 +192,10 @@ export default function SetupWizard() {
             <div style={{ marginBottom: 16 }}>
               <label className="rs-card-label">Type</label>
               <select className="rs-input" value={formData.hardware.drive.type} onChange={e => updateField('hardware.drive.type', e.target.value)}>
-                <option value="skid_steer">Skid Steer</option>
-                <option value="ackermann">Ackermann</option>
-                <option value="omnidirectional">Omnidirectional</option>
+                <option value="clutch">Clutch</option>
+                <option value="differential">Differential</option>
+                <option value="direct_electric">Direct Electric</option>
+                <option value="hydrostatic">Hydrostatic</option>
               </select>
             </div>
             <div style={{ marginBottom: 16 }}>
@@ -269,7 +270,15 @@ export default function SetupWizard() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
               <div><label><input type="checkbox" checked={formData.hardware.sensors.imu} onChange={e => updateField('hardware.sensors.imu', e.target.checked)} /> IMU Installed</label></div>
-              <div><label><input type="checkbox" checked={formData.hardware.sensors.obstacle} onChange={e => updateField('hardware.sensors.obstacle', e.target.checked)} /> Obstacle Sensors</label></div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 4 }}>Obstacle Sensors</label>
+                <select className="rs-input" value={formData.hardware.sensors.obstacle} onChange={e => updateField('hardware.sensors.obstacle', e.target.value)}>
+                  <option value="none">None</option>
+                  <option value="ultrasonic">Ultrasonic</option>
+                  <option value="lidar">Lidar</option>
+                  <option value="camera_based">Camera Based</option>
+                </select>
+              </div>
               <div><label><input type="checkbox" checked={formData.hardware.sensors.fuel} onChange={e => updateField('hardware.sensors.fuel', e.target.checked)} /> Fuel Sensor</label></div>
               <div><label><input type="checkbox" checked={formData.hardware.sensors.temperature} onChange={e => updateField('hardware.sensors.temperature', e.target.checked)} /> Temperature Sensor</label></div>
               <div><label><input type="checkbox" checked={formData.hardware.sensors.rpm} onChange={e => updateField('hardware.sensors.rpm', e.target.checked)} /> RPM Sensor</label></div>

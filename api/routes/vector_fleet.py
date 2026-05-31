@@ -4,6 +4,7 @@ api/routes/vector_fleet.py
 import asyncio
 import json
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 import httpx
@@ -264,7 +265,6 @@ class SessionStartBody(BaseModel):
 async def session_start(body: SessionStartBody, x_unit_token: str = Header(default=None)):
     await _verify_unit_token(body.unit_id, x_unit_token)
     store = SQLiteStore()
-    import uuid
     session_id = uuid.uuid4().hex
     sql = """
     INSERT INTO vector_sessions (session_id, unit_id, program_id, config_version, started_at, status)
@@ -313,7 +313,6 @@ async def zones_teach(body: TeachBody, x_unit_token: str = Header(default=None))
     
     if body.finalize:
         store = SQLiteStore()
-        import uuid
         zone_id = uuid.uuid4().hex
         boundary = _TEACH_WAYPOINTS.pop(key, [])
         now = datetime.now(timezone.utc).isoformat()
@@ -535,7 +534,6 @@ async def unit_sse_stream(id: str, request: Request, user: dict = Depends(requir
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 def queue_command(unit_id: str, action: str, params: dict):
-    import uuid
     cmd_id = uuid.uuid4().hex
     store = SQLiteStore()
     now = datetime.now(timezone.utc).isoformat()
@@ -543,17 +541,6 @@ def queue_command(unit_id: str, action: str, params: dict):
     # A background task could execute this, but since queue_command is synchronous right now, we do a fire-and-forget
     asyncio.create_task(store.execute_write_async(sql, (cmd_id, unit_id, now, action, json.dumps(params))))
     _get_command_event(unit_id).set()
-
-@router.get("/units", dependencies=[Depends(require_role("operator", "viewer"))])
-async def list_units():
-    return await SQLiteStore().get_vector_units()
-
-@router.get("/units/{unit_id}", dependencies=[Depends(require_role("operator", "viewer"))])
-async def get_unit(unit_id: str):
-    unit = await SQLiteStore().get_vector_unit(unit_id)
-    if not unit:
-        raise HTTPException(status_code=404, detail="Unit not found")
-    return unit
 
 @router.get("/zones", dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_zones():
@@ -653,7 +640,6 @@ async def patch_unit(id: str, body: UnitPatchBody):
         )
         
         # Queue push config command
-        import uuid
         cmd_id = uuid.uuid4().hex
         cmd_sql = """
         INSERT INTO vector_commands (command_id, unit_id, issued_by, action, params, status, created_at)
