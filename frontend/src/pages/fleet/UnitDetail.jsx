@@ -216,13 +216,13 @@ export default function UnitDetail() {
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 20, opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }}>
                 <div />
-                <button className="rs-btn-ghost" {...bindManualKey('manual.drive', { direction: 'fwd' })}>&#8593;</button>
+                <button className="rs-btn-ghost" {...bindManualKey('manual.drive', { direction: 'forward', throttle: 0.3, duration_ms: 500 })}>&#8593;</button>
                 <div />
-                <button className="rs-btn-ghost" {...bindManualKey('manual.steer', { angle_deg: -15 })}>&#8592;</button>
-                <button className="rs-btn-danger" {...bindManualKey('manual.brake', { force: 100 })}>Brake</button>
-                <button className="rs-btn-ghost" {...bindManualKey('manual.steer', { angle_deg: 15 })}>&#8594;</button>
+                <button className="rs-btn-ghost" {...bindManualKey('manual.steer', { angle_deg: -15, duration_ms: 500 })}>&#8592;</button>
+                <button className="rs-btn-danger" {...bindManualKey('manual.brake', { force: 1.0, duration_ms: 500 })}>Brake</button>
+                <button className="rs-btn-ghost" {...bindManualKey('manual.steer', { angle_deg: 15, duration_ms: 500 })}>&#8594;</button>
                 <div />
-                <button className="rs-btn-ghost" {...bindManualKey('manual.drive', { direction: 'rev' })}>&#8595;</button>
+                <button className="rs-btn-ghost" {...bindManualKey('manual.drive', { direction: 'reverse', throttle: 0.3, duration_ms: 500 })}>&#8595;</button>
                 <div />
               </div>
               <div style={{ marginTop: 20 }}>
