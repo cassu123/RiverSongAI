@@ -80,60 +80,62 @@ export default function Sessions() {
       </div>
 
       <div className="rs-card">
-        <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-              <th style={{ padding: 10 }}>Started At</th>
-              <th style={{ padding: 10 }}>Unit</th>
-              <th style={{ padding: 10 }}>Program</th>
-              <th style={{ padding: 10 }}>Duration (min)</th>
-              <th style={{ padding: 10 }}>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(s => {
-              const u = units.find(x => x.unit_id === s.unit_id)
-              const p = programs.find(x => x.program_id === s.program_id)
-              
-              let duration = '--'
-              if (s.started_at && s.ended_at) {
-                const ms = new Date(s.ended_at + 'Z') - new Date(s.started_at + 'Z')
-                duration = Math.round(ms / 60000)
-              } else if (s.started_at) {
-                const ms = new Date() - new Date(s.started_at + 'Z')
-                duration = Math.round(ms / 60000) + ' (ongoing)'
-              }
+        <div className="rs-table-wrap">
+          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <th style={{ padding: 10 }}>Started At</th>
+                <th style={{ padding: 10 }}>Unit</th>
+                <th style={{ padding: 10 }}>Program</th>
+                <th style={{ padding: 10 }}>Duration (min)</th>
+                <th style={{ padding: 10 }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(s => {
+                const u = units.find(x => x.unit_id === s.unit_id)
+                const p = programs.find(x => x.program_id === s.program_id)
+                
+                let duration = '--'
+                if (s.started_at && s.ended_at) {
+                  const ms = new Date(s.ended_at + 'Z') - new Date(s.started_at + 'Z')
+                  duration = Math.round(ms / 60000)
+                } else if (s.started_at) {
+                  const ms = new Date() - new Date(s.started_at + 'Z')
+                  duration = Math.round(ms / 60000) + ' (ongoing)'
+                }
 
-              return (
-                <tr key={s.session_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }} onClick={() => openSessionDetail(s)}>
-                  <td style={{ padding: 10 }}>{new Date(s.started_at + 'Z').toLocaleString()}</td>
-                  <td style={{ padding: 10 }}>{u ? u.name : s.unit_id}</td>
-                  <td style={{ padding: 10 }}>{p ? p.name : s.program_id}</td>
-                  <td style={{ padding: 10 }}>{duration}</td>
-                  <td style={{ padding: 10 }}>
-                    <span style={{ 
-                      padding: '2px 8px', borderRadius: 4, fontSize: '0.8em',
-                      background: s.status === 'completed' ? 'rgba(0,255,0,0.2)' : 
-                                  s.status === 'aborted' ? 'rgba(255,0,0,0.2)' : 'rgba(255,255,255,0.2)'
-                    }}>{s.status}</span>
-                  </td>
-                </tr>
-              )
-            })}
-            {filtered.length === 0 && <tr><td colSpan="5" style={{ padding: 10, textAlign: 'center' }}>No sessions found</td></tr>}
-          </tbody>
-        </table>
+                return (
+                  <tr key={s.session_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }} onClick={() => openSessionDetail(s)}>
+                    <td style={{ padding: 10 }}>{new Date(s.started_at + 'Z').toLocaleString()}</td>
+                    <td style={{ padding: 10 }}>{u ? u.name : s.unit_id}</td>
+                    <td style={{ padding: 10 }}>{p ? p.name : s.program_id}</td>
+                    <td style={{ padding: 10 }}>{duration}</td>
+                    <td style={{ padding: 10 }}>
+                      <span style={{ 
+                        padding: '2px 8px', borderRadius: 4, fontSize: '0.8em',
+                        background: s.status === 'completed' ? 'rgba(0,255,0,0.2)' : 
+                                    s.status === 'aborted' ? 'rgba(255,0,0,0.2)' : 'rgba(255,255,255,0.2)'
+                      }}>{s.status}</span>
+                    </td>
+                  </tr>
+                )
+              })}
+              {filtered.length === 0 && <tr><td colSpan="5" style={{ padding: 10, textAlign: 'center' }}>No sessions found</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {selectedSession && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
-          <div className="rs-card" style={{ width: '80%', maxWidth: 1000, maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="rs-card" style={{ width: 'min(95vw, 1000px)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <h3>Session Details: {selectedSession.session_id.substring(0,8)}...</h3>
               <button className="rs-btn-ghost" onClick={() => setSelectedSession(null)}>Close</button>
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, margin: '20px 0', padding: 15, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5" style={{ margin: '20px 0', padding: 15, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
               <div><strong>Status:</strong> {selectedSession.status}</div>
               <div><strong>Area Mowed:</strong> {selectedSession.area_mowed_sqm ?? '--'} m&sup2;</div>
               <div><strong>Battery Used:</strong> {selectedSession.battery_used_pct ?? '--'} %</div>

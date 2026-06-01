@@ -6,6 +6,9 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        'rail': '1200px',
+      },
       // ── Material You 3 color roles ────────────────────────────────────────
       colors: {
         // Primary

@@ -119,7 +119,7 @@ export default function Zones() {
         </div>
       </div>
 
-      <div style={{ height: '650px', marginTop: 20, borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+      <div className="rs-map" style={{ marginTop: 20 }}>
         <MapContainer center={[0, 0]} zoom={2} style={{ height: '100%', width: '100%' }}>
           <TileLayer
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"

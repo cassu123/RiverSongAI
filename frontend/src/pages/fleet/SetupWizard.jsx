@@ -27,7 +27,7 @@ function MapSelector({ position, onChange }) {
   const center = position.lat && position.lng ? [position.lat, position.lng] : defaultCenter
 
   return (
-    <div style={{ height: 400, width: '100%', marginBottom: 16 }}>
+    <div className="rs-map" style={{ marginBottom: 16 }}>
       <MapContainer center={center} zoom={18} style={{ height: '100%', width: '100%', borderRadius: 8 }}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -159,7 +159,7 @@ export default function SetupWizard() {
   if (loading) return <div style={{ padding: 24 }}>Loading unit data...</div>
 
   return (
-    <div className="rs-card" style={{ padding: 32, maxWidth: 800, margin: '0 auto' }}>
+    <div className="rs-card p-5 md:p-8" style={{ maxWidth: 800, margin: '0 auto' }}>
       <h2 style={{ marginBottom: 8 }}>Setup Wizard: {id}</h2>
       <div style={{ marginBottom: 24, fontSize: '0.9rem', opacity: 0.7 }}>Step {step} of 8</div>
 
@@ -258,7 +258,7 @@ export default function SetupWizard() {
             {formData.hardware.sensors.gps === 'rtk' && (
               <div style={{ background: 'rgba(255,255,255,0.05)', padding: 16, borderRadius: 8, marginBottom: 16 }}>
                 <h4>RTK NTRIP Config</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label>Host</label><input type="text" className="rs-input" value={formData.hardware.rtk.ntrip_host} onChange={e => updateField('hardware.rtk.ntrip_host', e.target.value)} /></div>
                   <div><label>Port</label><input type="number" className="rs-input" value={formData.hardware.rtk.port} onChange={e => updateField('hardware.rtk.port', Number(e.target.value))} /></div>
                   <div><label>Mountpoint</label><input type="text" className="rs-input" value={formData.hardware.rtk.mountpoint} onChange={e => updateField('hardware.rtk.mountpoint', e.target.value)} /></div>
@@ -268,7 +268,7 @@ export default function SetupWizard() {
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: 16 }}>
               <div><label><input type="checkbox" checked={formData.hardware.sensors.imu} onChange={e => updateField('hardware.sensors.imu', e.target.checked)} /> IMU Installed</label></div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 4 }}>Obstacle Sensors</label>

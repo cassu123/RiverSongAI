@@ -11,6 +11,7 @@ import './styles/chrome-stage.css'
 import './styles/chrome-components.css'
 import './styles/chrome-drawer.css'
 import './styles/white-pages.css'
+import './styles/responsive.css'
 
 // Lazy load pages
 const LoginPage          = lazy(() => import('./pages/LoginPage.jsx'))

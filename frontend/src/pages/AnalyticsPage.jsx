@@ -262,7 +262,7 @@ function PlatformDetail({
             })}
           </div>
 
-          <div style={{ overflowX: 'auto', border: '2px solid #000', borderRadius: 4 }}>
+          <div className="rs-table-wrap" style={{ overflowX: 'auto', border: '2px solid #000', borderRadius: 4 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid #000', background: '#f5f5f5' }}>
@@ -348,7 +348,7 @@ function AddDataModal({ platform, onClose, onSave }) {
               onChange={e => setDate(e.target.value)}
             />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {(p.metrics || []).map(m => (
               <div key={m} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <label className="rs-card-label" style={{ border: 'none', padding: 0 }}>{metricLabel(m).toUpperCase()}</label>

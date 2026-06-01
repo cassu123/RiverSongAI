@@ -198,7 +198,7 @@ export default function ReadingPage({ setAction }) {
       <Sheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Archive Sources">
         <div style={{ padding: '0 16px 24px' }}>
            <p className="rs-card-meta" style={{ marginBottom: 20 }}>Toggle frequency bands for digital integrations.</p>
-           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {ALL_SERVICES.map(s => {
                 const active = (selectedServiceKeys || []).includes(s.key)
                 return (

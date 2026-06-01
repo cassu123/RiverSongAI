@@ -354,7 +354,7 @@ function NimSection({ enabled, token, llmRoutingFlags, saveLlmRoutingFlags }) {
         </div>
 
         {/* Today's stats — 3-column grid with tabular nums */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, paddingTop: 4, borderTop: '1px solid var(--md-sys-color-outline-variant)' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" style={{ paddingTop: 4, borderTop: '1px solid var(--md-sys-color-outline-variant)' }}>
           {[
             { value: day.calls.toLocaleString(), label: 'requests today',  icon: 'bolt' },
             { value: `${(day.tokens / 1000).toFixed(1)}K`, label: 'tokens today', icon: 'token' },
@@ -1071,7 +1071,7 @@ export default function SettingsPage({
           </div>
 
           {/* Vault tree — 3-column, folder icons, monospace paths */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
             {[
               { path: 'Personal/',       desc: 'Private to you',     icon: 'lock',         color: 'var(--primary)' },
               { path: 'Household/',      desc: 'Shared with family',  icon: 'home',         color: 'var(--md-sys-color-tertiary)' },
@@ -1615,7 +1615,7 @@ export default function SettingsPage({
           <div style={{ height: 24 }} />
           
           <div className="rs-card-label" style={{ marginBottom: 12 }}>LOCATION (FOR WEATHER & FLIGHTS)</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="rs-card-meta" style={{ marginBottom: 8 }}>Latitude</div>
               <input
@@ -1656,7 +1656,7 @@ export default function SettingsPage({
           {/* ── Weather ───────────────────────────────────────────────── */}
           <div className="rs-card-label" style={{ marginBottom: 12 }}>WEATHER</div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: 12 }}>
             <div>
               <div className="rs-card-meta" style={{ marginBottom: 8 }}>Latitude</div>
               <input
@@ -1852,7 +1852,7 @@ export default function SettingsPage({
         />
 
         {llmSettings?.cloud_fallback_enabled && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginTop: 16 }}>
             <div className="rs-card-meta">
               <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>Provider</span>
               <select
@@ -3427,7 +3427,7 @@ function TokenUsageSection({ token }) {
           {data.by_model.length === 0 ? (
             <p className="rs-card-meta">No usage recorded yet.</p>
           ) : (
-            <div style={{ padding: 0, overflow: 'hidden', background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+            <div className="rs-table-wrap" style={{ padding: 0, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                 <thead>
                   <tr style={{ background: 'var(--md-surface-container-high)' }}>

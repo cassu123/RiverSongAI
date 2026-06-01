@@ -143,10 +143,10 @@ export default function UnitDetail() {
       </div>
 
       {tab === 'live' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
+        <div className="grid grid-cols-1 rail:grid-cols-[2fr_1fr] gap-5">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Telemetry Grid */}
-            <div className="rs-card" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 15, textAlign: 'center' }}>
+            <div className="rs-card grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div><small style={{ color: 'grey' }}>Battery</small><div>{latestT.battery_pct ?? '--'}% ({latestT.battery_v ?? '--'}V)</div></div>
               <div><small style={{ color: 'grey' }}>Fuel</small><div>{latestT.fuel_pct ?? '--'}%</div></div>
               <div><small style={{ color: 'grey' }}>RPM</small><div>{latestT.rpm ?? '--'}</div></div>
@@ -158,7 +158,7 @@ export default function UnitDetail() {
             </div>
 
             {/* Map */}
-            <div style={{ height: 400, borderRadius: 8, overflow: 'hidden' }}>
+            <div className="rs-map">
               <MapContainer center={[latestT.lat || 0, latestT.lng || 0]} zoom={18} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={20} />
                 {latestT.lat && <Marker position={[latestT.lat, latestT.lng]} />}
@@ -214,7 +214,7 @@ export default function UnitDetail() {
                 Enable Manual Mode
               </label>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 20, opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5" style={{ marginTop: 20, opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }}>
                 <div />
                 <button className="rs-btn-ghost" {...bindManualKey('manual.drive', { direction: 'forward', throttle: 0.3, duration_ms: 500 })}>&#8593;</button>
                 <div />
@@ -235,25 +235,27 @@ export default function UnitDetail() {
 
       {tab === 'history' && (
         <div className="rs-card">
-          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                <th style={{ padding: 10 }}>Started At</th>
-                <th style={{ padding: 10 }}>Program</th>
-                <th style={{ padding: 10 }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.map(s => (
-                <tr key={s.session_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                  <td style={{ padding: 10 }}>{new Date(s.started_at + 'Z').toLocaleString()}</td>
-                  <td style={{ padding: 10 }}>{s.program_id || 'Manual'}</td>
-                  <td style={{ padding: 10 }}>{s.status}</td>
+          <div className="rs-table-wrap">
+            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                  <th style={{ padding: 10 }}>Started At</th>
+                  <th style={{ padding: 10 }}>Program</th>
+                  <th style={{ padding: 10 }}>Status</th>
                 </tr>
-              ))}
-              {sessions.length === 0 && <tr><td colSpan="3" style={{ padding: 10, textAlign: 'center' }}>No sessions found</td></tr>}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sessions.map(s => (
+                  <tr key={s.session_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ padding: 10 }}>{new Date(s.started_at + 'Z').toLocaleString()}</td>
+                    <td style={{ padding: 10 }}>{s.program_id || 'Manual'}</td>
+                    <td style={{ padding: 10 }}>{s.status}</td>
+                  </tr>
+                ))}
+                {sessions.length === 0 && <tr><td colSpan="3" style={{ padding: 10, textAlign: 'center' }}>No sessions found</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

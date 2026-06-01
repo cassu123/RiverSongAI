@@ -105,39 +105,41 @@ export default function Schedules() {
       </div>
 
       <div className="rs-card">
-        <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-              <th style={{ padding: 10 }}>Enabled</th>
-              <th style={{ padding: 10 }}>Name</th>
-              <th style={{ padding: 10 }}>Program</th>
-              <th style={{ padding: 10 }}>Schedule</th>
-              <th style={{ padding: 10 }}>Next Run</th>
-              <th style={{ padding: 10 }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {schedules.map(s => {
-              const p = programs.find(x => x.program_id === s.program_id)
-              return (
-                <tr key={s.schedule_id || s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                  <td style={{ padding: 10 }}>
-                    <input type="checkbox" checked={s.enabled} onChange={() => toggleEnabled(s)} />
-                  </td>
-                  <td style={{ padding: 10 }}>{s.name}</td>
-                  <td style={{ padding: 10 }}>{p ? p.name : 'Unknown'}</td>
-                  <td style={{ padding: 10 }}>{renderCron(s.cron_utc)}<br/><small style={{color:'grey'}}>{s.timezone_display}</small></td>
-                  <td style={{ padding: 10 }}>{s.next_run ? new Date(s.next_run + 'Z').toLocaleString() : 'Pending'}</td>
-                  <td style={{ padding: 10 }}>
-                    <button className="rs-btn-ghost" style={{ marginRight: 5 }} onClick={() => openEdit(s)}>Edit</button>
-                    <button className="rs-btn-ghost" onClick={() => handleDelete(s.schedule_id || s.id)}>Delete</button>
-                  </td>
-                </tr>
-              )
-            })}
-            {schedules.length === 0 && <tr><td colSpan="6" style={{ padding: 10, textAlign: 'center' }}>No schedules found</td></tr>}
-          </tbody>
-        </table>
+        <div className="rs-table-wrap">
+          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <th style={{ padding: 10 }}>Enabled</th>
+                <th style={{ padding: 10 }}>Name</th>
+                <th style={{ padding: 10 }}>Program</th>
+                <th style={{ padding: 10 }}>Schedule</th>
+                <th style={{ padding: 10 }}>Next Run</th>
+                <th style={{ padding: 10 }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {schedules.map(s => {
+                const p = programs.find(x => x.program_id === s.program_id)
+                return (
+                  <tr key={s.schedule_id || s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ padding: 10 }}>
+                      <input type="checkbox" checked={s.enabled} onChange={() => toggleEnabled(s)} />
+                    </td>
+                    <td style={{ padding: 10 }}>{s.name}</td>
+                    <td style={{ padding: 10 }}>{p ? p.name : 'Unknown'}</td>
+                    <td style={{ padding: 10 }}>{renderCron(s.cron_utc)}<br/><small style={{color:'grey'}}>{s.timezone_display}</small></td>
+                    <td style={{ padding: 10 }}>{s.next_run ? new Date(s.next_run + 'Z').toLocaleString() : 'Pending'}</td>
+                    <td style={{ padding: 10 }}>
+                      <button className="rs-btn-ghost" style={{ marginRight: 5 }} onClick={() => openEdit(s)}>Edit</button>
+                      <button className="rs-btn-ghost" onClick={() => handleDelete(s.schedule_id || s.id)}>Delete</button>
+                    </td>
+                  </tr>
+                )
+              })}
+              {schedules.length === 0 && <tr><td colSpan="6" style={{ padding: 10, textAlign: 'center' }}>No schedules found</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showModal && (

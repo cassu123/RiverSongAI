@@ -230,7 +230,7 @@ export default function ChronosPage({ setAction }) {
   }, [])
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr 260px', height: '100%', gap: 16 }}>
+    <div className="grid grid-cols-1 rail:grid-cols-[260px_1fr_260px] h-full gap-4">
       
       {/* Search Modal */}
       {showQuickSwitcher && (

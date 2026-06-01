@@ -1,0 +1,12 @@
+/* Horizontally scrollable wrapper for any wide data table on small screens */
+.rs-table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.rs-table-wrap > table { min-width: 560px; }   /* keeps columns legible, scrolls */
+
+/* Responsive map height: never taller than ~55% of viewport on phones */
+.rs-map { height: clamp(320px, 55svh, 650px); width: 100%; border-radius: 8px;
+          overflow: hidden; border: 1px solid var(--md-outline-variant); }
+
+/* Prevent Leaflet draw controls from overlapping on mobile */
+@media (max-width: 767px) {
+  .rs-map .leaflet-draw { margin-top: 40px; }
+}

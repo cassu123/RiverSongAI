@@ -140,38 +140,40 @@ export default function Programs() {
       </div>
 
       <div className="rs-card">
-        <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-              <th style={{ padding: 10 }}>Name</th>
-              <th style={{ padding: 10 }}>Unit</th>
-              <th style={{ padding: 10 }}>Zones</th>
-              <th style={{ padding: 10 }}>Pattern</th>
-              <th style={{ padding: 10 }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {programs.map(p => {
-              const u = units.find(x => x.unit_id === p.assigned_unit_id)
-              let zIds = p.zone_ids || []
-              if (typeof zIds === 'string') { try { zIds = JSON.parse(zIds) } catch(e){} }
-              return (
-                <tr key={p.program_id || p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                  <td style={{ padding: 10 }}>{p.name}</td>
-                  <td style={{ padding: 10 }}>{u ? u.name : 'Unassigned'}</td>
-                  <td style={{ padding: 10 }}>{zIds.length} zone(s)</td>
-                  <td style={{ padding: 10 }}>{p.pattern}</td>
-                  <td style={{ padding: 10 }}>
-                    <button className="rs-btn-ghost" style={{ marginRight: 5 }} onClick={() => handleRun(p.program_id || p.id, p.assigned_unit_id)}>Run</button>
-                    <button className="rs-btn-ghost" style={{ marginRight: 5 }} onClick={() => openEdit(p)}>Edit</button>
-                    <button className="rs-btn-ghost" onClick={() => handleDelete(p.program_id || p.id)}>Delete</button>
-                  </td>
-                </tr>
-              )
-            })}
-            {programs.length === 0 && <tr><td colSpan="5" style={{ padding: 10, textAlign: 'center' }}>No programs found</td></tr>}
-          </tbody>
-        </table>
+        <div className="rs-table-wrap">
+          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <th style={{ padding: 10 }}>Name</th>
+                <th style={{ padding: 10 }}>Unit</th>
+                <th style={{ padding: 10 }}>Zones</th>
+                <th style={{ padding: 10 }}>Pattern</th>
+                <th style={{ padding: 10 }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {programs.map(p => {
+                const u = units.find(x => x.unit_id === p.assigned_unit_id)
+                let zIds = p.zone_ids || []
+                if (typeof zIds === 'string') { try { zIds = JSON.parse(zIds) } catch(e){} }
+                return (
+                  <tr key={p.program_id || p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ padding: 10 }}>{p.name}</td>
+                    <td style={{ padding: 10 }}>{u ? u.name : 'Unassigned'}</td>
+                    <td style={{ padding: 10 }}>{zIds.length} zone(s)</td>
+                    <td style={{ padding: 10 }}>{p.pattern}</td>
+                    <td style={{ padding: 10 }}>
+                      <button className="rs-btn-ghost" style={{ marginRight: 5 }} onClick={() => handleRun(p.program_id || p.id, p.assigned_unit_id)}>Run</button>
+                      <button className="rs-btn-ghost" style={{ marginRight: 5 }} onClick={() => openEdit(p)}>Edit</button>
+                      <button className="rs-btn-ghost" onClick={() => handleDelete(p.program_id || p.id)}>Delete</button>
+                    </td>
+                  </tr>
+                )
+              })}
+              {programs.length === 0 && <tr><td colSpan="5" style={{ padding: 10, textAlign: 'center' }}>No programs found</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showModal && (
@@ -179,7 +181,7 @@ export default function Programs() {
           <div className="rs-card" style={{ width: 600, maxHeight: '90vh', overflowY: 'auto' }}>
             <h3>{editingId ? 'Edit Program' : 'Create Program'}</h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
                 <label>Name</label><br/>
                 <input type="text" className="rs-input" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%' }} />
