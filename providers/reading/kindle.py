@@ -31,7 +31,7 @@ import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
 import httpx
 
@@ -75,7 +75,8 @@ class KindleProvider:
     def __init__(self, auth_base_path: str, country_code: str = "us") -> None:
         self._auth_base = auth_base_path
         self._country_code = country_code.lower()
-        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="kindle")
+        self._executor = ThreadPoolExecutor(
+            max_workers=2, thread_name_prefix="kindle")
 
     def _auth_file_for(self, user_id: str) -> str:
         return os.path.join(self._auth_base, f"{user_id}.json")
@@ -83,7 +84,8 @@ class KindleProvider:
     def _get_access_token(self, user_id: str) -> str:
         """Load Amazon OAuth credentials and return a current access token."""
         if not _AUDIBLE_AVAILABLE:
-            raise RuntimeError("audible package not installed. Run: pip install audible")
+            raise RuntimeError(
+                "audible package not installed. Run: pip install audible")
         path = self._auth_file_for(user_id)
         if not os.path.exists(path):
             raise FileNotFoundError(
@@ -103,10 +105,10 @@ class KindleProvider:
             "User-Agent": "KindleCloudReader/1.0",
         }
         params = {
-            "sortType":       "recency",
-            "isExtendedMYK":  "false",
-            "startIndex":     "0",
-            "batchSize":      str(min(limit, 50)),
+            "sortType": "recency",
+            "isExtendedMYK": "false",
+            "startIndex": "0",
+            "batchSize": str(min(limit, 50)),
         }
         with httpx.Client(timeout=20.0) as client:
             resp = client.get(url, headers=headers, params=params)
@@ -117,12 +119,18 @@ class KindleProvider:
         for item in data.get("itemsList", []):
             if item.get("productTypeName") not in ("EBOOK", "COMICS"):
                 continue
-            asin  = item.get("asin", "")
+            asin = item.get("asin", "")
             title = item.get("title", "Unknown")
-            # Authors come as a list of dicts or a single string depending on edition
+            # Authors come as a list of dicts or a single string depending on
+            # edition
             raw_authors = item.get("authors") or []
             if isinstance(raw_authors, list):
-                authors = [a.get("name", a) if isinstance(a, dict) else str(a) for a in raw_authors]
+                authors = [
+                    a.get(
+                        "name",
+                        a) if isinstance(
+                        a,
+                        dict) else str(a) for a in raw_authors]
             else:
                 authors = [str(raw_authors)]
             cover_url = (
@@ -151,7 +159,8 @@ class KindleProvider:
     # Public async API
     # ------------------------------------------------------------------
 
-    async def get_library(self, user_id: str, limit: int = 50) -> List[KindleBook]:
+    async def get_library(self, user_id: str,
+                          limit: int = 50) -> List[KindleBook]:
         """Return up to *limit* Kindle books for this user."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
@@ -170,6 +179,11 @@ def build_kindle_provider(settings=None) -> KindleProvider:
     if settings is None:
         from config.settings import get_settings
         settings = get_settings()
-    # Default to the same directory as Audible — same auth file, same Amazon account
-    auth_base = getattr(settings, "kindle_auth_base_path", settings.audible_auth_base_path)
-    return KindleProvider(auth_base_path=auth_base, country_code=settings.audible_country_code)
+    # Default to the same directory as Audible — same auth file, same Amazon
+    # account
+    auth_base = getattr(
+        settings,
+        "kindle_auth_base_path",
+        settings.audible_auth_base_path)
+    return KindleProvider(auth_base_path=auth_base,
+                          country_code=settings.audible_country_code)

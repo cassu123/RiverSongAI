@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import httpx
 
@@ -24,113 +24,207 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 CURATED_SOURCES: List[Dict[str, str]] = [
     # ── World / General ──────────────────────────────────────────────────────
-    {"name": "BBC News",         "url": "https://feeds.bbci.co.uk/news/rss.xml",                    "category": "world"},
-    {"name": "Al Jazeera",       "url": "https://www.aljazeera.com/xml/rss/all.xml",                 "category": "world"},
-    {"name": "NPR",              "url": "https://feeds.npr.org/1001/rss.xml",                        "category": "world"},
-    {"name": "FOX News",         "url": "https://moxie.foxnews.com/google-publisher/latest.xml",     "category": "world"},
+    {"name": "BBC News",
+     "url": "https://feeds.bbci.co.uk/news/rss.xml",
+     "category": "world"},
+    {"name": "Al Jazeera",
+     "url": "https://www.aljazeera.com/xml/rss/all.xml",
+     "category": "world"},
+    {"name": "NPR", "url": "https://feeds.npr.org/1001/rss.xml", "category": "world"},
+    {"name": "FOX News",
+     "url": "https://moxie.foxnews.com/google-publisher/latest.xml",
+     "category": "world"},
 
-    # ── US National ───────────────────────────────────────────────────────────
-    {"name": "NPR Politics",     "url": "https://feeds.npr.org/1014/rss.xml",                       "category": "us"},
-    {"name": "NPR National",     "url": "https://feeds.npr.org/1003/rss.xml",                       "category": "us"},
-    {"name": "FOX News US",      "url": "https://moxie.foxnews.com/google-publisher/us.xml",        "category": "us"},
-    {"name": "PBS NewsHour",     "url": "https://www.pbs.org/newshour/feeds/rss/headlines",          "category": "us"},
+    # ── US National ─────────────────────────────────────────────────────────
+    {"name": "NPR Politics",
+     "url": "https://feeds.npr.org/1014/rss.xml",
+     "category": "us"},
+    {"name": "NPR National",
+     "url": "https://feeds.npr.org/1003/rss.xml",
+     "category": "us"},
+    {"name": "FOX News US",
+     "url": "https://moxie.foxnews.com/google-publisher/us.xml",
+     "category": "us"},
+    {"name": "PBS NewsHour",
+     "url": "https://www.pbs.org/newshour/feeds/rss/headlines",
+     "category": "us"},
 
-    # ── Local — Central Arkansas ──────────────────────────────────────────────
-    {"name": "KARK 4 (NBC AR)",  "url": "https://www.kark.com/feed/",                               "category": "local"},
-    {"name": "Arkansas Online",  "url": "https://www.arkansasonline.com/rss/headlines/",            "category": "local"},
+    # ── Local — Central Arkansas ────────────────────────────────────────────
+    {"name": "KARK 4 (NBC AR)",
+     "url": "https://www.kark.com/feed/",
+     "category": "local"},
+    {"name": "Arkansas Online",
+     "url": "https://www.arkansasonline.com/rss/headlines/",
+     "category": "local"},
 
-    # ── Technology ────────────────────────────────────────────────────────────
-    {"name": "The Verge",        "url": "https://www.theverge.com/rss/index.xml",                   "category": "technology"},
-    {"name": "Ars Technica",     "url": "https://feeds.arstechnica.com/arstechnica/index",           "category": "technology"},
-    {"name": "Wired",            "url": "https://www.wired.com/feed/rss",                           "category": "technology"},
-    {"name": "TechCrunch",       "url": "https://techcrunch.com/feed/",                             "category": "technology"},
-    {"name": "Hacker News",      "url": "https://hnrss.org/frontpage",                              "category": "technology"},
-    {"name": "MIT Tech Review",  "url": "https://www.technologyreview.com/topnews.rss",             "category": "technology"},
+    # ── Technology ──────────────────────────────────────────────────────────
+    {"name": "The Verge",
+     "url": "https://www.theverge.com/rss/index.xml",
+     "category": "technology"},
+    {"name": "Ars Technica",
+     "url": "https://feeds.arstechnica.com/arstechnica/index",
+     "category": "technology"},
+    {"name": "Wired",
+     "url": "https://www.wired.com/feed/rss",
+     "category": "technology"},
+    {"name": "TechCrunch",
+     "url": "https://techcrunch.com/feed/",
+     "category": "technology"},
+    {"name": "Hacker News",
+     "url": "https://hnrss.org/frontpage",
+     "category": "technology"},
+    {"name": "MIT Tech Review",
+     "url": "https://www.technologyreview.com/topnews.rss",
+     "category": "technology"},
 
-    # ── Business / Finance ────────────────────────────────────────────────────
-    {"name": "BBC Business",     "url": "https://feeds.bbci.co.uk/news/business/rss.xml",            "category": "business"},
-    {"name": "Financial Times",  "url": "https://www.ft.com/rss/home",                             "category": "business"},
-    {"name": "CNBC",             "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",    "category": "business"},
-    {"name": "MarketWatch",      "url": "https://feeds.marketwatch.com/marketwatch/topstories/",    "category": "business"},
+    # ── Business / Finance ──────────────────────────────────────────────────
+    {"name": "BBC Business",
+     "url": "https://feeds.bbci.co.uk/news/business/rss.xml",
+     "category": "business"},
+    {"name": "Financial Times",
+     "url": "https://www.ft.com/rss/home",
+     "category": "business"},
+    {"name": "CNBC",
+     "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+     "category": "business"},
+    {"name": "MarketWatch",
+     "url": "https://feeds.marketwatch.com/marketwatch/topstories/",
+     "category": "business"},
 
     # ── Sports — General ─────────────────────────────────────────────────────
-    {"name": "ESPN Top",         "url": "https://www.espn.com/espn/rss/news",                       "category": "sports"},
-    {"name": "BBC Sport",        "url": "https://feeds.bbci.co.uk/sport/rss.xml",                   "category": "sports"},
-    {"name": "Sky Sports",       "url": "https://www.skysports.com/rss/12040",                      "category": "sports"},
-    {"name": "Yahoo Sports",     "url": "https://sports.yahoo.com/top/rss.xml",                     "category": "sports"},
+    {"name": "ESPN Top",
+     "url": "https://www.espn.com/espn/rss/news",
+     "category": "sports"},
+    {"name": "BBC Sport",
+     "url": "https://feeds.bbci.co.uk/sport/rss.xml",
+     "category": "sports"},
+    {"name": "Sky Sports",
+     "url": "https://www.skysports.com/rss/12040",
+     "category": "sports"},
+    {"name": "Yahoo Sports",
+     "url": "https://sports.yahoo.com/top/rss.xml",
+     "category": "sports"},
 
     # ── Sports — NFL ─────────────────────────────────────────────────────────
-    {"name": "ESPN NFL",         "url": "https://www.espn.com/espn/rss/nfl/news",                   "category": "nfl"},
-    {"name": "FOX Sports NFL",   "url": "https://api.foxsports.com/v1/rss?id=2",                    "category": "nfl"},
-    {"name": "CBS Sports NFL",   "url": "https://www.cbssports.com/rss/headlines/nfl/",              "category": "nfl"},
+    {"name": "ESPN NFL",
+     "url": "https://www.espn.com/espn/rss/nfl/news",
+     "category": "nfl"},
+    {"name": "FOX Sports NFL",
+     "url": "https://api.foxsports.com/v1/rss?id=2",
+     "category": "nfl"},
+    {"name": "CBS Sports NFL",
+     "url": "https://www.cbssports.com/rss/headlines/nfl/",
+     "category": "nfl"},
 
     # ── Sports — NBA ─────────────────────────────────────────────────────────
-    {"name": "ESPN NBA",         "url": "https://www.espn.com/espn/rss/nba/news",                   "category": "nba"},
-    {"name": "FOX Sports NBA",   "url": "https://api.foxsports.com/v1/rss?id=7",                    "category": "nba"},
+    {"name": "ESPN NBA",
+     "url": "https://www.espn.com/espn/rss/nba/news",
+     "category": "nba"},
+    {"name": "FOX Sports NBA",
+     "url": "https://api.foxsports.com/v1/rss?id=7",
+     "category": "nba"},
 
     # ── Sports — MLB ─────────────────────────────────────────────────────────
-    {"name": "ESPN MLB",         "url": "https://www.espn.com/espn/rss/mlb/news",                   "category": "mlb"},
-    {"name": "FOX Sports MLB",   "url": "https://api.foxsports.com/v1/rss?id=4",                    "category": "mlb"},
+    {"name": "ESPN MLB",
+     "url": "https://www.espn.com/espn/rss/mlb/news",
+     "category": "mlb"},
+    {"name": "FOX Sports MLB",
+     "url": "https://api.foxsports.com/v1/rss?id=4",
+     "category": "mlb"},
 
     # ── Sports — NHL ─────────────────────────────────────────────────────────
-    {"name": "ESPN NHL",         "url": "https://www.espn.com/espn/rss/nhl/news",                   "category": "nhl"},
-    {"name": "FOX Sports NHL",   "url": "https://api.foxsports.com/v1/rss?id=5",                    "category": "nhl"},
+    {"name": "ESPN NHL",
+     "url": "https://www.espn.com/espn/rss/nhl/news",
+     "category": "nhl"},
+    {"name": "FOX Sports NHL",
+     "url": "https://api.foxsports.com/v1/rss?id=5",
+     "category": "nhl"},
 
-    # ── Sports — NASCAR ───────────────────────────────────────────────────────
-    {"name": "ESPN NASCAR",      "url": "https://www.espn.com/espn/rss/rpm/news",                   "category": "nascar"},
-    {"name": "FOX Sports NASCAR","url": "https://api.foxsports.com/v1/rss?id=6",                    "category": "nascar"},
+    # ── Sports — NASCAR ─────────────────────────────────────────────────────
+    {"name": "ESPN NASCAR",
+     "url": "https://www.espn.com/espn/rss/rpm/news",
+     "category": "nascar"},
+    {"name": "FOX Sports NASCAR",
+     "url": "https://api.foxsports.com/v1/rss?id=6",
+     "category": "nascar"},
 
-    # ── Entertainment ─────────────────────────────────────────────────────────
-    {"name": "BBC Entertainment","url": "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml", "category": "entertainment"},
-    {"name": "The Guardian Arts","url": "https://www.theguardian.com/culture/rss",                  "category": "entertainment"},
-    {"name": "Variety",          "url": "https://variety.com/feed/",                                "category": "entertainment"},
-    {"name": "Hollywood Reporter","url": "https://www.hollywoodreporter.com/feed/",                 "category": "entertainment"},
+    # ── Entertainment ───────────────────────────────────────────────────────
+    {"name": "BBC Entertainment",
+     "url": "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+     "category": "entertainment"},
+    {"name": "The Guardian Arts",
+     "url": "https://www.theguardian.com/culture/rss",
+     "category": "entertainment"},
+    {"name": "Variety",
+     "url": "https://variety.com/feed/",
+     "category": "entertainment"},
+    {"name": "Hollywood Reporter",
+     "url": "https://www.hollywoodreporter.com/feed/",
+     "category": "entertainment"},
 
-    # ── Health ────────────────────────────────────────────────────────────────
-    {"name": "BBC Health",       "url": "https://feeds.bbci.co.uk/news/health/rss.xml",             "category": "health"},
+    # ── Health ──────────────────────────────────────────────────────────────
+    {"name": "BBC Health",
+     "url": "https://feeds.bbci.co.uk/news/health/rss.xml",
+     "category": "health"},
 
-    # ── Science ───────────────────────────────────────────────────────────────
-    {"name": "New Scientist",    "url": "https://www.newscientist.com/feed/home/",                  "category": "science"},
-    {"name": "NASA",             "url": "https://www.nasa.gov/rss/dyn/breaking_news.rss",           "category": "science"},
-    {"name": "Science Daily",    "url": "https://www.sciencedaily.com/rss/top.xml",                 "category": "science"},
-    {"name": "Space.com",        "url": "https://www.space.com/feeds/all",                          "category": "science"},
+    # ── Science ─────────────────────────────────────────────────────────────
+    {"name": "New Scientist",
+     "url": "https://www.newscientist.com/feed/home/",
+     "category": "science"},
+    {"name": "NASA",
+     "url": "https://www.nasa.gov/rss/dyn/breaking_news.rss",
+     "category": "science"},
+    {"name": "Science Daily",
+     "url": "https://www.sciencedaily.com/rss/top.xml",
+     "category": "science"},
+    {"name": "Space.com",
+     "url": "https://www.space.com/feeds/all",
+     "category": "science"},
 ]
 
 # Source categories with display metadata
 SOURCE_CATEGORIES: Dict[str, Dict[str, str]] = {
-    "world":         {"label": "World",              "icon": "public"},
-    "us":            {"label": "US National",        "icon": "flag"},
-    "local":         {"label": "Local (Arkansas)",   "icon": "location_on"},
-    "technology":    {"label": "Technology",         "icon": "computer"},
-    "business":      {"label": "Business",           "icon": "trending_up"},
-    "sports":        {"label": "Sports — General",   "icon": "sports"},
-    "nfl":           {"label": "Sports — NFL",       "icon": "sports_football"},
-    "nba":           {"label": "Sports — NBA",       "icon": "sports_basketball"},
-    "mlb":           {"label": "Sports — MLB",       "icon": "sports_baseball"},
-    "nhl":           {"label": "Sports — NHL",       "icon": "sports_hockey"},
-    "nascar":        {"label": "Sports — NASCAR",    "icon": "speed"},
-    "entertainment": {"label": "Entertainment",      "icon": "movie"},
-    "health":        {"label": "Health",             "icon": "health_and_safety"},
-    "science":       {"label": "Science",            "icon": "science"},
+    "world": {"label": "World", "icon": "public"},
+    "us": {"label": "US National", "icon": "flag"},
+    "local": {"label": "Local (Arkansas)", "icon": "location_on"},
+    "technology": {"label": "Technology", "icon": "computer"},
+    "business": {"label": "Business", "icon": "trending_up"},
+    "sports": {"label": "Sports — General", "icon": "sports"},
+    "nfl": {"label": "Sports — NFL", "icon": "sports_football"},
+    "nba": {"label": "Sports — NBA", "icon": "sports_basketball"},
+    "mlb": {"label": "Sports — MLB", "icon": "sports_baseball"},
+    "nhl": {"label": "Sports — NHL", "icon": "sports_hockey"},
+    "nascar": {"label": "Sports — NASCAR", "icon": "speed"},
+    "entertainment": {"label": "Entertainment", "icon": "movie"},
+    "health": {"label": "Health", "icon": "health_and_safety"},
+    "science": {"label": "Science", "icon": "science"},
 }
 
 # Sports-related category keys — these belong on the Sports tab, not News
-SPORTS_CATEGORIES: frozenset = frozenset({"sports", "nfl", "nba", "mlb", "nhl", "nascar"})
+SPORTS_CATEGORIES: frozenset = frozenset(
+    {"sports", "nfl", "nba", "mlb", "nhl", "nascar"})
 
 # Filtered views used by the respective API endpoints
-NEWS_SOURCES = [s for s in CURATED_SOURCES if s["category"] not in SPORTS_CATEGORIES]
-NEWS_SOURCE_CATEGORIES = {k: v for k, v in SOURCE_CATEGORIES.items() if k not in SPORTS_CATEGORIES}
+NEWS_SOURCES = [s for s in CURATED_SOURCES if s["category"]
+                not in SPORTS_CATEGORIES]
+NEWS_SOURCE_CATEGORIES = {
+    k: v for k,
+    v in SOURCE_CATEGORIES.items() if k not in SPORTS_CATEGORIES}
 
-SPORTS_RSS_SOURCES = [s for s in CURATED_SOURCES if s["category"] in SPORTS_CATEGORIES]
-SPORTS_RSS_CATEGORIES = {k: v for k, v in SOURCE_CATEGORIES.items() if k in SPORTS_CATEGORIES}
+SPORTS_RSS_SOURCES = [
+    s for s in CURATED_SOURCES if s["category"] in SPORTS_CATEGORIES]
+SPORTS_RSS_CATEGORIES = {
+    k: v for k,
+    v in SOURCE_CATEGORIES.items() if k in SPORTS_CATEGORIES}
 
-_NEWSAPI_BASE      = "https://newsapi.org/v2"
-_WORLD_NEWS_BASE   = "https://api.worldnewsapi.com"
-_APITUBE_BASE      = "https://apitube.io/v1/news"
-_MEDIASTACK_BASE   = "http://api.mediastack.com/v1/news"
+_NEWSAPI_BASE = "https://newsapi.org/v2"
+_WORLD_NEWS_BASE = "https://api.worldnewsapi.com"
+_APITUBE_BASE = "https://apitube.io/v1/news"
+_MEDIASTACK_BASE = "http://api.mediastack.com/v1/news"
 
 
-async def fetch_rss_feed(url: str, source_name: str, limit: int = 10) -> List[Dict[str, Any]]:
+async def fetch_rss_feed(url: str, source_name: str,
+                         limit: int = 10) -> List[Dict[str, Any]]:
     """Fetch and parse a single RSS feed URL, returning up to `limit` articles."""
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -171,11 +265,14 @@ async def fetch_rss_feed(url: str, source_name: str, limit: int = 10) -> List[Di
     if not items:
         entries = root.findall(".//{http://www.w3.org/2005/Atom}entry")
         for entry in entries[:limit]:
-            title = (entry.findtext("{http://www.w3.org/2005/Atom}title") or "").strip()
+            title = (
+                entry.findtext("{http://www.w3.org/2005/Atom}title") or "").strip()
             link_el = entry.find("{http://www.w3.org/2005/Atom}link")
             link = (link_el.get("href") if link_el is not None else "") or ""
-            summary_raw = (entry.findtext("{http://www.w3.org/2005/Atom}summary") or "").strip()
-            content_raw = (entry.findtext("{http://www.w3.org/2005/Atom}content") or "").strip()
+            summary_raw = (
+                entry.findtext("{http://www.w3.org/2005/Atom}summary") or "").strip()
+            content_raw = (
+                entry.findtext("{http://www.w3.org/2005/Atom}content") or "").strip()
             pub = entry.findtext("{http://www.w3.org/2005/Atom}updated") or ""
             img = _extract_image(entry, summary_raw or content_raw)
             articles.append({
@@ -191,7 +288,8 @@ async def fetch_rss_feed(url: str, source_name: str, limit: int = 10) -> List[Di
     return articles
 
 
-async def fetch_newsapi(api_key: str, category: str = "general", country: str = "gb", limit: int = 10) -> List[Dict[str, Any]]:
+async def fetch_newsapi(api_key: str, category: str = "general",
+                        country: str = "gb", limit: int = 10) -> List[Dict[str, Any]]:
     """Fetch top headlines from NewsAPI.org (requires a key)."""
     if not api_key:
         return []
@@ -203,7 +301,8 @@ async def fetch_newsapi(api_key: str, category: str = "general", country: str = 
     }
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(f"{_NEWSAPI_BASE}/top-headlines", params=params)
+            # type: ignore
+            resp = await client.get(f"{_NEWSAPI_BASE}/top-headlines", params=params)  # type: ignore
             resp.raise_for_status()
             data = resp.json()
     except Exception as exc:
@@ -226,7 +325,8 @@ async def fetch_newsapi(api_key: str, category: str = "general", country: str = 
     return articles
 
 
-async def fetch_world_news(api_key: str, language: str = "en", limit: int = 10) -> List[Dict[str, Any]]:
+async def fetch_world_news(
+        api_key: str, language: str = "en", limit: int = 10) -> List[Dict[str, Any]]:
     """Fetch top headlines from World News API (worldnewsapi.com)."""
     if not api_key:
         return []
@@ -294,7 +394,8 @@ async def fetch_apitube(api_key: str, limit: int = 10) -> List[Dict[str, Any]]:
     return articles
 
 
-async def fetch_mediastack(api_key: str, categories: str = "general", limit: int = 10) -> List[Dict[str, Any]]:
+async def fetch_mediastack(
+        api_key: str, categories: str = "general", limit: int = 10) -> List[Dict[str, Any]]:
     """Fetch headlines from Mediastack (mediastack.com) — 100 free req/month."""
     if not api_key:
         return []
@@ -346,10 +447,18 @@ async def fetch_articles(
     meta = []  # track category per task
     for src in sources:
         if src.get("url"):
-            tasks.append(fetch_rss_feed(src["url"], src["name"], limit_per_source))
+            tasks.append(
+                fetch_rss_feed(
+                    src["url"],
+                    src["name"],
+                    limit_per_source))
             meta.append(src.get("category", "general"))
         elif newsapi_key and src.get("category"):
-            tasks.append(fetch_newsapi(newsapi_key, src["category"], limit=limit_per_source))
+            tasks.append(
+                fetch_newsapi(
+                    newsapi_key,
+                    src["category"],
+                    limit=limit_per_source))
             meta.append(src.get("category", "general"))
     if not tasks:
         return []
@@ -378,7 +487,6 @@ def _extract_image(element, html_text: str = "") -> str:
     Try multiple strategies to find an image URL for an RSS item/entry element.
     Returns the first found URL, or "" if none.
     """
-    import xml.etree.ElementTree as ET
     import re
 
     # 1. media:thumbnail (BBC, many news sites)
@@ -393,7 +501,8 @@ def _extract_image(element, html_text: str = "") -> str:
     content_el = element.find(f"{{{ns_media}}}content")
     if content_el is not None:
         url = content_el.get("url") or ""
-        if url and any(ext in url.lower() for ext in (".jpg", ".jpeg", ".png", ".webp", ".gif")):
+        if url and any(ext in url.lower()
+                       for ext in (".jpg", ".jpeg", ".png", ".webp", ".gif")):
             return url
 
     # 3. enclosure (podcasts / TechCrunch style)

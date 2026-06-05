@@ -12,7 +12,6 @@ import json
 import logging
 import os
 import tempfile
-import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -77,12 +76,14 @@ class VoiceIDProvider:
             if embeddings:
                 self._cache[user_id] = embeddings
         self._cache_loaded = True
-        logger.info(f"Voice ID cache loaded: {len(self._cache)} enrolled users.")
+        logger.info(
+            f"Voice ID cache loaded: {len(self._cache)} enrolled users.")
 
     def _wav_to_array(self, wav_bytes: bytes) -> np.ndarray:
         """Decode WAV bytes to a float32 numpy array at 16kHz mono."""
         from resemblyzer import preprocess_wav
-        # preprocess_wav accepts bytes or path; using BytesIO so we don't write to disk
+        # preprocess_wav accepts bytes or path; using BytesIO so we don't write
+        # to disk
         data, sr = sf.read(io.BytesIO(wav_bytes), dtype="float32")
         if data.ndim > 1:
             data = data.mean(axis=1)  # downmix to mono
@@ -100,7 +101,8 @@ class VoiceIDProvider:
             os.makedirs(user_dir, exist_ok=True, mode=0o700)
 
             # Find next sample number
-            existing = [f for f in os.listdir(user_dir) if f.startswith("sample_") and f.endswith(".wav")]
+            existing = [f for f in os.listdir(user_dir) if f.startswith(
+                "sample_") and f.endswith(".wav")]
             n = len(existing) + 1
             wav_path = os.path.join(user_dir, f"sample_{n}.wav")
             npy_path = os.path.join(user_dir, f"sample_{n}.npy")
@@ -128,8 +130,9 @@ class VoiceIDProvider:
                     if "enrolled_at" in existing_manifest:
                         manifest["enrolled_at"] = existing_manifest["enrolled_at"]
                 except (OSError, json.JSONDecodeError) as exc:
-                    logger.warning("voice_id: manifest unreadable for %s, recreating: %s", user_id, exc)
-            manifest["sample_count"] = n
+                    logger.warning(
+                        "voice_id: manifest unreadable for %s, recreating: %s", user_id, exc)
+            manifest["sample_count"] = n  # type: ignore
             manifest["last_updated"] = now_iso
             _atomic_write_json(manifest_path, manifest)
 
@@ -138,7 +141,7 @@ class VoiceIDProvider:
             if len(embs) > 1:
                 sims = []
                 for i in range(len(embs)):
-                    for j in range(i+1, len(embs)):
+                    for j in range(i + 1, len(embs)):
                         sims.append(float(np.dot(embs[i], embs[j]) /
                                           (np.linalg.norm(embs[i]) * np.linalg.norm(embs[j]))))
                 mean_sim = sum(sims) / len(sims)
@@ -151,7 +154,8 @@ class VoiceIDProvider:
             loop = asyncio.get_running_loop()
             return await loop.run_in_executor(self._executor, _sync)
 
-    async def identify(self, wav_bytes: bytes, threshold: float = 0.75) -> Optional[dict]:
+    async def identify(self, wav_bytes: bytes,
+                       threshold: float = 0.75) -> Optional[dict]:
         """Return {user_id, score, runner_up_user_id, runner_up_score} or None below threshold."""
         if not self._cache_loaded:
             await asyncio.get_running_loop().run_in_executor(self._executor, self._load_cache)

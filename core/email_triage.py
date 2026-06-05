@@ -46,12 +46,12 @@ _HIGH_URGENCY_KEYWORDS = (
     "reminder", "due", "expires",
 )
 _TAG_KEYWORDS = {
-    "billing":  ("invoice", "billing", "payment", "receipt", "refund", "charge"),
-    "family":   ("mom", "dad", "kid", "school", "family"),
-    "work":     ("meeting", "deadline", "client", "project", "team"),
+    "billing": ("invoice", "billing", "payment", "receipt", "refund", "charge"),
+    "family": ("mom", "dad", "kid", "school", "family"),
+    "work": ("meeting", "deadline", "client", "project", "team"),
     "shipping": ("tracking", "shipped", "delivery", "package", "order"),
     "calendar": ("schedule", "appointment", "calendar", "rsvp"),
-    "promo":    ("deal", "sale", "discount", "newsletter", "unsubscribe"),
+    "promo": ("deal", "sale", "discount", "newsletter", "unsubscribe"),
     "security": ("password", "verify", "verification", "two-factor", "login"),
 }
 
@@ -70,7 +70,8 @@ def _triage_model() -> str:
 # Heuristic classifier — runs when the LLM is unavailable
 # -----------------------------------------------------------------------------
 
-def _heuristic_classify(subject: str, sender: str, body: str) -> Dict[str, Any]:
+def _heuristic_classify(subject: str, sender: str,
+                        body: str) -> Dict[str, Any]:
     blob = " ".join([subject, sender, body]).lower()
     urgency = "medium"
     if any(kw in blob for kw in _HIGH_URGENCY_KEYWORDS):
@@ -78,14 +79,17 @@ def _heuristic_classify(subject: str, sender: str, body: str) -> Dict[str, Any]:
     elif any(kw in blob for kw in ("newsletter", "no-reply", "noreply", "unsubscribe")):
         urgency = "low"
 
-    tags = [tag for tag, kws in _TAG_KEYWORDS.items() if any(k in blob for k in kws)]
+    tags = [
+        tag for tag,
+        kws in _TAG_KEYWORDS.items() if any(
+            k in blob for k in kws)]
     summary = (subject or sender or "")[:140]
     return {
-        "urgency":     urgency,
-        "tags":        tags,
-        "summary":     summary,
+        "urgency": urgency,
+        "tags": tags,
+        "summary": summary,
         "draft_reply": "",  # heuristic never drafts
-        "classifier":  "heuristic",
+        "classifier": "heuristic",
     }
 
 
@@ -103,7 +107,8 @@ _CLASSIFY_PROMPT = (
 )
 
 
-def _build_messages(subject: str, sender: str, body: str) -> List[Dict[str, str]]:
+def _build_messages(subject: str, sender: str,
+                    body: str) -> List[Dict[str, str]]:
     user_payload = (
         f"From: {sender}\n"
         f"Subject: {subject}\n"
@@ -111,7 +116,7 @@ def _build_messages(subject: str, sender: str, body: str) -> List[Dict[str, str]
     )
     return [
         {"role": "system", "content": _CLASSIFY_PROMPT},
-        {"role": "user",   "content": user_payload},
+        {"role": "user", "content": user_payload},
     ]
 
 
@@ -122,7 +127,8 @@ def _strip_code_fence(s: str) -> str:
     return (m.group(1) if m else s).strip()
 
 
-def _coerce_classification(raw: Any, fallback: Dict[str, Any]) -> Dict[str, Any]:
+def _coerce_classification(
+        raw: Any, fallback: Dict[str, Any]) -> Dict[str, Any]:
     """Coerce LLM JSON output into the contract; fall back on each missing piece."""
     if not isinstance(raw, dict):
         return fallback
@@ -145,11 +151,11 @@ def _coerce_classification(raw: Any, fallback: Dict[str, Any]) -> Dict[str, Any]
     draft = draft[:1200]
 
     return {
-        "urgency":     urgency,
-        "tags":        tags,
-        "summary":     summary,
+        "urgency": urgency,
+        "tags": tags,
+        "summary": summary,
         "draft_reply": draft,
-        "classifier":  "llm",
+        "classifier": "llm",
     }
 
 
@@ -186,7 +192,9 @@ async def classify_message(
             else:
                 content = str(res)
         else:
-            stream_fn = getattr(llm, "stream_chat", None) or getattr(llm, "stream_response", None)
+            stream_fn = getattr(
+                llm, "stream_chat", None) or getattr(
+                llm, "stream_response", None)
             if stream_fn is None:
                 return fallback
             content = ""
@@ -199,13 +207,15 @@ async def classify_message(
         try:
             parsed = json.loads(content)
         except (ValueError, TypeError):
-            logger.info("Triage LLM returned non-JSON output; falling back to heuristic.")
+            logger.info(
+                "Triage LLM returned non-JSON output; falling back to heuristic.")
             return fallback
 
         return _coerce_classification(parsed, fallback)
 
     except Exception as exc:
-        logger.warning("Triage LLM call failed: %s — using heuristic fallback.", exc)
+        logger.warning(
+            "Triage LLM call failed: %s — using heuristic fallback.", exc)
         return fallback
 
 
@@ -237,7 +247,7 @@ async def triage_inbox(
         try:
             from providers.google.auth import GoogleAuth
             from providers.google.gmail import GmailProvider
-            auth = GoogleAuth()
+            auth = GoogleAuth()  # type: ignore
             gmail_provider = GmailProvider(auth, user_id)
         except Exception as exc:
             logger.warning("Gmail provider unavailable for triage: %s", exc)
@@ -256,7 +266,10 @@ async def triage_inbox(
         try:
             body = await gmail_provider.get_message_body(msg["id"])
         except Exception as exc:
-            logger.debug("get_message_body failed for %s: %s", msg.get("id"), exc)
+            logger.debug(
+                "get_message_body failed for %s: %s",
+                msg.get("id"),
+                exc)
             body = msg.get("snippet", "") or ""
         body = (body or "")[:body_chars]
         classification = await classify_message(

@@ -1,22 +1,27 @@
 # providers/culinary/tandoor.py
 from __future__ import annotations
-import logging, os, time
+import logging
+import os
+import time
 from typing import Any
 import httpx
 
 logger = logging.getLogger(__name__)
 
-_BASE  = os.getenv("TANDOOR_URL", "http://localhost:8085")
+_BASE = os.getenv("TANDOOR_URL", "http://localhost:8085")
 _TOKEN = os.getenv("TANDOOR_TOKEN", "")
 _CACHE_TTL = 30
 _cache: dict[str, tuple[Any, float]] = {}
+
 
 def _client() -> httpx.AsyncClient:
     headers = {
         "Accept": "application/json",
         "Authorization": f"Bearer {_TOKEN}"
     }
-    return httpx.AsyncClient(base_url=_BASE.rstrip("/") + "/api", headers=headers, timeout=10)
+    return httpx.AsyncClient(base_url=_BASE.rstrip(
+        "/") + "/api", headers=headers, timeout=10)
+
 
 async def _get(path: str, params: dict | None = None) -> Any:
     if not _TOKEN:
@@ -36,14 +41,17 @@ async def _get(path: str, params: dict | None = None) -> Any:
     _cache[key] = (data, time.monotonic() + _CACHE_TTL)
     return data
 
+
 async def search_recipes(q: str) -> list[dict]:
     """Search for recipes in Tandoor."""
     data = await _get("/recipe/", params={"search": q})
     return data.get("results", []) if data else []
 
+
 async def recipe(recipe_id: int) -> dict | None:
     """Retrieve recipe details."""
     return await _get(f"/recipe/{recipe_id}/")
+
 
 async def import_url(url: str) -> dict | None:
     """Import a recipe from a URL."""

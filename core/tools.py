@@ -9,11 +9,10 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-import json
 import os
 import asyncio
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from config.settings import get_settings
 
@@ -370,7 +369,9 @@ except Exception:
 # Tool Executor
 # =============================================================================
 
-async def execute_tool(tool_name: str, tool_input: Dict[str, Any], context: Dict[str, Any]) -> str:
+
+async def execute_tool(
+        tool_name: str, tool_input: Dict[str, Any], context: Dict[str, Any]) -> str:
     """
     Dispatches a tool call to the appropriate internal provider or database.
 
@@ -383,7 +384,11 @@ async def execute_tool(tool_name: str, tool_input: Dict[str, Any], context: Dict
         A short plain-English success/failure message to be relayed to the user.
     """
     user_id = context.get("user_id", "primary_user")
-    logger.info("Executing tool '%s' for user '%s' with input: %s", tool_name, user_id, tool_input)
+    logger.info(
+        "Executing tool '%s' for user '%s' with input: %s",
+        tool_name,
+        user_id,
+        tool_input)
 
     try:
         if tool_name == "create_calendar_event":
@@ -402,7 +407,8 @@ async def execute_tool(tool_name: str, tool_input: Dict[str, Any], context: Dict
             return await _exec_control_device(tool_input, user_id)
 
         elif tool_name == "log_vehicle_maintenance":
-            return await _exec_vehicle_maintenance(tool_input, context)
+            # type: ignore
+            return await _exec_vehicle_maintenance(tool_input, context)  # type: ignore
 
         elif tool_name == "add_recipe_to_library":
             return await _exec_add_recipe(tool_input, user_id)
@@ -479,7 +485,11 @@ async def execute_tool(tool_name: str, tool_input: Dict[str, Any], context: Dict
             return f"Unknown tool '{tool_name}' requested."
 
     except Exception as exc:
-        logger.error("Error executing tool '%s': %s", tool_name, exc, exc_info=True)
+        logger.error(
+            "Error executing tool '%s': %s",
+            tool_name,
+            exc,
+            exc_info=True)
         return f"I tried to run the '{tool_name}' tool but encountered an error: {str(exc)}"
 
 
@@ -490,17 +500,15 @@ async def execute_tool(tool_name: str, tool_input: Dict[str, Any], context: Dict
 async def _exec_calendar_event(args: dict, user_id: str) -> str:
     try:
         from providers.google.calendar import build_calendar_provider
-        from datetime import datetime, time as dt_time
+        from datetime import datetime
 
         provider = build_calendar_provider(user_id=user_id)
-        
+
         # Parse date and time
         date_obj = datetime.strptime(args["date"], "%Y-%m-%d").date()
         time_obj = datetime.strptime(args["time"], "%H:%M").time()
         start_dt = datetime.combine(date_obj, time_obj)
-        
-        duration = args.get("duration_minutes", 30)
-        
+
         await provider.create_event(
             summary=args["title"],
             start_dt=start_dt,
@@ -511,28 +519,38 @@ async def _exec_calendar_event(args: dict, user_id: str) -> str:
         logger.error("Calendar tool failed: %s", exc)
         return f"I tried to create the calendar event for '{args['title']}', but encountered an issue: {str(exc)}. Make sure Google is linked in Settings."
 
+
 async def _exec_add_inventory(args: dict, user_id: str) -> str:
     settings = get_settings()
     db_path = settings.db_path
+
     def _sync_work():
         conn = sqlite3.connect(db_path)
         try:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS inventory_items (
-                    id INTEGER PRIMARY KEY, 
-                    user_id TEXT, 
-                    name TEXT, 
-                    quantity INTEGER, 
-                    unit TEXT, 
-                    location TEXT, 
-                    category TEXT, 
+                    id INTEGER PRIMARY KEY,
+                    user_id TEXT,
+                    name TEXT,
+                    quantity INTEGER,
+                    unit TEXT,
+                    location TEXT,
+                    category TEXT,
                     created_at TEXT
                 )
             """)
             conn.execute(
-                """INSERT INTO inventory_items (user_id, name, quantity, unit, location, category, created_at) 
+                """INSERT INTO inventory_items (user_id, name, quantity, unit, location, category, created_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (user_id, args['name'], args['quantity'], args.get('unit', ''), args['location'], args.get('category', 'Other'), datetime.now(timezone.utc).isoformat())
+                (user_id,
+                 args['name'],
+                    args['quantity'],
+                    args.get('unit',
+                             ''),
+                    args['location'],
+                    args.get('category',
+                             'Other'),
+                    datetime.now(timezone.utc).isoformat())
             )
             conn.commit()
             return f"Added {args['quantity']} x {args['name']} to the inventory at {args['location']}."
@@ -541,24 +559,27 @@ async def _exec_add_inventory(args: dict, user_id: str) -> str:
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _sync_work)
 
+
 async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
     settings = get_settings()
     db_path = settings.db_path
+
     def _sync_work():
         conn = sqlite3.connect(db_path)
         try:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS shopping_list (
-                    id INTEGER PRIMARY KEY, 
-                    user_id TEXT, 
-                    item TEXT, 
-                    quantity INTEGER, 
+                    id INTEGER PRIMARY KEY,
+                    user_id TEXT,
+                    item TEXT,
+                    quantity INTEGER,
                     added_at TEXT
                 )
             """)
             conn.execute(
                 """INSERT INTO shopping_list (user_id, item, quantity, added_at) VALUES (?, ?, ?, ?)""",
-                (user_id, args['item'], args.get('quantity', 1), datetime.now(timezone.utc).isoformat())
+                (user_id, args['item'], args.get('quantity', 1),
+                 datetime.now(timezone.utc).isoformat())
             )
             conn.commit()
             return f"Added {args.get('quantity', 1)} {args['item']} to your shopping list."
@@ -567,24 +588,27 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _sync_work)
 
+
 async def _exec_set_reminder(args: dict, user_id: str) -> str:
     settings = get_settings()
     db_path = settings.db_path
+
     def _sync_work():
         conn = sqlite3.connect(db_path)
         try:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS reminders (
-                    id INTEGER PRIMARY KEY, 
-                    user_id TEXT, 
-                    message TEXT, 
-                    remind_at TEXT, 
+                    id INTEGER PRIMARY KEY,
+                    user_id TEXT,
+                    message TEXT,
+                    remind_at TEXT,
                     created_at TEXT
                 )
             """)
             conn.execute(
                 """INSERT INTO reminders (user_id, message, remind_at, created_at) VALUES (?, ?, ?, ?)""",
-                (user_id, args['message'], args['datetime_str'], datetime.now(timezone.utc).isoformat())
+                (user_id, args['message'], args['datetime_str'],
+                 datetime.now(timezone.utc).isoformat())
             )
             conn.commit()
             return f"Reminder set: '{args['message']}' for {args['datetime_str']}."
@@ -593,73 +617,80 @@ async def _exec_set_reminder(args: dict, user_id: str) -> str:
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _sync_work)
 
+
 async def _exec_control_device(args: dict, user_id: str) -> str:
     try:
         from providers.smart_home.home_assistant import build_ha_client
         from providers.smart_home.device_registry import get_device_registry
-        
+
         registry = get_device_registry()
         resolved = registry.resolve(args['device_name'])
         if not resolved:
             return f"I couldn't find a device named '{args['device_name']}' in your registry."
-            
+
         async with build_ha_client() as client:
             if isinstance(resolved, list):
                 await client.execute_action_on_many(resolved, args['action'], args.get('value'))
             else:
                 await client.execute_action(resolved, args['action'], args.get('value'))
-                
+
         return f"Confirmed. Turned {args['action']} the {args['device_name']}."
     except Exception:
         return f"Home Assistant is not reachable. I've noted that you want to turn {args['action']} the {args['device_name']}."
 
+
 async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
     user_id = context.get("user_id")
     vehicle_id = context.get("vehicle_id")
-    
+
     if not vehicle_id:
         return {"error": "No vehicle_id in context. Cannot log maintenance."}
-        
+
     def _sync_work():
-        from vehicles.management import get_vehicles, create_service_log, update_check_point
-        from vehicles.models import VehicleCheckPoint
+        from vehicles.management import get_vehicles, create_service_log
         import difflib
         from datetime import datetime, timezone
-        
+
         db = context.get("db")
         if not db:
             from sqlalchemy import create_engine
             from sqlalchemy.orm import sessionmaker
-            engine = create_engine(os.environ.get("VEHICLES_DB_URL", "sqlite:///./data/vehicles.db"))
+            engine = create_engine(
+                os.environ.get(
+                    "VEHICLES_DB_URL",
+                    "sqlite:///./data/vehicles.db"))
             db = sessionmaker(bind=engine)()
             close_db = True
         else:
             close_db = False
-            
+
         try:
-            vehicles = get_vehicles(db, user_id)
+            vehicles = get_vehicles(db, user_id)  # type: ignore
             v = next((v for v in vehicles if str(v.id) == vehicle_id), None)
             if not v:
                 return {"error": "Vehicle not found."}
-                
+
             service_type = args.get('service_type', '')
-            date_str = args.get('date', datetime.now(timezone.utc).date().isoformat())
+            date_str = args.get(
+                'date', datetime.now(
+                    timezone.utc).date().isoformat())
             mileage = args.get('mileage')
-            
+
             try:
                 service_date = datetime.strptime(date_str, "%Y-%m-%d")
             except ValueError:
                 service_date = datetime.now(timezone.utc)
-                
+
             # Fuzzy match the checkpoint
             checkpoints = {cp.description: cp for cp in v.check_points}
             descriptions = list(checkpoints.keys())
-            
-            matches = difflib.get_close_matches(service_type, descriptions, n=1, cutoff=0.6)
+
+            matches = difflib.get_close_matches(
+                service_type, descriptions, n=1, cutoff=0.6)
             matched_cp = None
             if matches:
                 matched_cp = checkpoints[matches[0]]
-                
+
             check_results = []
             if matched_cp:
                 check_results.append({
@@ -672,15 +703,15 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
                 matched_cp.last_service_odometer = mileage
                 matched_cp.last_service_date = service_date
                 db.commit()
-                
+
             log = create_service_log(
-                db, user_id, vehicle_id,
+                db, user_id, vehicle_id,  # type: ignore
                 service_date=service_date,
                 odometer=mileage,
                 service_type=service_type,
                 check_results=check_results
             )
-            
+
             result = {
                 "success": True,
                 "message": f"Logged '{matched_cp.description if matched_cp else service_type}' at {mileage} miles.",
@@ -691,30 +722,33 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
         finally:
             if close_db:
                 db.close()
-                
+
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _sync_work)
+
 
 async def _exec_add_recipe(args: dict, user_id: str) -> str:
     settings = get_settings()
     db_path = settings.db_path
+
     def _sync_work():
         conn = sqlite3.connect(db_path)
         try:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS recipe_stubs (
-                    id INTEGER PRIMARY KEY, 
-                    user_id TEXT, 
-                    title TEXT, 
-                    source_url TEXT, 
-                    notes TEXT, 
+                    id INTEGER PRIMARY KEY,
+                    user_id TEXT,
+                    title TEXT,
+                    source_url TEXT,
+                    notes TEXT,
                     created_at TEXT
                 )
             """)
             conn.execute(
-                """INSERT INTO recipe_stubs (user_id, title, source_url, notes, created_at) 
+                """INSERT INTO recipe_stubs (user_id, title, source_url, notes, created_at)
                    VALUES (?, ?, ?, ?, ?)""",
-                (user_id, args['title'], args.get('source_url', ''), args.get('notes', ''), datetime.now(timezone.utc).isoformat())
+                (user_id, args['title'], args.get('source_url', ''), args.get(
+                    'notes', ''), datetime.now(timezone.utc).isoformat())
             )
             conn.commit()
             return f"Added '{args['title']}' to your culinary library."
@@ -723,26 +757,32 @@ async def _exec_add_recipe(args: dict, user_id: str) -> str:
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _sync_work)
 
+
 async def _exec_create_routine(args: dict, user_id: str) -> str:
     settings = get_settings()
     db_path = settings.db_path
+
     def _sync_work():
         conn = sqlite3.connect(db_path)
         try:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS routine_stubs (
-                    id INTEGER PRIMARY KEY, 
-                    user_id TEXT, 
-                    name TEXT, 
-                    trigger TEXT, 
-                    action_description TEXT, 
+                    id INTEGER PRIMARY KEY,
+                    user_id TEXT,
+                    name TEXT,
+                    trigger TEXT,
+                    action_description TEXT,
                     created_at TEXT
                 )
             """)
             conn.execute(
-                """INSERT INTO routine_stubs (user_id, name, trigger, action_description, created_at) 
+                """INSERT INTO routine_stubs (user_id, name, trigger, action_description, created_at)
                    VALUES (?, ?, ?, ?, ?)""",
-                (user_id, args['name'], args['trigger'], args['action_description'], datetime.now(timezone.utc).isoformat())
+                (user_id,
+                 args['name'],
+                    args['trigger'],
+                    args['action_description'],
+                    datetime.now(timezone.utc).isoformat())
             )
             conn.commit()
             return f"Created new routine '{args['name']}' triggered by '{args['trigger']}'."
@@ -751,22 +791,30 @@ async def _exec_create_routine(args: dict, user_id: str) -> str:
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _sync_work)
 
+
 async def _exec_check_reading_status(args: dict, user_id: str) -> str:
     db_path = get_settings().db_path
+
     def _sync_work():
         conn = sqlite3.connect(db_path)
         try:
             cur = conn.cursor()
             title = args.get("title", "").strip().lower()
             if title:
-                cur.execute("SELECT title, author, status, progress_pct FROM reading_shelf WHERE user_id = ? AND lower(title) LIKE ?", (user_id, f"%{title}%"))
+                cur.execute(
+                    "SELECT title, author, status, progress_pct FROM reading_shelf WHERE user_id = ? AND lower(title) LIKE ?",
+                    (user_id,
+                     f"%{title}%"))
                 rows = cur.fetchall()
                 if not rows:
                     return f"I couldn't find '{args['title']}' on your reading shelf."
                 r = rows[0]
                 return f"'{r[0]}' by {r[1]} is currently marked as '{r[2]}' with {r[3]}% progress."
             else:
-                cur.execute("SELECT title, status FROM reading_shelf WHERE user_id = ? AND status = 'reading'", (user_id,))
+                cur.execute(
+                    "SELECT title, status FROM reading_shelf WHERE user_id = ? AND status = 'reading'",
+                    (user_id,
+                     ))
                 rows = cur.fetchall()
                 if not rows:
                     return "You aren't currently reading anything on your shelf."
@@ -777,9 +825,11 @@ async def _exec_check_reading_status(args: dict, user_id: str) -> str:
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _sync_work)
 
+
 async def _exec_sync_kindle(args: dict, user_id: str) -> str:
     db_path = "data/reading.db"
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
+
     def _sync_work():
         conn = sqlite3.connect(db_path)
         try:
@@ -795,7 +845,8 @@ async def _exec_sync_kindle(args: dict, user_id: str) -> str:
             """)
             books = args.get("books", [])
             if not books:
-                books = [{"asin": "SYNC_PLACEHOLDER", "title": "Manual Sync Run", "author": "System"}]
+                books = [{"asin": "SYNC_PLACEHOLDER",
+                          "title": "Manual Sync Run", "author": "System"}]
             added = 0
             sync_date = datetime.now(timezone.utc).isoformat()
             for b in books:
@@ -815,6 +866,7 @@ async def _exec_sync_kindle(args: dict, user_id: str) -> str:
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _sync_work)
 
+
 def _get_commerce_db():
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
@@ -824,25 +876,28 @@ def _get_commerce_db():
     Session = sessionmaker(bind=engine)
     return Session()
 
+
 async def _exec_search_commerce_products(args: dict, user_id: str) -> str:
     db = None
     try:
         from commercial_inventory.management import get_workspaces_for_user, get_products, get_or_create_biz_user
-        
+
         db = _get_commerce_db()
-        biz_user = get_or_create_biz_user(db, external_user_id=user_id, email=user_id)
+        biz_user = get_or_create_biz_user(
+            db, external_user_id=user_id, email=user_id)
         workspaces = get_workspaces_for_user(db, biz_user)
         if not workspaces:
             return "You do not have any active store workspaces configured."
-        
+
         query = args.get('query', '').lower()
         results = []
         for ws in workspaces:
             products = get_products(db, biz_user, str(ws.id))
             for p in products:
                 if query in p.name.lower() or query in str(p.sku).lower():
-                    results.append(f"{p.name} (SKU: {p.sku}) - {p.stock_qty} in stock at ${p.unit_price}")
-                    
+                    results.append(
+                        f"{p.name} (SKU: {p.sku}) - {p.stock_qty} in stock at ${p.unit_price}")
+
         if not results:
             return f"No products found matching '{query}'."
         return "\n".join(results)
@@ -852,48 +907,65 @@ async def _exec_search_commerce_products(args: dict, user_id: str) -> str:
         if db is not None:
             db.close()
 
+
 async def _exec_create_commerce_sale(args: dict, user_id: str) -> str:
     db = None
     try:
         from commercial_inventory.management import get_workspaces_for_user, get_products, get_or_create_biz_user, create_sale, LineItemIn
         from commercial_inventory.models import Customer
-        
+
         db = _get_commerce_db()
-        biz_user = get_or_create_biz_user(db, external_user_id=user_id, email=user_id)
+        biz_user = get_or_create_biz_user(
+            db, external_user_id=user_id, email=user_id)
         workspaces = get_workspaces_for_user(db, biz_user)
         if not workspaces:
             return "You do not have any active store workspaces configured."
-            
+
         ws = workspaces[0]  # default to first workspace for voice commands
         products = get_products(db, biz_user, str(ws.id))
-        
+
         product_query = args['product_id'].lower()
-        target_product = next((p for p in products if p.sku.lower() == product_query or p.name.lower() == product_query or str(p.id) == product_query), None)
-        
+        target_product = next((p for p in products if p.sku.lower(
+        ) == product_query or p.name.lower() == product_query or str(p.id) == product_query), None)
+
         if not target_product:
             return f"Could not find a product matching '{args['product_id']}' to sell."
-            
+
         if target_product.stock_qty < args['quantity']:
             return f"Insufficient stock for {target_product.name}. You only have {target_product.stock_qty} units available."
-            
+
         customer_id = None
         if args.get('customer_name'):
             # naive search
-            cust = db.query(Customer).filter(Customer.workspace_id == str(ws.id)).first()
+            cust = db.query(Customer).filter(
+                Customer.workspace_id == str(ws.id)).first()
             # for perfection, let's just create if not exists
             if not cust:
-                cust = Customer(workspace_id=str(ws.id), name=args['customer_name'])
+                cust = Customer(
+                    workspace_id=str(
+                        ws.id),
+                    name=args['customer_name'])
                 db.add(cust)
                 db.flush()
             customer_id = str(cust.id)
-            
-        line_items = [LineItemIn(product_id=str(target_product.id), qty=args['quantity'], unit_price=float(target_product.unit_price or 0.0))]
-        sale = create_sale(db, biz_user, str(ws.id), line_items, customer_id=customer_id, notes="Created via Voice Assistant", deduct_stock=True)
-        
+
+        line_items = [
+            LineItemIn(
+                product_id=str(
+                    target_product.id), qty=args['quantity'], unit_price=float(
+                    target_product.unit_price or 0.0))]
+        sale = create_sale(db,
+                           biz_user,
+                           str(ws.id),
+                           line_items,
+                           customer_id=customer_id,
+                           notes="Created via Voice Assistant",
+                           deduct_stock=True)
+
         from commercial_inventory.models import SaleStatus
         sale.status = SaleStatus.COMPLETED
         db.commit()
-        
+
         return f"Successfully logged sale of {args['quantity']}x {target_product.name}. Remaining stock: {target_product.stock_qty}."
     except Exception as exc:
         return f"Failed to log sale: {exc}"
@@ -901,14 +973,16 @@ async def _exec_create_commerce_sale(args: dict, user_id: str) -> str:
         if db is not None:
             db.close()
 
+
 async def _exec_trigger_n8n(args: dict, user_id: str) -> str:
     try:
         from providers.automation.n8n_client import build_n8n_client
         client = build_n8n_client()
         if not client.enabled:
             return "n8n automation is currently disabled in your settings."
-        
-        success = await client.trigger_workflow(args['workflow_id'], args.get('data'))
+
+        # type: ignore
+        success = await client.trigger_workflow(args['workflow_id'], args.get('data'))  # type: ignore
         if success:
             return f"Successfully triggered n8n workflow '{args['workflow_id']}'."
         else:
@@ -916,24 +990,26 @@ async def _exec_trigger_n8n(args: dict, user_id: str) -> str:
     except Exception as exc:
         return f"Error triggering n8n: {exc}"
 
+
 async def _exec_generate_business_report(args: dict, user_id: str) -> str:
     from commercial_inventory.management import get_workspaces_for_user, get_sales, get_or_create_biz_user
     from datetime import datetime, timedelta
-    
+
     db = _get_commerce_db()
     try:
-        biz_user = get_or_create_biz_user(db, external_user_id=user_id, email=user_id)
+        biz_user = get_or_create_biz_user(
+            db, external_user_id=user_id, email=user_id)
         workspaces = get_workspaces_for_user(db, biz_user)
         if not workspaces:
             return "No store data available to generate a report."
-            
+
         days = args.get('days', 30)
         cutoff = datetime.now() - timedelta(days=days)
-        
-        total_revenue = 0
+
+        total_revenue = 0.0
         total_sales = 0
-        top_products = {}
-        
+        top_products = {}  # type: ignore
+
         for ws in workspaces:
             sales = get_sales(db, biz_user, str(ws.id))
             for s in sales:
@@ -943,10 +1019,15 @@ async def _exec_generate_business_report(args: dict, user_id: str) -> str:
                     for li in s.line_items:
                         name = li.product.name if li.product else "Unknown"
                         top_products[name] = top_products.get(name, 0) + li.qty
-                        
-        sorted_products = sorted(top_products.items(), key=lambda x: x[1], reverse=True)[:3]
-        prod_str = ", ".join([f"{name} ({qty} units)" for name, qty in sorted_products])
-        
+
+        sorted_products = sorted(
+            top_products.items(),
+            key=lambda x: x[1],
+            reverse=True)[
+            :3]
+        prod_str = ", ".join(
+            [f"{name} ({qty} units)" for name, qty in sorted_products])
+
         report = (
             f"Business Report (Last {days} days):\n"
             f"- Total Sales: {total_sales}\n"
@@ -957,6 +1038,7 @@ async def _exec_generate_business_report(args: dict, user_id: str) -> str:
     finally:
         db.close()
 
+
 async def _exec_web_search(args: dict, user_id: str) -> str:
     try:
         from providers.web.search import build_search_provider
@@ -966,55 +1048,58 @@ async def _exec_web_search(args: dict, user_id: str) -> str:
         logger.error("Web search tool failed: %s", exc)
         return f"I tried to search the web for '{args['query']}', but encountered an issue: {str(exc)}"
 
+
 async def _exec_search_emails(args: dict, user_id: str) -> str:
     try:
         from providers.google.gmail import build_gmail_provider
         provider = build_gmail_provider(user_id=user_id)
-        
+
         query = args.get("query", "is:unread")
         max_results = args.get("max_results", 3)
-        
+
         emails = await provider.search_messages(query, max_results=max_results)
         if not emails:
             return f"I searched your Gmail for '{query}' but didn't find any matching messages."
-            
+
         summaries = []
         for i, em in enumerate(emails):
             snippet = em.get("snippet", "No snippet.")
             subject = em.get("subject", "No subject")
             sender = em.get("from", "Unknown sender")
-            summaries.append(f"{i+1}. From: {sender}\n   Subject: {subject}\n   Snippet: {snippet}")
-            
+            summaries.append(
+                f"{i + 1}. From: {sender}\n   Subject: {subject}\n   Snippet: {snippet}")
+
         header = f"Found {len(summaries)} emails for '{query}':"
         return header + "\n\n" + "\n\n".join(summaries)
-        
+
     except Exception as exc:
         logger.error("Gmail tool failed: %s", exc)
         return f"I tried to read your emails, but encountered an issue: {str(exc)}. Make sure Google is linked in Settings."
+
 
 async def _exec_get_weather(args: dict, user_id: str) -> str:
     try:
         from providers.google.maps import build_maps_provider
         from providers.feeds.weather import get_weather_report
-        
+
         location = args["location"]
         units = args.get("units", "celsius")
-        
+
         # 1. Geocode location name to lat/lon
         maps = build_maps_provider()
         geo = await maps.geocode(location)
         if not geo:
             return f"I couldn't find a place called '{location}'."
-        
+
         lat = geo["geometry"]["location"]["lat"]
         lon = geo["geometry"]["location"]["lng"]
         addr = geo.get("formatted_address", location)
-        
+
         # 2. Fetch weather
         report = await get_weather_report(lat, lon, units)
-        
+
         return f"Weather for {addr}:\n{report}"
-        
+
     except Exception as exc:
         logger.error("Weather tool failed: %s", exc)
         return f"I tried to check the weather for '{args['location']}', but encountered an issue: {str(exc)}"
@@ -1025,17 +1110,19 @@ async def _exec_generate_image(args: dict, user_id: str) -> str:
     try:
         from providers.image.sd_provider import SDProvider
         import base64
-        
+
         provider = SDProvider()
         img_bytes = await provider.generate(
             prompt=args["prompt"],
-            negative_prompt=args.get("negative_prompt", "low quality, blurry, distorted"),
+            negative_prompt=args.get(
+                "negative_prompt",
+                "low quality, blurry, distorted"),
         )
-        
+
         b64 = base64.b64encode(img_bytes).decode("utf-8")
         # Prefix so the frontend can easily identify it
         return f"IMAGE_GEN_SUCCESS:data:image/png;base64,{b64}"
-        
+
     except Exception as exc:
         logger.error("Image generation tool failed: %s", exc)
         return f"I tried to generate the image, but encountered an issue: {str(exc)}"
@@ -1045,25 +1132,26 @@ async def _exec_search_google_books(args: dict, user_id: str) -> str:
     try:
         from providers.google.books import get_books_provider
         provider = get_books_provider()
-        
+
         query = args["query"]
-        library_only = args.get("library_only", False)
-        
         if not provider.is_connected(user_id):
             return "Your Google Books account is not linked. Please connect it in Settings."
-            
+
         library = await provider.get_library(user_id)
         # Search in library
-        matches = [b for b in library if query.lower() in b.title.lower() or any(query.lower() in a.lower() for a in b.authors)]
-        
+        matches = [
+            b for b in library if query.lower() in b.title.lower() or any(
+                query.lower() in a.lower() for a in b.authors)]
+
         if not matches:
             return f"I couldn't find any books matching '{query}' in your library."
-            
+
         lines = [f"Found {len(matches)} book(s) in your library:"]
         for b in matches[:5]:
             authors = ", ".join(b.authors)
-            lines.append(f"- {b.title} by {authors} ({int(b.progress_pct)}% read, status: {b.status})")
-            
+            lines.append(
+                f"- {b.title} by {authors} ({int(b.progress_pct)}% read, status: {b.status})")
+
         return "\n".join(lines)
     except Exception as exc:
         logger.error("Google Books tool failed: %s", exc)
@@ -1074,11 +1162,11 @@ async def _exec_add_google_task(args: dict, user_id: str) -> str:
     try:
         from providers.google.tasks import build_tasks_provider
         provider = build_tasks_provider(user_id)
-        
+
         title = args["title"]
         notes = args.get("notes")
-        
-        task = await provider.create_task(title=title, notes=notes)
+
+        await provider.create_task(title=title, notes=notes)
         return f"Successfully added task: '{title}' to your Google Tasks."
     except Exception as exc:
         logger.error("Google Tasks add failed: %s", exc)
@@ -1089,25 +1177,26 @@ async def _exec_list_google_tasks(args: dict, user_id: str) -> str:
     try:
         from providers.google.tasks import build_tasks_provider
         provider = build_tasks_provider(user_id)
-        
+
         show_completed = args.get("show_completed", False)
         tasks = await provider.get_tasks(show_completed=show_completed)
-        
+
         if not tasks:
             return "You don't have any tasks in your main Google Tasks list."
-            
+
         lines = ["Your Google Tasks:"]
         for t in tasks[:10]:
             status = "✓" if t.get("status") == "completed" else "○"
             lines.append(f"{status} {t['title']}")
-            
+
         return "\n".join(lines)
     except Exception as exc:
         logger.error("Google Tasks list failed: %s", exc)
         return f"I tried to retrieve your Google Tasks, but encountered an error: {str(exc)}"
 
 
-async def get_upcoming_events(user_id: str, hours_ahead: int = 8) -> list[dict]:
+async def get_upcoming_events(
+        user_id: str, hours_ahead: int = 8) -> list[dict]:
     """
     Standalone helper to fetch calendar events for the near future.
     Used by the startup briefing feature.
@@ -1115,31 +1204,32 @@ async def get_upcoming_events(user_id: str, hours_ahead: int = 8) -> list[dict]:
     try:
         from providers.google.calendar import build_calendar_provider
         from datetime import datetime, timedelta, timezone
-        
+
         provider = build_calendar_provider(user_id=user_id)
-        
+
         # We query 1 day to be safe, then filter in memory
         events = await provider.get_upcoming_events(days_ahead=1, max_results=10)
-        
+
         if not events:
             return []
-            
+
         now = datetime.now(timezone.utc)
         cutoff = now + timedelta(hours=hours_ahead)
-        
+
         results = []
         for e in events:
             start_raw = e.get("start", {})
             dt_str = start_raw.get("dateTime") or start_raw.get("date")
             if not dt_str:
                 continue
-                
+
             try:
                 # Handle both ISO formats
-                start_dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+                start_dt = datetime.fromisoformat(
+                    dt_str.replace("Z", "+00:00"))
                 if start_dt.tzinfo is None:
                     start_dt = start_dt.replace(tzinfo=timezone.utc)
-                
+
                 if now <= start_dt <= cutoff:
                     results.append({
                         "title": e.get("summary", "Untitled"),
@@ -1148,7 +1238,7 @@ async def get_upcoming_events(user_id: str, hours_ahead: int = 8) -> list[dict]:
                     })
             except (ValueError, TypeError):
                 continue
-                
+
         return results
     except Exception as exc:
         logger.debug("get_upcoming_events failed: %s", exc)
@@ -1211,7 +1301,8 @@ async def _exec_search_vault(args: dict, user_id: str) -> str:
         results = await provider.search_text(user_id, args["query"])
         if not results:
             return f"No notes found matching '{args['query']}'."
-        lines = [f"- {r.get('title', r['virtual_path'])} ({r['virtual_path']})" for r in results[:10]]
+        lines = [
+            f"- {r.get('title', r['virtual_path'])} ({r['virtual_path']})" for r in results[:10]]
         return f"Found {len(results)} note(s):\n" + "\n".join(lines)
     except Exception as exc:
         logger.error("search_vault failed: %s", exc)
@@ -1246,22 +1337,25 @@ async def _exec_mow_command(args: dict, user_id: str) -> str:
         import time
         online = last_seen and (time.time() - last_seen) < 30
 
-        queued = queue_command(unit_id, command)
+        queued = queue_command(unit_id, command, {})
         if not queued:
             return f"Could not queue '{command}' — unit '{unit_id}' is unknown."
 
         label = {
-            "mow_start":    "start mowing",
-            "mow_stop":     "stop mowing",
-            "return_home":  "return to dock",
-            "estop":        "EMERGENCY STOP",
-            "estop_reset":  "reset the E-stop",
+            "mow_start": "start mowing",
+            "mow_stop": "stop mowing",
+            "return_home": "return to dock",
+            "estop": "EMERGENCY STOP",
+            "estop_reset": "reset the E-stop",
         }.get(command, command)
 
         if online:
             return f"Command queued: {label}. Voyager will execute it on the next poll (within 100 ms)."
         else:
-            ago = f"{round(time.time() - last_seen)}s ago" if last_seen else "never"
+            ago = f"{
+                round(
+                    time.time() -
+                    last_seen)}s ago" if last_seen else "never"
             return (
                 f"Command queued: {label}. "
                 f"Note: Voyager was last seen {ago} and may be offline. "

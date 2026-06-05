@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Generator, List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
@@ -86,8 +86,8 @@ router = APIRouter(prefix="/api/vehicles", tags=["vehicles"])
 # Database
 # ---------------------------------------------------------------------------
 
-_DB_URL  = os.environ.get("VEHICLES_DB_URL", "sqlite:///./data/vehicles.db")
-_engine  = create_engine(
+_DB_URL = os.environ.get("VEHICLES_DB_URL", "sqlite:///./data/vehicles.db")
+_engine = create_engine(
     _DB_URL,
     connect_args={"check_same_thread": False} if "sqlite" in _DB_URL else {},
 )
@@ -100,44 +100,51 @@ def _migrate(engine) -> None:
     import sqlalchemy
     with engine.connect() as conn:
         def _cols(table):
-            return {row[1] for row in conn.execute(sqlalchemy.text(f"PRAGMA table_info({table})"))}
+            return {row[1] for row in conn.execute(
+                sqlalchemy.text(f"PRAGMA table_info({table})"))}
 
         # service_logs
         logs = _cols("vehicle_service_logs")
         if "performed_by_id" not in logs:
-            conn.execute(sqlalchemy.text("ALTER TABLE vehicle_service_logs ADD COLUMN performed_by_id TEXT"))
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_logs ADD COLUMN performed_by_id TEXT"))
         if "service_type" not in logs:
-            conn.execute(sqlalchemy.text("ALTER TABLE vehicle_service_logs ADD COLUMN service_type TEXT"))
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_logs ADD COLUMN service_type TEXT"))
 
         # check_points
         cps = _cols("vehicle_check_points")
         for col, typedef in [
-            ("interval_miles",        "INTEGER"),
-            ("interval_days",         "INTEGER"),
-            ("expected_spec",         "TEXT"),
-            ("min_value",             "REAL"),
-            ("max_value",             "REAL"),
-            ("unit",                  "TEXT"),
-            ("ft_lb",                 "REAL"),
-            ("nm",                    "REAL"),
-            ("volume",                "TEXT"),
-            ("service_level",         "TEXT"),
-            ("due_at_miles",          "INTEGER"),
+            ("interval_miles", "INTEGER"),
+            ("interval_days", "INTEGER"),
+            ("expected_spec", "TEXT"),
+            ("min_value", "REAL"),
+            ("max_value", "REAL"),
+            ("unit", "TEXT"),
+            ("ft_lb", "REAL"),
+            ("nm", "REAL"),
+            ("volume", "TEXT"),
+            ("service_level", "TEXT"),
+            ("due_at_miles", "INTEGER"),
             ("last_service_odometer", "INTEGER"),
-            ("last_service_date",     "TEXT"),
+            ("last_service_date", "TEXT"),
         ]:
             if col not in cps:
-                conn.execute(sqlalchemy.text(f"ALTER TABLE vehicle_check_points ADD COLUMN {col} {typedef}"))
+                conn.execute(
+                    sqlalchemy.text(
+                        f"ALTER TABLE vehicle_check_points ADD COLUMN {col} {typedef}"))
 
         # check_results
         crs = _cols("vehicle_service_check_results")
         for col, typedef in [
             ("check_point_id", "TEXT"),
-            ("actual_value",   "TEXT"),
-            ("status",         "TEXT"),
+            ("actual_value", "TEXT"),
+            ("status", "TEXT"),
         ]:
             if col not in crs:
-                conn.execute(sqlalchemy.text(f"ALTER TABLE vehicle_service_check_results ADD COLUMN {col} {typedef}"))
+                conn.execute(
+                    sqlalchemy.text(
+                        f"ALTER TABLE vehicle_service_check_results ADD COLUMN {col} {typedef}"))
 
         conn.commit()
 
@@ -187,9 +194,11 @@ async def get_current_user_role(request: Request) -> str:
 def _http(e: Exception) -> HTTPException:
     if isinstance(e, PermissionDeniedError):
         return HTTPException(status_code=403, detail=str(e))
-    if isinstance(e, (VehicleNotFoundError, PersonNotFoundError, NoResultFound)):
+    if isinstance(e, (VehicleNotFoundError,
+                  PersonNotFoundError, NoResultFound)):
         return HTTPException(status_code=404, detail=str(e))
-    if isinstance(e, (PersonAlreadyExistsError, AssignmentExistsError, PersonStillAssignedError)):
+    if isinstance(e, (PersonAlreadyExistsError,
+                  AssignmentExistsError, PersonStillAssignedError)):
         return HTTPException(status_code=409, detail=str(e))
     if isinstance(e, ValueError):
         return HTTPException(status_code=422, detail=str(e))
@@ -202,19 +211,22 @@ def _http(e: Exception) -> HTTPException:
 
 def _ser_vehicle(v) -> dict:
     return {
-        "id":            str(v.id),
-        "year":          v.year,
-        "make":          v.make,
-        "model":         v.model,
-        "trim":          v.trim,
-        "nickname":      v.nickname,
-        "vehicle_type":  v.vehicle_type.value if v.vehicle_type else None,
-        "vin":           v.vin,
+        "id": str(v.id),
+        "year": v.year,
+        "make": v.make,
+        "model": v.model,
+        "trim": v.trim,
+        "nickname": v.nickname,
+        "vehicle_type": v.vehicle_type.value if v.vehicle_type else None,
+        "vin": v.vin,
         "license_plate": v.license_plate,
-        "color":         v.color,
-        "notes":         v.notes,
+        "color": v.color,
+        "notes": v.notes,
         "fluid_specs": [
-            {"id": str(f.id), "name": f.name, "spec": f.spec, "volume": f.volume}
+            {"id": str(f.id),
+             "name": f.name,
+             "spec": f.spec,
+             "volume": f.volume}
             for f in v.fluid_specs
         ],
         "torque_specs": [
@@ -225,64 +237,65 @@ def _ser_vehicle(v) -> dict:
             _ser_checkpoint(cp)
             for cp in sorted(v.check_points, key=lambda x: x.sort_order)
         ],
-        "created_at":  v.created_at.isoformat() if v.created_at else None,
-        "updated_at":  v.updated_at.isoformat() if v.updated_at else None,
+        "created_at": v.created_at.isoformat() if v.created_at else None,
+        "updated_at": v.updated_at.isoformat() if v.updated_at else None,
     }
 
 
 def _ser_checkpoint(cp) -> dict:
     return {
-        "id":                     str(cp.id),
-        "description":            cp.description,
-        "sort_order":             cp.sort_order,
-        "service_level":          cp.service_level.value if cp.service_level else "inspect",
-        "interval_miles":         cp.interval_miles,
-        "interval_days":          cp.interval_days,
-        "due_at_miles":           cp.due_at_miles,
-        "expected_spec":          cp.expected_spec,
-        "volume":                 cp.volume,
-        "min_value":              cp.min_value,
-        "max_value":              cp.max_value,
-        "unit":                   cp.unit,
-        "ft_lb":                  cp.ft_lb,
-        "nm":                     cp.nm,
-        "last_service_odometer":  cp.last_service_odometer,
-        "last_service_date":      cp.last_service_date.isoformat() if cp.last_service_date else None,
-        "parts":                  [_ser_part(p) for p in cp.parts] if hasattr(cp, "parts") else [],
+        "id": str(cp.id),
+        "description": cp.description,
+        "sort_order": cp.sort_order,
+        "service_level": cp.service_level.value if cp.service_level else "inspect",
+        "interval_miles": cp.interval_miles,
+        "interval_days": cp.interval_days,
+        "due_at_miles": cp.due_at_miles,
+        "expected_spec": cp.expected_spec,
+        "volume": cp.volume,
+        "min_value": cp.min_value,
+        "max_value": cp.max_value,
+        "unit": cp.unit,
+        "ft_lb": cp.ft_lb,
+        "nm": cp.nm,
+        "last_service_odometer": cp.last_service_odometer,
+        "last_service_date": cp.last_service_date.isoformat() if cp.last_service_date else None,
+        "parts": [_ser_part(p) for p in cp.parts] if hasattr(cp, "parts") else [],
     }
+
 
 def _ser_part(p) -> dict:
     return {
-        "id":              str(p.id),
-        "vehicle_id":      str(p.vehicle_id),
-        "checkpoint_id":   str(p.checkpoint_id),
-        "part_name":       p.part_name,
+        "id": str(p.id),
+        "vehicle_id": str(p.vehicle_id),
+        "checkpoint_id": str(p.checkpoint_id),
+        "part_name": p.part_name,
         "oem_part_number": p.oem_part_number,
-        "oem_specs":       p.oem_specs,
-        "alternatives":    p.alternatives,
-        "source":          p.source,
-        "created_at":      p.created_at.isoformat() if p.created_at else None,
-        "updated_at":      p.updated_at.isoformat() if p.updated_at else None,
+        "oem_specs": p.oem_specs,
+        "alternatives": p.alternatives,
+        "source": p.source,
+        "created_at": p.created_at.isoformat() if p.created_at else None,
+        "updated_at": p.updated_at.isoformat() if p.updated_at else None,
     }
 
 
 def _ser_person(p) -> dict:
     return {
-        "id":               str(p.id),
+        "id": str(p.id),
         "external_user_id": p.external_user_id,
-        "email":            p.email,
-        "display_name":     p.display_name,
+        "email": p.email,
+        "display_name": p.display_name,
         "vehicle_ids": [str(a.vehicle_id) for a in p.assignments],
-        "created_at":       p.created_at.isoformat() if p.created_at else None,
+        "created_at": p.created_at.isoformat() if p.created_at else None,
     }
 
 
 def _ser_assignment(a) -> dict:
     return {
-        "id":          str(a.id),
-        "vehicle_id":  str(a.vehicle_id),
-        "person_id":   str(a.person_id),
-        "person_email":        a.person.email if a.person else None,
+        "id": str(a.id),
+        "vehicle_id": str(a.vehicle_id),
+        "person_id": str(a.person_id),
+        "person_email": a.person.email if a.person else None,
         "person_display_name": a.person.display_name if a.person else None,
         "assigned_at": a.assigned_at.isoformat() if a.assigned_at else None,
     }
@@ -292,34 +305,34 @@ def _ser_log(log) -> dict:
     performed_by = None
     if log.performed_by:
         performed_by = {
-            "id":           str(log.performed_by.id),
+            "id": str(log.performed_by.id),
             "display_name": log.performed_by.display_name,
-            "email":        log.performed_by.email,
+            "email": log.performed_by.email,
         }
     return {
-        "id":             str(log.id),
-        "vehicle_id":     str(log.vehicle_id),
-        "service_date":   log.service_date.isoformat() if log.service_date else None,
-        "service_type":   log.service_type,
-        "odometer":       log.odometer,
+        "id": str(log.id),
+        "vehicle_id": str(log.vehicle_id),
+        "service_date": log.service_date.isoformat() if log.service_date else None,
+        "service_type": log.service_type,
+        "odometer": log.odometer,
         "is_pro_service": log.is_pro_service,
         "service_center": log.service_center,
-        "cost":           float(log.cost) if log.cost else None,
-        "notes":          log.notes,
-        "receipt_path":   log.receipt_path,
-        "performed_by":   performed_by,
+        "cost": float(log.cost) if log.cost else None,
+        "notes": log.notes,
+        "receipt_path": log.receipt_path,
+        "performed_by": performed_by,
         "check_results": [
             {
-                "id":             str(cr.id),
+                "id": str(cr.id),
                 "check_point_id": str(cr.check_point_id) if cr.check_point_id else None,
-                "description":    cr.description,
-                "actual_value":   cr.actual_value,
-                "status":         cr.status.value if cr.status else ("pass" if cr.passed else "fail"),
-                "passed":         cr.passed,
+                "description": cr.description,
+                "actual_value": cr.actual_value,
+                "status": cr.status.value if cr.status else ("pass" if cr.passed else "fail"),
+                "passed": cr.passed,
             }
             for cr in log.check_results
         ],
-        "created_at":     log.created_at.isoformat() if log.created_at else None,
+        "created_at": log.created_at.isoformat() if log.created_at else None,
     }
 
 
@@ -328,22 +341,24 @@ def _ser_log(log) -> dict:
 # ---------------------------------------------------------------------------
 
 class VehicleCreate(BaseModel):
-    make:          str
-    model:         str
-    year:          Optional[int]         = None
-    trim:          str                   = ""
-    nickname:      str                   = ""
-    vehicle_type:  VehicleType           = VehicleType.AUTO
-    vin:           str                   = ""
-    license_plate: str                   = ""
-    color:         str                   = ""
-    notes:         str                   = ""
+    make: str
+    model: str
+    year: Optional[int] = None
+    trim: str = ""
+    nickname: str = ""
+    vehicle_type: VehicleType = VehicleType.AUTO
+    vin: str = ""
+    license_plate: str = ""
+    color: str = ""
+    notes: str = ""
+
 
 class PartAlternativeIn(BaseModel):
     part_number: str
     brand: str
     verified: bool = False
     notes: str = ""
+
 
 class PartCreate(BaseModel):
     checkpoint_id: str
@@ -353,102 +368,115 @@ class PartCreate(BaseModel):
     alternatives: List[PartAlternativeIn] = []
     source: Optional[str] = "user_added"
 
+
 class PartPatch(BaseModel):
     part_name: Optional[str] = None
     oem_part_number: Optional[str] = None
     oem_specs: Optional[str] = None
     alternatives: Optional[List[PartAlternativeIn]] = None
 
+
 class PartLookupQuery(BaseModel):
     checkpoint_id: str
     query: str
+
 
 class MaintenanceAIQuery(BaseModel):
     question: str
     current_odometer: Optional[int] = None
 
+
 class VehiclePatch(BaseModel):
-    make:          Optional[str]         = None
-    model:         Optional[str]         = None
-    year:          Optional[int]         = None
-    trim:          Optional[str]         = None
-    nickname:      Optional[str]         = None
-    vehicle_type:  Optional[VehicleType] = None
-    vin:           Optional[str]         = None
-    license_plate: Optional[str]         = None
-    color:         Optional[str]         = None
-    notes:         Optional[str]         = None
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year: Optional[int] = None
+    trim: Optional[str] = None
+    nickname: Optional[str] = None
+    vehicle_type: Optional[VehicleType] = None
+    vin: Optional[str] = None
+    license_plate: Optional[str] = None
+    color: Optional[str] = None
+    notes: Optional[str] = None
+
 
 class FluidSpecCreate(BaseModel):
-    name:   str
-    spec:   str = ""
+    name: str
+    spec: str = ""
     volume: str = ""
 
+
 class TorqueSpecCreate(BaseModel):
-    name:  str
+    name: str
     ft_lb: Optional[float] = None
-    nm:    Optional[float] = None
+    nm: Optional[float] = None
+
 
 class CheckPointCreate(BaseModel):
-    description:    str
-    sort_order:     int             = 0
-    service_level:  str             = "inspect"
-    interval_miles: Optional[int]   = None
-    interval_days:  Optional[int]   = None
-    due_at_miles:   Optional[int]   = None
-    expected_spec:  Optional[str]   = None
-    volume:         Optional[str]   = None
-    min_value:      Optional[float] = None
-    max_value:      Optional[float] = None
-    unit:           Optional[str]   = None
-    ft_lb:          Optional[float] = None
-    nm:             Optional[float] = None
+    description: str
+    sort_order: int = 0
+    service_level: str = "inspect"
+    interval_miles: Optional[int] = None
+    interval_days: Optional[int] = None
+    due_at_miles: Optional[int] = None
+    expected_spec: Optional[str] = None
+    volume: Optional[str] = None
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
+    unit: Optional[str] = None
+    ft_lb: Optional[float] = None
+    nm: Optional[float] = None
+
 
 class CheckPointPatch(BaseModel):
-    description:    Optional[str]   = None
-    service_level:  Optional[str]   = None
-    interval_miles: Optional[int]   = None
-    interval_days:  Optional[int]   = None
-    due_at_miles:   Optional[int]   = None
-    expected_spec:  Optional[str]   = None
-    volume:         Optional[str]   = None
-    min_value:      Optional[float] = None
-    max_value:      Optional[float] = None
-    unit:           Optional[str]   = None
-    ft_lb:          Optional[float] = None
-    nm:             Optional[float] = None
+    description: Optional[str] = None
+    service_level: Optional[str] = None
+    interval_miles: Optional[int] = None
+    interval_days: Optional[int] = None
+    due_at_miles: Optional[int] = None
+    expected_spec: Optional[str] = None
+    volume: Optional[str] = None
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
+    unit: Optional[str] = None
+    ft_lb: Optional[float] = None
+    nm: Optional[float] = None
+
 
 class PersonAdd(BaseModel):
     email: str
 
+
 class AssignPersonBody(BaseModel):
     person_id: str
 
+
 class CheckResultIn(BaseModel):
-    description:    str
-    check_point_id: Optional[str]   = None
-    actual_value:   Optional[str]   = None
-    status:         Optional[str]   = None  # "pass" | "warn" | "fail"
-    passed:         bool            = True
+    description: str
+    check_point_id: Optional[str] = None
+    actual_value: Optional[str] = None
+    status: Optional[str] = None  # "pass" | "warn" | "fail"
+    passed: bool = True
+
 
 class ServiceLogCreate(BaseModel):
-    service_date:    datetime
-    odometer:        Optional[int]         = None
-    is_pro_service:  bool                  = False
-    service_center:  Optional[str]         = None
-    service_type:    Optional[str]         = None
-    cost:            Optional[float]       = None
-    notes:           str                   = ""
-    performed_by_id: Optional[str]         = None
-    check_results:   List[CheckResultIn]   = []
+    service_date: datetime
+    odometer: Optional[int] = None
+    is_pro_service: bool = False
+    service_center: Optional[str] = None
+    service_type: Optional[str] = None
+    cost: Optional[float] = None
+    notes: str = ""
+    performed_by_id: Optional[str] = None
+    check_results: List[CheckResultIn] = []
+
 
 class ServiceLogPatch(BaseModel):
-    service_date:   Optional[datetime] = None
-    odometer:       Optional[int]      = None
-    service_center: Optional[str]      = None
-    service_type:   Optional[str]      = None
-    cost:           Optional[float]    = None
-    notes:          Optional[str]      = None
+    service_date: Optional[datetime] = None
+    odometer: Optional[int] = None
+    service_center: Optional[str] = None
+    service_type: Optional[str] = None
+    cost: Optional[float] = None
+    notes: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -562,18 +590,21 @@ def get_maintenance_timeline(
         if not v:
             raise not_found("Vehicle not found")
 
-        today = datetime.fromisoformat(current_date.replace('Z', '+00:00')).date() if current_date else datetime.now(timezone.utc).date()
-        
+        today = datetime.fromisoformat(current_date.replace(
+            'Z', '+00:00')).date() if current_date else datetime.now(timezone.utc).date()
+
         # Determine actual current odometer to use
         logs = get_service_logs(db, user_id, vehicle_id)
-        last_log_odo = max((log.odometer for log in logs if log.odometer is not None), default=0)
+        last_log_odo = max(
+            (log.odometer for log in logs if log.odometer is not None),
+            default=0)
         eff_odometer = current_odometer if current_odometer is not None else last_log_odo
 
         timeline_items = []
         for cp in v.check_points:
             proj_miles = None
             proj_date = None
-            
+
             # calculate miles
             if cp.due_at_miles is not None:
                 proj_miles = cp.due_at_miles
@@ -581,41 +612,49 @@ def get_maintenance_timeline(
                 proj_miles = cp.last_service_odometer + cp.interval_miles
             elif cp.interval_miles:
                 proj_miles = eff_odometer + cp.interval_miles
-                
+
             # calculate dates
             if cp.interval_days and cp.last_service_date:
-                proj_date = cp.last_service_date.date() + __import__("datetime").timedelta(days=cp.interval_days)
+                proj_date = cp.last_service_date.date(
+                ) + __import__("datetime").timedelta(days=cp.interval_days)
             elif cp.interval_days:
-                proj_date = today + __import__("datetime").timedelta(days=cp.interval_days)
-                
+                proj_date = today + \
+                    __import__("datetime").timedelta(days=cp.interval_days)
+
             if proj_miles is None and proj_date is None:
-                continue # Cannot predict
-                
+                continue  # Cannot predict
+
             # Delta to now
-            delta_miles = proj_miles - eff_odometer if proj_miles is not None else float('inf')
-            delta_days = (proj_date - today).days if proj_date is not None else float('inf')
-            
-            # Sort score (miles if available, otherwise days translated to approx miles at 10k/yr)
-            score = delta_miles if proj_miles is not None else (delta_days * 27.4)
-            
+            delta_miles = proj_miles - \
+                eff_odometer if proj_miles is not None else float('inf')
+            delta_days = (
+                proj_date -
+                today).days if proj_date is not None else float('inf')
+
+            # Sort score (miles if available, otherwise days translated to
+            # approx miles at 10k/yr)
+            score = delta_miles if proj_miles is not None else (
+                delta_days * 27.4)
+
             # Filter out things way far in the future if we have >4 items
             is_overdue = (delta_miles <= 0) or (delta_days <= 0)
-            
+
             item_data = _ser_checkpoint(cp)
             item_data["projected_due_miles"] = proj_miles
-            item_data["projected_due_date"] = proj_date.isoformat() if proj_date else None
+            item_data["projected_due_date"] = proj_date.isoformat(
+            ) if proj_date else None
             item_data["is_overdue"] = is_overdue
             item_data["delta_miles"] = delta_miles
             item_data["delta_days"] = delta_days
             item_data["score"] = score
-            
+
             timeline_items.append(item_data)
-            
+
         timeline_items.sort(key=lambda x: (x["score"], x["sort_order"]))
-        
+
         next_up = timeline_items[0] if timeline_items else None
         upcoming = timeline_items[1:4] if len(timeline_items) > 1 else []
-        
+
         return {
             "next_up": next_up,
             "upcoming": upcoming
@@ -659,8 +698,15 @@ def add_fluid(
     db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
 ):
     try:
-        f = add_fluid_spec(db, user_id, vehicle_id, body.name, body.spec, body.volume)
-        return {"id": str(f.id), "name": f.name, "spec": f.spec, "volume": f.volume}
+        f = add_fluid_spec(
+            db,
+            user_id,
+            vehicle_id,
+            body.name,
+            body.spec,
+            body.volume)
+        return {"id": str(f.id), "name": f.name,
+                "spec": f.spec, "volume": f.volume}
     except Exception as e:
         raise _http(e)
 
@@ -682,7 +728,13 @@ def add_torque(
     db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
 ):
     try:
-        t = add_torque_spec(db, user_id, vehicle_id, body.name, body.ft_lb, body.nm)
+        t = add_torque_spec(
+            db,
+            user_id,
+            vehicle_id,
+            body.name,
+            body.ft_lb,
+            body.nm)
         return {"id": str(t.id), "name": t.name, "ft_lb": t.ft_lb, "nm": t.nm}
     except Exception as e:
         raise _http(e)
@@ -772,7 +824,8 @@ def list_parts(
 ):
     try:
         from vehicles.models import VehiclePart
-        parts = db.query(VehiclePart).filter(VehiclePart.vehicle_id == vehicle_id).all()
+        parts = db.query(VehiclePart).filter(
+            VehiclePart.vehicle_id == vehicle_id).all()
         return [_ser_part(p) for p in parts]
     except Exception as e:
         raise _http(e)
@@ -788,10 +841,11 @@ def add_part(
         # Verify ownership
         get_vehicles(db, user_id)
         v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-        if not v: raise not_found("Vehicle not found")
-        
+        if not v:
+            raise not_found("Vehicle not found")
+
         alts = [a.model_dump() for a in body.alternatives]
-        
+
         part = VehiclePart(
             vehicle_id=vehicle_id,
             checkpoint_id=body.checkpoint_id,
@@ -818,14 +872,21 @@ def update_part(
     try:
         from vehicles.models import VehiclePart
         get_vehicles(db, user_id)
-        part = db.query(VehiclePart).filter(VehiclePart.id == part_id, VehiclePart.vehicle_id == vehicle_id).first()
-        if not part: raise not_found("Part not found")
-        
-        if body.part_name is not None: part.part_name = body.part_name
-        if body.oem_part_number is not None: part.oem_part_number = body.oem_part_number
-        if body.oem_specs is not None: part.oem_specs = body.oem_specs
-        if body.alternatives is not None: part.alternatives = [a.model_dump() for a in body.alternatives]
-        
+        part = db.query(VehiclePart).filter(
+            VehiclePart.id == part_id,
+            VehiclePart.vehicle_id == vehicle_id).first()
+        if not part:
+            raise not_found("Part not found")
+
+        if body.part_name is not None:
+            part.part_name = body.part_name
+        if body.oem_part_number is not None:
+            part.oem_part_number = body.oem_part_number
+        if body.oem_specs is not None:
+            part.oem_specs = body.oem_specs
+        if body.alternatives is not None:
+            part.alternatives = [a.model_dump() for a in body.alternatives]
+
         db.commit()
         db.refresh(part)
         return _ser_part(part)
@@ -847,19 +908,28 @@ def lookup_part_ai(
         from vehicles.models import VehiclePart, Vehicle
         get_vehicles(db, user_id)
         v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-        if not v: raise not_found("Vehicle not found")
-        
-        existing = db.query(VehiclePart).filter(VehiclePart.checkpoint_id == body.checkpoint_id).first()
+        if not v:
+            raise not_found("Vehicle not found")
+
+        existing = db.query(VehiclePart).filter(
+            VehiclePart.checkpoint_id == body.checkpoint_id).first()
         if existing:
             return _ser_part(existing)
-            
+
         # 2. AI lookup
         settings = get_settings()
-        ollama_url = getattr(settings, "ollama_base_url", None) or "http://localhost:11434"
+        ollama_url = getattr(
+            settings,
+            "ollama_base_url",
+            None) or "http://localhost:11434"
         ollama_model = getattr(settings, "ollama_model", None) or "mistral"
-        
-        sys_prompt = f"You are a parts expert. Determine the OEM part and reputable alternatives for this vehicle: {v.year} {v.make} {v.model}. Query: {body.query}. Output ONLY strict JSON: {{\"oem\": \"number or specs\", \"alternatives\": [{{\"part_number\": \"...\", \"brand\": \"...\", \"verified\": true, \"notes\": \"...\"}}], \"confidence\": \"high/medium/low\"}}"
-        
+
+        sys_prompt = f"You are a parts expert. Determine the OEM part and reputable alternatives for this vehicle: {
+            v.year} {
+            v.make} {
+            v.model}. Query: {
+                body.query}. Output ONLY strict JSON: {{\"oem\": \"number or specs\", \"alternatives\": [{{\"part_number\": \"...\", \"brand\": \"...\", \"verified\": true, \"notes\": \"...\"}}], \"confidence\": \"high/medium/low\"}}"
+
         with httpx.Client() as client:
             resp = client.post(
                 f"{ollama_url}/api/chat",
@@ -877,7 +947,8 @@ def lookup_part_ai(
                     data = json.loads(content)
                     return data
                 except json.JSONDecodeError:
-                    return {"oem": "Unknown", "alternatives": [], "confidence": "low"}
+                    return {"oem": "Unknown",
+                            "alternatives": [], "confidence": "low"}
             return {"oem": "Unknown", "alternatives": [], "confidence": "low"}
     except Exception as e:
         raise _http(e)
@@ -889,24 +960,27 @@ async def maintenance_ai(
     db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
 ):
     from providers.rag.rag_provider import RAGProvider
-    from core.tools import get_vehicle_tools, execute_tool
+    from core.tools import get_vehicle_tools, execute_tool  # type: ignore
     from config.settings import get_settings
     import json
     import httpx
-    
+
     try:
         # Get timeline context
-        timeline_resp = get_maintenance_timeline(vehicle_id, body.current_odometer, None, db, user_id)
+        timeline_resp = get_maintenance_timeline(
+            vehicle_id, body.current_odometer, None, db, user_id)
         next_up = timeline_resp.get("next_up")
-        
+
         # Get RAG context
         rag = RAGProvider()
-        chunks = await rag.query_context(body.question, filters={"vehicle_id": vehicle_id}, top_k=5)
-        
+        chunks = await rag.query_documents(body.question, where={"vehicle_id": vehicle_id}, n_results=5)
+
         context_text = "\n".join([f"- {c['content']}" for c in chunks])
-        
+
+        from vehicles.models import Vehicle
         v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-        
+
+        assert v is not None
         prompt = f"""Vehicle: {v.year} {v.make} {v.model}
 Current Odometer: {body.current_odometer or 'Unknown'}
 Next Service Due: {next_up['description'] if next_up else 'None'}
@@ -920,11 +994,14 @@ User Question: {body.question}
 Instructions: Answer using the manual and current vehicle status.
 If the user is reporting a completed service, you MUST call the `log_vehicle_maintenance` tool.
 If asking about parts, cite OEM and verified alternatives from the context above if available."""
-        
+
         settings = get_settings()
-        ollama_url = getattr(settings, "ollama_base_url", None) or "http://localhost:11434"
+        ollama_url = getattr(
+            settings,
+            "ollama_base_url",
+            None) or "http://localhost:11434"
         ollama_model = getattr(settings, "ollama_model", None) or "mistral"
-        
+
         # Provide tools
         tools = get_vehicle_tools()
         ollama_tools = [
@@ -938,9 +1015,9 @@ If asking about parts, cite OEM and verified alternatives from the context above
             }
             for t in tools
         ]
-        
+
         messages = [{"role": "system", "content": prompt}]
-        
+
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{ollama_url}/api/chat",
@@ -952,25 +1029,28 @@ If asking about parts, cite OEM and verified alternatives from the context above
                 },
                 timeout=45.0
             )
-            
+
             if resp.status_code != 200:
                 raise bad_request(f"AI error: {resp.text}")
-                
+
             resp_data = resp.json()
             message = resp_data.get("message", {})
-            
+
             # Check for tool call
             if message.get("tool_calls"):
                 tool_call = message["tool_calls"][0]
                 tool_name = tool_call["function"]["name"]
                 tool_args = tool_call["function"]["arguments"]
-                
+
                 # Execute tool
                 tool_result = await execute_tool(
                     tool_name, tool_args,
-                    context={"user_id": user_id, "vehicle_id": vehicle_id, "db": db}
+                    context={
+                        "user_id": user_id,
+                        "vehicle_id": vehicle_id,
+                        "db": db}
                 )
-                
+
                 # Send result back to get final answer
                 messages.append(message)
                 messages.append({
@@ -978,7 +1058,7 @@ If asking about parts, cite OEM and verified alternatives from the context above
                     "content": json.dumps(tool_result),
                     "name": tool_name
                 })
-                
+
                 final_resp = await client.post(
                     f"{ollama_url}/api/chat",
                     json={
@@ -993,13 +1073,13 @@ If asking about parts, cite OEM and verified alternatives from the context above
                     "tool_invoked": tool_name,
                     "tool_result": tool_result
                 }
-                
+
             return {
                 "answer": message.get("content", ""),
                 "tool_invoked": None,
                 "tool_result": None
             }
-            
+
     except Exception as e:
         logger.error(f"Maintenance AI error: {e}")
         raise _http(e)
@@ -1029,13 +1109,16 @@ async def preview_manual(
             raise bad_request("PDF has no extractable text.")
 
         settings = get_settings()
-        ollama_url   = getattr(settings, "ollama_base_url", None) or None
-        ollama_model = getattr(settings, "ollama_model",    None) or "mistral"
+        ollama_url = getattr(settings, "ollama_base_url", None) or None
+        ollama_model = getattr(settings, "ollama_model", None) or "mistral"
 
-        items = parse_manual(pdf_text, ollama_url=ollama_url, ollama_model=ollama_model)
+        items = parse_manual(
+            pdf_text,
+            ollama_url=ollama_url,
+            ollama_model=ollama_model)
         return {
             "item_count": len(items),
-            "pdf_chars":  len(pdf_text),
+            "pdf_chars": len(pdf_text),
             "items": items,
         }
     except HTTPException:
@@ -1069,17 +1152,22 @@ async def upload_manual(
             raise bad_request(f"Could not read PDF: {e}")
 
         if len(pdf_text.strip()) < 200:
-            raise bad_request("PDF has no extractable text. Scanned/image-only PDFs are not supported.")
+            raise bad_request(
+                "PDF has no extractable text. Scanned/image-only PDFs are not supported.")
 
         settings = get_settings()
-        ollama_url   = getattr(settings, "ollama_base_url", None) or None
-        ollama_model = getattr(settings, "ollama_model",    None) or "mistral"
+        ollama_url = getattr(settings, "ollama_base_url", None) or None
+        ollama_model = getattr(settings, "ollama_model", None) or "mistral"
 
-        items = parse_manual(pdf_text, ollama_url=ollama_url, ollama_model=ollama_model)
+        items = parse_manual(
+            pdf_text,
+            ollama_url=ollama_url,
+            ollama_model=ollama_model)
 
         if not items:
-            raise bad_request("No maintenance data found. Check that the PDF contains a maintenance schedule or specifications section.")
-            
+            raise bad_request(
+                "No maintenance data found. Check that the PDF contains a maintenance schedule or specifications section.")
+
         # Phase 5: Ingest into RAG provider for conversational retrieval
         try:
             from providers.rag.rag_provider import RAGProvider
@@ -1090,9 +1178,14 @@ async def upload_manual(
                 "user_id": user_id,
                 "type": "vehicle_manual"
             })
-            logger.info("Manual '%s' ingested into RAG store for vehicle %s.", file.filename, vehicle_id)
+            logger.info(
+                "Manual '%s' ingested into RAG store for vehicle %s.",
+                file.filename,
+                vehicle_id)
         except Exception as rag_exc:
-            logger.warning("RAG ingestion failed for manual (non-fatal): %s", rag_exc)
+            logger.warning(
+                "RAG ingestion failed for manual (non-fatal): %s",
+                rag_exc)
 
         result = apply_manual_intervals(db, user_id, vehicle_id, items)
         return result
@@ -1113,7 +1206,8 @@ def list_assignments(
     user_id: str = Depends(get_current_user_id),
 ):
     try:
-        return [_ser_assignment(a) for a in get_assignments_for_vehicle(db, user_id, vehicle_id)]
+        return [_ser_assignment(a) for a in get_assignments_for_vehicle(
+            db, user_id, vehicle_id)]
     except Exception as e:
         raise _http(e)
 
@@ -1153,7 +1247,8 @@ def list_logs(
     db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
 ):
     try:
-        return [_ser_log(log) for log in get_service_logs(db, user_id, vehicle_id)]
+        return [_ser_log(log)
+                for log in get_service_logs(db, user_id, vehicle_id)]
     except Exception as e:
         raise _http(e)
 
@@ -1166,11 +1261,11 @@ def create_log(
     try:
         check_results = [
             {
-                "description":    cr.description,
+                "description": cr.description,
                 "check_point_id": cr.check_point_id,
-                "actual_value":   cr.actual_value,
-                "status":         cr.status,
-                "passed":         cr.passed,
+                "actual_value": cr.actual_value,
+                "status": cr.status,
+                "passed": cr.passed,
             }
             for cr in body.check_results
         ]
@@ -1225,7 +1320,11 @@ def delete_log(
         raise _http(e)
 
 
-_RECEIPT_ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp", "application/pdf"}
+_RECEIPT_ALLOWED_MIME = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/pdf"}
 _RECEIPT_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
@@ -1238,12 +1337,17 @@ async def upload_receipt(
 ):
     mime = (file.content_type or "").lower().split(";")[0].strip()
     if mime not in _RECEIPT_ALLOWED_MIME:
-        raise HTTPException(status_code=415, detail="File type not allowed. Permitted: JPEG, PNG, WebP, PDF.")
+        raise HTTPException(
+            status_code=415,
+            detail="File type not allowed. Permitted: JPEG, PNG, WebP, PDF.")
     try:
         data = await file.read()
         if len(data) > _RECEIPT_MAX_BYTES:
-            raise HTTPException(status_code=413, detail="File exceeds 10 MB limit.")
-        log  = attach_receipt(db, user_id, log_id, data, file.filename or "receipt")
+            raise HTTPException(
+                status_code=413,
+                detail="File exceeds 10 MB limit.")
+        log = attach_receipt(db, user_id, log_id, data,
+                             file.filename or "receipt")
         return _ser_log(log)
     except HTTPException:
         raise

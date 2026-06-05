@@ -30,15 +30,15 @@ router = APIRouter(prefix="/api/remote-ollama", tags=["remote-ollama"])
 
 
 class RigCreate(BaseModel):
-    label:    str = Field(..., min_length=1, max_length=80)
+    label: str = Field(..., min_length=1, max_length=80)
     base_url: str = Field(..., min_length=8, max_length=300)
-    notes:    str = Field(default="")
+    notes: str = Field(default="")
 
 
 class RigUpdate(BaseModel):
-    label:     Optional[str]  = Field(default=None, min_length=1, max_length=80)
-    base_url:  Optional[str]  = None
-    notes:     Optional[str]  = None
+    label: Optional[str] = Field(default=None, min_length=1, max_length=80)
+    base_url: Optional[str] = None
+    notes: Optional[str] = None
     is_active: Optional[bool] = None
 
 
@@ -47,7 +47,8 @@ def _require_enabled() -> None:
         raise not_found("Remote Ollama is disabled.")
 
 
-async def _require_admin(authorization: Optional[str] = Header(default=None)) -> str:
+async def _require_admin(
+        authorization: Optional[str] = Header(default=None)) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
@@ -143,4 +144,5 @@ async def probe_rig_health(
         raise not_found("Rig not found.")
     health, models = await health_check(rig["base_url"])
     updated = await store.record_remote_rig_health(rig_id, health=health, models=models)
-    return updated or {"id": rig_id, "last_health": health, "last_models": models}
+    return updated or {"id": rig_id,
+                       "last_health": health, "last_models": models}

@@ -7,7 +7,6 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Header, Request
 from pydantic import BaseModel
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 from core.limiter import limiter
 from config.settings import get_settings
 from providers.voice_id.voice_id_provider import VoiceIDProvider
@@ -15,6 +14,7 @@ from providers.voice_id.voice_id_provider import VoiceIDProvider
 router = APIRouter(prefix="/api/voice-id", tags=["voice-id"])
 
 _provider: Optional[VoiceIDProvider] = None
+
 
 def _get_provider() -> VoiceIDProvider:
     global _provider
@@ -42,7 +42,8 @@ class IdentifyResponse(BaseModel):
     runner_up_score: Optional[float] = None
 
 
-async def _require_user(authorization: Optional[str] = Header(default=None)) -> str:
+async def _require_user(
+        authorization: Optional[str] = Header(default=None)) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
     payload = await decode_token(authorization.removeprefix("Bearer "))
@@ -51,7 +52,8 @@ async def _require_user(authorization: Optional[str] = Header(default=None)) -> 
     return payload["sub"]
 
 
-async def _require_admin(authorization: Optional[str] = Header(default=None)) -> str:
+async def _require_admin(
+        authorization: Optional[str] = Header(default=None)) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
     payload = await decode_token(authorization.removeprefix("Bearer "))

@@ -20,7 +20,6 @@ empty list — RAG keeps working via the default `unstructured_extract`.
 
 from __future__ import annotations
 
-import io
 import logging
 import os
 import tempfile
@@ -49,7 +48,8 @@ def markitdown_extract(
         Empty list on any failure or when MarkItDown is not installed.
     """
     if not file_path and not file_bytes:
-        logger.warning("markitdown_extract called without file_path or file_bytes.")
+        logger.warning(
+            "markitdown_extract called without file_path or file_bytes.")
         return []
 
     try:
@@ -76,12 +76,12 @@ def markitdown_extract(
                 target_path = temp_path
 
         result = md.convert(target_path)
-        text   = (getattr(result, "text_content", None) or "").strip()
+        text = (getattr(result, "text_content", None) or "").strip()
         if not text:
             return []
 
         metadata: Dict[str, Any] = {
-            "filename":  filename or os.path.basename(target_path),
+            "filename": filename or os.path.basename(target_path or ""),
             "extractor": "markitdown",
         }
         title = getattr(result, "title", None)
@@ -91,7 +91,10 @@ def markitdown_extract(
         return [{"text": text, "metadata": metadata}]
 
     except Exception as exc:
-        logger.error("MarkItDown extraction failed for %s: %s", filename or file_path, exc)
+        logger.error(
+            "MarkItDown extraction failed for %s: %s",
+            filename or file_path,
+            exc)
         return []
     finally:
         if temp_path and os.path.exists(temp_path):
@@ -107,4 +110,5 @@ def extract(
     filename: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Alias matching the legacy `unstructured_extract` symbol name."""
-    return markitdown_extract(file_path=file_path, file_bytes=file_bytes, filename=filename)
+    return markitdown_extract(
+        file_path=file_path, file_bytes=file_bytes, filename=filename)

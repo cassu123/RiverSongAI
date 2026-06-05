@@ -10,14 +10,14 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
-_CACHE_TTL_SOLAR    = 300   # 5 min
-_CACHE_TTL_AURORA   = 300   # 5 min
+_CACHE_TTL_SOLAR = 300   # 5 min
+_CACHE_TTL_AURORA = 300   # 5 min
 _CACHE_TTL_LAUNCHES = 900   # 15 min
 
 _cache_solar: dict[str, tuple[dict, float]] = {}
@@ -46,15 +46,20 @@ async def _fetch_solar() -> dict:
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             kp_resp, flares_resp, wind_resp, mag_resp = await asyncio.gather(
-                client.get("https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"),
-                client.get("https://services.swpc.noaa.gov/json/goes/primary/xrays-7-day.json"),
-                client.get("https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json"),
-                client.get("https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json"),
+                client.get(
+                    "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"),
+                client.get(
+                    "https://services.swpc.noaa.gov/json/goes/primary/xrays-7-day.json"),
+                client.get(
+                    "https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json"),
+                client.get(
+                    "https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json"),
                 return_exceptions=True
             )
 
-            if not isinstance(kp_resp, Exception) and kp_resp.status_code == 200:
-                data = kp_resp.json()
+            if not isinstance(
+                    kp_resp, Exception) and kp_resp.status_code == 200:  # type: ignore
+                data = kp_resp.json()  # type: ignore
                 if len(data) > 1:
                     last_row = data[-1]
                     try:
@@ -75,26 +80,30 @@ async def _fetch_solar() -> dict:
                     except (ValueError, IndexError):
                         pass
 
-            if not isinstance(flares_resp, Exception) and flares_resp.status_code == 200:
-                data = flares_resp.json()
-                now = datetime.now(timezone.utc).timestamp()
-                flares = []
-                # In real SWPC xrays, flux is under "flux". It's an array of dicts.
+            if not isinstance(
+                    flares_resp, Exception) and flares_resp.status_code == 200:  # type: ignore
+                data = flares_resp.json()  # type: ignore
+                datetime.now(timezone.utc).timestamp()
+                pass
                 # Threshold for C-class is 1e-6 W/m²
                 # Simplified flares extraction logic
-                pass # The API requires parsing the xrays-7-day.json, skipping deep parsing to avoid errors, leaving empty if hard to parse, wait, I can try to extract.
+                # The API requires parsing the xrays-7-day.json, skipping deep
+                # parsing to avoid errors, leaving empty if hard to parse,
+                # wait, I can try to extract.
 
-            if not isinstance(wind_resp, Exception) and wind_resp.status_code == 200:
-                data = wind_resp.json()
+            if not isinstance(
+                    wind_resp, Exception) and wind_resp.status_code == 200:  # type: ignore
+                data = wind_resp.json()  # type: ignore
                 if len(data) > 1:
                     last_row = data[-1]
                     try:
                         result["solar_wind_speed_kms"] = float(last_row[2])
                     except (ValueError, IndexError):
                         pass
-            
-            if not isinstance(mag_resp, Exception) and mag_resp.status_code == 200:
-                data = mag_resp.json()
+
+            if not isinstance(
+                    mag_resp, Exception) and mag_resp.status_code == 200:  # type: ignore
+                data = mag_resp.json()  # type: ignore
                 if len(data) > 1:
                     last_row = data[-1]
                     try:
@@ -126,9 +135,10 @@ async def _fetch_aurora(lat: float) -> dict:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get("https://services.swpc.noaa.gov/products/noaa-aurora-forecast.json")
             if resp.status_code == 200:
-                data = resp.json()
-                # Dummy viewline extraction for stability, real SWPC parsing is complex
-                result["viewline_lat"] = 60.0 # Placeholder
+                resp.json()
+                # Dummy viewline extraction for stability, real SWPC parsing is
+                # complex
+                result["viewline_lat"] = 60.0  # Placeholder
                 if lat >= 60.0:
                     result["your_chance"] = "likely"
                 elif lat >= 57.0:
@@ -157,7 +167,7 @@ async def _fetch_launches() -> list:
                     mission = item.get("mission") or {}
                     status = item.get("status") or {}
                     provider = item.get("launch_service_provider") or {}
-                    
+
                     result.append({
                         "id": item.get("id"),
                         "name": item.get("name"),
@@ -174,7 +184,8 @@ async def _fetch_launches() -> list:
     except Exception as exc:
         logger.warning("Launches fetch failed: %s", exc)
 
-    _cache_launches["launches"] = (result, time.monotonic() + _CACHE_TTL_LAUNCHES)
+    _cache_launches["launches"] = (
+        result, time.monotonic() + _CACHE_TTL_LAUNCHES)
     return result
 
 
@@ -188,7 +199,8 @@ async def fetch_space(lat: float, lon: float) -> dict[str, Any]:
         _fetch_launches()
     )
 
-    # We determine cached status roughly by if any was cached... Actually let's just set False for top-level.
+    # We determine cached status roughly by if any was cached... Actually
+    # let's just set False for top-level.
     return {
         "solar": solar,
         "aurora": aurora,

@@ -9,16 +9,18 @@ import logging
 import httpx
 import hmac
 import hashlib
-from typing import Dict, Optional
+from typing import Dict
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class ShopifyCredentials:
     shop: str
     access_token: str
     scope: str
+
 
 class ShopifyAuthProvider:
     """
@@ -40,7 +42,7 @@ class ShopifyAuthProvider:
         # Ensure shop is in the correct format (myshopify.com)
         if not shop.endswith(".myshopify.com"):
             shop = f"{shop}.myshopify.com"
-        
+
         return (
             f"https://{shop}/admin/oauth/authorize?"
             f"client_id={self.api_key}&"
@@ -63,7 +65,7 @@ class ShopifyAuthProvider:
             })
             resp.raise_for_status()
             data = resp.json()
-            
+
             return ShopifyCredentials(
                 shop=shop,
                 access_token=data["access_token"],
@@ -76,18 +78,18 @@ class ShopifyAuthProvider:
         """
         if "hmac" not in params:
             return False
-            
+
         received_hmac = params["hmac"]
         # Remove hmac from params to calculate
         filtered_params = {k: v for k, v in params.items() if k != "hmac"}
         # Sort keys and join
         sorted_params = sorted(filtered_params.items())
         query_string = "&".join([f"{k}={v}" for k, v in sorted_params])
-        
+
         calculated_hmac = hmac.new(
             self.api_secret.encode("utf-8"),
             query_string.encode("utf-8"),
             hashlib.sha256
         ).hexdigest()
-        
+
         return hmac.compare_digest(calculated_hmac, received_hmac)

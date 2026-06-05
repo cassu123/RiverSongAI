@@ -33,7 +33,8 @@ def _is_enabled() -> bool:
     settings = get_settings()
     if getattr(settings, "code_interpreter_enabled", None) is not None:
         return bool(settings.code_interpreter_enabled)
-    return os.getenv("CODE_INTERPRETER_ENABLED", "false").strip().lower() in ("1", "true", "yes")
+    return os.getenv("CODE_INTERPRETER_ENABLED",
+                     "false").strip().lower() in ("1", "true", "yes")
 
 
 async def run_code(code: str) -> str:
@@ -50,7 +51,10 @@ async def run_code(code: str) -> str:
         return "Error: open-interpreter is not installed."
 
     settings = get_settings()
-    ollama_base = getattr(settings, "ollama_base_url", "http://localhost:11434")
+    ollama_base = getattr(
+        settings,
+        "ollama_base_url",
+        "http://localhost:11434")
     local_model = getattr(settings, "llm_model", "llama3.2:3b")
 
     # Pin to local Ollama every call so a settings reload propagates without

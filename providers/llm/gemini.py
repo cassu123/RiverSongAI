@@ -39,6 +39,7 @@ _CLOUD_DELAY_WARNING = (
     "Response time depends on network and API load."
 )
 
+
 def _friendly_error(exc: Exception) -> str:
     err_str = str(exc).lower()
     if "rate limit" in err_str or "429" in err_str or "quota" in err_str:
@@ -123,7 +124,7 @@ class GeminiLLM(LLMProvider):
         try:
             async for chunk in await self._client.aio.models.generate_content_stream(
                 model=self._model,
-                contents=chat_messages,
+                contents=chat_messages,  # type: ignore
                 config=config,
             ):
                 text = chunk.text
@@ -134,7 +135,8 @@ class GeminiLLM(LLMProvider):
             logger.error("Gemini API call failed: %s", exc, exc_info=True)
             yield _friendly_error(exc)
 
-    async def stream_response_thinking(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+    async def stream_response_thinking(
+            self, messages: List[dict]) -> AsyncGenerator[str, None]:
         """Thinking mode for Gemini 2.5 models. Falls back for 2.0 and older."""
         if "2.5" not in self._model:
             async for chunk in self.stream_response(messages):
@@ -163,15 +165,16 @@ class GeminiLLM(LLMProvider):
             thinking_config=genai_types.ThinkingConfig(thinking_budget=5000),
         )
         try:
-            async for chunk in await self._client.aio.models.generate_content_stream(
+            async for chunk in await self._client.aio.models.generate_content_stream(  # type: ignore
                 model=self._model,
-                contents=chat_messages,
+                contents=chat_messages,  # type: ignore
                 config=config,
             ):
-                text = chunk.text
+                text = chunk.text  # type: ignore
                 if text:
                     yield text
         except Exception as exc:
-            logger.warning("Gemini thinking mode failed, falling back: %s", exc)
+            logger.warning(
+                "Gemini thinking mode failed, falling back: %s", exc)
             async for chunk in self.stream_response(messages):
                 yield chunk

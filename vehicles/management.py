@@ -154,7 +154,7 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _uid(s) -> "uuid.UUID":
+def _uid(s) -> "uuid.UUID":  # type: ignore
     """Convert a str/UUID to uuid.UUID for Uuid(as_uuid=True) column comparisons."""
     import uuid as _u
     return s if isinstance(s, _u.UUID) else _u.UUID(str(s))
@@ -663,7 +663,7 @@ def parse_manual_local(pdf_text: str) -> list[dict]:
         if any(k in item_name.lower() for k in ("tire", "pressure", "brake")):
             m = RE_PRESSURE.search(text)
             if m:
-                val, unit = m.group(1), m.group(2).upper()
+                val, unit = m.group(1), m.group(2).upper()  # type: ignore
                 return f"{val} {unit}", float(val), None, unit
 
         # Text-based specs — item-specific patterns

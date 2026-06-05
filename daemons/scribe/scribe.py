@@ -74,7 +74,7 @@ class ScribeDaemon(BaseDaemon):
 
             # 2. For each stale note, extract facts
             from core.conversation_loop import _build_llm_provider
-            llm = _build_llm_provider()
+            llm, _ = _build_llm_provider()
             
             for note in stale_notes:
                 vpath = note["virtual_path"]

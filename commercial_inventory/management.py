@@ -254,7 +254,7 @@ def remove_member(
         (workspace_members.c.workspace_id == workspace_id) &
         (workspace_members.c.user_id == member_user_id)
     ))
-    if result.rowcount == 0:
+    if result.rowcount == 0:  # type: ignore
         raise NoResultFound("Member not found in workspace.")
     db.commit()
 
@@ -267,7 +267,7 @@ def update_member_role(
         (workspace_members.c.workspace_id == workspace_id) &
         (workspace_members.c.user_id == member_user_id)
     ).values(role=role))
-    if result.rowcount == 0:
+    if result.rowcount == 0:  # type: ignore
         raise NoResultFound("Member not found in workspace.")
     db.commit()
 

@@ -29,7 +29,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,9 @@ _INTENT_PATTERNS: dict[str, List[Tuple[str, int]]] = {
         (r"\b(thermostat|temperature|heating|cooling|ac|air con)\b", 2),
         (r"\b(lock|unlock|door|garage|gate)\b", 2),
         (r"\b(fan|blinds?|curtain|shutter)\b", 2),
-        (r"\b(set|adjust|change|dim|brighten)\b.{0,20}\b(light|temp|volume)\b", 2),
+        (
+            r"\b(set|adjust|change|dim|brighten)\b.{0,20}\b(light|temp|volume)\b",
+            2),
         (r"\b(home assistant|smart home|device)\b", 1),
     ],
     "quick_lookup": [
@@ -70,7 +72,9 @@ _INTENT_PATTERNS: dict[str, List[Tuple[str, int]]] = {
         (r"\b(step[- ]by[- ]step|in depth|detailed|thorough)\b", 1),
     ],
     "creative": [
-        (r"\b(write|draft|compose|create)\b.{0,30}\b(story|poem|email|letter|post|caption|bio)\b", 3),
+        (
+            r"\b(write|draft|compose|create)\b.{0,30}\b(story|poem|email|letter|post|caption|bio)\b",
+            3),
         (r"\b(story|poem|fiction|creative|narrative|tale)\b", 2),
         (r"\b(imagine|pretend|roleplay|character|plot|scene)\b", 2),
         (r"\b(brainstorm|ideas? for|come up with|suggest)\b", 1),
@@ -103,7 +107,8 @@ _INTENT_PATTERNS: dict[str, List[Tuple[str, int]]] = {
 
 # Compile all patterns once at import time
 _COMPILED: dict[str, List[Tuple[re.Pattern, int]]] = {
-    intent: [(re.compile(pat, re.IGNORECASE), weight) for pat, weight in patterns]
+    intent: [(re.compile(pat, re.IGNORECASE), weight)
+             for pat, weight in patterns]
     for intent, patterns in _INTENT_PATTERNS.items()
 }
 
@@ -127,38 +132,38 @@ _INTENT_ROUTES: dict[str, List[Tuple[str, str]]] = {
         ("nvidia_nim", "nvidia/llama-3.1-nemotron-ultra-253b-v1"),
         ("nvidia_nim", "nvidia/llama-3.3-nemotron-super-49b-v1"),
         ("nvidia_nim", "deepseek-ai/deepseek-r1"),
-        ("anthropic",  "claude-sonnet-4-6"),
-        ("ollama",     "deepseek-r1:14b"),
+        ("anthropic", "claude-sonnet-4-6"),
+        ("ollama", "deepseek-r1:14b"),
     ],
     "creative": [
         ("nvidia_nim", "moonshotai/kimi-k2"),
-        ("anthropic",  "claude-sonnet-4-6"),
+        ("anthropic", "claude-sonnet-4-6"),
         ("nvidia_nim", "meta/llama-3.1-70b-instruct"),
-        ("ollama",     "llama3.1:8b"),
+        ("ollama", "llama3.1:8b"),
     ],
     "code": [
-        ("ollama",    "qwen2.5-coder:7b"),
-        ("ollama",    "qwen2.5-coder:14b"),
+        ("ollama", "qwen2.5-coder:7b"),
+        ("ollama", "qwen2.5-coder:14b"),
         ("anthropic", "claude-sonnet-4-6"),
-        ("nvidia_nim","meta/llama-3.1-70b-instruct"),
+        ("nvidia_nim", "meta/llama-3.1-70b-instruct"),
     ],
     "commerce": [
         ("anthropic", "claude-sonnet-4-6"),
         ("anthropic", "claude-haiku-4-5-20251001"),
-        ("gemini",    "gemini-2.0-flash"),
-        ("nvidia_nim","moonshotai/kimi-k2"),
+        ("gemini", "gemini-2.0-flash"),
+        ("nvidia_nim", "moonshotai/kimi-k2"),
     ],
     "research": [
-        ("gemini",    "gemini-2.0-flash"),
-        ("gemini",    "gemini-2.5-flash-preview-04-17"),
-        ("nvidia_nim","meta/llama-3.1-70b-instruct"),
+        ("gemini", "gemini-2.0-flash"),
+        ("gemini", "gemini-2.5-flash-preview-04-17"),
+        ("nvidia_nim", "meta/llama-3.1-70b-instruct"),
         ("anthropic", "claude-haiku-4-5-20251001"),
     ],
     "general": [
-        ("ollama",    "llama3.2:3b"),
-        ("nvidia_nim","moonshotai/kimi-k2"),
+        ("ollama", "llama3.2:3b"),
+        ("nvidia_nim", "moonshotai/kimi-k2"),
         ("anthropic", "claude-haiku-4-5-20251001"),
-        ("ollama",    "llama3.2:1b"),
+        ("ollama", "llama3.2:1b"),
     ],
 }
 
@@ -220,7 +225,8 @@ def route(message: str, enabled_providers: dict[str, bool]) -> RouterDecision:
         if enabled_providers.get(provider, False):
             from providers.llm.registry import LLMRegistry
             entry = LLMRegistry.get(provider, model_id)
-            display_name = entry.display_name if entry else model_id.split("/")[-1]
+            display_name = entry.display_name if entry else model_id.split(
+                "/")[-1]
             intent_label = intent.replace("_", " ").title()
             return RouterDecision(
                 provider=provider,

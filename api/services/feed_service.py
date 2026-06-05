@@ -14,7 +14,7 @@ from fastapi import HTTPException
 
 from config.settings import get_settings
 from providers.feeds.news import fetch_articles
-from providers.feeds import news, sports, stocks, weather, flights, space, earth, happenings
+from providers.feeds import earth, happenings
 from providers.feeds.weather import fetch_weather, fetch_nws_alerts
 from providers.feeds.sports import (
     search_teams, fetch_teams_feed, fetch_standings, fetch_event_stats
@@ -33,7 +33,8 @@ class FeedService:
         return await store.get_feed_preferences(user_id)
 
     @staticmethod
-    async def save_preferences(store: Any, user_id: str, prefs: Dict[str, Any]) -> None:
+    async def save_preferences(
+            store: Any, user_id: str, prefs: Dict[str, Any]) -> None:
         await store.save_feed_preferences(user_id, prefs)
 
     @staticmethod
@@ -56,8 +57,8 @@ class FeedService:
     @staticmethod
     async def get_weather(store: Any, user_id: str) -> Dict[str, Any]:
         prefs = await store.get_feed_preferences(user_id)
-        page  = await store.get_page_settings(user_id)
-        wx    = page.get("weather", {})
+        page = await store.get_page_settings(user_id)
+        wx = page.get("weather", {})
 
         lat = wx.get("lat") or prefs.get("weather_lat")
         lon = wx.get("lon") or prefs.get("weather_lon")
@@ -72,13 +73,16 @@ class FeedService:
         else:
             unit = prefs.get("weather_unit", "celsius")
 
-        wind_unit = wx.get("wind_unit", "mph" if unit == "fahrenheit" else "kmh")
+        wind_unit = wx.get("wind_unit", "mph" if unit ==
+                           "fahrenheit" else "kmh")
 
         try:
             return await fetch_weather(lat, lon, unit, wind_unit)
         except Exception as exc:
             logger.error("Weather fetch failed for user %s: %s", user_id, exc)
-            raise HTTPException(status_code=502, detail=f"Weather fetch failed: {exc}")
+            raise HTTPException(
+                status_code=502,
+                detail=f"Weather fetch failed: {exc}")
 
     @staticmethod
     async def get_weather_alerts(store: Any, user_id: str) -> Dict[str, Any]:
@@ -87,15 +91,15 @@ class FeedService:
         lon = prefs.get("weather_lon")
         if lat is None or lon is None:
             raise HTTPException(status_code=404, detail="No location saved.")
-        
+
         alerts = await fetch_nws_alerts(lat, lon)
         return {"alerts": alerts, "count": len(alerts)}
 
     @staticmethod
     async def get_earth(store: Any, user_id: str) -> Dict[str, Any]:
         prefs = await store.get_feed_preferences(user_id)
-        page  = await store.get_page_settings(user_id)
-        wx    = page.get("weather", {})
+        page = await store.get_page_settings(user_id)
+        wx = page.get("weather", {})
         lat = wx.get("lat") or prefs.get("weather_lat")
         lon = wx.get("lon") or prefs.get("weather_lon")
         if lat is None or lon is None:
@@ -106,8 +110,8 @@ class FeedService:
     @staticmethod
     async def get_happenings(store: Any, user_id: str) -> Dict[str, Any]:
         prefs = await store.get_feed_preferences(user_id)
-        page  = await store.get_page_settings(user_id)
-        wx    = page.get("weather", {})
+        page = await store.get_page_settings(user_id)
+        wx = page.get("weather", {})
         lat = wx.get("lat") or prefs.get("weather_lat")
         lon = wx.get("lon") or prefs.get("weather_lon")
         # lat/lon optional for happenings — HN/Reddit still work without them.
@@ -118,8 +122,8 @@ class FeedService:
 
     @staticmethod
     async def get_sports_news(
-        store: Any, 
-        user_id: str, 
+        store: Any,
+        user_id: str,
         fallback_sources: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         prefs = await store.get_feed_preferences(user_id)
@@ -136,7 +140,8 @@ class FeedService:
     @staticmethod
     async def get_sports_feed(store: Any, user_id: str) -> Dict[str, Any]:
         prefs = await store.get_feed_preferences(user_id)
-        teams = [t for t in (prefs.get("sport_teams") or []) if t.get("id") and t.get("league_id")]
+        teams = [t for t in (prefs.get("sport_teams") or [])
+                 if t.get("id") and t.get("league_id")]
         if not teams:
             return {"results": [], "fixtures": []}
 
@@ -147,47 +152,52 @@ class FeedService:
         return await search_teams(q)
 
     @staticmethod
-    async def get_sports_standings(league_id: str, season: str = "") -> List[Dict[str, Any]]:
+    async def get_sports_standings(
+            league_id: str, season: str = "") -> List[Dict[str, Any]]:
         return await fetch_standings(league_id, season)
 
     @staticmethod
     async def get_sports_event_stats(event_id: str) -> List[Dict[str, Any]]:
-        return await fetch_event_stats(event_id)
+        return await fetch_event_stats(event_id)  # type: ignore
 
     @staticmethod
     async def get_stock_news(ticker: str) -> List[Dict[str, Any]]:
         settings = get_settings()
         if not settings.finnhub_api_key:
-            raise HTTPException(status_code=503, detail="FINNHUB_KEY not configured.")
+            raise HTTPException(
+                status_code=503,
+                detail="FINNHUB_KEY not configured.")
         return await fetch_finnhub_news(ticker.upper(), settings.finnhub_api_key)
 
     @staticmethod
     async def search_stocks(q: str) -> List[Dict[str, Any]]:
         settings = get_settings()
         if not settings.alpha_vantage_api_key:
-            raise HTTPException(status_code=503, detail="ALPHA_VANTAGE_KEY not configured.")
+            raise HTTPException(status_code=503,
+                                detail="ALPHA_VANTAGE_KEY not configured.")
         return await search_symbols(q, settings.alpha_vantage_api_key)
 
     @staticmethod
     async def get_stock_chart(ticker: str) -> Dict[str, Any]:
         settings = get_settings()
         if not settings.alpha_vantage_api_key:
-            raise HTTPException(status_code=503, detail="ALPHA_VANTAGE_KEY not configured.")
-        
+            raise HTTPException(status_code=503,
+                                detail="ALPHA_VANTAGE_KEY not configured.")
+
         data = await fetch_chart(ticker.upper(), settings.alpha_vantage_api_key)
         if not data:
             raise HTTPException(
-                status_code=502, 
+                status_code=502,
                 detail=f"No chart data for {ticker}. API limit may be reached."
             )
-        return data
+        return data  # type: ignore
 
     @staticmethod
     async def get_stocks(store: Any, user_id: str) -> List[Dict[str, Any]]:
-        page    = await store.get_page_settings(user_id)
+        page = await store.get_page_settings(user_id)
         tickers = page.get("markets", {}).get("watchlist")
         if not tickers:
-            prefs   = await store.get_feed_preferences(user_id)
+            prefs = await store.get_feed_preferences(user_id)
             tickers = prefs.get("stock_tickers") or []
         if not tickers:
             return []
@@ -218,10 +228,10 @@ class FeedService:
         radius_override: Optional[float] = None,
         filter_status: Optional[str] = None,
     ) -> Dict[str, Any]:
-        page  = await store.get_page_settings(user_id)
+        page = await store.get_page_settings(user_id)
         prefs = await store.get_feed_preferences(user_id)
-        wx    = page.get("weather", {})
-        fl    = page.get("flights", {})
+        wx = page.get("weather", {})
+        fl = page.get("flights", {})
 
         lat = lat_override or wx.get("lat") or prefs.get("weather_lat")
         lon = lon_override or wx.get("lon") or prefs.get("weather_lon")
@@ -241,7 +251,7 @@ class FeedService:
 
         radius = radius_override or fl.get("radar_radius_deg", 0.5)
         from providers.feeds.flights import fetch_overhead
-        result   = await fetch_overhead(lat, lon, radius_deg=radius)
+        result = await fetch_overhead(lat, lon, radius_deg=radius)
         aircraft = result.get("aircraft", [])
 
         if filter_status == "airborne":
@@ -250,19 +260,19 @@ class FeedService:
             aircraft = [f for f in aircraft if f.get("on_ground")]
 
         return {
-            "aircraft":  aircraft,
-            "cached":    result.get("cached", False),
+            "aircraft": aircraft,
+            "cached": result.get("cached", False),
             "timestamp": result.get("timestamp", ""),
-            "lat":       lat,
-            "lon":       lon,
+            "lat": lat,
+            "lon": lon,
         }
 
     @staticmethod
     async def get_space(store: Any, user_id: str) -> Dict[str, Any]:
         prefs = await store.get_feed_preferences(user_id)
-        page  = await store.get_page_settings(user_id)
-        wx    = page.get("weather", {})
-        
+        page = await store.get_page_settings(user_id)
+        wx = page.get("weather", {})
+
         lat = wx.get("lat") or prefs.get("weather_lat")
         lon = wx.get("lon") or prefs.get("weather_lon")
         if lat is None or lon is None:

@@ -290,7 +290,7 @@ def return_item(db: Session, user_id: str, item_id: str) -> InventoryItem:
     item = _get_item_or_raise(db, item_id)
     home = db.query(InvHome).filter(InvHome.id == _uid(item.home_id)).first()
     # Owner or current custodian can return
-    if str(home.owner_id) != user_id and str(item.current_custodian_id) != user_id:
+    if str(home.owner_id) != user_id and str(item.current_custodian_id) != user_id:  # type: ignore
         raise PermissionDeniedError("Only the home owner or current custodian can return an item.")
 
     item.current_custodian_id = None
@@ -347,7 +347,7 @@ def manage_collaborators(
                 collaborators_table.c.home_id == _uid(home_id),
             )
         ))
-        if result.rowcount == 0:
+        if result.rowcount == 0:  # type: ignore
             raise NoResultFound(f"'{collab.email}' is not a collaborator of this home.")
 
     elif action == "update_role":
@@ -357,7 +357,7 @@ def manage_collaborators(
                 collaborators_table.c.home_id == _uid(home_id),
             )
         ).values(role=role))
-        if result.rowcount == 0:
+        if result.rowcount == 0:  # type: ignore
             raise NoResultFound(f"'{collab.email}' is not a collaborator of this home.")
 
     else:

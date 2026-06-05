@@ -8,26 +8,27 @@ Allows n8n workflows to trigger internal River Song actions.
 from __future__ import annotations
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from config.settings import get_settings
 from core.limiter import limiter
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 from providers.automation.n8n_client import build_n8n_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/webhooks/n8n", tags=["automation"])
 
 
-async def _require_admin(authorization: Optional[str] = Header(default=None)) -> str:
+async def _require_admin(
+        authorization: Optional[str] = Header(default=None)) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload or payload.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required.")
     return payload["sub"]
+
 
 @router.post("")
 @limiter.limit(get_settings().rate_limit_webhook_n8n)
@@ -45,7 +46,7 @@ async def n8n_webhook_receiver(
 
     payload = await request.json()
     logger.info("Received n8n webhook: %s", payload)
-    
+
     action = payload.get("action")
     if action == "notify":
         message = payload.get("message", "n8n notification")
@@ -66,6 +67,7 @@ async def n8n_webhook_receiver(
 
     return {"ok": True, "message": "Webhook received"}
 
+
 @router.get("/status")
 async def n8n_status(admin_id: str = Depends(_require_admin)):
     """Returns the availability and URL of the n8n instance."""
@@ -76,6 +78,7 @@ async def n8n_status(admin_id: str = Depends(_require_admin)):
         "n8n_url": client.url,
         "n8n_enabled": client.enabled
     }
+
 
 @router.get("/workflows")
 async def n8n_workflows(admin_id: str = Depends(_require_admin)):

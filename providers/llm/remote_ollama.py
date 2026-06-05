@@ -19,7 +19,6 @@ per `settings.remote_ollama_health_timeout_seconds`.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import AsyncGenerator, List, Optional, Tuple
 
@@ -68,7 +67,8 @@ class RemoteOllamaLLM(LLMProvider):
     # Streaming chat — same shape as OllamaLLM.stream_response
     # -------------------------------------------------------------------------
 
-    async def stream_response(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+    async def stream_response(
+            self, messages: List[dict]) -> AsyncGenerator[str, None]:
         if not messages:
             return
         try:
@@ -90,12 +90,21 @@ class RemoteOllamaLLM(LLMProvider):
                         else getattr(message, "content", "")
                     )
                 else:
-                    chunk = getattr(getattr(part, "message", None), "content", "") or ""
+                    chunk = getattr(
+                        getattr(
+                            part,
+                            "message",
+                            None),
+                        "content",
+                        "") or ""
                 if chunk:
                     yield chunk
             return
         except Exception as exc:
-            logger.warning("Remote Ollama (%s) failed: %s", self._rig_label, exc)
+            logger.warning(
+                "Remote Ollama (%s) failed: %s",
+                self._rig_label,
+                exc)
             if not self._fallback_local:
                 raise
 
@@ -109,11 +118,13 @@ class RemoteOllamaLLM(LLMProvider):
         async for chunk in local.stream_response(messages):
             yield chunk
 
-    async def stream_chat(self, messages: list[dict]) -> AsyncGenerator[str, None]:
+    async def stream_chat(
+            self, messages: list[dict]) -> AsyncGenerator[str, None]:
         async for chunk in self.stream_response(messages):
             yield chunk
 
-    async def stream_response_thinking(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+    async def stream_response_thinking(
+            self, messages: List[dict]) -> AsyncGenerator[str, None]:
         # Ollama has no separate "thinking" channel; the model emits the
         # full chain-of-thought inline when prompted for it. Delegating to
         # stream_response keeps RemoteOllamaLLM swappable into ProviderPair
@@ -121,7 +132,7 @@ class RemoteOllamaLLM(LLMProvider):
         async for chunk in self.stream_response(messages):
             yield chunk
 
-    async def chat(self, messages: list[dict]) -> dict:
+    async def chat(self, messages: list[dict]) -> dict:  # type: ignore
         out = ""
         async for chunk in self.stream_response(messages):
             out += chunk
@@ -132,13 +143,15 @@ class RemoteOllamaLLM(LLMProvider):
 # Health-check + model discovery (used by the admin route)
 # -----------------------------------------------------------------------------
 
-async def health_check(base_url: str, *, timeout: Optional[float] = None) -> Tuple[str, List[str]]:
+async def health_check(
+        base_url: str, *, timeout: Optional[float] = None) -> Tuple[str, List[str]]:
     """
     Probe a rig's `/api/tags` and return `("ok" | "down" | "unknown", [model_ids])`.
     Never raises — failure is reflected via the "down" / "unknown" status.
     """
     settings = get_settings()
-    t = float(timeout if timeout is not None else getattr(settings, "remote_ollama_health_timeout_seconds", 3.0))
+    t = float(timeout if timeout is not None else getattr(
+        settings, "remote_ollama_health_timeout_seconds", 3.0))
     base = (base_url or "").rstrip("/")
     if not base:
         return ("unknown", [])
@@ -174,7 +187,8 @@ async def resolve_rig(rig_id_or_label: str, store) -> Optional[dict]:
         # Try by label (case-insensitive).
         rigs = await store.list_remote_rigs(include_inactive=True)
         match = next(
-            (r for r in rigs if (r.get("label") or "").lower() == rig_id_or_label.lower()),
+            (r for r in rigs if (r.get("label") or "").lower()
+             == rig_id_or_label.lower()),
             None,
         )
         row = match
@@ -183,7 +197,8 @@ async def resolve_rig(rig_id_or_label: str, store) -> Optional[dict]:
     return row
 
 
-def build_remote_llm_from_rig(rig: dict, model: Optional[str]) -> RemoteOllamaLLM:
+def build_remote_llm_from_rig(
+        rig: dict, model: Optional[str]) -> RemoteOllamaLLM:
     return RemoteOllamaLLM(
         base_url=rig["base_url"],
         model=model,

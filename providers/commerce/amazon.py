@@ -49,14 +49,14 @@ from __future__ import annotations
 import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 try:
-    from sp_api.api import Inventories, Orders, Catalog
+    from sp_api.api import Inventories, Orders
     from sp_api.base import Marketplaces, SellingApiException
     _SPAPI_AVAILABLE = True
 except ImportError:
@@ -173,7 +173,9 @@ class AmazonProvider:
         Returns all SKUs with quantity, ASIN, and condition data.
         """
         marketplace = self._marketplace()
-        client = Inventories(credentials=self._credentials, marketplace=marketplace)
+        client = Inventories(
+            credentials=self._credentials,
+            marketplace=marketplace)
 
         items: List[InventoryItem] = []
         next_token: Optional[str] = None
@@ -197,7 +199,9 @@ class AmazonProvider:
 
             for s in summaries:
                 qty = s.get("inventoryDetails", {}) or {}
-                fulfillable = (qty.get("fulfillableQuantity") or {}).get("quantity", 0)
+                fulfillable = (
+                    qty.get("fulfillableQuantity") or {}).get(
+                    "quantity", 0)
                 reserved = sum(
                     v.get("quantity", 0)
                     for v in (qty.get("reservedQuantity") or {}).values()
@@ -224,7 +228,8 @@ class AmazonProvider:
 
         return items
 
-    def _sync_get_orders(self, days_back: int, statuses: List[str]) -> List[AmazonOrder]:
+    def _sync_get_orders(self, days_back: int,
+                         statuses: List[str]) -> List[AmazonOrder]:
         """Fetch recent orders filtered by status."""
         marketplace = self._marketplace()
         client = Orders(credentials=self._credentials, marketplace=marketplace)
@@ -256,7 +261,7 @@ class AmazonProvider:
                 status=o.get("OrderStatus", ""),
                 purchase_date=o.get("PurchaseDate", ""),
                 item_count=int(o.get("NumberOfItemsShipped", 0) or 0)
-                    + int(o.get("NumberOfItemsUnshipped", 0) or 0),
+                + int(o.get("NumberOfItemsUnshipped", 0) or 0),
                 total_amount=amount,
                 ship_by=o.get("LatestShipDate"),
                 buyer_name=o.get("BuyerInfo", {}).get("BuyerName"),
@@ -341,14 +346,20 @@ class AmazonProvider:
             )
         if low:
             names = ", ".join(
-                f"{self._short_name(i.product_name)} ({i.fulfillable_quantity} left)"
+                f"{
+                    self._short_name(
+                        i.product_name)} ({
+                    i.fulfillable_quantity} left)"
                 for i in low[:5]
             )
             parts.append(
                 f"{len(low)} item{'s are' if len(low) != 1 else ' is'} running low: {names}."
             )
         if len(items) > 5:
-            parts.append(f"There are {len(items) - 5} more low-stock items in total.")
+            parts.append(
+                f"There are {
+                    len(items) -
+                    5} more low-stock items in total.")
         return " ".join(parts)
 
     @staticmethod
@@ -359,9 +370,13 @@ class AmazonProvider:
         unshipped = sum(1 for o in orders if o.status == "Unshipped")
         parts = []
         if pending:
-            parts.append(f"{pending} pending order{'s' if pending != 1 else ''}")
+            parts.append(
+                f"{pending} pending order{
+                    's' if pending != 1 else ''}")
         if unshipped:
-            parts.append(f"{unshipped} unshipped order{'s' if unshipped != 1 else ''}")
+            parts.append(
+                f"{unshipped} unshipped order{
+                    's' if unshipped != 1 else ''}")
         summary = " and ".join(parts) if parts else f"{len(orders)} orders"
         return f"You have {summary} that need attention."
 

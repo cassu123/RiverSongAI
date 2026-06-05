@@ -43,21 +43,21 @@ from typing import Optional
 # =============================================================================
 
 class TTLOption:
-    SHORT    = "short"      # 7 days
+    SHORT = "short"      # 7 days
     STANDARD = "standard"   # 30 days  (default)
     EXTENDED = "extended"   # 90 days
-    LONG     = "long"       # 365 days
-    FOREVER  = "forever"    # never deleted
+    LONG = "long"       # 365 days
+    FOREVER = "forever"    # never deleted
 
     ALL = [SHORT, STANDARD, EXTENDED, LONG, FOREVER]
 
     # Maps each option to its day count; None means no expiry
     DAYS: dict[str, Optional[int]] = {
-        SHORT:    7,
+        SHORT: 7,
         STANDARD: 30,
         EXTENDED: 90,
-        LONG:     365,
-        FOREVER:  None,
+        LONG: 365,
+        FOREVER: None,
     }
 
     @classmethod
@@ -92,8 +92,12 @@ class Fact:
     key: str
     value: str
     source: str = "explicit"         # "explicit" | "inferred"
-    created_at: datetime = field(default_factory=lambda: datetime.now(tz=timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(
+            tz=timezone.utc))
+    updated_at: datetime = field(
+        default_factory=lambda: datetime.now(
+            tz=timezone.utc))
 
 
 # =============================================================================
@@ -123,7 +127,9 @@ class Preference:
     category: str
     value: str                       # JSON string for complex values
     confidence: str = "low"          # "low" | "medium" | "high"
-    last_updated: datetime = field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    last_updated: datetime = field(
+        default_factory=lambda: datetime.now(
+            tz=timezone.utc))
 
 
 # =============================================================================
@@ -155,7 +161,9 @@ class ConversationSummary:
     expires_at: Optional[datetime] = None
     reference_count: int = 0
     last_referenced: Optional[datetime] = None
-    created_at: datetime = field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(
+            tz=timezone.utc))
 
 
 # =============================================================================
@@ -206,7 +214,7 @@ class LLMSettings:
     cloud_fallback_provider: Optional[str] = None
     cloud_fallback_model: Optional[str] = None
     voice_id: str = "river"   # active TTS voice from the voice registry
-    whisper_model: str = "base" # active STT Whisper model size
+    whisper_model: str = "base"  # active STT Whisper model size
 
 
 # =============================================================================

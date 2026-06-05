@@ -99,11 +99,13 @@ class DeviceRegistry:
 
         if not isinstance(devices, dict):
             raise ValueError(
-                f"Device registry 'devices' must be an object (dict), got {type(devices)}"
+                f"Device registry 'devices' must be an object (dict), got {
+                    type(devices)}"
             )
         if not isinstance(groups, dict):
             raise ValueError(
-                f"Device registry 'groups' must be an object (dict), got {type(groups)}"
+                f"Device registry 'groups' must be an object (dict), got {
+                    type(groups)}"
             )
 
         self._devices = {k.lower(): v for k, v in devices.items()}
@@ -139,7 +141,7 @@ class DeviceRegistry:
 
         # 2. Exact group match.
         if lower in self._groups:
-            result = self._groups[lower]
+            result = self._groups[lower]  # type: ignore
             logger.debug("Exact group match: '%s' -> %s.", name, result)
             return result
 
@@ -155,7 +157,7 @@ class DeviceRegistry:
         # 4. Fuzzy group match.
         best_key, best_score = _best_match(lower, self._groups.keys())
         if best_score >= _FUZZY_THRESHOLD:
-            result = self._groups[best_key]
+            result = self._groups[best_key]  # type: ignore
             logger.debug(
                 "Fuzzy group match: '%s' -> %s (score=%.2f).", name, result, best_score
             )

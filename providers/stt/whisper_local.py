@@ -25,8 +25,6 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
-import os
-import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import Optional
@@ -94,11 +92,12 @@ class WhisperLocalSTT(STTProvider):
                 device=device,
                 compute_type=compute_type
             )
-            logger.info("Faster-Whisper model '%s' loaded on %s (%s).", 
+            logger.info("Faster-Whisper model '%s' loaded on %s (%s).",
                         self._model_size, device, compute_type)
         except Exception as exc:
             raise RuntimeError(
-                f"Failed to load Faster-Whisper model '{self._model_size}': {exc}"
+                f"Failed to load Faster-Whisper model '{
+                    self._model_size}': {exc}"
             ) from exc
 
     async def transcribe(self, audio_bytes: bytes) -> str:
@@ -137,7 +136,8 @@ class WhisperLocalSTT(STTProvider):
                     io.BytesIO(audio_bytes), dtype="float32"
                 )
             except Exception as exc:
-                raise RuntimeError(f"Failed to decode WAV bytes: {exc}") from exc
+                raise RuntimeError(
+                    f"Failed to decode WAV bytes: {exc}") from exc
 
             # Convert stereo to mono if needed
             if audio_np.ndim > 1:
@@ -145,11 +145,20 @@ class WhisperLocalSTT(STTProvider):
 
             # Resample to 16 kHz if the browser sent a different rate
             if sample_rate != WHISPER_SAMPLE_RATE:
-                target_length = int(len(audio_np) * WHISPER_SAMPLE_RATE / sample_rate)
-                audio_np = scipy.signal.resample(audio_np, target_length).astype(np.float32)
+                target_length = int(
+                    len(audio_np) *
+                    WHISPER_SAMPLE_RATE /
+                    sample_rate)
+                audio_np = scipy.signal.resample(
+                    audio_np, target_length).astype(
+                    np.float32)
         else:
             # Assume raw 16-bit PCM at 16kHz from AudioWorklet
-            audio_np = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+            audio_np = np.frombuffer(
+                audio_bytes,
+                dtype=np.int16).astype(
+                np.float32) / 32768.0
 
-        segments, _ = self._model.transcribe(audio_np, beam_size=5, language="en")
+        segments, _ = self._model.transcribe(
+            audio_np, beam_size=5, language="en")
         return " ".join(s.text.strip() for s in segments)

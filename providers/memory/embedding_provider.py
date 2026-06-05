@@ -47,7 +47,11 @@ class EmbeddingProvider:
 
     def __init__(self) -> None:
         self._settings = get_settings()
-        self._backend  = (getattr(self._settings, "embedding_backend", "ollama") or "ollama").lower()
+        self._backend = (
+            getattr(
+                self._settings,
+                "embedding_backend",
+                "ollama") or "ollama").lower()
         self._ollama_client: Optional[Any] = None
 
     def _get_ollama_client(self) -> Optional[Any]:
@@ -60,7 +64,8 @@ class EmbeddingProvider:
                 "Ollama package missing; install 'ollama' to use the ollama embedding backend."
             )
             return None
-        self._ollama_client = ollama.AsyncClient(host=self._settings.ollama_base_url)
+        self._ollama_client = ollama.AsyncClient(
+            host=self._settings.ollama_base_url)
         return self._ollama_client
 
     async def embed(self, text: str) -> Optional[List[float]]:
@@ -104,7 +109,8 @@ class EmbeddingProvider:
         if model is None:
             return None
         try:
-            # fastembed returns a generator of numpy arrays; one input → one output.
+            # fastembed returns a generator of numpy arrays; one input → one
+            # output.
             vectors = await asyncio.to_thread(lambda: list(model.embed([text])))
             if not vectors:
                 return None
@@ -141,12 +147,15 @@ def _get_fastembed_model(model_id: str):
         return None
 
     try:
-        _fastembed_model    = TextEmbedding(model_name=model_id)
+        _fastembed_model = TextEmbedding(model_name=model_id)
         _fastembed_model_id = model_id
         logger.info("fastembed model loaded: %s", model_id)
         return _fastembed_model
     except Exception as exc:
-        logger.warning("Could not initialise fastembed model %s: %s", model_id, exc)
-        _fastembed_model    = None
+        logger.warning(
+            "Could not initialise fastembed model %s: %s",
+            model_id,
+            exc)
+        _fastembed_model = None
         _fastembed_model_id = None
         return None

@@ -94,7 +94,8 @@ class GoogleCalendarProvider:
         loop = asyncio.get_running_loop()
         events = await loop.run_in_executor(_executor, _fetch)
         logger.info(
-            "Fetched %d upcoming events for user '%s'.", len(events), self._user_id
+            "Fetched %d upcoming events for user '%s'.", len(
+                events), self._user_id
         )
         return events
 
@@ -208,7 +209,8 @@ class GoogleCalendarProvider:
 # Factory
 # -----------------------------------------------------------------------------
 
-def build_calendar_provider(user_id: Optional[str] = None) -> GoogleCalendarProvider:
+def build_calendar_provider(
+        user_id: Optional[str] = None) -> GoogleCalendarProvider:
     """
     Convenience factory that builds a GoogleCalendarProvider using app settings.
 
@@ -224,4 +226,5 @@ def build_calendar_provider(user_id: Optional[str] = None) -> GoogleCalendarProv
         client_secrets_path=s.google_client_secrets_path,
         token_storage_path=s.google_token_storage_path,
     )
-    return GoogleCalendarProvider(auth=auth, user_id=user_id or s.default_user_id)
+    return GoogleCalendarProvider(
+        auth=auth, user_id=user_id or s.default_user_id)

@@ -14,7 +14,6 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -36,9 +35,13 @@ async def _require_admin(authorization: Optional[str]) -> str:
         raise HTTPException(status_code=401, detail="Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token.")
     if payload.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin privileges required.")
+        raise HTTPException(
+            status_code=403,
+            detail="Admin privileges required.")
     return payload["sub"]
 
 
@@ -48,11 +51,11 @@ def _authenticate_daemon(authorization: Optional[str]) -> bool:
     """
     if not authorization:
         return False
-    
+
     settings = get_settings()
     if authorization == f"Bearer {settings.daemon_internal_secret}":
         return True
-            
+
     return False
 
 
@@ -67,18 +70,22 @@ async def receive_sensor_event(
     Auth: Daemon internal secret only.
     """
     if not _authenticate_daemon(authorization):
-        raise HTTPException(status_code=403, detail="Unauthorized context update.")
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized context update.")
 
     engine = getattr(request.app.state, "context_engine", None)
     if not engine:
-        raise HTTPException(status_code=503, detail="Context engine not initialized.")
+        raise HTTPException(status_code=503,
+                            detail="Context engine not initialized.")
 
     if body.source == "warden":
         # state is expected to be person count
         persons = int(body.state) if body.state.isdigit() else 0
         activity = body.attributes.get("activity", "present")
         # heuristic if room is missing
-        room = body.room or engine._extract_room(body.entity_id, body.attributes)
+        room = body.room or engine._extract_room(
+            body.entity_id, body.attributes)
         if room:
             await engine.update_room(room, persons, activity)
     else:
@@ -103,7 +110,8 @@ async def manual_override(
 
     engine = getattr(request.app.state, "context_engine", None)
     if not engine:
-        raise HTTPException(status_code=503, detail="Context engine not initialized.")
+        raise HTTPException(status_code=503,
+                            detail="Context engine not initialized.")
 
     await engine.update_from_ha_sensor(body.entity_id, body.state, body.attributes)
     room = engine._extract_room(body.entity_id, body.attributes)
@@ -122,8 +130,8 @@ async def get_room_states(
     """
     # Simple auth check: any valid user can view context
     if not authorization or not authorization.startswith("Bearer "):
-         raise HTTPException(status_code=401, detail="Not authenticated.")
-    
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+
     token = authorization.removeprefix("Bearer ")
     if not await decode_token(token):
         raise HTTPException(status_code=401, detail="Invalid token.")
@@ -131,5 +139,5 @@ async def get_room_states(
     engine = getattr(request.app.state, "context_engine", None)
     if not engine:
         return {"rooms": {}}
-    
+
     return {"rooms": engine.get_rooms()}

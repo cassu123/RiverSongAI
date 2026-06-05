@@ -45,10 +45,9 @@ import asyncio
 import json
 import logging
 import os
-import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import httpx
 
@@ -77,7 +76,7 @@ class LibbyLoan:
     format_id: str          # e.g. "ebook-epub-adobe", "audiobook-mp3"
     expires: str            # ISO 8601 timestamp
     days_remaining: int
-    percent_complete: float # 0.0-100.0; -1.0 if not available
+    percent_complete: float  # 0.0-100.0; -1.0 if not available
     cover_url: str = ""
 
 
@@ -112,7 +111,8 @@ def _load_chip(base: str, user_id: str) -> str:
         data = json.load(fh)
     chip = data.get("chip")
     if not chip:
-        raise ValueError(f"Chip file at '{path}' is malformed -- missing 'chip' key.")
+        raise ValueError(
+            f"Chip file at '{path}' is malformed -- missing 'chip' key.")
     return chip
 
 
@@ -155,7 +155,11 @@ def _parse_loan(raw: dict) -> LibbyLoan:
     mark = raw.get("readingMark") or {}
     percent = float(mark.get("percent", -1.0)) if mark else -1.0
     covers = raw.get("covers") or {}
-    cover_url = covers.get("cover150Wide", {}).get("href", "") if covers else ""
+    cover_url = covers.get(
+        "cover150Wide",
+        {}).get(
+        "href",
+        "") if covers else ""
     return LibbyLoan(
         title=title,
         author=author,
@@ -181,7 +185,11 @@ def _parse_hold(raw: dict) -> LibbyHold:
     queue_size = int(raw.get("holdsCount", 0))
     wait = int(raw.get("estimatedWaitDays", -1))
     covers = raw.get("covers") or {}
-    cover_url = covers.get("cover150Wide", {}).get("href", "") if covers else ""
+    cover_url = covers.get(
+        "cover150Wide",
+        {}).get(
+        "href",
+        "") if covers else ""
     return LibbyHold(
         title=title,
         author=author,
@@ -273,7 +281,9 @@ class LibbyProvider:
         for i, loan in enumerate(loans[:5], 1):
             author = loan.author
             due = (
-                f"due in {loan.days_remaining} day{'s' if loan.days_remaining != 1 else ''}"
+                f"due in {
+                    loan.days_remaining} day{
+                    's' if loan.days_remaining != 1 else ''}"
                 if loan.days_remaining >= 0
                 else "expiry unknown"
             )
@@ -302,11 +312,16 @@ class LibbyProvider:
                 else "position unknown"
             )
             wait = (
-                f", about {hold.estimated_wait_days} day{'s' if hold.estimated_wait_days != 1 else ''} wait"
+                f", about {
+                    hold.estimated_wait_days} day{
+                    's' if hold.estimated_wait_days != 1 else ''} wait"
                 if hold.estimated_wait_days >= 0
                 else ""
             )
-            lines.append(f"{i}. {hold.title} by {hold.author}, {position}{wait}.")
+            lines.append(
+                f"{i}. {
+                    hold.title} by {
+                    hold.author}, {position}{wait}.")
         suffix = (
             f" And {len(holds) - 5} more."
             if len(holds) > 5
@@ -360,7 +375,8 @@ async def _register_chip(user_id: str, chip_base: str) -> None:
             "  -> 'This is the sending device'\n"
             "  An 8-digit code will appear.\n"
         )
-        code = input("Enter the 8-digit code from Libby: ").strip().replace(" ", "")
+        code = input(
+            "Enter the 8-digit code from Libby: ").strip().replace(" ", "")
         if not code.isdigit() or len(code) != 8:
             raise ValueError(f"Expected an 8-digit number, got: '{code}'")
 
@@ -374,7 +390,11 @@ async def _register_chip(user_id: str, chip_base: str) -> None:
         clone_resp.raise_for_status()
 
     _save_chip(chip_base, user_id, chip)
-    print(f"\nSetup complete. Chip saved to {_chip_file_for(chip_base, user_id)}")
+    print(
+        f"\nSetup complete. Chip saved to {
+            _chip_file_for(
+                chip_base,
+                user_id)}")
 
 
 if __name__ == "__main__":

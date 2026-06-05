@@ -9,40 +9,41 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
 ESPN_LEAGUES = {
-    "nfl":        {"sport": "football",    "league": "nfl",                      "label": "NFL",              "icon": "🏈", "category": "American Pro"},
-    "nba":        {"sport": "basketball",  "league": "nba",                      "label": "NBA",              "icon": "🏀", "category": "American Pro"},
-    "mlb":        {"sport": "baseball",    "league": "mlb",                      "label": "MLB",              "icon": "⚾", "category": "American Pro"},
-    "nhl":        {"sport": "hockey",      "league": "nhl",                      "label": "NHL",              "icon": "🏒", "category": "American Pro"},
-    "mls":        {"sport": "soccer",      "league": "usa.1",                    "label": "MLS",              "icon": "⚽", "category": "American Pro"},
-    "wnba":       {"sport": "basketball",  "league": "wnba",                     "label": "WNBA",             "icon": "🏀", "category": "American Pro"},
-    "nwsl":       {"sport": "soccer",      "league": "usa.nwsl",                 "label": "NWSL",             "icon": "⚽", "category": "American Pro"},
-    "ncaaf":      {"sport": "football",    "league": "college-football",         "label": "NCAAF",            "icon": "🏈", "category": "College"},
-    "ncaab":      {"sport": "basketball",  "league": "mens-college-basketball",  "label": "NCAAB",            "icon": "🏀", "category": "College"},
-    "ncaabw":     {"sport": "basketball",  "league": "womens-college-basketball","label": "NCAAB Women",      "icon": "🏀", "category": "College"},
-    "epl":        {"sport": "soccer",      "league": "eng.1",                    "label": "Premier League",   "icon": "⚽", "category": "Global Soccer"},
-    "laliga":     {"sport": "soccer",      "league": "esp.1",                    "label": "La Liga",          "icon": "⚽", "category": "Global Soccer"},
-    "seriea":     {"sport": "soccer",      "league": "ita.1",                    "label": "Serie A",          "icon": "⚽", "category": "Global Soccer"},
-    "bundesliga": {"sport": "soccer",      "league": "ger.1",                    "label": "Bundesliga",       "icon": "⚽", "category": "Global Soccer"},
-    "ligue1":     {"sport": "soccer",      "league": "fra.1",                    "label": "Ligue 1",          "icon": "⚽", "category": "Global Soccer"},
-    "ucl":        {"sport": "soccer",      "league": "uefa.champions",           "label": "Champions League", "icon": "⚽", "category": "Global Soccer"},
-    "uel":        {"sport": "soccer",      "league": "uefa.europa",              "label": "Europa League",    "icon": "⚽", "category": "Global Soccer"},
-    "ligamx":     {"sport": "soccer",      "league": "mex.1",                    "label": "Liga MX",          "icon": "⚽", "category": "Global Soccer"},
-    "atp":        {"sport": "tennis",      "league": "atp",                      "label": "ATP Tennis",       "icon": "🎾", "category": "Racket"},
-    "wta":        {"sport": "tennis",      "league": "wta",                      "label": "WTA Tennis",       "icon": "🎾", "category": "Racket"},
-    "pga":        {"sport": "golf",        "league": "pga",                      "label": "PGA Tour",         "icon": "⛳", "category": "Golf"},
-    "lpga":       {"sport": "golf",        "league": "lpga",                     "label": "LPGA",             "icon": "⛳", "category": "Golf"},
+    "nfl": {"sport": "football", "league": "nfl", "label": "NFL", "icon": "🏈", "category": "American Pro"},
+    "nba": {"sport": "basketball", "league": "nba", "label": "NBA", "icon": "🏀", "category": "American Pro"},
+    "mlb": {"sport": "baseball", "league": "mlb", "label": "MLB", "icon": "⚾", "category": "American Pro"},
+    "nhl": {"sport": "hockey", "league": "nhl", "label": "NHL", "icon": "🏒", "category": "American Pro"},
+    "mls": {"sport": "soccer", "league": "usa.1", "label": "MLS", "icon": "⚽", "category": "American Pro"},
+    "wnba": {"sport": "basketball", "league": "wnba", "label": "WNBA", "icon": "🏀", "category": "American Pro"},
+    "nwsl": {"sport": "soccer", "league": "usa.nwsl", "label": "NWSL", "icon": "⚽", "category": "American Pro"},
+    "ncaaf": {"sport": "football", "league": "college-football", "label": "NCAAF", "icon": "🏈", "category": "College"},
+    "ncaab": {"sport": "basketball", "league": "mens-college-basketball", "label": "NCAAB", "icon": "🏀", "category": "College"},
+    "ncaabw": {"sport": "basketball", "league": "womens-college-basketball", "label": "NCAAB Women", "icon": "🏀", "category": "College"},
+    "epl": {"sport": "soccer", "league": "eng.1", "label": "Premier League", "icon": "⚽", "category": "Global Soccer"},
+    "laliga": {"sport": "soccer", "league": "esp.1", "label": "La Liga", "icon": "⚽", "category": "Global Soccer"},
+    "seriea": {"sport": "soccer", "league": "ita.1", "label": "Serie A", "icon": "⚽", "category": "Global Soccer"},
+    "bundesliga": {"sport": "soccer", "league": "ger.1", "label": "Bundesliga", "icon": "⚽", "category": "Global Soccer"},
+    "ligue1": {"sport": "soccer", "league": "fra.1", "label": "Ligue 1", "icon": "⚽", "category": "Global Soccer"},
+    "ucl": {"sport": "soccer", "league": "uefa.champions", "label": "Champions League", "icon": "⚽", "category": "Global Soccer"},
+    "uel": {"sport": "soccer", "league": "uefa.europa", "label": "Europa League", "icon": "⚽", "category": "Global Soccer"},
+    "ligamx": {"sport": "soccer", "league": "mex.1", "label": "Liga MX", "icon": "⚽", "category": "Global Soccer"},
+    "atp": {"sport": "tennis", "league": "atp", "label": "ATP Tennis", "icon": "🎾", "category": "Racket"},
+    "wta": {"sport": "tennis", "league": "wta", "label": "WTA Tennis", "icon": "🎾", "category": "Racket"},
+    "pga": {"sport": "golf", "league": "pga", "label": "PGA Tour", "icon": "⛳", "category": "Golf"},
+    "lpga": {"sport": "golf", "league": "lpga", "label": "LPGA", "icon": "⛳", "category": "Golf"},
 }
 
 BASE_URL = "https://site.api.espn.com/apis/site/v2/sports"
 
 _cache: dict = {}
+
 
 def _get_from_cache(key: str) -> Optional[Any]:
     if key in _cache:
@@ -51,15 +52,19 @@ def _get_from_cache(key: str) -> Optional[Any]:
             return val
     return None
 
+
 def _set_cache(key: str, val: Any, ttl_sec: int):
     _cache[key] = (val, time.time() + ttl_sec)
+
 
 async def get_leagues() -> list[dict]:
     return [{"id": k, **v} for k, v in ESPN_LEAGUES.items()]
 
+
 async def get_teams(league_id: str) -> list[dict]:
     cached = _get_from_cache(f"teams:{league_id}")
-    if cached: return cached
+    if cached:
+        return cached
 
     info = ESPN_LEAGUES.get(league_id)
     if not info:
@@ -72,7 +77,7 @@ async def get_teams(league_id: str) -> list[dict]:
             resp.raise_for_status()
             data = resp.json()
             teams_data = data["sports"][0]["leagues"][0]["teams"]
-            
+
             results = []
             for t in teams_data:
                 team = t["team"]
@@ -87,19 +92,22 @@ async def get_teams(league_id: str) -> list[dict]:
                     "sport": info["sport"],
                     "icon": info["icon"],
                 })
-            
-            _set_cache(f"teams:{league_id}", results, 86400) # 24h
+
+            _set_cache(f"teams:{league_id}", results, 86400)  # 24h
             return results
     except Exception as exc:
         logger.warning("ESPN get_teams failed for %s: %s", league_id, exc)
         return []
 
+
 async def get_scoreboard(league_id: str) -> list[dict]:
     cached = _get_from_cache(f"scoreboard:{league_id}")
-    if cached: return cached
+    if cached:
+        return cached
 
     info = ESPN_LEAGUES.get(league_id)
-    if not info: return []
+    if not info:
+        return []
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -107,7 +115,7 @@ async def get_scoreboard(league_id: str) -> list[dict]:
             resp = await client.get(url)
             resp.raise_for_status()
             data = resp.json()
-            
+
             results = []
             for event in data.get("events", []):
                 competition = event["competitions"][0]
@@ -134,19 +142,22 @@ async def get_scoreboard(league_id: str) -> list[dict]:
                     "venue": competition["venue"]["fullName"] if competition.get("venue") else "",
                     "league_id": league_id,
                 })
-            
-            _set_cache(f"scoreboard:{league_id}", results, 60) # 60s
+
+            _set_cache(f"scoreboard:{league_id}", results, 60)  # 60s
             return results
     except Exception as exc:
         logger.warning("ESPN get_scoreboard failed for %s: %s", league_id, exc)
         return []
 
+
 async def get_standings(league_id: str) -> list[dict]:
     cached = _get_from_cache(f"standings:{league_id}")
-    if cached: return cached
+    if cached:
+        return cached
 
     info = ESPN_LEAGUES.get(league_id)
-    if not info: return []
+    if not info:
+        return []
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -154,7 +165,7 @@ async def get_standings(league_id: str) -> list[dict]:
             resp = await client.get(url)
             resp.raise_for_status()
             data = resp.json()
-            
+
             entries = data["standings"]["entries"]
             results = []
             for entry in entries:
@@ -166,19 +177,22 @@ async def get_standings(league_id: str) -> list[dict]:
                     "logo": team["logos"][0]["href"] if team.get("logos") else "",
                     "stats": {s["name"]: s["displayValue"] for s in entry.get("stats", [])},
                 })
-            
-            _set_cache(f"standings:{league_id}", results, 3600) # 1h
+
+            _set_cache(f"standings:{league_id}", results, 3600)  # 1h
             return results
     except Exception as exc:
         logger.warning("ESPN get_standings failed for %s: %s", league_id, exc)
         return []
 
+
 async def get_schedule(team_id: str, league_id: str) -> list[dict]:
     cached = _get_from_cache(f"schedule:{league_id}:{team_id}")
-    if cached: return cached
+    if cached:
+        return cached
 
     info = ESPN_LEAGUES.get(league_id)
-    if not info: return []
+    if not info:
+        return []
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -186,7 +200,7 @@ async def get_schedule(team_id: str, league_id: str) -> list[dict]:
             resp = await client.get(url)
             resp.raise_for_status()
             data = resp.json()
-            
+
             events = data.get("events", [])
             results = []
             for event in events:
@@ -194,7 +208,7 @@ async def get_schedule(team_id: str, league_id: str) -> list[dict]:
                 # Filter pre-game events only (state != post)
                 if comp["status"]["type"]["state"] == "post":
                     continue
-                
+
                 results.append({
                     "id": event["id"],
                     "name": event["name"],
@@ -218,19 +232,26 @@ async def get_schedule(team_id: str, league_id: str) -> list[dict]:
                 })
                 if len(results) >= 10:
                     break
-            
-            _set_cache(f"schedule:{league_id}:{team_id}", results, 3600) # 1h
+
+            _set_cache(f"schedule:{league_id}:{team_id}", results, 3600)  # 1h
             return results
     except Exception as exc:
-        logger.warning("ESPN get_schedule failed for %s/%s: %s", league_id, team_id, exc)
+        logger.warning(
+            "ESPN get_schedule failed for %s/%s: %s",
+            league_id,
+            team_id,
+            exc)
         return []
+
 
 async def get_boxscore(event_id: str, league_id: str) -> dict:
     cached = _get_from_cache(f"boxscore:{event_id}")
-    if cached: return cached
+    if cached:
+        return cached
 
     info = ESPN_LEAGUES.get(league_id)
-    if not info: return {}
+    if not info:
+        return {}
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -238,15 +259,15 @@ async def get_boxscore(event_id: str, league_id: str) -> dict:
             resp = await client.get(url)
             resp.raise_for_status()
             data = resp.json()
-            
+
             res = {
                 "header": data.get("header", {}),
                 "boxscore": data.get("boxscore", {}),
                 "plays": data.get("plays", []),
                 "league_id": league_id
             }
-            
-            _set_cache(f"boxscore:{event_id}", res, 30) # 30s
+
+            _set_cache(f"boxscore:{event_id}", res, 30)  # 30s
             return res
     except Exception as exc:
         logger.warning("ESPN get_boxscore failed for %s: %s", event_id, exc)
@@ -283,10 +304,11 @@ async def search_teams(q: str) -> list[dict]:
     for teams in all_results:
         if isinstance(teams, Exception) or not teams:
             continue
-        for team in teams:
+        for team in teams:  # type: ignore
             if team["id"] in seen:
                 continue
-            if q_lower in team["name"].lower() or q_lower in team.get("abbr", "").lower():
+            if q_lower in team["name"].lower(
+            ) or q_lower in team.get("abbr", "").lower():
                 matches.append(team)
                 seen.add(team["id"])
 
@@ -304,7 +326,8 @@ async def fetch_teams_feed(teams: list[dict]) -> dict:
         return {"results": [], "fixtures": []}
 
     team_id_set = {str(t["id"]) for t in teams if t.get("id")}
-    unique_leagues = list({t["league_id"] for t in teams if t.get("league_id")})
+    unique_leagues = list({t["league_id"]
+                          for t in teams if t.get("league_id")})
 
     # Fetch scoreboards and schedules concurrently
     scoreboard_task = asyncio.gather(
@@ -323,10 +346,11 @@ async def fetch_teams_feed(teams: list[dict]) -> dict:
     for board in scoreboard_results:
         if isinstance(board, Exception) or not board:
             continue
-        for event in board:
+        for event in board:  # type: ignore
             if event["id"] in seen_event_ids:
                 continue
-            if str(event.get("home_id", "")) in team_id_set or str(event.get("away_id", "")) in team_id_set:
+            if str(event.get("home_id", "")) in team_id_set or str(
+                    event.get("away_id", "")) in team_id_set:
                 results.append(event)
                 seen_event_ids.add(event["id"])
 
@@ -334,7 +358,7 @@ async def fetch_teams_feed(teams: list[dict]) -> dict:
     for sched in schedule_results:
         if isinstance(sched, Exception) or not sched:
             continue
-        for event in sched:
+        for event in sched:  # type: ignore
             if event["id"] not in seen_event_ids:
                 fixtures.append(event)
                 seen_event_ids.add(event["id"])
@@ -347,7 +371,8 @@ async def fetch_event_stats(event_id: str) -> dict:
     Retrieve boxscore/stats for a single event.
     Searches cached scoreboards to determine the league, then calls get_boxscore.
     """
-    # Search through all cached scoreboards to find which league owns this event
+    # Search through all cached scoreboards to find which league owns this
+    # event
     for lid in ESPN_LEAGUES:
         cached = _get_from_cache(f"scoreboard:{lid}")
         if not cached:
@@ -364,11 +389,13 @@ async def fetch_event_stats(event_id: str) -> dict:
     for lid, board in zip(active_leagues, boards):
         if isinstance(board, Exception):
             continue
-        for event in (board or []):
+        for event in (board or []):  # type: ignore
             if event["id"] == event_id:
                 return await get_boxscore(event_id, lid)
 
-    logger.warning("fetch_event_stats: event %s not found in any league scoreboard.", event_id)
+    logger.warning(
+        "fetch_event_stats: event %s not found in any league scoreboard.",
+        event_id)
     return {}
 
 

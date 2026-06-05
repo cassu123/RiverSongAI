@@ -9,7 +9,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 from pathlib import Path
 from typing import List, Optional
 
@@ -95,7 +94,8 @@ class GoogleAuth:
     # Web OAuth Flow
     # -------------------------------------------------------------------------
 
-    def get_authorization_url(self, redirect_uri: str, state: Optional[str] = None) -> str:
+    def get_authorization_url(self, redirect_uri: str,
+                              state: Optional[str] = None) -> str:
         import urllib.parse
         flow = Flow.from_client_secrets_file(
             str(self._secrets_path),
@@ -104,7 +104,8 @@ class GoogleAuth:
         )
         # We build the URL manually to avoid automatic PKCE (Proof Key for Code Exchange).
         # google-auth-oauthlib 1.0+ automatically adds PKCE challenges to the URL,
-        # but since we are stateless and don't store the verifier, the exchange fails.
+        # but since we are stateless and don't store the verifier, the exchange
+        # fails.
         params = {
             "client_id": flow.client_config["client_id"],
             "redirect_uri": redirect_uri,
@@ -117,10 +118,13 @@ class GoogleAuth:
         if state:
             params["state"] = state
 
-        auth_url = f"{flow.client_config['auth_uri']}?{urllib.parse.urlencode(params)}"
+        auth_url = f"{
+            flow.client_config['auth_uri']}?{
+            urllib.parse.urlencode(params)}"
         return auth_url
 
-    def fetch_token_from_code(self, user_id: str, code: str, redirect_uri: str) -> Credentials:
+    def fetch_token_from_code(self, user_id: str, code: str,
+                              redirect_uri: str) -> Credentials:
         flow = Flow.from_client_secrets_file(
             str(self._secrets_path),
             scopes=self._scopes,
@@ -185,7 +189,6 @@ def _build_google_auth_from_settings() -> "GoogleAuth":
 
 
 if __name__ == "__main__":
-    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--user-id", default="primary_user")
     args = parser.parse_args()

@@ -25,7 +25,7 @@ from typing import Optional
 import httpx
 
 from core.auth import create_access_token, decode_token, create_totp_challenge_token, decode_challenge_token
-from core.errors import api_error, bad_request, conflict, forbidden, not_found, unauthorized
+from core.errors import bad_request, conflict, forbidden, not_found, unauthorized
 from config.settings import get_settings
 from core.limiter import limiter
 
@@ -83,7 +83,9 @@ async def setup(request: Request, body: SetupBody):
     if await store.email_exists(body.email.lower()):
         raise conflict("An account with that email already exists.")
 
-    password_hash = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
+    password_hash = bcrypt.hashpw(
+        body.password.encode(),
+        bcrypt.gensalt()).decode()
     user_id = str(uuid.uuid4())
 
     await store.create_user(
@@ -95,9 +97,19 @@ async def setup(request: Request, body: SetupBody):
         is_approved=True,
     )
 
-    token = create_access_token(user_id=user_id, email=body.email.lower(), role="admin")
-    logger.info("Master admin account created: %s", body.email.replace('\n', '').replace('\r', ''))
-    return {"token": token, "user": {"id": user_id, "email": body.email.lower(), "display_name": body.display_name, "role": "admin", "is_approved": True}}
+    token = create_access_token(
+        user_id=user_id,
+        email=body.email.lower(),
+        role="admin")
+    logger.info(
+        "Master admin account created: %s",
+        body.email.replace(
+            '\n',
+            '').replace(
+            '\r',
+            ''))
+    return {"token": token, "user": {"id": user_id, "email": body.email.lower(
+    ), "display_name": body.display_name, "role": "admin", "is_approved": True}}
 
 
 @router.post("/signup")
@@ -109,12 +121,15 @@ async def signup(request: Request, body: SignupBody):
     store = _get_store(request)
 
     if not await store.has_admin():
-        raise bad_request("System not yet configured. Please complete admin setup first.")
+        raise bad_request(
+            "System not yet configured. Please complete admin setup first.")
 
     if await store.email_exists(body.email.lower()):
         raise conflict("An account with that email already exists.")
 
-    password_hash = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
+    password_hash = bcrypt.hashpw(
+        body.password.encode(),
+        bcrypt.gensalt()).decode()
     user_id = str(uuid.uuid4())
 
     await store.create_user(
@@ -126,8 +141,15 @@ async def signup(request: Request, body: SignupBody):
         is_approved=False,
     )
 
-    logger.info("New user registered (pending approval): %s", body.email.replace('\n', '').replace('\r', ''))
-    return {"pending": True, "message": "Account created. An admin must approve your account before you can log in."}
+    logger.info(
+        "New user registered (pending approval): %s",
+        body.email.replace(
+            '\n',
+            '').replace(
+            '\r',
+            ''))
+    return {"pending": True,
+            "message": "Account created. An admin must approve your account before you can log in."}
 
 
 @router.post("/login")
@@ -139,7 +161,8 @@ async def login(request: Request, body: LoginBody):
     if not user:
         raise unauthorized("Invalid email or password.")
 
-    if not bcrypt.checkpw(body.password.encode(), user["password_hash"].encode()):
+    if not bcrypt.checkpw(body.password.encode(),
+                          user["password_hash"].encode()):
         raise unauthorized("Invalid email or password.")
 
     if not user["is_approved"]:
@@ -151,11 +174,26 @@ async def login(request: Request, body: LoginBody):
     totp = await store.get_totp_state(user["id"])
     if totp.get("enabled"):
         challenge = create_totp_challenge_token(user_id=user["id"])
-        logger.info("2FA challenge issued for %s", body.email.replace('\n', '').replace('\r', ''))
+        logger.info(
+            "2FA challenge issued for %s",
+            body.email.replace(
+                '\n',
+                '').replace(
+                '\r',
+                ''))
         return {"require_totp": True, "challenge_token": challenge}
 
-    token = create_access_token(user_id=user["id"], email=user["email"], role=user["role"])
-    logger.info("User logged in: %s", body.email.replace('\n', '').replace('\r', ''))
+    token = create_access_token(
+        user_id=user["id"],
+        email=user["email"],
+        role=user["role"])
+    logger.info(
+        "User logged in: %s",
+        body.email.replace(
+            '\n',
+            '').replace(
+            '\r',
+            ''))
     return {
         "token": token,
         "user": {
@@ -206,7 +244,7 @@ async def login_totp(request: Request, body: TotpLoginBody):
         raise bad_request("Provide a 6-digit code or a recovery code.")
 
     store = _get_store(request)
-    user  = await store.get_user_by_id(payload["sub"])
+    user = await store.get_user_by_id(payload["sub"])
     if not user:
         raise unauthorized("User not found.")
 
@@ -216,7 +254,10 @@ async def login_totp(request: Request, body: TotpLoginBody):
     # NOT silently issue an access token — that would be a 2FA bypass.
     if totp.get("enabled") is False:
         # User disabled 2FA between step 1 and step 2 — treat as plain login.
-        token = create_access_token(user_id=user["id"], email=user["email"], role=user["role"])
+        token = create_access_token(
+            user_id=user["id"],
+            email=user["email"],
+            role=user["role"])
         return {"token": token, "user": _user_login_payload(user)}
     if totp.get("enabled") is not True:
         # Anything other than True/False means the state record is malformed.
@@ -224,7 +265,9 @@ async def login_totp(request: Request, body: TotpLoginBody):
 
     used_recovery = False
     if body.recovery_code:
-        idx = verify_recovery_code(body.recovery_code, totp.get("recovery_codes") or [])
+        idx = verify_recovery_code(
+            body.recovery_code,
+            totp.get("recovery_codes") or [])
         if idx is None:
             raise unauthorized("Invalid recovery code.")
         await store.consume_recovery_code(user["id"], idx)
@@ -233,28 +276,33 @@ async def login_totp(request: Request, body: TotpLoginBody):
         if not verify_totp(totp["secret"], body.code or ""):
             raise unauthorized("Invalid 2FA code.")
 
-    token = create_access_token(user_id=user["id"], email=user["email"], role=user["role"])
+    token = create_access_token(
+        user_id=user["id"],
+        email=user["email"],
+        role=user["role"])
     logger.info(
         "2FA login completed for %s (recovery=%s).",
         user["email"].replace('\n', '').replace('\r', ''),
         used_recovery,
     )
-    return {"token": token, "user": _user_login_payload(user), "used_recovery_code": used_recovery}
+    return {"token": token, "user": _user_login_payload(
+        user), "used_recovery_code": used_recovery}
 
 
 def _user_login_payload(user: dict) -> dict:
     return {
-        "id":                    user["id"],
-        "email":                 user["email"],
-        "display_name":          user["display_name"],
-        "role":                  user["role"],
-        "is_approved":           user["is_approved"],
+        "id": user["id"],
+        "email": user["email"],
+        "display_name": user["display_name"],
+        "role": user["role"],
+        "is_approved": user["is_approved"],
         "force_password_change": user.get("force_password_change", False),
     }
 
 
 @router.get("/2fa/status")
-async def twofa_status(request: Request, authorization: Optional[str] = Header(default=None)):
+async def twofa_status(request: Request,
+                       authorization: Optional[str] = Header(default=None)):
     """Whether the current user has 2FA enabled, and how many recovery codes remain."""
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
@@ -265,13 +313,14 @@ async def twofa_status(request: Request, authorization: Optional[str] = Header(d
     store = _get_store(request)
     state = await store.get_totp_state(payload["sub"])
     return {
-        "enabled":              bool(state.get("enabled")),
-        "recovery_codes_left":  len(state.get("recovery_codes") or []),
+        "enabled": bool(state.get("enabled")),
+        "recovery_codes_left": len(state.get("recovery_codes") or []),
     }
 
 
 @router.post("/2fa/enroll/start")
-async def twofa_enroll_start(request: Request, authorization: Optional[str] = Header(default=None)):
+async def twofa_enroll_start(
+        request: Request, authorization: Optional[str] = Header(default=None)):
     """
     Generate a fresh TOTP secret + provisioning URI + QR code (PNG b64).
     The secret is NOT persisted yet — the user must verify the first code
@@ -286,7 +335,7 @@ async def twofa_enroll_start(request: Request, authorization: Optional[str] = He
         raise unauthorized("Invalid or expired token.")
 
     store = _get_store(request)
-    user  = await store.get_user_by_id(payload["sub"])
+    user = await store.get_user_by_id(payload["sub"])
     if not user:
         raise unauthorized("User not found.")
 
@@ -295,16 +344,17 @@ async def twofa_enroll_start(request: Request, authorization: Optional[str] = He
         raise conflict("2FA is already enabled. Disable it first to re-enrol.")
 
     secret = generate_secret()
-    uri    = provisioning_uri(secret, user["email"])
+    uri = provisioning_uri(secret, user["email"])
     return {
-        "secret":      secret,
+        "secret": secret,
         "otpauth_uri": uri,
-        "qr_png_b64":  make_qr_png_base64(uri),
+        "qr_png_b64": make_qr_png_base64(uri),
     }
 
 
 @router.post("/2fa/enroll/verify")
-async def twofa_enroll_verify(body: TotpEnrollVerifyBody, request: Request, authorization: Optional[str] = Header(default=None)):
+async def twofa_enroll_verify(body: TotpEnrollVerifyBody, request: Request,
+                              authorization: Optional[str] = Header(default=None)):
     """
     Confirm the user has the secret on their authenticator by checking one
     valid code. On success, persist the secret, generate recovery codes,
@@ -319,23 +369,31 @@ async def twofa_enroll_verify(body: TotpEnrollVerifyBody, request: Request, auth
         raise unauthorized("Invalid or expired token.")
 
     if not verify_totp(body.secret, body.code):
-        raise unauthorized("Code does not match. Try again — the clock may have ticked.")
+        raise unauthorized(
+            "Code does not match. Try again — the clock may have ticked.")
 
     store = _get_store(request)
-    user  = await store.get_user_by_id(payload["sub"])
+    user = await store.get_user_by_id(payload["sub"])
     if not user:
         raise unauthorized("User not found.")
 
-    recovery_plain  = generate_recovery_codes()
+    recovery_plain = generate_recovery_codes()
     recovery_hashed = hash_recovery_codes(recovery_plain)
     await store.enable_totp(user["id"], body.secret, recovery_hashed)
-    logger.info("2FA enabled for %s.", user["email"].replace('\n', '').replace('\r', ''))
+    logger.info(
+        "2FA enabled for %s.",
+        user["email"].replace(
+            '\n',
+            '').replace(
+            '\r',
+            ''))
 
     return {"enabled": True, "recovery_codes": recovery_plain}
 
 
 @router.post("/2fa/disable")
-async def twofa_disable(body: TotpDisableBody, request: Request, authorization: Optional[str] = Header(default=None)):
+async def twofa_disable(body: TotpDisableBody, request: Request,
+                        authorization: Optional[str] = Header(default=None)):
     """
     Disable 2FA. Requires the current password AND a valid TOTP code —
     losing the phone is recoverable via recovery codes against /login/totp,
@@ -350,11 +408,12 @@ async def twofa_disable(body: TotpDisableBody, request: Request, authorization: 
         raise unauthorized("Invalid or expired token.")
 
     store = _get_store(request)
-    user  = await store.get_user_by_id(payload["sub"])
+    user = await store.get_user_by_id(payload["sub"])
     if not user:
         raise unauthorized("User not found.")
 
-    if not bcrypt.checkpw(body.password.encode("utf-8"), user["password_hash"].encode("utf-8")):
+    if not bcrypt.checkpw(body.password.encode("utf-8"),
+                          user["password_hash"].encode("utf-8")):
         raise unauthorized("Password is incorrect.")
 
     state = await store.get_totp_state(user["id"])
@@ -365,33 +424,42 @@ async def twofa_disable(body: TotpDisableBody, request: Request, authorization: 
         raise unauthorized("Invalid 2FA code.")
 
     await store.disable_totp(user["id"])
-    logger.info("2FA disabled for %s.", user["email"].replace('\n', '').replace('\r', ''))
+    logger.info(
+        "2FA disabled for %s.",
+        user["email"].replace(
+            '\n',
+            '').replace(
+            '\r',
+            ''))
     return {"enabled": False}
 
 
 @router.post("/logout", status_code=204)
-async def logout(request: Request, authorization: Optional[str] = Header(default=None)):
+async def logout(request: Request,
+                 authorization: Optional[str] = Header(default=None)):
     if not authorization or not authorization.startswith("Bearer "):
-        return # Ignore if not logged in
+        return  # Ignore if not logged in
 
     token = authorization.removeprefix("Bearer ").strip()
     payload = await decode_token(token)
     if not payload:
-        return # Already invalid
+        return  # Already invalid
 
     jti = payload.get("jti")
     if jti:
         store = _get_store(request)
         # expires_at is required for revocation record
         exp = payload.get("exp")
-        expires_at = datetime.fromtimestamp(exp, tz=timezone.utc) if exp else datetime.now(tz=timezone.utc) + timedelta(days=1)
+        expires_at = datetime.fromtimestamp(exp, tz=timezone.utc) if exp else datetime.now(
+            tz=timezone.utc) + timedelta(days=1)
         await store.revoke_token(jti, payload["sub"], expires_at)
-    
+
     return
 
 
 @router.get("/me")
-async def me(request: Request, authorization: Optional[str] = Header(default=None)):
+async def me(request: Request,
+             authorization: Optional[str] = Header(default=None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
 
@@ -407,8 +475,10 @@ async def me(request: Request, authorization: Optional[str] = Header(default=Non
 
     return user
 
+
 @router.patch("/password")
-async def change_password(body: ChangePasswordBody, request: Request, authorization: Optional[str] = Header(default=None)):
+async def change_password(body: ChangePasswordBody, request: Request,
+                          authorization: Optional[str] = Header(default=None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
 
@@ -422,17 +492,21 @@ async def change_password(body: ChangePasswordBody, request: Request, authorizat
     if not user:
         raise unauthorized("User not found.")
 
-    if not bcrypt.checkpw(body.current_password.encode("utf-8"), user["password_hash"].encode("utf-8")):
+    if not bcrypt.checkpw(body.current_password.encode(
+            "utf-8"), user["password_hash"].encode("utf-8")):
         raise unauthorized("Current password is incorrect.")
 
-    new_hash = bcrypt.hashpw(body.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    new_hash = bcrypt.hashpw(
+        body.new_password.encode("utf-8"),
+        bcrypt.gensalt()).decode("utf-8")
     await store.update_user_password(user["id"], new_hash)
 
     return {"status": "ok"}
 
 
 @router.post("/force-change-password")
-async def force_change_password(body: ForceChangePasswordBody, request: Request, authorization: Optional[str] = Header(default=None)):
+async def force_change_password(body: ForceChangePasswordBody, request: Request,
+                                authorization: Optional[str] = Header(default=None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
 
@@ -452,7 +526,9 @@ async def force_change_password(body: ForceChangePasswordBody, request: Request,
     if len(body.new_password) < 12:
         raise bad_request("Password must be at least 12 characters.")
 
-    new_hash = bcrypt.hashpw(body.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    new_hash = bcrypt.hashpw(
+        body.new_password.encode("utf-8"),
+        bcrypt.gensalt()).decode("utf-8")
     await store.update_user_password(user["id"], new_hash)
     logger.info("User %s completed mandatory password change", user["id"])
 
@@ -465,10 +541,11 @@ async def force_change_password(body: ForceChangePasswordBody, request: Request,
 
 class IntegrationsUpdate(BaseModel):
     amazon_sp_api: Optional[dict] = None
-    walmart_api:   Optional[dict] = None
+    walmart_api: Optional[dict] = None
 
 
-async def _require_admin(request: Request, authorization: Optional[str]) -> dict:
+async def _require_admin(request: Request,
+                         authorization: Optional[str]) -> dict:
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
@@ -480,7 +557,8 @@ async def _require_admin(request: Request, authorization: Optional[str]) -> dict
 
 
 @router.get("/integrations")
-async def get_integrations(request: Request, authorization: Optional[str] = Header(default=None)):
+async def get_integrations(
+        request: Request, authorization: Optional[str] = Header(default=None)):
     await _require_admin(request, authorization)
     store = _get_store(request)
     integrations = await store.get_integrations()
@@ -497,48 +575,57 @@ async def get_integrations(request: Request, authorization: Optional[str] = Head
 
     return {
         "amazon_sp_api": {
-            "lwa_app_id":         _val("AMAZON_SP_LWA_APP_ID"),
-            "lwa_client_secret":  _val("AMAZON_SP_LWA_CLIENT_SECRET", True),
-            "lwa_refresh_token":  _val("AMAZON_SP_REFRESH_TOKEN", True),
-            "aws_access_key":     _val("AMAZON_AWS_ACCESS_KEY"),
-            "aws_secret_key":     _val("AMAZON_AWS_SECRET_KEY", True),
-            "seller_id":          _val("AMAZON_SELLER_ID"),
+            "lwa_app_id": _val("AMAZON_SP_LWA_APP_ID"),
+            "lwa_client_secret": _val("AMAZON_SP_LWA_CLIENT_SECRET", True),
+            "lwa_refresh_token": _val("AMAZON_SP_REFRESH_TOKEN", True),
+            "aws_access_key": _val("AMAZON_AWS_ACCESS_KEY"),
+            "aws_secret_key": _val("AMAZON_AWS_SECRET_KEY", True),
+            "seller_id": _val("AMAZON_SELLER_ID"),
         },
         "walmart_api": {
-            "client_id":          _val("WALMART_CLIENT_ID"),
-            "client_secret":      _val("WALMART_CLIENT_SECRET", True),
+            "client_id": _val("WALMART_CLIENT_ID"),
+            "client_secret": _val("WALMART_CLIENT_SECRET", True),
         }
     }
 
 
 @router.put("/integrations")
-async def save_integrations(body: IntegrationsUpdate, request: Request, authorization: Optional[str] = Header(default=None)):
+async def save_integrations(body: IntegrationsUpdate, request: Request,
+                            authorization: Optional[str] = Header(default=None)):
     await _require_admin(request, authorization)
     store = _get_store(request)
     integrations = await store.get_integrations()
 
     if body.amazon_sp_api:
         a = body.amazon_sp_api
-        if a.get("lwa_app_id") is not None:         integrations["AMAZON_SP_LWA_APP_ID"] = a["lwa_app_id"]
-        if a.get("lwa_client_secret") not in [None, "__SET__"]: integrations["AMAZON_SP_LWA_CLIENT_SECRET"] = a["lwa_client_secret"]
-        if a.get("lwa_refresh_token") not in [None, "__SET__"]: integrations["AMAZON_SP_REFRESH_TOKEN"] = a["lwa_refresh_token"]
-        if a.get("aws_access_key") is not None:     integrations["AMAZON_AWS_ACCESS_KEY"] = a["aws_access_key"]
-        if a.get("aws_secret_key") not in [None, "__SET__"]: integrations["AMAZON_AWS_SECRET_KEY"] = a["aws_secret_key"]
-        if a.get("seller_id") is not None:          integrations["AMAZON_SELLER_ID"] = a["seller_id"]
+        if a.get("lwa_app_id") is not None:
+            integrations["AMAZON_SP_LWA_APP_ID"] = a["lwa_app_id"]
+        if a.get("lwa_client_secret") not in [None, "__SET__"]:
+            integrations["AMAZON_SP_LWA_CLIENT_SECRET"] = a["lwa_client_secret"]
+        if a.get("lwa_refresh_token") not in [None, "__SET__"]:
+            integrations["AMAZON_SP_REFRESH_TOKEN"] = a["lwa_refresh_token"]
+        if a.get("aws_access_key") is not None:
+            integrations["AMAZON_AWS_ACCESS_KEY"] = a["aws_access_key"]
+        if a.get("aws_secret_key") not in [None, "__SET__"]:
+            integrations["AMAZON_AWS_SECRET_KEY"] = a["aws_secret_key"]
+        if a.get("seller_id") is not None:
+            integrations["AMAZON_SELLER_ID"] = a["seller_id"]
 
     if body.walmart_api:
         w = body.walmart_api
-        if w.get("client_id") is not None:          integrations["WALMART_ID"] = w["client_id"]
-        if w.get("client_secret") not in [None, "__SET__"]: integrations["WALMART_CLIENT_SECRET"] = w["client_secret"]
+        if w.get("client_id") is not None:
+            integrations["WALMART_ID"] = w["client_id"]
+        if w.get("client_secret") not in [None, "__SET__"]:
+            integrations["WALMART_CLIENT_SECRET"] = w["client_secret"]
 
     await store.set_integrations(integrations)
-    
+
     # Inject into live os.environ so providers see it immediately
     for k, v in integrations.items():
-        if v: os.environ[k] = str(v)
+        if v:
+            os.environ[k] = str(v)
 
     return {"ok": True}
-
 
 
 # =============================================================================
@@ -550,7 +637,8 @@ def _load_google_client() -> dict:
     settings = get_settings()
     path = Path(settings.google_client_secrets_path)
     if not path.exists():
-        raise HTTPException(status_code=500, detail="Google client secrets not configured.")
+        raise HTTPException(status_code=500,
+                            detail="Google client secrets not configured.")
     data = json.loads(path.read_text())
     return data.get("web") or data.get("installed") or {}
 
@@ -566,7 +654,9 @@ async def google_authorize():
     from providers.google.auth import DEFAULT_SCOPES
     client = _load_google_client()
     client_id = client.get("client_id", "")
-    auth_uri = client.get("auth_uri", "https://accounts.google.com/o/oauth2/auth")
+    auth_uri = client.get(
+        "auth_uri",
+        "https://accounts.google.com/o/oauth2/auth")
     scope = " ".join(DEFAULT_SCOPES)
     params = (
         f"client_id={client_id}"
@@ -643,7 +733,10 @@ async def google_callback(request: Request, body: GoogleCallbackBody):
     if not user["is_approved"]:
         raise forbidden("Your account is pending admin approval.")
 
-    token = create_access_token(user_id=user["id"], email=user["email"], role=user["role"])
+    token = create_access_token(
+        user_id=user["id"],
+        email=user["email"],
+        role=user["role"])
     logger.info("Google sign-in: %s", google_email)
 
     # Sync tokens to service storage so AI can use Calendar/Gmail immediately
@@ -663,9 +756,12 @@ async def google_callback(request: Request, body: GoogleCallbackBody):
             "client_secret": client.get("client_secret"),
         }
         auth.save_credentials_from_dict(user["id"], sync_data)
-        logger.info("Synced Google tokens to service storage for user %s", user["id"])
+        logger.info(
+            "Synced Google tokens to service storage for user %s",
+            user["id"])
     except Exception as exc:
-        logger.warning("Failed to sync Google tokens to service storage: %s", exc)
+        logger.warning(
+            "Failed to sync Google tokens to service storage: %s", exc)
 
     return {
         "token": token,
@@ -680,9 +776,11 @@ class ProfilePatch(BaseModel):
     mood: Optional[str] = None
     display_name: Optional[str] = None
     # Legacy fields kept for backward compatibility with older clients.
-    # New clients should ignore these. Writes still accepted and translated below.
+    # New clients should ignore these. Writes still accepted and translated
+    # below.
     theme: Optional[str] = None
     palette: Optional[str] = None
+
 
 VALID_UNIVERSES = {"dune", "halo", "mv", "nightcity"}
 VALID_ENVIRONMENTS = {
@@ -694,56 +792,58 @@ VALID_ENVIRONMENTS = {
 
 # Which environments are legal under which universe
 UNIVERSE_ENV_PAIRS = {
-    "dune":      {"atreides", "harkonnen"},
-    "halo":      {"forerunner", "unsc"},
-    "mv":        {"spires", "garden"},
+    "dune": {"atreides", "harkonnen"},
+    "halo": {"forerunner", "unsc"},
+    "mv": {"spires", "garden"},
     "nightcity": {"corpo", "pacifica"},
 }
 
 # Which moods are legal under which environment
 ENV_MOOD_PAIRS = {
-    "atreides":   {"caladan", "spice-hall"},
-    "harkonnen":  {"giedi", "bloodlight"},
+    "atreides": {"caladan", "spice-hall"},
+    "harkonnen": {"giedi", "bloodlight"},
     "forerunner": {"hard-light", "ceramic-veil"},
-    "unsc":       {"combat-steel", "night-vision"},
-    "spires":     {"sacred", "daybreak-temple", "twilight-spires"},
-    "garden":     {"pastel-day", "dusk-pavilion"},
-    "corpo":      {"chrome", "executive"},
-    "pacifica":   {"glitch-street", "smoke"},
+    "unsc": {"combat-steel", "night-vision"},
+    "spires": {"sacred", "daybreak-temple", "twilight-spires"},
+    "garden": {"pastel-day", "dusk-pavilion"},
+    "corpo": {"chrome", "executive"},
+    "pacifica": {"glitch-street", "smoke"},
 }
 
-# Legacy theme/palette -> new (universe, environment, mood) for one-time client migrations
+# Legacy theme/palette -> new (universe, environment, mood) for one-time
+# client migrations
 LEGACY_THEME_MAP = {
-    "halo":            ("halo",      "forerunner", "hard-light"),
-    "crimson-dark":    ("dune",      "harkonnen",  "bloodlight"),
-    "combat":          ("halo",      "unsc",       "night-vision"),
-    "midnight-violet": ("mv",        "spires",     "twilight-spires"),
-    "amber":           ("mv",        "garden",     "dusk-pavilion"),
-    "arctic":          ("mv",        "spires",     "daybreak-temple"),
-    "cyberpunk":       ("nightcity", "pacifica",   "glitch-street"),
-    "dune":            ("dune",      "atreides",   "spice-hall"),
+    "halo": ("halo", "forerunner", "hard-light"),
+    "crimson-dark": ("dune", "harkonnen", "bloodlight"),
+    "combat": ("halo", "unsc", "night-vision"),
+    "midnight-violet": ("mv", "spires", "twilight-spires"),
+    "amber": ("mv", "garden", "dusk-pavilion"),
+    "arctic": ("mv", "spires", "daybreak-temple"),
+    "cyberpunk": ("nightcity", "pacifica", "glitch-street"),
+    "dune": ("dune", "atreides", "spice-hall"),
 }
 
 
 @router.post("/ws-ticket")
-async def get_ws_ticket(request: Request, authorization: Optional[str] = Header(default=None)):
+async def get_ws_ticket(request: Request,
+                        authorization: Optional[str] = Header(default=None)):
     """
     Exchange a long-lived JWT for a one-time 60s WebSocket ticket.
     """
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
-    
+
     token = authorization.removeprefix("Bearer ").strip()
     payload = await decode_token(token)
     if not payload:
         raise unauthorized("Invalid or expired token.")
-    
+
     user_id = payload["sub"]
     settings = get_settings()
     ticket = str(uuid.uuid4())
-    
+
     request.app.state.ws_tickets[ticket] = {
-        "user_id":    user_id,
+        "user_id": user_id,
         "expires_at": datetime.now(tz=timezone.utc).timestamp() + settings.ws_ticket_lifetime_seconds,
     }
 
@@ -751,7 +851,8 @@ async def get_ws_ticket(request: Request, authorization: Optional[str] = Header(
 
 
 @router.get("/profile")
-async def get_profile(request: Request, authorization: Optional[str] = Header(default=None)):
+async def get_profile(request: Request,
+                      authorization: Optional[str] = Header(default=None)):
     store = request.app.state.memory_manager._store
     token = (authorization or "").removeprefix("Bearer ").strip()
     payload = await decode_token(token)
@@ -768,14 +869,16 @@ async def get_profile(request: Request, authorization: Optional[str] = Header(de
         "universe": user.get("universe", "dune"),
         "environment": user.get("environment", "atreides"),
         "mood": user.get("mood", "caladan"),
-        # Legacy fields, kept readable so older clients don't crash. Newer clients ignore.
+        # Legacy fields, kept readable so older clients don't crash. Newer
+        # clients ignore.
         "theme": user.get("theme", "halo"),
         "palette": user.get("palette", "spice"),
     }
 
 
 @router.patch("/profile")
-async def update_profile(body: ProfilePatch, request: Request, authorization: Optional[str] = Header(default=None)):
+async def update_profile(body: ProfilePatch, request: Request,
+                         authorization: Optional[str] = Header(default=None)):
     store = request.app.state.memory_manager._store
     token = (authorization or "").removeprefix("Bearer ").strip()
     payload = await decode_token(token)
@@ -783,35 +886,51 @@ async def update_profile(body: ProfilePatch, request: Request, authorization: Op
         raise unauthorized("Invalid token")
     user_id = payload["sub"]
 
-    # Legacy translation: if a client still sends `theme`, map it to the new triple
+    # Legacy translation: if a client still sends `theme`, map it to the new
+    # triple
     if body.theme is not None and body.theme in LEGACY_THEME_MAP:
         u, e, m = LEGACY_THEME_MAP[body.theme]
-        if body.universe is None:    body.universe    = u
-        if body.environment is None: body.environment = e
-        if body.mood is None:        body.mood        = m
+        if body.universe is None:
+            body.universe = u
+        if body.environment is None:
+            body.environment = e
+        if body.mood is None:
+            body.mood = m
     # Legacy palette -> universe rename
     if body.palette is not None and body.universe is None:
         body.universe = "halo" if body.palette == "halo" else "dune"
 
     if body.universe is not None:
         if body.universe not in VALID_UNIVERSES:
-            raise bad_request(f"Invalid universe. Valid: {', '.join(sorted(VALID_UNIVERSES))}")
+            raise bad_request(
+                f"Invalid universe. Valid: {
+                    ', '.join(
+                        sorted(VALID_UNIVERSES))}")
         await store.update_user_universe(user_id, body.universe)
 
     if body.environment is not None:
         if body.environment not in VALID_ENVIRONMENTS:
-            raise bad_request(f"Invalid environment. Valid: {', '.join(sorted(VALID_ENVIRONMENTS))}")
+            raise bad_request(
+                f"Invalid environment. Valid: {
+                    ', '.join(
+                        sorted(VALID_ENVIRONMENTS))}")
         user_record = await store.get_user_by_id(user_id)
         current_universe = body.universe or user_record.get("universe", "dune")
-        if body.environment not in UNIVERSE_ENV_PAIRS.get(current_universe, set()):
-            raise bad_request(f"environment '{body.environment}' is not valid under universe '{current_universe}'")
+        if body.environment not in UNIVERSE_ENV_PAIRS.get(
+                current_universe, set()):
+            raise bad_request(
+                f"environment '{
+                    body.environment}' is not valid under universe '{current_universe}'")
         await store.update_user_environment(user_id, body.environment)
 
     if body.mood is not None:
         user_record = await store.get_user_by_id(user_id)
-        current_env = body.environment or user_record.get("environment", "atreides")
+        current_env = body.environment or user_record.get(
+            "environment", "atreides")
         if body.mood not in ENV_MOOD_PAIRS.get(current_env, set()):
-            raise bad_request(f"mood '{body.mood}' is not valid under environment '{current_env}'")
+            raise bad_request(
+                f"mood '{
+                    body.mood}' is not valid under environment '{current_env}'")
         await store.update_user_mood(user_id, body.mood)
 
     user = await store.get_user_by_id(user_id)

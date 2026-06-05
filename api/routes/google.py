@@ -14,10 +14,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request, Query
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
 
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 from providers.google.auth import GoogleAuth
 from config.settings import get_settings
 
@@ -34,7 +32,9 @@ async def _require_user(authorization: Optional[str]) -> str:
         raise HTTPException(status_code=401, detail="Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token.")
     return payload["sub"]
 
 
@@ -62,7 +62,8 @@ async def get_auth_url(
     user_id = await _require_user(authorization)
     auth = _get_google_auth()
     # We use state to pass the user_id securely through the flow
-    auth_url = auth.get_authorization_url(redirect_uri=redirect_uri, state=user_id)
+    auth_url = auth.get_authorization_url(
+        redirect_uri=redirect_uri, state=user_id)
     return {"auth_url": auth_url}
 
 
@@ -79,11 +80,13 @@ async def auth_callback(
     user_id = state
     auth = _get_google_auth()
     # Reconstruct the redirect_uri from the current URL (strip query params).
-    # Google does not echo redirect_uri back; it must match what was registered.
+    # Google does not echo redirect_uri back; it must match what was
+    # registered.
     redirect_uri = str(request.url).split("?")[0]
     try:
-        creds = auth.fetch_token_from_code(user_id=user_id, code=code, redirect_uri=redirect_uri)
-        
+        creds = auth.fetch_token_from_code(
+            user_id=user_id, code=code, redirect_uri=redirect_uri)
+
         # Link the identity so "Login with Google" also works
         try:
             async with httpx.AsyncClient() as http:
@@ -95,14 +98,23 @@ async def auth_callback(
                     profile = resp.json()
                     store = request.app.state.memory_manager._store
                     await store.link_google_account(user_id, profile["id"], profile["email"])
-                    logger.info("Linked Google identity %s to user %s during service connection", profile["email"], user_id)
+                    logger.info(
+                        "Linked Google identity %s to user %s during service connection",
+                        profile["email"],
+                        user_id)
         except Exception as link_exc:
-            logger.warning("Failed to link Google identity for user %s: %s", user_id, link_exc)
+            logger.warning(
+                "Failed to link Google identity for user %s: %s",
+                user_id,
+                link_exc)
 
         # Redirect back to the frontend Google page
         return RedirectResponse(url="/google")
     except Exception as exc:
-        logger.error("Google auth callback failed for user %s: %s", user_id, exc)
+        logger.error(
+            "Google auth callback failed for user %s: %s",
+            user_id,
+            exc)
         # On error, we might want to redirect with an error param
         return RedirectResponse(url=f"/google?error={exc}")
 
@@ -119,7 +131,7 @@ async def get_status(
     auth = _get_google_auth()
     try:
         creds = auth.get_credentials(user_id)
-        
+
         # Also check if identity is linked in DB
         store = request.app.state.memory_manager._store
         user = await store.get_user_by_id(user_id)
@@ -204,7 +216,9 @@ async def get_gmail_triage(
     """
     from config.settings import get_settings as _gs
     if not getattr(_gs(), "gmail_triage_enabled", False):
-        raise HTTPException(status_code=404, detail="Gmail triage is disabled.")
+        raise HTTPException(
+            status_code=404,
+            detail="Gmail triage is disabled.")
 
     user_id = await _require_user(authorization)
     from core.email_triage import triage_inbox
@@ -289,11 +303,13 @@ async def get_music_home():
     try:
         tracks = await provider.get_charts(country="US")
         if not tracks:
-            return {"success": True, "data": [], "message": "No charts available."}
+            return {"success": True, "data": [],
+                    "message": "No charts available."}
         return {"success": True, "data": tracks}
     except Exception as exc:
         logger.error("Failed to fetch music charts: %s", exc)
-        raise HTTPException(status_code=502, detail="Unable to fetch music charts.")
+        raise HTTPException(status_code=502,
+                            detail="Unable to fetch music charts.")
 
 
 @router.post("/music/play/{video_id}")

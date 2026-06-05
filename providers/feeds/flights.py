@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 ADSBX_URL = "https://adsbexchange-com1.p.rapidapi.com/v2/lat/{lat}/lon/{lon}/dist/{nm}/"
 
-_CACHE_TTL  = 60  # seconds
+_CACHE_TTL = 60  # seconds
 
 _cache: dict[tuple, tuple[dict, float]] = {}  # key → (result, expires_at)
 
@@ -75,8 +75,11 @@ async def fetch_overhead(
     # Load key from settings/env
     from config.settings import get_settings
     settings = get_settings()
-    api_key = getattr(settings, "adsbx_rapidapi_key", os.getenv("ADSBX_RAPIDAPI_KEY"))
-    
+    api_key = getattr(
+        settings,
+        "adsbx_rapidapi_key",
+        os.getenv("ADSBX_RAPIDAPI_KEY"))
+
     if not api_key:
         return {"aircraft": [], "cached": False, "timestamp": _now_iso()}
 
@@ -102,7 +105,8 @@ async def fetch_overhead(
         callsign = (s.get("flight") or "").strip()
         reg = (s.get("r") or "").strip()
         type_name = (s.get("desc") or "").strip()   # e.g. "BOEING 737-800"
-        operator = (s.get("ownOp") or "").strip()    # owner/operator when ADSBx has it
+        # owner/operator when ADSBx has it
+        operator = (s.get("ownOp") or "").strip()
 
         mil = bool(s.get("mil"))
         if mil:
@@ -123,7 +127,8 @@ async def fetch_overhead(
         else:
             on_ground = False
             try:
-                alt_val = int(alt_raw) if alt_raw is not None else None
+                # type: ignore
+                alt_val = int(alt_raw) if alt_raw is not None else None  # type: ignore
             except (TypeError, ValueError):
                 alt_val = None
 
@@ -131,24 +136,24 @@ async def fetch_overhead(
         heading = s.get("track")
 
         aircraft.append({
-            "icao24":         s.get("hex"),
-            "callsign":       callsign or None,
+            "icao24": s.get("hex"),
+            "callsign": callsign or None,
             "origin_country": None,                   # ADSBx does not expose this directly
-            "longitude":      s.get("lon"),
-            "latitude":       s.get("lat"),
-            "altitude_ft":    alt_val,
-            "on_ground":      on_ground,
-            "velocity_kts":   float(vel) if vel is not None else None,
-            "heading_deg":    float(heading) if heading is not None else None,
+            "longitude": s.get("lon"),
+            "latitude": s.get("lat"),
+            "altitude_ft": alt_val,
+            "on_ground": on_ground,
+            "velocity_kts": float(vel) if vel is not None else None,
+            "heading_deg": float(heading) if heading is not None else None,
 
-            "registration":   reg or None,
-            "operator":       operator or None,
-            "type_code":      s.get("t"),
-            "type_name":      type_name or None,
-            "category":       cat,
-            "squawk":         s.get("squawk"),
-            "emergency":      bool(s.get("emergency")),
-            "interesting":    mil or cat in ("military", "government"),
+            "registration": reg or None,
+            "operator": operator or None,
+            "type_code": s.get("t"),
+            "type_name": type_name or None,
+            "category": cat,
+            "squawk": s.get("squawk"),
+            "emergency": bool(s.get("emergency")),
+            "interesting": mil or cat in ("military", "government"),
         })
 
     ts = _now_iso()

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from fastapi import Request, HTTPException
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -16,23 +17,26 @@ def create_totp_challenge_token(user_id: str, ttl_seconds: int = 300) -> str:
     so it can't be confused with an access token.
     """
     settings = get_settings()
-    now    = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=timezone.utc)
     expire = now + timedelta(seconds=ttl_seconds)
     payload = {
-        "sub":     user_id,
+        "sub": user_id,
         "purpose": "totp_challenge",
-        "iat":     now,
-        "exp":     expire,
-        "jti":     str(uuid.uuid4()),
+        "iat": now,
+        "exp": expire,
+        "jti": str(uuid.uuid4()),
     }
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode(payload, settings.jwt_secret_key,
+                      algorithm=settings.jwt_algorithm)
 
 
 def decode_challenge_token(token: str) -> Optional[dict]:
     """Verify a TOTP challenge token. Returns payload if valid and unexpired."""
     settings = get_settings()
     try:
-        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(
+            token, settings.jwt_secret_key, algorithms=[
+                settings.jwt_algorithm])
     except jwt.PyJWTError:
         return None
     if payload.get("purpose") != "totp_challenge":
@@ -40,7 +44,8 @@ def decode_challenge_token(token: str) -> Optional[dict]:
     return payload
 
 
-def create_access_token(user_id: str, email: str, role: str, impersonator_id: Optional[str] = None) -> str:
+def create_access_token(user_id: str, email: str, role: str,
+                        impersonator_id: Optional[str] = None) -> str:
     settings = get_settings()
     now = datetime.now(tz=timezone.utc)
     expire = now + timedelta(minutes=settings.jwt_expire_minutes)
@@ -54,13 +59,16 @@ def create_access_token(user_id: str, email: str, role: str, impersonator_id: Op
     }
     if impersonator_id:
         payload["impersonator_id"] = impersonator_id
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode(payload, settings.jwt_secret_key,
+                      algorithm=settings.jwt_algorithm)
 
 
 async def decode_token(token: str) -> Optional[dict]:
     settings = get_settings()
     try:
-        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(
+            token, settings.jwt_secret_key, algorithms=[
+                settings.jwt_algorithm])
 
         # Reject any token that carries a `purpose` claim (e.g. TOTP challenge
         # tokens with purpose='totp_challenge'). Access tokens are minted by
@@ -80,7 +88,7 @@ async def decode_token(token: str) -> Optional[dict]:
                 store = app.state.memory_manager._store
                 if await store.is_token_revoked(jti):
                     return None
-                
+
                 # Check user suspension and forced logout
                 user_id = payload.get("sub")
                 if user_id:
@@ -88,25 +96,25 @@ async def decode_token(token: str) -> Optional[dict]:
                     if user:
                         if user.get("is_suspended"):
                             return None
-                        
+
                         tokens_valid_after = user.get("tokens_valid_after")
                         iat = payload.get("iat")
                         if tokens_valid_after and iat:
                             # Convert isoformat to UTC timestamp
                             try:
                                 # handle trailing 'Z' if present
-                                ts_str = tokens_valid_after.replace("Z", "+00:00")
+                                ts_str = tokens_valid_after.replace(
+                                    "Z", "+00:00")
                                 cutoff_dt = datetime.fromisoformat(ts_str)
                                 if iat < cutoff_dt.timestamp():
                                     return None
                             except ValueError:
                                 pass
-                    
+
         return payload
     except jwt.PyJWTError:
         return None
 
-from fastapi import Request, HTTPException
 
 def require_role(*roles: str):
     async def role_checker(request: Request):
@@ -120,16 +128,16 @@ def require_role(*roles: str):
                 user = await decode_token(token)
                 if user:
                     request.state.user = user
-                    
+
         if not user:
             raise HTTPException(status_code=401, detail="Unauthorized")
-            
+
         user_role = user.get("role", "viewer")
         if user_role == "admin":
             return user
-            
+
         if roles and user_role not in roles:
             raise HTTPException(status_code=403, detail="Forbidden")
-            
+
         return user
     return role_checker

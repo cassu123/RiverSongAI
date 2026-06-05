@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import Sheet, { SheetRow } from '../chrome/Sheet'
+import ReadingIntegrationsModal from '../components/ReadingIntegrationsModal'
 
 const API = '/api/reading'
 
@@ -53,15 +54,18 @@ export default function ReadingPage({ setAction }) {
   const [activeStatus, setActiveStatus] = useState('all')
   const [activeService, setActiveService] = useState('all')
   const [search, setSearch] = useState('')
+  const [stats, setStats] = useState({ total: 0, reading: 0, queue: 0, dnf: 0, finished: 0 })
   
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [integrationsOpen, setIntegrationsOpen] = useState(false)
   const [selectedServiceKeys, setSelectedServiceKeys] = useState(() => {
     try { const raw = localStorage.getItem(`rs-reading-services:${userId}`); return raw ? JSON.parse(raw) : [] } catch { return [] }
   })
 
   const loadShelf = useCallback(() => {
     setLoading(true)
-    apiFetch('/shelf').then(setShelf).catch(() => {}).finally(() => setLoading(false))
+    apiFetch('/shelf').then(setShelf).catch(() => {})
+    apiFetch('/stats').then(setStats).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   useEffect(() => { loadShelf() }, [loadShelf])
@@ -75,12 +79,6 @@ export default function ReadingPage({ setAction }) {
       return true
     })
   }, [shelf, activeStatus, activeService, search])
-
-  const stats = useMemo(() => ({
-    total: shelf.length,
-    reading: shelf.filter(b => b.status === 'reading').length,
-    queue: shelf.filter(b => b.status === 'want_to_read').length
-  }), [shelf])
 
   // Contextual Action Bar
   useEffect(() => {
@@ -197,7 +195,13 @@ export default function ReadingPage({ setAction }) {
 
       <Sheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Archive Sources">
         <div style={{ padding: '0 16px 24px' }}>
-           <p className="rs-card-meta" style={{ marginBottom: 20 }}>Toggle frequency bands for digital integrations.</p>
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+             <p className="rs-card-meta" style={{ margin: 0 }}>Toggle frequency bands for digital integrations.</p>
+             <button className="rs-pill" onClick={() => setIntegrationsOpen(true)}>
+               <span className="material-symbols-rounded">settings_input_antenna</span>
+               INTEGRATIONS
+             </button>
+           </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {ALL_SERVICES.map(s => {
                 const active = (selectedServiceKeys || []).includes(s.key)
@@ -217,6 +221,12 @@ export default function ReadingPage({ setAction }) {
            </div>
         </div>
       </Sheet>
+
+      <ReadingIntegrationsModal 
+        open={integrationsOpen} 
+        onClose={() => setIntegrationsOpen(false)}
+        onRefresh={loadShelf}
+      />
     </div>
   )
 }

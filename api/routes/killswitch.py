@@ -20,7 +20,6 @@ from fastapi import Header
 
 from config.settings import get_settings
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 from core.kill_switch import (
     is_kill_switch_active,
     activate_global_kill_switch,
@@ -56,10 +55,17 @@ async def get_status(authorization: Optional[str] = Header(default=None)):
 
 
 @router.post("/activate")
-async def activate(body: ActivateBody, request: Request, authorization: Optional[str] = Header(default=None)):
+async def activate(body: ActivateBody, request: Request,
+                   authorization: Optional[str] = Header(default=None)):
     await _require_admin(authorization)
     activate_global_kill_switch(origin=body.origin)
-    safe_origin = body.origin.replace("\r", "").replace("\n", "").replace("\t", "")
+    safe_origin = body.origin.replace(
+        "\r",
+        "").replace(
+        "\n",
+        "").replace(
+            "\t",
+        "")
     logger.critical("Kill switch activated via API (origin=%s).", safe_origin)
 
     settings = get_settings()
@@ -80,9 +86,11 @@ async def activate(body: ActivateBody, request: Request, authorization: Optional
 
 
 @router.post("/reset")
-async def reset(body: ResetBody, authorization: Optional[str] = Header(default=None)):
+async def reset(body: ResetBody,
+                authorization: Optional[str] = Header(default=None)):
     await _require_admin(authorization)
     success = reset_global_kill_switch(body.password)
     if success:
-        return {"success": True, "message": "Kill switch reset. Restart the server to resume."}
+        return {"success": True,
+                "message": "Kill switch reset. Restart the server to resume."}
     return {"success": False, "message": "Incorrect password."}

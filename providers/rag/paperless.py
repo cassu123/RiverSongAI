@@ -1,15 +1,18 @@
 # providers/rag/paperless.py
 from __future__ import annotations
-import logging, os, time
+import logging
+import os
+import time
 from typing import Any
 import httpx
 
 logger = logging.getLogger(__name__)
 
-_BASE  = os.getenv("PAPERLESS_URL", "http://localhost:8010")
+_BASE = os.getenv("PAPERLESS_URL", "http://localhost:8010")
 _TOKEN = os.getenv("PAPERLESS_TOKEN", "")
 _CACHE_TTL = 30  # seconds for read-heavy endpoints
 _cache: dict[str, tuple[Any, float]] = {}
+
 
 def _client() -> httpx.AsyncClient:
     headers = {
@@ -17,6 +20,7 @@ def _client() -> httpx.AsyncClient:
         "Authorization": f"Token {_TOKEN}" if _TOKEN else ""
     }
     return httpx.AsyncClient(base_url=_BASE, headers=headers, timeout=10)
+
 
 async def _get(path: str, params: dict | None = None) -> Any:
     if not _TOKEN:
@@ -36,6 +40,7 @@ async def _get(path: str, params: dict | None = None) -> Any:
     _cache[key] = (data, time.monotonic() + _CACHE_TTL)
     return data
 
+
 async def search(q: str) -> list[dict]:
     """Search for documents in Paperless."""
     data = await _get("/api/documents/", params={"query": q})
@@ -43,9 +48,11 @@ async def search(q: str) -> list[dict]:
         return []
     return data.get("results", [])
 
+
 async def get_document(doc_id: int) -> dict | None:
     """Retrieve document metadata."""
     return await _get(f"/api/documents/{doc_id}/")
+
 
 async def download_pdf(doc_id: int) -> bytes | None:
     """Download the PDF content of a document."""

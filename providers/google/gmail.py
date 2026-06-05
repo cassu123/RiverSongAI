@@ -123,7 +123,8 @@ class GmailProvider:
         loop = asyncio.get_running_loop()
         messages = await loop.run_in_executor(_executor, _fetch)
         logger.info(
-            "Fetched %d unread messages for user '%s'.", len(messages), self._user_id
+            "Fetched %d unread messages for user '%s'.", len(
+                messages), self._user_id
         )
         return messages
 
@@ -307,7 +308,8 @@ def _extract_plain_text(message: Dict[str, Any]) -> str:
         Decoded plain-text string, or a placeholder if none found.
     """
     payload = message.get("payload", {})
-    return _walk_parts(payload) or "[No plain-text body found in this message.]"
+    return _walk_parts(
+        payload) or "[No plain-text body found in this message.]"
 
 
 def _walk_parts(part: Dict[str, Any]) -> Optional[str]:
@@ -325,7 +327,8 @@ def _walk_parts(part: Dict[str, Any]) -> Optional[str]:
     if mime_type == "text/plain":
         data = part.get("body", {}).get("data", "")
         if data:
-            return base64.urlsafe_b64decode(data + "==").decode("utf-8", errors="replace")
+            return base64.urlsafe_b64decode(
+                data + "==").decode("utf-8", errors="replace")
         return None
 
     for sub_part in part.get("parts", []):

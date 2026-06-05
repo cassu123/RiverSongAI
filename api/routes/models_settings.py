@@ -33,10 +33,9 @@ from pydantic import BaseModel
 
 from config.settings import get_settings
 from core.auth import decode_token
-from core.errors import api_error, bad_request, forbidden, not_found, unauthorized
-from core.errors import api_error, bad_request, forbidden, not_found, unauthorized
+from api.routes.auth import bad_request, forbidden, not_found, unauthorized
 from providers.llm.registry import LLMRegistry, ModelEntry
-from providers.memory.models import LLMSettings, MemorySettings, TTLOption, UserPreferences
+from providers.memory.models import LLMSettings, MemorySettings, TTLOption
 
 
 logger = logging.getLogger(__name__)
@@ -54,15 +53,22 @@ def _get_ollama_installed_models() -> Set[str]:
     """Query the local Ollama daemon for pulled model names. Returns empty set on failure."""
     try:
         settings = get_settings()
-        base = getattr(settings, "ollama_base_url", "http://localhost:11434").rstrip("/")
+        base = getattr(
+            settings,
+            "ollama_base_url",
+            "http://localhost:11434").rstrip("/")
         from urllib.parse import urlparse
         parsed = urlparse(base)
         if parsed.scheme == "http" and parsed.hostname not in _OLLAMA_LOCAL_HOSTS:
             raise ValueError(
-                f"Insecure HTTP connection to remote Ollama host '{parsed.hostname}' is not allowed. "
+                f"Insecure HTTP connection to remote Ollama host '{
+                    parsed.hostname}' is not allowed. "
                 "Use HTTPS or restrict OLLAMA_BASE_URL to localhost."
             )
-        req = urllib.request.Request(f"{base}/api/tags", headers={"Accept": "application/json"})
+        req = urllib.request.Request(
+            f"{base}/api/tags",
+            headers={
+                "Accept": "application/json"})
         with urllib.request.urlopen(req, timeout=3) as resp:
             data = json.loads(resp.read())
         return {m["name"] for m in data.get("models", [])}
@@ -70,65 +76,72 @@ def _get_ollama_installed_models() -> Set[str]:
         return set()
 
 
-def _model_to_dict(m: ModelEntry, installed: Optional[Set[str]] = None) -> dict:
+def _model_to_dict(m: ModelEntry,
+                   installed: Optional[Set[str]] = None) -> dict:
     available: bool
     if m.is_cloud:
         available = True  # cloud availability is gated by API key, handled separately
     elif installed is None:
         available = True  # unknown — assume available
     else:
-        # Match exact name or base name without tag (e.g. "mistral:7b" matches "mistral:7b" or "mistral")
+        # Match exact name or base name without tag (e.g. "mistral:7b" matches
+        # "mistral:7b" or "mistral")
         model_base = m.model_id.split(":")[0]
         available = m.model_id in installed or any(
             n == m.model_id or n.split(":")[0] == model_base
             for n in installed
         )
     return {
-        "provider":              m.provider,
-        "model_id":              m.model_id,
-        "display_name":          m.display_name,
-        "context_window":        m.context_window,
-        "is_cloud":              m.is_cloud,
-        "vram_gb":               m.vram_gb,
+        "provider": m.provider,
+        "model_id": m.model_id,
+        "display_name": m.display_name,
+        "context_window": m.context_window,
+        "is_cloud": m.is_cloud,
+        "vram_gb": m.vram_gb,
         "cost_per_1k_input_usd": m.cost_per_1k_input_usd,
-        "cost_per_1k_output_usd":m.cost_per_1k_output_usd,
-        "notes":                 m.notes,
-        "priority":              m.priority,
-        "available":             available,
+        "cost_per_1k_output_usd": m.cost_per_1k_output_usd,
+        "notes": m.notes,
+        "priority": m.priority,
+        "available": available,
     }
 
 
 def _get_enabled_providers(admin_config: Optional[dict] = None) -> dict:
     s = get_settings()
     admin_config = admin_config or {}
-    
+
     local_enabled = admin_config.get("local_llms_enabled_global", True)
     cloud_enabled = admin_config.get("cloud_llms_enabled_global", True)
-    nvidia_enabled = admin_config.get("nvidia_nim_enabled_global", s.nvidia_nim_enabled)
+    nvidia_enabled = admin_config.get(
+        "nvidia_nim_enabled_global",
+        s.nvidia_nim_enabled)
 
     return {
-        "anthropic":  cloud_enabled and s.anthropic_enabled  and bool(s.anthropic_api_key),
-        "gemini":     cloud_enabled and s.gemini_enabled     and bool(s.gemini_api_key),
-        "openai":     cloud_enabled and s.openai_enabled     and bool(s.openai_api_key),
+        "anthropic": cloud_enabled and s.anthropic_enabled and bool(s.anthropic_api_key),
+        "gemini": cloud_enabled and s.gemini_enabled and bool(s.gemini_api_key),
+        "openai": cloud_enabled and s.openai_enabled and bool(s.openai_api_key),
         "mistral_ai": cloud_enabled and s.mistral_ai_enabled and bool(s.mistral_api_key),
-        "bedrock":    cloud_enabled and s.bedrock_enabled    and bool(s.aws_access_key_id) and bool(s.aws_secret_access_key),
+        "bedrock": cloud_enabled and s.bedrock_enabled and bool(s.aws_access_key_id) and bool(s.aws_secret_access_key),
         "nvidia_nim": nvidia_enabled and bool(s.nvidia_api_key),
-        "ollama":     local_enabled,
+        "ollama": local_enabled,
     }
 
 
 async def _require_user(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
-    payload = await decode_token(authorization.removeprefix("Bearer "))
+    payload: dict = decode_token(authorization.removeprefix(
+        "Bearer ")) if authorization else {}  # type: ignore
     if not payload:
         raise unauthorized("Invalid or expired token.")
     return payload["sub"]
 
+
 async def _require_admin(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
-    payload = await decode_token(authorization.removeprefix("Bearer "))
+    payload: dict = decode_token(authorization.removeprefix(
+        "Bearer ")) if authorization else {}  # type: ignore
     if not payload or payload.get("role") != "admin":
         raise forbidden("Admin role required.")
     return payload["sub"]
@@ -158,7 +171,7 @@ async def list_models(
         pass
 
     installed = _get_ollama_installed_models()
-    enabled   = _get_enabled_providers()
+    enabled = _get_enabled_providers()
 
     hidden_llms: set[str] = set()
     family_overrides: dict = {}
@@ -168,7 +181,7 @@ async def list_models(
         hidden_llms = set(config.get("hidden_llms", []))
         family_overrides = config.get("model_families", {}) or {}
         nvidia_nim_users_enabled = config.get("nvidia_nim_user_access", True)
-        
+
         enabled = _get_enabled_providers(config)
     except Exception:
         pass
@@ -176,7 +189,8 @@ async def list_models(
     # Non-admins cannot see NIM models when access is restricted
     if not is_admin and not nvidia_nim_users_enabled:
         from providers.llm.registry import LLMRegistry as _reg
-        hidden_llms = hidden_llms | {m.model_id for m in _reg.list_by_provider("nvidia_nim")}
+        hidden_llms = hidden_llms | {
+            m.model_id for m in _reg.list_by_provider("nvidia_nim")}
 
     local_models = [
         _model_to_dict(m, installed)
@@ -190,11 +204,11 @@ async def list_models(
     ]
 
     return {
-        "local":             local_models,
-        "cloud":             cloud_models,
+        "local": local_models,
+        "cloud": cloud_models,
         "enabled_providers": enabled,
-        "ollama_reachable":  bool(installed) or True,
-        "family_overrides":  family_overrides,
+        "ollama_reachable": bool(installed) or True,
+        "family_overrides": family_overrides,
     }
 
 
@@ -227,11 +241,13 @@ async def get_hardware_cookbook(
 # =============================================================================
 
 class UserPreferencesSchema(BaseModel):
-    music_provider: Literal["youtube_music", "spotify", "none"] = "youtube_music"
+    music_provider: Literal["youtube_music",
+                            "spotify", "none"] = "youtube_music"
 
 
 @router.get("/settings", response_model=UserPreferencesSchema)
-async def get_user_preferences_route(request: Request, authorization: Optional[str] = Header(default=None)):
+async def get_user_preferences_route(
+        request: Request, authorization: Optional[str] = Header(default=None)):
     """Return the general user preferences (music provider, etc.)."""
     user_id = await _require_user(authorization)
     store = request.app.state.memory_manager._store
@@ -257,7 +273,9 @@ async def save_user_preferences_route(
         return {"success": True}
     except Exception as exc:
         logger.error("Failed to save user preferences: %s", exc)
-        raise HTTPException(status_code=500, detail="Failed to save preferences.")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to save preferences.")
 
 
 # =============================================================================
@@ -274,24 +292,25 @@ class LLMSettingsBody(BaseModel):
 
 
 @router.get("/settings/llm")
-async def get_llm_settings(request: Request, authorization: Optional[str] = Header(default=None)):
+async def get_llm_settings(
+        request: Request, authorization: Optional[str] = Header(default=None)):
     """Return the current LLM provider + model selection for a user."""
     user_id = await _require_user(authorization)
     memory = request.app.state.memory_manager
     s = await memory.get_llm_settings(user_id)
-    
+
     # Get display name from registry
     entry = LLMRegistry.get(s.provider, s.model)
     display_name = entry.display_name if entry else s.model
-    
+
     return {
-        "provider":               s.provider,
-        "model":                  s.model,
-        "display_name":           display_name,
+        "provider": s.provider,
+        "model": s.model,
+        "display_name": display_name,
         "cloud_fallback_enabled": s.cloud_fallback_enabled,
-        "cloud_fallback_provider":s.cloud_fallback_provider,
-        "cloud_fallback_model":   s.cloud_fallback_model,
-        "whisper_model":          s.whisper_model,
+        "cloud_fallback_provider": s.cloud_fallback_provider,
+        "cloud_fallback_model": s.cloud_fallback_model,
+        "whisper_model": s.whisper_model,
     }
 
 
@@ -305,13 +324,13 @@ async def save_llm_settings(
     entry = LLMRegistry.get(body.provider, body.model_id)
     if not entry:
         raise bad_request(f"Unknown model '{body.model_id}' for provider '{body.provider}'. "
-               f"Check /api/models for valid options.")
+                          f"Check /api/models for valid options.")
 
     if entry.is_cloud:
         enabled = _get_enabled_providers()
         if not enabled.get(body.provider, False):
             raise bad_request(f"Provider '{body.provider}' is not enabled or has no API key set. "
-                   f"Set {body.provider.upper()}_ENABLED=true and {body.provider.upper()}_API_KEY in .env.")
+                              f"Set {body.provider.upper()}_ENABLED=true and {body.provider.upper()}_API_KEY in .env.")
 
     memory = request.app.state.memory_manager
     settings = LLMSettings(
@@ -324,8 +343,21 @@ async def save_llm_settings(
         whisper_model=body.whisper_model,
     )
     await memory.save_llm_settings(settings)
-    _strip = lambda s: str(s).replace("\r", "").replace("\n", "").replace("\t", "")
-    logger.info("LLM settings saved (user=%s, provider=%s, model=%s).", _strip(user_id), _strip(body.provider), _strip(body.model_id))
+
+    def _strip(s): return str(s).replace(
+        "\r",
+        "").replace(
+        "\n",
+        "").replace(
+            "\t",
+        "")
+    logger.info(
+        "LLM settings saved (user=%s, provider=%s, model=%s).",
+        _strip(user_id),
+        _strip(
+            body.provider),
+        _strip(
+            body.model_id))
     return {"status": "ok", "provider": body.provider, "model": body.model_id}
 
 
@@ -336,7 +368,8 @@ async def save_llm_settings(
 class ModelFamiliesBody(BaseModel):
     # families is a free-form dict keyed by family id (e.g. "deepseek"):
     #   { enabled: bool, quirky_name: str|null, tiers: {fast?, thinking?, pro?} }
-    # Tier values are model_id strings or null (= use default from modelFamilies.js).
+    # Tier values are model_id strings or null (= use default from
+    # modelFamilies.js).
     families: dict
 
 
@@ -369,10 +402,17 @@ async def save_model_families(
         await store.set_admin_config(config)
     except Exception as e:
         logger.error("Failed to persist model_families: %s", e)
-        raise HTTPException(status_code=500, detail="Failed to persist model families.")
+        raise HTTPException(status_code=500,
+                            detail="Failed to persist model families.")
 
     logger.info("Model family overrides saved by admin %s (count=%d).",
-                str(user_id).replace("\r", "").replace("\n", "").replace("\t", ""),
+                str(user_id).replace(
+                    "\r",
+                    "").replace(
+                    "\n",
+                    "").replace(
+                    "\t",
+                    ""),
                 len(body.families))
     return {"ok": True}
 
@@ -388,16 +428,17 @@ class MemorySettingsBody(BaseModel):
 
 
 @router.get("/settings/memory")
-async def get_memory_settings(request: Request, authorization: Optional[str] = Header(default=None)):
+async def get_memory_settings(
+        request: Request, authorization: Optional[str] = Header(default=None)):
     """Return the current memory settings for a user."""
     user_id = await _require_user(authorization)
     memory = request.app.state.memory_manager
     s = await memory.get_memory_settings(user_id)
     return {
         "summaries_enabled": s.summaries_enabled,
-        "default_ttl":       s.default_ttl,
-        "auto_extend":       s.auto_extend,
-        "ttl_options":       TTLOption.ALL,
+        "default_ttl": s.default_ttl,
+        "auto_extend": s.auto_extend,
+        "ttl_options": TTLOption.ALL,
     }
 
 
@@ -409,7 +450,10 @@ async def save_memory_settings(
 ):
     user_id = await _require_user(authorization)
     if not TTLOption.is_valid(body.default_ttl):
-        raise bad_request(f"Invalid TTL '{body.default_ttl}'. Valid options: {TTLOption.ALL}")
+        raise bad_request(
+            f"Invalid TTL '{
+                body.default_ttl}'. Valid options: {
+                TTLOption.ALL}")
 
     memory = request.app.state.memory_manager
     settings = MemorySettings(
@@ -419,7 +463,15 @@ async def save_memory_settings(
         auto_extend=body.auto_extend,
     )
     await memory.save_memory_settings(settings)
-    logger.info("Memory settings saved (user=%s).", str(user_id).replace("\r", "").replace("\n", "").replace("\t", ""))
+    logger.info(
+        "Memory settings saved (user=%s).",
+        str(user_id).replace(
+            "\r",
+            "").replace(
+            "\n",
+            "").replace(
+                "\t",
+            ""))
     return {"status": "ok"}
 
 
@@ -436,9 +488,9 @@ async def get_voice_settings(
     Return the active TTS provider, the full voice registry, and which voices
     are installed on disk. Active voice is read from per-user SQLite settings.
     """
-    user_id  = await _require_user(authorization)
+    user_id = await _require_user(authorization)
     settings = get_settings()
-    provider   = settings.tts_provider
+    provider = settings.tts_provider
     model_path = settings.piper_model_path
 
     from providers.tts.voice_registry import VoiceRegistry
@@ -457,7 +509,8 @@ async def get_voice_settings(
     except Exception:
         pass
 
-    # Check kokoro once — requires Python <3.13; skip all kokoro voices if unavailable
+    # Check kokoro once — requires Python <3.13; skip all kokoro voices if
+    # unavailable
     try:
         import kokoro  # noqa: F401
         kokoro_available = True
@@ -471,7 +524,8 @@ async def get_voice_settings(
     except Exception:
         pass
 
-    # Build the voice list from the registry, annotating installed/active status
+    # Build the voice list from the registry, annotating installed/active
+    # status
     voices = []
     for entry in VoiceRegistry.list_all():
         if entry.voice_id in hidden_voices:
@@ -483,45 +537,47 @@ async def get_voice_settings(
             path = None
         else:
             # Piper voices: check for the .onnx file on disk
-            installed_path = os.path.join(model_dir, entry.filename) if model_dir and entry.filename else ""
+            installed_path = os.path.join(
+                model_dir, entry.filename) if model_dir and entry.filename else ""
             installed = bool(installed_path and os.path.exists(installed_path))
-            path      = installed_path if installed else None
+            path = installed_path if installed else None
 
         active = entry.voice_id == active_voice_id
 
         voices.append({
-            "voice_id":    entry.voice_id,
-            "display_name":entry.display_name,
-            "engine":      entry.engine,
-            "filename":    entry.filename,
-            "lang":        entry.lang,
-            "accent":      entry.accent,
-            "gender":      entry.gender,
-            "quality":     entry.quality,
-            "size_mb":     entry.size_mb,
+            "voice_id": entry.voice_id,
+            "display_name": entry.display_name,
+            "engine": entry.engine,
+            "filename": entry.filename,
+            "lang": entry.lang,
+            "accent": entry.accent,
+            "gender": entry.gender,
+            "quality": entry.quality,
+            "size_mb": entry.size_mb,
             "description": entry.description,
-            "default":     entry.default,
-            "installed":   installed,
-            "active":      active,
-            "path":        path,
+            "default": entry.default,
+            "installed": installed,
+            "active": active,
+            "path": path,
         })
 
-    active_entry   = next((v for v in voices if v["active"]), None)
-    active_name    = active_entry["display_name"] if active_entry else (active_voice_id or "None")
-    active_engine  = active_entry["engine"] if active_entry else provider
+    active_entry = next((v for v in voices if v["active"]), None)
+    active_name = active_entry["display_name"] if active_entry else (
+        active_voice_id or "None")
+    active_engine = active_entry["engine"] if active_entry else provider
     provider_labels = {
-        "piper":  "Piper (local binary)",
+        "piper": "Piper (local binary)",
         "kokoro": "Kokoro (neural, CPU)",
-        "none":   "Disabled",
+        "none": "Disabled",
     }
 
     return {
-        "provider":        active_engine,
-        "provider_label":  provider_labels.get(active_engine, active_engine),
-        "active_voice":    active_name,
-        "active_path":     model_path,
+        "provider": active_engine,
+        "provider_label": provider_labels.get(str(active_engine), str(active_engine)),
+        "active_voice": active_name,
+        "active_path": model_path,
         "active_voice_id": active_voice_id,
-        "voices":          voices,
+        "voices": voices,
     }
 
 
@@ -539,7 +595,7 @@ async def set_active_voice(
     Switch the active voice — saved to SQLite per user, takes effect on
     the next conversation (new WebSocket connection). No restart required.
     """
-    user_id  = await _require_user(authorization)
+    user_id = await _require_user(authorization)
     settings = get_settings()
 
     from providers.tts.voice_registry import VoiceRegistry
@@ -551,13 +607,15 @@ async def set_active_voice(
 
     # Piper voices need the .onnx file on disk
     if entry.engine == "piper":
-        model_dir = os.path.dirname(settings.piper_model_path) if settings.piper_model_path else ""
+        model_dir = os.path.dirname(
+            settings.piper_model_path) if settings.piper_model_path else ""
         if not model_dir:
-            raise HTTPException(status_code=500, detail="PIPER_MODEL_PATH not configured.")
+            raise HTTPException(status_code=500,
+                                detail="PIPER_MODEL_PATH not configured.")
         new_piper_path = os.path.join(model_dir, entry.filename)
         if not os.path.exists(new_piper_path):
             raise not_found(f"{entry.display_name} is not installed. "
-                   f"Run: python scripts/download_voices.py {entry.voice_id}")
+                            f"Run: python scripts/download_voices.py {entry.voice_id}")
 
     # Save voice_id to SQLite (same store as LLM settings)
     mm = getattr(request.app.state, "memory_manager", None)
@@ -567,13 +625,17 @@ async def set_active_voice(
         current.voice_id = entry.voice_id
         await store.save_llm_settings(current)
 
-    logger.info("Voice switched to %s (%s) [%s]", entry.display_name, entry.voice_id, entry.engine)
+    logger.info(
+        "Voice switched to %s (%s) [%s]",
+        entry.display_name,
+        entry.voice_id,
+        entry.engine)
     return {
-        "ok":           True,
-        "voice_id":     entry.voice_id,
+        "ok": True,
+        "voice_id": entry.voice_id,
         "display_name": entry.display_name,
-        "engine":       entry.engine,
-        "note":         "Active on your next conversation.",
+        "engine": entry.engine,
+        "note": "Active on your next conversation.",
     }
 
 
@@ -612,7 +674,10 @@ async def set_nvidia_nim_access(
         await store.set_admin_config(config)
     except Exception as e:
         logger.warning("Failed to persist nvidia_nim_user_access: %s", e)
-    logger.info("NIM user access set to %s by admin %s.", body.enabled, user_id)
+    logger.info(
+        "NIM user access set to %s by admin %s.",
+        body.enabled,
+        user_id)
     return {"ok": True, "enabled": body.enabled}
 
 
@@ -620,6 +685,7 @@ class LLMRoutingFlagsBody(BaseModel):
     local_enabled: bool
     cloud_enabled: bool
     nvidia_enabled: bool
+
 
 @router.get("/admin/llm-routing-flags")
 async def get_llm_routing_flags(
@@ -637,7 +703,9 @@ async def get_llm_routing_flags(
             "nvidia_enabled": config.get("nvidia_nim_enabled_global", s.nvidia_nim_enabled)
         }
     except Exception:
-        return {"local_enabled": True, "cloud_enabled": True, "nvidia_enabled": False}
+        return {"local_enabled": True,
+                "cloud_enabled": True, "nvidia_enabled": False}
+
 
 @router.post("/admin/llm-routing-flags")
 async def set_llm_routing_flags(
@@ -673,7 +741,7 @@ async def get_intent_router_settings(
     await _require_admin(authorization)
     s = get_settings()
     return {
-        "enabled":  s.model_intent_router_enabled,
+        "enabled": s.model_intent_router_enabled,
         "min_hits": s.model_intent_router_min_hits,
     }
 
@@ -734,9 +802,13 @@ async def patch_page_settings(
     try:
         body = await request.json()
     except Exception:
-        raise HTTPException(status_code=400, detail="Body must be a JSON object.")
+        raise HTTPException(
+            status_code=400,
+            detail="Body must be a JSON object.")
     if not isinstance(body, dict):
-        raise HTTPException(status_code=400, detail="Body must be a JSON object.")
+        raise HTTPException(
+            status_code=400,
+            detail="Body must be a JSON object.")
     store = request.app.state.memory_manager._store
     await store.save_page_settings(user_id, body)
     return {"ok": True}
@@ -755,16 +827,17 @@ class OrchestrationSettingsBody(BaseModel):
 
 
 @router.get("/settings/orchestration")
-async def get_orchestration_settings(request: Request, authorization: Optional[str] = Header(default=None)):
+async def get_orchestration_settings(
+        request: Request, authorization: Optional[str] = Header(default=None)):
     """Return the current n8n + daemon orchestration settings."""
     await _require_user(authorization)
     s = get_settings()
     return {
-        "n8n_enabled":            s.n8n_enabled,
-        "n8n_url":                s.n8n_url,
-        "n8n_api_key":            s.n8n_api_key,
-        "n8n_webhook_secret":     s.n8n_webhook_secret,
-        "daemon_scribe_enabled":  s.daemon_scribe_enabled,
+        "n8n_enabled": s.n8n_enabled,
+        "n8n_url": s.n8n_url,
+        "n8n_api_key": s.n8n_api_key,
+        "n8n_webhook_secret": s.n8n_webhook_secret,
+        "daemon_scribe_enabled": s.daemon_scribe_enabled,
     }
 
 
@@ -775,8 +848,9 @@ async def save_orchestration_settings(
     authorization: Optional[str] = Header(default=None),
 ):
     user_id = await _require_user(authorization)
-    payload = await decode_token(authorization.removeprefix("Bearer "))
-    if payload.get("role") != "admin":
+    payload: dict = decode_token(authorization.removeprefix(
+        "Bearer ")) if authorization else {}  # type: ignore
+    if not payload or payload.get("role") != "admin":
         raise forbidden("Only admins can modify orchestration settings.")
 
     s = get_settings()
@@ -789,6 +863,7 @@ async def save_orchestration_settings(
 
     logger.info("Orchestration settings saved by admin %s.", user_id)
     return {"status": "ok"}
+
 
 @router.get("/tts/preview/{voice_id}")
 async def preview_voice(
@@ -819,16 +894,19 @@ async def preview_voice(
             provider = KokoroTTS(voice_code=entry.voice_code)
 
         elif entry.engine == "piper":
-            model_dir = os.path.dirname(settings.piper_model_path) if settings.piper_model_path else ""
+            model_dir = os.path.dirname(
+                settings.piper_model_path) if settings.piper_model_path else ""
             if not model_dir:
-                raise HTTPException(status_code=503, detail="PIPER_MODEL_PATH not configured.")
+                raise HTTPException(
+                    status_code=503,
+                    detail="PIPER_MODEL_PATH not configured.")
             model_path = os.path.join(model_dir, entry.filename)
             if not os.path.exists(model_path):
                 raise not_found(f"{entry.display_name} is not installed. "
-                       f"Run: python scripts/download_voices.py {entry.voice_id}")
+                                f"Run: python scripts/download_voices.py {entry.voice_id}")
             from providers.tts.piper import PiperTTS
             # Override the model path for this preview only
-            provider = PiperTTS(model_path_override=model_path)
+            provider = PiperTTS(model_path_override=model_path)  # type: ignore
 
         else:
             raise bad_request(f"Unsupported engine: {entry.engine}")
@@ -850,6 +928,7 @@ async def preview_voice(
 # ElevenLabs & Persona settings
 # =============================================================================
 
+
 class ElevenLabsBody(BaseModel):
     api_key: str
     voice_id: str = "21m00Tcm4TlvDq8ikWAM"
@@ -863,14 +942,14 @@ async def get_elevenlabs_settings(
 ):
     await _require_admin(authorization)
     s = get_settings()
-    
+
     key = s.elevenlabs_api_key
     masked_key = ""
     if key:
         masked_key = f"...{key[-8:]}" if len(key) > 8 else "XXXXXXXX"
 
     return {
-        "api_key":  masked_key,
+        "api_key": masked_key,
         "voice_id": s.elevenlabs_voice_id,
         "model_id": s.elevenlabs_model_id,
     }
@@ -883,7 +962,7 @@ async def save_elevenlabs_settings(
     authorization: Optional[str] = Header(default=None),
 ):
     user_id = await _require_admin(authorization)
-    
+
     # Update live settings singleton
     s = get_settings()
     # If the user passed a masked key, don't overwrite with it
@@ -891,7 +970,7 @@ async def save_elevenlabs_settings(
         s.elevenlabs_api_key = body.api_key
     s.elevenlabs_voice_id = body.voice_id
     s.elevenlabs_model_id = body.model_id
-    
+
     # Persist to admin_config
     try:
         store = request.app.state.memory_manager._store
@@ -922,19 +1001,19 @@ async def get_wake_word_settings(
 ):
     await _require_admin(authorization)
     s = get_settings()
-    
+
     # Check if openWakeWord is installed
     try:
-        import openwakeword # noqa: F401
+        import openwakeword  # noqa: F401
         installed = True
     except ImportError:
         installed = False
 
     return {
-        "enabled":     s.wake_word_enabled,
-        "phrase":      s.wake_word_model,
+        "enabled": s.wake_word_enabled,
+        "phrase": s.wake_word_model,
         "sensitivity": s.wake_word_threshold,
-        "installed":   installed,
+        "installed": installed,
     }
 
 
@@ -945,13 +1024,13 @@ async def save_wake_word_settings(
     authorization: Optional[str] = Header(default=None),
 ):
     user_id = await _require_admin(authorization)
-    
+
     # Update live settings singleton
     s = get_settings()
-    s.wake_word_enabled   = body.enabled
-    s.wake_word_model     = body.phrase
+    s.wake_word_enabled = body.enabled
+    s.wake_word_model = body.phrase
     s.wake_word_threshold = body.sensitivity
-    
+
     # Persist to admin_config
     try:
         store = request.app.state.memory_manager._store
@@ -989,15 +1068,15 @@ async def get_persona_default(
 @router.post("/settings/persona")
 async def save_persona(
     request: Request,
-    body: PersonaBody, 
+    body: PersonaBody,
     authorization: Optional[str] = Header(default=None)
 ):
     user_id = await _require_admin(authorization)
-    
+
     # Update live settings
     s = get_settings()
     s.river_song_system_prompt = body.system_prompt
-    
+
     # Persist to admin_config
     try:
         store = request.app.state.memory_manager._store
@@ -1006,7 +1085,7 @@ async def save_persona(
         await store.set_admin_config(config)
     except Exception as e:
         logger.warning("Failed to persist Persona settings to DB: %s", e)
-        
+
     logger.info("Persona settings updated by admin %s.", user_id)
     return {"ok": True}
 
@@ -1025,8 +1104,8 @@ def get_current_provider_rate(
     from core.token_tracker import get_provider_rate
     # No auth check needed or just quick check
     if authorization and authorization.startswith("Bearer "):
-        pass # we could require_user but sync auth is tricky, let's keep it open or do async def + run_in_executor
-    
+        pass  # we could require_user but sync auth is tricky, let's keep it open or do async def + run_in_executor
+
     rate = get_provider_rate(provider, window_seconds=window)
     return {
         "provider": provider,
@@ -1048,7 +1127,7 @@ async def get_briefing_settings(
     store = request.app.state.memory_manager._store
     config = await store.get_admin_config()
     settings = get_settings()
-    
+
     return {
         "startup_briefing_enabled": config.get("startup_briefing_enabled", settings.startup_briefing_enabled),
         "pulse_news_enabled": config.get("pulse_news_enabled", True),
@@ -1059,6 +1138,7 @@ async def get_briefing_settings(
         "location_lon": config.get("location_lon", settings.location_lon),
     }
 
+
 class BriefingSettingsBody(BaseModel):
     startup_briefing_enabled: bool
     pulse_news_enabled: bool = True
@@ -1067,6 +1147,7 @@ class BriefingSettingsBody(BaseModel):
     pulse_flights_enabled: bool = True
     location_lat: Optional[float] = None
     location_lon: Optional[float] = None
+
 
 @router.post("/settings/briefing")
 async def save_briefing_settings(
@@ -1086,6 +1167,6 @@ async def save_briefing_settings(
     config["location_lat"] = body.location_lat
     config["location_lon"] = body.location_lon
     await store.set_admin_config(config)
-    
+
     logger.info("Briefing settings updated by admin %s.", user_id)
     return {"ok": True}

@@ -57,7 +57,7 @@ class NvidiaNimLLM(LLMProvider):
         try:
             response = await self._client.chat.completions.create(
                 model=self._model,
-                messages=messages,
+                messages=messages,  # type: ignore
                 max_tokens=self._max_tokens,
                 temperature=self._temperature,
             )
@@ -71,12 +71,13 @@ class NvidiaNimLLM(LLMProvider):
             logger.error("NIM chat failed: %s", exc, exc_info=True)
             return _friendly_error(exc)
 
-    async def stream_response(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+    async def stream_response(
+            self, messages: List[dict]) -> AsyncGenerator[str, None]:
         """Stream a chat completion from NIM."""
         if not messages:
             return
         try:
-            stream = await self._client.chat.completions.create(
+            stream = await self._client.chat.completions.create(  # type: ignore
                 model=self._model,
                 messages=messages,
                 max_tokens=self._max_tokens,
@@ -101,7 +102,8 @@ class NvidiaNimLLM(LLMProvider):
             logger.error("NIM streaming failed: %s", exc, exc_info=True)
             yield _friendly_error(exc)
 
-    async def stream_response_thinking(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+    async def stream_response_thinking(
+            self, messages: List[dict]) -> AsyncGenerator[str, None]:
         """NIM has no dedicated thinking mode — falls through to standard streaming."""
         async for chunk in self.stream_response(messages):
             yield chunk

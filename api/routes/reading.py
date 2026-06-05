@@ -31,7 +31,6 @@ import io
 import json
 import logging
 import os
-import uuid
 from typing import Optional
 
 import httpx
@@ -40,13 +39,20 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from core.auth import decode_token
-from core.errors import api_error, bad_request, not_found, unauthorized
+from core.errors import bad_request, not_found, unauthorized
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/reading", tags=["reading"])
 
-VALID_SERVICES = {"kindle", "google_play", "audible", "libby", "kobo", "apple_books", "other"}
+VALID_SERVICES = {
+    "kindle",
+    "google_play",
+    "audible",
+    "libby",
+    "kobo",
+    "apple_books",
+    "other"}
 VALID_STATUSES = {"reading", "finished", "want_to_read", "dnf"}
 
 # Module-level provider singleton — built once, reused across requests
@@ -77,7 +83,8 @@ async def _require_user(authorization: Optional[str]) -> str:
 def _store(request: Request):
     mm = getattr(request.app.state, "memory_manager", None)
     if mm is None:
-        raise HTTPException(status_code=503, detail="Memory manager not available.")
+        raise HTTPException(status_code=503,
+                            detail="Memory manager not available.")
     return mm._store
 
 
@@ -129,9 +136,9 @@ async def list_shelf(
     user_id = await _require_user(authorization)
 
     if service and service not in VALID_SERVICES:
-        raise bad_request(f"Invalid service filter.")
+        raise bad_request("Invalid service filter.")
     if status and status not in VALID_STATUSES:
-        raise bad_request(f"Invalid status filter.")
+        raise bad_request("Invalid status filter.")
 
     store = _store(request)
     books = await store.list_shelf(user_id, service=service, status=status)
@@ -175,22 +182,28 @@ async def add_book(
     user_id = await _require_user(authorization)
 
     if body.service not in VALID_SERVICES:
-        raise bad_request(f"Invalid service. Must be one of: {', '.join(sorted(VALID_SERVICES))}")
+        raise bad_request(
+            f"Invalid service. Must be one of: {
+                ', '.join(
+                    sorted(VALID_SERVICES))}")
     if body.status not in VALID_STATUSES:
-        raise bad_request(f"Invalid status. Must be one of: {', '.join(sorted(VALID_STATUSES))}")
+        raise bad_request(
+            f"Invalid status. Must be one of: {
+                ', '.join(
+                    sorted(VALID_STATUSES))}")
 
     store = _store(request)
     book = await store.create_book({
-        "user_id":      user_id,
-        "service":      body.service,
-        "title":        body.title.strip(),
-        "author":       body.author.strip(),
-        "cover_url":    body.cover_url.strip(),
+        "user_id": user_id,
+        "service": body.service,
+        "title": body.title.strip(),
+        "author": body.author.strip(),
+        "cover_url": body.cover_url.strip(),
         "progress_pct": body.progress_pct,
-        "status":       body.status,
-        "rating":       body.rating,
-        "notes":        body.notes.strip(),
-        "launch_url":   body.launch_url.strip(),
+        "status": body.status,
+        "rating": body.rating,
+        "notes": body.notes.strip(),
+        "launch_url": body.launch_url.strip(),
     })
     return _serialize_book(book)
 
@@ -252,23 +265,26 @@ async def libby_loans(
         loans = await provider.get_loans(user_id)
         return [
             {
-                "title":            l.title,
-                "author":           l.author,
-                "format_id":        l.format_id,
-                "expires":          l.expires,
-                "days_remaining":   l.days_remaining,
+                "title": l.title,
+                "author": l.author,
+                "format_id": l.format_id,
+                "expires": l.expires,
+                "days_remaining": l.days_remaining,
                 "percent_complete": l.percent_complete,
-                "cover_url":        l.cover_url,
+                "cover_url": l.cover_url,
             }
             for l in loans
         ]
     except FileNotFoundError:
-        raise not_found("Libby not set up. Run: python -m providers.reading.libby --setup")
+        raise not_found(
+            "Libby not set up. Run: python -m providers.reading.libby --setup")
     except PermissionError as exc:
         raise unauthorized(str(exc))
     except Exception as exc:
         logger.error("Libby loans fetch failed: %s", exc)
-        raise HTTPException(status_code=502, detail="Could not reach Libby. Check your connection.")
+        raise HTTPException(
+            status_code=502,
+            detail="Could not reach Libby. Check your connection.")
 
 
 @router.get("/libby/holds")
@@ -281,23 +297,26 @@ async def libby_holds(
         holds = await provider.get_holds(user_id)
         return [
             {
-                "title":               h.title,
-                "author":              h.author,
-                "format_id":           h.format_id,
-                "queue_position":      h.queue_position,
-                "queue_size":          h.queue_size,
+                "title": h.title,
+                "author": h.author,
+                "format_id": h.format_id,
+                "queue_position": h.queue_position,
+                "queue_size": h.queue_size,
                 "estimated_wait_days": h.estimated_wait_days,
-                "cover_url":           h.cover_url,
+                "cover_url": h.cover_url,
             }
             for h in holds
         ]
     except FileNotFoundError:
-        raise not_found("Libby not set up. Run: python -m providers.reading.libby --setup")
+        raise not_found(
+            "Libby not set up. Run: python -m providers.reading.libby --setup")
     except PermissionError as exc:
         raise unauthorized(str(exc))
     except Exception as exc:
         logger.error("Libby holds fetch failed: %s", exc)
-        raise HTTPException(status_code=502, detail="Could not reach Libby. Check your connection.")
+        raise HTTPException(
+            status_code=502,
+            detail="Could not reach Libby. Check your connection.")
 
 
 # ---------------------------------------------------------------------------
@@ -330,10 +349,10 @@ async def get_connections(
         pass
 
     return {
-        "libby":        os.path.exists(_libby_chip_path(user_id)),
-        "audible":      audible_connected,
-        "kindle":       audible_connected,
-        "google_play":  google_play_connected,
+        "libby": os.path.exists(_libby_chip_path(user_id)),
+        "audible": audible_connected,
+        "kindle": audible_connected,
+        "google_play": google_play_connected,
     }
 
 
@@ -350,7 +369,8 @@ _LIBBY_HEADERS = {
     "Content-Type": "application/json",
 }
 
-# In-progress chips keyed by (user_id, chip_uuid) — cleared on complete or expiry
+# In-progress chips keyed by (user_id, chip_uuid) — cleared on complete or
+# expiry
 _pending_chips: dict[str, str] = {}
 
 
@@ -377,7 +397,9 @@ async def libby_connect_start(
             raise ValueError(f"Sentry response missing chip UUID: {data}")
     except Exception as exc:
         logger.error("Libby chip creation failed: %s", exc)
-        raise HTTPException(status_code=502, detail="Could not reach Libby. Check your internet connection.")
+        raise HTTPException(
+            status_code=502,
+            detail="Could not reach Libby. Check your internet connection.")
 
     _pending_chips[user_id] = chip
     return {
@@ -405,7 +427,8 @@ async def libby_connect_complete(
     user_id = await _require_user(authorization)
     chip = _pending_chips.get(user_id)
     if not chip:
-        raise bad_request("No pending Libby pairing found. Start the flow again.")
+        raise bad_request(
+            "No pending Libby pairing found. Start the flow again.")
 
     code = body.code.strip().replace(" ", "").replace("-", "")
     if not code.isdigit() or len(code) != 8:
@@ -422,7 +445,8 @@ async def libby_connect_complete(
             resp.raise_for_status()
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in (400, 401, 403):
-            raise bad_request("Invalid or expired code. Check the code and try again.")
+            raise bad_request(
+                "Invalid or expired code. Check the code and try again.")
         logger.error("Libby chip clone failed: %s", exc)
         raise HTTPException(status_code=502, detail="Could not reach Libby.")
     except Exception as exc:
@@ -502,9 +526,11 @@ async def audible_connect(
     except Exception as exc:
         err = str(exc).lower()
         if "captcha" in err:
-            raise bad_request("Amazon requires a CAPTCHA for this login. Try again later or use a different network.")
+            raise bad_request(
+                "Amazon requires a CAPTCHA for this login. Try again later or use a different network.")
         if "otp" in err or "2-step" in err or "two-step" in err:
-            raise bad_request("Your Amazon account has 2-step verification enabled. Disable it temporarily for setup, then re-enable it.")
+            raise bad_request(
+                "Your Amazon account has 2-step verification enabled. Disable it temporarily for setup, then re-enable it.")
         logger.error("Audible login failed for user '%s': %s", user_id, exc)
         raise unauthorized(f"Login failed: {exc}")
 
@@ -536,7 +562,9 @@ def _load_google_client() -> dict:
     from pathlib import Path
     path = Path(settings.google_client_secrets_path)
     if not path.exists():
-        raise HTTPException(status_code=500, detail="Google client secrets not configured on this server.")
+        raise HTTPException(
+            status_code=500,
+            detail="Google client secrets not configured on this server.")
     data = _json.loads(path.read_text())
     return data.get("web") or data.get("installed") or {}
 
@@ -555,15 +583,17 @@ async def google_play_authorize(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
-    auth_uri = client.get("auth_uri", "https://accounts.google.com/o/oauth2/auth")
+    auth_uri = client.get(
+        "auth_uri",
+        "https://accounts.google.com/o/oauth2/auth")
     from urllib.parse import urlencode
     params = urlencode({
-        "client_id":     client["client_id"],
+        "client_id": client["client_id"],
         "response_type": "code",
-        "scope":         _BOOKS_SCOPE,
-        "access_type":   "offline",
-        "prompt":        "consent",
-        "redirect_uri":  redirect_uri,
+        "scope": _BOOKS_SCOPE,
+        "access_type": "offline",
+        "prompt": "consent",
+        "redirect_uri": redirect_uri,
     })
     return {"auth_url": f"{auth_uri}?{params}"}
 
@@ -588,11 +618,11 @@ async def google_play_callback(
     token_uri = client.get("token_uri", "https://oauth2.googleapis.com/token")
     async with httpx.AsyncClient(timeout=15) as http:
         resp = await http.post(token_uri, data={
-            "code":          body.code,
-            "client_id":     client["client_id"],
+            "code": body.code,
+            "client_id": client["client_id"],
             "client_secret": client["client_secret"],
-            "redirect_uri":  body.redirect_uri,
-            "grant_type":    "authorization_code",
+            "redirect_uri": body.redirect_uri,
+            "grant_type": "authorization_code",
         })
     if resp.status_code != 200:
         logger.error("Google Books token exchange failed: %s", resp.text)
@@ -604,7 +634,8 @@ async def google_play_callback(
         provider.save_token_from_callback(user_id, resp.json())
     except Exception as exc:
         logger.error("Google Books token save failed: %s", exc)
-        raise HTTPException(status_code=500, detail="Could not save Google Books token.")
+        raise HTTPException(status_code=500,
+                            detail="Could not save Google Books token.")
 
     return {"connected": True}
 
@@ -650,11 +681,14 @@ async def sync_kindle(
     try:
         provider = _get_kindle()
         books = await provider.get_library(user_id, limit=100)
-    except FileNotFoundError as exc:
-        raise not_found("Kindle not set up. Connect your Audible/Amazon account first.")
+    except FileNotFoundError:
+        raise not_found(
+            "Kindle not set up. Connect your Audible/Amazon account first.")
     except Exception as exc:
         logger.error("Kindle sync failed for '%s': %s", user_id, exc)
-        raise HTTPException(status_code=502, detail=f"Could not reach the Kindle library: {exc}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Could not reach the Kindle library: {exc}")
 
     store = _store(request)
     existing = await store.list_shelf(user_id, service="kindle")
@@ -669,18 +703,19 @@ async def sync_kindle(
             skipped += 1
             continue
         author = book.authors[0] if book.authors else ""
-        launch_url = f"https://read.amazon.com/?asin={book.asin}" if book.asin else ""
+        launch_url = f"https://read.amazon.com/?asin={
+            book.asin}" if book.asin else ""
         await store.create_book({
-            "user_id":      user_id,
-            "service":      "kindle",
-            "title":        book.title,
-            "author":       author,
-            "cover_url":    book.cover_url,
+            "user_id": user_id,
+            "service": "kindle",
+            "title": book.title,
+            "author": author,
+            "cover_url": book.cover_url,
             "progress_pct": max(book.percent_complete, 0) if book.percent_complete >= 0 else 0,
-            "status":       "reading" if book.percent_complete > 0 else "want_to_read",
-            "rating":       None,
-            "notes":        "",
-            "launch_url":   launch_url,
+            "status": "reading" if book.percent_complete > 0 else "want_to_read",
+            "rating": None,
+            "notes": "",
+            "launch_url": launch_url,
         })
         added += 1
 
@@ -707,14 +742,16 @@ async def sync_google_play(
         provider = get_books_provider()
         books = await provider.get_library(user_id)
     except FileNotFoundError:
-        raise not_found("Google Play Books not connected. Authorize via the Reading page first.")
+        raise not_found(
+            "Google Play Books not connected. Authorize via the Reading page first.")
     except PermissionError as exc:
         raise unauthorized(str(exc))
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except Exception as exc:
         logger.error("Google Play sync failed for '%s': %s", user_id, exc)
-        raise HTTPException(status_code=502, detail=f"Google Play sync failed: {exc}")
+        raise HTTPException(status_code=502,
+                            detail=f"Google Play sync failed: {exc}")
 
     store = _store(request)
     existing = await store.list_shelf(user_id, service="google_play")
@@ -731,16 +768,17 @@ async def sync_google_play(
 
     added = skipped = 0
     for book in books:
-        info_link = book.info_link or f"https://play.google.com/books/reader?id={book.volume_id}"
+        info_link = book.info_link or f"https://play.google.com/books/reader?id={
+            book.volume_id}"
 
         if info_link in existing_by_vid:
             # Update progress and status in place
             existing_book = existing_by_vid[info_link]
             await store.update_book(existing_book["id"], user_id, {
-                "status":       book.status,
+                "status": book.status,
                 "progress_pct": book.progress_pct,
-                "rating":       book.rating,
-                "cover_url":    book.cover_url,
+                "rating": book.rating,
+                "cover_url": book.cover_url,
             })
             skipped += 1
             continue
@@ -751,16 +789,16 @@ async def sync_google_play(
 
         author = book.authors[0] if book.authors else ""
         await store.create_book({
-            "user_id":      user_id,
-            "service":      "google_play",
-            "title":        book.title,
-            "author":       author,
-            "cover_url":    book.cover_url,
+            "user_id": user_id,
+            "service": "google_play",
+            "title": book.title,
+            "author": author,
+            "cover_url": book.cover_url,
             "progress_pct": book.progress_pct,
-            "status":       book.status,
-            "rating":       book.rating,
-            "notes":        "",
-            "launch_url":   info_link,
+            "status": book.status,
+            "rating": book.rating,
+            "notes": "",
+            "launch_url": info_link,
         })
         added += 1
 
@@ -782,25 +820,25 @@ async def sync_google_play(
 #   Reading Status, Progress (%), Rating
 
 _CSV_SERVICE_LABELS = {
-    "goodreads":    "goodreads",
-    "kobo":         "kobo",
-    "google_play":  "google_play",
-    "apple_books":  "apple_books",
-    "other":        "other",
+    "goodreads": "goodreads",
+    "kobo": "kobo",
+    "google_play": "google_play",
+    "apple_books": "apple_books",
+    "other": "other",
 }
 
 _GOODREADS_STATUS_MAP = {
-    "read":              "finished",
+    "read": "finished",
     "currently-reading": "reading",
-    "to-read":           "want_to_read",
-    "did-not-finish":    "dnf",
+    "to-read": "want_to_read",
+    "did-not-finish": "dnf",
 }
 
 _PLAY_STATUS_MAP = {
-    "HAVE_READ":        "finished",
-    "READING":          "reading",
-    "WANT_TO_READ":     "want_to_read",
-    "DNF":              "dnf",
+    "HAVE_READ": "finished",
+    "READING": "reading",
+    "WANT_TO_READ": "want_to_read",
+    "DNF": "dnf",
 }
 
 
@@ -816,7 +854,8 @@ def _parse_goodreads_row(row: dict) -> Optional[dict]:
         rating = None
     shelf = (row.get("Exclusive Shelf") or "").strip().lower()
     status = _GOODREADS_STATUS_MAP.get(shelf, "want_to_read")
-    return {"title": title, "author": author, "rating": rating, "status": status, "cover_url": "", "notes": "", "launch_url": ""}
+    return {"title": title, "author": author, "rating": rating,
+            "status": status, "cover_url": "", "notes": "", "launch_url": ""}
 
 
 def _parse_play_books_row(row: dict) -> Optional[dict]:
@@ -826,7 +865,8 @@ def _parse_play_books_row(row: dict) -> Optional[dict]:
     author = (row.get("Authors") or "").strip()
     raw_status = (row.get("Reading Status") or "").strip().upper()
     status = _PLAY_STATUS_MAP.get(raw_status, "want_to_read")
-    progress_raw = (row.get("Progress (%)") or row.get("Progress") or "").strip().rstrip("%")
+    progress_raw = (row.get("Progress (%)") or row.get(
+        "Progress") or "").strip().rstrip("%")
     try:
         progress = float(progress_raw)
     except ValueError:
@@ -836,7 +876,8 @@ def _parse_play_books_row(row: dict) -> Optional[dict]:
         rating = int(float(rating_raw)) if rating_raw else None
     except ValueError:
         rating = None
-    return {"title": title, "author": author, "rating": rating, "status": status, "progress_pct": progress, "cover_url": "", "notes": "", "launch_url": ""}
+    return {"title": title, "author": author, "rating": rating, "status": status,
+            "progress_pct": progress, "cover_url": "", "notes": "", "launch_url": ""}
 
 
 def _detect_format(headers: list[str]) -> str:
@@ -851,11 +892,16 @@ def _detect_format(headers: list[str]) -> str:
 
 def _parse_generic_row(row: dict, service: str) -> Optional[dict]:
     """Best-effort parse for unknown CSV formats."""
-    title = next((row[k].strip() for k in row if "title" in k.lower() and row[k].strip()), None)
+    title = next(
+        (row[k].strip()
+         for k in row if "title" in k.lower() and row[k].strip()),
+        None)
     if not title:
         return None
-    author = next((row[k].strip() for k in row if "author" in k.lower() and row[k].strip()), "")
-    return {"title": title, "author": author, "rating": None, "status": "want_to_read", "cover_url": "", "notes": "", "launch_url": ""}
+    author = next((row[k].strip()
+                  for k in row if "author" in k.lower() and row[k].strip()), "")
+    return {"title": title, "author": author, "rating": None,
+            "status": "want_to_read", "cover_url": "", "notes": "", "launch_url": ""}
 
 
 @router.post("/import/csv")
@@ -883,7 +929,7 @@ async def import_csv(
     if not rows:
         raise bad_request("CSV file is empty or has no data rows.")
 
-    fmt = _detect_format(reader.fieldnames or [])
+    fmt = _detect_format(list(reader.fieldnames or []))
     store = _store(request)
     existing = await store.list_shelf(user_id, service=mapped_service)
     existing_titles = {b["title"].lower() for b in existing}
@@ -905,20 +951,21 @@ async def import_csv(
                 continue
 
             await store.create_book({
-                "user_id":      user_id,
-                "service":      mapped_service,
-                "title":        parsed["title"],
-                "author":       parsed.get("author", ""),
-                "cover_url":    parsed.get("cover_url", ""),
+                "user_id": user_id,
+                "service": mapped_service,
+                "title": parsed["title"],
+                "author": parsed.get("author", ""),
+                "cover_url": parsed.get("cover_url", ""),
                 "progress_pct": parsed.get("progress_pct", 0.0),
-                "status":       parsed.get("status", "want_to_read"),
-                "rating":       parsed.get("rating"),
-                "notes":        parsed.get("notes", ""),
-                "launch_url":   parsed.get("launch_url", ""),
+                "status": parsed.get("status", "want_to_read"),
+                "rating": parsed.get("rating"),
+                "notes": parsed.get("notes", ""),
+                "launch_url": parsed.get("launch_url", ""),
             })
             added += 1
         except Exception as exc:
             logger.warning("CSV import row error: %s", exc)
             errors += 1
 
-    return {"added": added, "skipped": skipped, "errors": errors, "format_detected": fmt}
+    return {"added": added, "skipped": skipped,
+            "errors": errors, "format_detected": fmt}

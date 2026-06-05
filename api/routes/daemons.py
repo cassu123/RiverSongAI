@@ -14,7 +14,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 from config.settings import get_settings
 from daemons.registry import call_daemon
 
@@ -22,20 +21,23 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/daemon", tags=["daemons"])
 
 
-async def _require_admin(authorization: Optional[str] = Header(default=None)) -> str:
+async def _require_admin(
+        authorization: Optional[str] = Header(default=None)) -> str:
     """Validate Bearer token and ensure the user has the 'admin' role."""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    
+
     token = authorization.removeprefix("Bearer ")
     payload = await decode_token(token)
-    
+
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
-    
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token.")
+
     if payload.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required.")
-        
+
     return payload["sub"]
 
 
@@ -62,14 +64,17 @@ async def record_heartbeat(
     """
     settings = get_settings()
     expected = f"Bearer {settings.daemon_internal_secret}"
-    
+
     if authorization != expected:
-        logger.warning("Unauthorized heartbeat attempt for daemon '%s'", body.name)
+        logger.warning(
+            "Unauthorized heartbeat attempt for daemon '%s'",
+            body.name)
         raise HTTPException(status_code=403, detail="Invalid internal secret.")
 
     registry = getattr(request.app.state, "daemon_registry", None)
     if not registry:
-        raise HTTPException(status_code=503, detail="Daemon registry not initialized.")
+        raise HTTPException(status_code=503,
+                            detail="Daemon registry not initialized.")
 
     registry.record_heartbeat(body.name, body.port, body.status)
     return {"ok": True}
@@ -87,7 +92,7 @@ async def get_daemons_status(
     registry = getattr(request.app.state, "daemon_registry", None)
     if not registry:
         return {"daemons": {}}
-    
+
     return {"daemons": registry.get_all()}
 
 

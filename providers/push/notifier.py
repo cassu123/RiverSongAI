@@ -88,7 +88,10 @@ async def notify_user(
         try:
             subs = await store.get_push_subscriptions(user_id)
         except Exception as exc:
-            logger.warning("notify_user: store lookup failed for %s: %s", user_id, exc)
+            logger.warning(
+                "notify_user: store lookup failed for %s: %s",
+                user_id,
+                exc)
             subs = []
         if subs:
             results = await asyncio.gather(
@@ -110,7 +113,8 @@ async def notify_user(
                 # outcome is None → transient; neither count nor delete.
             if to_delete:
                 await asyncio.gather(
-                    *[store.delete_push_subscription(user_id, ep) for ep in to_delete],
+                    *[store.delete_push_subscription(user_id, ep)
+                      for ep in to_delete],
                     return_exceptions=True,
                 )
 
@@ -149,7 +153,8 @@ async def notify_admins(
     if not active_admins:
         return 0
     counts = await asyncio.gather(
-        *[notify_user(store, u["id"], title, body, icon=icon) for u in active_admins],
+        *[notify_user(store, u["id"], title, body, icon=icon)
+          for u in active_admins],
         return_exceptions=False,
     )
     return sum(counts)

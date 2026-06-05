@@ -10,6 +10,7 @@ from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
+
 async def send_push(subscription_json: str, title: str, body: str,
                     icon: str = "/favicon.ico") -> bool:
     """
@@ -25,10 +26,10 @@ async def send_push(subscription_json: str, title: str, body: str,
             "Push notifications require VAPID_PRIVATE_KEY and "
             "VAPID_PUBLIC_KEY in .env. Generate them with pywebpush."
         )
-    
+
     subscription = json.loads(subscription_json)
     payload = json.dumps({"title": title, "body": body, "icon": icon})
-    
+
     try:
         await asyncio.get_running_loop().run_in_executor(
             None,

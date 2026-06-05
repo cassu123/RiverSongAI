@@ -13,15 +13,17 @@
 
 import logging
 import httpx
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
+
 
 class N8NClient:
     """
     Client for interacting with a local n8n instance.
     """
+
     def __init__(self):
         settings = get_settings()
         self.url = settings.n8n_url.rstrip("/")
@@ -51,7 +53,9 @@ class N8NClient:
             logger.error("Failed to list n8n workflows: %s", exc)
             return []
 
-    async def trigger_workflow(self, workflow_id: str, data: Dict[str, Any] = None) -> bool:
+    # type: ignore
+    async def trigger_workflow(
+            self, workflow_id: str, data: Dict[str, Any] = None) -> bool:  # type: ignore
         if not self.enabled or not self.api_key:
             return False
         try:
@@ -64,8 +68,12 @@ class N8NClient:
                 resp.raise_for_status()
                 return True
         except Exception as exc:
-            logger.error("Failed to trigger n8n workflow %s: %s", workflow_id, exc)
+            logger.error(
+                "Failed to trigger n8n workflow %s: %s",
+                workflow_id,
+                exc)
             return False
+
 
 def build_n8n_client() -> N8NClient:
     return N8NClient()

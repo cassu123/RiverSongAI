@@ -30,10 +30,12 @@ router = APIRouter(tags=["health"])
 # Global start time for uptime calculation
 START_TIME = time.time()
 
+
 class OllamaHealth(BaseModel):
     reachable: bool
     active_model: Optional[str] = None
     response_time_ms: Optional[int] = None
+
 
 class ProviderHealth(BaseModel):
     stt: str
@@ -43,9 +45,11 @@ class ProviderHealth(BaseModel):
     llm: str
     llm_model: str
 
+
 class MemoryHealth(BaseModel):
     fact_count: int
     habit_count: int
+
 
 class HealthResponse(BaseModel):
     status: str
@@ -67,7 +71,7 @@ class HealthResponse(BaseModel):
 async def health_check(request: Request) -> HealthResponse:
     settings = get_settings()
     kill_active = is_kill_switch_active()
-    
+
     status = "ok"
     if kill_active:
         status = "kill_switch_active"
@@ -77,7 +81,7 @@ async def health_check(request: Request) -> HealthResponse:
     ollama_reachable = False
     active_model = None
     response_time = None
-    
+
     try:
         start = time.time()
         async with httpx.AsyncClient() as client:
@@ -85,7 +89,7 @@ async def health_check(request: Request) -> HealthResponse:
             if resp.status_code == 200:
                 ollama_reachable = True
                 response_time = int((time.time() - start) * 1000)
-                
+
                 # Try to get active models
                 tags_resp = await client.get(f"{settings.ollama_base_url}/api/tags", timeout=1.0)
                 if tags_resp.status_code == 200:
@@ -102,7 +106,7 @@ async def health_check(request: Request) -> HealthResponse:
         stt_model=settings.whisper_model_size,
         tts=settings.tts_provider,
         active_voice=settings.active_voice_id,
-        llm="ollama", # Primary
+        llm="ollama",  # Primary
         llm_model=settings.llm_model
     )
 
@@ -110,20 +114,20 @@ async def health_check(request: Request) -> HealthResponse:
     fact_count = 0
     habit_count = 0
     last_briefing = None
-    
+
     mm = getattr(request.app.state, "memory_manager", None)
     if mm:
         try:
             store = mm._store
-            user_id = "primary_user" # Default
-            
+            user_id = "primary_user"  # Default
+
             # These might be expensive if tables are huge, but fine for now
             facts = await store.get_facts(user_id)
             fact_count = len(facts)
-            
+
             prefs = await store.get_preferences(user_id)
             habit_count = len(prefs)
-            
+
             routines = await store.list_routines(user_id)
             if routines:
                 # Find most recent last_run
@@ -158,7 +162,7 @@ async def system_health() -> dict:
     """
     Returns CPU/GPU/RAM/disk metrics pulled from Glances.
     """
-    glances_url = get_settings().glances_url or "http://localhost:61208/api/3"
+    glances_url = get_settings().glances_url or "http://localhost:61208/api/3"  # type: ignore
     async with httpx.AsyncClient() as client:
         try:
             # Pull core metrics from Glances
@@ -188,9 +192,13 @@ def _require_internal_secret(authorization: Optional[str]) -> None:
     from fastapi import HTTPException
     secret = (get_settings().daemon_internal_secret or "").strip()
     if not secret:
-        raise HTTPException(status_code=503, detail="Webhook auth not configured.")
+        raise HTTPException(
+            status_code=503,
+            detail="Webhook auth not configured.")
     if authorization != f"Bearer {secret}":
-        raise HTTPException(status_code=401, detail="Invalid webhook credentials.")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid webhook credentials.")
 
 
 @router.post("/api/health/webhook")
@@ -232,12 +240,19 @@ async def scrutiny_webhook(
     status_str = data.get("status", "Unknown")
 
     title = f"DISK WARNING: {device.get('device_name', 'Unknown')}"
-    body = f"SMART Status: {status_str}\nDevice: {device.get('device_model', 'Unknown')}\nSerial: {device.get('serial_number', 'Unknown')}"
+    body = f"SMART Status: {status_str}\nDevice: {
+        device.get(
+            'device_model',
+            'Unknown')}\nSerial: {
+        device.get(
+            'serial_number',
+            'Unknown')}"
 
     await apprise_provider.push(title=title, body=body, tag="critical")
 
     if status_str.lower() in ("failed", "critical"):
-        logger.critical("Scrutiny reported disk failure. Triggering emergency backup.")
+        logger.critical(
+            "Scrutiny reported disk failure. Triggering emergency backup.")
         asyncio.create_task(_trigger_emergency_backup())
 
     return {"status": "ok"}
@@ -247,12 +262,11 @@ async def _trigger_emergency_backup():
     """
     Run the repo's backup/maintenance script.
     """
-    import subprocess
     try:
         # Assuming Makefile or a script handles backup
         # ./Makefile has no backup target usually, checking...
         process = await asyncio.create_subprocess_shell(
-            "./deploy.sh --backup", # Placeholder for actual backup flag/script
+            "./deploy.sh --backup",  # Placeholder for actual backup flag/script
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )

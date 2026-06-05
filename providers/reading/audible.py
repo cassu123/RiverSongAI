@@ -36,7 +36,7 @@ import logging
 import os
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,8 @@ class AudibleProvider:
         self._auth_base = auth_base_path
         self._country_code = country_code.lower()
         # Single executor shared across all users. audible calls are lightweight
-        # network I/O so one thread is enough; raise max_workers for higher concurrency.
+        # network I/O so one thread is enough; raise max_workers for higher
+        # concurrency.
         self._executor = ThreadPoolExecutor(
             max_workers=4, thread_name_prefix="audible"
         )
@@ -97,7 +98,8 @@ class AudibleProvider:
 
     def _load_auth(self, user_id: str) -> "audible.Authenticator":
         if not _AUDIBLE_AVAILABLE:
-            raise RuntimeError("audible package not installed. Run: pip install audible")
+            raise RuntimeError(
+                "audible package not installed. Run: pip install audible")
         path = self._auth_file_for(user_id)
         if not os.path.exists(path):
             raise FileNotFoundError(
@@ -114,7 +116,8 @@ class AudibleProvider:
         Called only by the --setup script.
         """
         if not _AUDIBLE_AVAILABLE:
-            raise RuntimeError("audible package not installed. Run: pip install audible")
+            raise RuntimeError(
+                "audible package not installed. Run: pip install audible")
         auth = audible.Authenticator.from_login(
             username=username,
             password=password,
@@ -129,7 +132,8 @@ class AudibleProvider:
     # Sync helpers (run in executor)
     # ------------------------------------------------------------------
 
-    def _sync_get_library(self, user_id: str, limit: int) -> List[AudiobookEntry]:
+    def _sync_get_library(self, user_id: str,
+                          limit: int) -> List[AudiobookEntry]:
         auth = self._load_auth(user_id)
         with audible.Client(auth=auth) as client:
             resp = client.get(
@@ -145,7 +149,8 @@ class AudibleProvider:
             )
         return [self._parse_item(item) for item in resp.get("items", [])]
 
-    def _sync_get_last_listened(self, user_id: str) -> Optional[AudiobookEntry]:
+    def _sync_get_last_listened(
+            self, user_id: str) -> Optional[AudiobookEntry]:
         auth = self._load_auth(user_id)
         with audible.Client(auth=auth) as client:
             resp = client.get(
@@ -160,7 +165,8 @@ class AudibleProvider:
     @staticmethod
     def _parse_item(item: dict) -> AudiobookEntry:
         authors = [a.get("name", "Unknown") for a in item.get("authors", [])]
-        narrators = [n.get("name", "Unknown") for n in item.get("narrators", [])]
+        narrators = [n.get("name", "Unknown")
+                     for n in item.get("narrators", [])]
 
         percent = -1.0
         progress = item.get("listening_status") or {}
@@ -193,7 +199,8 @@ class AudibleProvider:
             self._executor, self._sync_get_library, user_id, limit
         )
 
-    async def get_last_listened(self, user_id: str) -> Optional[AudiobookEntry]:
+    async def get_last_listened(
+            self, user_id: str) -> Optional[AudiobookEntry]:
         """Return the most recently played audiobook for *user_id*, or None."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
@@ -217,7 +224,10 @@ class AudibleProvider:
             except FileNotFoundError as exc:
                 return str(exc)
             except Exception as exc:
-                logger.error("Audible get_last_listened failed for '%s': %s", user_id, exc)
+                logger.error(
+                    "Audible get_last_listened failed for '%s': %s",
+                    user_id,
+                    exc)
                 return "I could not reach Audible right now. Check your connection and try again."
 
         if book is None and asin is None:
@@ -285,7 +295,9 @@ class AudibleProvider:
         )
         h, m = divmod(book.duration_minutes, 60)
         duration = (
-            f"{h} hour{'s' if h != 1 else ''} and {m} minute{'s' if m != 1 else ''}."
+            f"{h} hour{
+                's' if h != 1 else ''} and {m} minute{
+                's' if m != 1 else ''}."
             if h
             else f"{m} minute{'s' if m != 1 else ''}."
         )
@@ -343,17 +355,21 @@ if __name__ == "__main__":
         print("Error: audible package not installed. Run: pip install audible")
         sys.exit(1)
 
-    print(f"Audible setup -- user: {args.user_id}, marketplace: {args.country.upper()}")
+    print(
+        f"Audible setup -- user: {args.user_id}, marketplace: {args.country.upper()}")
     print(f"Auth will be saved to: {args.auth_base}/{args.user_id}.json")
     print()
 
     email = input("Audible email: ").strip()
     password = getpass.getpass("Audible password: ")
 
-    provider = AudibleProvider(auth_base_path=args.auth_base, country_code=args.country)
+    provider = AudibleProvider(
+        auth_base_path=args.auth_base,
+        country_code=args.country)
     try:
         provider.setup_auth(args.user_id, email, password)
-        print(f"\nSetup complete. Auth saved to {args.auth_base}/{args.user_id}.json")
+        print(
+            f"\nSetup complete. Auth saved to {args.auth_base}/{args.user_id}.json")
     except Exception as exc:
         print(f"Setup failed: {exc}")
         sys.exit(1)

@@ -15,7 +15,6 @@ import logging
 import sqlite3
 import threading
 
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -115,5 +114,9 @@ async def is_feature_enabled_for(user_id: str, feature_key: str) -> bool:
 
         return True
     except Exception as exc:
-        logger.error("Feature check failed for user %s, key %s: %s", user_id, feature_key, exc)
+        logger.error(
+            "Feature check failed for user %s, key %s: %s",
+            user_id,
+            feature_key,
+            exc)
         return False

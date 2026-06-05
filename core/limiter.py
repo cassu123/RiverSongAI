@@ -2,7 +2,8 @@ from starlette.requests import Request as StarletteRequest
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-async def get_rate_limit_key(request: StarletteRequest) -> str:
+
+def get_rate_limit_key(request: StarletteRequest) -> str:
     """
     Prefer JWT sub if available, else fallback to remote IP.
     """
@@ -10,9 +11,10 @@ async def get_rate_limit_key(request: StarletteRequest) -> str:
     if auth_header.startswith("Bearer "):
         from core.auth import decode_token
         token = auth_header.removeprefix("Bearer ").strip()
-        payload = await decode_token(token)
+        payload: dict = decode_token(token) or {}  # type: ignore
         if payload and "sub" in payload:
             return payload["sub"]
     return get_remote_address(request)
+
 
 limiter = Limiter(key_func=get_rate_limit_key)

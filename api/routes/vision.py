@@ -13,7 +13,6 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 from config.settings import get_settings
 from providers.llm.vision_provider import VisionProvider
 
@@ -34,12 +33,14 @@ async def _require_user(
 
 _vision_provider = VisionProvider()
 
+
 def _check_vision_enabled():
     if not get_settings().vision_enabled:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Vision model is not enabled in settings."
         )
+
 
 @router.post("/analyze")
 async def analyze_image(
@@ -48,16 +49,20 @@ async def analyze_image(
     user_id: str = Depends(_require_user)
 ):
     _check_vision_enabled()
-    
+
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large (max 10MB).")
-        
-    description = await _vision_provider.analyze_image(content, prompt)
+        raise HTTPException(
+            status_code=413,
+            detail="File too large (max 10MB).")
+
+    # type: ignore
+    description = await _vision_provider.analyze_image(content, prompt)  # type: ignore
     return {
         "description": description,
         "model_used": get_settings().vision_model
     }
+
 
 @router.post("/recipe")
 async def extract_recipe(
@@ -65,12 +70,15 @@ async def extract_recipe(
     user_id: str = Depends(_require_user)
 ):
     _check_vision_enabled()
-    
+
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large (max 10MB).")
-        
+        raise HTTPException(
+            status_code=413,
+            detail="File too large (max 10MB).")
+
     return await _vision_provider.extract_recipe_data(content)
+
 
 @router.post("/inventory-item")
 async def extract_inventory(
@@ -78,12 +86,15 @@ async def extract_inventory(
     user_id: str = Depends(_require_user)
 ):
     _check_vision_enabled()
-    
+
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large (max 10MB).")
-        
+        raise HTTPException(
+            status_code=413,
+            detail="File too large (max 10MB).")
+
     return await _vision_provider.extract_inventory_item(content)
+
 
 @router.post("/listing")
 async def suggest_listing(
@@ -91,9 +102,11 @@ async def suggest_listing(
     user_id: str = Depends(_require_user)
 ):
     _check_vision_enabled()
-    
+
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large (max 10MB).")
-        
+        raise HTTPException(
+            status_code=413,
+            detail="File too large (max 10MB).")
+
     return await _vision_provider.suggest_listing_details(content)

@@ -81,20 +81,23 @@ async def decompose_query(
             model = getattr(settings, "deep_research_model", "") or None
             llm = OllamaLLM(model=model)
         except Exception as exc:
-            logger.info("Deep research: no LLM available for decompose (%s); using heuristic.", exc)
+            logger.info(
+                "Deep research: no LLM available for decompose (%s); using heuristic.", exc)
             return _heuristic_decompose(query, n)
 
     user_msg = f"Question: {query}\nReturn exactly {n} sub-queries."
     messages = [
         {"role": "system", "content": _DECOMPOSE_PROMPT},
-        {"role": "user",   "content": user_msg},
+        {"role": "user", "content": user_msg},
     ]
     try:
         if hasattr(llm, "chat"):
             res = await llm.chat(messages)
             content = res.get("content") if isinstance(res, dict) else str(res)
         else:
-            stream_fn = getattr(llm, "stream_chat", None) or getattr(llm, "stream_response", None)
+            stream_fn = getattr(
+                llm, "stream_chat", None) or getattr(
+                llm, "stream_response", None)
             if stream_fn is None:
                 return _heuristic_decompose(query, n)
             content = ""
@@ -114,7 +117,9 @@ async def decompose_query(
             clean.append(_heuristic_decompose(query, n)[len(clean)])
         return clean[:n]
     except Exception as exc:
-        logger.info("Deep research decompose failed (%s); using heuristic.", exc)
+        logger.info(
+            "Deep research decompose failed (%s); using heuristic.",
+            exc)
         return _heuristic_decompose(query, n)
 
 
@@ -148,8 +153,8 @@ def _parse_urls_from_block(text: str) -> List[Dict[str, str]]:
             continue
         seen.add(url)
         out.append({
-            "title":   m.group("title").strip(),
-            "url":     url,
+            "title": m.group("title").strip(),
+            "url": url,
             "snippet": (m.group("content") or "").strip(),
         })
 
@@ -176,7 +181,11 @@ async def gather_sources(
     parse the formatted output, dedupe by URL, cap at `overall_cap`.
     """
     settings = get_settings()
-    cap = int(overall_cap or getattr(settings, "deep_research_max_sources", 10))
+    cap = int(
+        overall_cap or getattr(
+            settings,
+            "deep_research_max_sources",
+            10))  # type: ignore
 
     if not sub_queries:
         return []
@@ -186,7 +195,8 @@ async def gather_sources(
             from providers.web.search import build_search_provider
             search_provider = build_search_provider()
         except Exception as exc:
-            logger.warning("Deep research: search provider unavailable (%s).", exc)
+            logger.warning(
+                "Deep research: search provider unavailable (%s).", exc)
             return []
 
     async def _one(q: str) -> List[Dict[str, str]]:
@@ -247,7 +257,8 @@ def _markitdown_to_text(content: bytes, filename: str) -> str:
     try:
         items = markitdown_extract(file_bytes=content, filename=filename)
         if items:
-            return "\n\n".join(it.get("text", "") for it in items if it.get("text"))
+            return "\n\n".join(it.get("text", "")
+                               for it in items if it.get("text"))
     except Exception:
         pass
     return ""
@@ -260,7 +271,7 @@ def _html_to_text(content: bytes) -> str:
     except Exception:
         return ""
     text = re.sub(r"<script[\s\S]*?</script>", " ", text, flags=re.IGNORECASE)
-    text = re.sub(r"<style[\s\S]*?</style>",   " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"<style[\s\S]*?</style>", " ", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", " ", text)
     # Collapse whitespace.
     text = re.sub(r"\s+", " ", text).strip()
@@ -283,7 +294,7 @@ async def fetch_and_extract(
         return {**source, "text": ""}
 
     if fetcher is None:
-        fetcher = lambda u: _httpx_fetch(u, timeout=_DEFAULT_FETCH_TIMEOUT)  # noqa: E731
+        def fetcher(u): return _httpx_fetch(u, timeout=_DEFAULT_FETCH_TIMEOUT)  # noqa: E731
 
     content = await fetcher(url)
     if not content:
@@ -321,12 +332,13 @@ _SYNTH_PROMPT = (
 )
 
 
-def _build_synthesis_messages(query: str, sources: List[Dict[str, str]]) -> List[Dict[str, str]]:
+def _build_synthesis_messages(
+        query: str, sources: List[Dict[str, str]]) -> List[Dict[str, str]]:
     excerpts: List[str] = []
     for i, src in enumerate(sources, start=1):
         title = src.get("title") or src.get("url") or f"Source {i}"
-        url   = src.get("url", "")
-        body  = (src.get("text") or src.get("snippet") or "").strip()
+        url = src.get("url", "")
+        body = (src.get("text") or src.get("snippet") or "").strip()
         if not body:
             continue
         excerpts.append(f"[{i}] {title} — {url}\n{body[:2400]}")
@@ -334,13 +346,19 @@ def _build_synthesis_messages(query: str, sources: List[Dict[str, str]]) -> List
     user = f"Question: {query}\n\nSource excerpts:\n{payload}"
     return [
         {"role": "system", "content": _SYNTH_PROMPT},
-        {"role": "user",   "content": user},
+        {"role": "user", "content": user},
     ]
 
 
 def _heuristic_synth(query: str, sources: List[Dict[str, str]]) -> str:
     """Minimal report when no LLM is available — still useful, just terse."""
-    lines = [f"# Research: {query}", "", "_Generated by River Song Deep Research (heuristic)_", "", "## Summary", ""]
+    lines = [
+        f"# Research: {query}",
+        "",
+        "_Generated by River Song Deep Research (heuristic)_",
+        "",
+        "## Summary",
+        ""]
     if sources:
         lines.append(f"Reviewed {len(sources)} source(s) related to: {query}.")
     else:
@@ -353,7 +371,7 @@ def _heuristic_synth(query: str, sources: List[Dict[str, str]]) -> str:
     lines += ["", "## Sources"]
     for i, src in enumerate(sources, start=1):
         title = src.get("title") or src.get("url", "")
-        url   = src.get("url", "")
+        url = src.get("url", "")
         lines.append(f"{i}. [{title}]({url})")
     return "\n".join(lines).strip() + "\n"
 
@@ -380,7 +398,9 @@ async def synthesize(
             res = await llm.chat(messages)
             content = res.get("content") if isinstance(res, dict) else str(res)
         else:
-            stream_fn = getattr(llm, "stream_chat", None) or getattr(llm, "stream_response", None)
+            stream_fn = getattr(
+                llm, "stream_chat", None) or getattr(
+                llm, "stream_response", None)
             if stream_fn is None:
                 return _heuristic_synth(query, sources)
             content = ""
@@ -391,7 +411,9 @@ async def synthesize(
             return _heuristic_synth(query, sources)
         return content
     except Exception as exc:
-        logger.info("Deep research synthesis failed (%s); using heuristic.", exc)
+        logger.info(
+            "Deep research synthesis failed (%s); using heuristic.",
+            exc)
         return _heuristic_synth(query, sources)
 
 
@@ -458,8 +480,8 @@ async def run_deep_research(
 
     return {
         "document_id": doc["id"],
-        "report":      report,
-        "title":       title,
+        "report": report,
+        "title": title,
         "sub_queries": sub_queries,
-        "sources":     [{"title": s.get("title"), "url": s.get("url")} for s in sources],
+        "sources": [{"title": s.get("title"), "url": s.get("url")} for s in sources],
     }

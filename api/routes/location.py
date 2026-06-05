@@ -15,7 +15,6 @@ import httpx
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/location", tags=["location"])
@@ -26,7 +25,9 @@ async def _require_user(authorization: Optional[str]) -> str:
         raise HTTPException(status_code=401, detail="Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token.")
     return payload["sub"]
 
 
@@ -40,15 +41,17 @@ async def get_city(
     Uses ip-api.com (free for non-commercial use, 45 req/min).
     """
     await _require_user(authorization)
-    
+
     # In many production setups, request.client.host is the load balancer IP.
     # main.py includes _CloudflareIPMiddleware which sets request.scope["client"]
     # from the CF-Connecting-IP header if present.
     client_host = request.client.host if request.client else None
-    
+
     url = "http://ip-api.com/json/"
-    # If we have a public IP, pass it to the API. Otherwise, ip-api uses the caller's IP.
-    if client_host and not client_host.startswith(("127.", "192.168.", "10.", "172.16.")):
+    # If we have a public IP, pass it to the API. Otherwise, ip-api uses the
+    # caller's IP.
+    if client_host and not client_host.startswith(
+            ("127.", "192.168.", "10.", "172.16.")):
         url += client_host
 
     try:
@@ -56,14 +59,17 @@ async def get_city(
             resp = await client.get(url)
             resp.raise_for_status()
             data = resp.json()
-            
+
             if data.get("status") == "fail":
-                logger.error("IP-API failed for IP %s: %s", client_host, data.get("message"))
+                logger.error(
+                    "IP-API failed for IP %s: %s",
+                    client_host,
+                    data.get("message"))
                 raise HTTPException(
-                    status_code=502, 
+                    status_code=502,
                     detail=f"Location lookup failed: {data.get('message')}"
                 )
-                
+
             return {
                 "city": data.get("city"),
                 "region": data.get("regionName"),
@@ -77,4 +83,5 @@ async def get_city(
         raise
     except Exception as exc:
         logger.error("Location lookup error: %s", exc)
-        raise HTTPException(status_code=502, detail=f"Location lookup error: {exc}")
+        raise HTTPException(status_code=502,
+                            detail=f"Location lookup error: {exc}")

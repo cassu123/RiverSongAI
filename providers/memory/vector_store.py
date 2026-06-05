@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 from typing import Any, Dict, List, Optional
 
 from config.settings import get_settings
@@ -21,8 +20,8 @@ try:
     import chromadb
     from chromadb.api.types import Where
 except ImportError:
-    chromadb = None
-    Where = Any
+    chromadb = None  # type: ignore
+    Where = Any  # type: ignore
 
 
 class VectorStore:
@@ -50,19 +49,26 @@ class VectorStore:
         HttpClient without first confirming a patched ChromaDB release.
         """
         if chromadb is None:
-            logger.warning("chromadb package not found. Semantic memory will be disabled.")
+            logger.warning(
+                "chromadb package not found. Semantic memory will be disabled.")
             self._enabled = False
             return
 
         try:
-            self._client = chromadb.PersistentClient(path=self._settings.chroma_path)
-            self._collection = self._client.get_or_create_collection("river_song_memory")
-            logger.info("ChromaDB initialized at %s", self._settings.chroma_path)
+            self._client = chromadb.PersistentClient(
+                path=self._settings.chroma_path)
+            self._collection = self._client.get_or_create_collection(
+                "river_song_memory")  # type: ignore
+            logger.info(
+                "ChromaDB initialized at %s",
+                self._settings.chroma_path)
         except Exception as exc:
-            logger.warning("Failed to initialize ChromaDB: %s. Semantic memory will be disabled.", exc)
+            logger.warning(
+                "Failed to initialize ChromaDB: %s. Semantic memory will be disabled.", exc)
             self._enabled = False
 
-    async def upsert(self, id: str, text: str, metadata: Dict[str, Any]) -> None:
+    async def upsert(self, id: str, text: str,
+                     metadata: Dict[str, Any]) -> None:
         """
         Embed text and upsert into the vector store.
         """

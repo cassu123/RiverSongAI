@@ -1,22 +1,29 @@
 # providers/smart_home/homeassistant.py
 from __future__ import annotations
-import logging, os, time, json, asyncio
+import logging
+import os
+import time
+import json
+import asyncio
 from typing import Any, Callable
 import httpx
 
 logger = logging.getLogger(__name__)
 
-_BASE  = os.getenv("HOME_ASSISTANT_URL", "http://localhost:8123")
+_BASE = os.getenv("HOME_ASSISTANT_URL", "http://localhost:8123")
 _TOKEN = os.getenv("HOME_ASSISTANT_TOKEN", "")
 _CACHE_TTL = 30
 _cache: dict[str, tuple[Any, float]] = {}
+
 
 def _client() -> httpx.AsyncClient:
     headers = {
         "Accept": "application/json",
         "Authorization": f"Bearer {_TOKEN}"
     }
-    return httpx.AsyncClient(base_url=_BASE.rstrip("/") + "/api", headers=headers, timeout=10)
+    return httpx.AsyncClient(base_url=_BASE.rstrip(
+        "/") + "/api", headers=headers, timeout=10)
+
 
 async def _get(path: str, params: dict | None = None) -> Any:
     if not _TOKEN:
@@ -36,11 +43,14 @@ async def _get(path: str, params: dict | None = None) -> Any:
     _cache[key] = (data, time.monotonic() + _CACHE_TTL)
     return data
 
+
 async def states() -> list[dict]:
     """Retrieve all entity states."""
     return await _get("/states") or []
 
-async def service_call(domain: str, service: str, entity_id: str, **kwargs) -> bool:
+
+async def service_call(domain: str, service: str,
+                       entity_id: str, **kwargs) -> bool:
     """Call a service for a specific entity."""
     if not _TOKEN:
         return False
@@ -51,8 +61,13 @@ async def service_call(domain: str, service: str, entity_id: str, **kwargs) -> b
             r.raise_for_status()
             return True
         except Exception as exc:
-            logger.warning("HASS service call %s.%s failed: %s", domain, service, exc)
+            logger.warning(
+                "HASS service call %s.%s failed: %s",
+                domain,
+                service,
+                exc)
             return False
+
 
 async def subscribe_events(callback: Callable[[dict], Any]):
     """
@@ -64,17 +79,17 @@ async def subscribe_events(callback: Callable[[dict], Any]):
         return
 
     ws_url = _BASE.replace("http", "ws").rstrip("/") + "/api/websocket"
-    
+
     import websockets
     async for websocket in websockets.connect(ws_url):
         try:
             # 1. Auth
-            auth_msg = await websocket.recv()
+            await websocket.recv()
             await websocket.send(json.dumps({
                 "type": "auth",
                 "access_token": _TOKEN
             }))
-            
+
             auth_resp = json.loads(await websocket.recv())
             if auth_resp.get("type") != "auth_ok":
                 logger.error("HASS WS auth failed: %s", auth_resp)
@@ -92,7 +107,7 @@ async def subscribe_events(callback: Callable[[dict], Any]):
                 data = json.loads(message)
                 if data.get("type") == "event":
                     await callback(data["event"])
-                    
+
         except websockets.ConnectionClosed:
             continue
         except Exception as exc:

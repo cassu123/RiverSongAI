@@ -1,18 +1,24 @@
 # providers/image/comfyui.py
 from __future__ import annotations
-import logging, os, time, json, uuid, asyncio
-from typing import Any
+import logging
+import os
+import json
+import uuid
+import asyncio
 import httpx
 
 logger = logging.getLogger(__name__)
 
-_BASE  = os.getenv("COMFYUI_URL", "http://localhost:8188")
+_BASE = os.getenv("COMFYUI_URL", "http://localhost:8188")
 _WORKFLOW_DIR = "providers/image/workflows"
+
 
 def _client() -> httpx.AsyncClient:
     return httpx.AsyncClient(base_url=_BASE, timeout=60)
 
-async def generate(prompt: str, workflow: str = "portrait", seed: int | None = None) -> bytes | None:
+
+async def generate(prompt: str, workflow: str = "portrait",
+                   seed: int | None = None) -> bytes | None:
     """
     Generate an image using ComfyUI.
     Loads a JSON workflow, substitutes parameters, and polls for result.
@@ -46,7 +52,7 @@ async def generate(prompt: str, workflow: str = "portrait", seed: int | None = N
             prompt_id = r.json()["prompt_id"]
 
             # 2. Poll for history
-            for _ in range(30): # 30 attempts, 2s each
+            for _ in range(30):  # 30 attempts, 2s each
                 await asyncio.sleep(2)
                 r = await c.get(f"/history/{prompt_id}")
                 r.raise_for_status()
@@ -57,8 +63,9 @@ async def generate(prompt: str, workflow: str = "portrait", seed: int | None = N
                     for node_id, node_output in outputs.items():
                         if "images" in node_output:
                             filename = node_output["images"][0]["filename"]
-                            subfolder = node_output["images"][0].get("subfolder", "")
-                            
+                            subfolder = node_output["images"][0].get(
+                                "subfolder", "")
+
                             # 4. Download image
                             r = await c.get("/view", params={"filename": filename, "subfolder": subfolder, "type": "output"})
                             r.raise_for_status()

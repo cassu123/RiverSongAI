@@ -13,11 +13,10 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional
 
 import httpx
@@ -72,7 +71,8 @@ def _save_token(user_id: str, base: str, token_data: dict) -> None:
     os.replace(tmp, path)
 
 
-async def _refresh_if_needed(token_data: dict, client_id: str, client_secret: str) -> dict:
+async def _refresh_if_needed(
+        token_data: dict, client_id: str, client_secret: str) -> dict:
     """Refresh the access token if expired. Returns updated token_data."""
     import time
     expires_at = token_data.get("expires_at", 0)
@@ -81,7 +81,8 @@ async def _refresh_if_needed(token_data: dict, client_id: str, client_secret: st
 
     refresh_token = token_data.get("refresh_token")
     if not refresh_token:
-        raise PermissionError("Books token has no refresh_token — re-authorize.")
+        raise PermissionError(
+            "Books token has no refresh_token — re-authorize.")
 
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.post(_TOKEN_URI, data={
@@ -106,10 +107,11 @@ async def _refresh_if_needed(token_data: dict, client_id: str, client_secret: st
 
 
 class GoogleBooksProvider:
-    def __init__(self, client_id: str, client_secret: str, token_storage_path: str):
-        self._client_id     = client_id
+    def __init__(self, client_id: str, client_secret: str,
+                 token_storage_path: str):
+        self._client_id = client_id
         self._client_secret = client_secret
-        self._storage       = token_storage_path
+        self._storage = token_storage_path
 
     def is_connected(self, user_id: str) -> bool:
         return _load_token(user_id, self._storage) is not None
@@ -118,10 +120,10 @@ class GoogleBooksProvider:
         """Called after the OAuth callback exchanges code for tokens."""
         import time
         data = {
-            "access_token":  token_resp["access_token"],
+            "access_token": token_resp["access_token"],
             "refresh_token": token_resp.get("refresh_token", ""),
-            "expires_at":    time.time() + token_resp.get("expires_in", 3600),
-            "scope":         token_resp.get("scope", _BOOKS_SCOPE),
+            "expires_at": time.time() + token_resp.get("expires_in", 3600),
+            "scope": token_resp.get("scope", _BOOKS_SCOPE),
         }
         _save_token(user_id, self._storage, data)
 
@@ -159,12 +161,17 @@ class GoogleBooksProvider:
                 while True:
                     resp = await client.get(
                         f"{_BOOKS_API}/mylibrary/bookshelves/{shelf_id}/volumes",
-                        params={"maxResults": 40, "startIndex": start_index, "projection": "full"},
+                        params={
+                            "maxResults": 40,
+                            "startIndex": start_index,
+                            "projection": "full"},
                     )
                     if resp.status_code == 401:
-                        raise PermissionError("Books access token rejected — re-authorize.")
+                        raise PermissionError(
+                            "Books access token rejected — re-authorize.")
                     if resp.status_code == 403:
-                        raise PermissionError("Books API access denied. Make sure the Books API is enabled in your Google Cloud project.")
+                        raise PermissionError(
+                            "Books API access denied. Make sure the Books API is enabled in your Google Cloud project.")
                     resp.raise_for_status()
                     data = resp.json()
 
@@ -178,11 +185,11 @@ class GoogleBooksProvider:
                             continue
                         seen_ids.add(vid)
 
-                        info     = item.get("volumeInfo", {})
+                        info = item.get("volumeInfo", {})
                         user_info = item.get("userInfo", {})
-                        reading_pos = item.get("volumeInfo", {})
+                        item.get("volumeInfo", {})
 
-                        title   = info.get("title", "").strip()
+                        title = info.get("title", "").strip()
                         if not title:
                             continue
 
@@ -223,7 +230,8 @@ class GoogleBooksProvider:
                             except (TypeError, ValueError):
                                 pass
 
-                        info_link = info.get("canonicalVolumeLink") or info.get("infoLink") or ""
+                        info_link = info.get(
+                            "canonicalVolumeLink") or info.get("infoLink") or ""
 
                         books.append(GoogleBook(
                             title=title,
@@ -241,7 +249,10 @@ class GoogleBooksProvider:
                     if start_index >= total:
                         break
 
-        logger.info("Google Books: fetched %d books for user '%s'", len(books), user_id)
+        logger.info(
+            "Google Books: fetched %d books for user '%s'",
+            len(books),
+            user_id)
         return books
 
 
@@ -262,7 +273,8 @@ def get_books_provider() -> GoogleBooksProvider:
             from pathlib import Path
             secrets_path = Path(s.google_client_secrets_path)
             if not secrets_path.exists():
-                raise FileNotFoundError(f"Google client secrets not found: {secrets_path}")
+                raise FileNotFoundError(
+                    f"Google client secrets not found: {secrets_path}")
             secrets = _json.loads(secrets_path.read_text())
             client = secrets.get("web") or secrets.get("installed") or {}
             _provider = GoogleBooksProvider(
@@ -271,5 +283,6 @@ def get_books_provider() -> GoogleBooksProvider:
                 token_storage_path=s.google_token_storage_path,
             )
         except Exception as exc:
-            raise RuntimeError(f"Could not initialise Google Books provider: {exc}") from exc
+            raise RuntimeError(
+                f"Could not initialise Google Books provider: {exc}") from exc
     return _provider

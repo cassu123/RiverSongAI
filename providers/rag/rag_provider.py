@@ -19,6 +19,7 @@ from providers.rag.markitdown_loader import markitdown_extract
 
 logger = logging.getLogger(__name__)
 
+
 class RAGProvider:
     """
     Handles ingestion and retrieval of local documents (PDFs, manuals, images).
@@ -26,36 +27,50 @@ class RAGProvider:
 
     def __init__(self):
         self._settings = get_settings()
-        self._vector_store = VectorStore() # ChromaDB instance from Phase 1
-        
-    async def ingest_document(self, file_bytes: bytes, metadata: Dict[str, Any]) -> int:
+        self._vector_store = VectorStore()  # ChromaDB instance from Phase 1
+
+    async def ingest_document(self, file_bytes: bytes,
+                              metadata: Dict[str, Any]) -> int:
         """
         Extracts text from a document using Unstructured, chunks it, and stores in the vector database.
         Returns the number of chunks ingested.
         """
         filename = metadata.get('filename', 'unknown')
-        backend  = (getattr(self._settings, "rag_extractor", "unstructured") or "unstructured").lower()
+        backend = (
+            getattr(
+                self._settings,
+                "rag_extractor",
+                "unstructured") or "unstructured").lower()
         if backend == "markitdown":
-            elements = markitdown_extract(file_bytes=file_bytes, filename=filename)
+            elements = markitdown_extract(
+                file_bytes=file_bytes, filename=filename)
             if not elements:
-                logger.info("MarkItDown returned nothing for %s; trying unstructured.", filename)
-                elements = unstructured_extract(file_bytes=file_bytes, filename=filename)
+                logger.info(
+                    "MarkItDown returned nothing for %s; trying unstructured.",
+                    filename)
+                elements = unstructured_extract(
+                    file_bytes=file_bytes, filename=filename)
         else:
-            elements = unstructured_extract(file_bytes=file_bytes, filename=filename)
-        
+            elements = unstructured_extract(
+                file_bytes=file_bytes, filename=filename)
+
         if not elements:
-            logger.warning("No elements extracted from document %s for ingestion.", filename)
+            logger.warning(
+                "No elements extracted from document %s for ingestion.",
+                filename)
             return 0
-            
-        # Combine elements into a single text for chunking, 
+
+        # Combine elements into a single text for chunking,
         # or we could chunk per element if they are large.
         # For now, let's keep it simple and combine.
         full_text = "\n\n".join([el['text'] for el in elements])
-        
+
         if not full_text.strip():
-            logger.warning("No text extracted from document %s for ingestion.", filename)
+            logger.warning(
+                "No text extracted from document %s for ingestion.",
+                filename)
             return 0
-            
+
         chunks = chunk_text(full_text)
         for i, chunk in enumerate(chunks):
             chunk_id = f"doc_{metadata.get('document_id', uuid.uuid4())}_{i}"
@@ -69,15 +84,20 @@ class RAGProvider:
                 text=chunk,
                 metadata=chunk_metadata
             )
-            
-        logger.info("Ingested %d chunks from document: %s", len(chunks), filename)
+
+        logger.info(
+            "Ingested %d chunks from document: %s",
+            len(chunks),
+            filename)
         return len(chunks)
 
-    async def ingest_pdf(self, file_bytes: bytes, metadata: Dict[str, Any]) -> int:
+    async def ingest_pdf(self, file_bytes: bytes,
+                         metadata: Dict[str, Any]) -> int:
         """Alias for backward compatibility."""
         return await self.ingest_document(file_bytes, metadata)
 
-    async def query_documents(self, query_text: str, n_results: int = 5, where: Optional[dict] = None) -> List[Dict[str, Any]]:
+    async def query_documents(self, query_text: str, n_results: int = 5,
+                              where: Optional[dict] = None) -> List[Dict[str, Any]]:
         """
         Retrieves relevant document chunks for a given query.
         """
@@ -86,7 +106,7 @@ class RAGProvider:
             where = {"source_type": "document"}
         elif "source_type" not in where:
             where["source_type"] = "document"
-            
+
         return await self._vector_store.search(
             query_text=query_text,
             n_results=n_results,
@@ -99,10 +119,11 @@ class RAGProvider:
         """
         if not search_results:
             return ""
-            
+
         context_parts = []
         for res in search_results:
             source = res['metadata'].get('filename', 'Local Document')
-            context_parts.append(f"--- Excerpt from {source} ---\n{res['text']}")
-            
+            context_parts.append(
+                f"--- Excerpt from {source} ---\n{res['text']}")
+
         return "\n\n".join(context_parts)

@@ -39,6 +39,7 @@ _CLOUD_DELAY_WARNING = (
     "Response time depends on network and API load."
 )
 
+
 def _friendly_error(exc: Exception) -> str:
     err_str = str(exc).lower()
     if "rate limit" in err_str or "429" in err_str:
@@ -94,7 +95,7 @@ class OpenAILLM(LLMProvider):
         logger.info(_CLOUD_DELAY_WARNING)
 
         try:
-            stream = await self._client.chat.completions.create(
+            stream = await self._client.chat.completions.create(  # type: ignore
                 model=self._model,
                 messages=messages,
                 max_tokens=self._max_tokens,

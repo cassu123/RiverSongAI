@@ -1,3 +1,4 @@
+from typing import Optional, Any
 """
 vehicles/models.py
 
@@ -23,9 +24,9 @@ import uuid
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
-from sqlalchemy import (
+from sqlalchemy import (  # type: ignore
     Boolean,
-    Column,
+    Column, mapped_column,
     DateTime,
     Enum,
     Float,
@@ -38,7 +39,7 @@ from sqlalchemy import (
     Uuid,
     JSON,
 )
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import declarative_base, Mapped, mapped_column, relationship
 
 Base = declarative_base()
 
@@ -76,23 +77,23 @@ class CheckStatus(PyEnum):
 # Vehicle
 # ---------------------------------------------------------------------------
 
-class Vehicle(Base):
+class Vehicle(Base):  # type: ignore
     __tablename__ = "vehicles"
 
-    id               = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    external_user_id = Column(String, nullable=False, index=True)
-    year             = Column(Integer, nullable=True)
-    make             = Column(String,  nullable=False)
-    model            = Column(String,  nullable=False)
-    trim             = Column(String,  nullable=True)
-    nickname         = Column(String,  nullable=True)
-    vehicle_type     = Column(Enum(VehicleType), default=VehicleType.AUTO, nullable=False)
-    vin              = Column(String,  nullable=True)
-    license_plate    = Column(String,  nullable=True)
-    color            = Column(String,  nullable=True)
-    notes            = Column(Text,    nullable=True)
-    created_at       = Column(DateTime, default=_now)
-    updated_at       = Column(DateTime, default=_now, onupdate=_now)
+    id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    external_user_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    make: Mapped[str] = mapped_column(String,  nullable=False)
+    model: Mapped[str] = mapped_column(String,  nullable=False)
+    trim: Mapped[Optional[str]] = mapped_column(String,  nullable=True)
+    nickname: Mapped[Optional[str]] = mapped_column(String,  nullable=True)
+    vehicle_type: Mapped[VehicleType] = mapped_column(Enum(VehicleType), default=VehicleType.AUTO, nullable=False)
+    vin: Mapped[Optional[str]] = mapped_column(String,  nullable=True)
+    license_plate: Mapped[Optional[str]] = mapped_column(String,  nullable=True)
+    color: Mapped[Optional[str]] = mapped_column(String,  nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text,    nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
     check_points = relationship("VehicleCheckPoint", back_populates="vehicle", cascade="all, delete-orphan")
     service_logs = relationship("ServiceLog",        back_populates="vehicle", cascade="all, delete-orphan")
@@ -107,7 +108,7 @@ class Vehicle(Base):
 # Unified checkpoint — one row per service/inspection task
 # ---------------------------------------------------------------------------
 
-class VehicleCheckPoint(Base):
+class VehicleCheckPoint(Base):  # type: ignore
     """
     A single maintenance or inspection line item.
 
@@ -140,31 +141,31 @@ class VehicleCheckPoint(Base):
     """
     __tablename__ = "vehicle_check_points"
 
-    id            = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    vehicle_id    = Column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
-    description   = Column(String, nullable=False)
-    sort_order    = Column(Integer, default=0, nullable=False)
-    service_level = Column(Enum(ServiceLevel), default=ServiceLevel.INSPECT, nullable=False)
+    id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vehicle_id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    service_level: Mapped[ServiceLevel] = mapped_column(Enum(ServiceLevel), default=ServiceLevel.INSPECT, nullable=False)
 
     # When
-    interval_miles = Column(Integer, nullable=True)
-    interval_days  = Column(Integer, nullable=True)
-    due_at_miles   = Column(Integer, nullable=True)
+    interval_miles: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    interval_days: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    due_at_miles: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     # What spec
-    expected_spec  = Column(String, nullable=True)
-    volume         = Column(String, nullable=True)
-    min_value      = Column(Float,  nullable=True)
-    max_value      = Column(Float,  nullable=True)
-    unit           = Column(String, nullable=True)
+    expected_spec: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    volume: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    min_value: Mapped[Optional[float]] = mapped_column(Float,  nullable=True)
+    max_value: Mapped[Optional[float]] = mapped_column(Float,  nullable=True)
+    unit: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Torque (for this task's fastener)
-    ft_lb = Column(Float, nullable=True)
-    nm    = Column(Float, nullable=True)
+    ft_lb: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    nm: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     # Last completed
-    last_service_odometer = Column(Integer,  nullable=True)
-    last_service_date     = Column(DateTime, nullable=True)
+    last_service_odometer: Mapped[Optional[int]] = mapped_column(Integer,  nullable=True)
+    last_service_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     vehicle       = relationship("Vehicle", back_populates="check_points")
     check_results = relationship("ServiceCheckResult", back_populates="check_point")
@@ -175,22 +176,22 @@ class VehicleCheckPoint(Base):
 # Vehicle Parts
 # ---------------------------------------------------------------------------
 
-class VehiclePart(Base):
+class VehiclePart(Base):  # type: ignore
     """
     OEM parts and alternatives for a given checkpoint.
     """
     __tablename__ = "vehicle_parts"
 
-    id              = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    vehicle_id      = Column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
-    checkpoint_id   = Column(Uuid(as_uuid=True), ForeignKey("vehicle_check_points.id"), nullable=False)
-    part_name       = Column(String, nullable=False)
-    oem_part_number = Column(String, nullable=True)
-    oem_specs       = Column(String, nullable=True)
-    alternatives    = Column(JSON, nullable=True, default=[])
-    source          = Column(String, nullable=True)  # "manual", "user_added", "ai_lookup"
-    created_at      = Column(DateTime, default=_now)
-    updated_at      = Column(DateTime, default=_now, onupdate=_now)
+    id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vehicle_id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
+    checkpoint_id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), ForeignKey("vehicle_check_points.id"), nullable=False)
+    part_name: Mapped[str] = mapped_column(String, nullable=False)
+    oem_part_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    oem_specs: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    alternatives: Mapped[Optional[Any]] = mapped_column(JSON, nullable=True, default=[])
+    source: Mapped[Optional[str]] = mapped_column(String, nullable=True)# "manual", "user_added", "ai_lookup"
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
     vehicle     = relationship("Vehicle", back_populates="parts")
     check_point = relationship("VehicleCheckPoint", back_populates="parts")
@@ -200,23 +201,23 @@ class VehiclePart(Base):
 # Legacy spec tables — kept for DB compat, not used in UI
 # ---------------------------------------------------------------------------
 
-class VehicleFluidSpec(Base):
+class VehicleFluidSpec(Base):  # type: ignore
     __tablename__ = "vehicle_fluid_specs"
-    id         = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    vehicle_id = Column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
-    name       = Column(String, nullable=False)
-    spec       = Column(String, nullable=True)
-    volume     = Column(String, nullable=True)
+    id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vehicle_id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    spec: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    volume: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     vehicle    = relationship("Vehicle", back_populates="fluid_specs")
 
 
-class VehicleTorqueSpec(Base):
+class VehicleTorqueSpec(Base):  # type: ignore
     __tablename__ = "vehicle_torque_specs"
-    id         = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    vehicle_id = Column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
-    name       = Column(String, nullable=False)
-    ft_lb      = Column(Float,  nullable=True)
-    nm         = Column(Float,  nullable=True)
+    id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vehicle_id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    ft_lb: Mapped[Optional[float]] = mapped_column(Float,  nullable=True)
+    nm: Mapped[Optional[float]] = mapped_column(Float,  nullable=True)
     vehicle    = relationship("Vehicle", back_populates="torque_specs")
 
 
@@ -224,33 +225,33 @@ class VehicleTorqueSpec(Base):
 # People roster
 # ---------------------------------------------------------------------------
 
-class MaintenancePerson(Base):
+class MaintenancePerson(Base):  # type: ignore
     __tablename__ = "maint_persons"
     __table_args__ = (
         UniqueConstraint("owner_user_id", "external_user_id", name="uq_person_per_owner"),
     )
 
-    id               = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    owner_user_id    = Column(String, nullable=False, index=True)
-    external_user_id = Column(String, nullable=False, index=True)
-    email            = Column(String, nullable=False)
-    display_name     = Column(String, nullable=True)
-    created_at       = Column(DateTime, default=_now)
+    id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    owner_user_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    external_user_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String, nullable=False)
+    display_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
     assignments  = relationship("VehicleAssignment", back_populates="person", cascade="all, delete-orphan")
     service_logs = relationship("ServiceLog",        back_populates="performed_by")
 
 
-class VehicleAssignment(Base):
+class VehicleAssignment(Base):  # type: ignore
     __tablename__ = "vehicle_assignments"
     __table_args__ = (
         UniqueConstraint("vehicle_id", "person_id", name="uq_assignment"),
     )
 
-    id          = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    vehicle_id  = Column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
-    person_id   = Column(Uuid(as_uuid=True), ForeignKey("maint_persons.id"), nullable=False)
-    assigned_at = Column(DateTime, default=_now)
+    id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vehicle_id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
+    person_id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), ForeignKey("maint_persons.id"), nullable=False)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
     vehicle = relationship("Vehicle",           back_populates="assignments")
     person  = relationship("MaintenancePerson", back_populates="assignments")
@@ -260,28 +261,28 @@ class VehicleAssignment(Base):
 # Service logs
 # ---------------------------------------------------------------------------
 
-class ServiceLog(Base):
+class ServiceLog(Base):  # type: ignore
     __tablename__ = "vehicle_service_logs"
 
-    id              = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    vehicle_id      = Column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
-    performed_by_id = Column(Uuid(as_uuid=True), ForeignKey("maint_persons.id"), nullable=True)
-    service_date    = Column(DateTime, nullable=False, default=_now)
-    service_type    = Column(String,   nullable=True)
-    odometer        = Column(Integer,  nullable=True)
-    is_pro_service  = Column(Boolean,  default=False, nullable=False)
-    service_center  = Column(String,   nullable=True)
-    cost            = Column(Numeric(10, 2), nullable=True)
-    notes           = Column(Text, nullable=True)
-    receipt_path    = Column(String, nullable=True)
-    created_at      = Column(DateTime, default=_now)
+    id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vehicle_id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), nullable=False)
+    performed_by_id: Mapped[Optional[Any]] = mapped_column(Uuid(as_uuid=True), ForeignKey("maint_persons.id"), nullable=True)
+    service_date: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_now)
+    service_type: Mapped[Optional[str]] = mapped_column(String,   nullable=True)
+    odometer: Mapped[Optional[int]] = mapped_column(Integer,  nullable=True)
+    is_pro_service: Mapped[bool] = mapped_column(Boolean,  default=False, nullable=False)
+    service_center: Mapped[Optional[str]] = mapped_column(String,   nullable=True)
+    cost: Mapped[Optional[Any]] = mapped_column(Numeric(10, 2), nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    receipt_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
     vehicle       = relationship("Vehicle",           back_populates="service_logs")
     performed_by  = relationship("MaintenancePerson", back_populates="service_logs")
     check_results = relationship("ServiceCheckResult", back_populates="log", cascade="all, delete-orphan")
 
 
-class ServiceCheckResult(Base):
+class ServiceCheckResult(Base):  # type: ignore
     """
     Result of a single inspection item within a service log.
 
@@ -291,13 +292,13 @@ class ServiceCheckResult(Base):
     """
     __tablename__ = "vehicle_service_check_results"
 
-    id             = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    log_id         = Column(Uuid(as_uuid=True), ForeignKey("vehicle_service_logs.id"), nullable=False)
-    check_point_id = Column(Uuid(as_uuid=True), ForeignKey("vehicle_check_points.id"), nullable=True)
-    description    = Column(String,  nullable=False)
-    actual_value   = Column(String,  nullable=True)
-    status         = Column(Enum(CheckStatus), nullable=True)
-    passed         = Column(Boolean, default=True, nullable=False)
+    id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    log_id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), ForeignKey("vehicle_service_logs.id"), nullable=False)
+    check_point_id: Mapped[Optional[Any]] = mapped_column(Uuid(as_uuid=True), ForeignKey("vehicle_check_points.id"), nullable=True)
+    description: Mapped[str] = mapped_column(String,  nullable=False)
+    actual_value: Mapped[Optional[str]] = mapped_column(String,  nullable=True)
+    status: Mapped[Optional[CheckStatus]] = mapped_column(Enum(CheckStatus), nullable=True)
+    passed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     log         = relationship("ServiceLog",       back_populates="check_results")
     check_point = relationship("VehicleCheckPoint", back_populates="check_results")

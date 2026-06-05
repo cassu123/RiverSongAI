@@ -33,7 +33,22 @@ function StarRating({ value, size = 14, onChange }) {
   )
 }
 
-function ShoppingListModal({ items, onClose }) {
+function ShoppingListModal({ items, onClose, api }) {
+  const [exporting, setExporting] = useState(false);
+  const [exportResult, setExportResult] = useState(null);
+
+  const handleWalmartExport = async () => {
+    setExporting(true);
+    try {
+      const res = await api.post('/walmart/export', {});
+      setExportResult(res);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)' }} onClick={onClose}>
        <div className="rs-card is-elev animate-page-in" style={{ width: 'min(95%, 500px)', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
@@ -53,6 +68,27 @@ function ShoppingListModal({ items, onClose }) {
                   </div>
                 ))}
              </div>
+             
+             <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                 {exportResult ? (
+                   <div style={{ padding: 16, background: 'rgba(74,222,128,0.1)', border: '1px solid #4ade80', borderRadius: 8 }}>
+                     <div style={{ color: '#4ade80', fontWeight: 800, marginBottom: 8 }}>EXPORT SUCCESSFUL</div>
+                     {exportResult.cart_url ? (
+                        <a href={exportResult.cart_url} target="_blank" rel="noreferrer" className="rs-btn-primary" style={{ display: 'inline-flex', textDecoration: 'none' }}>OPEN WALMART CART</a>
+                     ) : (
+                        <div>No items were mapped to Walmart products.</div>
+                     )}
+                     {exportResult.unmapped?.length > 0 && (
+                        <div style={{ marginTop: 12, fontSize: '0.8rem', color: '#f87171' }}>Unmapped: {exportResult.unmapped.join(', ')}</div>
+                     )}
+                   </div>
+                 ) : (
+                   <button className="rs-btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleWalmartExport} disabled={exporting || items.length === 0}>
+                     <span className="material-symbols-rounded">shopping_cart_checkout</span>
+                     {exporting ? 'EXPORTING...' : 'EXPORT TO WALMART CART'}
+                   </button>
+                 )}
+              </div>
           </div>
        </div>
     </div>
@@ -123,9 +159,27 @@ function PrepAdjuster({ entry, recipe, api, onUpdate }) {
 
 function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
   const [isEditing, setIsEditing] = useState(false)
-  const [edited, setEdited] = useState({ ...recipe })
+  const [edited, setEdited] = useState({ ...recipe, tags_str: (recipe.tags || []).join(', ') })
   const [saving, setSaving] = useState(false)
+  const [targetEquipment, setTargetEquipment] = useState('')
+  const [translating, setTranslating] = useState(false)
   const modalRef = React.useRef(null)
+
+  const handleTranslateEquipment = async () => {
+    if (!targetEquipment.trim()) return;
+    setTranslating(true);
+    try {
+      const res = await api.post(`/recipes/${recipe.id}/translate-equipment`, { equipment: targetEquipment });
+      const newSteps = res.rewritten_steps;
+      const updated = await api.put(`/recipes/${recipe.id}`, { ...recipe, steps: newSteps });
+      onSave(updated);
+      setTargetEquipment('');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setTranslating(false);
+    }
+  };
 
   React.useEffect(() => {
     const handleKeyDown = (e) => {
@@ -226,6 +280,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                      <input className="rs-chat-input" value={edited.title} onChange={e => setEdited({ ...edited, title: e.target.value })} placeholder="RECIPE TITLE" style={{ lineHeight: 1.7 }} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                     <input className="rs-pill" value={edited.tags_str || ''} onChange={e => setEdited({ ...edited, tags_str: e.target.value, tags: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) })} placeholder="DIETARY TAGS (comma separated, e.g. keto, low-sodium)" style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: '12px 16px', gridColumn: '1 / -1' }} />
                      <select className="rs-pill" value={edited.meal_type} onChange={e => setEdited({ ...edited, meal_type: e.target.value })} style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: '12px 16px' }}>
                         {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert', 'Other'].map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                      </select>
@@ -273,6 +328,17 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                     </div>
                   </div>
 
+                  <div style={{ marginTop: 32, padding: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 12 }}>
+                     <div className="rs-card-label" style={{ marginBottom: 12 }}>ADAPT EQUIPMENT</div>
+                     <div style={{ display: 'flex', gap: 12 }}>
+                       <input className="rs-pill" style={{ flex: 1, background: 'var(--md-surface-container-low)', border: 'none' }} placeholder="E.g., Air Fryer, Instant Pot, Dutch Oven" value={targetEquipment} onChange={e => setTargetEquipment(e.target.value)} />
+                       <button className="rs-btn-primary" onClick={handleTranslateEquipment} disabled={translating || !targetEquipment.trim()}>
+                         <span className="material-symbols-rounded">sync_alt</span>
+                         {translating ? 'TRANSLATING...' : 'TRANSLATE'}
+                       </button>
+                     </div>
+                  </div>
+
                   <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
                      <button className="rs-btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={saving}>{saving ? 'PERSISTING...' : 'SAVE CHANGES'}</button>
                      <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={() => { if(confirm('Erase this archive?')) onDelete(recipe.id) }}>DELETE</button>
@@ -281,6 +347,11 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
              ) : (
                <>
                  <div className="rs-card-value" style={{ fontSize: '2rem', fontWeight: 800, marginBottom: 8 }}>{recipe.title}</div>
+                 {recipe.tags && recipe.tags.length > 0 && (
+                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                     {recipe.tags.map((t, i) => <span key={i} className="rs-card-label" style={{ background: 'var(--primary)', color: 'var(--bg-base)', padding: '4px 8px', borderRadius: 4 }}>{t.toUpperCase()}</span>)}
+                   </div>
+                 )}
                  <div style={{ marginBottom: 32 }}><StarRating value={recipe.rating} size={20} onChange={async (v) => {
                     const updated = await api.patch(`/recipes/${recipe.id}/rate`, { rating: v });
                     onSave(updated);
@@ -323,10 +394,10 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                    <div>
                      <div className="rs-card-label" style={{ marginBottom: 16 }}>EXECUTION SEQUENCE</div>
                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                       {recipe.steps?.map((s, i) => (
-                         <div key={i} style={{ fontSize: '0.95rem', lineHeight: 1.7, display: 'flex', gap: 16 }}>
-                            <span style={{ fontWeight: 900, color: 'var(--primary)', opacity: 0.4, fontFamily: 'var(--font-mono)' }}>{String(i+1).padStart(2,'0')}</span>
-                            <span style={{ opacity: 0.9 }}>{s}</span>
+                       {recipe.steps.map((s, i) => (
+                         <div key={i} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', opacity: 0.4, fontWeight: 900, marginTop: 4 }}>{String(i+1).padStart(2, '0')}</span>
+                            <div style={{ flex: 1, lineHeight: 1.6 }}>{s}</div>
                          </div>
                        ))}
                      </div>
@@ -387,6 +458,7 @@ export default function CulinaryPage({ setAction }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   
+  const [scannerMode, setScannerMode] = useState(null)
   const [recipes, setRecipes] = useState([])
   const [stock, setStock] = useState([])
   const [grocery, setGrocery] = useState([])
@@ -400,8 +472,7 @@ export default function CulinaryPage({ setAction }) {
   const [filterProtein, setFilterProtein] = useState('ALL')
   const [sortMode, setSortMode] = useState('NEWEST') // NEWEST, RATING
   
-  const [selectedRecipe, setSelectedRecipe] = useState(null)
-  const [showScanner, setShowScanner] = useState(false)
+  const [activeRecipe, setActiveRecipe] = useState(null)
   const [showShoppingList, setShowShoppingList] = useState(null) // items
   const [showStagingArea, setShowStagingArea] = useState(null) // piles
 
@@ -511,7 +582,7 @@ export default function CulinaryPage({ setAction }) {
           .filter(r => filterProtein === 'ALL' || r.primary_protein === filterProtein)
           .sort((a, b) => sortMode === 'RATING' ? (b.rating || 0) - (a.rating || 0) : new Date(b.created_at || 0) - new Date(a.created_at || 0))
           .map(r => (
-          <div key={r.id} className="rs-card is-tappable animate-page-in" style={{ padding: 0, overflow: 'hidden', animationDuration: '400ms' }} onClick={() => setSelectedRecipe(r)}>
+          <div key={r.id} className="rs-card is-tappable animate-page-in" style={{ padding: 0, overflow: 'hidden', animationDuration: '400ms' }} onClick={() => setActiveRecipe(r)}>
              <div className="rs-card-inner" style={{ padding: 0, border: 'none', background: 'transparent' }}>
                <div style={{ position: 'relative', width: '100%', aspectRatio: '16/10', overflow: 'hidden', background: 'var(--md-surface-container-highest)' }}>
                   {r.image_url ? (
@@ -544,6 +615,12 @@ export default function CulinaryPage({ setAction }) {
 
   const renderStockroom = () => (
     <div className="rs-card-flow">
+      <div style={{ marginBottom: 16 }}>
+        <button className="rs-btn-primary" style={{ width: '100%', height: 48, justifyContent: 'center', background: 'rgba(248,113,113,0.1)', color: '#f87171' }} onClick={() => setScannerMode('deplete')}>
+          <span className="material-symbols-rounded">delete_sweep</span>
+          DEPLETE ITEM SCAN
+        </button>
+      </div>
       {stock.filter(i => i.name.toLowerCase().includes(search.toLowerCase())).map(item => (
         <div key={item.id} className="rs-card is-wide animate-page-in" style={{ animationDuration: '400ms' }}>
            <div className="rs-card-inner">
@@ -669,8 +746,25 @@ export default function CulinaryPage({ setAction }) {
         <div className="rs-greeting-sub">Sector provisioning and autonomous culinary archives.</div>
       </div>
 
-      {showScanner && (
-        <BarcodeScanner onDetected={v => setShowScanner(false)} onClose={() => setShowScanner(false)} />
+      {scannerMode && (
+        <BarcodeScanner 
+           onDetected={async (code) => {
+             const mode = scannerMode;
+             setScannerMode(null);
+             if (mode === 'deplete') {
+               try {
+                 await api.post('/stockroom/deplete', { barcode: code });
+                 const stockRes = await api.get('/stockroom');
+                 setStock(stockRes);
+               } catch(e) {
+                 alert('Deplete failed: ' + e.message);
+               }
+             } else {
+               setSearch(code);
+             }
+           }} 
+           onClose={() => setScannerMode(null)} 
+        />
       )}
 
       {error ? (
@@ -768,25 +862,16 @@ export default function CulinaryPage({ setAction }) {
         </div>
       )}
 
-      {selectedRecipe && (
-        <RecipeDetailModal 
-          recipe={selectedRecipe} 
-          api={api}
-          onClose={() => setSelectedRecipe(null)} 
-          onSave={(updated) => {
-            setRecipes(recipes.map(r => r.id === updated.id ? updated : r));
-            setSelectedRecipe(updated);
-          }}
-          onDelete={async (id) => {
-            await api.delete(`/recipes/${id}`);
-            setRecipes(recipes.filter(r => r.id !== id));
-            setSelectedRecipe(null);
-          }}
-        />
-      )}
-
-      {showShoppingList && <ShoppingListModal items={showShoppingList} onClose={() => setShowShoppingList(null)} />}
+      {activeRecipe && <RecipeDetailModal recipe={activeRecipe} onClose={() => setActiveRecipe(null)} onSave={(updated) => {
+         setRecipes(recipes.map(r => r.id === updated.id ? updated : r))
+         setActiveRecipe(updated)
+      }} onDelete={async (id) => {
+         await api.delete(`/recipes/${id}`)
+         setRecipes(recipes.filter(r => r.id !== id))
+         setActiveRecipe(null)
+      }} api={api} />}
       {showStagingArea && <StagingAreaModal piles={showStagingArea} onClose={() => setShowStagingArea(null)} />}
+      {showShoppingList && <ShoppingListModal items={showShoppingList} onClose={() => setShowShoppingList(null)} api={api} />}
     </div>
   )
 }

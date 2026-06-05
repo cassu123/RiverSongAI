@@ -20,7 +20,7 @@ Endpoints:
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Header, Request
 from pydantic import BaseModel, Field
@@ -42,16 +42,16 @@ router = APIRouter(prefix="/api/skills", tags=["skills"])
 # -----------------------------------------------------------------------------
 
 class SkillCreate(BaseModel):
-    name:            str = Field(..., min_length=1, max_length=120)
-    prompt:          str = Field(..., min_length=1)
+    name: str = Field(..., min_length=1, max_length=120)
+    prompt: str = Field(..., min_length=1)
     trigger_phrases: str = Field(default="")
 
 
 class SkillUpdate(BaseModel):
-    name:            Optional[str]  = Field(default=None, min_length=1, max_length=120)
-    prompt:          Optional[str]  = None
-    trigger_phrases: Optional[str]  = None
-    is_active:       Optional[bool] = None
+    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    prompt: Optional[str] = None
+    trigger_phrases: Optional[str] = None
+    is_active: Optional[bool] = None
 
 
 class RelevantQuery(BaseModel):
@@ -107,12 +107,13 @@ async def create_skill(
 ):
     _require_enabled()
     user_id = await _require_user(authorization)
-    store   = _store(request)
+    store = _store(request)
 
     cap = int(getattr(get_settings(), "skills_max_per_user", 100))
     count = await store.count_skills(user_id)
     if count >= cap:
-        raise bad_request(f"Skill cap reached ({cap}). Delete one to add another.")
+        raise bad_request(
+            f"Skill cap reached ({cap}). Delete one to add another.")
 
     skill = await store.create_skill(
         owner_id=user_id,

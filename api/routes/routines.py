@@ -13,14 +13,13 @@ POST   /api/routines/{id}/run   -- run routine now (returns River's response)
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/routines", tags=["routines"])
@@ -61,13 +60,15 @@ class RoutinePatch(BaseModel):
 
 
 @router.get("")
-async def list_routines(request: Request, user_id: str = Depends(_require_user)):
+async def list_routines(request: Request,
+                        user_id: str = Depends(_require_user)):
     store = request.app.state.memory_manager._store
     return await store.list_routines(user_id)
 
 
 @router.post("")
-async def create_routine(body: RoutineIn, request: Request, user_id: str = Depends(_require_user)):
+async def create_routine(body: RoutineIn, request: Request,
+                         user_id: str = Depends(_require_user)):
     store = request.app.state.memory_manager._store
     routine = await store.create_routine({
         "user_id": user_id,
@@ -77,7 +78,8 @@ async def create_routine(body: RoutineIn, request: Request, user_id: str = Depen
 
 
 @router.patch("/{routine_id}")
-async def update_routine(routine_id: str, body: RoutinePatch, request: Request, user_id: str = Depends(_require_user)):
+async def update_routine(routine_id: str, body: RoutinePatch,
+                         request: Request, user_id: str = Depends(_require_user)):
     store = request.app.state.memory_manager._store
     fields = {k: v for k, v in body.model_dump().items() if v is not None}
     # Preserve explicit False for boolean fields
@@ -90,7 +92,8 @@ async def update_routine(routine_id: str, body: RoutinePatch, request: Request, 
 
 
 @router.delete("/{routine_id}")
-async def delete_routine(routine_id: str, request: Request, user_id: str = Depends(_require_user)):
+async def delete_routine(routine_id: str, request: Request,
+                         user_id: str = Depends(_require_user)):
     store = request.app.state.memory_manager._store
     deleted = await store.delete_routine(routine_id, user_id)
     if not deleted:
@@ -99,7 +102,8 @@ async def delete_routine(routine_id: str, request: Request, user_id: str = Depen
 
 
 @router.post("/{routine_id}/run")
-async def run_routine(routine_id: str, request: Request, user_id: str = Depends(_require_user)):
+async def run_routine(routine_id: str, request: Request,
+                      user_id: str = Depends(_require_user)):
     from datetime import datetime, timezone
     import httpx
     from core.conversation_loop import ConversationLoop
@@ -118,7 +122,9 @@ async def run_routine(routine_id: str, request: Request, user_id: str = Depends(
             async with httpx.AsyncClient() as client:
                 res = await client.post(routine["webhook_url"], json={"routine_name": routine["name"], "user_id": user_id}, timeout=30.0)
                 if res.status_code >= 400:
-                    output_text = f"Webhook failed with status {res.status_code}: {res.text}"
+                    output_text = f"Webhook failed with status {
+                        res.status_code}: {
+                        res.text}"
                 else:
                     output_text = f"Webhook triggered successfully. Response: {res.text[:200]}"
         except Exception as e:
@@ -144,7 +150,7 @@ async def run_routine(routine_id: str, request: Request, user_id: str = Depends(
                 user_id=user_id,
             )
             await loop.initialize()
-            await loop.run_text(routine["prompt"], collect)
+            await loop.run_text(routine["prompt"], collect)  # type: ignore
             output_text = "".join(output_parts) or "(No response generated.)"
         except Exception as e:
             logger.error("Routine run failed: %s", e)

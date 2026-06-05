@@ -1,3 +1,4 @@
+from typing import Optional, Any
 """
 commercial_inventory/models.py
 
@@ -21,9 +22,9 @@ import uuid
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
-from sqlalchemy import (
+from sqlalchemy import (  # type: ignore
     Boolean,
-    Column,
+    Column, mapped_column,
     DateTime,
     Enum,
     ForeignKey,
@@ -33,7 +34,7 @@ from sqlalchemy import (
     Table,
     Text,
 )
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import declarative_base, Mapped, mapped_column, relationship
 
 Base = declarative_base()
 
@@ -92,15 +93,15 @@ workspace_members = Table(
 # Models
 # ---------------------------------------------------------------------------
 
-class BizUser(Base):
+class BizUser(Base):  # type: ignore
     """River Song user mirrored into the commercial system."""
     __tablename__ = "biz_users"
 
-    id               = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    external_user_id = Column(String, unique=True, nullable=False, index=True)
-    email            = Column(String, unique=True, nullable=False, index=True)
-    display_name     = Column(String, nullable=True)
-    created_at       = Column(DateTime, default=_now)
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    external_user_id: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
+    display_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
     workspaces_owned       = relationship("BizWorkspace", back_populates="owner", cascade="all, delete-orphan")
     workspaces_membered    = relationship(
@@ -108,18 +109,18 @@ class BizUser(Base):
     )
 
 
-class BizWorkspace(Base):
+class BizWorkspace(Base):  # type: ignore
     """A business entity — a store, brand, or department."""
     __tablename__ = "biz_workspaces"
 
-    id          = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    name        = Column(String, nullable=False)
-    description = Column(Text,   nullable=True)
-    owner_id    = Column(String, ForeignKey("biz_users.id"), nullable=False)
-    currency    = Column(String(3), default="USD", nullable=False)
-    tax_rate    = Column(Numeric(5, 4), default=0, nullable=False)  # e.g. 0.0875 = 8.75 %
-    created_at  = Column(DateTime, default=_now)
-    updated_at  = Column(DateTime, default=_now, onupdate=_now)
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text,   nullable=True)
+    owner_id: Mapped[str] = mapped_column(String, ForeignKey("biz_users.id"), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
+    tax_rate: Mapped[Any] = mapped_column(Numeric(5, 4), default=0, nullable=False)# e.g. 0.0875 = 8.75 %
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
     owner     = relationship("BizUser", back_populates="workspaces_owned")
     members   = relationship("BizUser", secondary=workspace_members, back_populates="workspaces_membered")
@@ -129,26 +130,26 @@ class BizWorkspace(Base):
     sales     = relationship("Sale",     back_populates="workspace", cascade="all, delete-orphan")
 
 
-class Supplier(Base):
+class Supplier(Base):  # type: ignore
     """A vendor or supplier that provides products to a workspace."""
     __tablename__ = "biz_suppliers"
 
-    id           = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    workspace_id = Column(String, ForeignKey("biz_workspaces.id"), nullable=False)
-    name         = Column(String, nullable=False)
-    contact_name = Column(String, nullable=True)
-    email        = Column(String, nullable=True)
-    phone        = Column(String, nullable=True)
-    website      = Column(String, nullable=True)
-    notes        = Column(Text,   nullable=True)
-    created_at   = Column(DateTime, default=_now)
-    updated_at   = Column(DateTime, default=_now, onupdate=_now)
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    workspace_id: Mapped[str] = mapped_column(String, ForeignKey("biz_workspaces.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    contact_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    website: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text,   nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
     workspace = relationship("BizWorkspace", back_populates="suppliers")
     products  = relationship("Product", back_populates="supplier")
 
 
-class Product(Base):
+class Product(Base):  # type: ignore
     """
     A SKU tracked within a workspace.
 
@@ -157,51 +158,51 @@ class Product(Base):
     """
     __tablename__ = "biz_products"
 
-    id               = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    workspace_id     = Column(String, ForeignKey("biz_workspaces.id"), nullable=False)
-    supplier_id      = Column(String, ForeignKey("biz_suppliers.id"),  nullable=True)
-    sku              = Column(String, nullable=False, index=True)
-    name             = Column(String, nullable=False, index=True)
-    description      = Column(Text,   nullable=True)
-    category         = Column(Enum(ProductCategory), default=ProductCategory.OTHER, nullable=False)
-    stock_qty        = Column(Integer, default=0,  nullable=False)
-    threshold        = Column(Integer, default=5,  nullable=False)
-    unit_price       = Column(Numeric(10, 2), nullable=True)
-    cost_price       = Column(Numeric(10, 2), nullable=True)
-    shopify_synced   = Column(Boolean, default=False, nullable=False)
-    shopify_product_id = Column(String, nullable=True)
-    image_data       = Column(Text, nullable=True)   # base64 data URL (data:image/...;base64,...)
-    metadata_json    = Column(Text, nullable=True)   # freeform JSON for category-specific fields
-    is_active        = Column(Boolean, default=True, nullable=False)
-    created_at       = Column(DateTime, default=_now)
-    updated_at       = Column(DateTime, default=_now, onupdate=_now)
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    workspace_id: Mapped[str] = mapped_column(String, ForeignKey("biz_workspaces.id"), nullable=False)
+    supplier_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("biz_suppliers.id"),  nullable=True)
+    sku: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    description: Mapped[Optional[str]] = mapped_column(Text,   nullable=True)
+    category: Mapped[ProductCategory] = mapped_column(Enum(ProductCategory), default=ProductCategory.OTHER, nullable=False)
+    stock_qty: Mapped[int] = mapped_column(Integer, default=0,  nullable=False)
+    threshold: Mapped[int] = mapped_column(Integer, default=5,  nullable=False)
+    unit_price: Mapped[Optional[Any]] = mapped_column(Numeric(10, 2), nullable=True)
+    cost_price: Mapped[Optional[Any]] = mapped_column(Numeric(10, 2), nullable=True)
+    shopify_synced: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    shopify_product_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    image_data: Mapped[Optional[str]] = mapped_column(Text, nullable=True)# base64 data URL (data:image/...;base64,...)
+    metadata_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)# freeform JSON for category-specific fields
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
     workspace      = relationship("BizWorkspace", back_populates="products")
     supplier       = relationship("Supplier",     back_populates="products")
     sale_line_items = relationship("SaleLineItem", back_populates="product")
 
 
-class Customer(Base):
+class Customer(Base):  # type: ignore
     """A CRM contact associated with a workspace."""
     __tablename__ = "biz_customers"
 
-    id           = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    workspace_id = Column(String, ForeignKey("biz_workspaces.id"), nullable=False)
-    name         = Column(String, nullable=False, index=True)
-    email        = Column(String, nullable=True,  index=True)
-    phone        = Column(String, nullable=True)
-    address      = Column(Text,   nullable=True)
-    notes        = Column(Text,   nullable=True)
-    tags         = Column(String, nullable=True)  # comma-separated
-    shopify_customer_id = Column(String, nullable=True)
-    created_at   = Column(DateTime, default=_now)
-    updated_at   = Column(DateTime, default=_now, onupdate=_now)
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    workspace_id: Mapped[str] = mapped_column(String, ForeignKey("biz_workspaces.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    email: Mapped[Optional[str]] = mapped_column(String, nullable=True,  index=True)
+    phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(Text,   nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text,   nullable=True)
+    tags: Mapped[Optional[str]] = mapped_column(String, nullable=True)# comma-separated
+    shopify_customer_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
     workspace = relationship("BizWorkspace", back_populates="customers")
     sales     = relationship("Sale",         back_populates="customer")
 
 
-class Sale(Base):
+class Sale(Base):  # type: ignore
     """
     A transaction within a workspace.
 
@@ -211,15 +212,15 @@ class Sale(Base):
     """
     __tablename__ = "biz_sales"
 
-    id              = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    workspace_id    = Column(String, ForeignKey("biz_workspaces.id"), nullable=False)
-    customer_id     = Column(String, ForeignKey("biz_customers.id"),  nullable=True)
-    created_by_id   = Column(String, ForeignKey("biz_users.id"),      nullable=True)
-    status          = Column(Enum(SaleStatus), default=SaleStatus.PENDING, nullable=False)
-    total           = Column(Numeric(10, 2), nullable=True)
-    notes           = Column(Text, nullable=True)
-    created_at      = Column(DateTime, default=_now)
-    updated_at      = Column(DateTime, default=_now, onupdate=_now)
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    workspace_id: Mapped[str] = mapped_column(String, ForeignKey("biz_workspaces.id"), nullable=False)
+    customer_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("biz_customers.id"),  nullable=True)
+    created_by_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("biz_users.id"),      nullable=True)
+    status: Mapped[SaleStatus] = mapped_column(Enum(SaleStatus), default=SaleStatus.PENDING, nullable=False)
+    total: Mapped[Optional[Any]] = mapped_column(Numeric(10, 2), nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
     workspace  = relationship("BizWorkspace", back_populates="sales")
     customer   = relationship("Customer",     back_populates="sales")
@@ -227,15 +228,15 @@ class Sale(Base):
     line_items = relationship("SaleLineItem", back_populates="sale", cascade="all, delete-orphan")
 
 
-class SaleLineItem(Base):
+class SaleLineItem(Base):  # type: ignore
     """One product entry within a sale."""
     __tablename__ = "biz_sale_line_items"
 
-    id          = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    sale_id     = Column(String, ForeignKey("biz_sales.id"),    nullable=False)
-    product_id  = Column(String, ForeignKey("biz_products.id"), nullable=False)
-    qty         = Column(Integer,         nullable=False, default=1)
-    unit_price  = Column(Numeric(10, 2),  nullable=False)
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    sale_id: Mapped[str] = mapped_column(String, ForeignKey("biz_sales.id"),    nullable=False)
+    product_id: Mapped[str] = mapped_column(String, ForeignKey("biz_products.id"), nullable=False)
+    qty: Mapped[int] = mapped_column(Integer,         nullable=False, default=1)
+    unit_price: Mapped[Any] = mapped_column(Numeric(10, 2),  nullable=False)
 
     sale    = relationship("Sale",    back_populates="line_items")
     product = relationship("Product", back_populates="sale_line_items")

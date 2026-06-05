@@ -29,7 +29,8 @@ import bcrypt
 logger = logging.getLogger(__name__)
 if not logger.handlers:
     handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
@@ -97,7 +98,10 @@ def _write_kill_switch_state(state: str):
 
         with open(KILL_SWITCH_STATE_FILE, 'w') as f:
             f.write(state + '\n')
-        logger.debug("Kill switch state '%s' written to '%s'.", state, KILL_SWITCH_STATE_FILE)
+        logger.debug(
+            "Kill switch state '%s' written to '%s'.",
+            state,
+            KILL_SWITCH_STATE_FILE)
     except Exception as e:
         logger.critical(
             "CRITICAL ERROR: Could not write kill switch state to '%s': %s",
@@ -185,7 +189,6 @@ def reset_global_kill_switch(input_password: str) -> bool:
         bool: True if reset succeeded, False if password was wrong or hash missing.
     """
     global _is_kill_switch_active
-    global _PASSWORD_HASH_STORED
 
     if not _PASSWORD_HASH_STORED:
         logger.error("Cannot reset kill switch: no password hash loaded.")
@@ -198,13 +201,16 @@ def reset_global_kill_switch(input_password: str) -> bool:
         ):
             _is_kill_switch_active = False
             _write_kill_switch_state('GLOBAL KILL RESET')
-            logger.info("Global kill switch reset. Restart the system to resume operation.")
+            logger.info(
+                "Global kill switch reset. Restart the system to resume operation.")
             return True
         else:
-            logger.warning("Incorrect password for kill switch reset. Access denied.")
+            logger.warning(
+                "Incorrect password for kill switch reset. Access denied.")
             return False
     except ValueError as ve:
-        logger.error("Error during password hash comparison (invalid hash format?): %s", ve)
+        logger.error(
+            "Error during password hash comparison (invalid hash format?): %s", ve)
         return False
     except Exception as e:
         logger.error("Unexpected error during kill switch reset: %s", e)

@@ -39,7 +39,6 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
 from typing import Optional
 
 from config.settings import get_settings
@@ -51,7 +50,7 @@ from providers.memory.models import (
     TTLOption,
 )
 from providers.memory.sqlite_store import SQLiteStore
-from providers.memory.ttl_engine import calculate_expires_at, extend_ttl, is_expired
+from providers.memory.ttl_engine import calculate_expires_at, extend_ttl
 from providers.memory.vector_store import VectorStore
 
 
@@ -81,13 +80,16 @@ class MemoryManager:
     async def initialize(self) -> None:
         """Ensure the database schema is ready. Call once at server startup."""
         await self._store.initialize()
-        logger.info("MemoryManager initialized (db=%s).", self._settings.db_path)
+        logger.info(
+            "MemoryManager initialized (db=%s).",
+            self._settings.db_path)
 
     # =========================================================================
     # Context building
     # =========================================================================
 
-    async def build_context_block(self, user_id: str, query_text: Optional[str] = None) -> str:
+    async def build_context_block(
+            self, user_id: str, query_text: Optional[str] = None) -> str:
         """
         Build the memory context string to inject into the system prompt.
 
@@ -154,13 +156,14 @@ class MemoryManager:
             + "\n--- END MEMORY ---"
         )
 
-    async def get_context_for_prompt(self, user_id: str, query_text: str) -> str:
+    async def get_context_for_prompt(
+            self, user_id: str, query_text: str) -> str:
         """
         Retrieves relevant context using semantic search, augmented by MemGPT long-term recall.
         """
         try:
             # 1. Local Semantic results (ChromaDB)
-            semantic_results = await self._vector_store.search(
+            semantic_results = await self._vector_store.search(  # type: ignore
                 query_text,
                 n_results=8,
                 where={"user_id": user_id}
@@ -186,7 +189,9 @@ class MemoryManager:
 
             if facts:
                 lines = [f"  - {f.key}: {f.value}" for f in facts]
-                parts.append("KNOWN FACTS ABOUT THE USER:\n" + "\n".join(lines))
+                parts.append(
+                    "KNOWN FACTS ABOUT THE USER:\n" +
+                    "\n".join(lines))
 
             if prefs:
                 lines = [f"  - {p.category}: {p.value}" for p in prefs]
@@ -202,7 +207,8 @@ class MemoryManager:
             )
 
         except Exception as exc:
-            logger.warning("Semantic search failed: %s. Falling back to SQLite only.", exc)
+            logger.warning(
+                "Semantic search failed: %s. Falling back to SQLite only.", exc)
             return await self.build_context_block(user_id, query_text=None)
 
     # =========================================================================
@@ -234,7 +240,10 @@ class MemoryManager:
             source=source,
         )
         await self._store.upsert_fact(fact)
-        logger.debug("Fact upserted to SQLite (user=%s, key=%s).", user_id, key)
+        logger.debug(
+            "Fact upserted to SQLite (user=%s, key=%s).",
+            user_id,
+            key)
 
         if self._settings.semantic_memory_enabled and self._vector_store:
             fact_text = f"{key}: {value}"
@@ -284,7 +293,10 @@ class MemoryManager:
             confidence=confidence,
         )
         await self._store.upsert_preference(pref)
-        logger.debug("Preference upserted to SQLite (user=%s, category=%s).", user_id, category)
+        logger.debug(
+            "Preference upserted to SQLite (user=%s, category=%s).",
+            user_id,
+            category)
 
         if self._settings.semantic_memory_enabled and self._vector_store:
             pref_text = f"Preference - {category}: {value}"
@@ -348,7 +360,8 @@ class MemoryManager:
         effective_ttl = ttl_setting or mem_settings.default_ttl
         if not TTLOption.is_valid(effective_ttl):
             raise ValueError(
-                f"Invalid TTL setting '{effective_ttl}'. Valid: {TTLOption.ALL}"
+                f"Invalid TTL setting '{effective_ttl}'. Valid: {
+                    TTLOption.ALL}"
             )
 
         expires_at = calculate_expires_at(effective_ttl)
@@ -383,7 +396,6 @@ class MemoryManager:
     # =========================================================================
 
     async def get_llm_settings(self, user_id: str):
-        from providers.memory.models import LLMSettings
         return await self._store.get_llm_settings(user_id)
 
     async def save_llm_settings(self, settings) -> None:

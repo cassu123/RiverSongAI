@@ -9,14 +9,14 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/pulse", tags=["pulse"])
 
 
-async def _require_user(authorization: Optional[str] = Header(default=None)) -> str:
+async def _require_user(
+        authorization: Optional[str] = Header(default=None)) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
     payload = await decode_token(authorization.removeprefix("Bearer "))
@@ -25,7 +25,8 @@ async def _require_user(authorization: Optional[str] = Header(default=None)) -> 
     return payload["sub"]
 
 
-def _require_daemon_secret(authorization: Optional[str] = Header(default=None)) -> None:
+def _require_daemon_secret(
+        authorization: Optional[str] = Header(default=None)) -> None:
     """Internal-only auth using the daemon shared secret."""
     settings = get_settings()
     if not authorization or not authorization.startswith("Bearer "):
@@ -42,7 +43,8 @@ class SnapshotBody(BaseModel):
 
 
 @router.get("/latest")
-async def get_latest(request: Request, user_id: str = Depends(_require_user)) -> dict:
+async def get_latest(request: Request,
+                     user_id: str = Depends(_require_user)) -> dict:
     """Return the latest snapshot per source."""
     store = request.app.state.memory_manager._store
     news = await store.get_latest_pulse_snapshot("news")
@@ -52,7 +54,7 @@ async def get_latest(request: Request, user_id: str = Depends(_require_user)) ->
     pulse_news_enabled = config.get("pulse_news_enabled", True)
     pulse_markets_enabled = config.get("pulse_markets_enabled", True)
     pulse_flights_enabled = config.get("pulse_flights_enabled", True)
-    
+
     return {
         "news": news["data"] if news and pulse_news_enabled else None,
         "markets": markets["data"] if markets and pulse_markets_enabled else None,
@@ -68,8 +70,8 @@ async def get_latest(request: Request, user_id: str = Depends(_require_user)) ->
 # Internal — called by the Pulse daemon over HTTP loopback.
 @router.post("/_internal/snapshot")
 async def _save_snapshot(
-    body: SnapshotBody, 
-    request: Request, 
+    body: SnapshotBody,
+    request: Request,
     authorization: Optional[str] = Header(None)
 ) -> dict:
     _require_daemon_secret(authorization)
@@ -80,7 +82,7 @@ async def _save_snapshot(
 
 @router.post("/_internal/prune")
 async def _prune_all(
-    request: Request, 
+    request: Request,
     authorization: Optional[str] = Header(None)
 ) -> dict:
     _require_daemon_secret(authorization)

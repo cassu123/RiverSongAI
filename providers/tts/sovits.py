@@ -1,17 +1,20 @@
 # providers/tts/sovits.py
 from __future__ import annotations
-import logging, os, time
+import logging
+import os
 from typing import Any
 import httpx
 
 logger = logging.getLogger(__name__)
 
-_BASE  = os.getenv("SOVITS_URL", "http://localhost:9880")
+_BASE = os.getenv("SOVITS_URL", "http://localhost:9880")
 _CACHE_TTL = 30
 _cache: dict[str, tuple[Any, float]] = {}
 
+
 def _client() -> httpx.AsyncClient:
     return httpx.AsyncClient(base_url=_BASE, timeout=30)
+
 
 async def synthesize(text: str, persona: str = "river") -> bytes | None:
     """
@@ -26,7 +29,7 @@ async def synthesize(text: str, persona: str = "river") -> bytes | None:
                 "text": text,
                 "text_language": "en",
                 "refer_wav_path": f"/workspace/reference_voices/{persona}/sample.wav",
-                "prompt_text": "Sample text for reference audio", # Should ideally be from a file
+                "prompt_text": "Sample text for reference audio",  # Should ideally be from a file
                 "prompt_language": "en"
             }
             r = await c.get("/", params=params)

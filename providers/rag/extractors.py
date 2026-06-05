@@ -1,12 +1,13 @@
 # providers/rag/extractors.py
 import io
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
-def unstructured_extract(file_path: str = None, file_bytes: bytes = None, filename: str = None) -> List[Dict[str, Any]]:
+def unstructured_extract(file_path: Optional[str] = None, file_bytes: Optional[bytes]
+                         = None, filename: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Extract text and metadata from various file types using Unstructured.
     Supports PDF, HTML, DOCX, images (with OCR), etc.
@@ -18,15 +19,22 @@ def unstructured_extract(file_path: str = None, file_bytes: bytes = None, filena
     try:
         from unstructured.partition.auto import partition
     except ImportError:
-        logger.warning("unstructured not installed; skipping advanced extraction.")
+        logger.warning(
+            "unstructured not installed; skipping advanced extraction.")
         return []
 
     try:
         if file_bytes:
-            elements = partition(file=io.BytesIO(file_bytes), metadata_filename=filename)
+            elements = partition(
+                file=io.BytesIO(file_bytes),
+                metadata_filename=filename)
         else:
             elements = partition(filename=file_path)
-        return [{"text": str(el), "metadata": el.metadata.to_dict()} for el in elements]
+        return [{"text": str(el), "metadata": el.metadata.to_dict()}
+                for el in elements]
     except Exception as exc:
-        logger.error("Unstructured extraction failed for %s: %s", filename or file_path, exc)
+        logger.error(
+            "Unstructured extraction failed for %s: %s",
+            filename or file_path,
+            exc)
         return []

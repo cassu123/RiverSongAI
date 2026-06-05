@@ -29,6 +29,8 @@ WS         /api/culinary/ws
 """
 
 from __future__ import annotations
+from providers.vault.vault_provider import VaultProvider, VROOT_HOUSEHOLD, VROOT_PERSONAL
+from core.family import resolve_module_owner as _resolve_module_owner
 
 import base64
 import html
@@ -84,7 +86,7 @@ router = APIRouter(prefix="/api/culinary", tags=["culinary"])
 # ---------------------------------------------------------------------------
 
 _DB_URL = os.environ.get("CULINARY_DB_URL", "sqlite:///./data/culinary.db")
-_engine  = create_engine(
+_engine = create_engine(
     _DB_URL,
     connect_args={"check_same_thread": False} if "sqlite" in _DB_URL else {},
 )
@@ -142,16 +144,16 @@ _DEFAULT_BLACKLIST = {
 }
 
 _DEFAULT_SUBSTITUTIONS = {
-    "bell pepper":  "poblano pepper",
+    "bell pepper": "poblano pepper",
     "bell peppers": "poblano peppers",
-    "pearl onion":  "shallot",
+    "pearl onion": "shallot",
     "pearl onions": "shallots",
-    "quinoa":       "brown rice",
-    "radish":       "turnip",
-    "radishes":     "turnips",
-    "zucchini":     "yellow squash",
-    "mushroom":     "eggplant",
-    "mushrooms":    "eggplant",
+    "quinoa": "brown rice",
+    "radish": "turnip",
+    "radishes": "turnips",
+    "zucchini": "yellow squash",
+    "mushroom": "eggplant",
+    "mushrooms": "eggplant",
 }
 
 
@@ -161,7 +163,8 @@ def _seed_banned_ingredients() -> None:
         households = session.query(Household).all()
         for hh in households:
             # Only seed if they have NO banned ingredients yet
-            existing = session.query(BannedIngredient).filter_by(household_id=hh.id).count()
+            existing = session.query(BannedIngredient).filter_by(
+                household_id=hh.id).count()
             if existing == 0:
                 for name in _DEFAULT_BLACKLIST:
                     bi = BannedIngredient(
@@ -201,10 +204,6 @@ async def _get_user_id(request: Request) -> str:
     return uid
 
 
-from core.family import resolve_module_owner as _resolve_module_owner
-from providers.vault.vault_provider import VaultProvider, VROOT_HOUSEHOLD, VROOT_PERSONAL
-
-
 def _get_household(db: Session, owner_id: str) -> Household:
     effective_id = _resolve_module_owner(owner_id, "culinary")
     hh = db.query(Household).filter_by(owner_id=effective_id).first()
@@ -220,8 +219,10 @@ def _get_household(db: Session, owner_id: str) -> Household:
 # Ingredient blacklist
 # ---------------------------------------------------------------------------
 
-def _flag_blacklist(db: Session, household_id: str, ingredients: list[dict]) -> list[dict]:
-    banned = db.query(BannedIngredient).filter_by(household_id=household_id).all()
+def _flag_blacklist(db: Session, household_id: str,
+                    ingredients: list[dict]) -> list[dict]:
+    banned = db.query(BannedIngredient).filter_by(
+        household_id=household_id).all()
     banned_map = {b.name.lower(): b.substitute for b in banned}
 
     flagged = []
@@ -229,8 +230,8 @@ def _flag_blacklist(db: Session, household_id: str, ingredients: list[dict]) -> 
         name_lower = ing.get("name", "").lower().strip()
         if name_lower in banned_map:
             flagged.append({
-                "name":        ing["name"],
-                "substitute":  banned_map[name_lower],
+                "name": ing["name"],
+                "substitute": banned_map[name_lower],
             })
     return flagged
 
@@ -239,8 +240,8 @@ def _flag_blacklist(db: Session, household_id: str, ingredients: list[dict]) -> 
 # Ollama helpers
 # ---------------------------------------------------------------------------
 
-OLLAMA_BASE         = os.environ.get("OLLAMA_BASE_URL",       "http://localhost:11434")
-OLLAMA_MODEL        = os.environ.get("CULINARY_LLM_MODEL",    "qwen2.5:14b")
+OLLAMA_BASE = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.environ.get("CULINARY_LLM_MODEL", "qwen2.5:14b")
 OLLAMA_VISION_MODEL = os.environ.get("CULINARY_VISION_MODEL", "gemma3:12b")
 
 _RECIPE_SCHEMA_PROMPT = """
@@ -319,7 +320,11 @@ async def _call_ollama_vision(prompt: str, image_b64: str) -> str:
     async with httpx.AsyncClient(timeout=180) as client:
         resp = await client.post(
             f"{OLLAMA_BASE}/api/generate",
-            json={"model": OLLAMA_VISION_MODEL, "prompt": prompt, "images": [image_b64], "stream": False},
+            json={
+                "model": OLLAMA_VISION_MODEL,
+                "prompt": prompt,
+                "images": [image_b64],
+                "stream": False},
         )
         resp.raise_for_status()
         return resp.json().get("response", "")
@@ -332,7 +337,10 @@ async def _identify_equipment(make: str, model: str) -> dict:
         raw = await _call_ollama(prompt)
         data = _extract_json(raw)
         if isinstance(data, dict):
-            types = [t for t in data.get("types", []) if t in _KNOWN_EQUIPMENT_TYPES]
+            types = [
+                t for t in data.get(
+                    "types",
+                    []) if t in _KNOWN_EQUIPMENT_TYPES]
             label = data.get("label") or f"{make} {model}".strip()
             return {"label": label, "types": types}
     except Exception:
@@ -342,7 +350,8 @@ async def _identify_equipment(make: str, model: str) -> dict:
 
 def _chunk_text(text: str, size: int = 20000) -> List[str]:
     text = text.strip()
-    return [text[i:i + size] for i in range(0, len(text), size)] if text else []
+    return [text[i:i + size]
+            for i in range(0, len(text), size)] if text else []
 
 
 def _collect_parsed(raw: str) -> List[dict]:
@@ -352,7 +361,8 @@ def _collect_parsed(raw: str) -> List[dict]:
         return []
     if isinstance(result, dict):
         result = [result]
-    return [r for r in result if isinstance(r, dict)] if isinstance(result, list) else []
+    return [r for r in result if isinstance(
+        r, dict)] if isinstance(result, list) else []
 
 
 # ---------------------------------------------------------------------------
@@ -360,15 +370,15 @@ def _collect_parsed(raw: str) -> List[dict]:
 # ---------------------------------------------------------------------------
 
 _UNITS = {
-    "cup","cups","c","tablespoon","tablespoons","tbsp","tbsps","tbs",
-    "teaspoon","teaspoons","tsp","tsps","pound","pounds","lb","lbs",
-    "ounce","ounces","oz","gram","grams","g","kilogram","kilograms","kg",
-    "liter","liters","l","ml","milliliter","milliliters","quart","quarts",
-    "qt","pint","pints","pt","gallon","gallons","package","packages","pkg",
-    "can","cans","jar","jars","slice","slices","piece","pieces","bunch",
-    "bunches","clove","cloves","stalk","stalks","head","heads","pinch",
-    "pinches","dash","dashes","handful","inch","inches","strip","strips",
-    "sprig","sprigs","sheet","sheets","link","links","fillet","fillets",
+    "cup", "cups", "c", "tablespoon", "tablespoons", "tbsp", "tbsps", "tbs",
+    "teaspoon", "teaspoons", "tsp", "tsps", "pound", "pounds", "lb", "lbs",
+    "ounce", "ounces", "oz", "gram", "grams", "g", "kilogram", "kilograms", "kg",
+    "liter", "liters", "l", "ml", "milliliter", "milliliters", "quart", "quarts",
+    "qt", "pint", "pints", "pt", "gallon", "gallons", "package", "packages", "pkg",
+    "can", "cans", "jar", "jars", "slice", "slices", "piece", "pieces", "bunch",
+    "bunches", "clove", "cloves", "stalk", "stalks", "head", "heads", "pinch",
+    "pinches", "dash", "dashes", "handful", "inch", "inches", "strip", "strips",
+    "sprig", "sprigs", "sheet", "sheets", "link", "links", "fillet", "fillets",
 }
 
 _UNICODE_FRACS = {
@@ -386,24 +396,24 @@ _MEAL_TYPE_MAP = {
 
 _PROTEIN_MAP = {
     "chicken": "Chicken",
-    "beef":    "Beef",
-    "steak":   "Beef",
-    "pork":    "Pork",
-    "bacon":   "Pork",
-    "ham":     "Pork",
-    "fish":    "Fish",
-    "salmon":  "Fish",
-    "cod":     "Fish",
-    "tuna":    "Fish",
-    "shrimp":  "Seafood",
-    "prawn":   "Seafood",
-    "crab":    "Seafood",
+    "beef": "Beef",
+    "steak": "Beef",
+    "pork": "Pork",
+    "bacon": "Pork",
+    "ham": "Pork",
+    "fish": "Fish",
+    "salmon": "Fish",
+    "cod": "Fish",
+    "tuna": "Fish",
+    "shrimp": "Seafood",
+    "prawn": "Seafood",
+    "crab": "Seafood",
     "lobster": "Seafood",
-    "turkey":  "Turkey",
-    "lamb":    "Lamb",
-    "tofu":    "Vegetarian",
-    "paneer":  "Vegetarian",
-    "egg":     "Vegetarian",
+    "turkey": "Turkey",
+    "lamb": "Lamb",
+    "tofu": "Vegetarian",
+    "paneer": "Vegetarian",
+    "egg": "Vegetarian",
 }
 
 
@@ -427,7 +437,8 @@ def _detect_protein(title: str, ingredients: List[dict]) -> Optional[str]:
 
 def _backfill_protein() -> None:
     with _Session() as session:
-        recipes = session.query(Recipe).filter(Recipe.primary_protein.is_(None)).all()
+        recipes = session.query(Recipe).filter(
+            Recipe.primary_protein.is_(None)).all()
         updated = 0
         for r in recipes:
             ingredients = json.loads(r.ingredients_json or "[]")
@@ -437,7 +448,9 @@ def _backfill_protein() -> None:
                 updated += 1
         if updated:
             session.commit()
-            logger.info("Backfilled primary_protein for %d existing recipes", updated)
+            logger.info(
+                "Backfilled primary_protein for %d existing recipes",
+                updated)
 
 
 _backfill_protein()
@@ -509,17 +522,22 @@ def _format_qty(v: float) -> str:
     """Format a float quantity back to a string, rounding to fractions if possible."""
     if abs(v - round(v)) < 1e-9:
         return str(round(v))
-    
+
     whole = int(v)
     frac = v - whole
-    
+
     frac_str = ""
-    if abs(frac - 0.25) < 0.01: frac_str = "1/4"
-    elif abs(frac - 0.50) < 0.01: frac_str = "1/2"
-    elif abs(frac - 0.75) < 0.01: frac_str = "3/4"
-    elif abs(frac - 0.33) < 0.02: frac_str = "1/3"
-    elif abs(frac - 0.66) < 0.02: frac_str = "2/3"
-    
+    if abs(frac - 0.25) < 0.01:
+        frac_str = "1/4"
+    elif abs(frac - 0.50) < 0.01:
+        frac_str = "1/2"
+    elif abs(frac - 0.75) < 0.01:
+        frac_str = "3/4"
+    elif abs(frac - 0.33) < 0.02:
+        frac_str = "1/3"
+    elif abs(frac - 0.66) < 0.02:
+        frac_str = "2/3"
+
     if frac_str:
         return f"{whole if whole > 0 else ''} {frac_str}".strip()
     return str(round(v, 2))
@@ -611,24 +629,28 @@ def _jsonld_to_recipe(node: dict) -> Optional[dict]:
             meal_type = val
             break
 
-    title       = node.get("name", "Untitled Recipe")
-    ingredients = [_parse_ingredient(i) for i in node.get("recipeIngredient", [])]
+    title = node.get("name", "Untitled Recipe")
+    ingredients = [_parse_ingredient(i)
+                   for i in node.get("recipeIngredient", [])]
 
     return {
-        "title":            title,
-        "meal_type":        meal_type,
-        "primary_protein":  _detect_protein(title, ingredients),
-        "servings":         _parse_yield(node.get("recipeYield", 4)),
-        "image_url":        _extract_image_url(node.get("image")),
-        "ingredients":      ingredients,
-        "steps":            _parse_steps(node.get("recipeInstructions", [])),
+        "title": title,
+        "meal_type": meal_type,
+        "primary_protein": _detect_protein(title, ingredients),
+        "servings": _parse_yield(node.get("recipeYield", 4)),
+        "image_url": _extract_image_url(node.get("image")),
+        "ingredients": ingredients,
+        "steps": _parse_steps(node.get("recipeInstructions", [])),
         "equipment_needed": [],
     }
 
 
 def _extract_jsonld_recipes(page_html: str) -> List[dict]:
     """Pull all schema.org Recipe objects from JSON-LD blocks in an HTML page."""
-    blocks = re.findall(r'<script[^>]*ld\+json[^>]*>([\s\S]*?)</script>', page_html, re.I)
+    blocks = re.findall(
+        r'<script[^>]*ld\+json[^>]*>([\s\S]*?)</script>',
+        page_html,
+        re.I)
     found: List[dict] = []
     for block in blocks:
         try:
@@ -688,7 +710,8 @@ def _is_bot_challenge(page_html: str) -> bool:
         "challenge-form",
         "cf-challenge",
     ]
-    return any(phrase in lower for phrase in indicators) and len(page_html) < 60_000
+    return any(phrase in lower for phrase in indicators) and len(
+        page_html) < 60_000
 
 
 def _extract_microdata_recipes(page_html: str) -> List[dict]:
@@ -700,20 +723,27 @@ def _extract_microdata_recipes(page_html: str) -> List[dict]:
 
     soup = BeautifulSoup(page_html, "html.parser")
     # Instant Pot and others use itemprop="recipeIngredient" for list items
-    ingredients = [i.get_text(strip=True) for i in soup.find_all(attrs={"itemprop": "recipeIngredient"})]
+    ingredients = [
+        i.get_text(
+            strip=True) for i in soup.find_all(
+            attrs={
+                "itemprop": "recipeIngredient"})]
     if not ingredients:
         return []
 
-    # Scope title search to the recipe container to avoid picking up site/author names
+    # Scope title search to the recipe container to avoid picking up
+    # site/author names
     recipe_container = (
         soup.find(attrs={"itemtype": re.compile(r"schema\.org/Recipe", re.I)})
     )
     title_node = (
-        (recipe_container.find(attrs={"itemprop": "name"}) if recipe_container else None)
+        (recipe_container.find(
+            attrs={"itemprop": "name"}) if recipe_container else None)
         or soup.find(attrs={"itemprop": "name"})
         or soup.find("h1")
     )
-    title = title_node.get_text(strip=True) if title_node else "Untitled Recipe"
+    title = title_node.get_text(
+        strip=True) if title_node else "Untitled Recipe"
 
     # Instructions — look for itemprop="recipeInstructions" first
     steps: List[str] = []
@@ -739,7 +769,10 @@ def _extract_microdata_recipes(page_html: str) -> List[dict]:
                     if lis:
                         steps = [li.get_text(strip=True) for li in lis]
                     else:
-                        steps = [p.get_text(strip=True) for p in container.find_all("p") if len(p.get_text()) > 10]
+                        steps = [
+                            p.get_text(
+                                strip=True) for p in container.find_all("p") if len(
+                                p.get_text()) > 10]
                 if steps:
                     break
 
@@ -748,7 +781,8 @@ def _extract_microdata_recipes(page_html: str) -> List[dict]:
 
     # Try to find a specific recipe image, fallback to OG
     image_node = soup.find(attrs={"itemprop": "image"})
-    image_url = _extract_image_url(image_node.get("src") if image_node else None) or _extract_og_image(page_html)
+    image_url = _extract_image_url(image_node.get(
+        "src") if image_node else None) or _extract_og_image(page_html)
 
     parsed_ingredients = [_parse_ingredient(i) for i in ingredients]
 
@@ -765,7 +799,10 @@ def _extract_microdata_recipes(page_html: str) -> List[dict]:
 
 def _extract_nextdata_recipes(page_html: str) -> List[dict]:
     """Extract recipes from Next.js __NEXT_DATA__ JSON (Walmart and similar SPA sites)."""
-    m = re.search(r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>([\s\S]*?)</script>', page_html, re.I)
+    m = re.search(
+        r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>([\s\S]*?)</script>',
+        page_html,
+        re.I)
     if not m:
         return []
     try:
@@ -779,9 +816,11 @@ def _extract_nextdata_recipes(page_html: str) -> List[dict]:
         found: List[dict] = []
         if isinstance(obj, dict):
             has_name = bool(obj.get("title") or obj.get("name"))
-            has_ingredients = bool(obj.get("ingredients") or obj.get("recipeIngredients"))
+            has_ingredients = bool(
+                obj.get("ingredients") or obj.get("recipeIngredients"))
             has_steps = bool(
-                obj.get("instructions") or obj.get("steps") or obj.get("recipeInstructions")
+                obj.get("instructions") or obj.get(
+                    "steps") or obj.get("recipeInstructions")
             )
             if has_name and (has_ingredients or has_steps):
                 found.append(obj)
@@ -802,16 +841,19 @@ def _extract_nextdata_recipes(page_html: str) -> List[dict]:
             if isinstance(ing, str):
                 ingredients.append(_parse_ingredient(ing))
             elif isinstance(ing, dict):
-                text = ing.get("text") or ing.get("name") or ing.get("description") or ""
+                text = ing.get("text") or ing.get(
+                    "name") or ing.get("description") or ""
                 if text:
                     ingredients.append(_parse_ingredient(str(text)))
 
         raw_steps = (
-            raw.get("instructions") or raw.get("steps") or raw.get("recipeInstructions") or []
+            raw.get("instructions") or raw.get(
+                "steps") or raw.get("recipeInstructions") or []
         )
         steps = _parse_steps(raw_steps)
 
-        raw_yield = raw.get("recipeYield") or raw.get("servings") or raw.get("yield") or 4
+        raw_yield = raw.get("recipeYield") or raw.get(
+            "servings") or raw.get("yield") or 4
         servings = _parse_yield(raw_yield)
 
         raw_image = (
@@ -838,13 +880,13 @@ def _extract_nextdata_recipes(page_html: str) -> List[dict]:
                 meal_type = val
                 break
         parsed.append({
-            "title":            name,
-            "meal_type":        meal_type,
-            "primary_protein":  _detect_protein(name, ingredients),
-            "servings":         servings,
-            "image_url":        image_url,
-            "ingredients":      ingredients,
-            "steps":            steps,
+            "title": name,
+            "meal_type": meal_type,
+            "primary_protein": _detect_protein(name, ingredients),
+            "servings": servings,
+            "image_url": image_url,
+            "ingredients": ingredients,
+            "steps": steps,
             "equipment_needed": [],
         })
 
@@ -864,7 +906,7 @@ async def _lookup_barcode(upc: str) -> Optional[dict]:
             if data.get("status") == 1:
                 product = data.get("product", {})
                 return {
-                    "name":  product.get("product_name") or product.get("product_name_en") or upc,
+                    "name": product.get("product_name") or product.get("product_name_en") or upc,
                     "brand": product.get("brands", ""),
                 }
         except Exception:
@@ -877,42 +919,42 @@ async def _lookup_barcode(upc: str) -> Optional[dict]:
 # ---------------------------------------------------------------------------
 
 class HouseholdUpdate(BaseModel):
-    name:            Optional[str]  = None
-    has_air_fryer:   Optional[bool] = None
+    name: Optional[str] = None
+    has_air_fryer: Optional[bool] = None
     has_instant_pot: Optional[bool] = None
-    has_dutch_oven:  Optional[bool] = None
-    has_sous_vide:   Optional[bool] = None
+    has_dutch_oven: Optional[bool] = None
+    has_sous_vide: Optional[bool] = None
     has_slow_cooker: Optional[bool] = None
     has_stand_mixer: Optional[bool] = None
-    has_wok:         Optional[bool] = None
-    has_grill:       Optional[bool] = None
+    has_wok: Optional[bool] = None
+    has_grill: Optional[bool] = None
 
 
 class RecipeCreate(BaseModel):
-    title:           str
-    meal_type:       str  = "Other"
+    title: str
+    meal_type: str = "Other"
     primary_protein: Optional[str] = None
-    servings:        int  = 4
-    image_url:       Optional[str] = None
-    ingredients:     List[Dict[str, Any]] = []
-    steps:           List[str] = []
+    servings: int = 4
+    image_url: Optional[str] = None
+    ingredients: List[Dict[str, Any]] = []
+    steps: List[str] = []
     equipment_needed: List[str] = []
 
 
 class RecipeUpdate(BaseModel):
-    title:           Optional[str] = None
-    meal_type:       Optional[str] = None
+    title: Optional[str] = None
+    meal_type: Optional[str] = None
     primary_protein: Optional[str] = None
-    servings:        Optional[int] = None
-    image_url:       Optional[str] = None
-    ingredients:     Optional[List[Dict[str, Any]]] = None
-    steps:           Optional[List[str]] = None
+    servings: Optional[int] = None
+    image_url: Optional[str] = None
+    ingredients: Optional[List[Dict[str, Any]]] = None
+    steps: Optional[List[str]] = None
     equipment_needed: Optional[List[str]] = None
 
 
 class ScaleRequest(BaseModel):
     target_servings: int
-    prefer_system:   Optional[str] = None  # "metric" or "imperial"
+    prefer_system: Optional[str] = None  # "metric" or "imperial"
 
 
 class EquipmentTranslateRequest(BaseModel):
@@ -920,30 +962,31 @@ class EquipmentTranslateRequest(BaseModel):
 
 
 class StockroomItemCreate(BaseModel):
-    name:    str
+    name: str
     barcode: Optional[str] = None
-    brand:   Optional[str] = None
-    state:   str = "Good"
+    brand: Optional[str] = None
+    state: str = "Good"
 
 
 class StockroomItemUpdate(BaseModel):
-    name:   Optional[str] = None
-    brand:  Optional[str] = None
-    state:  Optional[str] = None
+    name: Optional[str] = None
+    brand: Optional[str] = None
+    state: Optional[str] = None
 
 
 class ScanRequest(BaseModel):
     barcode: str
+    quantity: float = 1.0
 
 
 class PrepSessionCreate(BaseModel):
-    label:             Optional[str] = None
+    label: Optional[str] = None
     target_containers: Optional[int] = None
-    container_oz:      Optional[int] = None
+    container_oz: Optional[int] = None
 
 
 class AddRecipeToPrep(BaseModel):
-    recipe_id:      str
+    recipe_id: str
     servings_target: Optional[int] = None
 
 
@@ -953,17 +996,17 @@ class PrepRecipeScaleUpdate(BaseModel):
 
 
 class EquipmentItemCreate(BaseModel):
-    make:  str
+    make: str
     model: str
 
 
 class EquipmentItemUpdate(BaseModel):
-    make:  Optional[str] = None
+    make: Optional[str] = None
     model: Optional[str] = None
 
 
 class EquipmentIdentifyRequest(BaseModel):
-    make:  str
+    make: str
     model: str
 
 
@@ -973,12 +1016,12 @@ class WalmartMappingCreate(BaseModel):
 
 
 class BannedIngredientCreate(BaseModel):
-    name:       str
+    name: str
     substitute: Optional[str] = None
 
 
 class BannedIngredientUpdate(BaseModel):
-    name:       Optional[str] = None
+    name: Optional[str] = None
     substitute: Optional[str] = None
 
 
@@ -1004,18 +1047,18 @@ class VoteRequest(BaseModel):
 
 def _household_out(hh: Household) -> dict:
     return {
-        "id":       hh.id,
-        "name":     hh.name,
+        "id": hh.id,
+        "name": hh.name,
         "owner_id": hh.owner_id,
         "equipment": {
-            "air_fryer":   hh.has_air_fryer,
+            "air_fryer": hh.has_air_fryer,
             "instant_pot": hh.has_instant_pot,
-            "dutch_oven":  hh.has_dutch_oven,
-            "sous_vide":   hh.has_sous_vide,
+            "dutch_oven": hh.has_dutch_oven,
+            "sous_vide": hh.has_sous_vide,
             "slow_cooker": hh.has_slow_cooker,
             "stand_mixer": hh.has_stand_mixer,
-            "wok":         hh.has_wok,
-            "grill":       hh.has_grill,
+            "wok": hh.has_wok,
+            "grill": hh.has_grill,
         },
         "created_at": hh.created_at.isoformat() if hh.created_at else None,
         "updated_at": hh.updated_at.isoformat() if hh.updated_at else None,
@@ -1024,22 +1067,22 @@ def _household_out(hh: Household) -> dict:
 
 def _recipe_out(r: Recipe) -> dict:
     return {
-        "id":               r.id,
-        "household_id":     r.household_id,
-        "title":            r.title,
-        "meal_type":        r.meal_type.value if r.meal_type else "Other",
-        "primary_protein":  r.primary_protein,
-        "servings":         r.servings,
-        "image_url":        r.image_url,
-        "source_url":       r.source_url,
-        "source_type":      r.source_type.value if r.source_type else "manual",
-        "rating":           r.rating,
-        "ingredients":      _safe_json(r.ingredients_json, []),
-        "steps":            _safe_json(r.steps_json, []),
+        "id": r.id,
+        "household_id": r.household_id,
+        "title": r.title,
+        "meal_type": r.meal_type.value if r.meal_type else "Other",
+        "primary_protein": r.primary_protein,
+        "servings": r.servings,
+        "image_url": r.image_url,
+        "source_url": r.source_url,
+        "source_type": r.source_type.value if r.source_type else "manual",
+        "rating": r.rating,
+        "ingredients": _safe_json(r.ingredients_json, []),
+        "steps": _safe_json(r.steps_json, []),
         "equipment_needed": _safe_json(r.equipment_needed_json, []),
-        "blacklisted":      _safe_json(r.blacklisted_json, []),
-        "created_at":       r.created_at.isoformat() if r.created_at else None,
-        "updated_at":       r.updated_at.isoformat() if r.updated_at else None,
+        "blacklisted": _safe_json(r.blacklisted_json, []),
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+        "updated_at": r.updated_at.isoformat() if r.updated_at else None,
     }
 
 
@@ -1064,8 +1107,8 @@ def _recipe_vault_path_for(r: Recipe, root: str = VROOT_HOUSEHOLD) -> str:
 def _recipe_to_markdown(r: Recipe) -> str:
     """Serialize a Recipe to markdown with YAML frontmatter."""
     ingredients = _safe_json(r.ingredients_json, [])
-    steps       = _safe_json(r.steps_json, [])
-    equipment   = _safe_json(r.equipment_needed_json, [])
+    steps = _safe_json(r.steps_json, [])
+    equipment = _safe_json(r.equipment_needed_json, [])
 
     def _yaml_str(v) -> str:
         if v is None:
@@ -1078,7 +1121,9 @@ def _recipe_to_markdown(r: Recipe) -> str:
         "kind: recipe",
         f"recipe_id: {_yaml_str(r.id)}",
         f"title: {_yaml_str(r.title)}",
-        f"meal_type: {_yaml_str(r.meal_type.value if r.meal_type else 'Other')}",
+        f"meal_type: {
+            _yaml_str(
+                r.meal_type.value if r.meal_type else 'Other')}",
         f"primary_protein: {_yaml_str(r.primary_protein or '')}",
         f"servings: {r.servings or 0}",
         f"rating: {r.rating if r.rating is not None else 'null'}",
@@ -1097,10 +1142,14 @@ def _recipe_to_markdown(r: Recipe) -> str:
     if ingredients:
         for ing in ingredients:
             if isinstance(ing, dict):
-                qty   = ing.get("quantity") or ing.get("amount") or ""
-                unit  = ing.get("unit", "")
-                name  = ing.get("name") or ing.get("item") or ""
-                line  = " ".join(p for p in [str(qty).strip(), unit.strip(), name.strip()] if p)
+                qty = ing.get("quantity") or ing.get("amount") or ""
+                unit = ing.get("unit", "")
+                name = ing.get("name") or ing.get("item") or ""
+                line = " ".join(
+                    p for p in [
+                        str(qty).strip(),
+                        unit.strip(),
+                        name.strip()] if p)
                 body.append(f"- {line}")
             else:
                 body.append(f"- {ing}")
@@ -1111,7 +1160,9 @@ def _recipe_to_markdown(r: Recipe) -> str:
     body.append("")
     if steps:
         for i, step in enumerate(steps, 1):
-            text = step if isinstance(step, str) else (step.get("text") or step.get("instruction") or str(step))
+            text = step if isinstance(
+                step, str) else (
+                step.get("text") or step.get("instruction") or str(step))
             body.append(f"{i}. {text}")
     else:
         body.append("_(no steps recorded)_")
@@ -1126,7 +1177,8 @@ def _recipe_to_markdown(r: Recipe) -> str:
     return "\n".join(body)
 
 
-async def _sync_recipe_to_vault(uid: str, r: Recipe, old_title: Optional[str] = None) -> None:
+async def _sync_recipe_to_vault(
+        uid: str, r: Recipe, old_title: Optional[str] = None) -> None:
     """
     Write the recipe to the user's vault as a markdown note. Best-effort:
     a vault failure must never break the recipe save itself.
@@ -1134,11 +1186,14 @@ async def _sync_recipe_to_vault(uid: str, r: Recipe, old_title: Optional[str] = 
     try:
         provider = VaultProvider(store=None)
         content = _recipe_to_markdown(r)
-        # Prefer household root when the user has one; otherwise fall back to personal.
+        # Prefer household root when the user has one; otherwise fall back to
+        # personal.
         owner_id = _resolve_module_owner(uid, "vault")
-        root = VROOT_HOUSEHOLD if owner_id.startswith("family:") else VROOT_PERSONAL
+        root = VROOT_HOUSEHOLD if owner_id.startswith(
+            "family:") else VROOT_PERSONAL
         new_path = _recipe_vault_path_for(r, root=root)
-        # If the title changed, retire the old file by renaming (delete-on-fail).
+        # If the title changed, retire the old file by renaming
+        # (delete-on-fail).
         if old_title and _safe_filename(old_title) != _safe_filename(r.title):
             old_path = f"{root}/Recipes/{_safe_filename(old_title)}.md"
             try:
@@ -1149,48 +1204,60 @@ async def _sync_recipe_to_vault(uid: str, r: Recipe, old_title: Optional[str] = 
                 logger.debug("Recipe note rename skipped: %s", exc)
         await provider.write_note(uid, new_path, content)
     except Exception as exc:
-        logger.debug("Recipe vault sync skipped (recipe=%s): %s", getattr(r, "id", "?"), exc)
+        logger.debug(
+            "Recipe vault sync skipped (recipe=%s): %s",
+            getattr(
+                r,
+                "id",
+                "?"),
+            exc)
 
 
 async def _delete_recipe_from_vault(uid: str, r: Recipe) -> None:
     try:
         provider = VaultProvider(store=None)
         owner_id = _resolve_module_owner(uid, "vault")
-        root = VROOT_HOUSEHOLD if owner_id.startswith("family:") else VROOT_PERSONAL
+        root = VROOT_HOUSEHOLD if owner_id.startswith(
+            "family:") else VROOT_PERSONAL
         path = _recipe_vault_path_for(r, root=root)
         await provider.delete_note(uid, path)
     except Exception as exc:
-        logger.debug("Recipe vault delete skipped (recipe=%s): %s", getattr(r, "id", "?"), exc)
+        logger.debug(
+            "Recipe vault delete skipped (recipe=%s): %s",
+            getattr(
+                r,
+                "id",
+                "?"),
+            exc)
 
 
 def _proposal_out(p: DinnerProposal) -> dict:
     return {
-        "id":           p.id,
+        "id": p.id,
         "household_id": p.household_id,
-        "recipe_id":    p.recipe_id,
-        "recipe":       _recipe_out(p.recipe) if p.recipe else None,
-        "proposed_by":  p.proposed_by,
-        "votes_yes":    _safe_json(p.votes_yes, []),
-        "votes_no":     _safe_json(p.votes_no,  []),
-        "status":       p.status,
-        "created_at":   p.created_at.isoformat() if p.created_at else None,
+        "recipe_id": p.recipe_id,
+        "recipe": _recipe_out(p.recipe) if p.recipe else None,
+        "proposed_by": p.proposed_by,
+        "votes_yes": _safe_json(p.votes_yes, []),
+        "votes_no": _safe_json(p.votes_no, []),
+        "status": p.status,
+        "created_at": p.created_at.isoformat() if p.created_at else None,
     }
 
 
 def _stock_out(s: StockroomItem) -> dict:
     return {
-        "id":           s.id,
+        "id": s.id,
         "household_id": s.household_id,
-        "name":         s.name,
-        "barcode":      s.barcode,
-        "brand":        s.brand,
-        "state":        s.state.value if s.state else "Good",
-        "quantity":     getattr(s, "quantity", 1.0),
+        "name": s.name,
+        "barcode": s.barcode,
+        "brand": s.brand,
+        "state": s.state.value if s.state else "Good",
+        "quantity": getattr(s, "quantity", 1.0),
         "min_quantity": getattr(s, "min_quantity", 0.25),
-        "created_at":   s.created_at.isoformat() if s.created_at else None,
-        "updated_at":   s.updated_at.isoformat() if s.updated_at else None,
+        "created_at": s.created_at.isoformat() if s.created_at else None,
+        "updated_at": s.updated_at.isoformat() if s.updated_at else None,
     }
-
 
 
 def _equipment_out(eq: KitchenEquipment) -> dict:
@@ -1203,46 +1270,46 @@ def _equipment_out(eq: KitchenEquipment) -> dict:
     else:
         capabilities = [eq.equipment_type] if eq.equipment_type else []
     return {
-        "id":             eq.id,
+        "id": eq.id,
         "equipment_type": eq.equipment_type,
-        "label":          eq.label,
-        "make":           eq.make,
-        "model":          eq.model,
-        "capabilities":   capabilities,
+        "label": eq.label,
+        "make": eq.make,
+        "model": eq.model,
+        "capabilities": capabilities,
     }
 
 
 def _banned_out(bi: BannedIngredient) -> dict:
     return {
-        "id":           bi.id,
+        "id": bi.id,
         "household_id": bi.household_id,
-        "name":         bi.name,
-        "substitute":   bi.substitute,
-        "created_at":   bi.created_at.isoformat() if bi.created_at else None,
-        "updated_at":   bi.updated_at.isoformat() if bi.updated_at else None,
+        "name": bi.name,
+        "substitute": bi.substitute,
+        "created_at": bi.created_at.isoformat() if bi.created_at else None,
+        "updated_at": bi.updated_at.isoformat() if bi.updated_at else None,
     }
 
 
 def _session_out(ps: PrepSession) -> dict:
     return {
-        "id":                ps.id,
-        "household_id":      ps.household_id,
-        "label":             ps.label,
-        "is_active":         ps.is_active,
+        "id": ps.id,
+        "household_id": ps.household_id,
+        "label": ps.label,
+        "is_active": ps.is_active,
         "target_containers": ps.target_containers,
-        "container_oz":      ps.container_oz,
+        "container_oz": ps.container_oz,
         "recipes": [
             {
-                "entry_id":          pr.id,
-                "recipe_id":         pr.recipe_id,
-                "session_id":        pr.session_id,
-                "recipe_title":      pr.recipe.title if pr.recipe else "",
-                "servings_target":   pr.servings_target,
+                "entry_id": pr.id,
+                "recipe_id": pr.recipe_id,
+                "session_id": pr.session_id,
+                "recipe_title": pr.recipe.title if pr.recipe else "",
+                "servings_target": pr.servings_target,
                 "scaled_ingredients": json.loads(pr.scaled_ingredients_json) if pr.scaled_ingredients_json else None,
             }
             for pr in ps.recipes
         ],
-        "created_at":   ps.created_at.isoformat() if ps.created_at else None,
+        "created_at": ps.created_at.isoformat() if ps.created_at else None,
         "completed_at": ps.completed_at.isoformat() if ps.completed_at else None,
     }
 
@@ -1335,7 +1402,8 @@ async def update_household(
 # ---------------------------------------------------------------------------
 
 @router.get("/household/banned")
-async def list_banned_ingredients(request: Request, db: Session = Depends(get_db)):
+async def list_banned_ingredients(
+        request: Request, db: Session = Depends(get_db)):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     return [_banned_out(bi) for bi in hh.banned_ingredients]
@@ -1370,7 +1438,8 @@ async def update_banned_ingredient(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    bi = db.query(BannedIngredient).filter_by(id=bi_id, household_id=hh.id).first()
+    bi = db.query(BannedIngredient).filter_by(
+        id=bi_id, household_id=hh.id).first()
     if not bi:
         raise not_found("Banned ingredient not found")
 
@@ -1385,7 +1454,8 @@ async def update_banned_ingredient(
     return _banned_out(bi)
 
 
-@router.delete("/household/banned/{bi_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/household/banned/{bi_id}",
+               status_code=status.HTTP_204_NO_CONTENT)
 async def delete_banned_ingredient(
     bi_id: str,
     request: Request,
@@ -1393,7 +1463,8 @@ async def delete_banned_ingredient(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    bi = db.query(BannedIngredient).filter_by(id=bi_id, household_id=hh.id).first()
+    bi = db.query(BannedIngredient).filter_by(
+        id=bi_id, household_id=hh.id).first()
     if not bi:
         raise not_found("Banned ingredient not found")
     db.delete(bi)
@@ -1402,7 +1473,8 @@ async def delete_banned_ingredient(
 
 
 @router.post("/household/banned/recommend")
-async def recommend_substitutes(body: SubstituteRecommendRequest, request: Request):
+async def recommend_substitutes(
+        body: SubstituteRecommendRequest, request: Request):
     """Ask AI for substitute recommendations for a given ingredient."""
     await _get_user_id(request)  # auth check
     prompt = _SUBSTITUTE_RECOMMEND_PROMPT.format(ingredient=body.ingredient)
@@ -1475,7 +1547,8 @@ async def update_equipment(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    eq = db.query(KitchenEquipment).filter_by(id=eq_id, household_id=hh.id).first()
+    eq = db.query(KitchenEquipment).filter_by(
+        id=eq_id, household_id=hh.id).first()
     if not eq:
         raise not_found("Equipment not found")
 
@@ -1494,7 +1567,7 @@ async def update_equipment(
             if eq.equipment_type:
                 old_caps.add(eq.equipment_type)
 
-        identified = await _identify_equipment(eq.make, eq.model)
+        identified = await _identify_equipment(eq.make or "", eq.model or "")
         new_types = identified["types"]
         eq.equipment_type = new_types[0] if new_types else "other"
         eq.label = identified["label"]
@@ -1529,7 +1602,8 @@ async def update_equipment(
     return _equipment_out(eq)
 
 
-@router.delete("/household/equipment/{eq_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/household/equipment/{eq_id}",
+               status_code=status.HTTP_204_NO_CONTENT)
 async def delete_equipment(
     eq_id: str,
     request: Request,
@@ -1537,7 +1611,8 @@ async def delete_equipment(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    eq = db.query(KitchenEquipment).filter_by(id=eq_id, household_id=hh.id).first()
+    eq = db.query(KitchenEquipment).filter_by(
+        id=eq_id, household_id=hh.id).first()
     if not eq:
         raise not_found("Equipment not found")
     try:
@@ -1545,7 +1620,8 @@ async def delete_equipment(
     except Exception:
         caps = [eq.equipment_type] if eq.equipment_type else []
 
-    # Determine which capabilities remain on other equipment before clearing flags
+    # Determine which capabilities remain on other equipment before clearing
+    # flags
     remaining = db.query(KitchenEquipment).filter(
         KitchenEquipment.household_id == hh.id,
         KitchenEquipment.id != eq_id,
@@ -1579,17 +1655,18 @@ async def list_recipes(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/recipes/duplicates")
-async def list_duplicate_recipes(request: Request, db: Session = Depends(get_db)):
+async def list_duplicate_recipes(
+        request: Request, db: Session = Depends(get_db)):
     """Group recipes by normalized title and return groups with >1 item."""
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    
+
     from collections import defaultdict
     groups = defaultdict(list)
     for r in hh.recipes:
         key = (r.title or "Untitled").strip().lower()
         groups[key].append(_recipe_out(r))
-    
+
     return [g for g in groups.values() if len(g) > 1]
 
 
@@ -1611,15 +1688,19 @@ async def create_recipe(
             sqlalchemy.func.lower(Recipe.title) == title_norm
         ).first()
         if existing:
-            raise conflict(f"A recipe with title '{body.title}' already exists.")
+            raise conflict(
+                f"A recipe with title '{
+                    body.title}' already exists.")
 
     blacklisted = _flag_blacklist(db, hh.id, body.ingredients)
-    meal = MealType(body.meal_type) if body.meal_type in [m.value for m in MealType] else MealType.OTHER
+    meal = MealType(body.meal_type) if body.meal_type in [
+        m.value for m in MealType] else MealType.OTHER
     r = Recipe(
         household_id=hh.id,
         title=body.title,
         meal_type=meal,
-        primary_protein=body.primary_protein or _detect_protein(body.title, body.ingredients),
+        primary_protein=body.primary_protein or _detect_protein(
+            body.title, body.ingredients),
         servings=body.servings,
         image_url=body.image_url,
         source_type=SourceType.MANUAL,
@@ -1637,7 +1718,8 @@ async def create_recipe(
 
 
 @router.get("/recipes/{recipe_id}")
-async def get_recipe(recipe_id: str, request: Request, db: Session = Depends(get_db)):
+async def get_recipe(recipe_id: str, request: Request,
+                     db: Session = Depends(get_db)):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
@@ -1662,14 +1744,16 @@ async def update_recipe(
     if body.title is not None:
         r.title = body.title
     if body.meal_type is not None:
-        r.meal_type = MealType(body.meal_type) if body.meal_type in [m.value for m in MealType] else MealType.OTHER
+        r.meal_type = MealType(body.meal_type) if body.meal_type in [
+            m.value for m in MealType] else MealType.OTHER
     if body.primary_protein is not None:
         r.primary_protein = body.primary_protein
     if body.servings is not None:
         r.servings = body.servings
     if body.ingredients is not None:
         r.ingredients_json = json.dumps(body.ingredients)
-        r.blacklisted_json = json.dumps(_flag_blacklist(db, hh.id, body.ingredients))
+        r.blacklisted_json = json.dumps(
+            _flag_blacklist(db, hh.id, body.ingredients))
     if body.steps is not None:
         r.steps_json = json.dumps(body.steps)
     if body.equipment_needed is not None:
@@ -1684,7 +1768,8 @@ async def update_recipe(
 
 
 @router.delete("/recipes/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_recipe(recipe_id: str, request: Request, db: Session = Depends(get_db)):
+async def delete_recipe(recipe_id: str, request: Request,
+                        db: Session = Depends(get_db)):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     r = db.query(Recipe).filter_by(id=recipe_id, household_id=hh.id).first()
@@ -1735,9 +1820,10 @@ def _active_proposals(db: Session, household_id: str) -> list[DinnerProposal]:
 
 
 @router.get("/dinner")
-async def get_dinner_proposals(request: Request, db: Session = Depends(get_db)):
+async def get_dinner_proposals(
+        request: Request, db: Session = Depends(get_db)):
     uid = await _get_user_id(request)
-    hh  = _get_household(db, uid)
+    hh = _get_household(db, uid)
     return [_proposal_out(p) for p in _active_proposals(db, hh.id)]
 
 
@@ -1748,11 +1834,15 @@ async def suggest_dinner(
     db: Session = Depends(get_db),
 ):
     uid = await _get_user_id(request)
-    hh  = _get_household(db, uid)
-    recipe = db.query(Recipe).filter_by(id=body.recipe_id, household_id=hh.id).first()
+    hh = _get_household(db, uid)
+    recipe = db.query(Recipe).filter_by(
+        id=body.recipe_id, household_id=hh.id).first()
     if not recipe:
         raise not_found("Recipe not found")
-    p = DinnerProposal(household_id=hh.id, recipe_id=recipe.id, proposed_by=uid)
+    p = DinnerProposal(
+        household_id=hh.id,
+        recipe_id=recipe.id,
+        proposed_by=uid)
     db.add(p)
     db.commit()
     db.refresh(p)
@@ -1769,15 +1859,16 @@ async def vote_dinner(
     db: Session = Depends(get_db),
 ):
     uid = await _get_user_id(request)
-    hh  = _get_household(db, uid)
-    p   = db.query(DinnerProposal).filter_by(id=proposal_id, household_id=hh.id).first()
+    hh = _get_household(db, uid)
+    p = db.query(DinnerProposal).filter_by(
+        id=proposal_id, household_id=hh.id).first()
     if not p:
         raise not_found("Proposal not found")
 
     yes_list = json.loads(p.votes_yes or "[]")
-    no_list  = json.loads(p.votes_no  or "[]")
+    no_list = json.loads(p.votes_no or "[]")
     yes_list = [u for u in yes_list if u != uid]
-    no_list  = [u for u in no_list  if u != uid]
+    no_list = [u for u in no_list if u != uid]
 
     if body.vote == "yes":
         yes_list.append(uid)
@@ -1788,7 +1879,7 @@ async def vote_dinner(
         raise bad_request("vote must be 'yes' or 'no'")
 
     p.votes_yes = json.dumps(yes_list)
-    p.votes_no  = json.dumps(no_list)
+    p.votes_no = json.dumps(no_list)
     db.commit()
     db.refresh(p)
     proposals = [_proposal_out(x) for x in _active_proposals(db, hh.id)]
@@ -1803,8 +1894,9 @@ async def dismiss_dinner(
     db: Session = Depends(get_db),
 ):
     uid = await _get_user_id(request)
-    hh  = _get_household(db, uid)
-    p   = db.query(DinnerProposal).filter_by(id=proposal_id, household_id=hh.id).first()
+    hh = _get_household(db, uid)
+    p = db.query(DinnerProposal).filter_by(
+        id=proposal_id, household_id=hh.id).first()
     if not p:
         raise not_found("Proposal not found")
     db.delete(p)
@@ -1821,8 +1913,9 @@ async def cook_now(
 ):
     """Scale the proposed recipe to 4 servings and return a single-use shopping list."""
     uid = await _get_user_id(request)
-    hh  = _get_household(db, uid)
-    p   = db.query(DinnerProposal).filter_by(id=proposal_id, household_id=hh.id).first()
+    hh = _get_household(db, uid)
+    p = db.query(DinnerProposal).filter_by(
+        id=proposal_id, household_id=hh.id).first()
     if not p:
         raise not_found("Proposal not found")
     recipe = p.recipe
@@ -1830,14 +1923,15 @@ async def cook_now(
         raise not_found("Recipe not found")
 
     original_servings = recipe.servings or 4
-    target_servings   = 4
-    factor            = target_servings / original_servings
+    target_servings = 4
+    factor = target_servings / original_servings
 
     scaled = []
     for ing in _safe_json(recipe.ingredients_json, []):
         raw_qty = _parse_qty(str(ing.get("qty", ""))) * factor
         qty_out = _format_qty(raw_qty) if raw_qty > 0 else ing.get("qty", "")
-        scaled.append({"name": ing.get("name", ""), "qty": qty_out, "unit": ing.get("unit", "")})
+        scaled.append({"name": ing.get("name", ""),
+                      "qty": qty_out, "unit": ing.get("unit", "")})
 
     # Dismiss the proposal — it's been acted on
     db.delete(p)
@@ -1846,11 +1940,11 @@ async def cook_now(
     await _ws_manager.broadcast(hh.id, "dinner_updated", {"proposals": proposals})
 
     return {
-        "recipe_id":     recipe.id,
-        "title":         recipe.title,
-        "servings":      target_servings,
+        "recipe_id": recipe.id,
+        "title": recipe.title,
+        "servings": target_servings,
         "shopping_list": scaled,
-        "steps":         _safe_json(recipe.steps_json, []),
+        "steps": _safe_json(recipe.steps_json, []),
     }
 
 
@@ -1869,7 +1963,7 @@ async def ingest_recipe(
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
 
-    src_type   = SourceType.MANUAL
+    src_type = SourceType.MANUAL
     actual_url = source_url
     all_parsed: List[dict] = []
 
@@ -1877,17 +1971,20 @@ async def ingest_recipe(
         try:
             import fitz  # PyMuPDF
         except ImportError:
-            raise HTTPException(status_code=500, detail="PyMuPDF not installed. Run: pip install pymupdf")
+            raise HTTPException(
+                status_code=500,
+                detail="PyMuPDF not installed. Run: pip install pymupdf")
 
         content = await file.read()
         try:
             doc = fitz.open(stream=content, filetype="pdf")
         except Exception as exc:
             logger.error("Failed to parse uploaded PDF: %s", exc)
-            raise bad_request("The uploaded file is not a valid PDF or is corrupted. Ensure you are uploading a direct PDF file.")
+            raise bad_request(
+                "The uploaded file is not a valid PDF or is corrupted. Ensure you are uploading a direct PDF file.")
         src_type = SourceType.PDF
 
-        text_pages:  List[str] = []
+        text_pages: List[str] = []
         image_pages: List[str] = []  # base64 PNG per scanned page
 
         for page in doc:
@@ -1897,7 +1994,9 @@ async def ingest_recipe(
             else:
                 # Scanned page — render at 150 DPI and send to vision model
                 pix = page.get_pixmap(dpi=150)
-                image_pages.append(base64.b64encode(pix.tobytes("png")).decode())
+                image_pages.append(
+                    base64.b64encode(
+                        pix.tobytes("png")).decode())
 
         # ── text track: chunk and send to qwen2.5:14b ──────────────────────
         if text_pages:
@@ -1921,7 +2020,9 @@ async def ingest_recipe(
         try:
             from bs4 import BeautifulSoup
         except ImportError:
-            raise HTTPException(status_code=500, detail="BeautifulSoup not installed. Run: pip install beautifulsoup4")
+            raise HTTPException(
+                status_code=500,
+                detail="BeautifulSoup not installed. Run: pip install beautifulsoup4")
 
         _fetch_headers = {
             "User-Agent": (
@@ -1937,18 +2038,23 @@ async def ingest_recipe(
                 resp = await client.get(source_url, headers=_fetch_headers)
                 resp.raise_for_status()
         except httpx.TimeoutException:
-            raise HTTPException(status_code=504, detail="Request to recipe site timed out.")
+            raise HTTPException(status_code=504,
+                                detail="Request to recipe site timed out.")
         except httpx.HTTPStatusError as exc:
             raise HTTPException(
                 status_code=502,
-                detail=f"Recipe site returned an error: {exc.response.status_code} {exc.response.reason_phrase}"
+                detail=f"Recipe site returned an error: {
+                    exc.response.status_code} {
+                    exc.response.reason_phrase}"
             )
         except Exception as exc:
             logger.error("Failed to fetch recipe URL %s: %s", source_url, exc)
-            raise HTTPException(status_code=502, detail=f"Could not reach the recipe site: {exc}")
+            raise HTTPException(
+                status_code=502,
+                detail=f"Could not reach the recipe site: {exc}")
 
         page_html = resp.text
-        src_type  = SourceType.URL
+        src_type = SourceType.URL
 
         if _is_bot_challenge(page_html):
             raise bad_request((
@@ -1966,21 +2072,27 @@ async def ingest_recipe(
         if not all_parsed:
             microdata_recipes = _extract_microdata_recipes(page_html)
             if microdata_recipes:
-                logger.info("Microdata found: %d recipe(s)", len(microdata_recipes))
+                logger.info(
+                    "Microdata found: %d recipe(s)",
+                    len(microdata_recipes))
                 all_parsed.extend(microdata_recipes)
 
         # ── Track 1c: Next.js __NEXT_DATA__ (other SPA sites) ───────────────
         if not all_parsed:
             nextdata_recipes = _extract_nextdata_recipes(page_html)
             if nextdata_recipes:
-                logger.info("__NEXT_DATA__ found: %d recipe(s)", len(nextdata_recipes))
+                logger.info(
+                    "__NEXT_DATA__ found: %d recipe(s)",
+                    len(nextdata_recipes))
                 all_parsed.extend(nextdata_recipes)
 
         if not all_parsed:
             # ── Track 2: Fallback — scrape text → qwen2.5:14b ───────────────
-            logger.info("No structured data found — falling back to AI text parse")
+            logger.info(
+                "No structured data found — falling back to AI text parse")
             soup = BeautifulSoup(page_html, "html.parser")
-            for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+            for tag in soup(["script", "style", "nav",
+                            "footer", "header", "aside"]):
                 tag.decompose()
             raw_text = soup.get_text(separator="\n", strip=True)
 
@@ -2002,10 +2114,12 @@ async def ingest_recipe(
         raise bad_request("Provide either a PDF file or a source_url")
 
     if not all_parsed:
-        raise HTTPException(status_code=502, detail="No recipes found in source")
+        raise HTTPException(
+            status_code=502,
+            detail="No recipes found in source")
 
     # Deduplicate by normalised title across all chunks
-    seen:          set  = set()
+    seen: set = set()
     unique_parsed: List[dict] = []
     for item in all_parsed:
         key = item.get("title", "").lower().strip()
@@ -2015,14 +2129,17 @@ async def ingest_recipe(
 
     # Duplicate check against DB
     if not force:
-        titles = [item.get("title", "").strip().lower() for item in unique_parsed if item.get("title")]
+        titles = [item.get("title", "").strip().lower()
+                  for item in unique_parsed if item.get("title")]
         if titles:
             existing = db.query(Recipe).filter(
                 Recipe.household_id == hh.id,
                 sqlalchemy.func.lower(Recipe.title).in_(titles)
             ).first()
             if existing:
-                raise conflict(f"Recipe '{existing.title}' already exists in your library.")
+                raise conflict(
+                    f"Recipe '{
+                        existing.title}' already exists in your library.")
 
     saved: List[Recipe] = []
     try:
@@ -2035,7 +2152,8 @@ async def ingest_recipe(
                 meal = MealType.OTHER
 
             title = item.get("title", "Untitled Recipe")
-            protein = item.get("primary_protein") or _detect_protein(title, ingredients)
+            protein = item.get("primary_protein") or _detect_protein(
+                title, ingredients)
             r = Recipe(
                 household_id=hh.id,
                 title=title,
@@ -2047,7 +2165,8 @@ async def ingest_recipe(
                 source_type=src_type,
                 ingredients_json=json.dumps(ingredients),
                 steps_json=json.dumps(item.get("steps", [])),
-                equipment_needed_json=json.dumps(item.get("equipment_needed", [])),
+                equipment_needed_json=json.dumps(
+                    item.get("equipment_needed", [])),
                 blacklisted_json=json.dumps(blacklisted),
             )
             db.add(r)
@@ -2058,7 +2177,10 @@ async def ingest_recipe(
     except Exception as exc:
         db.rollback()
         logger.error("Failed to save ingested recipes: %s", exc, exc_info=True)
-        raise api_error(f"Database error while saving recipes: {exc}", exc, logger)
+        raise api_error(
+            f"Database error while saving recipes: {exc}",
+            exc,
+            logger)
     for r in saved:
         db.refresh(r)
         await _sync_recipe_to_vault(uid, r)
@@ -2091,14 +2213,14 @@ async def scale_recipe(
     scaled = []
     for ing in ingredients:
         raw_qty_str = str(ing.get("qty", "")).strip()
-        unit        = str(ing.get("unit", "")).strip()
-        
+        unit = str(ing.get("unit", "")).strip()
+
         # 1. Parse and Scale
         f_qty = _parse_qty(raw_qty_str)
         if f_qty > 0:
             new_qty = f_qty * scale_factor
             new_unit = unit
-            
+
             # 2. Convert if system preference set
             u_lower = unit.lower()
             if body.prefer_system == "imperial" and u_lower in _METRIC_TO_IMPERIAL:
@@ -2107,7 +2229,7 @@ async def scale_recipe(
             elif body.prefer_system == "metric" and u_lower in _IMPERIAL_TO_METRIC:
                 new_unit, ratio = _IMPERIAL_TO_METRIC[u_lower]
                 new_qty *= ratio
-                
+
             formatted_qty = _format_qty(new_qty)
             scaled.append({**ing, "qty": formatted_qty, "unit": new_unit})
         else:
@@ -2115,11 +2237,11 @@ async def scale_recipe(
             scaled.append({**ing})
 
     return {
-        "recipe_id":        recipe_id,
+        "recipe_id": recipe_id,
         "original_servings": orig_servings,
-        "target_servings":   body.target_servings,
-        "scale_factor":     round(scale_factor, 3),
-        "prefer_system":    body.prefer_system,
+        "target_servings": body.target_servings,
+        "scale_factor": round(scale_factor, 3),
+        "prefer_system": body.prefer_system,
         "scaled_ingredients": scaled,
     }
 
@@ -2153,11 +2275,13 @@ async def translate_equipment(
             new_steps = steps
     except Exception as exc:
         logger.error("Equipment translation failed: %s", exc, exc_info=True)
-        raise HTTPException(status_code=502, detail="Equipment translation failed. Please try again.")
+        raise HTTPException(
+            status_code=502,
+            detail="Equipment translation failed. Please try again.")
 
     return {
-        "recipe_id":    recipe_id,
-        "equipment":    body.equipment,
+        "recipe_id": recipe_id,
+        "equipment": body.equipment,
         "rewritten_steps": new_steps,
     }
 
@@ -2201,10 +2325,12 @@ async def add_stockroom_item(
 
 
 @router.get("/stockroom/{item_id}")
-async def get_stockroom_item(item_id: str, request: Request, db: Session = Depends(get_db)):
+async def get_stockroom_item(
+        item_id: str, request: Request, db: Session = Depends(get_db)):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    item = db.query(StockroomItem).filter_by(id=item_id, household_id=hh.id).first()
+    item = db.query(StockroomItem).filter_by(
+        id=item_id, household_id=hh.id).first()
     if not item:
         raise not_found("Item not found")
     return _stock_out(item)
@@ -2219,7 +2345,8 @@ async def update_stockroom_item(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    item = db.query(StockroomItem).filter_by(id=item_id, household_id=hh.id).first()
+    item = db.query(StockroomItem).filter_by(
+        id=item_id, household_id=hh.id).first()
     if not item:
         raise not_found("Item not found")
     if body.name is not None:
@@ -2238,20 +2365,17 @@ async def update_stockroom_item(
 
 
 @router.delete("/stockroom/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_stockroom_item(item_id: str, request: Request, db: Session = Depends(get_db)):
+async def delete_stockroom_item(
+        item_id: str, request: Request, db: Session = Depends(get_db)):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    item = db.query(StockroomItem).filter_by(id=item_id, household_id=hh.id).first()
+    item = db.query(StockroomItem).filter_by(
+        id=item_id, household_id=hh.id).first()
     if not item:
         raise not_found("Item not found")
     db.delete(item)
     db.commit()
     await _ws_manager.broadcast(hh.id, "stockroom_updated", {"deleted_id": item_id})
-
-
-class ScanRequest(BaseModel):
-    barcode:  str
-    quantity: float = 1.0
 
 
 @router.post("/stockroom/scan")
@@ -2275,7 +2399,7 @@ async def scan_barcode(
     if existing:
         existing.quantity += body.quantity
         existing.state = StockState.GOOD if existing.quantity > 0.25 else StockState.LOW
-        existing.name  = product["name"] if product["name"] != body.barcode else existing.name
+        existing.name = product["name"] if product["name"] != body.barcode else existing.name
         existing.brand = product["brand"] or existing.brand
         db.commit()
         db.refresh(existing)
@@ -2297,7 +2421,6 @@ async def scan_barcode(
 
     await _ws_manager.broadcast(hh.id, "stockroom_updated", out)
     return out
-
 
 
 @router.post("/stockroom/deplete")
@@ -2346,7 +2469,8 @@ async def deplete_item(
 async def get_active_prep(request: Request, db: Session = Depends(get_db)):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    session = db.query(PrepSession).filter_by(household_id=hh.id, is_active=True).first()
+    session = db.query(PrepSession).filter_by(
+        household_id=hh.id, is_active=True).first()
     if not session:
         raise not_found("No active prep session")
     return _session_out(session)
@@ -2361,7 +2485,8 @@ async def create_prep_session(
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     # Deactivate any existing active session
-    old = db.query(PrepSession).filter_by(household_id=hh.id, is_active=True).first()
+    old = db.query(PrepSession).filter_by(
+        household_id=hh.id, is_active=True).first()
     if old:
         old.is_active = False
     session = PrepSession(
@@ -2387,10 +2512,12 @@ async def add_recipe_to_prep(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
+    session = db.query(PrepSession).filter_by(
+        id=session_id, household_id=hh.id).first()
     if not session:
         raise not_found("Prep session not found")
-    recipe = db.query(Recipe).filter_by(id=body.recipe_id, household_id=hh.id).first()
+    recipe = db.query(Recipe).filter_by(
+        id=body.recipe_id, household_id=hh.id).first()
     if not recipe:
         raise not_found("Recipe not found")
     entry = PrepSessionRecipe(
@@ -2416,17 +2543,19 @@ async def update_prep_recipe_scale(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
+    session = db.query(PrepSession).filter_by(
+        id=session_id, household_id=hh.id).first()
     if not session:
         raise not_found("Prep session not found")
-    
-    entry = db.query(PrepSessionRecipe).filter_by(id=entry_id, session_id=session_id).first()
+
+    entry = db.query(PrepSessionRecipe).filter_by(
+        id=entry_id, session_id=session_id).first()
     if not entry:
         raise not_found("Recipe entry not found in session")
 
     entry.servings_target = body.target_servings
     entry.scaled_ingredients_json = json.dumps(body.scaled_ingredients)
-    
+
     db.commit()
     db.refresh(session)
     out = _session_out(session)
@@ -2434,7 +2563,8 @@ async def update_prep_recipe_scale(
     return out
 
 
-@router.delete("/prep/{session_id}/recipes/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/prep/{session_id}/recipes/{entry_id}",
+               status_code=status.HTTP_204_NO_CONTENT)
 async def remove_recipe_from_prep(
     session_id: str,
     entry_id: str,
@@ -2443,25 +2573,29 @@ async def remove_recipe_from_prep(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    entry = db.query(PrepSessionRecipe).filter_by(id=entry_id, session_id=session_id).first()
+    entry = db.query(PrepSessionRecipe).filter_by(
+        id=entry_id, session_id=session_id).first()
     if not entry:
         raise not_found("Entry not found")
     db.delete(entry)
     db.commit()
-    session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
+    session = db.query(PrepSession).filter_by(
+        id=session_id, household_id=hh.id).first()
     if session:
         await _ws_manager.broadcast(hh.id, "prep_updated", _session_out(session))
 
 
 @router.get("/prep/{session_id}/shopping-list")
-async def get_shopping_list(session_id: str, request: Request, db: Session = Depends(get_db)):
+async def get_shopping_list(
+        session_id: str, request: Request, db: Session = Depends(get_db)):
     """
     Master Shopping List: aggregate + deduplicate all ingredients across staged recipes.
     Cross-reference Stockroom — anything marked Good is omitted.
     """
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
+    session = db.query(PrepSession).filter_by(
+        id=session_id, household_id=hh.id).first()
     if not session:
         raise not_found("Prep session not found")
 
@@ -2497,7 +2631,7 @@ async def get_shopping_list(session_id: str, request: Request, db: Session = Dep
             else:
                 aggregated[name_key] = {
                     "name": ing.get("name", ""),
-                    "qty":  ing.get("qty", ""),
+                    "qty": ing.get("qty", ""),
                     "unit": ing.get("unit", ""),
                 }
 
@@ -2507,17 +2641,24 @@ async def get_shopping_list(session_id: str, request: Request, db: Session = Dep
         if item.state == StockState.LOW:
             key = item.name.lower().strip()
             if key not in aggregated:
-                aggregated[key] = {"name": item.name, "qty": "", "unit": "", "_from_stockroom": True}
+                aggregated[key] = {
+                    "name": item.name,
+                    "qty": "",
+                    "unit": "",
+                    "_from_stockroom": True}
 
-    return {"session_id": session_id, "shopping_list": list(aggregated.values())}
+    return {"session_id": session_id,
+            "shopping_list": list(aggregated.values())}
 
 
 @router.get("/prep/{session_id}/staging")
-async def get_staging_area(session_id: str, request: Request, db: Session = Depends(get_db)):
+async def get_staging_area(
+        session_id: str, request: Request, db: Session = Depends(get_db)):
     """Staging Area: shopping list split back into per-recipe piles."""
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
+    session = db.query(PrepSession).filter_by(
+        id=session_id, household_id=hh.id).first()
     if not session:
         raise not_found("Prep session not found")
 
@@ -2537,9 +2678,9 @@ async def get_staging_area(session_id: str, request: Request, db: Session = Depe
             if ing.get("name", "").lower().strip() not in good_stock
         ]
         piles.append({
-            "recipe_id":    entry.recipe_id,
+            "recipe_id": entry.recipe_id,
             "recipe_title": entry.recipe.title,
-            "ingredients":  ingredients,
+            "ingredients": ingredients,
         })
 
     return {"session_id": session_id, "piles": piles}
@@ -2553,7 +2694,8 @@ async def complete_prep_session(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
+    session = db.query(PrepSession).filter_by(
+        id=session_id, household_id=hh.id).first()
     if not session:
         raise not_found("Prep session not found")
     session.is_active = False
@@ -2568,12 +2710,14 @@ async def complete_prep_session(
 # ---------------------------------------------------------------------------
 
 @router.get("/walmart/mappings")
-async def list_walmart_mappings(request: Request, db: Session = Depends(get_db)):
+async def list_walmart_mappings(
+        request: Request, db: Session = Depends(get_db)):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     mappings = db.query(WalmartMapping).filter_by(household_id=hh.id).all()
     return [
-        {"id": m.id, "ingredient_name": m.ingredient_name, "walmart_item_id": m.walmart_item_id}
+        {"id": m.id, "ingredient_name": m.ingredient_name,
+            "walmart_item_id": m.walmart_item_id}
         for m in mappings
     ]
 
@@ -2587,7 +2731,7 @@ async def create_walmart_mapping(
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     name_norm = body.ingredient_name.lower().strip()
-    item_id   = body.walmart_item_id.strip()
+    item_id = body.walmart_item_id.strip()
 
     # 1. Backend URL Extraction
     if "walmart.com" in item_id:
@@ -2601,11 +2745,13 @@ async def create_walmart_mapping(
     if not item_id.isdigit():
         raise bad_request("Invalid Walmart Item ID. Must be a number.")
 
-    existing = db.query(WalmartMapping).filter_by(household_id=hh.id, ingredient_name=name_norm).first()
+    existing = db.query(WalmartMapping).filter_by(
+        household_id=hh.id, ingredient_name=name_norm).first()
     if existing:
         existing.walmart_item_id = item_id
         db.commit()
-        return {"id": existing.id, "ingredient_name": existing.ingredient_name, "walmart_item_id": existing.walmart_item_id}
+        return {"id": existing.id, "ingredient_name": existing.ingredient_name,
+                "walmart_item_id": existing.walmart_item_id}
     m = WalmartMapping(
         household_id=hh.id,
         ingredient_name=name_norm,
@@ -2614,14 +2760,18 @@ async def create_walmart_mapping(
     db.add(m)
     db.commit()
     db.refresh(m)
-    return {"id": m.id, "ingredient_name": m.ingredient_name, "walmart_item_id": m.walmart_item_id}
+    return {"id": m.id, "ingredient_name": m.ingredient_name,
+            "walmart_item_id": m.walmart_item_id}
 
 
-@router.delete("/walmart/mappings/{mapping_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_walmart_mapping(mapping_id: str, request: Request, db: Session = Depends(get_db)):
+@router.delete("/walmart/mappings/{mapping_id}",
+               status_code=status.HTTP_204_NO_CONTENT)
+async def delete_walmart_mapping(
+        mapping_id: str, request: Request, db: Session = Depends(get_db)):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    m = db.query(WalmartMapping).filter_by(id=mapping_id, household_id=hh.id).first()
+    m = db.query(WalmartMapping).filter_by(
+        id=mapping_id, household_id=hh.id).first()
     if not m:
         raise not_found("Mapping not found")
     db.delete(m)
@@ -2642,9 +2792,11 @@ async def walmart_export(
     hh = _get_household(db, uid)
 
     if session_id:
-        session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
+        session = db.query(PrepSession).filter_by(
+            id=session_id, household_id=hh.id).first()
     else:
-        session = db.query(PrepSession).filter_by(household_id=hh.id, is_active=True).first()
+        session = db.query(PrepSession).filter_by(
+            household_id=hh.id, is_active=True).first()
 
     if not session:
         raise not_found("No prep session found")
@@ -2690,12 +2842,13 @@ async def walmart_export(
             unmapped.append(ing.get("name", name_key))
 
     if cart_items:
-        cart_url = "https://www.walmart.com/sc/cart/addToCart?items=" + ",".join(cart_items)
+        cart_url = "https://www.walmart.com/sc/cart/addToCart?items=" + \
+            ",".join(cart_items)
     else:
         cart_url = None
 
     return {
-        "cart_url":    cart_url,
+        "cart_url": cart_url,
         "mapped_count": len(cart_items),
-        "unmapped":    unmapped,
+        "unmapped": unmapped,
     }

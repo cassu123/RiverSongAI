@@ -188,7 +188,10 @@ class WalmartProvider:
                     .get("ItemInventory", [])
                 )
                 for elem in elements:
-                    qty_block = elem.get("inventories", {}).get("inventory", [{}])
+                    qty_block = elem.get(
+                        "inventories", {}).get(
+                        "inventory", [
+                            {}])
                     qty_entry = qty_block[0] if qty_block else {}
                     items.append(WalmartInventoryItem(
                         sku=elem.get("sku", ""),
@@ -213,7 +216,8 @@ class WalmartProvider:
         inventory = await self.get_inventory(limit=200)
         return [i for i in inventory if i.quantity <= self._threshold]
 
-    async def get_inventory_by_sku(self, sku: str) -> Optional[WalmartInventoryItem]:
+    async def get_inventory_by_sku(
+            self, sku: str) -> Optional[WalmartInventoryItem]:
         """Return inventory for a single SKU, or None if not found."""
         headers = await self._headers()
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -284,7 +288,8 @@ class WalmartProvider:
                 order_date=o.get("orderDate", ""),
                 item_count=len(lines),
                 ship_by=o.get("shippingInfo", {}).get("estimatedShipDate"),
-                estimated_delivery=o.get("shippingInfo", {}).get("estimatedDeliveryDate"),
+                estimated_delivery=o.get(
+                    "shippingInfo", {}).get("estimatedDeliveryDate"),
             ))
         return orders
 
@@ -292,7 +297,8 @@ class WalmartProvider:
     # Speech formatting
     # ------------------------------------------------------------------
 
-    def format_low_stock_for_speech(self, items: List[WalmartInventoryItem]) -> str:
+    def format_low_stock_for_speech(
+            self, items: List[WalmartInventoryItem]) -> str:
         if not items:
             return (
                 f"All your Walmart inventory is above the "

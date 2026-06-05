@@ -14,25 +14,25 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-_BASE     = "https://api.open-meteo.com/v1/forecast"
+_BASE = "https://api.open-meteo.com/v1/forecast"
 _AQI_BASE = "https://air-quality-api.open-meteo.com/v1/air-quality"
 _NWS_BASE = "https://api.weather.gov"
 
 _NWS_SEVERITY_COLORS = {
-    "Extreme":  "#cc0000",
-    "Severe":   "#ff4400",
+    "Extreme": "#cc0000",
+    "Severe": "#ff4400",
     "Moderate": "#ff8800",
-    "Minor":    "#ffcc00",
-    "Unknown":  "#888888",
+    "Minor": "#ffcc00",
+    "Unknown": "#888888",
 }
 
 _AQI_LEVELS = [
-    (50,  "Good",                    "#00cc44"),
-    (100, "Moderate",                "#ffcc00"),
+    (50, "Good", "#00cc44"),
+    (100, "Moderate", "#ffcc00"),
     (150, "Unhealthy for Sensitive", "#ff8800"),
-    (200, "Unhealthy",               "#ff3300"),
-    (300, "Very Unhealthy",          "#9933cc"),
-    (999, "Hazardous",               "#7a0000"),
+    (200, "Unhealthy", "#ff3300"),
+    (300, "Very Unhealthy", "#9933cc"),
+    (999, "Hazardous", "#7a0000"),
 ]
 
 # WMO weather interpretation codes → human-readable description
@@ -109,7 +109,7 @@ async def fetch_weather(
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(_BASE, params=params)
+            resp = await client.get(_BASE, params=params)  # type: ignore
             resp.raise_for_status()
             data = resp.json()
     except Exception as exc:
@@ -146,7 +146,6 @@ async def fetch_weather(
     hourly_wind = hourly_raw.get("windspeed_10m", [])
 
     # Find index of current hour to slice next 24
-    from datetime import datetime as _dt
     now_str = current_raw.get("time", "")
     start_idx = 0
     if now_str and hourly_times:
@@ -211,21 +210,30 @@ async def fetch_weather(
     }
 
 
-async def get_weather_report(lat: float, lon: float, units: str = "celsius") -> str:
+async def get_weather_report(lat: float, lon: float,
+                             units: str = "celsius") -> str:
     """
     Fetch weather and return a concise text summary for the LLM tool.
     """
     data = await fetch_weather(lat, lon, unit=units)
     curr = data["current"]
     unit_sym = curr["unit"]
-    
-    report = f"The current weather is {curr['condition'].lower()} at {curr['temperature']}{unit_sym}. "
-    report += f"Wind speed is {curr['wind_speed']} {curr.get('wind_unit', 'km/h')}."
-    
+
+    report = f"The current weather is {
+        curr['condition'].lower()} at {
+        curr['temperature']}{unit_sym}. "
+    report += f"Wind speed is {
+        curr['wind_speed']} {
+        curr.get(
+            'wind_unit',
+            'km/h')}."
+
     if data["daily"]:
         today = data["daily"][0]
-        report += f" Expect a high of {today['temp_max']}{unit_sym} and a low of {today['temp_min']}{unit_sym} today."
-        
+        report += f" Expect a high of {
+            today['temp_max']}{unit_sym} and a low of {
+            today['temp_min']}{unit_sym} today."
+
     return report
 
 
@@ -241,7 +249,8 @@ async def _reverse_geocode(lat: float, lon: float) -> str:
             resp.raise_for_status()
             addr = resp.json().get("address", {})
         parts = [
-            addr.get("city") or addr.get("town") or addr.get("village") or addr.get("county"),
+            addr.get("city") or addr.get("town") or addr.get(
+                "village") or addr.get("county"),
             addr.get("state"),
         ]
         return ", ".join(p for p in parts if p)
@@ -252,21 +261,29 @@ async def _reverse_geocode(lat: float, lon: float) -> str:
 
 _PURPLEAIR_BASE = "https://api.purpleair.com/v1/sensors"
 
+
 def _pm25_to_aqi(pm: float) -> int:
     # EPA breakpoint formula
     c = [(0.0, 12.0, 0, 50), (12.1, 35.4, 51, 100), (35.5, 55.4, 101, 150),
-         (55.5, 150.4, 151, 200), (150.5, 250.4, 201, 300), (250.5, 350.4, 301, 400),
+         (55.5, 150.4, 151, 200), (150.5, 250.4,
+                                   201, 300), (250.5, 350.4, 301, 400),
          (350.5, 500.4, 401, 500)]
     for low, high, aqilow, aqihigh in c:
         if low <= pm <= high:
-            return round(((aqihigh - aqilow) / (high - low)) * (pm - low) + aqilow)
+            return round(((aqihigh - aqilow) / (high - low))
+                         * (pm - low) + aqilow)
     return 500
 
-async def _fetch_purpleair_aqi(lat: float, lon: float) -> Optional[Dict[str, Any]]:
+
+async def _fetch_purpleair_aqi(
+        lat: float, lon: float) -> Optional[Dict[str, Any]]:
     import os
     from config.settings import get_settings
     settings = get_settings()
-    api_key = getattr(settings, "purpleair_api_key", os.getenv("PURPLEAIR_API_KEY"))
+    api_key = getattr(
+        settings,
+        "purpleair_api_key",
+        os.getenv("PURPLEAIR_API_KEY"))
     if not api_key:
         return None
 
@@ -289,12 +306,13 @@ async def _fetch_purpleair_aqi(lat: float, lon: float) -> Optional[Dict[str, Any
             data = resp.json()
             if not data.get("data"):
                 return None
-            
+
             # Simple fallback to first sensor
             sensor = data["data"][0]
             pm25 = sensor[1] if len(sensor) > 1 else 0
-            if pm25 is None: return None
-            
+            if pm25 is None:
+                return None
+
             aqi = _pm25_to_aqi(pm25)
             label, color = "Unknown", "#888"
             for threshold, lbl, col in _AQI_LEVELS:
@@ -315,6 +333,7 @@ async def _fetch_purpleair_aqi(lat: float, lon: float) -> Optional[Dict[str, Any
     except Exception as exc:
         logger.warning("PurpleAir fetch failed: %s", exc)
         return None
+
 
 async def _fetch_openmeteo_aqi(lat: float, lon: float) -> Dict[str, Any]:
     """Fetch current air quality from Open-Meteo air quality API (no key needed)."""
@@ -352,6 +371,7 @@ async def _fetch_openmeteo_aqi(lat: float, lon: float) -> Dict[str, Any]:
         "carbon_monoxide": c.get("carbon_monoxide"),
     }
 
+
 async def fetch_air_quality(lat: float, lon: float) -> Dict[str, Any]:
     purpleair = await _fetch_purpleair_aqi(lat, lon)
     if purpleair:
@@ -383,11 +403,13 @@ async def fetch_nws_alerts(lat: float, lon: float) -> List[Dict[str, Any]]:
                 f"{_NWS_BASE}/points/{lat:.4f},{lon:.4f}"
             )
             if point_resp.status_code != 200:
-                logger.debug("NWS point lookup failed: %s", point_resp.status_code)
+                logger.debug(
+                    "NWS point lookup failed: %s",
+                    point_resp.status_code)
                 return []
-            point_data  = point_resp.json()
-            zone_url    = point_data.get("properties", {}).get("forecastZone", "")
-            county_url  = point_data.get("properties", {}).get("county", "")
+            point_data = point_resp.json()
+            point_data.get("properties", {}).get("forecastZone", "")
+            point_data.get("properties", {}).get("county", "")
 
             # Use the active alerts by point endpoint (simplest)
             alerts_resp = await client.get(
@@ -405,7 +427,7 @@ async def fetch_nws_alerts(lat: float, lon: float) -> List[Dict[str, Any]]:
     for feature in alerts_data.get("features", []):
         props = feature.get("properties", {})
         severity = props.get("severity", "Unknown")
-        color    = _NWS_SEVERITY_COLORS.get(severity, "#888888")
+        color = _NWS_SEVERITY_COLORS.get(severity, "#888888")
 
         # Clean up description — strip redundant whitespace
         desc = (props.get("description") or "").strip()
@@ -415,21 +437,26 @@ async def fetch_nws_alerts(lat: float, lon: float) -> List[Dict[str, Any]]:
         instruction = " ".join(instruction.split())
 
         alerts.append({
-            "id":          feature.get("id", ""),
-            "event":       props.get("event", ""),
-            "headline":    props.get("headline") or props.get("event", ""),
+            "id": feature.get("id", ""),
+            "event": props.get("event", ""),
+            "headline": props.get("headline") or props.get("event", ""),
             "description": desc[:600],
             "instruction": instruction[:400],
-            "severity":    severity,
-            "urgency":     props.get("urgency", ""),
-            "certainty":   props.get("certainty", ""),
-            "onset":       props.get("onset") or "",
-            "expires":     props.get("expires") or "",
-            "color":       color,
-            "sender":      props.get("senderName", "NWS"),
+            "severity": severity,
+            "urgency": props.get("urgency", ""),
+            "certainty": props.get("certainty", ""),
+            "onset": props.get("onset") or "",
+            "expires": props.get("expires") or "",
+            "color": color,
+            "sender": props.get("senderName", "NWS"),
         })
 
     # Sort: Extreme first, then Severe, then the rest
-    severity_order = {"Extreme": 0, "Severe": 1, "Moderate": 2, "Minor": 3, "Unknown": 4}
+    severity_order = {
+        "Extreme": 0,
+        "Severe": 1,
+        "Moderate": 2,
+        "Minor": 3,
+        "Unknown": 4}
     alerts.sort(key=lambda a: severity_order.get(a["severity"], 9))
     return alerts

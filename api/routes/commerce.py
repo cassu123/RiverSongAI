@@ -39,7 +39,6 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, sessionmaker
 
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 from core.family import resolve_module_owner
 from commercial_inventory.management import (
     PermissionDeniedError,
@@ -91,8 +90,8 @@ router = APIRouter(prefix="/api/commerce", tags=["commerce"])
 # Database
 # ---------------------------------------------------------------------------
 
-_DB_URL  = os.environ.get("COMMERCE_DB_URL", "sqlite:///./data/commerce.db")
-_engine  = create_engine(
+_DB_URL = os.environ.get("COMMERCE_DB_URL", "sqlite:///./data/commerce.db")
+_engine = create_engine(
     _DB_URL,
     connect_args={"check_same_thread": False} if "sqlite" in _DB_URL else {},
 )
@@ -112,7 +111,8 @@ def get_db() -> Generator[Session, None, None]:
 # Auth
 # ---------------------------------------------------------------------------
 
-async def get_current_biz_user(request: Request, db: Session = Depends(get_db)) -> BizUser:
+async def get_current_biz_user(
+        request: Request, db: Session = Depends(get_db)) -> BizUser:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
@@ -120,15 +120,17 @@ async def get_current_biz_user(request: Request, db: Session = Depends(get_db)) 
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    user_id      = str(payload.get("sub", ""))
-    email        = payload.get("email", "")
+    user_id = str(payload.get("sub", ""))
+    email = payload.get("email", "")
     display_name = payload.get("display_name", "") or email
 
     if not user_id or not email:
-        raise HTTPException(status_code=401, detail="Token missing required fields")
+        raise HTTPException(status_code=401,
+                            detail="Token missing required fields")
 
     effective_id = resolve_module_owner(user_id, "store")
-    return get_or_create_biz_user(db, external_user_id=effective_id, email=email, display_name=display_name)
+    return get_or_create_biz_user(
+        db, external_user_id=effective_id, email=email, display_name=display_name)
 
 
 # ---------------------------------------------------------------------------
@@ -151,94 +153,94 @@ def _http(e: Exception) -> HTTPException:
 
 def _ser_workspace(ws: BizWorkspace) -> dict:
     return {
-        "id":          str(ws.id),
-        "name":        ws.name,
+        "id": str(ws.id),
+        "name": ws.name,
         "description": ws.description,
-        "owner_id":    str(ws.owner_id),
-        "currency":    ws.currency,
-        "tax_rate":    float(ws.tax_rate) if ws.tax_rate else 0.0,
+        "owner_id": str(ws.owner_id),
+        "currency": ws.currency,
+        "tax_rate": float(ws.tax_rate) if ws.tax_rate else 0.0,
         "product_count": len(ws.products),
         "customer_count": len(ws.customers),
-        "created_at":  ws.created_at.isoformat() if ws.created_at else None,
-        "updated_at":  ws.updated_at.isoformat() if ws.updated_at else None,
+        "created_at": ws.created_at.isoformat() if ws.created_at else None,
+        "updated_at": ws.updated_at.isoformat() if ws.updated_at else None,
     }
 
 
 def _ser_product(p) -> dict:
     return {
-        "id":            str(p.id),
-        "workspace_id":  str(p.workspace_id),
-        "supplier_id":   str(p.supplier_id) if p.supplier_id else None,
-        "sku":           p.sku,
-        "name":          p.name,
-        "description":   p.description,
-        "category":      p.category.value if p.category else None,
-        "stock_qty":     p.stock_qty,
-        "threshold":     p.threshold,
-        "unit_price":    float(p.unit_price)  if p.unit_price  else None,
-        "cost_price":    float(p.cost_price)  if p.cost_price  else None,
+        "id": str(p.id),
+        "workspace_id": str(p.workspace_id),
+        "supplier_id": str(p.supplier_id) if p.supplier_id else None,
+        "sku": p.sku,
+        "name": p.name,
+        "description": p.description,
+        "category": p.category.value if p.category else None,
+        "stock_qty": p.stock_qty,
+        "threshold": p.threshold,
+        "unit_price": float(p.unit_price) if p.unit_price else None,
+        "cost_price": float(p.cost_price) if p.cost_price else None,
         "shopify_synced": p.shopify_synced,
         "shopify_product_id": p.shopify_product_id,
-        "image_data":    p.image_data,
+        "image_data": p.image_data,
         "metadata_json": p.metadata_json,
-        "is_active":     p.is_active,
-        "is_low_stock":  p.stock_qty <= p.threshold,
-        "created_at":    p.created_at.isoformat() if p.created_at else None,
-        "updated_at":    p.updated_at.isoformat() if p.updated_at else None,
+        "is_active": p.is_active,
+        "is_low_stock": p.stock_qty <= p.threshold,
+        "created_at": p.created_at.isoformat() if p.created_at else None,
+        "updated_at": p.updated_at.isoformat() if p.updated_at else None,
     }
 
 
 def _ser_customer(c) -> dict:
     return {
-        "id":          str(c.id),
+        "id": str(c.id),
         "workspace_id": str(c.workspace_id),
-        "name":        c.name,
-        "email":       c.email,
-        "phone":       c.phone,
-        "address":     c.address,
-        "notes":       c.notes,
-        "tags":        c.tags,
+        "name": c.name,
+        "email": c.email,
+        "phone": c.phone,
+        "address": c.address,
+        "notes": c.notes,
+        "tags": c.tags,
         "shopify_customer_id": c.shopify_customer_id,
-        "created_at":  c.created_at.isoformat() if c.created_at else None,
-        "updated_at":  c.updated_at.isoformat() if c.updated_at else None,
+        "created_at": c.created_at.isoformat() if c.created_at else None,
+        "updated_at": c.updated_at.isoformat() if c.updated_at else None,
     }
 
 
 def _ser_supplier(s) -> dict:
     return {
-        "id":           str(s.id),
+        "id": str(s.id),
         "workspace_id": str(s.workspace_id),
-        "name":         s.name,
+        "name": s.name,
         "contact_name": s.contact_name,
-        "email":        s.email,
-        "phone":        s.phone,
-        "website":      s.website,
-        "notes":        s.notes,
-        "created_at":   s.created_at.isoformat() if s.created_at else None,
+        "email": s.email,
+        "phone": s.phone,
+        "website": s.website,
+        "notes": s.notes,
+        "created_at": s.created_at.isoformat() if s.created_at else None,
     }
 
 
 def _ser_sale(sale) -> dict:
     return {
-        "id":           str(sale.id),
+        "id": str(sale.id),
         "workspace_id": str(sale.workspace_id),
-        "customer_id":  str(sale.customer_id) if sale.customer_id else None,
+        "customer_id": str(sale.customer_id) if sale.customer_id else None,
         "created_by_id": str(sale.created_by_id) if sale.created_by_id else None,
-        "status":       sale.status.value if sale.status else None,
-        "total":        float(sale.total) if sale.total else None,
-        "notes":        sale.notes,
+        "status": sale.status.value if sale.status else None,
+        "total": float(sale.total) if sale.total else None,
+        "notes": sale.notes,
         "line_items": [
             {
-                "id":         str(li.id),
+                "id": str(li.id),
                 "product_id": str(li.product_id),
-                "qty":        li.qty,
+                "qty": li.qty,
                 "unit_price": float(li.unit_price),
-                "subtotal":   float(li.unit_price * li.qty),
+                "subtotal": float(li.unit_price * li.qty),
             }
             for li in sale.line_items
         ],
-        "created_at":   sale.created_at.isoformat() if sale.created_at else None,
-        "updated_at":   sale.updated_at.isoformat() if sale.updated_at else None,
+        "created_at": sale.created_at.isoformat() if sale.created_at else None,
+        "updated_at": sale.updated_at.isoformat() if sale.updated_at else None,
     }
 
 
@@ -247,93 +249,106 @@ def _ser_sale(sale) -> dict:
 # ---------------------------------------------------------------------------
 
 class WorkspaceCreate(BaseModel):
-    name:        str
-    description: str   = ""
-    currency:    str   = "USD"
-    tax_rate:    float = 0.0
+    name: str
+    description: str = ""
+    currency: str = "USD"
+    tax_rate: float = 0.0
+
 
 class WorkspacePatch(BaseModel):
-    name:        Optional[str]   = None
-    description: Optional[str]   = None
-    currency:    Optional[str]   = None
-    tax_rate:    Optional[float] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    currency: Optional[str] = None
+    tax_rate: Optional[float] = None
+
 
 class MemberAdd(BaseModel):
     email: str
-    role:  WorkspaceRole = WorkspaceRole.VIEWER
+    role: WorkspaceRole = WorkspaceRole.VIEWER
+
 
 class MemberRoleUpdate(BaseModel):
     role: WorkspaceRole
 
+
 class ProductCreate(BaseModel):
-    sku:           str
-    name:          str
-    category:      ProductCategory  = ProductCategory.OTHER
-    description:   str              = ""
-    stock_qty:     int              = 0
-    threshold:     int              = 5
-    unit_price:    Optional[float]  = None
-    cost_price:    Optional[float]  = None
-    supplier_id:   Optional[str]    = None
-    metadata_json: Optional[str]    = None
+    sku: str
+    name: str
+    category: ProductCategory = ProductCategory.OTHER
+    description: str = ""
+    stock_qty: int = 0
+    threshold: int = 5
+    unit_price: Optional[float] = None
+    cost_price: Optional[float] = None
+    supplier_id: Optional[str] = None
+    metadata_json: Optional[str] = None
+
 
 class ProductPatch(BaseModel):
-    sku:           Optional[str]            = None
-    name:          Optional[str]            = None
-    category:      Optional[ProductCategory] = None
-    description:   Optional[str]            = None
-    threshold:     Optional[int]            = None
-    unit_price:    Optional[float]          = None
-    cost_price:    Optional[float]          = None
-    supplier_id:   Optional[str]            = None
-    metadata_json: Optional[str]            = None
-    is_active:     Optional[bool]           = None
+    sku: Optional[str] = None
+    name: Optional[str] = None
+    category: Optional[ProductCategory] = None
+    description: Optional[str] = None
+    threshold: Optional[int] = None
+    unit_price: Optional[float] = None
+    cost_price: Optional[float] = None
+    supplier_id: Optional[str] = None
+    metadata_json: Optional[str] = None
+    is_active: Optional[bool] = None
+
 
 class StockAdjust(BaseModel):
     delta: int  # positive = restock, negative = sale/shrinkage
 
+
 class SupplierCreate(BaseModel):
-    name:         str
+    name: str
     contact_name: str = ""
-    email:        str = ""
-    phone:        str = ""
-    website:      str = ""
-    notes:        str = ""
+    email: str = ""
+    phone: str = ""
+    website: str = ""
+    notes: str = ""
+
 
 class SupplierPatch(BaseModel):
-    name:         Optional[str] = None
+    name: Optional[str] = None
     contact_name: Optional[str] = None
-    email:        Optional[str] = None
-    phone:        Optional[str] = None
-    website:      Optional[str] = None
-    notes:        Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    notes: Optional[str] = None
+
 
 class CustomerCreate(BaseModel):
-    name:    str
-    email:   str = ""
-    phone:   str = ""
+    name: str
+    email: str = ""
+    phone: str = ""
     address: str = ""
-    notes:   str = ""
-    tags:    str = ""
+    notes: str = ""
+    tags: str = ""
+
 
 class CustomerPatch(BaseModel):
-    name:    Optional[str] = None
-    email:   Optional[str] = None
-    phone:   Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
     address: Optional[str] = None
-    notes:   Optional[str] = None
-    tags:    Optional[str] = None
+    notes: Optional[str] = None
+    tags: Optional[str] = None
+
 
 class SaleLineItemIn(BaseModel):
     product_id: str
-    qty:        int
+    qty: int
     unit_price: Optional[float] = None
 
+
 class SaleCreate(BaseModel):
-    line_items:  List[SaleLineItemIn]
-    customer_id: Optional[str]   = None
-    notes:       str             = ""
-    deduct_stock: bool           = True
+    line_items: List[SaleLineItemIn]
+    customer_id: Optional[str] = None
+    notes: str = ""
+    deduct_stock: bool = True
+
 
 class SaleStatusUpdate(BaseModel):
     status: SaleStatus
@@ -344,7 +359,8 @@ class SaleStatusUpdate(BaseModel):
 # ---------------------------------------------------------------------------
 
 @router.get("/workspaces")
-def list_workspaces(db: Session = Depends(get_db), user: BizUser = Depends(get_current_biz_user)):
+def list_workspaces(db: Session = Depends(get_db),
+                    user: BizUser = Depends(get_current_biz_user)):
     return [_ser_workspace(ws) for ws in get_workspaces_for_user(db, user)]
 
 
@@ -354,7 +370,13 @@ def create_workspace_route(
     db: Session = Depends(get_db),
     user: BizUser = Depends(get_current_biz_user),
 ):
-    ws = create_workspace(db, user, body.name, body.description, body.currency, body.tax_rate)
+    ws = create_workspace(
+        db,
+        user,
+        body.name,
+        body.description,
+        body.currency,
+        body.tax_rate)
     return _ser_workspace(ws)
 
 
@@ -377,7 +399,14 @@ def edit_workspace_route(
     db: Session = Depends(get_db), user: BizUser = Depends(get_current_biz_user),
 ):
     try:
-        ws = edit_workspace(db, user, workspace_id, body.name, body.description, body.currency, body.tax_rate)
+        ws = edit_workspace(
+            db,
+            user,
+            workspace_id,
+            body.name,
+            body.description,
+            body.currency,
+            body.tax_rate)
         return _ser_workspace(ws)
     except Exception as e:
         raise _http(e)
@@ -433,7 +462,8 @@ def update_member_route(
         raise _http(e)
 
 
-@router.delete("/workspaces/{workspace_id}/members/{member_user_id}", status_code=204)
+@router.delete("/workspaces/{workspace_id}/members/{member_user_id}",
+               status_code=204)
 def remove_member_route(
     workspace_id: str, member_user_id: str,
     db: Session = Depends(get_db), user: BizUser = Depends(get_current_biz_user),
@@ -523,10 +553,14 @@ async def upload_product_image(
         allowed_types = {"image/jpeg", "image/png", "image/webp", "image/gif"}
         mime = file.content_type or ""
         if mime not in allowed_types:
-            raise HTTPException(status_code=415, detail="Unsupported image type. Use JPEG, PNG, WebP, or GIF.")
+            raise HTTPException(
+                status_code=415,
+                detail="Unsupported image type. Use JPEG, PNG, WebP, or GIF.")
         data = await file.read()
         if len(data) > 5 * 1024 * 1024:  # 5 MB limit
-            raise HTTPException(status_code=413, detail="Image must be under 5 MB.")
+            raise HTTPException(
+                status_code=413,
+                detail="Image must be under 5 MB.")
         p = get_product(db, user, product_id)
         p.image_data = f"data:{mime};base64,{base64.b64encode(data).decode()}"
         db.commit()
@@ -573,7 +607,8 @@ def list_suppliers(
     db: Session = Depends(get_db), user: BizUser = Depends(get_current_biz_user),
 ):
     try:
-        return [_ser_supplier(s) for s in get_suppliers(db, user, workspace_id)]
+        return [_ser_supplier(s)
+                for s in get_suppliers(db, user, workspace_id)]
     except Exception as e:
         raise _http(e)
 
@@ -624,7 +659,8 @@ def list_customers(
     db: Session = Depends(get_db), user: BizUser = Depends(get_current_biz_user),
 ):
     try:
-        return [_ser_customer(c) for c in get_customers(db, user, workspace_id)]
+        return [_ser_customer(c)
+                for c in get_customers(db, user, workspace_id)]
     except Exception as e:
         raise _http(e)
 
@@ -697,8 +733,16 @@ def create_sale_route(
     db: Session = Depends(get_db), user: BizUser = Depends(get_current_biz_user),
 ):
     try:
-        items = [LineItemIn(li.product_id, li.qty, li.unit_price) for li in body.line_items]
-        sale  = create_sale(db, user, workspace_id, items, body.customer_id, body.notes, body.deduct_stock)
+        items = [LineItemIn(li.product_id, li.qty, li.unit_price)
+                 for li in body.line_items]
+        sale = create_sale(
+            db,
+            user,
+            workspace_id,
+            items,
+            body.customer_id,
+            body.notes,
+            body.deduct_stock)
         return _ser_sale(sale)
     except Exception as e:
         raise _http(e)

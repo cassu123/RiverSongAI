@@ -26,7 +26,6 @@ import logging
 from typing import AsyncGenerator, List
 
 from mistralai import Mistral
-from mistralai.models import SDKError
 
 from config.settings import get_settings
 from providers.base import LLMProvider
@@ -38,6 +37,7 @@ _CLOUD_DELAY_WARNING = (
     "[Cloud LLM] Request sent to Mistral AI API. "
     "Response time depends on network and API load."
 )
+
 
 def _friendly_error(exc: Exception) -> str:
     err_str = str(exc).lower()
@@ -93,9 +93,9 @@ class MistralAILLM(LLMProvider):
         logger.info(_CLOUD_DELAY_WARNING)
 
         try:
-            async with self._client.chat.stream_async(
+            async with self._client.chat.stream_async(  # type: ignore
                 model=self._model,
-                messages=messages,
+                messages=messages,  # type: ignore
                 max_tokens=self._max_tokens,
                 temperature=self._temperature,
             ) as stream:

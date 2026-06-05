@@ -69,7 +69,8 @@ def is_expired(expires_at: Optional[str]) -> bool:
     return dt <= _now()
 
 
-def has_required_scopes(token_scopes: Iterable[str], required: Iterable[str]) -> bool:
+def has_required_scopes(
+        token_scopes: Iterable[str], required: Iterable[str]) -> bool:
     """
     Return True iff every scope in `required` is present in `token_scopes`.
     Empty required means "any valid token is enough".

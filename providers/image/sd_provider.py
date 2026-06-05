@@ -15,6 +15,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+
 class SDProvider:
     def __init__(self):
         from config.settings import get_settings
@@ -33,16 +34,19 @@ class SDProvider:
                 pass
 
         if not self.settings.sd_on_demand:
-            logger.error("Stable Diffusion API not reachable at %s", self.settings.sd_api_url)
+            logger.error(
+                "Stable Diffusion API not reachable at %s",
+                self.settings.sd_api_url)
             return False
 
         import os
         exec_path = self.settings.sd_executable_path
         if not exec_path or not os.path.exists(exec_path):
-            raise RuntimeError(f"Stable Diffusion executable not found at '{exec_path}'. Set SD_EXECUTABLE_PATH in .env to your A1111/Forge executable.")
+            raise RuntimeError(
+                f"Stable Diffusion executable not found at '{exec_path}'. Set SD_EXECUTABLE_PATH in .env to your A1111/Forge executable.")
 
         logger.info("Starting Stable Diffusion on-demand to save VRAM...")
-        
+
         # Attempt to unload Ollama LLM to free VRAM for SD
         try:
             async with httpx.AsyncClient() as client:
@@ -62,11 +66,11 @@ class SDProvider:
             "--nowebui",
             "--listen",
             "--port", port,
-            "--skip-torch-cuda-test", # Some environments need this
+            "--skip-torch-cuda-test",  # Some environments need this
             "--precision", "full",    # for 1050 Ti stability if needed
             "--no-half"               # for 1050 Ti stability if needed
         ]
-        
+
         self._process = subprocess.Popen(
             cmd,
             cwd=self.settings.sd_working_dir or None,
@@ -76,7 +80,7 @@ class SDProvider:
 
         # Poll until API is ready
         start_time = time.time()
-        while time.time() - start_time < 60: # 60 seconds timeout
+        while time.time() - start_time < 60:  # 60 seconds timeout
             try:
                 async with httpx.AsyncClient() as client:
                     resp = await client.get(f"{self.settings.sd_api_url}/sdapi/v1/options", timeout=1.0)
@@ -86,9 +90,10 @@ class SDProvider:
             except Exception:
                 pass
             await asyncio.sleep(3)
-        
-        await self._cleanup() # Kill the process if it timed out
-        raise RuntimeError("Stable Diffusion failed to start within 60 seconds.")
+
+        await self._cleanup()  # Kill the process if it timed out
+        raise RuntimeError(
+            "Stable Diffusion failed to start within 60 seconds.")
 
     async def _cleanup(self):
         """Kill the SD process to free VRAM immediately after use."""
@@ -102,17 +107,18 @@ class SDProvider:
                 self._process.kill()
             self._process = None
 
-    async def generate(self, prompt: str, negative_prompt: str = "", width: int = 512, height: int = 512, steps: int = 20) -> bytes:
+    async def generate(self, prompt: str, negative_prompt: str = "",
+                       width: int = 512, height: int = 512, steps: int = 20) -> bytes:
         """
         Generate an image using the Stable Diffusion API.
-        
+
         Args:
             prompt: Text describing what to generate.
             negative_prompt: Text describing what to avoid.
             width: Image width in pixels.
             height: Image height in pixels.
             steps: Number of sampling steps.
-            
+
         Returns:
             bytes: Raw PNG image data.
         """
@@ -134,12 +140,15 @@ class SDProvider:
                 resp = await client.post(
                     f"{self.settings.sd_api_url}/sdapi/v1/txt2img",
                     json=payload,
-                    timeout=300.0 # 5 minutes for generation
+                    timeout=300.0  # 5 minutes for generation
                 )
-                
+
                 if resp.status_code != 200:
-                    raise RuntimeError(f"Stable Diffusion API returned error {resp.status_code}: {resp.text}")
-                
+                    raise RuntimeError(
+                        f"Stable Diffusion API returned error {
+                            resp.status_code}: {
+                            resp.text}")
+
                 result = resp.json()
                 img_b64 = result["images"][0]
                 return base64.b64decode(img_b64)

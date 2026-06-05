@@ -28,10 +28,9 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import json
 import logging
 import re
-from typing import Any, Callable, Coroutine, List, Optional, AsyncGenerator
+from typing import Union, Any, Callable, Coroutine, List, Optional, AsyncGenerator
 
 from config.settings import get_settings
 from core.kill_switch import is_kill_switch_active
@@ -44,7 +43,8 @@ logger = logging.getLogger(__name__)
 
 # Type alias: an async callable that accepts a dict event payload.
 # Typically sends JSON over a WebSocket connection.
-EventCallback = Callable[[dict], Coroutine[Any, Any, None]]
+EventCallback = Callable[[Union[dict, bytes]],
+                         Coroutine[Any, Any, None]]  # type: ignore
 
 
 class FallbackLLMProvider(LLMProvider):
@@ -53,25 +53,30 @@ class FallbackLLMProvider(LLMProvider):
     it automatically falls back to the secondary provider for the remainder
     of the request.
     """
+
     def __init__(self, primary: LLMProvider, secondary: LLMProvider):
         self.primary = primary
         self.secondary = secondary
 
-    async def stream_response(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+    async def stream_response(
+            self, messages: List[dict]) -> AsyncGenerator[str, None]:
         try:
             async for chunk in self.primary.stream_response(messages):
                 yield chunk
         except Exception as exc:
-            logger.warning("Primary LLM failed, falling back to secondary: %s", exc)
+            logger.warning(
+                "Primary LLM failed, falling back to secondary: %s", exc)
             async for chunk in self.secondary.stream_response(messages):
                 yield chunk
 
-    async def stream_response_thinking(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+    async def stream_response_thinking(
+            self, messages: List[dict]) -> AsyncGenerator[str, None]:
         try:
             async for chunk in self.primary.stream_response_thinking(messages):
                 yield chunk
         except Exception as exc:
-            logger.warning("Primary LLM (thinking) failed, falling back to secondary: %s", exc)
+            logger.warning(
+                "Primary LLM (thinking) failed, falling back to secondary: %s", exc)
             async for chunk in self.secondary.stream_response_thinking(messages):
                 yield chunk
 
@@ -108,33 +113,39 @@ def _instantiate_llm(key: str, model: Optional[str]) -> LLMProvider:
         return OllamaLLM(model=model) if model else OllamaLLM()
     if key == "anthropic":
         if not settings.anthropic_enabled:
-            raise ValueError("Anthropic LLM is disabled. Set ANTHROPIC_ENABLED=true in .env.")
+            raise ValueError(
+                "Anthropic LLM is disabled. Set ANTHROPIC_ENABLED=true in .env.")
         from providers.llm.claude_api import ClaudeAPILLM
         return ClaudeAPILLM(model=model) if model else ClaudeAPILLM()
     if key == "gemini":
         if not settings.gemini_enabled:
-            raise ValueError("Gemini LLM is disabled. Set GEMINI_ENABLED=true in .env.")
+            raise ValueError(
+                "Gemini LLM is disabled. Set GEMINI_ENABLED=true in .env.")
         from providers.llm.gemini import GeminiLLM
         return GeminiLLM(model=model) if model else GeminiLLM()
     if key == "openai":
         if not settings.openai_enabled:
-            raise ValueError("OpenAI LLM is disabled. Set OPENAI_ENABLED=true in .env.")
+            raise ValueError(
+                "OpenAI LLM is disabled. Set OPENAI_ENABLED=true in .env.")
         from providers.llm.openai_api import OpenAILLM
         return OpenAILLM(model=model) if model else OpenAILLM()
     if key == "mistral_ai":
         if not settings.mistral_ai_enabled:
-            raise ValueError("Mistral AI LLM is disabled. Set MISTRAL_AI_ENABLED=true in .env.")
+            raise ValueError(
+                "Mistral AI LLM is disabled. Set MISTRAL_AI_ENABLED=true in .env.")
         from providers.llm.mistral_api import MistralAILLM
         return MistralAILLM(model=model) if model else MistralAILLM()
     if key == "bedrock":
         if not settings.bedrock_enabled:
-            raise ValueError("Amazon Bedrock is disabled. Set BEDROCK_ENABLED=true in .env.")
+            raise ValueError(
+                "Amazon Bedrock is disabled. Set BEDROCK_ENABLED=true in .env.")
         from providers.llm.bedrock import BedrockLLM
         return BedrockLLM(model=model) if model else BedrockLLM()
     if key == "nvidia_nim":
         from api.routes.models_settings import _get_enabled_providers
         if not _get_enabled_providers().get("nvidia_nim", False):
-            raise ValueError("NVIDIA NIM is disabled. Set NVIDIA_API_KEY in .env or enable it in Settings.")
+            raise ValueError(
+                "NVIDIA NIM is disabled. Set NVIDIA_API_KEY in .env or enable it in Settings.")
         from providers.llm.nvidia_nim import NvidiaNimLLM
         return NvidiaNimLLM(model=model) if model else NvidiaNimLLM()
     raise ValueError(
@@ -181,7 +192,8 @@ def _build_llm_provider(
                     decision.intent, key, model_override, decision.confidence,
                 )
             except Exception as exc:
-                logger.error("Intent router failed, falling back to direct provider resolution: %s", exc)
+                logger.error(
+                    "Intent router failed, falling back to direct provider resolution: %s", exc)
                 key = fallback_provider or settings.llm_provider
                 model_override = fallback_model or settings.llm_model
         else:
@@ -189,7 +201,8 @@ def _build_llm_provider(
             model_override = fallback_model or settings.llm_model
 
     if key != "auto" and key in enabled_providers and not enabled_providers[key]:
-        raise ValueError(f"Provider '{key}' is disabled globally by the administrator.")
+        raise ValueError(
+            f"Provider '{key}' is disabled globally by the administrator.")
 
     primary = _instantiate_llm(key, model_override)
 
@@ -198,12 +211,14 @@ def _build_llm_provider(
             secondary = _instantiate_llm(fallback_provider, fallback_model)
             return FallbackLLMProvider(primary, secondary), router_label
         except Exception as exc:
-            logger.warning("Failed to initialize secondary LLM fallback: %s", exc)
+            logger.warning(
+                "Failed to initialize secondary LLM fallback: %s", exc)
 
     return primary, router_label
 
 
-def _build_tts_provider(voice_id_override: Optional[str] = None) -> TTSProvider:
+def _build_tts_provider(
+        voice_id_override: Optional[str] = None) -> TTSProvider:
     """
     Instantiate the TTS provider for the active voice.
 
@@ -215,7 +230,8 @@ def _build_tts_provider(voice_id_override: Optional[str] = None) -> TTSProvider:
     settings = get_settings()
 
     # Per-user override (from SQLite) takes priority over system .env default
-    active_id = voice_id_override or getattr(settings, "active_voice_id", "") or ""
+    active_id = voice_id_override or getattr(
+        settings, "active_voice_id", "") or ""
     if active_id:
         try:
             from providers.tts.voice_registry import VoiceRegistry
@@ -310,7 +326,8 @@ class ConversationLoop:
         self._turn_transcript: str = ""
         self._flush_memory: bool = False
         self._web_search: bool = False
-        self._thinking_mode: Optional[str] = "fast" # "fast" | "thinking" | "pro"
+        # "fast" | "thinking" | "pro"
+        self._thinking_mode: Optional[str] = "fast"
         self._suppress_memory: bool = False
         self._gen_id: int = 0
         self._generation_task: Optional[asyncio.Task] = None
@@ -325,8 +342,9 @@ class ConversationLoop:
 
     def cancel_generation(self) -> None:
         """Immediately abort the current LLM + TTS generation task."""
-        if getattr(self, "_generation_task", None) and not self._generation_task.done():
-            self._generation_task.cancel()
+        task = getattr(self, "_generation_task", None)
+        if task is not None and not task.done():
+            task.cancel()
             self._generation_task = None
 
     def _spawn_background(self, coro, label: str) -> "asyncio.Task":
@@ -341,12 +359,15 @@ class ConversationLoop:
             try:
                 await coro
             except Exception as exc:
-                logger.error("Background task %s failed: %s", label, exc, exc_info=True)
+                logger.error(
+                    "Background task %s failed: %s",
+                    label,
+                    exc,
+                    exc_info=True)
         task = asyncio.create_task(_runner())
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
         return task
-
 
     async def initialize(self) -> None:
         """
@@ -365,21 +386,23 @@ class ConversationLoop:
 
         logger.info("Initializing ConversationLoop providers...")
         loop = asyncio.get_running_loop()
-        
+
         admin_config = {}
         if self._memory and hasattr(self._memory, "_store"):
             try:
+                assert self._memory is not None
                 admin_config = await self._memory._store.get_admin_config()
             except Exception as e:
-                logger.warning("Failed to fetch admin config for LLM routing: %s", e)
+                logger.warning(
+                    "Failed to fetch admin config for LLM routing: %s", e)
 
         try:
             llm_provider_override = self._llm_provider_override
-            llm_model_override    = self._llm_model_override
-            voice_id_override     = self._voice_id_override
-            fallback_provider     = self._fallback_provider
-            fallback_model        = self._fallback_model
-            stt_model_override    = self._stt_model_override
+            llm_model_override = self._llm_model_override
+            voice_id_override = self._voice_id_override
+            fallback_provider = self._fallback_provider
+            fallback_model = self._fallback_model
+            stt_model_override = self._stt_model_override
 
             def _build_all():
                 stt = _build_stt_provider(model_size=stt_model_override)
@@ -410,11 +433,15 @@ class ConversationLoop:
         """
         config = {}
         try:
+            assert self._memory is not None
+
             config = await self._memory._store.get_admin_config()
         except Exception:
             pass
-            
-        enabled = config.get("startup_briefing_enabled", self._settings.startup_briefing_enabled)
+
+        enabled = config.get(
+            "startup_briefing_enabled",
+            self._settings.startup_briefing_enabled)
         if not enabled:
             return
 
@@ -425,11 +452,12 @@ class ConversationLoop:
 
             # 1. Fetch events & pulse snapshots
             events = await get_upcoming_events(self._user_id, hours_ahead=self._settings.startup_briefing_hours_ahead)
-            
+
+            assert self._memory is not None
             store = self._memory._store
             news_snap = await store.get_latest_pulse_snapshot("news")
             markets_snap = await store.get_latest_pulse_snapshot("markets")
-            
+
             if not events and not news_snap and not markets_snap:
                 return
 
@@ -440,33 +468,44 @@ class ConversationLoop:
 
             if events:
                 event_list = "\n".join([
-                    f"- {e['title']} at {datetime.fromisoformat(e['time']).strftime('%I:%M %p')}"
+                    f"- {
+                        e['title']} at {
+                        datetime.fromisoformat(
+                            e['time']).strftime('%I:%M %p')}"
                     for e in events
                 ])
                 prompt_parts.append(f"Upcoming Calendar Events:\n{event_list}")
-                
+
             if news_snap and "data" in news_snap:
                 n_data = news_snap["data"]
                 if n_data and n_data.get("headline"):
-                    prompt_parts.append(f"Top News Pulse: '{n_data.get('headline')}' (Source: {n_data.get('source')})")
-                    
+                    prompt_parts.append(
+                        f"Top News Pulse: '{
+                            n_data.get('headline')}' (Source: {
+                            n_data.get('source')})")
+
             if markets_snap and "data" in markets_snap:
                 m_data = markets_snap["data"]
                 if m_data and "error" not in m_data and m_data.get("symbol"):
-                    prompt_parts.append(f"Market Pulse for {m_data.get('symbol')}: {m_data}")
+                    prompt_parts.append(
+                        f"Market Pulse for {
+                            m_data.get('symbol')}: {m_data}")
 
             prompt_parts.append(
                 "Weave the available events, news, and market pulse naturally into a friendly greeting. "
                 "Do not read raw JSON or list it dryly. Be conversational and brief — 2 to 3 sentences max. No markdown."
             )
-            
+
             prompt = "\n\n".join(prompt_parts)
 
             # 3. Generate greeting (10s timeout)
             try:
                 response = ""
+
                 async def _collect():
                     nonlocal response
+                    assert self._llm is not None
+
                     async for chunk in self._llm.stream_response([{"role": "user", "content": prompt}]):
                         response += chunk
                 await asyncio.wait_for(_collect(), timeout=10.0)
@@ -479,9 +518,10 @@ class ConversationLoop:
 
             # 4. Dispatch events
             await on_event({"type": "proactive_briefing_start", "text": response})
-            
+
             # 5. Synthesize TTS
             await on_event({"type": "speaking"})
+            assert self._tts is not None
             audio_bytes = await self._tts.synthesize(response)
             if audio_bytes:
                 import base64
@@ -489,7 +529,7 @@ class ConversationLoop:
                 # ElevenLabs returns mp3, Piper/Kokoro return wav
                 fmt = "mp3" if self._tts.__class__.__name__ == "ElevenLabsTTS" else "wav"
                 await on_event({"type": "audio", "data": b64, "format": fmt})
-            
+
             await on_event({"type": "idle"})
 
         except Exception as exc:
@@ -499,7 +539,7 @@ class ConversationLoop:
     # system prompt while keeping the operation idempotent across turns.
     # Prior block (from a previous turn) is stripped before the new block
     # is appended so the system message does not grow unboundedly.
-    _RAG_BLOCK_MARKER    = "\n\nRELEVANT DOCUMENT EXCERPTS:"
+    _RAG_BLOCK_MARKER = "\n\nRELEVANT DOCUMENT EXCERPTS:"
     _SKILLS_BLOCK_MARKER = "\n\n[ User skills relevant to this turn ]"
 
     def _splice_system_block(self, marker: str, body: str) -> None:
@@ -547,7 +587,9 @@ class ConversationLoop:
             body = block
             if body.startswith(header):
                 body = body[len(header):].lstrip("\n")
-            self._splice_system_block(self._SKILLS_BLOCK_MARKER, "\n" + body if body else "")
+            self._splice_system_block(
+                self._SKILLS_BLOCK_MARKER,
+                "\n" + body if body else "")
         except Exception as exc:
             logger.warning("Skill injection failed: %s", exc)
 
@@ -558,7 +600,10 @@ class ConversationLoop:
             try:
                 memory_block = await self._memory.build_context_block(self._user_id)
             except Exception as exc:
-                logger.warning("Memory context build failed (user=%s): %s", self._user_id, exc)
+                logger.warning(
+                    "Memory context build failed (user=%s): %s",
+                    self._user_id,
+                    exc)
 
         # NEW: inject live environment context (Task D)
         context_block = ""
@@ -596,63 +641,69 @@ class ConversationLoop:
         else:
             self._history = [{"role": "system", "content": full_system}]
 
-        # Clear the flag so memory is only skipped on the next turn (session-scoped)
+        # Clear the flag so memory is only skipped on the next turn
+        # (session-scoped)
         self._flush_memory = False
 
-    async def _stream_sentences(self, stream: AsyncGenerator[str, None], on_token: Callable[[str], Coroutine[Any, Any, None]]) -> AsyncGenerator[str, None]:
+    async def _stream_sentences(self, stream: AsyncGenerator[str, None], on_token: Callable[[
+                                str], Coroutine[Any, Any, None]]) -> AsyncGenerator[str, None]:
         """Buffer LLM tokens and yield complete sentences for TTS."""
         buffer = ""
         # Match sentence endings: . ! ? or newline
         sentence_end = re.compile(r'(.+?[.!?\n]+)(?:\s+|$)')
-        
+
         async for chunk in stream:
             await on_token(chunk)
             buffer += chunk
-            
+
             while True:
                 match = sentence_end.search(buffer)
                 if not match:
                     break
-                
+
                 sentence = match.group(1).strip()
                 if sentence:
                     yield sentence
                 buffer = buffer[match.end():]
-        
+
         # Final remaining text
         if buffer.strip():
             yield buffer.strip()
 
-    async def _process_tts_stream(self, sentence_stream: AsyncGenerator[str, None], on_event: EventCallback):
+    async def _process_tts_stream(
+            self, sentence_stream: AsyncGenerator[str, None], on_event: EventCallback):
         """Consume sentences and stream audio chunks to the browser."""
         seq_id = 0
         async for sentence in sentence_stream:
             if not sentence.strip():
                 continue
-            
+
             audio_data = b""
+            assert self._tts is not None
             async for chunk in self._tts.stream_synthesize(sentence):
                 if chunk:
                     audio_data += chunk
-            
+
             if audio_data:
                 await on_event({"type": "speaking"})
                 # ElevenLabs returns mp3, Piper/Kokoro return wav
                 fmt = "mp3" if self._tts.__class__.__name__ == "ElevenLabsTTS" else "wav"
-                
-                # Strip WAV header if present (44 bytes typically for simple RIFF)
+
+                # Strip WAV header if present (44 bytes typically for simple
+                # RIFF)
                 if fmt == "wav" and audio_data.startswith(b"RIFF"):
                     pcm_data = audio_data[44:]
                 else:
                     pcm_data = audio_data
-                
+
                 import struct
                 header = struct.pack("<HH", self._gen_id, seq_id)
                 await on_event(header + pcm_data)
 
                 seq_id += 1
 
-    async def run_once(self, audio_bytes: bytes, on_event: EventCallback) -> None:
+    async def run_once(self, audio_bytes: bytes,
+                       on_event: EventCallback) -> None:
         """
         Execute one full conversation turn: transcribe -> respond -> speak.
 
@@ -705,7 +756,8 @@ class ConversationLoop:
             )
 
         if is_kill_switch_active():
-            logger.critical("Kill switch active -- aborting conversation turn.")
+            logger.critical(
+                "Kill switch active -- aborting conversation turn.")
             await on_event({"type": "error", "message": "System kill switch is active."})
             await on_event({"type": "idle"})
             return
@@ -721,6 +773,7 @@ class ConversationLoop:
         # -----------------------------------------------------------------
         try:
             await on_event({"type": "transcribing"})
+            assert self._stt is not None
             transcript = await self._stt.transcribe(audio_bytes)
         except Exception as exc:
             logger.error("Transcription failed: %s", exc)
@@ -782,7 +835,8 @@ class ConversationLoop:
             # Google provider handled this turn. Add to history and speak.
             logger.info("Intent '%s' handled. Skipping LLM.", intent_name)
             self._history.append({"role": "user", "content": transcript})
-            self._history.append({"role": "assistant", "content": spoken_response})
+            self._history.append(
+                {"role": "assistant", "content": spoken_response})
             await on_event({"type": "response_complete", "text": spoken_response})
             await self._speak_and_send(spoken_response, on_event)
             await on_event({"type": "idle"})
@@ -793,7 +847,7 @@ class ConversationLoop:
         # -----------------------------------------------------------------
         self._history.append({"role": "user", "content": transcript})
         await on_event({"type": "thinking"})
-        
+
         self._gen_id += 1
 
         async def _run_generation():
@@ -809,26 +863,39 @@ class ConversationLoop:
                 if self._settings.tool_use_enabled:
                     from core.tools import TOOL_SCHEMAS, execute_tool
                     if hasattr(self._llm, "chat_with_tools"):
-                        res = await self._llm.chat_with_tools(self._history, TOOL_SCHEMAS)
+                        # type: ignore
+                        res = await self._llm.chat_with_tools(self._history, TOOL_SCHEMAS)  # type: ignore
                         if res["type"] == "tool_call":
                             result_text = await execute_tool(res["tool_name"], res["tool_input"], {"user_id": self._user_id})
-                            # Add to history and get final response summarization
+                            # Add to history and get final response
+                            # summarization
                             if self._llm.__class__.__name__ == "ClaudeAPILLM":
-                                self._history.append({"role": "assistant", "content": [{"type": "tool_use", "id": res["tool_use_id"], "name": res["tool_name"], "input": res["tool_input"]}]})
-                                self._history.append({"role": "user", "content": [{"type": "tool_result", "tool_use_id": res["tool_use_id"], "content": result_text}]})
+                                self._history.append({"role": "assistant",
+                                                      "content": [{"type": "tool_use",
+                                                                   "id": res["tool_use_id"],
+                                                                   "name": res["tool_name"],
+                                                                   "input": res["tool_input"]}]})
+                                self._history.append({"role": "user", "content": [
+                                                     {"type": "tool_result", "tool_use_id": res["tool_use_id"], "content": result_text}]})
                             else:
-                                self._history.append({"role": "assistant", "content": "", "tool_calls": [{"function": {"name": res["tool_name"], "arguments": res["tool_input"]}}]})
-                                self._history.append({"role": "tool", "content": result_text})
+                                self._history.append({"role": "assistant", "content": "", "tool_calls": [
+                                                     {"function": {"name": res["tool_name"], "arguments": res["tool_input"]}}]})
+                                self._history.append(
+                                    {"role": "tool", "content": result_text})
 
                 # Run the streaming pipeline
-                stream_fn = getattr(self._llm, "stream_chat", self._llm.stream_response)
+                stream_fn = getattr(
+                    self._llm,
+                    "stream_chat",
+                    self._llm.stream_response)  # type: ignore
                 llm_stream = stream_fn(self._history)
                 sentence_stream = self._stream_sentences(llm_stream, on_token)
-                
+
                 # Interleave TTS synthesis with LLM token arrival
                 await self._process_tts_stream(sentence_stream, on_event)
 
-                self._history.append({"role": "assistant", "content": full_response})
+                self._history.append(
+                    {"role": "assistant", "content": full_response})
                 await on_event({"type": "response_complete", "text": full_response})
 
                 # -----------------------------------------------------------------
@@ -841,36 +908,36 @@ class ConversationLoop:
                             f"River Song responded: \"{full_response[:200]}\"."
                         )
                         await self._memory.record_summary(self._user_id, summary_text)
-                        
+
                         # Phase 15: Habit Inference
                         self._spawn_background(
                             self._infer_habits(transcript, full_response),
                             "infer_habits",
                         )
                     except Exception as exc:
-                        logger.warning("Summary recording failed (user=%s): %s", self._user_id, exc)
+                        logger.warning(
+                            "Summary recording failed (user=%s): %s", self._user_id, exc)
 
                 await on_event({"type": "idle"})
-                
+
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
                 logger.error("Conversation turn failed: %s", exc)
                 await on_event({"type": "error", "message": f"LLM/TTS error: {exc}"})
                 await on_event({"type": "idle"})
-        
+
         self._generation_task = asyncio.create_task(_run_generation())
         try:
             await self._generation_task
         except asyncio.CancelledError:
             logger.info("Generation task cancelled.")
-            pass
 
     async def _infer_habits(self, user_text: str, assistant_text: str):
         """Analyze the turn to infer new user patterns/habits."""
         if not self._memory or not self._settings.habit_inference_enabled:
             return
-            
+
         prompt = (
             f"Based on the following interaction, identify if the user has any specific "
             f"habits, routines, or recurring preferences. "
@@ -880,15 +947,21 @@ class ConversationLoop:
             f"River: {assistant_text}\n\n"
             f"Response format: 'Pattern: <description>'"
         )
-        
+
         try:
             # Low-priority background inference
+            assert self._llm is not None
+
             res = await self._llm.chat([{"role": "user", "content": prompt}])
             if "Pattern:" in res:
                 pattern = res.split("Pattern:")[1].strip()
                 if pattern and pattern.upper() != "NONE":
-                    logger.info("Inferred new habit for %s: %s", self._user_id, pattern)
-                    # FIX B10: Persist to pending table instead of active preferences
+                    logger.info(
+                        "Inferred new habit for %s: %s",
+                        self._user_id,
+                        pattern)
+                    # FIX B10: Persist to pending table instead of active
+                    # preferences
                     await self._memory.save_pending_habit(
                         user_id=self._user_id,
                         pattern=pattern,
@@ -897,10 +970,12 @@ class ConversationLoop:
         except Exception as exc:
             logger.debug("Habit inference skipped: %s", exc)
 
-    async def _speak_and_send(self, text: str, on_event: EventCallback) -> None:
+    async def _speak_and_send(self, text: str,
+                              on_event: EventCallback) -> None:
         """Synthesize text and send audio bytes to the browser."""
         try:
             await on_event({"type": "speaking"})
+            assert self._tts is not None
             wav_bytes = await self._tts.synthesize(text)
             if wav_bytes:
                 # ElevenLabs returns mp3, Piper/Kokoro return wav
@@ -917,7 +992,8 @@ class ConversationLoop:
     async def run_text(self, text: str, on_event: EventCallback) -> None:
         """Execute one conversation turn from typed text, skipping STT."""
         if not self._initialized:
-            raise RuntimeError("ConversationLoop.initialize() must be called before run_text().")
+            raise RuntimeError(
+                "ConversationLoop.initialize() must be called before run_text().")
 
         if is_kill_switch_active():
             await on_event({"type": "error", "message": "System kill switch is active."})
@@ -954,7 +1030,8 @@ class ConversationLoop:
 
         if intent_name != "conversation" and spoken_response and intent_name != "document_qa":
             self._history.append({"role": "user", "content": text})
-            self._history.append({"role": "assistant", "content": spoken_response})
+            self._history.append(
+                {"role": "assistant", "content": spoken_response})
             await on_event({"type": "response_complete", "text": spoken_response})
             await self._speak_and_send(spoken_response, on_event)
             await on_event({"type": "idle"})
@@ -969,39 +1046,41 @@ class ConversationLoop:
             # Phase 3: Tool Use / Function Calling
             if self._settings.tool_use_enabled:
                 from core.tools import TOOL_SCHEMAS, execute_tool
-                
+
                 # Filter tools based on session settings
                 active_tools = TOOL_SCHEMAS
                 if not self._web_search:
-                    active_tools = [t for t in TOOL_SCHEMAS if t["name"] != "web_search"]
-                
+                    active_tools = [
+                        t for t in TOOL_SCHEMAS if t["name"] != "web_search"]
+
                 tool_system_prompt = (
                     "You have access to tools. If the user asks for an action that matches "
                     "a tool, use the tool. If not, respond normally."
                 )
-                
+
                 # Use thinking stream if requested
                 use_thinking = self._thinking_mode in ("thinking", "pro")
-                stream_method = self._llm.stream_response_thinking if use_thinking else self._llm.stream_response
+                stream_method = self._llm.stream_response_thinking if use_thinking else self._llm.stream_response  # type: ignore
 
                 if hasattr(self._llm, "chat_with_tools"):
                     messages_with_tools = self._history.copy()
                     if messages_with_tools[0]["role"] == "system":
                         messages_with_tools[0]["content"] += f"\n\n{tool_system_prompt}"
-                    
-                    res = await self._llm.chat_with_tools(messages_with_tools, active_tools)
+
+                    # type: ignore
+                    res = await self._llm.chat_with_tools(messages_with_tools, active_tools)  # type: ignore
                     if res["type"] == "tool_call":
                         tool_name = res["tool_name"]
                         tool_input = res["tool_input"]
                         tool_id = res.get("tool_use_id")
                         logger.info("LLM requested tool: %s", tool_name)
-                        
+
                         await on_event({"type": "tool_use", "tool": tool_name, "input": tool_input})
-                        
+
                         result_text = await execute_tool(tool_name, tool_input, {"user_id": self._user_id})
-                        
+
                         await on_event({"type": "tool_result", "tool": tool_name, "result": result_text})
-                        
+
                         if self._llm.__class__.__name__ == "ClaudeAPILLM":
                             self._history.append({
                                 "role": "assistant",
@@ -1016,8 +1095,9 @@ class ConversationLoop:
                                 "role": "assistant", "content": "",
                                 "tool_calls": [{"function": {"name": tool_name, "arguments": tool_input}}]
                             })
-                            self._history.append({"role": "tool", "content": result_text})
-                            
+                            self._history.append(
+                                {"role": "tool", "content": result_text})
+
                         async for chunk in stream_method(self._history):
                             full_response += chunk
                             await on_event({"type": "token", "content": chunk})
@@ -1032,17 +1112,17 @@ class ConversationLoop:
             # Phase 2: Normal streaming (no tool use enabled)
             elif self._settings.llm_streaming_enabled and self._llm.__class__.__name__ == "OllamaLLM":
                 use_thinking = self._thinking_mode in ("thinking", "pro")
-                stream_chat_fn = self._llm.stream_response_thinking if use_thinking else getattr(self._llm, "stream_chat", self._llm.stream_response)
+                stream_chat_fn = self._llm.stream_response_thinking if use_thinking else getattr(  # type: ignore
+                    self._llm, "stream_chat", self._llm.stream_response)  # type: ignore
                 async for chunk in stream_chat_fn(self._history):
                     full_response += chunk
                     await on_event({"type": "token", "content": chunk})
             else:
                 use_thinking = self._thinking_mode in ("thinking", "pro")
-                stream_chat_fn = self._llm.stream_response_thinking if use_thinking else self._llm.stream_response
+                stream_chat_fn = self._llm.stream_response_thinking if use_thinking else self._llm.stream_response  # type: ignore
                 async for chunk in stream_chat_fn(self._history):
                     full_response += chunk
                     await on_event({"type": "response_chunk", "text": chunk})
-
 
         except Exception as exc:
             self._history.pop()
@@ -1053,7 +1133,11 @@ class ConversationLoop:
 
         # Strip DeepSeek / Qwen thinking blocks that some models emit inline.
         import re as _re
-        full_response = _re.sub(r"<think>.*?</think>", "", full_response, flags=_re.DOTALL).strip()
+        full_response = _re.sub(
+            r"<think>.*?</think>",
+            "",
+            full_response,
+            flags=_re.DOTALL).strip()
 
         self._history.append({"role": "assistant", "content": full_response})
         await on_event({"type": "response_complete", "text": full_response})
@@ -1068,7 +1152,10 @@ class ConversationLoop:
                 )
                 await self._memory.record_summary(self._user_id, summary_text)
             except Exception as exc:
-                logger.warning("Summary recording failed (user=%s): %s", self._user_id, exc)
+                logger.warning(
+                    "Summary recording failed (user=%s): %s",
+                    self._user_id,
+                    exc)
 
         await on_event({"type": "idle"})
 
@@ -1085,4 +1172,7 @@ class ConversationLoop:
             self._suppress_memory = True
         await self._rebuild_system_prompt()
         self._flush_memory = flush_memory
-        logger.info("Conversation history reset (user=%s, suppress_memory=%s).", self._user_id, self._suppress_memory)
+        logger.info(
+            "Conversation history reset (user=%s, suppress_memory=%s).",
+            self._user_id,
+            self._suppress_memory)

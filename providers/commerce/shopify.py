@@ -11,9 +11,9 @@ import os
 import asyncio
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
 
 logger = logging.getLogger(__name__)
+
 
 class ShopifySyncWrapper:
     def __init__(self, db_path: str, workspace_id: str, user_id: str):
@@ -82,7 +82,8 @@ class ShopifySyncWrapper:
             local_customer_id = None
 
             if customer_data:
-                shopify_cust_id = f"gid://shopify/Customer/{customer_data.get('id')}"
+                shopify_cust_id = f"gid://shopify/Customer/{
+                    customer_data.get('id')}"
                 cur = conn.execute(
                     "SELECT id FROM customers WHERE workspace_id = ? AND shopify_customer_id = ?",
                     (self.workspace_id, shopify_cust_id)
@@ -93,13 +94,19 @@ class ShopifySyncWrapper:
                 else:
                     import uuid
                     local_customer_id = str(uuid.uuid4())
-                    logger.info("[SYNC] Creating new customer profile for: %s", customer_data.get("email"))
+                    logger.info(
+                        "[SYNC] Creating new customer profile for: %s",
+                        customer_data.get("email"))
                     conn.execute(
                         "INSERT INTO customers (id, workspace_id, name, email, phone, notes, shopify_customer_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                         (
-                            local_customer_id, 
+                            local_customer_id,
                             self.workspace_id,
-                            f"{customer_data.get('first_name', '')} {customer_data.get('last_name', '')}".strip(),
+                            f"{
+                                customer_data.get(
+                                    'first_name', '')} {
+                                customer_data.get(
+                                    'last_name', '')}".strip(),
                             customer_data.get("email", ""),
                             customer_data.get("phone", ""),
                             "Auto-synced from Shopify Order",
@@ -118,7 +125,7 @@ class ShopifySyncWrapper:
                 sku = item.get("sku")
                 qty = item.get("quantity", 1)
                 price = Decimal(str(item.get("price", "0.0")))
-                
+
                 if not sku:
                     continue
 
@@ -130,7 +137,8 @@ class ShopifySyncWrapper:
 
                 if product:
                     if product["stock_qty"] < qty:
-                        logger.warning("[SYNC] Insufficient stock for %s, skipping", sku)
+                        logger.warning(
+                            "[SYNC] Insufficient stock for %s, skipping", sku)
                         continue
 
                     # Decrement stock
@@ -138,11 +146,12 @@ class ShopifySyncWrapper:
                         "UPDATE products SET stock_qty = stock_qty - ? WHERE id = ?",
                         (qty, product["id"])
                     )
-                    
+
                     # Create line item
                     conn.execute(
                         "INSERT INTO sale_line_items (id, sale_id, product_id, qty, unit_price) VALUES (?, ?, ?, ?, ?)",
-                        (str(uuid.uuid4()), sale_id, product["id"], qty, float(price))
+                        (str(uuid.uuid4()), sale_id,
+                         product["id"], qty, float(price))
                     )
                     total += price * qty
                     items_processed += 1
@@ -161,13 +170,20 @@ class ShopifySyncWrapper:
                     )
                 )
                 conn.commit()
-                logger.info("[SYNC] Order %s synced. Total: %s", order_id, total)
+                logger.info(
+                    "[SYNC] Order %s synced. Total: %s",
+                    order_id,
+                    total)
             else:
-                logger.warning("[SYNC] No items processed for order %s", order_id)
+                logger.warning(
+                    "[SYNC] No items processed for order %s", order_id)
 
         except Exception as e:
             conn.rollback()
-            logger.error("[SYNC ERROR] Failed to sync order %s: %s", order_id, e)
+            logger.error(
+                "[SYNC ERROR] Failed to sync order %s: %s",
+                order_id,
+                e)
         finally:
             conn.close()
 
@@ -176,4 +192,6 @@ class ShopifySyncWrapper:
         logger.info("[SYNC] Pushing local sale %s to Shopify", sale_id)
         # Mock implementation as per audit requirements (no real API call)
         await asyncio.sleep(0.5)
-        logger.info("[SYNC] Successfully pushed transaction %s to Shopify.", sale_id)
+        logger.info(
+            "[SYNC] Successfully pushed transaction %s to Shopify.",
+            sale_id)

@@ -4,7 +4,7 @@ import math
 import os
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import httpx
 from config.settings import get_settings
@@ -20,11 +20,13 @@ _cache_neows: Dict[str, Any] = {}
 _cache_ocearch: Dict[str, Any] = {}
 CACHE_MAX_ENTRIES = 1000
 
+
 def _get_cached(cache_dict: dict, key: str, ttl: int) -> Any:
     entry = cache_dict.get(key)
     if entry and time.time() - entry["ts"] < ttl:
         return entry["data"]
     return None
+
 
 def _set_cached(cache_dict: dict, key: str, data: Any):
     if len(cache_dict) >= CACHE_MAX_ENTRIES:
@@ -32,25 +34,35 @@ def _set_cached(cache_dict: dict, key: str, data: Any):
         del cache_dict[oldest]
     cache_dict[key] = {"data": data, "ts": time.time()}
 
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
 
 def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     R = 3958.8  # Earth radius in miles
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lon2 - lon1)
-    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    a = math.sin(dphi / 2)**2 + math.cos(phi1) * \
+        math.cos(phi2) * math.sin(dlambda / 2)**2
     return 2 * R * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
 
 def _eonet_color(category: str) -> str:
     category = category.lower()
-    if "wildfire" in category: return "#ff4400"
-    if "volcano" in category: return "#cc0000"
-    if "storm" in category: return "#ff8800"
-    if "ice" in category: return "#3366cc"
-    if "earthquake" in category: return "#990066"
+    if "wildfire" in category:
+        return "#ff4400"
+    if "volcano" in category:
+        return "#cc0000"
+    if "storm" in category:
+        return "#ff8800"
+    if "ice" in category:
+        return "#3366cc"
+    if "earthquake" in category:
+        return "#990066"
     return "#888888"
+
 
 async def _fetch_eonet(lat: float, lon: float) -> list[Dict[str, Any]]:
     ckey = f"{round(lat, 1)}_{round(lon, 1)}"
@@ -69,25 +81,34 @@ async def _fetch_eonet(lat: float, lon: float) -> list[Dict[str, Any]]:
                     if not geoms:
                         continue
                     # Most recent geometry
-                    geom = sorted(geoms, key=lambda g: g.get("date", ""), reverse=True)[0]
+                    geom = sorted(
+                        geoms, key=lambda g: g.get(
+                            "date", ""), reverse=True)[0]
                     coords = geom.get("coordinates")
-                    # coords is [lon, lat] for points, or polygon. We assume point or use first
+                    # coords is [lon, lat] for points, or polygon. We assume
+                    # point or use first
                     if isinstance(coords, list) and len(coords) >= 2:
                         # flatten if polygon
                         if isinstance(coords[0], list):
                             c = coords[0][0]
                             while isinstance(c, list):
                                 c = c[0]
-                            elat, elon = coords[0][0][1], coords[0][0][0]  # naive extraction
+                            # naive extraction
+                            elat, elon = coords[0][0][1], coords[0][0][0]
                             try:
-                                elon, elat = float(coords[0][0][0]), float(coords[0][0][1])
-                            except:
+                                elon, elat = float(
+                                    coords[0][0][0]), float(
+                                    coords[0][0][1])
+                            except BaseException:
                                 continue
                         else:
                             elon, elat = float(coords[0]), float(coords[1])
-                        
+
                         dist = _haversine(lat, lon, elat, elon)
-                        cat = event.get("categories", [{}])[0].get("title", "Unknown")
+                        cat = event.get(
+                            "categories", [
+                                {}])[0].get(
+                            "title", "Unknown")
                         results.append({
                             "id": event.get("id"),
                             "title": event.get("title"),
@@ -102,9 +123,10 @@ async def _fetch_eonet(lat: float, lon: float) -> list[Dict[str, Any]]:
                 results.sort(key=lambda x: x["distance_mi"])
     except Exception as e:
         logger.warning(f"EONET fetch failed: {e}")
-    
+
     _set_cached(_cache_eonet, ckey, results)
     return results
+
 
 async def _fetch_neows() -> list[Dict[str, Any]]:
     ckey = "neows_global"
@@ -114,7 +136,12 @@ async def _fetch_neows() -> list[Dict[str, Any]]:
 
     results = []
     try:
-        api_key = getattr(get_settings(), "nasa_api_key", os.getenv("NASA_API_KEY", "DEMO_KEY"))
+        api_key = getattr(
+            get_settings(),
+            "nasa_api_key",
+            os.getenv(
+                "NASA_API_KEY",
+                "DEMO_KEY"))
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         async with httpx.AsyncClient(timeout=10.0) as client:
             res = await client.get(NEOWS_URL, params={"start_date": today, "api_key": api_key})
@@ -124,7 +151,7 @@ async def _fetch_neows() -> list[Dict[str, Any]]:
                 all_neos = []
                 for date_key, arr in neos.items():
                     all_neos.extend(arr)
-                
+
                 for neo in all_neos:
                     ca = neo.get("close_approach_data", [{}])[0]
                     results.append({
@@ -141,13 +168,18 @@ async def _fetch_neows() -> list[Dict[str, Any]]:
                 results.sort(key=lambda x: x["approach_date"])
                 for r in results:
                     if isinstance(r["approach_date"], (int, float)):
-                        r["approach_date"] = datetime.fromtimestamp(r["approach_date"]/1000.0, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+                        r["approach_date"] = datetime.fromtimestamp(
+                            r["approach_date"] / 1000.0,
+                            tz=timezone.utc).isoformat().replace(
+                            "+00:00",
+                            "Z")
                 results = results[:5]
     except Exception as e:
         logger.warning(f"NeoWs fetch failed: {e}")
 
     _set_cached(_cache_neows, ckey, results)
     return results
+
 
 async def _fetch_ocearch(lat: float, lon: float) -> list[Dict[str, Any]]:
     ckey = f"{round(lat, 1)}_{round(lon, 1)}"
@@ -187,6 +219,7 @@ async def _fetch_ocearch(lat: float, lon: float) -> list[Dict[str, Any]]:
 
     _set_cached(_cache_ocearch, ckey, results)
     return results
+
 
 async def fetch_earth(lat: float, lon: float) -> dict[str, Any]:
     eonet_task = _fetch_eonet(lat, lon)

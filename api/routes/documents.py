@@ -39,14 +39,14 @@ _ALLOWED_KINDS = {"markdown", "text", "csv", "html", "research"}
 
 class DocumentCreate(BaseModel):
     title: str = Field(default="Untitled", max_length=200)
-    kind:  str = Field(default="markdown")
-    body:  str = Field(default="")
+    kind: str = Field(default="markdown")
+    body: str = Field(default="")
 
 
 class DocumentUpdate(BaseModel):
-    title:  Optional[str]  = Field(default=None, max_length=200)
-    kind:   Optional[str]  = None
-    body:   Optional[str]  = None
+    title: Optional[str] = Field(default=None, max_length=200)
+    kind: Optional[str] = None
+    body: Optional[str] = None
     pinned: Optional[bool] = None
 
 
@@ -111,12 +111,13 @@ async def create_document(
 ):
     _require_enabled()
     user_id = await _require_user(authorization)
-    store   = _store(request)
+    store = _store(request)
 
     cap = int(getattr(get_settings(), "documents_max_per_user", 500))
     count = await store.count_documents(user_id)
     if count >= cap:
-        raise bad_request(f"Document cap reached ({cap}). Delete one to add another.")
+        raise bad_request(
+            f"Document cap reached ({cap}). Delete one to add another.")
 
     kind = _validate_kind(body.kind)
     _validate_body(body.body or "")

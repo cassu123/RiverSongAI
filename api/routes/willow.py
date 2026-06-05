@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["willow"])
 
 
-async def _authenticate(websocket: WebSocket, expected: str) -> tuple[bool, str]:
+async def _authenticate(websocket: WebSocket,
+                        expected: str) -> tuple[bool, str]:
     """
     Return (authenticated, user_id). Closes the socket on failure.
 
@@ -67,7 +68,8 @@ async def willow_websocket(websocket: WebSocket) -> None:
     expected = (getattr(settings, "willow_device_token", "") or "").strip()
     if not expected:
         # Hard-refuse before accept() so no handshake completes.
-        logger.warning("Willow connection rejected: WILLOW_DEVICE_TOKEN not configured.")
+        logger.warning(
+            "Willow connection rejected: WILLOW_DEVICE_TOKEN not configured.")
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
@@ -80,7 +82,10 @@ async def willow_websocket(websocket: WebSocket) -> None:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    logger.info("Willow device authenticated as user=%s from %s", user_id, websocket.client)
+    logger.info(
+        "Willow device authenticated as user=%s from %s",
+        user_id,
+        websocket.client)
     loop = ConversationLoop(user_id=user_id)
     await loop.initialize()
 
@@ -109,7 +114,7 @@ async def willow_websocket(websocket: WebSocket) -> None:
                     pass
                 elif data.get("type") == "audio_data":
                     audio_bytes = base64.b64decode(data["data"])
-                    await loop.run_once(audio_bytes, on_event=on_event)
+                    await loop.run_once(audio_bytes, on_event=on_event)  # type: ignore
 
     except WebSocketDisconnect:
         logger.info("Willow device disconnected user=%s", user_id)

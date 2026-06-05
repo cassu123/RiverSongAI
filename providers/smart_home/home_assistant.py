@@ -153,7 +153,12 @@ class HomeAssistantClient:
             json=service_data,
         )
         resp.raise_for_status()
-        logger.debug("Called %s.%s with %s -> %s", domain, service, service_data, resp.status_code)
+        logger.debug(
+            "Called %s.%s with %s -> %s",
+            domain,
+            service,
+            service_data,
+            resp.status_code)
         return resp.json()
 
     async def ping(self) -> bool:

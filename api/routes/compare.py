@@ -24,7 +24,7 @@ import asyncio
 import hashlib
 import logging
 import random
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Header, Request
 from pydantic import BaseModel, Field
@@ -44,11 +44,11 @@ router = APIRouter(prefix="/api/compare", tags=["compare"])
 
 class ModelRef(BaseModel):
     provider: str = Field(..., min_length=1)
-    model:    str = Field(..., min_length=1)
+    model: str = Field(..., min_length=1)
 
 
 class CompareRunRequest(BaseModel):
-    prompt:  str       = Field(..., min_length=1, max_length=6000)
+    prompt: str = Field(..., min_length=1, max_length=6000)
     model_a: ModelRef
     model_b: ModelRef
 
@@ -105,13 +105,16 @@ async def _resolve_llm(provider: str, model: str, request: Request):
             rigs = await store.list_remote_rigs(include_inactive=False)
             rig = rigs[0] if rigs else None
         if rig is None:
-            raise RuntimeError(f"No active remote rig matches '{rig_ref or '(default)'}'.")
+            raise RuntimeError(
+                f"No active remote rig matches '{
+                    rig_ref or '(default)'}'.")
         return build_remote_llm_from_rig(rig, model)
     from core.conversation_loop import _instantiate_llm
     return _instantiate_llm(provider, model)
 
 
-async def _run_one(provider: str, model: str, prompt: str, request: Request) -> str:
+async def _run_one(provider: str, model: str, prompt: str,
+                   request: Request) -> str:
     """Instantiate a single LLM and return the full response text."""
     llm = await _resolve_llm(provider, model, request)
     messages = [{"role": "user", "content": prompt}]
@@ -120,7 +123,13 @@ async def _run_one(provider: str, model: str, prompt: str, request: Request) -> 
         if isinstance(res, dict):
             return res.get("content") or res.get("text") or ""
         return str(res)
-    stream_fn = getattr(llm, "stream_chat", None) or getattr(llm, "stream_response", None)
+    stream_fn = getattr(
+        llm,
+        "stream_chat",
+        None) or getattr(
+        llm,
+        "stream_response",
+        None)
     if stream_fn is None:
         return ""
     out = ""
@@ -149,10 +158,12 @@ async def run_compare(
     """
     _require_enabled()
     user_id = await _require_user(authorization)
-    store   = _store(request)
+    store = _store(request)
 
-    a = {"provider": body.model_a.provider.strip(), "model": body.model_a.model.strip()}
-    b = {"provider": body.model_b.provider.strip(), "model": body.model_b.model.strip()}
+    a = {"provider": body.model_a.provider.strip(),
+         "model": body.model_a.model.strip()}
+    b = {"provider": body.model_b.provider.strip(),
+         "model": body.model_b.model.strip()}
 
     try:
         resp_a, resp_b = await asyncio.gather(
@@ -181,11 +192,11 @@ async def run_compare(
 
     # Identities hidden in the response payload — only sides labeled.
     return {
-        "id":         run["id"],
-        "prompt":     body.prompt,
+        "id": run["id"],
+        "prompt": body.prompt,
         "response_a": resp_a,
         "response_b": resp_b,
-        "voted":      False,
+        "voted": False,
     }
 
 
@@ -198,7 +209,7 @@ async def vote_compare(
 ):
     _require_enabled()
     user_id = await _require_user(authorization)
-    store   = _store(request)
+    store = _store(request)
     updated = await store.record_compare_vote(run_id, user_id, body.winner)
     if updated is None:
         raise not_found("Compare run not found or already voted.")

@@ -52,7 +52,6 @@ from providers.memory.models import (
     LLMSettings,
     MemorySettings,
     Preference,
-    TTLOption,
     UserPreferences,
 )
 from providers.memory.ttl_engine import calculate_expires_at
@@ -701,13 +700,16 @@ class SQLiteStore:
             "ALTER TABLE users ADD COLUMN force_password_change INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE users ADD COLUMN is_suspended INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE users ADD COLUMN tokens_valid_after TEXT",
-            # Q1#5 — TOTP 2FA. Per-user opt-in; default off so existing logins are untouched.
+            # Q1#5 — TOTP 2FA. Per-user opt-in; default off so existing logins
+            # are untouched.
             "ALTER TABLE users ADD COLUMN totp_secret TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE users ADD COLUMN totp_recovery_codes TEXT NOT NULL DEFAULT ''",
-            # One-time mapping: legacy palette -> universe (idempotent via default-gate)
+            # One-time mapping: legacy palette -> universe (idempotent via
+            # default-gate)
             "UPDATE users SET universe='halo' WHERE palette='halo' AND universe='dune'",
-            # One-time mapping: legacy theme -> mood (idempotent — only rewrites rows still at default)
+            # One-time mapping: legacy theme -> mood (idempotent — only
+            # rewrites rows still at default)
             "UPDATE users SET mood='hard-light',     environment='forerunner' WHERE theme='halo'          AND mood='caladan'",
             "UPDATE users SET mood='bloodlight',     environment='harkonnen'  WHERE theme='crimson-dark'  AND mood='caladan'",
             "UPDATE users SET mood='night-vision',   environment='unsc'       WHERE theme='combat'        AND mood='caladan'",
@@ -720,7 +722,8 @@ class SQLiteStore:
             "ALTER TABLE routines ADD COLUMN type TEXT NOT NULL DEFAULT 'simple'",
             "ALTER TABLE routines ADD COLUMN webhook_url TEXT",
             "INSERT OR IGNORE INTO admin_config (key, value) VALUES ('__global__', '{}')",
-            # FIX B11: Remove (user_id, category) uniqueness to allow multi-value preferences
+            # FIX B11: Remove (user_id, category) uniqueness to allow
+            # multi-value preferences
             "CREATE TABLE IF NOT EXISTS preferences_new (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, category TEXT NOT NULL, value TEXT NOT NULL, confidence TEXT NOT NULL DEFAULT 'low', last_updated TEXT NOT NULL, UNIQUE(user_id, category, value))",
             "INSERT OR IGNORE INTO preferences_new SELECT id, user_id, category, value, confidence, last_updated FROM preferences",
             "DROP TABLE preferences",
@@ -734,7 +737,8 @@ class SQLiteStore:
             "CREATE TABLE IF NOT EXISTS user_preferences (user_id TEXT PRIMARY KEY, music_provider TEXT NOT NULL DEFAULT 'youtube_music', updated_at TEXT NOT NULL DEFAULT '')",
             "ALTER TABLE feed_preferences ADD COLUMN sports_favorite_leagues TEXT NOT NULL DEFAULT '[\"nba\",\"nfl\",\"mlb\"]'",
             "ALTER TABLE feed_preferences ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}'",
-            # OAuth CSRF nonce store (for /api/integrations/google/callback validation).
+            # OAuth CSRF nonce store (for /api/integrations/google/callback
+            # validation).
             "CREATE TABLE IF NOT EXISTS oauth_nonces (nonce TEXT PRIMARY KEY, user_id TEXT NOT NULL, service TEXT NOT NULL, created_at REAL NOT NULL, expires_at REAL NOT NULL)",
             "CREATE INDEX IF NOT EXISTS idx_oauth_nonces_expires ON oauth_nonces(expires_at)",
             # Hot-path indexes for per-user lookups (audit DATA-001).
@@ -811,12 +815,15 @@ class SQLiteStore:
             "SELECT service, metadata, is_active FROM user_integrations WHERE user_id = ? AND is_active = 1",
             (user_id,)
         )
-        return [{"service": row[0], "metadata": json.loads(row[1]), "is_active": row[2]} for row in cur.fetchall()]
+        return [{"service": row[0], "metadata": json.loads(
+            row[1]), "is_active": row[2]} for row in cur.fetchall()]
 
-    async def get_user_integration(self, user_id: str, service: str) -> Optional[dict]:
+    async def get_user_integration(
+            self, user_id: str, service: str) -> Optional[dict]:
         return await self._run(self._sync_get_user_integration, user_id, service)
 
-    def _sync_get_user_integration(self, user_id: str, service: str) -> Optional[dict]:
+    def _sync_get_user_integration(
+            self, user_id: str, service: str) -> Optional[dict]:
         conn = self._get_conn()
         cur = conn.cursor()
         cur.execute(
@@ -835,33 +842,36 @@ class SQLiteStore:
         }
 
     async def upsert_user_integration(
-        self, user_id: str, service: str, access_token: Optional[str] = None, 
-        refresh_token: Optional[str] = None, token_expires_at: Optional[str] = None, 
+        self, user_id: str, service: str, access_token: Optional[str] = None,
+        refresh_token: Optional[str] = None, token_expires_at: Optional[str] = None,
         metadata: Optional[dict] = None
     ) -> None:
         await self._run(
-            self._sync_upsert_user_integration, 
+            self._sync_upsert_user_integration,
             user_id, service, access_token, refresh_token, token_expires_at, metadata
         )
 
     def _sync_upsert_user_integration(
-        self, user_id: str, service: str, access_token: Optional[str], 
+        self, user_id: str, service: str, access_token: Optional[str],
         refresh_token: Optional[str], token_expires_at: Optional[str], metadata: Optional[dict]
     ) -> None:
         conn = self._get_conn()
         cur = conn.cursor()
-        
+
         now = _now_str()
         new_id = str(uuid.uuid4())
-        
-        cur.execute("SELECT metadata FROM user_integrations WHERE user_id = ? AND service = ?", (user_id, service))
+
+        cur.execute(
+            "SELECT metadata FROM user_integrations WHERE user_id = ? AND service = ?",
+            (user_id,
+             service))
         row = cur.fetchone()
-        
+
         if row:
             meta_str = json.dumps(metadata) if metadata is not None else row[0]
             cur.execute(
                 """
-                UPDATE user_integrations 
+                UPDATE user_integrations
                 SET access_token = COALESCE(?, access_token),
                     refresh_token = COALESCE(?, refresh_token),
                     token_expires_at = COALESCE(?, token_expires_at),
@@ -870,30 +880,34 @@ class SQLiteStore:
                     updated_at = ?
                 WHERE user_id = ? AND service = ?
                 """,
-                (access_token, refresh_token, token_expires_at, meta_str, now, user_id, service)
+                (access_token, refresh_token, token_expires_at,
+                 meta_str, now, user_id, service)
             )
         else:
             meta_str = json.dumps(metadata) if metadata else '{}'
             cur.execute(
                 """
-                INSERT INTO user_integrations 
+                INSERT INTO user_integrations
                 (id, user_id, service, access_token, refresh_token, token_expires_at, metadata, is_active, connected_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
                 """,
-                (new_id, user_id, service, access_token, refresh_token, token_expires_at, meta_str, now, now)
+                (new_id, user_id, service, access_token,
+                 refresh_token, token_expires_at, meta_str, now, now)
             )
         conn.commit()
 
-    async def deactivate_user_integration(self, user_id: str, service: str) -> None:
+    async def deactivate_user_integration(
+            self, user_id: str, service: str) -> None:
         await self._run(self._sync_deactivate_user_integration, user_id, service)
 
-    def _sync_deactivate_user_integration(self, user_id: str, service: str) -> None:
+    def _sync_deactivate_user_integration(
+            self, user_id: str, service: str) -> None:
         conn = self._get_conn()
         cur = conn.cursor()
         cur.execute(
             """
-            UPDATE user_integrations 
-            SET is_active = 0, access_token = NULL, refresh_token = NULL, updated_at = ? 
+            UPDATE user_integrations
+            SET is_active = 0, access_token = NULL, refresh_token = NULL, updated_at = ?
             WHERE user_id = ? AND service = ?
             """,
             (_now_str(), user_id, service)
@@ -925,7 +939,8 @@ class SQLiteStore:
         conn.execute("DELETE FROM oauth_nonces WHERE expires_at < ?", (now,))
         conn.commit()
 
-    async def consume_oauth_nonce(self, nonce: str, service: str) -> Optional[str]:
+    async def consume_oauth_nonce(
+            self, nonce: str, service: str) -> Optional[str]:
         """
         Validate, consume (delete), and return the user_id bound to ``nonce``
         for ``service``. Returns None if the nonce is missing, expired, or
@@ -933,7 +948,8 @@ class SQLiteStore:
         """
         return await self._run(self._sync_consume_oauth_nonce, nonce, service)
 
-    def _sync_consume_oauth_nonce(self, nonce: str, service: str) -> Optional[str]:
+    def _sync_consume_oauth_nonce(
+            self, nonce: str, service: str) -> Optional[str]:
         import time
         conn = self._get_conn()
         now = time.time()
@@ -950,7 +966,6 @@ class SQLiteStore:
         if row_service != service or expires_at < now:
             return None
         return user_id
-
 
     # -------------------------------------------------------------------------
     # Facts
@@ -973,11 +988,11 @@ class SQLiteStore:
                 updated_at = excluded.updated_at
             """,
             {
-                "id":         fact.id,
-                "user_id":    fact.user_id,
-                "key":        fact.key,
-                "value":      fact.value,
-                "source":     fact.source,
+                "id": fact.id,
+                "user_id": fact.user_id,
+                "key": fact.key,
+                "value": fact.value,
+                "source": fact.source,
                 "created_at": _dt_to_str(fact.created_at) or now,
                 "updated_at": now,
             },
@@ -1000,8 +1015,8 @@ class SQLiteStore:
                 key=r["key"],
                 value=r["value"],
                 source=r["source"],
-                created_at=_str_to_dt(r["created_at"]),
-                updated_at=_str_to_dt(r["updated_at"]),
+                created_at=_str_to_dt(r["created_at"]),  # type: ignore
+                updated_at=_str_to_dt(r["updated_at"]),  # type: ignore
             )
             for r in rows
         ]
@@ -1011,7 +1026,8 @@ class SQLiteStore:
 
     def _sync_delete_fact(self, fact_id: str, user_id: str) -> bool:
         conn = self._get_conn()
-        res = conn.execute("DELETE FROM facts WHERE id = ? AND user_id = ?", (fact_id, user_id))
+        res = conn.execute(
+            "DELETE FROM facts WHERE id = ? AND user_id = ?", (fact_id, user_id))
         conn.commit()
         return res.rowcount > 0
 
@@ -1039,11 +1055,11 @@ class SQLiteStore:
                 last_updated = excluded.last_updated
             """,
             {
-                "id":           pref.id,
-                "user_id":      pref.user_id,
-                "category":     pref.category,
-                "value":        pref.value,
-                "confidence":   pref.confidence,
+                "id": pref.id,
+                "user_id": pref.user_id,
+                "category": pref.category,
+                "value": pref.value,
+                "confidence": pref.confidence,
                 "last_updated": _dt_to_str(pref.last_updated) or now,
             },
         )
@@ -1065,7 +1081,7 @@ class SQLiteStore:
                 category=r["category"],
                 value=r["value"],
                 confidence=r["confidence"],
-                last_updated=_str_to_dt(r["last_updated"]),
+                last_updated=_str_to_dt(r["last_updated"]),  # type: ignore
             )
             for r in rows
         ]
@@ -1074,10 +1090,12 @@ class SQLiteStore:
     # Pending Habits
     # -------------------------------------------------------------------------
 
-    async def save_pending_habit(self, user_id: str, pattern: str, confidence: str = "low") -> None:
+    async def save_pending_habit(
+            self, user_id: str, pattern: str, confidence: str = "low") -> None:
         await self._run(self._sync_save_pending_habit, user_id, pattern, confidence)
 
-    def _sync_save_pending_habit(self, user_id: str, pattern: str, confidence: str) -> None:
+    def _sync_save_pending_habit(
+            self, user_id: str, pattern: str, confidence: str) -> None:
         conn = self._get_conn()
         conn.execute(
             "INSERT INTO pending_habits (id, user_id, pattern, confidence, created_at) VALUES (?,?,?,?,?)",
@@ -1101,7 +1119,8 @@ class SQLiteStore:
 
     def _sync_delete_pending_habit(self, habit_id: str, user_id: str) -> bool:
         conn = self._get_conn()
-        res = conn.execute("DELETE FROM pending_habits WHERE id = ? AND user_id = ?", (habit_id, user_id))
+        res = conn.execute(
+            "DELETE FROM pending_habits WHERE id = ? AND user_id = ?", (habit_id, user_id))
         conn.commit()
         return res.rowcount > 0
 
@@ -1110,7 +1129,8 @@ class SQLiteStore:
 
     def _sync_delete_preference(self, pref_id: str, user_id: str) -> bool:
         conn = self._get_conn()
-        res = conn.execute("DELETE FROM preferences WHERE id = ? AND user_id = ?", (pref_id, user_id))
+        res = conn.execute(
+            "DELETE FROM preferences WHERE id = ? AND user_id = ?", (pref_id, user_id))
         conn.commit()
         return res.rowcount > 0
 
@@ -1123,7 +1143,10 @@ class SQLiteStore:
 
     def _sync_delete_summary(self, summary_id: str, user_id: str) -> bool:
         conn = self._get_conn()
-        res = conn.execute("DELETE FROM conversation_summaries WHERE id = ? AND user_id = ?", (summary_id, user_id))
+        res = conn.execute(
+            "DELETE FROM conversation_summaries WHERE id = ? AND user_id = ?",
+            (summary_id,
+             user_id))
         conn.commit()
         return res.rowcount > 0
 
@@ -1148,14 +1171,14 @@ class SQLiteStore:
                  :reference_count, :last_referenced, :created_at)
             """,
             {
-                "id":              summary.id,
-                "user_id":         summary.user_id,
-                "summary":         summary.summary,
-                "ttl_setting":     summary.ttl_setting,
-                "expires_at":      expires_at,
+                "id": summary.id,
+                "user_id": summary.user_id,
+                "summary": summary.summary,
+                "ttl_setting": summary.ttl_setting,
+                "expires_at": expires_at,
                 "reference_count": summary.reference_count,
                 "last_referenced": _dt_to_str(summary.last_referenced),
-                "created_at":      _dt_to_str(summary.created_at) or _now_str(),
+                "created_at": _dt_to_str(summary.created_at) or _now_str(),
             },
         )
         conn.commit()
@@ -1217,8 +1240,8 @@ class SQLiteStore:
             """,
             {
                 "expires_at": _dt_to_str(new_expires_at),
-                "now":        _now_str(),
-                "id":         summary_id,
+                "now": _now_str(),
+                "id": summary_id,
             },
         )
         conn.commit()
@@ -1255,7 +1278,7 @@ class SQLiteStore:
             expires_at=_str_to_dt(r["expires_at"]),
             reference_count=r["reference_count"],
             last_referenced=_str_to_dt(r["last_referenced"]),
-            created_at=_str_to_dt(r["created_at"]),
+            created_at=_str_to_dt(r["created_at"]),  # type: ignore
         )
 
     # -------------------------------------------------------------------------
@@ -1297,10 +1320,10 @@ class SQLiteStore:
                 auto_extend       = excluded.auto_extend
             """,
             {
-                "user_id":           settings.user_id,
+                "user_id": settings.user_id,
                 "summaries_enabled": int(settings.summaries_enabled),
-                "default_ttl":       settings.default_ttl,
-                "auto_extend":       int(settings.auto_extend),
+                "default_ttl": settings.default_ttl,
+                "auto_extend": int(settings.auto_extend),
             },
         )
         conn.commit()
@@ -1329,7 +1352,8 @@ class SQLiteStore:
             cloud_fallback_provider=row["cloud_fallback_provider"],
             cloud_fallback_model=row["cloud_fallback_model"],
             voice_id=row["voice_id"] if "voice_id" in row.keys() else "river",
-            whisper_model=row["whisper_model"] if "whisper_model" in row.keys() else "base",
+            whisper_model=row["whisper_model"] if "whisper_model" in row.keys(
+            ) else "base",
         )
 
     async def save_llm_settings(self, settings: LLMSettings) -> None:
@@ -1405,15 +1429,16 @@ class SQLiteStore:
         )
         conn.commit()
 
-
     # -------------------------------------------------------------------------
     # JWT Revocation
     # -------------------------------------------------------------------------
 
-    async def revoke_token(self, jti: str, user_id: str, expires_at: datetime) -> None:
+    async def revoke_token(self, jti: str, user_id: str,
+                           expires_at: datetime) -> None:
         await self._run(self._sync_revoke_token, jti, user_id, expires_at)
 
-    def _sync_revoke_token(self, jti: str, user_id: str, expires_at: datetime) -> None:
+    def _sync_revoke_token(self, jti: str, user_id: str,
+                           expires_at: datetime) -> None:
         conn = self._get_conn()
         conn.execute(
             "INSERT INTO revoked_tokens (jti, user_id, revoked_at, expires_at) VALUES (?,?,?,?)",
@@ -1426,7 +1451,8 @@ class SQLiteStore:
 
     def _sync_is_token_revoked(self, jti: str) -> bool:
         conn = self._get_conn()
-        row = conn.execute("SELECT 1 FROM revoked_tokens WHERE jti=?", (jti,)).fetchone()
+        row = conn.execute(
+            "SELECT 1 FROM revoked_tokens WHERE jti=?", (jti,)).fetchone()
         return row is not None
 
     async def delete_expired_tokens(self) -> int:
@@ -1434,7 +1460,8 @@ class SQLiteStore:
 
     def _sync_delete_expired_tokens(self) -> int:
         conn = self._get_conn()
-        res = conn.execute("DELETE FROM revoked_tokens WHERE expires_at < ?", (_now_str(),))
+        res = conn.execute(
+            "DELETE FROM revoked_tokens WHERE expires_at < ?", (_now_str(),))
         conn.commit()
         return res.rowcount
 
@@ -1466,7 +1493,7 @@ class SQLiteStore:
     ) -> None:
         conn = self._get_conn()
         now = datetime.now(tz=timezone.utc).timestamp()
-        
+
         # 1. Upsert note
         conn.execute(
             """
@@ -1480,16 +1507,23 @@ class SQLiteStore:
             """,
             (owner_kind, owner_id, virtual_path, title, size, mtime, now)
         )
-        
+
         # Always fetch the ID by virtual_path to be safe (Task A.2)
-        row = conn.execute("SELECT id FROM vault_notes WHERE virtual_path = ?", (virtual_path,)).fetchone()
+        row = conn.execute(
+            "SELECT id FROM vault_notes WHERE virtual_path = ?",
+            (virtual_path,
+             )).fetchone()
         note_id = row["id"]
 
         # 2. Clear old links and insert new ones
-        conn.execute("DELETE FROM vault_links WHERE src_note_id = ?", (note_id,))
+        conn.execute(
+            "DELETE FROM vault_links WHERE src_note_id = ?", (note_id,))
         for target in links:
-            conn.execute("INSERT INTO vault_links (src_note_id, target_title) VALUES (?, ?)", (note_id, target))
-            
+            conn.execute(
+                "INSERT INTO vault_links (src_note_id, target_title) VALUES (?, ?)",
+                (note_id,
+                 target))
+
         conn.commit()
 
     async def delete_vault_note_by_path(self, virtual_path: str) -> None:
@@ -1497,23 +1531,32 @@ class SQLiteStore:
 
     def _sync_delete_vault_note_by_path(self, virtual_path: str) -> None:
         conn = self._get_conn()
-        conn.execute("DELETE FROM vault_notes WHERE virtual_path = ?", (virtual_path,))
+        conn.execute(
+            "DELETE FROM vault_notes WHERE virtual_path = ?", (virtual_path,))
         conn.commit()
 
-    async def get_vault_note_by_path(self, virtual_path: str) -> Optional[dict]:
+    async def get_vault_note_by_path(
+            self, virtual_path: str) -> Optional[dict]:
         return await self._run(self._sync_get_vault_note_by_path, virtual_path)
 
-    def _sync_get_vault_note_by_path(self, virtual_path: str) -> Optional[dict]:
+    def _sync_get_vault_note_by_path(
+            self, virtual_path: str) -> Optional[dict]:
         conn = self._get_conn()
-        row = conn.execute("SELECT * FROM vault_notes WHERE virtual_path = ?", (virtual_path,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM vault_notes WHERE virtual_path = ?",
+            (virtual_path,
+             )).fetchone()
         return dict(row) if row else None
 
-    async def search_vault_notes(self, user_id: str, query: str, limit: int = 50) -> list[dict]:
-        # NOTE: This search doesn't strictly check permissions by owner_id yet. 
-        # The caller (VaultProvider) is expected to filter or pass the right constraints.
+    async def search_vault_notes(
+            self, user_id: str, query: str, limit: int = 50) -> list[dict]:
+        # NOTE: This search doesn't strictly check permissions by owner_id yet.
+        # The caller (VaultProvider) is expected to filter or pass the right
+        # constraints.
         return await self._run(self._sync_search_vault_notes, user_id, query, limit)
 
-    def _sync_search_vault_notes(self, user_id: str, query: str, limit: int) -> list[dict]:
+    def _sync_search_vault_notes(
+            self, user_id: str, query: str, limit: int) -> list[dict]:
         conn = self._get_conn()
         rows = conn.execute(
             "SELECT * FROM vault_notes WHERE title LIKE ? AND owner_kind = 'user' AND owner_id = ? LIMIT ?",
@@ -1537,10 +1580,12 @@ class SQLiteStore:
         ).fetchall()
         return [dict(r) for r in rows]
 
-    async def log_vault_audit(self, user_id: str, action: str, virtual_path: str) -> None:
+    async def log_vault_audit(
+            self, user_id: str, action: str, virtual_path: str) -> None:
         await self._run(self._sync_log_vault_audit, user_id, action, virtual_path)
 
-    def _sync_log_vault_audit(self, user_id: str, action: str, virtual_path: str) -> None:
+    def _sync_log_vault_audit(
+            self, user_id: str, action: str, virtual_path: str) -> None:
         conn = self._get_conn()
         conn.execute(
             "INSERT INTO vault_audit (user_id, action, virtual_path, ts) VALUES (?, ?, ?, ?)",
@@ -1558,8 +1603,9 @@ class SQLiteStore:
             (user_id,)
         ).fetchall()
 
-        nodes_by_id   = {r["id"]: dict(r) for r in note_rows}
-        title_to_path = {r["title"]: r["virtual_path"] for r in note_rows if r["title"]}
+        nodes_by_id = {r["id"]: dict(r) for r in note_rows}
+        title_to_path = {r["title"]: r["virtual_path"]
+                         for r in note_rows if r["title"]}
 
         edge_rows = conn.execute(
             """
@@ -1571,13 +1617,13 @@ class SQLiteStore:
             (user_id,)
         ).fetchall()
 
-        edges       = []
+        edges = []
         ghost_nodes = {}
 
         for row in edge_rows:
-            src_path     = row["src_path"]
+            src_path = row["src_path"]
             target_title = row["target_title"]
-            target_path  = title_to_path.get(target_title)
+            target_path = title_to_path.get(target_title)
 
             if target_path:
                 edges.append({"source": src_path, "target": target_path})
@@ -1592,11 +1638,11 @@ class SQLiteStore:
 
         nodes = [
             {
-                "id":           n["virtual_path"],
+                "id": n["virtual_path"],
                 "virtual_path": n["virtual_path"],
-                "title":        n["title"] or n["virtual_path"].split("/")[-1].replace(".md", ""),
-                "owner_kind":   n["owner_kind"],
-                "ghost":        False,
+                "title": n["title"] or n["virtual_path"].split("/")[-1].replace(".md", ""),
+                "owner_kind": n["owner_kind"],
+                "ghost": False,
             }
             for n in nodes_by_id.values()
         ]
@@ -1629,7 +1675,8 @@ class SQLiteStore:
             "SELECT * FROM pulse_snapshots WHERE source = ? ORDER BY ts DESC LIMIT 1",
             (source,)
         ).fetchone()
-        if not row: return None
+        if not row:
+            return None
         return {
             "source": row["source"],
             "data": json.loads(row["data_json"]),
@@ -1647,9 +1694,9 @@ class SQLiteStore:
             DELETE FROM pulse_snapshots
             WHERE source = ?
             AND id NOT IN (
-                SELECT id FROM pulse_snapshots 
-                WHERE source = ? 
-                ORDER BY ts DESC 
+                SELECT id FROM pulse_snapshots
+                WHERE source = ?
+                ORDER BY ts DESC
                 LIMIT ?
             )
             """,
@@ -1697,7 +1744,7 @@ class SQLiteStore:
         conn.execute(
             """
             INSERT INTO voice_id_events (
-                ts, identified_user_id, score, runner_up_user_id, runner_up_score, 
+                ts, identified_user_id, score, runner_up_user_id, runner_up_score,
                 audio_duration_ms, session_kind
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
@@ -1732,15 +1779,18 @@ class SQLiteStore:
     # User auth methods
     # =========================================================================
 
-    async def create_user(self, id: str, email: str, password_hash: str, display_name: str, role: str = "user", is_approved: bool = False) -> None:
+    async def create_user(self, id: str, email: str, password_hash: str,
+                          display_name: str, role: str = "user", is_approved: bool = False) -> None:
         await self._run(self._sync_create_user, id, email, password_hash, display_name, role, is_approved)
 
-    def _sync_create_user(self, id: str, email: str, password_hash: str, display_name: str, role: str, is_approved: bool) -> None:
+    def _sync_create_user(self, id: str, email: str, password_hash: str,
+                          display_name: str, role: str, is_approved: bool) -> None:
         conn = self._get_conn()
         now = _now_str()
         conn.execute(
             "INSERT INTO users (id, email, password_hash, display_name, role, is_approved, force_password_change, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
-            (id, email, password_hash, display_name, role, int(is_approved), 0, now, now),
+            (id, email, password_hash, display_name,
+             role, int(is_approved), 0, now, now),
         )
         conn.commit()
 
@@ -1798,7 +1848,11 @@ class SQLiteStore:
 
     def _sync_update_user_theme(self, user_id: str, theme: str) -> None:
         conn = self._get_conn()
-        conn.execute("UPDATE users SET theme=?, updated_at=? WHERE id=?", (theme, _now_str(), user_id))
+        conn.execute(
+            "UPDATE users SET theme=?, updated_at=? WHERE id=?",
+            (theme,
+             _now_str(),
+             user_id))
         conn.commit()
 
     async def update_user_palette(self, user_id: str, palette: str) -> None:
@@ -1806,15 +1860,25 @@ class SQLiteStore:
 
     def _sync_update_user_palette(self, user_id: str, palette: str) -> None:
         conn = self._get_conn()
-        conn.execute("UPDATE users SET palette=?, updated_at=? WHERE id=?", (palette, _now_str(), user_id))
+        conn.execute(
+            "UPDATE users SET palette=?, updated_at=? WHERE id=?",
+            (palette,
+             _now_str(),
+             user_id))
         conn.commit()
 
-    async def update_user_environment(self, user_id: str, environment: str) -> None:
+    async def update_user_environment(
+            self, user_id: str, environment: str) -> None:
         await self._run(self._sync_update_user_environment, user_id, environment)
 
-    def _sync_update_user_environment(self, user_id: str, environment: str) -> None:
+    def _sync_update_user_environment(
+            self, user_id: str, environment: str) -> None:
         conn = self._get_conn()
-        conn.execute("UPDATE users SET environment=?, updated_at=? WHERE id=?", (environment, _now_str(), user_id))
+        conn.execute(
+            "UPDATE users SET environment=?, updated_at=? WHERE id=?",
+            (environment,
+             _now_str(),
+             user_id))
         conn.commit()
 
     async def update_user_universe(self, user_id: str, universe: str) -> None:
@@ -1822,7 +1886,11 @@ class SQLiteStore:
 
     def _sync_update_user_universe(self, user_id: str, universe: str) -> None:
         conn = self._get_conn()
-        conn.execute("UPDATE users SET universe=?, updated_at=? WHERE id=?", (universe, _now_str(), user_id))
+        conn.execute(
+            "UPDATE users SET universe=?, updated_at=? WHERE id=?",
+            (universe,
+             _now_str(),
+             user_id))
         conn.commit()
 
     async def update_user_mood(self, user_id: str, mood: str) -> None:
@@ -1830,7 +1898,11 @@ class SQLiteStore:
 
     def _sync_update_user_mood(self, user_id: str, mood: str) -> None:
         conn = self._get_conn()
-        conn.execute("UPDATE users SET mood=?, updated_at=? WHERE id=?", (mood, _now_str(), user_id))
+        conn.execute(
+            "UPDATE users SET mood=?, updated_at=? WHERE id=?",
+            (mood,
+             _now_str(),
+             user_id))
         conn.commit()
 
     async def email_exists(self, email: str) -> bool:
@@ -1838,7 +1910,8 @@ class SQLiteStore:
 
     def _sync_email_exists(self, email: str) -> bool:
         conn = self._get_conn()
-        row = conn.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone()
+        row = conn.execute(
+            "SELECT 1 FROM users WHERE email=?", (email,)).fetchone()
         return row is not None
 
     async def has_admin(self) -> bool:
@@ -1846,7 +1919,8 @@ class SQLiteStore:
 
     def _sync_has_admin(self) -> bool:
         conn = self._get_conn()
-        row = conn.execute("SELECT 1 FROM users WHERE role='admin' LIMIT 1").fetchone()
+        row = conn.execute(
+            "SELECT 1 FROM users WHERE role='admin' LIMIT 1").fetchone()
         return row is not None
 
     async def list_users(self) -> list:
@@ -1871,10 +1945,12 @@ class SQLiteStore:
             } for r in rows
         ]
 
-    async def update_user(self, user_id: str, role: Optional[str] = None, is_approved: Optional[bool] = None, force_password_change: Optional[bool] = None, is_suspended: Optional[bool] = None) -> bool:
+    async def update_user(self, user_id: str, role: Optional[str] = None, is_approved: Optional[bool]
+                          = None, force_password_change: Optional[bool] = None, is_suspended: Optional[bool] = None) -> bool:
         return await self._run(self._sync_update_user, user_id, role, is_approved, force_password_change, is_suspended)
 
-    def _sync_update_user(self, user_id: str, role: Optional[str], is_approved: Optional[bool], force_password_change: Optional[bool], is_suspended: Optional[bool]) -> bool:
+    def _sync_update_user(self, user_id: str, role: Optional[str], is_approved: Optional[bool],
+                          force_password_change: Optional[bool], is_suspended: Optional[bool]) -> bool:
         conn = self._get_conn()
         now = _now_str()
         parts, vals = [], []
@@ -1886,13 +1962,13 @@ class SQLiteStore:
             vals.append(role)
         if is_approved is not None:
             parts.append("is_approved = ?")
-            vals.append(int(is_approved))
+            vals.append(int(is_approved))  # type: ignore
         if force_password_change is not None:
             parts.append("force_password_change = ?")
-            vals.append(int(force_password_change))
+            vals.append(int(force_password_change))  # type: ignore
         if is_suspended is not None:
             parts.append("is_suspended = ?")
-            vals.append(int(is_suspended))
+            vals.append(int(is_suspended))  # type: ignore
         if not parts:
             return False
         parts.append("updated_at = ?")
@@ -1905,10 +1981,12 @@ class SQLiteStore:
         conn.commit()
         return True
 
-    async def update_user_password(self, user_id: str, password_hash: str, force_change: bool = False) -> None:
+    async def update_user_password(
+            self, user_id: str, password_hash: str, force_change: bool = False) -> None:
         await self._run(self._sync_update_user_password, user_id, password_hash, force_change)
 
-    def _sync_update_user_password(self, user_id: str, password_hash: str, force_change: bool) -> None:
+    def _sync_update_user_password(
+            self, user_id: str, password_hash: str, force_change: bool) -> None:
         conn = self._get_conn()
         now = _now_str()
         force_val = 1 if force_change else 0
@@ -1928,7 +2006,7 @@ class SQLiteStore:
 
     def _sync_get_totp_state(self, user_id: str) -> dict:
         conn = self._get_conn()
-        cur  = conn.execute(
+        cur = conn.execute(
             "SELECT totp_enabled, totp_secret, totp_recovery_codes FROM users WHERE id = ?",
             (user_id,),
         )
@@ -1942,17 +2020,19 @@ class SQLiteStore:
         except (ValueError, TypeError):
             recovery = []
         return {
-            "enabled":        bool(row[0]),
-            "secret":         row[1] or "",
+            "enabled": bool(row[0]),
+            "secret": row[1] or "",
             "recovery_codes": recovery,
         }
 
-    async def enable_totp(self, user_id: str, secret: str, recovery_hashes: list[str]) -> None:
+    async def enable_totp(self, user_id: str, secret: str,
+                          recovery_hashes: list[str]) -> None:
         await self._run(self._sync_enable_totp, user_id, secret, recovery_hashes)
 
-    def _sync_enable_totp(self, user_id: str, secret: str, recovery_hashes: list[str]) -> None:
+    def _sync_enable_totp(self, user_id: str, secret: str,
+                          recovery_hashes: list[str]) -> None:
         conn = self._get_conn()
-        now  = _now_str()
+        now = _now_str()
         conn.execute(
             "UPDATE users SET totp_secret = ?, totp_enabled = 1, totp_recovery_codes = ?, updated_at = ? WHERE id = ?",
             (secret, json.dumps(recovery_hashes), now, user_id),
@@ -1964,7 +2044,7 @@ class SQLiteStore:
 
     def _sync_disable_totp(self, user_id: str) -> None:
         conn = self._get_conn()
-        now  = _now_str()
+        now = _now_str()
         conn.execute(
             "UPDATE users SET totp_secret = '', totp_enabled = 0, totp_recovery_codes = '', updated_at = ? WHERE id = ?",
             (now, user_id),
@@ -1981,7 +2061,7 @@ class SQLiteStore:
         if 0 <= index < len(codes):
             codes.pop(index)
         conn = self._get_conn()
-        now  = _now_str()
+        now = _now_str()
         conn.execute(
             "UPDATE users SET totp_recovery_codes = ?, updated_at = ? WHERE id = ?",
             (json.dumps(codes), now, user_id),
@@ -2005,13 +2085,13 @@ class SQLiteStore:
         out: List[dict] = []
         for row in cur.fetchall():
             out.append({
-                "id":         row[0],
-                "title":      row[1],
-                "kind":       row[2],
-                "pinned":     bool(row[3]),
+                "id": row[0],
+                "title": row[1],
+                "kind": row[2],
+                "pinned": bool(row[3]),
                 "created_at": row[4],
                 "updated_at": row[5],
-                "size":       int(row[6] or 0),
+                "size": int(row[6] or 0),
             })
         return out
 
@@ -2028,11 +2108,11 @@ class SQLiteStore:
         if row is None:
             return None
         return {
-            "id":         row[0],
-            "title":      row[1],
-            "kind":       row[2],
-            "body":       row[3],
-            "pinned":     bool(row[4]),
+            "id": row[0],
+            "title": row[1],
+            "kind": row[2],
+            "body": row[3],
+            "pinned": bool(row[4]),
             "created_at": row[5],
             "updated_at": row[6],
         }
@@ -2047,10 +2127,12 @@ class SQLiteStore:
         ).fetchone()
         return int(row[0]) if row else 0
 
-    async def create_document(self, owner_id: str, title: str, kind: str, body: str) -> dict:
+    async def create_document(
+            self, owner_id: str, title: str, kind: str, body: str) -> dict:
         return await self._run(self._sync_create_document, owner_id, title, kind, body)
 
-    def _sync_create_document(self, owner_id: str, title: str, kind: str, body: str) -> dict:
+    def _sync_create_document(
+            self, owner_id: str, title: str, kind: str, body: str) -> dict:
         conn = self._get_conn()
         doc_id = str(uuid.uuid4())
         now = _now_str()
@@ -2061,11 +2143,11 @@ class SQLiteStore:
         )
         conn.commit()
         return {
-            "id":         doc_id,
-            "title":      title,
-            "kind":       kind,
-            "body":       body,
-            "pinned":     False,
+            "id": doc_id,
+            "title": title,
+            "kind": kind,
+            "body": body,
+            "pinned": False,
             "created_at": now,
             "updated_at": now,
         }
@@ -2097,23 +2179,24 @@ class SQLiteStore:
         if existing is None:
             return None
         new_title = existing["title"] if title is None else title
-        new_kind  = existing["kind"]  if kind  is None else kind
-        new_body  = existing["body"]  if body  is None else body
-        new_pin   = existing["pinned"] if pinned is None else bool(pinned)
+        new_kind = existing["kind"] if kind is None else kind
+        new_body = existing["body"] if body is None else body
+        new_pin = existing["pinned"] if pinned is None else bool(pinned)
         now = _now_str()
         conn = self._get_conn()
         conn.execute(
             "UPDATE documents SET title=?, kind=?, body=?, pinned=?, updated_at=? "
             "WHERE id=? AND owner_id=?",
-            (new_title, new_kind, new_body, 1 if new_pin else 0, now, doc_id, owner_id),
+            (new_title, new_kind, new_body,
+             1 if new_pin else 0, now, doc_id, owner_id),
         )
         conn.commit()
         return {
-            "id":         doc_id,
-            "title":      new_title,
-            "kind":       new_kind,
-            "body":       new_body,
-            "pinned":     new_pin,
+            "id": doc_id,
+            "title": new_title,
+            "kind": new_kind,
+            "body": new_body,
+            "pinned": new_pin,
             "created_at": existing["created_at"],
             "updated_at": now,
         }
@@ -2124,7 +2207,8 @@ class SQLiteStore:
     def _sync_delete_document(self, owner_id: str, doc_id: str) -> bool:
         conn = self._get_conn()
         cur = conn.execute(
-            "DELETE FROM documents WHERE id=? AND owner_id=?", (doc_id, owner_id)
+            "DELETE FROM documents WHERE id=? AND owner_id=?", (
+                doc_id, owner_id)
         )
         conn.commit()
         return cur.rowcount > 0
@@ -2133,10 +2217,12 @@ class SQLiteStore:
     # Skills library (Q2#7)
     # -------------------------------------------------------------------------
 
-    async def list_skills(self, owner_id: str, *, active_only: bool = False) -> List[dict]:
+    async def list_skills(self, owner_id: str, *,
+                          active_only: bool = False) -> List[dict]:
         return await self._run(self._sync_list_skills, owner_id, active_only)
 
-    def _sync_list_skills(self, owner_id: str, active_only: bool) -> List[dict]:
+    def _sync_list_skills(self, owner_id: str,
+                          active_only: bool) -> List[dict]:
         conn = self._get_conn()
         sql = (
             "SELECT id, name, prompt, trigger_phrases, is_active, created_at, updated_at "
@@ -2152,13 +2238,13 @@ class SQLiteStore:
     @staticmethod
     def _row_to_skill(row) -> dict:
         return {
-            "id":              row[0],
-            "name":            row[1],
-            "prompt":          row[2],
+            "id": row[0],
+            "name": row[1],
+            "prompt": row[2],
             "trigger_phrases": row[3],
-            "is_active":       bool(row[4]),
-            "created_at":      row[5],
-            "updated_at":      row[6],
+            "is_active": bool(row[4]),
+            "created_at": row[5],
+            "updated_at": row[6],
         }
 
     async def get_skill(self, owner_id: str, skill_id: str) -> Optional[dict]:
@@ -2178,7 +2264,8 @@ class SQLiteStore:
 
     def _sync_count_skills(self, owner_id: str) -> int:
         conn = self._get_conn()
-        row = conn.execute("SELECT COUNT(*) FROM skills WHERE owner_id=?", (owner_id,)).fetchone()
+        row = conn.execute(
+            "SELECT COUNT(*) FROM skills WHERE owner_id=?", (owner_id,)).fetchone()
         return int(row[0]) if row else 0
 
     async def create_skill(
@@ -2205,13 +2292,13 @@ class SQLiteStore:
         )
         conn.commit()
         return {
-            "id":              skill_id,
-            "name":            name,
-            "prompt":          prompt,
+            "id": skill_id,
+            "name": name,
+            "prompt": prompt,
             "trigger_phrases": trigger_phrases,
-            "is_active":       True,
-            "created_at":      now,
-            "updated_at":      now,
+            "is_active": True,
+            "created_at": now,
+            "updated_at": now,
         }
 
     async def update_skill(
@@ -2241,26 +2328,33 @@ class SQLiteStore:
         existing = self._sync_get_skill(owner_id, skill_id)
         if existing is None:
             return None
-        new_name    = existing["name"]            if name            is None else name
-        new_prompt  = existing["prompt"]          if prompt          is None else prompt
-        new_trig    = existing["trigger_phrases"] if trigger_phrases is None else trigger_phrases
-        new_active  = existing["is_active"]       if is_active       is None else bool(is_active)
+        new_name = existing["name"] if name is None else name
+        new_prompt = existing["prompt"] if prompt is None else prompt
+        new_trig = existing["trigger_phrases"] if trigger_phrases is None else trigger_phrases
+        new_active = existing["is_active"] if is_active is None else bool(
+            is_active)
         now = _now_str()
         conn = self._get_conn()
         conn.execute(
             "UPDATE skills SET name=?, prompt=?, trigger_phrases=?, is_active=?, updated_at=? "
             "WHERE id=? AND owner_id=?",
-            (new_name, new_prompt, new_trig, 1 if new_active else 0, now, skill_id, owner_id),
+            (new_name,
+             new_prompt,
+             new_trig,
+             1 if new_active else 0,
+             now,
+             skill_id,
+             owner_id),
         )
         conn.commit()
         return {
-            "id":              skill_id,
-            "name":            new_name,
-            "prompt":          new_prompt,
+            "id": skill_id,
+            "name": new_name,
+            "prompt": new_prompt,
             "trigger_phrases": new_trig,
-            "is_active":       new_active,
-            "created_at":      existing["created_at"],
-            "updated_at":      now,
+            "is_active": new_active,
+            "created_at": existing["created_at"],
+            "updated_at": now,
         }
 
     async def delete_skill(self, owner_id: str, skill_id: str) -> bool:
@@ -2269,7 +2363,8 @@ class SQLiteStore:
     def _sync_delete_skill(self, owner_id: str, skill_id: str) -> bool:
         conn = self._get_conn()
         cur = conn.execute(
-            "DELETE FROM skills WHERE id=? AND owner_id=?", (skill_id, owner_id)
+            "DELETE FROM skills WHERE id=? AND owner_id=?", (
+                skill_id, owner_id)
         )
         conn.commit()
         return cur.rowcount > 0
@@ -2299,18 +2394,20 @@ class SQLiteStore:
         except (ValueError, TypeError):
             cfg = {}
         return {
-            "id":         row[0],
-            "name":       row[1],
-            "config":     cfg,
+            "id": row[0],
+            "name": row[1],
+            "config": cfg,
             "is_default": bool(row[3]),
             "created_at": row[4],
             "updated_at": row[5],
         }
 
-    async def get_preset(self, owner_id: str, preset_id: str) -> Optional[dict]:
+    async def get_preset(self, owner_id: str,
+                         preset_id: str) -> Optional[dict]:
         return await self._run(self._sync_get_preset, owner_id, preset_id)
 
-    def _sync_get_preset(self, owner_id: str, preset_id: str) -> Optional[dict]:
+    def _sync_get_preset(self, owner_id: str,
+                         preset_id: str) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(
             "SELECT id, name, config_json, is_default, created_at, updated_at "
@@ -2329,10 +2426,12 @@ class SQLiteStore:
         ).fetchone()
         return int(row[0]) if row else 0
 
-    async def create_preset(self, owner_id: str, name: str, config: dict) -> dict:
+    async def create_preset(self, owner_id: str,
+                            name: str, config: dict) -> dict:
         return await self._run(self._sync_create_preset, owner_id, name, config)
 
-    def _sync_create_preset(self, owner_id: str, name: str, config: dict) -> dict:
+    def _sync_create_preset(self, owner_id: str,
+                            name: str, config: dict) -> dict:
         conn = self._get_conn()
         preset_id = str(uuid.uuid4())
         now = _now_str()
@@ -2343,9 +2442,9 @@ class SQLiteStore:
         )
         conn.commit()
         return {
-            "id":         preset_id,
-            "name":       name,
-            "config":     config or {},
+            "id": preset_id,
+            "name": name,
+            "config": config or {},
             "is_default": False,
             "created_at": now,
             "updated_at": now,
@@ -2375,9 +2474,10 @@ class SQLiteStore:
         existing = self._sync_get_preset(owner_id, preset_id)
         if existing is None:
             return None
-        new_name   = existing["name"]       if name       is None else name
-        new_cfg    = existing["config"]     if config     is None else config
-        new_def    = existing["is_default"] if is_default is None else bool(is_default)
+        new_name = existing["name"] if name is None else name
+        new_cfg = existing["config"] if config is None else config
+        new_def = existing["is_default"] if is_default is None else bool(
+            is_default)
         now = _now_str()
         conn = self._get_conn()
         if new_def:
@@ -2389,13 +2489,14 @@ class SQLiteStore:
         conn.execute(
             "UPDATE session_presets SET name=?, config_json=?, is_default=?, updated_at=? "
             "WHERE id=? AND owner_id=?",
-            (new_name, json.dumps(new_cfg or {}), 1 if new_def else 0, now, preset_id, owner_id),
+            (new_name, json.dumps(new_cfg or {}),
+             1 if new_def else 0, now, preset_id, owner_id),
         )
         conn.commit()
         return {
-            "id":         preset_id,
-            "name":       new_name,
-            "config":     new_cfg or {},
+            "id": preset_id,
+            "name": new_name,
+            "config": new_cfg or {},
             "is_default": new_def,
             "created_at": existing["created_at"],
             "updated_at": now,
@@ -2444,24 +2545,27 @@ class SQLiteStore:
         conn.execute(
             "INSERT INTO webhook_tokens (id, label, token_hash, scopes_json, created_by, created_at, expires_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (token_id, label, token_hash, json.dumps(scopes or []), created_by, now, expires_at),
+            (token_id, label, token_hash, json.dumps(
+                scopes or []), created_by, now, expires_at),
         )
         conn.execute(
             "INSERT INTO webhook_token_audit (token_id, action, detail, actor, ts) VALUES (?, ?, ?, ?, ?)",
-            (token_id, "issued", json.dumps({"label": label, "scopes": scopes}), created_by, now),
+            (token_id, "issued", json.dumps(
+                {"label": label, "scopes": scopes}), created_by, now),
         )
         conn.commit()
         return {
-            "id":         token_id,
-            "label":      label,
-            "scopes":     scopes or [],
+            "id": token_id,
+            "label": label,
+            "scopes": scopes or [],
             "created_by": created_by,
             "created_at": now,
             "expires_at": expires_at,
             "revoked_at": None,
         }
 
-    async def list_webhook_tokens(self, include_revoked: bool = False) -> List[dict]:
+    async def list_webhook_tokens(
+            self, include_revoked: bool = False) -> List[dict]:
         return await self._run(self._sync_list_webhook_tokens, include_revoked)
 
     def _sync_list_webhook_tokens(self, include_revoked: bool) -> List[dict]:
@@ -2481,22 +2585,24 @@ class SQLiteStore:
             except (ValueError, TypeError):
                 scopes = []
             out.append({
-                "id":           r[0],
-                "label":        r[1],
-                "scopes":       scopes,
-                "created_by":   r[3],
-                "created_at":   r[4],
-                "expires_at":   r[5],
-                "revoked_at":   r[6],
+                "id": r[0],
+                "label": r[1],
+                "scopes": scopes,
+                "created_by": r[3],
+                "created_at": r[4],
+                "expires_at": r[5],
+                "revoked_at": r[6],
                 "last_used_at": r[7],
-                "use_count":    int(r[8] or 0),
+                "use_count": int(r[8] or 0),
             })
         return out
 
-    async def get_webhook_token_by_hash(self, token_hash: str) -> Optional[dict]:
+    async def get_webhook_token_by_hash(
+            self, token_hash: str) -> Optional[dict]:
         return await self._run(self._sync_get_webhook_token_by_hash, token_hash)
 
-    def _sync_get_webhook_token_by_hash(self, token_hash: str) -> Optional[dict]:
+    def _sync_get_webhook_token_by_hash(
+            self, token_hash: str) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(
             "SELECT id, label, scopes_json, created_by, created_at, expires_at, revoked_at "
@@ -2510,9 +2616,9 @@ class SQLiteStore:
         except (ValueError, TypeError):
             scopes = []
         return {
-            "id":         row[0],
-            "label":      row[1],
-            "scopes":     scopes,
+            "id": row[0],
+            "label": row[1],
+            "scopes": scopes,
             "created_by": row[3],
             "created_at": row[4],
             "expires_at": row[5],
@@ -2539,10 +2645,12 @@ class SQLiteStore:
         conn.commit()
         return False
 
-    async def record_webhook_token_use(self, token_id: str, detail: str = "") -> None:
+    async def record_webhook_token_use(
+            self, token_id: str, detail: str = "") -> None:
         await self._run(self._sync_record_webhook_token_use, token_id, detail)
 
-    def _sync_record_webhook_token_use(self, token_id: str, detail: str) -> None:
+    def _sync_record_webhook_token_use(
+            self, token_id: str, detail: str) -> None:
         conn = self._get_conn()
         now = _now_str()
         conn.execute(
@@ -2555,10 +2663,12 @@ class SQLiteStore:
         )
         conn.commit()
 
-    async def list_webhook_token_audit(self, token_id: Optional[str] = None, limit: int = 200) -> List[dict]:
+    async def list_webhook_token_audit(
+            self, token_id: Optional[str] = None, limit: int = 200) -> List[dict]:
         return await self._run(self._sync_list_webhook_token_audit, token_id, limit)
 
-    def _sync_list_webhook_token_audit(self, token_id: Optional[str], limit: int) -> List[dict]:
+    def _sync_list_webhook_token_audit(
+            self, token_id: Optional[str], limit: int) -> List[dict]:
         conn = self._get_conn()
         if token_id:
             rows = conn.execute(
@@ -2573,7 +2683,8 @@ class SQLiteStore:
                 (int(limit),),
             ).fetchall()
         return [
-            {"id": r[0], "token_id": r[1], "action": r[2], "detail": r[3], "actor": r[4], "ts": r[5]}
+            {"id": r[0], "token_id": r[1], "action": r[2],
+                "detail": r[3], "actor": r[4], "ts": r[5]}
             for r in rows
         ]
 
@@ -2623,20 +2734,22 @@ class SQLiteStore:
         )
         conn.commit()
         return {
-            "id":         run_id,
-            "prompt":     prompt,
-            "model_a":    model_a,
-            "model_b":    model_b,
+            "id": run_id,
+            "prompt": prompt,
+            "model_a": model_a,
+            "model_b": model_b,
             "response_a": response_a,
             "response_b": response_b,
-            "winner":     "",
+            "winner": "",
             "created_at": now,
         }
 
-    async def record_compare_vote(self, run_id: str, owner_id: str, winner: str) -> Optional[dict]:
+    async def record_compare_vote(
+            self, run_id: str, owner_id: str, winner: str) -> Optional[dict]:
         return await self._run(self._sync_record_compare_vote, run_id, owner_id, winner)
 
-    def _sync_record_compare_vote(self, run_id: str, owner_id: str, winner: str) -> Optional[dict]:
+    def _sync_record_compare_vote(
+            self, run_id: str, owner_id: str, winner: str) -> Optional[dict]:
         if winner not in {"a", "b", "tie"}:
             return None
         conn = self._get_conn()
@@ -2651,10 +2764,12 @@ class SQLiteStore:
             return None
         return self._sync_get_compare_run(owner_id, run_id)
 
-    async def get_compare_run(self, owner_id: str, run_id: str) -> Optional[dict]:
+    async def get_compare_run(self, owner_id: str,
+                              run_id: str) -> Optional[dict]:
         return await self._run(self._sync_get_compare_run, owner_id, run_id)
 
-    def _sync_get_compare_run(self, owner_id: str, run_id: str) -> Optional[dict]:
+    def _sync_get_compare_run(self, owner_id: str,
+                              run_id: str) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(
             "SELECT id, prompt, model_a_provider, model_a_id, model_b_provider, "
@@ -2665,21 +2780,23 @@ class SQLiteStore:
         if not row:
             return None
         return {
-            "id":         row[0],
-            "prompt":     row[1],
-            "model_a":    {"provider": row[2], "model": row[3]},
-            "model_b":    {"provider": row[4], "model": row[5]},
+            "id": row[0],
+            "prompt": row[1],
+            "model_a": {"provider": row[2], "model": row[3]},
+            "model_b": {"provider": row[4], "model": row[5]},
             "response_a": row[6],
             "response_b": row[7],
-            "winner":     row[8],
+            "winner": row[8],
             "created_at": row[9],
-            "voted_at":   row[10],
+            "voted_at": row[10],
         }
 
-    async def list_compare_history(self, owner_id: str, limit: int = 50) -> List[dict]:
+    async def list_compare_history(
+            self, owner_id: str, limit: int = 50) -> List[dict]:
         return await self._run(self._sync_list_compare_history, owner_id, limit)
 
-    def _sync_list_compare_history(self, owner_id: str, limit: int) -> List[dict]:
+    def _sync_list_compare_history(
+            self, owner_id: str, limit: int) -> List[dict]:
         conn = self._get_conn()
         rows = conn.execute(
             "SELECT id, prompt, model_a_provider, model_a_id, model_b_provider, "
@@ -2690,18 +2807,19 @@ class SQLiteStore:
         ).fetchall()
         return [
             {
-                "id":         r[0],
-                "prompt":     r[1],
-                "model_a":    {"provider": r[2], "model": r[3]},
-                "model_b":    {"provider": r[4], "model": r[5]},
-                "winner":     r[6],
+                "id": r[0],
+                "prompt": r[1],
+                "model_a": {"provider": r[2], "model": r[3]},
+                "model_b": {"provider": r[4], "model": r[5]},
+                "winner": r[6],
                 "created_at": r[7],
-                "voted_at":   r[8],
+                "voted_at": r[8],
             }
             for r in rows
         ]
 
-    async def compare_leaderboard(self, owner_id: Optional[str] = None) -> List[dict]:
+    async def compare_leaderboard(
+            self, owner_id: Optional[str] = None) -> List[dict]:
         """Aggregate win-counts per (provider, model) across voted runs."""
         return await self._run(self._sync_compare_leaderboard, owner_id)
 
@@ -2733,14 +2851,17 @@ class SQLiteStore:
         stats: dict = {}
         for prov, mid, wins, ties, total in list(rows_a) + list(rows_b):
             key = (prov or "", mid or "")
-            entry = stats.setdefault(key, {"provider": prov, "model": mid, "wins": 0, "ties": 0, "total": 0})
-            entry["wins"]  += int(wins or 0)
-            entry["ties"]  += int(ties or 0)
+            entry = stats.setdefault(
+                key, {"provider": prov, "model": mid, "wins": 0, "ties": 0, "total": 0})
+            entry["wins"] += int(wins or 0)
+            entry["ties"] += int(ties or 0)
             entry["total"] += int(total or 0)
         out = list(stats.values())
         for e in out:
-            e["losses"]   = max(0, e["total"] - e["wins"] - e["ties"])
-            e["win_rate"] = round(e["wins"] / e["total"], 3) if e["total"] else 0.0
+            e["losses"] = max(0, e["total"] - e["wins"] - e["ties"])
+            e["win_rate"] = round(
+                e["wins"] / e["total"],
+                3) if e["total"] else 0.0
         out.sort(key=lambda r: (-r["win_rate"], -r["wins"]))
         return out
 
@@ -2748,7 +2869,8 @@ class SQLiteStore:
     # Remote Ollama rigs (Q3#14)
     # -------------------------------------------------------------------------
 
-    async def list_remote_rigs(self, *, include_inactive: bool = True) -> List[dict]:
+    async def list_remote_rigs(
+            self, *, include_inactive: bool = True) -> List[dict]:
         return await self._run(self._sync_list_remote_rigs, include_inactive)
 
     def _sync_list_remote_rigs(self, include_inactive: bool) -> List[dict]:
@@ -2773,17 +2895,17 @@ class SQLiteStore:
         except (ValueError, TypeError):
             models = []
         return {
-            "id":              row[0],
-            "label":           row[1],
-            "base_url":        row[2],
-            "is_active":       bool(row[3]),
-            "notes":           row[4],
-            "last_health":     row[5],
+            "id": row[0],
+            "label": row[1],
+            "base_url": row[2],
+            "is_active": bool(row[3]),
+            "notes": row[4],
+            "last_health": row[5],
             "last_checked_at": row[6],
-            "last_models":     models,
-            "created_by":      row[8],
-            "created_at":      row[9],
-            "updated_at":      row[10],
+            "last_models": models,
+            "created_by": row[8],
+            "created_at": row[9],
+            "updated_at": row[10],
         }
 
     async def get_remote_rig(self, rig_id: str) -> Optional[dict]:
@@ -2823,7 +2945,7 @@ class SQLiteStore:
             (rig_id, label, base_url, notes, created_by, now, now),
         )
         conn.commit()
-        return self._sync_get_remote_rig(rig_id)
+        return self._sync_get_remote_rig(rig_id)  # type: ignore
 
     async def update_remote_rig(
         self,
@@ -2849,10 +2971,11 @@ class SQLiteStore:
         existing = self._sync_get_remote_rig(rig_id)
         if existing is None:
             return None
-        new_label = existing["label"]     if label     is None else label
-        new_url   = existing["base_url"]  if base_url  is None else base_url
-        new_notes = existing["notes"]     if notes     is None else notes
-        new_act   = existing["is_active"] if is_active is None else bool(is_active)
+        new_label = existing["label"] if label is None else label
+        new_url = existing["base_url"] if base_url is None else base_url
+        new_notes = existing["notes"] if notes is None else notes
+        new_act = existing["is_active"] if is_active is None else bool(
+            is_active)
         now = _now_str()
         conn = self._get_conn()
         conn.execute(
@@ -2888,7 +3011,8 @@ class SQLiteStore:
 
     def _sync_delete_remote_rig(self, rig_id: str) -> bool:
         conn = self._get_conn()
-        cur = conn.execute("DELETE FROM remote_ollama_rigs WHERE id=?", (rig_id,))
+        cur = conn.execute(
+            "DELETE FROM remote_ollama_rigs WHERE id=?", (rig_id,))
         conn.commit()
         return cur.rowcount > 0
 
@@ -2907,7 +3031,11 @@ class SQLiteStore:
     def _sync_force_logout(self, user_id: str) -> None:
         conn = self._get_conn()
         now = _now_str()
-        conn.execute("UPDATE users SET tokens_valid_after = ?, updated_at = ? WHERE id = ?", (now, now, user_id))
+        conn.execute(
+            "UPDATE users SET tokens_valid_after = ?, updated_at = ? WHERE id = ?",
+            (now,
+             now,
+             user_id))
         conn.commit()
 
     async def get_user_by_google_id(self, google_id: str) -> Optional[dict]:
@@ -2921,12 +3049,15 @@ class SQLiteStore:
         ).fetchone()
         if row is None:
             return None
-        return {"id": row[0], "email": row[1], "password_hash": row[2], "display_name": row[3], "role": row[4], "is_approved": bool(row[5]), "created_at": row[6], "google_id": row[7], "google_email": row[8]}
+        return {"id": row[0], "email": row[1], "password_hash": row[2], "display_name": row[3], "role": row[4],
+                "is_approved": bool(row[5]), "created_at": row[6], "google_id": row[7], "google_email": row[8]}
 
-    async def link_google_account(self, user_id: str, google_id: str, google_email: str) -> None:
+    async def link_google_account(
+            self, user_id: str, google_id: str, google_email: str) -> None:
         await self._run(self._sync_link_google_account, user_id, google_id, google_email)
 
-    def _sync_link_google_account(self, user_id: str, google_id: str, google_email: str) -> None:
+    def _sync_link_google_account(
+            self, user_id: str, google_id: str, google_email: str) -> None:
         conn = self._get_conn()
         conn.execute(
             "UPDATE users SET google_id=?, google_email=?, updated_at=? WHERE id=?",
@@ -2934,15 +3065,18 @@ class SQLiteStore:
         )
         conn.commit()
 
-    async def create_google_user(self, id: str, email: str, display_name: str, google_id: str, google_email: str, role: str = "user", is_approved: bool = True) -> None:
+    async def create_google_user(self, id: str, email: str, display_name: str, google_id: str,
+                                 google_email: str, role: str = "user", is_approved: bool = True) -> None:
         await self._run(self._sync_create_google_user, id, email, display_name, google_id, google_email, role, is_approved)
 
-    def _sync_create_google_user(self, id: str, email: str, display_name: str, google_id: str, google_email: str, role: str, is_approved: bool) -> None:
+    def _sync_create_google_user(self, id: str, email: str, display_name: str,
+                                 google_id: str, google_email: str, role: str, is_approved: bool) -> None:
         conn = self._get_conn()
         now = _now_str()
         conn.execute(
             "INSERT INTO users (id, email, password_hash, display_name, role, is_approved, google_id, google_email, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (id, email, "", display_name, role, int(is_approved), google_id, google_email, now, now),
+            (id, email, "", display_name, role, int(
+                is_approved), google_id, google_email, now, now),
         )
         conn.commit()
 
@@ -2952,17 +3086,19 @@ class SQLiteStore:
 
     def _row_to_family_group(self, row) -> dict:
         return {
-            "id":             row["id"],
-            "name":           row["name"],
+            "id": row["id"],
+            "name": row["name"],
             "shared_modules": json.loads(row["shared_modules"] or "[]"),
-            "created_at":     row["created_at"],
-            "updated_at":     row["updated_at"],
+            "created_at": row["created_at"],
+            "updated_at": row["updated_at"],
         }
 
-    async def create_family_group(self, group_id: str, name: str, shared_modules: list) -> dict:
+    async def create_family_group(
+            self, group_id: str, name: str, shared_modules: list) -> dict:
         return await self._run(self._sync_create_family_group, group_id, name, shared_modules)
 
-    def _sync_create_family_group(self, group_id: str, name: str, shared_modules: list) -> dict:
+    def _sync_create_family_group(
+            self, group_id: str, name: str, shared_modules: list) -> dict:
         conn = self._get_conn()
         now = _now_str()
         conn.execute(
@@ -2970,7 +3106,8 @@ class SQLiteStore:
             (group_id, name, json.dumps(shared_modules), now, now),
         )
         conn.commit()
-        row = conn.execute("SELECT * FROM family_groups WHERE id=?", (group_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM family_groups WHERE id=?", (group_id,)).fetchone()
         return self._row_to_family_group(row)
 
     async def get_family_group(self, group_id: str) -> Optional[dict]:
@@ -2978,7 +3115,8 @@ class SQLiteStore:
 
     def _sync_get_family_group(self, group_id: str) -> Optional[dict]:
         conn = self._get_conn()
-        row = conn.execute("SELECT * FROM family_groups WHERE id=?", (group_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM family_groups WHERE id=?", (group_id,)).fetchone()
         return self._row_to_family_group(row) if row else None
 
     async def list_family_groups(self) -> list:
@@ -2991,7 +3129,11 @@ class SQLiteStore:
             for r in conn.execute("SELECT * FROM family_groups ORDER BY created_at ASC").fetchall()
         ]
         users = {
-            r["id"]: {"id": r["id"], "display_name": r["display_name"], "email": r["email"], "role": r["role"]}
+            r["id"]: {
+                "id": r["id"],
+                "display_name": r["display_name"],
+                "email": r["email"],
+                "role": r["role"]}
             for r in conn.execute("SELECT id, display_name, email, role FROM users").fetchall()
         }
         members_rows = conn.execute(
@@ -3001,37 +3143,50 @@ class SQLiteStore:
         for m in members_rows:
             gid = m["family_group_id"]
             if gid in member_map:
-                user = users.get(m["profile_id"], {"id": m["profile_id"], "display_name": m["profile_id"], "email": "", "role": ""})
+                user = users.get(
+                    m["profile_id"], {
+                        "id": m["profile_id"], "display_name": m["profile_id"], "email": "", "role": ""})
                 member_map[gid].append({
-                    "profile_id":   m["profile_id"],
+                    "profile_id": m["profile_id"],
                     "display_name": user["display_name"],
-                    "email":        user["email"],
-                    "role":         user["role"],
+                    "email": user["email"],
+                    "role": user["role"],
                     "relationship": m["relationship"],
-                    "joined_at":    m["joined_at"],
+                    "joined_at": m["joined_at"],
                 })
         for g in groups:
             g["members"] = member_map.get(g["id"], [])
         return groups
 
-    async def update_family_group(self, group_id: str, name: Optional[str], shared_modules: Optional[list]) -> Optional[dict]:
+    async def update_family_group(
+            self, group_id: str, name: Optional[str], shared_modules: Optional[list]) -> Optional[dict]:
         return await self._run(self._sync_update_family_group, group_id, name, shared_modules)
 
-    def _sync_update_family_group(self, group_id: str, name: Optional[str], shared_modules: Optional[list]) -> Optional[dict]:
+    def _sync_update_family_group(
+            self, group_id: str, name: Optional[str], shared_modules: Optional[list]) -> Optional[dict]:
         conn = self._get_conn()
         parts, vals = [], []
         if name is not None:
-            parts.append("name = ?"); vals.append(name)
+            parts.append("name = ?")
+            vals.append(name)
         if shared_modules is not None:
-            parts.append("shared_modules = ?"); vals.append(json.dumps(shared_modules))
+            parts.append("shared_modules = ?")
+            vals.append(json.dumps(shared_modules))
         if not parts:
-            row = conn.execute("SELECT * FROM family_groups WHERE id=?", (group_id,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM family_groups WHERE id=?", (group_id,)).fetchone()
             return self._row_to_family_group(row) if row else None
-        parts.append("updated_at = ?"); vals.append(_now_str())
+        parts.append("updated_at = ?")
+        vals.append(_now_str())
         vals.append(group_id)
-        conn.execute("UPDATE family_groups SET " + ", ".join(parts) + " WHERE id=?", vals)
+        conn.execute(
+            "UPDATE family_groups SET " +
+            ", ".join(parts) +
+            " WHERE id=?",
+            vals)
         conn.commit()
-        row = conn.execute("SELECT * FROM family_groups WHERE id=?", (group_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM family_groups WHERE id=?", (group_id,)).fetchone()
         return self._row_to_family_group(row) if row else None
 
     async def delete_family_group(self, group_id: str) -> None:
@@ -3039,14 +3194,17 @@ class SQLiteStore:
 
     def _sync_delete_family_group(self, group_id: str) -> None:
         conn = self._get_conn()
-        conn.execute("DELETE FROM family_memberships WHERE family_group_id=?", (group_id,))
+        conn.execute(
+            "DELETE FROM family_memberships WHERE family_group_id=?", (group_id,))
         conn.execute("DELETE FROM family_groups WHERE id=?", (group_id,))
         conn.commit()
 
-    async def add_family_member(self, group_id: str, profile_id: str, relationship: str) -> dict:
+    async def add_family_member(
+            self, group_id: str, profile_id: str, relationship: str) -> dict:
         return await self._run(self._sync_add_family_member, group_id, profile_id, relationship)
 
-    def _sync_add_family_member(self, group_id: str, profile_id: str, relationship: str) -> dict:
+    def _sync_add_family_member(
+            self, group_id: str, profile_id: str, relationship: str) -> dict:
         conn = self._get_conn()
         mid = str(uuid.uuid4())
         now = _now_str()
@@ -3062,12 +3220,15 @@ class SQLiteStore:
             (mid, profile_id, group_id, relationship, now),
         )
         conn.commit()
-        return {"profile_id": profile_id, "family_group_id": group_id, "relationship": relationship}
+        return {"profile_id": profile_id,
+                "family_group_id": group_id, "relationship": relationship}
 
-    async def remove_family_member(self, group_id: str, profile_id: str) -> None:
+    async def remove_family_member(
+            self, group_id: str, profile_id: str) -> None:
         await self._run(self._sync_remove_family_member, group_id, profile_id)
 
-    def _sync_remove_family_member(self, group_id: str, profile_id: str) -> None:
+    def _sync_remove_family_member(
+            self, group_id: str, profile_id: str) -> None:
         conn = self._get_conn()
         conn.execute(
             "DELETE FROM family_memberships WHERE family_group_id=? AND profile_id=?",
@@ -3092,10 +3253,10 @@ class SQLiteStore:
         if row is None:
             return None
         return {
-            "id":             row["id"],
-            "name":           row["name"],
+            "id": row["id"],
+            "name": row["name"],
             "shared_modules": json.loads(row["shared_modules"] or "[]"),
-            "relationship":   row["relationship"],
+            "relationship": row["relationship"],
         }
 
     # =========================================================================
@@ -3104,19 +3265,19 @@ class SQLiteStore:
 
     def _row_to_routine(self, row) -> dict:
         return {
-            "id":          row["id"],
-            "user_id":     row["user_id"],
-            "name":        row["name"],
-            "trigger":     row["trigger"],
-            "time":        row["time"],
-            "days":        json.loads(row["days"] or "[]"),
-            "prompt":      row["prompt"],
-            "type":        row["type"],
+            "id": row["id"],
+            "user_id": row["user_id"],
+            "name": row["name"],
+            "trigger": row["trigger"],
+            "time": row["time"],
+            "days": json.loads(row["days"] or "[]"),
+            "prompt": row["prompt"],
+            "type": row["type"],
             "webhook_url": row["webhook_url"],
-            "enabled":     bool(row["enabled"]),
-            "last_run":    row["last_run"],
-            "created_at":  row["created_at"],
-            "updated_at":  row["updated_at"],
+            "enabled": bool(row["enabled"]),
+            "last_run": row["last_run"],
+            "created_at": row["created_at"],
+            "updated_at": row["updated_at"],
         }
 
     async def list_routines(self, user_id: str) -> list:
@@ -3139,25 +3300,40 @@ class SQLiteStore:
         rid = routine.get("id") or str(uuid.uuid4())
         conn.execute(
             """
-            INSERT INTO routines 
-                (id, user_id, name, trigger, time, days, prompt, type, webhook_url, enabled, created_at, updated_at) 
+            INSERT INTO routines
+                (id, user_id, name, trigger, time, days, prompt, type, webhook_url, enabled, created_at, updated_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
             """,
-            (rid, routine["user_id"], routine["name"], routine.get("trigger","manual"),
-             routine.get("time"), json.dumps(routine.get("days",[])), routine.get("prompt",""),
-             routine.get("type", "simple"), routine.get("webhook_url"),
-             int(routine.get("enabled", True)), now, now),
+            (rid, routine["user_id"], routine["name"], routine.get("trigger", "manual"),
+             routine.get("time"), json.dumps(
+                routine.get(
+                    "days", [])), routine.get(
+                "prompt", ""),
+                routine.get("type", "simple"), routine.get("webhook_url"),
+                int(routine.get("enabled", True)), now, now),
         )
         conn.commit()
-        row = conn.execute("SELECT * FROM routines WHERE id=?", (rid,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM routines WHERE id=?", (rid,)).fetchone()
         return self._row_to_routine(row)
 
-    async def update_routine(self, routine_id: str, user_id: str, fields: dict) -> Optional[dict]:
+    async def update_routine(self, routine_id: str,
+                             user_id: str, fields: dict) -> Optional[dict]:
         return await self._run(self._sync_update_routine, routine_id, user_id, fields)
 
-    def _sync_update_routine(self, routine_id: str, user_id: str, fields: dict) -> Optional[dict]:
+    def _sync_update_routine(self, routine_id: str,
+                             user_id: str, fields: dict) -> Optional[dict]:
         conn = self._get_conn()
-        allowed = {"name", "trigger", "time", "days", "prompt", "type", "webhook_url", "enabled", "last_run"}
+        allowed = {
+            "name",
+            "trigger",
+            "time",
+            "days",
+            "prompt",
+            "type",
+            "webhook_url",
+            "enabled",
+            "last_run"}
         set_parts, vals = [], []
         for k, v in fields.items():
             if k not in allowed:
@@ -3174,11 +3350,15 @@ class SQLiteStore:
         vals.append(_now_str())
         vals += [routine_id, user_id]
         conn.execute(
-            "UPDATE routines SET " + ", ".join(set_parts) + " WHERE id=? AND user_id=?",
+            "UPDATE routines SET " +
+            ", ".join(set_parts) + " WHERE id=? AND user_id=?",
             vals,
         )
         conn.commit()
-        row = conn.execute("SELECT * FROM routines WHERE id=? AND user_id=?", (routine_id, user_id)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM routines WHERE id=? AND user_id=?",
+            (routine_id,
+             user_id)).fetchone()
         return self._row_to_routine(row) if row else None
 
     async def delete_routine(self, routine_id: str, user_id: str) -> bool:
@@ -3186,7 +3366,8 @@ class SQLiteStore:
 
     def _sync_delete_routine(self, routine_id: str, user_id: str) -> bool:
         conn = self._get_conn()
-        cur = conn.execute("DELETE FROM routines WHERE id=? AND user_id=?", (routine_id, user_id))
+        cur = conn.execute(
+            "DELETE FROM routines WHERE id=? AND user_id=?", (routine_id, user_id))
         conn.commit()
         return cur.rowcount > 0
 
@@ -3274,7 +3455,8 @@ class SQLiteStore:
     def _sync_get_page_settings(self, user_id: str) -> dict:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT settings_json FROM feed_preferences WHERE user_id = ?", (user_id,)
+            "SELECT settings_json FROM feed_preferences WHERE user_id = ?", (
+                user_id,)
         ).fetchone()
         if row is None:
             return {}
@@ -3299,7 +3481,8 @@ class SQLiteStore:
             (user_id, _now_str()),
         )
         row = conn.execute(
-            "SELECT settings_json FROM feed_preferences WHERE user_id = ?", (user_id,)
+            "SELECT settings_json FROM feed_preferences WHERE user_id = ?", (
+                user_id,)
         ).fetchone()
         try:
             current = json.loads(row["settings_json"] or "{}") or {}
@@ -3322,25 +3505,26 @@ class SQLiteStore:
 
     def _row_to_book(self, row) -> dict:
         return {
-            "id":           row[0],
-            "user_id":      row[1],
-            "service":      row[2],
-            "title":        row[3],
-            "author":       row[4],
-            "cover_url":    row[5],
+            "id": row[0],
+            "user_id": row[1],
+            "service": row[2],
+            "title": row[3],
+            "author": row[4],
+            "cover_url": row[5],
             "progress_pct": row[6],
-            "status":       row[7],
-            "rating":       row[8],
-            "notes":        row[9],
-            "launch_url":   row[10],
-            "created_at":   row[11],
-            "updated_at":   row[12],
+            "status": row[7],
+            "rating": row[8],
+            "notes": row[9],
+            "launch_url": row[10],
+            "created_at": row[11],
+            "updated_at": row[12],
         }
 
-    async def list_shelf(self, user_id: str, service: str = None, status: str = None) -> list:
+    async def list_shelf(self, user_id: str, service: str = None, status: str = None) -> list:  # type: ignore
         return await self._run(self._sync_list_shelf, user_id, service, status)
 
-    def _sync_list_shelf(self, user_id: str, service: str, status: str) -> list:
+    def _sync_list_shelf(self, user_id: str, service: str,
+                         status: str) -> list:
         conn = self._get_conn()
         query = (
             "SELECT id,user_id,service,title,author,cover_url,progress_pct,status,rating,notes,launch_url,created_at,updated_at "
@@ -3369,9 +3553,14 @@ class SQLiteStore:
             "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (bid, book["user_id"], book["service"], book["title"],
              book.get("author", ""), book.get("cover_url", ""),
-             float(book.get("progress_pct", 0.0)), book.get("status", "reading"),
-             book.get("rating"), book.get("notes", ""), book.get("launch_url", ""),
-             now, now),
+             float(
+                book.get(
+                    "progress_pct", 0.0)), book.get(
+                "status", "reading"),
+                book.get("rating"), book.get(
+                "notes", ""), book.get(
+                "launch_url", ""),
+                now, now),
         )
         conn.commit()
         row = conn.execute(
@@ -3380,12 +3569,23 @@ class SQLiteStore:
         ).fetchone()
         return self._row_to_book(row)
 
-    async def update_book(self, book_id: str, user_id: str, fields: dict) -> Optional[dict]:
+    async def update_book(self, book_id: str, user_id: str,
+                          fields: dict) -> Optional[dict]:
         return await self._run(self._sync_update_book, book_id, user_id, fields)
 
-    def _sync_update_book(self, book_id: str, user_id: str, fields: dict) -> Optional[dict]:
+    def _sync_update_book(self, book_id: str, user_id: str,
+                          fields: dict) -> Optional[dict]:
         conn = self._get_conn()
-        allowed = {"service", "title", "author", "cover_url", "progress_pct", "status", "rating", "notes", "launch_url"}
+        allowed = {
+            "service",
+            "title",
+            "author",
+            "cover_url",
+            "progress_pct",
+            "status",
+            "rating",
+            "notes",
+            "launch_url"}
         parts, vals = [], []
         for k, v in fields.items():
             if k in allowed:
@@ -3397,7 +3597,8 @@ class SQLiteStore:
         vals.append(_now_str())
         vals += [book_id, user_id]
         conn.execute(
-            "UPDATE reading_shelf SET " + ", ".join(parts) + " WHERE id=? AND user_id=?",
+            "UPDATE reading_shelf SET " +
+            ", ".join(parts) + " WHERE id=? AND user_id=?",
             vals,
         )
         conn.commit()
@@ -3412,7 +3613,8 @@ class SQLiteStore:
 
     def _sync_delete_book(self, book_id: str, user_id: str) -> bool:
         conn = self._get_conn()
-        cur = conn.execute("DELETE FROM reading_shelf WHERE id=? AND user_id=?", (book_id, user_id))
+        cur = conn.execute(
+            "DELETE FROM reading_shelf WHERE id=? AND user_id=?", (book_id, user_id))
         conn.commit()
         return cur.rowcount > 0
 
@@ -3445,19 +3647,19 @@ class SQLiteStore:
                 updated_at                = excluded.updated_at
             """,
             {
-                "user_id":                   user_id,
-                "news_sources":              json.dumps(prefs.get("news_sources", [])),
-                "weather_lat":               prefs.get("weather_lat"),
-                "weather_lon":               prefs.get("weather_lon"),
-                "weather_unit":              prefs.get("weather_unit", "celsius"),
-                "sport_teams":               json.dumps(prefs.get("sport_teams", [])),
-                "sports_favorite_leagues":   json.dumps(prefs.get("sports_favorite_leagues", ["nba", "nfl", "mlb"])),
-                "stock_tickers":             json.dumps(prefs.get("stock_tickers", [])),
-                "refresh_news_min":          prefs.get("refresh_news_min", 30),
-                "refresh_weather_min":       prefs.get("refresh_weather_min", 30),
-                "refresh_sports_min":        prefs.get("refresh_sports_min", 60),
-                "refresh_stocks_min":        prefs.get("refresh_stocks_min", 60),
-                "updated_at":                _now_str(),
+                "user_id": user_id,
+                "news_sources": json.dumps(prefs.get("news_sources", [])),
+                "weather_lat": prefs.get("weather_lat"),
+                "weather_lon": prefs.get("weather_lon"),
+                "weather_unit": prefs.get("weather_unit", "celsius"),
+                "sport_teams": json.dumps(prefs.get("sport_teams", [])),
+                "sports_favorite_leagues": json.dumps(prefs.get("sports_favorite_leagues", ["nba", "nfl", "mlb"])),
+                "stock_tickers": json.dumps(prefs.get("stock_tickers", [])),
+                "refresh_news_min": prefs.get("refresh_news_min", 30),
+                "refresh_weather_min": prefs.get("refresh_weather_min", 30),
+                "refresh_sports_min": prefs.get("refresh_sports_min", 60),
+                "refresh_stocks_min": prefs.get("refresh_stocks_min", 60),
+                "updated_at": _now_str(),
             },
         )
 
@@ -3485,11 +3687,15 @@ class SQLiteStore:
                 (user_id,),
             ).fetchone()
             try:
-                current = json.loads(row["settings_json"] or "{}") or {} if row else {}
+                current = json.loads(
+                    row["settings_json"] or "{}") or {} if row else {}
             except (json.JSONDecodeError, ValueError):
                 current = {}
-            existing_feeds = current.get("feeds") if isinstance(current.get("feeds"), dict) else {}
-            current["feeds"] = {**existing_feeds, **feeds_patch}
+            existing_feeds = current.get("feeds") if isinstance(
+                current.get("feeds"), dict) else {}
+            current["feeds"] = {
+                **existing_feeds,  # type: ignore
+                **feeds_patch}  # type: ignore
             conn.execute(
                 "UPDATE feed_preferences SET settings_json = ? WHERE user_id = ?",
                 (json.dumps(current), user_id),
@@ -3581,7 +3787,8 @@ class SQLiteStore:
         rows = conn.execute(
             "SELECT parent_id, child_id, created_at FROM parent_child ORDER BY created_at"
         ).fetchall()
-        return [{"parent_id": r[0], "child_id": r[1], "created_at": r[2]} for r in rows]
+        return [{"parent_id": r[0], "child_id": r[1], "created_at": r[2]}
+                for r in rows]
 
     # =========================================================================
     # Child feature settings (parent-controlled per-child feature access)
@@ -3593,7 +3800,8 @@ class SQLiteStore:
     def _sync_get_child_features(self, child_id: str) -> list[str]:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT enabled_features FROM child_features WHERE child_id=?", (child_id,)
+            "SELECT enabled_features FROM child_features WHERE child_id=?", (
+                child_id,)
         ).fetchone()
         if not row:
             return []
@@ -3602,10 +3810,12 @@ class SQLiteStore:
         except (json.JSONDecodeError, TypeError):
             return []
 
-    async def set_child_features(self, child_id: str, features: list[str]) -> None:
+    async def set_child_features(
+            self, child_id: str, features: list[str]) -> None:
         await self._run(self._sync_set_child_features, child_id, features)
 
-    def _sync_set_child_features(self, child_id: str, features: list[str]) -> None:
+    def _sync_set_child_features(
+            self, child_id: str, features: list[str]) -> None:
         conn = self._get_conn()
         conn.execute(
             "INSERT OR REPLACE INTO child_features (child_id, enabled_features) VALUES (?,?)",
@@ -3662,10 +3872,12 @@ class SQLiteStore:
             )
         conn.commit()
 
-    async def delete_analytics_platform(self, user_id: str, platform: str) -> None:
+    async def delete_analytics_platform(
+            self, user_id: str, platform: str) -> None:
         await self._run(self._sync_delete_analytics_platform, user_id, platform)
 
-    def _sync_delete_analytics_platform(self, user_id: str, platform: str) -> None:
+    def _sync_delete_analytics_platform(
+            self, user_id: str, platform: str) -> None:
         conn = self._get_conn()
         conn.execute(
             "DELETE FROM analytics_platforms WHERE user_id=? AND platform=?",
@@ -3745,10 +3957,12 @@ class SQLiteStore:
         conn.commit()
         return snap_id
 
-    async def delete_analytics_snapshot(self, snapshot_id: str, user_id: str) -> None:
+    async def delete_analytics_snapshot(
+            self, snapshot_id: str, user_id: str) -> None:
         await self._run(self._sync_delete_analytics_snapshot, snapshot_id, user_id)
 
-    def _sync_delete_analytics_snapshot(self, snapshot_id: str, user_id: str) -> None:
+    def _sync_delete_analytics_snapshot(
+            self, snapshot_id: str, user_id: str) -> None:
         conn = self._get_conn()
         conn.execute(
             "DELETE FROM analytics_snapshots WHERE id=? AND user_id=?",
@@ -3760,10 +3974,12 @@ class SQLiteStore:
     # Web Push Notifications
     # -------------------------------------------------------------------------
 
-    async def save_push_subscription(self, user_id: str, subscription_json: str) -> None:
+    async def save_push_subscription(
+            self, user_id: str, subscription_json: str) -> None:
         await self._run(self._sync_save_push_subscription, user_id, subscription_json)
 
-    def _sync_save_push_subscription(self, user_id: str, subscription_json: str) -> None:
+    def _sync_save_push_subscription(
+            self, user_id: str, subscription_json: str) -> None:
         import json
         conn = self._get_conn()
         sub = json.loads(subscription_json)
@@ -3791,10 +4007,12 @@ class SQLiteStore:
         ).fetchall()
         return [row[0] for row in rows]
 
-    async def delete_push_subscription(self, user_id: str, endpoint: str) -> None:
+    async def delete_push_subscription(
+            self, user_id: str, endpoint: str) -> None:
         await self._run(self._sync_delete_push_subscription, user_id, endpoint)
 
-    def _sync_delete_push_subscription(self, user_id: str, endpoint: str) -> None:
+    def _sync_delete_push_subscription(
+            self, user_id: str, endpoint: str) -> None:
         conn = self._get_conn()
         conn.execute(
             "DELETE FROM push_subscriptions WHERE user_id=? AND endpoint=?",
@@ -3814,8 +4032,9 @@ class SQLiteStore:
         conn = self._get_conn()
         rows = conn.execute(sql, params).fetchall()
         return [dict(row) for row in rows]
-        
-    def _execute_read_one(self, sql: str, params: tuple = ()) -> Optional[dict]:
+
+    def _execute_read_one(self, sql: str,
+                          params: tuple = ()) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(sql, params).fetchone()
         return dict(row) if row else None
@@ -3823,10 +4042,12 @@ class SQLiteStore:
     async def execute_write_async(self, sql: str, params: tuple) -> None:
         await self._run(self._execute_write, sql, params)
 
-    async def execute_read_async(self, sql: str, params: tuple = ()) -> list[dict]:
+    async def execute_read_async(
+            self, sql: str, params: tuple = ()) -> list[dict]:
         return await self._run(self._execute_read, sql, params)
 
-    async def execute_read_one_async(self, sql: str, params: tuple = ()) -> Optional[dict]:
+    async def execute_read_one_async(
+            self, sql: str, params: tuple = ()) -> Optional[dict]:
         return await self._run(self._execute_read_one, sql, params)
 
     # Simplified general access wrappers
@@ -3842,8 +4063,9 @@ class SQLiteStore:
         cols = ", ".join([f"{k}=?" for k in updates.keys()])
         params = list(updates.values()) + [unit_id]
         await self.execute_write_async(f"UPDATE vector_units SET {cols} WHERE unit_id=?", tuple(params))
-        
-    async def insert_vector_unit(self, unit_id: str, name: str, platform: str, unit_token: str, registered_at: str, claimed_at: str) -> None:
+
+    async def insert_vector_unit(self, unit_id: str, name: str, platform: str,
+                                 unit_token: str, registered_at: str, claimed_at: str) -> None:
         sql = "INSERT INTO vector_units (unit_id, name, platform, unit_token, registered_at, claimed_at) VALUES (?, ?, ?, ?, ?, ?)"
         await self.execute_write_async(sql, (unit_id, name, platform, unit_token, registered_at, claimed_at))
 
@@ -3860,7 +4082,8 @@ class SQLiteStore:
         sql = "SELECT * FROM vector_commands WHERE unit_id=? AND status='pending' ORDER BY issued_at ASC LIMIT 1"
         return await self.execute_read_one_async(sql, (unit_id,))
 
-    async def update_command_status(self, command_id: str, status: str) -> None:
+    async def update_command_status(
+            self, command_id: str, status: str) -> None:
         sql = f"UPDATE vector_commands SET status=?, {status}_at=? WHERE command_id=?"
         await self.execute_write_async(sql, (status, _now_str(), command_id))
 
@@ -3876,11 +4099,12 @@ class SQLiteStore:
         sql = f"INSERT INTO vector_alerts ({cols}) VALUES ({placeholders})"
         await self.execute_write_async(sql, tuple(fields.values()))
 
-    async def insert_session_event(self, session_id: str, unit_id: str, event: str, data: str) -> None:
+    async def insert_session_event(
+            self, session_id: str, unit_id: str, event: str, data: str) -> None:
         sql = "INSERT INTO vector_session_events (session_id, unit_id, timestamp, event, data) VALUES (?, ?, ?, ?, ?)"
         await self.execute_write_async(sql, (session_id, unit_id, _now_str(), event, data))
 
-    async def insert_session(self, session_id: str, unit_id: str, config_version: int, program_id: str = None) -> None:
+    async def insert_session(self, session_id: str, unit_id: str, config_version: int, program_id: str = None) -> None:  # type: ignore
         sql = "INSERT INTO vector_sessions (session_id, unit_id, program_id, config_version, started_at, status) VALUES (?, ?, ?, ?, ?, 'active')"
         await self.execute_write_async(sql, (session_id, unit_id, program_id, config_version, _now_str()))
 
@@ -3888,25 +4112,35 @@ class SQLiteStore:
         cols = ", ".join([f"{k}=?" for k in fields.keys()])
         params = list(fields.values()) + [session_id]
         await self.execute_write_async(f"UPDATE vector_sessions SET {cols} WHERE session_id=?", tuple(params))
-        
+
     async def get_active_schedules(self) -> list[dict]:
         sql = "SELECT * FROM vector_schedules WHERE enabled = 1"
         return await self.execute_read_async(sql)
-        
-    async def update_schedule(self, schedule_id: str, last_run: str, next_run: str) -> None:
+
+    async def update_schedule(self, schedule_id: str,
+                              last_run: str, next_run: str) -> None:
         sql = "UPDATE vector_schedules SET last_run=?, next_run=? WHERE schedule_id=?"
         await self.execute_write_async(sql, (last_run, next_run, schedule_id))
-        
-    async def prune_telemetry(self, unit_id: str, older_than_days: int) -> None:
+
+    async def prune_telemetry(self, unit_id: str,
+                              older_than_days: int) -> None:
         # Full query per spec 14.4 is "deletes vector_telemetry older than VECTOR_TELEMETRY_RETENTION_DAYS (default 90)"
         # And downsamples rows 7+ days old
-        # For simplicity in this SQLite store, we'll implement simple drop, downsample can be implemented in daemon logic if needed, or simple prune here.
+        # For simplicity in this SQLite store, we'll implement simple drop,
+        # downsample can be implemented in daemon logic if needed, or simple
+        # prune here.
         sql = "DELETE FROM vector_telemetry WHERE unit_id=? AND timestamp < datetime('now', ? || ' days')"
         await self.execute_write_async(sql, (unit_id, f"-{older_than_days}"))
 
     # Adding simple generic list access for UI routes
-    async def get_zones(self) -> list[dict]: return await self.execute_read_async("SELECT * FROM vector_zones")
-    async def get_programs(self) -> list[dict]: return await self.execute_read_async("SELECT * FROM vector_programs")
-    async def get_schedules(self) -> list[dict]: return await self.execute_read_async("SELECT * FROM vector_schedules")
-    async def get_sessions(self) -> list[dict]: return await self.execute_read_async("SELECT * FROM vector_sessions ORDER BY started_at DESC LIMIT 100")
+    async def get_zones(
+        self) -> list[dict]: return await self.execute_read_async("SELECT * FROM vector_zones")
 
+    async def get_programs(
+        self) -> list[dict]: return await self.execute_read_async("SELECT * FROM vector_programs")
+
+    async def get_schedules(
+        self) -> list[dict]: return await self.execute_read_async("SELECT * FROM vector_schedules")
+
+    async def get_sessions(self) -> list[dict]: return await self.execute_read_async(
+        "SELECT * FROM vector_sessions ORDER BY started_at DESC LIMIT 100")

@@ -15,10 +15,11 @@ from providers.base import TTSProvider
 
 logger = logging.getLogger(__name__)
 
+
 class ChatterboxTTS(TTSProvider):
     """
     On-demand voice cloning provider.
-    
+
     This provider is designed for 4GB VRAM cards. It does not keep the model
     in memory. Each call to synthesize() performs a full load/unload cycle.
     """
@@ -27,10 +28,10 @@ class ChatterboxTTS(TTSProvider):
         from config.settings import get_settings
         import os
         self.settings = get_settings()
-        
+
         # 1. Check for chatterbox-tts package
         try:
-            import chatterbox
+            pass
         except ImportError:
             raise RuntimeError(
                 "Chatterbox TTS requires the 'chatterbox-tts' package. "
@@ -45,7 +46,8 @@ class ChatterboxTTS(TTSProvider):
                 "Record a 20-second clip and save it there to use the cloned voice."
             )
 
-        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="chatterbox")
+        self._executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="chatterbox")
         logger.info("ChatterboxTTS initialized in on-demand mode.")
 
     def _synth_blocking(self, text: str) -> bytes:
@@ -57,19 +59,24 @@ class ChatterboxTTS(TTSProvider):
         # Note: Actual path/initialization depends on the chatterbox-tts library structure
         # This is a generalized implementation of the on-demand pattern.
         model = Chatterbox.load_model(device="cuda")
-        
+
         try:
             logger.info("Chatterbox: Synthesizing cloned voice...")
             audio_array, sample_rate = model.synthesize(
-                text, 
+                text,
                 reference_wav=self.settings.chatterbox_reference_audio
             )
-            
+
             # Convert numpy array to WAV bytes
             buf = io.BytesIO()
-            sf.write(buf, audio_array, sample_rate, format="WAV", subtype="PCM_16")
+            sf.write(
+                buf,
+                audio_array,
+                sample_rate,
+                format="WAV",
+                subtype="PCM_16")
             return buf.getvalue()
-            
+
         finally:
             logger.info("Chatterbox: Cleaning up VRAM...")
             # Explicitly delete the model and clear the torch cache
@@ -82,8 +89,8 @@ class ChatterboxTTS(TTSProvider):
     async def synthesize(self, text: str) -> bytes:
         """
         Synthesize text with voice cloning.
-        
-        Expect a 3-5 second delay for the model to load into VRAM before 
+
+        Expect a 3-5 second delay for the model to load into VRAM before
         synthesis begins.
         """
         if not text.strip():

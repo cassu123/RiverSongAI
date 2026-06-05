@@ -31,7 +31,9 @@ class FactCreate(BaseModel):
 def _mm(request: Request):
     mm = getattr(request.app.state, "memory_manager", None)
     if mm is None:
-        raise HTTPException(status_code=503, detail="Memory manager not available")
+        raise HTTPException(
+            status_code=503,
+            detail="Memory manager not available")
     return mm
 
 
@@ -46,16 +48,17 @@ async def _require_user(authorization: Optional[str]) -> str:
 
 
 @router.get("/facts")
-async def get_facts(request: Request, authorization: Optional[str] = Header(default=None)):
+async def get_facts(request: Request,
+                    authorization: Optional[str] = Header(default=None)):
     user_id = await _require_user(authorization)
     mm = _mm(request)
     facts = await mm.get_facts(user_id)
     return [
         {
-            "id":         f.id,
-            "key":        f.key,
-            "value":      f.value,
-            "source":     f.source,
+            "id": f.id,
+            "key": f.key,
+            "value": f.value,
+            "source": f.source,
             "created_at": f.created_at.isoformat() if f.created_at else None,
             "updated_at": f.updated_at.isoformat() if f.updated_at else None,
         }
@@ -64,20 +67,22 @@ async def get_facts(request: Request, authorization: Optional[str] = Header(defa
 
 
 @router.post("/facts", status_code=201)
-async def create_fact(body: FactCreate, request: Request, authorization: Optional[str] = Header(default=None)):
+async def create_fact(body: FactCreate, request: Request,
+                      authorization: Optional[str] = Header(default=None)):
     user_id = await _require_user(authorization)
     if not body.key.strip() or not body.value.strip():
         raise bad_request("key and value are required")
     mm = _mm(request)
     await mm.upsert_fact(user_id=user_id, key=body.key, value=body.value, source="manual")
     facts = await mm.get_facts(user_id)
-    created = next((f for f in reversed(facts) if f.key == body.key.lower().strip()), None)
+    created = next((f for f in reversed(facts) if f.key ==
+                   body.key.lower().strip()), None)
     if created:
         return {
-            "id":         created.id,
-            "key":        created.key,
-            "value":      created.value,
-            "source":     created.source,
+            "id": created.id,
+            "key": created.key,
+            "value": created.value,
+            "source": created.source,
             "created_at": created.created_at.isoformat() if created.created_at else None,
             "updated_at": created.updated_at.isoformat() if created.updated_at else None,
         }
@@ -85,7 +90,8 @@ async def create_fact(body: FactCreate, request: Request, authorization: Optiona
 
 
 @router.delete("/facts/{fact_id}", status_code=204)
-async def delete_fact(fact_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
+async def delete_fact(fact_id: str, request: Request,
+                      authorization: Optional[str] = Header(default=None)):
     user_id = await _require_user(authorization)
     mm = _mm(request)
     ok = await mm.delete_fact(fact_id, user_id)
@@ -94,16 +100,17 @@ async def delete_fact(fact_id: str, request: Request, authorization: Optional[st
 
 
 @router.get("/preferences")
-async def get_preferences(request: Request, authorization: Optional[str] = Header(default=None)):
+async def get_preferences(request: Request,
+                          authorization: Optional[str] = Header(default=None)):
     user_id = await _require_user(authorization)
     mm = _mm(request)
     prefs = await mm.get_preferences(user_id)
     return [
         {
-            "id":           p.id,
-            "category":     p.category,
-            "value":        p.value,
-            "confidence":   p.confidence,
+            "id": p.id,
+            "category": p.category,
+            "value": p.value,
+            "confidence": p.confidence,
             "last_updated": p.last_updated.isoformat() if p.last_updated else None,
         }
         for p in prefs
@@ -111,7 +118,8 @@ async def get_preferences(request: Request, authorization: Optional[str] = Heade
 
 
 @router.delete("/preferences/{pref_id}", status_code=204)
-async def delete_preference(pref_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
+async def delete_preference(pref_id: str, request: Request,
+                            authorization: Optional[str] = Header(default=None)):
     user_id = await _require_user(authorization)
     mm = _mm(request)
     ok = await mm.delete_preference(pref_id, user_id)
@@ -120,7 +128,8 @@ async def delete_preference(pref_id: str, request: Request, authorization: Optio
 
 
 @router.get("/pending-habits")
-async def get_pending_habits(request: Request, authorization: Optional[str] = Header(default=None)):
+async def get_pending_habits(
+        request: Request, authorization: Optional[str] = Header(default=None)):
     user_id = await _require_user(authorization)
     mm = _mm(request)
     habits = await mm.get_pending_habits(user_id)
@@ -128,7 +137,8 @@ async def get_pending_habits(request: Request, authorization: Optional[str] = He
 
 
 @router.post("/pending-habits/{habit_id}/approve")
-async def approve_habit(habit_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
+async def approve_habit(habit_id: str, request: Request,
+                        authorization: Optional[str] = Header(default=None)):
     user_id = await _require_user(authorization)
     mm = _mm(request)
     # Find the habit
@@ -136,7 +146,7 @@ async def approve_habit(habit_id: str, request: Request, authorization: Optional
     habit = next((h for h in habits if h["id"] == habit_id), None)
     if not habit:
         raise not_found("Pending habit not found")
-    
+
     # Move to preferences
     from providers.memory.models import Preference
     import uuid
@@ -146,18 +156,19 @@ async def approve_habit(habit_id: str, request: Request, authorization: Optional
         user_id=user_id,
         category="habit",
         value=habit["pattern"],
-        confidence="medium", # Upgraded confidence since human approved it
+        confidence="medium",  # Upgraded confidence since human approved it
         last_updated=datetime.now(tz=timezone.utc)
     )
     await mm._store.upsert_preference(pref)
-    
+
     # Delete from pending
     await mm.delete_pending_habit(habit_id, user_id)
     return {"status": "approved"}
 
 
 @router.delete("/pending-habits/{habit_id}", status_code=204)
-async def delete_pending_habit(habit_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
+async def delete_pending_habit(
+        habit_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
     user_id = await _require_user(authorization)
     mm = _mm(request)
     ok = await mm.delete_pending_habit(habit_id, user_id)
@@ -166,25 +177,27 @@ async def delete_pending_habit(habit_id: str, request: Request, authorization: O
 
 
 @router.get("/summaries")
-async def get_summaries(request: Request, limit: int = 50, authorization: Optional[str] = Header(default=None)):
+async def get_summaries(request: Request, limit: int = 50,
+                        authorization: Optional[str] = Header(default=None)):
     user_id = await _require_user(authorization)
     mm = _mm(request)
     summaries = await mm._store.get_recent_summaries(user_id, limit=limit)
     return [
         {
-            "id":              s.id,
-            "summary":         s.summary,
-            "ttl_setting":     s.ttl_setting,
-            "expires_at":      s.expires_at.isoformat() if s.expires_at else None,
+            "id": s.id,
+            "summary": s.summary,
+            "ttl_setting": s.ttl_setting,
+            "expires_at": s.expires_at.isoformat() if s.expires_at else None,
             "reference_count": s.reference_count,
-            "created_at":      s.created_at.isoformat() if s.created_at else None,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
         }
         for s in summaries
     ]
 
 
 @router.delete("/summaries/{summary_id}", status_code=204)
-async def delete_summary(summary_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
+async def delete_summary(summary_id: str, request: Request,
+                         authorization: Optional[str] = Header(default=None)):
     user_id = await _require_user(authorization)
     mm = _mm(request)
     ok = await mm.delete_summary(summary_id, user_id)

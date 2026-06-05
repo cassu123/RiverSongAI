@@ -38,10 +38,10 @@ from typing import Optional
 # =============================================================================
 
 TOTP_PERIOD_SECONDS = 30
-TOTP_DIGITS         = 6
-TOTP_DRIFT_STEPS    = 1     # accept current step ±1 (so ±30s)
+TOTP_DIGITS = 6
+TOTP_DRIFT_STEPS = 1     # accept current step ±1 (so ±30s)
 
-RECOVERY_CODE_COUNT  = 8
+RECOVERY_CODE_COUNT = 8
 RECOVERY_CODE_NIBBLES = 10  # hex chars per code; 10 → 40 bits entropy each
 
 
@@ -68,15 +68,16 @@ def _hotp(secret_b32: str, counter: int, digits: int = TOTP_DIGITS) -> str:
     mac = hmac.new(key, msg, hashlib.sha1).digest()
     offset = mac[-1] & 0x0F
     code_int = (
-        ((mac[offset]     & 0x7F) << 24)
+        ((mac[offset] & 0x7F) << 24)
         | ((mac[offset + 1] & 0xFF) << 16)
-        | ((mac[offset + 2] & 0xFF) <<  8)
-        |  (mac[offset + 3] & 0xFF)
+        | ((mac[offset + 2] & 0xFF) << 8)
+        | (mac[offset + 3] & 0xFF)
     )
     return str(code_int % (10 ** digits)).zfill(digits)
 
 
-def totp_at(secret_b32: str, when: float, period: int = TOTP_PERIOD_SECONDS, digits: int = TOTP_DIGITS) -> str:
+def totp_at(secret_b32: str, when: float,
+            period: int = TOTP_PERIOD_SECONDS, digits: int = TOTP_DIGITS) -> str:
     """Compute the TOTP code at a specific unix time."""
     counter = int(when // period)
     return _hotp(secret_b32, counter, digits)
@@ -87,7 +88,8 @@ def totp_now(secret_b32: str) -> str:
     return totp_at(secret_b32, time.time())
 
 
-def verify_totp(secret_b32: str, code: str, when: Optional[float] = None, drift_steps: int = TOTP_DRIFT_STEPS) -> bool:
+def verify_totp(secret_b32: str, code: str,
+                when: Optional[float] = None, drift_steps: int = TOTP_DRIFT_STEPS) -> bool:
     """
     Constant-time check that `code` matches the TOTP for `secret_b32` within
     ±drift_steps of the current period.
@@ -100,7 +102,7 @@ def verify_totp(secret_b32: str, code: str, when: Optional[float] = None, drift_
     if not code.isdigit() or len(code) != TOTP_DIGITS:
         return False
 
-    now    = when if when is not None else time.time()
+    now = when if when is not None else time.time()
     centre = int(now // TOTP_PERIOD_SECONDS)
     for offset in range(-drift_steps, drift_steps + 1):
         try:
@@ -112,18 +114,19 @@ def verify_totp(secret_b32: str, code: str, when: Optional[float] = None, drift_
     return False
 
 
-def provisioning_uri(secret_b32: str, account_name: str, issuer: str = "River Song") -> str:
+def provisioning_uri(secret_b32: str, account_name: str,
+                     issuer: str = "River Song") -> str:
     """
     Build the otpauth:// URI for QR-code provisioning. Compatible with
     Google Authenticator, Authy, 1Password, Aegis, etc.
     """
     label = f"{issuer}:{account_name}"
     params = {
-        "secret":    secret_b32,
-        "issuer":    issuer,
+        "secret": secret_b32,
+        "issuer": issuer,
         "algorithm": "SHA1",
-        "digits":    str(TOTP_DIGITS),
-        "period":    str(TOTP_PERIOD_SECONDS),
+        "digits": str(TOTP_DIGITS),
+        "period": str(TOTP_PERIOD_SECONDS),
     }
     query = urllib.parse.urlencode(params)
     return f"otpauth://totp/{urllib.parse.quote(label)}?{query}"
@@ -158,7 +161,8 @@ def make_qr_png_base64(otpauth_uri: str) -> Optional[str]:
 # Recovery codes
 # =============================================================================
 
-def generate_recovery_codes(count: int = RECOVERY_CODE_COUNT, nibbles: int = RECOVERY_CODE_NIBBLES) -> list[str]:
+def generate_recovery_codes(count: int = RECOVERY_CODE_COUNT,
+                            nibbles: int = RECOVERY_CODE_NIBBLES) -> list[str]:
     """
     Plaintext recovery codes — shown to the user once, never stored.
     Format: `XXXXX-XXXXX` (hex, easy to write down).
@@ -175,7 +179,8 @@ def hash_recovery_codes(plaintext_codes: list[str]) -> list[str]:
     """bcrypt-hash each recovery code for storage."""
     import bcrypt
     return [
-        bcrypt.hashpw(_normalise_recovery_code(c).encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        bcrypt.hashpw(_normalise_recovery_code(c).encode(
+            "utf-8"), bcrypt.gensalt()).decode("utf-8")
         for c in plaintext_codes
     ]
 
@@ -185,7 +190,8 @@ def _normalise_recovery_code(code: str) -> str:
     return code.strip().lower().replace("-", "").replace(" ", "")
 
 
-def verify_recovery_code(input_code: str, hashed_codes: list[str]) -> Optional[int]:
+def verify_recovery_code(input_code: str,
+                         hashed_codes: list[str]) -> Optional[int]:
     """
     Return the index of the matching hashed code, or None if no match.
     Caller is responsible for removing that index from the user's record
@@ -201,7 +207,8 @@ def verify_recovery_code(input_code: str, hashed_codes: list[str]) -> Optional[i
 
     candidate = normalised.encode("utf-8")
     # Also try the canonical dashed form, since bcrypt hashes the exact input.
-    # We hash with normalised form, so only the normalised candidate should match.
+    # We hash with normalised form, so only the normalised candidate should
+    # match.
     for idx, hashed in enumerate(hashed_codes):
         try:
             if bcrypt.checkpw(candidate, hashed.encode("utf-8")):

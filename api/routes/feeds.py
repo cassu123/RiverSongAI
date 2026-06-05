@@ -6,6 +6,11 @@ Refactored to use FeedService for modular logic.
 """
 
 from __future__ import annotations
+from providers.feeds.sports import (
+    get_leagues, get_teams, get_scoreboard,
+    get_standings as espn_get_standings,
+    get_schedule, get_boxscore,
+)
 
 import logging
 from typing import Optional
@@ -14,7 +19,6 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 from api.services.feed_service import FeedService
 from providers.feeds.news import (
     NEWS_SOURCES, NEWS_SOURCE_CATEGORIES,
@@ -34,14 +38,17 @@ async def _require_user(authorization: Optional[str]) -> str:
         raise HTTPException(status_code=401, detail="Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token.")
     return payload["sub"]
 
 
 def _store(request: Request):
     mm = getattr(request.app.state, "memory_manager", None)
     if mm is None:
-        raise HTTPException(status_code=503, detail="Memory manager not available.")
+        raise HTTPException(status_code=503,
+                            detail="Memory manager not available.")
     return mm._store
 
 
@@ -70,28 +77,27 @@ class PrefsUpdate(BaseModel):
     feed_flights_enabled: bool = True
 
     # --- Phase 1 ---
-    feed_space_enabled:       bool = True
-    refresh_space_min:        int  = 30
-    space_show_solar:         bool = True
-    space_show_aurora:        bool = True
-    space_show_launches:      bool = True
-    aqi_source:               str  = "purpleair"
+    feed_space_enabled: bool = True
+    refresh_space_min: int = 30
+    space_show_solar: bool = True
+    space_show_aurora: bool = True
+    space_show_launches: bool = True
+    aqi_source: str = "purpleair"
 
     # --- Phase 2 ---
-    feed_earth_enabled:       bool = True
-    refresh_earth_min:        int  = 60
-    earth_show_eonet:         bool = True
-    earth_show_neows:         bool = True
-    earth_show_ocearch:       bool = True
+    feed_earth_enabled: bool = True
+    refresh_earth_min: int = 60
+    earth_show_eonet: bool = True
+    earth_show_neows: bool = True
+    earth_show_ocearch: bool = True
 
-    feed_happenings_enabled:  bool = True
-    refresh_happenings_min:   int  = 15
-    happenings_show_hn:       bool = True
-    happenings_show_reddit:   bool = True
-    happenings_show_events:   bool = True
-    happenings_reddit_subs:   list = ["all"]
+    feed_happenings_enabled: bool = True
+    refresh_happenings_min: int = 15
+    happenings_show_hn: bool = True
+    happenings_show_reddit: bool = True
+    happenings_show_events: bool = True
+    happenings_reddit_subs: list = ["all"]
     happenings_event_radius_mi: int = 25
-
 
 
 @router.get("/preferences")
@@ -165,41 +171,42 @@ async def get_weather_alerts(
 # Sports
 # ---------------------------------------------------------------------------
 
-from providers.feeds.sports import (
-    get_leagues, get_teams, get_scoreboard,
-    get_standings as espn_get_standings,
-    get_schedule, get_boxscore,
-)
 
 @router.get("/sports/leagues")
 async def list_leagues():
     """Return list of supported leagues from the ESPN registry."""
     return await get_leagues()
 
+
 @router.get("/sports/teams/{league_id}")
 async def list_teams(league_id: str):
     """Return all teams in a specific league via ESPN."""
     return await get_teams(league_id)
+
 
 @router.get("/sports/scoreboard/{league_id}")
 async def scoreboard(league_id: str):
     """Return live scores and today's schedule for a league via ESPN."""
     return await get_scoreboard(league_id)
 
+
 @router.get("/sports/espn-standings/{league_id}")
 async def espn_standings(league_id: str):
     """Return league standings table via ESPN."""
     return await espn_get_standings(league_id)
+
 
 @router.get("/sports/schedule/{league_id}/{team_id}")
 async def team_schedule(league_id: str, team_id: str):
     """Return upcoming games for a specific team via ESPN."""
     return await get_schedule(team_id, league_id)
 
+
 @router.get("/sports/boxscore/{league_id}/{event_id}")
 async def event_boxscore(league_id: str, event_id: str):
     """Return detailed game summary/plays for an event via ESPN."""
     return await get_boxscore(event_id, league_id)
+
 
 @router.get("/sports/news")
 async def get_sports_news(
@@ -212,7 +219,8 @@ async def get_sports_news(
 
 
 @router.get("/sports/standings")
-async def get_standings(league_id: str = Query(...), season: str = Query(default="")):
+async def get_standings(league_id: str = Query(...),
+                        season: str = Query(default="")):
     """Fetch league standings table from TheSportsDB."""
     return await FeedService.get_sports_standings(league_id, season)
 
@@ -287,6 +295,7 @@ async def get_flights(
         radius_override=radius, filter_status=filter_status,
     )
 
+
 @router.get("/space")
 async def get_space(
     request: Request,
@@ -295,12 +304,16 @@ async def get_space(
     user_id = await _require_user(authorization)
     return await FeedService.get_space(_store(request), user_id)
 
+
 @router.get("/earth")
-async def get_earth(request: Request, authorization: Optional[str] = Header(default=None)):
+async def get_earth(request: Request,
+                    authorization: Optional[str] = Header(default=None)):
     user_id = await _require_user(authorization)
     return await FeedService.get_earth(_store(request), user_id)
 
+
 @router.get("/happenings")
-async def get_happenings(request: Request, authorization: Optional[str] = Header(default=None)):
+async def get_happenings(request: Request,
+                         authorization: Optional[str] = Header(default=None)):
     user_id = await _require_user(authorization)
     return await FeedService.get_happenings(_store(request), user_id)

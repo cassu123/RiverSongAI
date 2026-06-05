@@ -56,7 +56,6 @@ from core.memory_manager import MemoryManager
 from core.wake_word_service import WakeWordService
 from config.settings import get_settings
 from core.limiter import limiter
-from providers.web.search import build_search_provider
 from providers.vault.vault_provider import VaultProvider
 
 
@@ -82,8 +81,8 @@ async def conversation_websocket(websocket: WebSocket) -> None:
 
     # Require a valid one-time ticket OR (legacy) a valid JWT token
     ticket_id: str = websocket.query_params.get("ticket", "")
-    token: str     = websocket.query_params.get("token", "")
-    
+    token: str = websocket.query_params.get("token", "")
+
     settings = get_settings()
     user_id: str | None = None
 
@@ -110,7 +109,8 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                 logger.warning("WebSocket connection via LEGACY token query param from %s (user_id=%s).",
                                websocket.client, user_id)
         else:
-            logger.warning("WebSocket connection attempted via legacy token but LEGACY_WS_TOKEN_ACCEPT is False.")
+            logger.warning(
+                "WebSocket connection attempted via legacy token but LEGACY_WS_TOKEN_ACCEPT is False.")
 
     if not user_id:
         await websocket.send_json({"type": "error", "message": "Authentication required."})
@@ -122,27 +122,28 @@ async def conversation_websocket(websocket: WebSocket) -> None:
         websocket.app.state.active_connections[user_id] = []
     websocket.app.state.active_connections[user_id].append(websocket)
 
-    memory_manager: MemoryManager | None = getattr(websocket.app.state, "memory_manager", None)
+    memory_manager: MemoryManager | None = getattr(
+        websocket.app.state, "memory_manager", None)
 
     # Load per-user LLM + voice settings from DB
     llm_provider = None
-    llm_model    = None
-    voice_id     = None
-    fb_provider  = None
-    fb_model     = None
+    llm_model = None
+    voice_id = None
+    fb_provider = None
+    fb_model = None
     if memory_manager and user_id != "default":
         try:
             store = memory_manager._store
             user_settings = await store.get_llm_settings(user_id)
-            llm_provider  = user_settings.provider
-            llm_model     = user_settings.model
-            voice_id      = user_settings.voice_id or None
+            llm_provider = user_settings.provider
+            llm_model = user_settings.model
+            voice_id = user_settings.voice_id or None
             whisper_model = user_settings.whisper_model or None
-            
+
             if user_settings.cloud_fallback_enabled:
                 fb_provider = user_settings.cloud_fallback_provider
-                fb_model    = user_settings.cloud_fallback_model
-                
+                fb_model = user_settings.cloud_fallback_model
+
             logger.info(
                 "Using user settings: provider=%s model=%s voice=%s fallback=%s",
                 llm_provider, llm_model, voice_id, fb_provider,
@@ -165,14 +166,14 @@ async def conversation_websocket(websocket: WebSocket) -> None:
 
     try:
         await loop.initialize()
-        
+
         # Fire-and-forget startup briefing — does not block the connection
         async def _startup_briefing():
             try:
                 await loop.run_startup_briefing(on_event=lambda evt: _send(websocket, evt))
             except Exception as exc:
                 logger.debug("Startup briefing skipped: %s", exc)
-        
+
         asyncio.create_task(_startup_briefing())
 
     except Exception as exc:
@@ -189,7 +190,7 @@ async def conversation_websocket(websocket: WebSocket) -> None:
     # Wake word detection for Ambient Mode
     def on_wake():
         asyncio.create_task(_send(websocket, {"type": "wake_word_detected"}))
-    
+
     wake_service = WakeWordService(on_wake_word=on_wake)
     ambient_mode = False
 
@@ -199,28 +200,28 @@ async def conversation_websocket(websocket: WebSocket) -> None:
     try:
         while True:
             ws_msg = await websocket.receive()
-            
+
             if "bytes" in ws_msg and ws_msg["bytes"]:
                 audio_bytes = ws_msg["bytes"]
                 if not waiting_for_audio:
                     continue
                 waiting_for_audio = False
-                
+
                 # Run the turn in the background so we can receive interrupts
                 async def _background_turn(b):
                     try:
                         await loop.run_once(
                             audio_bytes=b,
-                            on_event=lambda evt: asyncio.create_task(_send(websocket, evt)),
+                            on_event=lambda evt: _send(websocket, evt),
                         )
                     except asyncio.CancelledError:
                         pass
                     except Exception as e:
                         logger.error("Turn failed: %s", e)
-                    
+
                     if get_settings().llm_streaming_enabled:
                         await _send(websocket, {"type": "stream_done"})
-                        
+
                 asyncio.create_task(_background_turn(audio_bytes))
                 continue
 
@@ -239,28 +240,32 @@ async def conversation_websocket(websocket: WebSocket) -> None:
 
             if msg_type == "ambient_mode":
                 ambient_mode = bool(message.get("enabled", False))
-                logger.info("Ambient mode %s (user_id=%s)", "enabled" if ambient_mode else "disabled", user_id)
+                logger.info(
+                    "Ambient mode %s (user_id=%s)",
+                    "enabled" if ambient_mode else "disabled",
+                    user_id)
                 continue
 
             elif msg_type == "ambient_audio":
                 if not ambient_mode:
                     continue
-                
+
                 raw_data = message.get("data", "")
                 if raw_data:
                     try:
                         chunk = base64.b64decode(raw_data)
                         wake_service.process_chunk(chunk)
                     except Exception as exc:
-                        logger.warning("Wake word chunk processing failed: %s", exc)
+                        logger.warning(
+                            "Wake word chunk processing failed: %s", exc)
                 continue
 
             elif msg_type == "settings":
                 # Live session settings
                 web_search = message.get("web_search")
                 if web_search is not None:
-                    loop._web_search_enabled = bool(web_search)
-                    logger.info("WebSocket: web_search=%s", loop._web_search_enabled)
+                    loop._web_search = bool(web_search)
+                    logger.info("WebSocket: web_search=%s", loop._web_search)
                 continue
 
             elif msg_type == "start":
@@ -302,13 +307,13 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                     try:
                         await loop.run_once(
                             audio_bytes=b,
-                            on_event=lambda evt: asyncio.create_task(_send(websocket, evt)),
+                            on_event=lambda evt: _send(websocket, evt),
                         )
                     except asyncio.CancelledError:
                         pass
                     except Exception as e:
                         logger.error("Turn failed: %s", e)
-                        
+
                     if get_settings().llm_streaming_enabled:
                         await _send(websocket, {"type": "stream_done"})
                 asyncio.create_task(_background_turn_b64(audio_bytes))
@@ -348,7 +353,7 @@ async def conversation_websocket(websocket: WebSocket) -> None:
 
     except WebSocketDisconnect:
         logger.info("Client disconnected from %s.", websocket.client)
-    
+
     except Exception as exc:
         logger.error(
             "Unexpected WebSocket error from %s: %s", websocket.client, exc, exc_info=True
@@ -358,16 +363,20 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                 "type": "error",
                 "message": "An unexpected server error occurred.",
             })
-            
+
     finally:
         # Unregister active connection
         if user_id in websocket.app.state.active_connections:
             try:
-                websocket.app.state.active_connections[user_id].remove(websocket)
+                websocket.app.state.active_connections[user_id].remove(
+                    websocket)
                 if not websocket.app.state.active_connections[user_id]:
                     del websocket.app.state.active_connections[user_id]
             except Exception as exc:
-                logger.debug("Failed to unregister active connection (user=%s): %s", user_id, exc)
+                logger.debug(
+                    "Failed to unregister active connection (user=%s): %s",
+                    user_id,
+                    exc)
 
 
 async def _send(websocket: WebSocket, payload: dict | bytes) -> None:
@@ -416,7 +425,8 @@ async def chat_http(
         raise HTTPException(status_code=401, detail="Authentication required.")
 
     user_id: str = payload["sub"]
-    memory_manager: MemoryManager | None = getattr(request.app.state, "memory_manager", None)
+    memory_manager: MemoryManager | None = getattr(
+        request.app.state, "memory_manager", None)
 
     # We use ConversationLoop to get full tool support and consistent behavior
     loop = ConversationLoop(
@@ -447,7 +457,7 @@ async def chat_http(
             await queue.put(evt)
 
         # Run the conversation turn in a background task
-        task = asyncio.create_task(loop.run_text(body.message, on_event))
+        task = asyncio.create_task(loop.run_text(body.message, on_event))  # type: ignore
 
         try:
             while True:
@@ -465,7 +475,8 @@ async def chat_http(
                 if task.done() and queue.empty():
                     break
 
-                # Wait for the next event or task completion (whichever comes first)
+                # Wait for the next event or task completion (whichever comes
+                # first)
                 try:
                     evt = await asyncio.wait_for(queue.get(), timeout=0.05)
                     if evt["type"] in ("response_chunk", "token"):
@@ -524,7 +535,8 @@ async def extract_facts_http(
     Uses the LLM to pull facts the user stated about themselves,
     then saves them to the memory store.
     """
-    import asyncio, json as _json
+    import asyncio
+    import json as _json
 
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
@@ -534,7 +546,8 @@ async def extract_facts_http(
         raise HTTPException(status_code=401, detail="Authentication required.")
 
     user_id: str = payload["sub"]
-    memory_manager: MemoryManager | None = getattr(request.app.state, "memory_manager", None)
+    memory_manager: MemoryManager | None = getattr(
+        request.app.state, "memory_manager", None)
     if not memory_manager:
         return {"status": "no memory manager"}
 
@@ -568,41 +581,50 @@ async def extract_facts_http(
     import re as _re
 
     def _clean(text: str) -> str:
-        text = _re.sub(r"<think>.*?</think>", "", text, flags=_re.DOTALL).strip()
+        text = _re.sub(
+            r"<think>.*?</think>",
+            "",
+            text,
+            flags=_re.DOTALL).strip()
         text = _re.sub(r"```(?:json)?\s*", "", text).strip()
         return text
 
     def _parse_json_array(text: str):
         start = text.find("[")
-        end   = text.rfind("]") + 1
+        end = text.rfind("]") + 1
         if start == -1 or end == 0:
             return None
         return _json.loads(text[start:end])
 
     async def _extract_facts():
         try:
-            llm = _build_llm_provider()
+            llm, _ = _build_llm_provider()
             full = ""
             async for chunk in llm.stream_response([
-                {"role": "system", "content": "You are a precise fact extractor. Output only valid JSON."},
-                {"role": "user",   "content": extraction_prompt},
+                {"role": "system",
+                 "content": "You are a precise fact extractor. Output only valid JSON."},
+                {"role": "user", "content": extraction_prompt},
             ]):
                 full += chunk
             full = _clean(full)
-            logger.info("Fact extraction output (user=%s): %s", user_id, full[:300])
+            logger.info("Fact extraction output (user=%s): %s",
+                        user_id, full[:300])
             items = _parse_json_array(full)
             if not items:
                 return
             saved = 0
             for f in items:
-                key   = str(f.get("key",   "")).strip()
+                key = str(f.get("key", "")).strip()
                 value = str(f.get("value", "")).strip()
                 if key and value:
                     await memory_manager.upsert_fact(user_id, key, value, source="inferred")
                     saved += 1
             logger.info("Facts saved (user=%s): %d", user_id, saved)
         except Exception as exc:
-            logger.warning("Fact extraction failed (user=%s): %s", user_id, exc)
+            logger.warning(
+                "Fact extraction failed (user=%s): %s",
+                user_id,
+                exc)
 
     async def _extract_preferences():
         pref_prompt = (
@@ -616,11 +638,12 @@ async def extract_facts_http(
             f"CONVERSATION:\n{conversation_text}\n\nJSON array:"
         )
         try:
-            llm = _build_llm_provider()
+            llm, _ = _build_llm_provider()
             full = ""
             async for chunk in llm.stream_response([
-                {"role": "system", "content": "You are a preference extractor. Output only valid JSON."},
-                {"role": "user",   "content": pref_prompt},
+                {"role": "system",
+                 "content": "You are a preference extractor. Output only valid JSON."},
+                {"role": "user", "content": pref_prompt},
             ]):
                 full += chunk
             full = _clean(full)
@@ -629,15 +652,18 @@ async def extract_facts_http(
                 return
             saved = 0
             for p in items:
-                cat   = str(p.get("category", "")).strip()
-                value = str(p.get("value",    "")).strip()
-                conf  = str(p.get("confidence", "low")).strip()
+                cat = str(p.get("category", "")).strip()
+                value = str(p.get("value", "")).strip()
+                conf = str(p.get("confidence", "low")).strip()
                 if cat and value:
                     await memory_manager.upsert_preference(user_id, cat, value, confidence=conf)
                     saved += 1
             logger.info("Preferences saved (user=%s): %d", user_id, saved)
         except Exception as exc:
-            logger.warning("Preference extraction failed (user=%s): %s", user_id, exc)
+            logger.warning(
+                "Preference extraction failed (user=%s): %s",
+                user_id,
+                exc)
 
     vault_store = getattr(memory_manager, "_store", None)
 
@@ -649,11 +675,11 @@ async def extract_facts_http(
             f"CONVERSATION:\n{conversation_text}\n\nSummary:"
         )
         try:
-            llm = _build_llm_provider()
+            llm, _ = _build_llm_provider()
             full = ""
             async for chunk in llm.stream_response([
                 {"role": "system", "content": "You are a concise summarizer."},
-                {"role": "user",   "content": summary_prompt},
+                {"role": "user", "content": summary_prompt},
             ]):
                 full += chunk
             full = _clean(full).strip()
@@ -666,9 +692,13 @@ async def extract_facts_http(
                     provider = VaultProvider(store=vault_store)
                     await provider.append_to_daily(user_id, "Conversation summary", full)
                 except Exception as vexc:
-                    logger.debug("Daily-note append skipped (user=%s): %s", user_id, vexc)
+                    logger.debug(
+                        "Daily-note append skipped (user=%s): %s", user_id, vexc)
         except Exception as exc:
-            logger.warning("Summary generation failed (user=%s): %s", user_id, exc)
+            logger.warning(
+                "Summary generation failed (user=%s): %s",
+                user_id,
+                exc)
 
     async def _run():
         await asyncio.gather(
@@ -718,7 +748,7 @@ async def enhance_prompt_http(
         {"role": "user", "content": meta_prompt},
     ]
     try:
-        llm = _build_llm_provider()
+        llm, _ = _build_llm_provider()
         full = ""
         async for chunk in llm.stream_response(messages):
             full += chunk

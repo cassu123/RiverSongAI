@@ -91,17 +91,17 @@ class Intent:
 # Patterns that identify the action. Checked in order -- first match wins.
 # Each entry is (action_name, regex_pattern).
 _ACTION_PATTERNS: List[tuple] = [
-    ("turn_on",         r"\bturn\s+on\b"),
-    ("turn_off",        r"\bturn\s+off\b"),
-    ("toggle",          r"\btoggle\b"),
-    ("dim",             r"\bdim\b|\bdarken\b"),
-    ("brighten",        r"\bbrighten\b|\braise\b|\bbrighter\b"),
-    ("lock",            r"\block\b"),
-    ("unlock",          r"\bunlock\b"),
-    ("open",            r"\bopen\b"),
-    ("close",           r"\bclose\b"),
-    ("activate",        r"\bactivate\b|\brun scene\b"),
-    ("run",             r"\brun script\b"),
+    ("turn_on", r"\bturn\s+on\b"),
+    ("turn_off", r"\bturn\s+off\b"),
+    ("toggle", r"\btoggle\b"),
+    ("dim", r"\bdim\b|\bdarken\b"),
+    ("brighten", r"\bbrighten\b|\braise\b|\bbrighter\b"),
+    ("lock", r"\block\b"),
+    ("unlock", r"\bunlock\b"),
+    ("open", r"\bopen\b"),
+    ("close", r"\bclose\b"),
+    ("activate", r"\bactivate\b|\brun scene\b"),
+    ("run", r"\brun script\b"),
 ]
 
 # Patterns stripped from the transcript to isolate the device name.
@@ -156,7 +156,8 @@ def _parse_smart_home_command(transcript: str) -> Dict[str, Any]:
     # override the action so the handler can resolve set_brightness vs set_temperature.
     # Covers: "set to 50%", "turn to 50%", "put at 50%", "lights to 50%".
     if value is not None and re.search(r"\bto\s+\d+", lower):
-        action = "set_value"  # Resolved to set_brightness or set_temperature in handler.
+        # Resolved to set_brightness or set_temperature in handler.
+        action = "set_value"
 
     # Strip action/filler words to isolate the device name.
     device_name = lower
@@ -208,7 +209,8 @@ async def _handle_smart_home(transcript: str, user_id: str) -> str:
 
         # Resolve "set_value" to a domain-specific action.
         if action == "set_value":
-            entity_list = resolved if isinstance(resolved, list) else [resolved]
+            entity_list = resolved if isinstance(
+                resolved, list) else [resolved]
             domain = entity_list[0].split(".")[0]
             action = "set_temperature" if domain == "climate" else "set_brightness"
 
@@ -240,7 +242,8 @@ async def _handle_smart_home(transcript: str, user_id: str) -> str:
         return "Sorry, I had trouble controlling that device right now."
 
 
-def _build_confirmation(action: str, device_name: str, value: Optional[int]) -> str:
+def _build_confirmation(action: str, device_name: str,
+                        value: Optional[int]) -> str:
     """Build a natural-sounding spoken confirmation for a completed action."""
     if action == "turn_on":
         return f"Turning on the {device_name}."
@@ -344,7 +347,8 @@ async def _handle_maps(transcript: str, user_id: str) -> str:
         # Fall back to a general location info lookup.
         # Strip leading navigation keywords.
         query = transcript
-        for prefix in ("where is ", "find ", "locate ", "what is ", "search for "):
+        for prefix in ("where is ", "find ", "locate ",
+                       "what is ", "search for "):
             if lower.startswith(prefix):
                 query = transcript[len(prefix):]
                 break
@@ -359,18 +363,20 @@ async def _handle_maps(transcript: str, user_id: str) -> str:
 async def _handle_weather(transcript: str, user_id: str) -> str:
     """Fetch weather for the detected location and day, return a spoken summary."""
     try:
-        from providers.feeds.weather import (
+        from providers.feeds.weather import (  # type: ignore
             build_weather_provider,
             extract_location_from_transcript,
             extract_day_from_transcript,
         )
         from config.settings import get_settings
 
-        provider = build_weather_provider()
-        location = extract_location_from_transcript(transcript, get_settings().default_location)
+        provider = build_weather_provider()  # type: ignore
+        location = extract_location_from_transcript(
+            transcript, get_settings().default_location)
         day = extract_day_from_transcript(transcript)
 
-        if day or any(kw in transcript.lower() for kw in ("forecast", "weekend", "this week", "week")):
+        if day or any(kw in transcript.lower()
+                      for kw in ("forecast", "weekend", "this week", "week")):
             periods = await provider.get_forecast(location=location, day_name=day)
             return provider.format_forecast_for_speech(periods, day_name=day)
         else:
@@ -385,13 +391,13 @@ async def _handle_weather(transcript: str, user_id: str) -> str:
 async def _handle_news(transcript: str, user_id: str) -> str:
     """Fetch news headlines or a topic search, return a spoken summary."""
     try:
-        from providers.feeds.news import (
+        from providers.feeds.news import (  # type: ignore
             build_news_provider,
             extract_category_from_transcript,
             extract_topic_from_transcript,
         )
 
-        provider = build_news_provider()
+        provider = build_news_provider()  # type: ignore
         topic = extract_topic_from_transcript(transcript)
         category = extract_category_from_transcript(transcript)
 
@@ -410,12 +416,12 @@ async def _handle_news(transcript: str, user_id: str) -> str:
 async def _handle_stocks(transcript: str, user_id: str) -> str:
     """Fetch a stock quote for the detected ticker, return a spoken summary."""
     try:
-        from providers.feeds.stocks import (
+        from providers.feeds.stocks import (  # type: ignore
             build_stocks_provider,
             extract_ticker_from_transcript,
         )
 
-        provider = build_stocks_provider()
+        provider = build_stocks_provider()  # type: ignore
         ticker = extract_ticker_from_transcript(transcript)
 
         if not ticker:
@@ -437,12 +443,12 @@ async def _handle_stocks(transcript: str, user_id: str) -> str:
 async def _handle_sports(transcript: str, user_id: str) -> str:
     """Fetch the most recent result for the detected team, return a spoken summary."""
     try:
-        from providers.feeds.sports import (
+        from providers.feeds.sports import (  # type: ignore
             build_sports_provider,
             extract_team_from_transcript,
         )
 
-        provider = build_sports_provider()
+        provider = build_sports_provider()  # type: ignore
         team_name = extract_team_from_transcript(transcript)
 
         if not team_name:
@@ -452,7 +458,8 @@ async def _handle_sports(transcript: str, user_id: str) -> str:
             )
 
         data = await provider.get_team_results(team_name)
-        return provider.format_results_for_speech(data, requested_name=team_name)
+        return provider.format_results_for_speech(
+            data, requested_name=team_name)
 
     except Exception as exc:
         logger.error("Sports handler failed: %s", exc)
@@ -476,10 +483,6 @@ async def _handle_commerce(transcript: str, user_id: str) -> str:
             kw in lower
             for kw in ("order", "orders", "pending", "ship", "unshipped", "fulfill")
         )
-        want_low_stock = any(
-            kw in lower
-            for kw in ("low stock", "running low", "out of stock", "restock", "inventory")
-        )
 
         parts: List[str] = []
 
@@ -499,11 +502,12 @@ async def _handle_commerce(transcript: str, user_id: str) -> str:
             walmart = build_walmart_provider()
 
             if want_orders:
-                orders = await walmart.get_orders(status="Created")
-                parts.append(walmart.format_orders_for_speech(orders))
+                walmart_orders = await walmart.get_orders(status="Created")
+                parts.append(walmart.format_orders_for_speech(walmart_orders))
             else:
-                items = await walmart.get_low_stock_items()
-                parts.append(walmart.format_low_stock_for_speech(items))
+                walmart_items = await walmart.get_low_stock_items()
+                parts.append(
+                    walmart.format_low_stock_for_speech(walmart_items))
 
         return " ".join(parts) if parts else (
             "I heard a commerce query but could not determine what to look up. "
@@ -562,7 +566,8 @@ async def _handle_library(transcript: str, user_id: str) -> str:
         provider = build_libby_provider()
         lower = transcript.lower()
 
-        if any(kw in lower for kw in ("loan", "borrowed", "borrow", "due", "checked out")):
+        if any(kw in lower for kw in (
+                "loan", "borrowed", "borrow", "due", "checked out")):
             loans = await provider.get_loans(user_id)
             return provider.format_loans_for_speech(loans)
 
@@ -815,7 +820,7 @@ INTENT_REGISTRY: List[Intent] = [
             "specifications",
             "maintenance",
         ],
-        handler=lambda t, u: "", # Return empty string to let conversation loop handle LLM turn
+        handler=None,  # Let conversation loop handle LLM turn
     ),
     Intent(
         name="weather",
@@ -1067,7 +1072,8 @@ class IntentRouter:
         """
         lower = transcript.lower()
         best_score = 0.0
-        best_intent: Intent = INTENT_REGISTRY[-1]  # Default: conversation fallback
+        # Default: conversation fallback
+        best_intent: Intent = INTENT_REGISTRY[-1]
 
         for intent in INTENT_REGISTRY:
             if intent.name == "conversation":

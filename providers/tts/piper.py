@@ -114,7 +114,8 @@ class PiperTTS(TTSProvider):
                 try:
                     os.unlink(wav_path)
                 except OSError as exc:
-                    logger.warning("Could not delete temp WAV '%s': %s", wav_path, exc)
+                    logger.warning(
+                        "Could not delete temp WAV '%s': %s", wav_path, exc)
 
     def _run_piper(self, text: str, output_wav_path: str) -> None:
         """
@@ -138,7 +139,8 @@ class PiperTTS(TTSProvider):
                 shell=False,
             )
         except subprocess.TimeoutExpired as exc:
-            raise RuntimeError("Piper synthesis timed out after 60 seconds.") from exc
+            raise RuntimeError(
+                "Piper synthesis timed out after 60 seconds.") from exc
         except FileNotFoundError as exc:
             raise RuntimeError(
                 f"Piper binary not found at '{self._piper_path}'. "
@@ -147,7 +149,9 @@ class PiperTTS(TTSProvider):
 
         if result.returncode != 0:
             stderr = result.stderr.decode("utf-8", errors="replace")
-            raise RuntimeError(f"Piper exited with code {result.returncode}: {stderr}")
+            raise RuntimeError(
+                f"Piper exited with code {
+                    result.returncode}: {stderr}")
 
         logger.debug("Piper synthesis complete -> '%s'.", output_wav_path)
 

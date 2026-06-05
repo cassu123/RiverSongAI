@@ -1,15 +1,18 @@
 # providers/media/immich.py
 from __future__ import annotations
-import logging, os, time
+import logging
+import os
+import time
 from typing import Any
 import httpx
 
 logger = logging.getLogger(__name__)
 
-_BASE  = os.getenv("IMMICH_URL", "http://localhost:2283")
+_BASE = os.getenv("IMMICH_URL", "http://localhost:2283")
 _TOKEN = os.getenv("IMMICH_API_KEY", "")
 _CACHE_TTL = 30
 _cache: dict[str, tuple[Any, float]] = {}
+
 
 def _client() -> httpx.AsyncClient:
     headers = {
@@ -17,6 +20,7 @@ def _client() -> httpx.AsyncClient:
         "x-api-key": _TOKEN
     }
     return httpx.AsyncClient(base_url=_BASE, headers=headers, timeout=10)
+
 
 async def _get(path: str, params: dict | None = None) -> Any:
     if not _TOKEN:
@@ -36,13 +40,16 @@ async def _get(path: str, params: dict | None = None) -> Any:
     _cache[key] = (data, time.monotonic() + _CACHE_TTL)
     return data
 
+
 async def search_photos(query: str, limit: int = 50) -> list[dict]:
     """Search for photos in Immich."""
     return await _get("/api/search/photos", params={"searchTerm": query, "clip": "true"}) or []
 
+
 async def get_photo(asset_id: str) -> dict | None:
     """Retrieve photo/asset metadata."""
     return await _get(f"/api/asset/assetById/{asset_id}")
+
 
 async def albums() -> list[dict]:
     """Retrieve list of albums."""

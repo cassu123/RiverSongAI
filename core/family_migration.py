@@ -20,11 +20,24 @@ from typing import List
 
 logger = logging.getLogger(__name__)
 
-_MAIN_DB  = lambda: os.environ.get("MAIN_DB_PATH") or _settings_db_path()
-_CUL_DB   = lambda: os.environ.get("CULINARY_DB_URL",  "sqlite:///./data/culinary.db" ).replace("sqlite:///", "")
-_INV_DB   = lambda: os.environ.get("INVENTORY_DB_URL", "sqlite:///./data/inventory.db").replace("sqlite:///", "")
-_VEH_DB   = lambda: os.environ.get("VEHICLES_DB_URL",  "sqlite:///./data/vehicles.db" ).replace("sqlite:///", "")
-_COM_DB   = lambda: os.environ.get("COMMERCE_DB_URL",  "sqlite:///./data/commerce.db" ).replace("sqlite:///", "")
+
+def _MAIN_DB(): return os.environ.get("MAIN_DB_PATH") or _settings_db_path()
+
+
+def _CUL_DB(): return os.environ.get("CULINARY_DB_URL",
+                                     "sqlite:///./data/culinary.db").replace("sqlite:///", "")
+
+
+def _INV_DB(): return os.environ.get("INVENTORY_DB_URL",
+                                     "sqlite:///./data/inventory.db").replace("sqlite:///", "")
+
+
+def _VEH_DB(): return os.environ.get("VEHICLES_DB_URL",
+                                     "sqlite:///./data/vehicles.db").replace("sqlite:///", "")
+
+
+def _COM_DB(): return os.environ.get("COMMERCE_DB_URL",
+                                     "sqlite:///./data/commerce.db").replace("sqlite:///", "")
 
 
 def _settings_db_path() -> str:
@@ -36,7 +49,8 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def migrate_member_to_family(group_id: str, profile_id: str, shared_modules: List[str]) -> dict:
+def migrate_member_to_family(
+        group_id: str, profile_id: str, shared_modules: List[str]) -> dict:
     """
     Move all personal module data for `profile_id` into the shared family
     owner slot for `group_id`.  Safe to call multiple times (idempotent).
@@ -47,16 +61,19 @@ def migrate_member_to_family(group_id: str, profile_id: str, shared_modules: Lis
     summary: dict = {}
 
     if "culinary" in shared_modules:
-        summary["culinary"] = _migrate_culinary(profile_id, family_owner, group_id)
+        summary["culinary"] = _migrate_culinary(
+            profile_id, family_owner, group_id)
 
     if "inventory" in shared_modules:
-        summary["inventory"] = _migrate_inventory(profile_id, family_owner, group_id)
+        summary["inventory"] = _migrate_inventory(
+            profile_id, family_owner, group_id)
 
     if "maintenance" in shared_modules:
         summary["maintenance"] = _migrate_vehicles(profile_id, family_owner)
 
     if "store" in shared_modules:
-        summary["store"] = _migrate_commerce(profile_id, family_owner, group_id)
+        summary["store"] = _migrate_commerce(
+            profile_id, family_owner, group_id)
 
     logger.info(
         "Family migration for profile %s → group %s: %s",
@@ -69,10 +86,12 @@ def migrate_member_to_family(group_id: str, profile_id: str, shared_modules: Lis
 # Culinary
 # ---------------------------------------------------------------------------
 
-def _migrate_culinary(profile_id: str, family_owner: str, group_id: str) -> dict:
+def _migrate_culinary(profile_id: str, family_owner: str,
+                      group_id: str) -> dict:
     moved = 0
     try:
-        conn = sqlite3.connect(_CUL_DB()); conn.row_factory = sqlite3.Row
+        conn = sqlite3.connect(_CUL_DB())
+        conn.row_factory = sqlite3.Row
 
         personal_hh = conn.execute(
             "SELECT id FROM cul_households WHERE owner_id=?", (profile_id,)
@@ -117,7 +136,8 @@ def _migrate_culinary(profile_id: str, family_owner: str, group_id: str) -> dict
         conn.commit()
         conn.close()
     except Exception as exc:
-        logger.warning("Culinary migration failed for %s: %s", profile_id[:8], exc)
+        logger.warning("Culinary migration failed for %s: %s",
+                       profile_id[:8], exc)
 
     return {"moved": moved}
 
@@ -126,10 +146,12 @@ def _migrate_culinary(profile_id: str, family_owner: str, group_id: str) -> dict
 # Inventory
 # ---------------------------------------------------------------------------
 
-def _migrate_inventory(profile_id: str, family_owner: str, group_id: str) -> dict:
+def _migrate_inventory(profile_id: str, family_owner: str,
+                       group_id: str) -> dict:
     moved = 0
     try:
-        conn = sqlite3.connect(_INV_DB()); conn.row_factory = sqlite3.Row
+        conn = sqlite3.connect(_INV_DB())
+        conn.row_factory = sqlite3.Row
 
         personal_inv = conn.execute(
             "SELECT id FROM inv_users WHERE external_user_id=?", (profile_id,)
@@ -141,15 +163,19 @@ def _migrate_inventory(profile_id: str, family_owner: str, group_id: str) -> dic
         puid = str(personal_inv["id"]).replace("-", "")
 
         family_inv = conn.execute(
-            "SELECT id FROM inv_users WHERE external_user_id=?", (family_owner,)
+            "SELECT id FROM inv_users WHERE external_user_id=?", (
+                family_owner,)
         ).fetchone()
         if not family_inv:
             # Create the shared InvUser using a synthetic email
-            sample_tz = conn.execute("SELECT timezone FROM inv_users LIMIT 1").fetchone()
+            sample_tz = conn.execute(
+                "SELECT timezone FROM inv_users LIMIT 1").fetchone()
             tz = sample_tz["timezone"] if sample_tz else "UTC"
             # Get group name for display
-            main = sqlite3.connect(_MAIN_DB()); main.row_factory = sqlite3.Row
-            grp  = main.execute("SELECT name FROM family_groups WHERE id=?", (group_id,)).fetchone()
+            main = sqlite3.connect(_MAIN_DB())
+            main.row_factory = sqlite3.Row
+            grp = main.execute(
+                "SELECT name FROM family_groups WHERE id=?", (group_id,)).fetchone()
             main.close()
             group_name = grp["name"] if grp else "Family"
             new_uid = uuid.uuid4().hex
@@ -179,7 +205,8 @@ def _migrate_inventory(profile_id: str, family_owner: str, group_id: str) -> dic
         conn.commit()
         conn.close()
     except Exception as exc:
-        logger.warning("Inventory migration failed for %s: %s", profile_id[:8], exc)
+        logger.warning("Inventory migration failed for %s: %s",
+                       profile_id[:8], exc)
 
     return {"moved": moved}
 
@@ -191,7 +218,8 @@ def _migrate_inventory(profile_id: str, family_owner: str, group_id: str) -> dic
 def _migrate_vehicles(profile_id: str, family_owner: str) -> dict:
     moved = 0
     try:
-        conn = sqlite3.connect(_VEH_DB()); conn.row_factory = sqlite3.Row
+        conn = sqlite3.connect(_VEH_DB())
+        conn.row_factory = sqlite3.Row
 
         cur = conn.execute(
             "UPDATE vehicles SET external_user_id=? WHERE external_user_id=?",
@@ -212,7 +240,8 @@ def _migrate_vehicles(profile_id: str, family_owner: str) -> dict:
         conn.commit()
         conn.close()
     except Exception as exc:
-        logger.warning("Vehicles migration failed for %s: %s", profile_id[:8], exc)
+        logger.warning("Vehicles migration failed for %s: %s",
+                       profile_id[:8], exc)
 
     return {"moved": moved}
 
@@ -221,10 +250,12 @@ def _migrate_vehicles(profile_id: str, family_owner: str) -> dict:
 # Commerce / Store
 # ---------------------------------------------------------------------------
 
-def _migrate_commerce(profile_id: str, family_owner: str, group_id: str) -> dict:
+def _migrate_commerce(profile_id: str, family_owner: str,
+                      group_id: str) -> dict:
     moved = 0
     try:
-        conn = sqlite3.connect(_COM_DB()); conn.row_factory = sqlite3.Row
+        conn = sqlite3.connect(_COM_DB())
+        conn.row_factory = sqlite3.Row
 
         personal_biz = conn.execute(
             "SELECT id FROM biz_users WHERE external_user_id=?", (profile_id,)
@@ -236,17 +267,17 @@ def _migrate_commerce(profile_id: str, family_owner: str, group_id: str) -> dict
         puid = personal_biz["id"]
 
         family_biz = conn.execute(
-            "SELECT id FROM biz_users WHERE external_user_id=?", (family_owner,)
+            "SELECT id FROM biz_users WHERE external_user_id=?", (
+                family_owner,)
         ).fetchone()
         if not family_biz:
-            main = sqlite3.connect(_MAIN_DB()); main.row_factory = sqlite3.Row
-            grp  = main.execute("SELECT name FROM family_groups WHERE id=?", (group_id,)).fetchone()
+            main = sqlite3.connect(_MAIN_DB())
+            main.row_factory = sqlite3.Row
+            grp = main.execute(
+                "SELECT name FROM family_groups WHERE id=?", (group_id,)).fetchone()
             main.close()
             group_name = grp["name"] if grp else "Family"
             # Get email from personal user for display
-            user_row = conn.execute(
-                "SELECT email FROM biz_users WHERE id=?", (puid,)
-            ).fetchone()
             new_uid = str(uuid.uuid4())
             conn.execute(
                 "INSERT INTO biz_users (id, external_user_id, email, display_name, created_at) "
@@ -267,12 +298,14 @@ def _migrate_commerce(profile_id: str, family_owner: str, group_id: str) -> dict
             return {"moved": 0}
 
         cur = conn.execute(
-            "UPDATE biz_workspaces SET owner_id=? WHERE owner_id=?", (fuid, puid)
+            "UPDATE biz_workspaces SET owner_id=? WHERE owner_id=?", (
+                fuid, puid)
         )
         moved += cur.rowcount
         conn.commit()
         conn.close()
     except Exception as exc:
-        logger.warning("Commerce migration failed for %s: %s", profile_id[:8], exc)
+        logger.warning("Commerce migration failed for %s: %s",
+                       profile_id[:8], exc)
 
     return {"moved": moved}

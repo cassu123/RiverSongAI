@@ -67,7 +67,8 @@ def _detect_nvidia_gpus() -> list[dict]:
     query = "name,memory.total,memory.free,memory.used,driver_version,compute_cap"
     try:
         result = subprocess.run(
-            ["nvidia-smi", f"--query-gpu={query}", "--format=csv,noheader,nounits"],
+            ["nvidia-smi", f"--query-gpu={query}",
+                "--format=csv,noheader,nounits"],
             capture_output=True,
             text=True,
             timeout=5,
@@ -78,7 +79,10 @@ def _detect_nvidia_gpus() -> list[dict]:
         return []
 
     if result.returncode != 0:
-        logger.info("nvidia-smi returned %s: %s", result.returncode, result.stderr.strip())
+        logger.info(
+            "nvidia-smi returned %s: %s",
+            result.returncode,
+            result.stderr.strip())
         return []
 
     gpus: list[dict] = []
@@ -88,12 +92,12 @@ def _detect_nvidia_gpus() -> list[dict]:
             continue
         try:
             gpus.append({
-                "index":           idx,
-                "name":            parts[0],
-                "vram_total_gb":   round(float(parts[1]) / 1024.0, 2),
-                "vram_free_gb":    round(float(parts[2]) / 1024.0, 2),
-                "vram_used_gb":    round(float(parts[3]) / 1024.0, 2),
-                "driver_version":  parts[4],
+                "index": idx,
+                "name": parts[0],
+                "vram_total_gb": round(float(parts[1]) / 1024.0, 2),
+                "vram_free_gb": round(float(parts[2]) / 1024.0, 2),
+                "vram_used_gb": round(float(parts[3]) / 1024.0, 2),
+                "driver_version": parts[4],
                 "compute_capability": parts[5],
             })
         except (ValueError, IndexError) as exc:
@@ -113,9 +117,11 @@ def _detect_ram() -> dict:
         with open("/proc/meminfo", "r", encoding="utf-8") as fh:
             for line in fh:
                 if line.startswith("MemTotal:"):
-                    info["total_gb"] = round(int(line.split()[1]) / (1024 * 1024), 2)
+                    info["total_gb"] = round(
+                        int(line.split()[1]) / (1024 * 1024), 2)
                 elif line.startswith("MemAvailable:"):
-                    info["available_gb"] = round(int(line.split()[1]) / (1024 * 1024), 2)
+                    info["available_gb"] = round(
+                        int(line.split()[1]) / (1024 * 1024), 2)
                 if info["total_gb"] and info["available_gb"]:
                     break
     except (OSError, ValueError, IndexError) as exc:
@@ -130,10 +136,10 @@ def _detect_ram() -> dict:
 def _detect_cpu() -> dict:
     """Best-effort CPU model name + core count via /proc/cpuinfo and stdlib."""
     cpu = {
-        "model":     platform.processor() or "unknown",
-        "arch":      platform.machine(),
-        "cores":     os.cpu_count() or 0,
-        "threads":   os.cpu_count() or 0,
+        "model": platform.processor() or "unknown",
+        "arch": platform.machine(),
+        "cores": os.cpu_count() or 0,
+        "threads": os.cpu_count() or 0,
     }
     try:
         with open("/proc/cpuinfo", "r", encoding="utf-8") as fh:
@@ -141,8 +147,13 @@ def _detect_cpu() -> dict:
         m = re.search(r"^model name\s*:\s*(.+)$", text, re.MULTILINE)
         if m:
             cpu["model"] = m.group(1).strip()
-        physical_ids = set(re.findall(r"^physical id\s*:\s*(\d+)$", text, re.MULTILINE))
-        core_counts  = re.findall(r"^cpu cores\s*:\s*(\d+)$", text, re.MULTILINE)
+        physical_ids = set(
+            re.findall(
+                r"^physical id\s*:\s*(\d+)$",
+                text,
+                re.MULTILINE))
+        core_counts = re.findall(
+            r"^cpu cores\s*:\s*(\d+)$", text, re.MULTILINE)
         if physical_ids and core_counts:
             cpu["cores"] = int(core_counts[0]) * len(physical_ids)
     except (OSError, ValueError) as exc:
@@ -162,14 +173,15 @@ def detect_hardware() -> dict:
     All keys are always present; sub-fields are populated best-effort.
     """
     return {
-        "gpus":        _detect_nvidia_gpus(),
-        "ram_gb":      _detect_ram(),
-        "cpu":         _detect_cpu(),
+        "gpus": _detect_nvidia_gpus(),
+        "ram_gb": _detect_ram(),
+        "cpu": _detect_cpu(),
         "detected_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
-def _score_one(vram_gb: Optional[float], gpu_free: float, gpu_total: float, ram_avail: float) -> tuple[str, str]:
+def _score_one(vram_gb: Optional[float], gpu_free: float,
+               gpu_total: float, ram_avail: float) -> tuple[str, str]:
     """
     Decide a fit category + human reason for one model.
 
@@ -184,13 +196,16 @@ def _score_one(vram_gb: Optional[float], gpu_free: float, gpu_total: float, ram_
 
     if gpu_total > 0 and vram_gb <= gpu_total * _SAFETY_MARGIN:
         return "tight", (
-            f"GPU has {gpu_total:.1f} GB total but only {gpu_free:.1f} GB free; "
+            f"GPU has {
+                gpu_total:.1f} GB total but only {
+                gpu_free:.1f} GB free; "
             "another process must release VRAM first."
         )
 
     if vram_gb <= ram_avail * _SAFETY_MARGIN:
         return "ram_fallback", (
-            f"Too large for GPU; will run on CPU+RAM ({ram_avail:.1f} GB available). "
+            f"Too large for GPU; will run on CPU+RAM ({
+                ram_avail:.1f} GB available). "
             "Expect ~2–10 tokens/s."
         )
 
@@ -209,23 +224,24 @@ def score_models(hw: dict) -> list[dict]:
     """
     gpus = hw.get("gpus") or []
     gpu_total = max((g["vram_total_gb"] for g in gpus), default=0.0)
-    gpu_free  = max((g["vram_free_gb"]  for g in gpus), default=0.0)
+    gpu_free = max((g["vram_free_gb"] for g in gpus), default=0.0)
     ram_avail = float((hw.get("ram_gb") or {}).get("available_gb") or 0.0)
 
     rank = {"fits": 0, "tight": 1, "ram_fallback": 2, "oom": 3, "unknown": 4}
 
     rows: list[dict] = []
     for entry in LLMRegistry.list_local():
-        status, reason = _score_one(entry.vram_gb, gpu_free, gpu_total, ram_avail)
+        status, reason = _score_one(
+            entry.vram_gb, gpu_free, gpu_total, ram_avail)
         rows.append({
-            "provider":     entry.provider,
-            "model_id":     entry.model_id,
+            "provider": entry.provider,
+            "model_id": entry.model_id,
             "display_name": entry.display_name,
-            "vram_gb":      entry.vram_gb,
+            "vram_gb": entry.vram_gb,
             "context_window": entry.context_window,
-            "status":       status,
-            "reason":       reason,
-            "priority":     entry.priority,
+            "status": status,
+            "reason": reason,
+            "priority": entry.priority,
         })
 
     rows.sort(key=lambda r: (rank.get(r["status"], 99), r["priority"]))
@@ -234,18 +250,18 @@ def score_models(hw: dict) -> list[dict]:
 
 def build_cookbook() -> dict:
     """One-shot: detect hardware and score every local model against it."""
-    hw    = detect_hardware()
-    rows  = score_models(hw)
+    hw = detect_hardware()
+    rows = score_models(hw)
     summary = {
-        "fits":         sum(1 for r in rows if r["status"] == "fits"),
-        "tight":        sum(1 for r in rows if r["status"] == "tight"),
+        "fits": sum(1 for r in rows if r["status"] == "fits"),
+        "tight": sum(1 for r in rows if r["status"] == "tight"),
         "ram_fallback": sum(1 for r in rows if r["status"] == "ram_fallback"),
-        "oom":          sum(1 for r in rows if r["status"] == "oom"),
-        "unknown":      sum(1 for r in rows if r["status"] == "unknown"),
-        "total":        len(rows),
+        "oom": sum(1 for r in rows if r["status"] == "oom"),
+        "unknown": sum(1 for r in rows if r["status"] == "unknown"),
+        "total": len(rows),
     }
     return {
         "hardware": hw,
-        "models":   rows,
-        "summary":  summary,
+        "models": rows,
+        "summary": summary,
     }

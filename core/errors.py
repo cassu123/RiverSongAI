@@ -50,7 +50,8 @@ def conflict(detail: str) -> HTTPException:
     return HTTPException(status_code=409, detail=detail)
 
 
-def api_error(detail: str, exc: Optional[Exception] = None, log: logging.Logger = _logger) -> HTTPException:
+def api_error(detail: str, exc: Optional[Exception] = None,
+              log: logging.Logger = _logger) -> HTTPException:
     """Log an unexpected exception and return a 500 HTTPException."""
     if exc is not None:
         log.error("%s: %s", detail, exc, exc_info=True)

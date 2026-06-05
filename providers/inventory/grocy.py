@@ -1,22 +1,27 @@
 # providers/inventory/grocy.py
 from __future__ import annotations
-import logging, os, time
+import logging
+import os
+import time
 from typing import Any
 import httpx
 
 logger = logging.getLogger(__name__)
 
-_BASE  = os.getenv("GROCY_URL", "http://localhost:9283")
+_BASE = os.getenv("GROCY_URL", "http://localhost:9283")
 _TOKEN = os.getenv("GROCY_API_KEY", "")
 _CACHE_TTL = 30
 _cache: dict[str, tuple[Any, float]] = {}
+
 
 def _client() -> httpx.AsyncClient:
     headers = {
         "Accept": "application/json",
         "GROCY-API-KEY": _TOKEN
     }
-    return httpx.AsyncClient(base_url=_BASE.rstrip("/") + "/api", headers=headers, timeout=10)
+    return httpx.AsyncClient(base_url=_BASE.rstrip(
+        "/") + "/api", headers=headers, timeout=10)
+
 
 async def _get(path: str, params: dict | None = None) -> Any:
     if not _TOKEN:
@@ -36,13 +41,16 @@ async def _get(path: str, params: dict | None = None) -> Any:
     _cache[key] = (data, time.monotonic() + _CACHE_TTL)
     return data
 
+
 async def stock() -> list[dict]:
     """Retrieve current stock."""
     return await _get("/stock") or []
 
+
 async def shopping_list() -> list[dict]:
     """Retrieve shopping list."""
     return await _get("/objects/shopping_list") or []
+
 
 async def add_to_shopping_list(product_id: int, qty: float = 1.0) -> bool:
     """Add a product to the shopping list."""
@@ -57,6 +65,7 @@ async def add_to_shopping_list(product_id: int, qty: float = 1.0) -> bool:
         except Exception as exc:
             logger.warning("Grocy add_to_shopping_list failed: %s", exc)
             return False
+
 
 async def expiring(days: int = 5) -> list[dict]:
     """Retrieve products expiring within a certain number of days."""

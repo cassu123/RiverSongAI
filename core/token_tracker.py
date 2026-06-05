@@ -23,28 +23,28 @@ _local = threading.local()
 # ---------------------------------------------------------------------------
 _COST_PER_M: Dict[str, Dict[str, float]] = {
     # Anthropic
-    "claude-sonnet-4-6":          {"in": 3.00,  "out": 15.00},
-    "claude-opus-4-7":            {"in": 15.00, "out": 75.00},
-    "claude-haiku-4-5":           {"in": 0.80,  "out": 4.00},
-    "claude-haiku-4-5-20251001":  {"in": 0.80,  "out": 4.00},
+    "claude-sonnet-4-6": {"in": 3.00, "out": 15.00},
+    "claude-opus-4-7": {"in": 15.00, "out": 75.00},
+    "claude-haiku-4-5": {"in": 0.80, "out": 4.00},
+    "claude-haiku-4-5-20251001": {"in": 0.80, "out": 4.00},
     # OpenAI
-    "gpt-4o":                     {"in": 2.50,  "out": 10.00},
-    "gpt-4o-mini":                {"in": 0.15,  "out": 0.60},
-    "gpt-4.1":                    {"in": 2.00,  "out": 8.00},
-    "gpt-4.1-mini":               {"in": 0.40,  "out": 1.60},
+    "gpt-4o": {"in": 2.50, "out": 10.00},
+    "gpt-4o-mini": {"in": 0.15, "out": 0.60},
+    "gpt-4.1": {"in": 2.00, "out": 8.00},
+    "gpt-4.1-mini": {"in": 0.40, "out": 1.60},
     # Google
-    "gemini-2.0-flash":           {"in": 0.10,  "out": 0.40},
-    "gemini-1.5-pro":             {"in": 1.25,  "out": 5.00},
+    "gemini-2.0-flash": {"in": 0.10, "out": 0.40},
+    "gemini-1.5-pro": {"in": 1.25, "out": 5.00},
     # Mistral
-    "mistral-large-latest":       {"in": 2.00,  "out": 6.00},
-    "mistral-small-latest":       {"in": 0.10,  "out": 0.30},
+    "mistral-large-latest": {"in": 2.00, "out": 6.00},
+    "mistral-small-latest": {"in": 0.10, "out": 0.30},
     # NVIDIA NIM — free tier, $0 cost, rate-limited ~40 req/min
-    "moonshotai/kimi-k2":                            {"in": 0.0, "out": 0.0},
-    "nvidia/llama-3.1-nemotron-ultra-253b-v1":       {"in": 0.0, "out": 0.0},
-    "nvidia/llama-3.3-nemotron-super-49b-v1":        {"in": 0.0, "out": 0.0},
-    "deepseek-ai/deepseek-r1":                       {"in": 0.0, "out": 0.0},
-    "meta/llama-3.1-70b-instruct":                   {"in": 0.0, "out": 0.0},
-    "mistralai/mistral-large-2-instruct":             {"in": 0.0, "out": 0.0},
+    "moonshotai/kimi-k2": {"in": 0.0, "out": 0.0},
+    "nvidia/llama-3.1-nemotron-ultra-253b-v1": {"in": 0.0, "out": 0.0},
+    "nvidia/llama-3.3-nemotron-super-49b-v1": {"in": 0.0, "out": 0.0},
+    "deepseek-ai/deepseek-r1": {"in": 0.0, "out": 0.0},
+    "meta/llama-3.1-70b-instruct": {"in": 0.0, "out": 0.0},
+    "mistralai/mistral-large-2-instruct": {"in": 0.0, "out": 0.0},
 }
 
 
@@ -95,7 +95,8 @@ def ensure_table() -> None:
             call_type    TEXT    NOT NULL DEFAULT 'stream'
         )
     """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_token_usage_ts ON token_usage(ts)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_token_usage_ts ON token_usage(ts)")
 
 
 def record_usage(
@@ -115,7 +116,8 @@ def record_usage(
         conn.execute(
             "INSERT INTO token_usage (ts, provider, model, input_tokens, output_tokens, user_id, call_type) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (time.time(), provider, model, input_tokens, output_tokens, user_id, call_type),
+            (time.time(), provider, model, input_tokens,
+             output_tokens, user_id, call_type),
         )
     except Exception as exc:
         logger.debug("token_tracker: write failed: %s", exc)
@@ -132,7 +134,8 @@ def _estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
                 break
     if not rates:
         return 0.0
-    return (input_tokens * rates["in"] + output_tokens * rates["out"]) / 1_000_000
+    return (input_tokens * rates["in"] +
+            output_tokens * rates["out"]) / 1_000_000
 
 
 def get_summary(days: int = 30) -> dict:
@@ -183,24 +186,24 @@ def get_summary(days: int = 30) -> dict:
         for r in rows:
             inp, out = r["input_tokens"] or 0, r["output_tokens"] or 0
             cost = _estimate_cost(r["model"], inp, out)
-            total_in  += inp
+            total_in += inp
             total_out += out
-            total_cost += cost
+            total_cost += cost  # type: ignore
             by_model.append({
-                "provider":           r["provider"],
-                "model":              r["model"],
-                "input_tokens":       inp,
-                "output_tokens":      out,
+                "provider": r["provider"],
+                "model": r["model"],
+                "input_tokens": inp,
+                "output_tokens": out,
                 "estimated_cost_usd": round(cost, 6),
-                "calls":              r["calls"],
+                "calls": r["calls"],
             })
 
         return {
-            "days":                days,
-            "total_input":         total_in,
-            "total_output":        total_out,
-            "estimated_cost_usd":  round(total_cost, 6),
-            "by_model":            by_model,
+            "days": days,
+            "total_input": total_in,
+            "total_output": total_out,
+            "estimated_cost_usd": round(total_cost, 6),
+            "by_model": by_model,
         }
     except Exception as exc:
         logger.warning("token_tracker: summary failed: %s", exc)
@@ -231,11 +234,11 @@ def get_provider_rate(provider: str, window_seconds: int = 60) -> dict:
         ).fetchone()
         calls = row[0] or 0
         return {
-            "provider":       provider,
+            "provider": provider,
             "window_seconds": window_seconds,
-            "calls":          calls,
-            "input_tokens":   row[1] or 0,
-            "output_tokens":  row[2] or 0,
+            "calls": calls,
+            "input_tokens": row[1] or 0,
+            "output_tokens": row[2] or 0,
         }
     except Exception as exc:
         logger.warning("token_tracker: rate query failed: %s", exc)

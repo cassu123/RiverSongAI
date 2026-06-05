@@ -28,7 +28,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 
@@ -78,7 +78,8 @@ _CATALOG: List[ModelEntry] = [
     # -------------------------------------------------------------------------
     # DeepSeek (priority 10-19)
     # -------------------------------------------------------------------------
-    # DeepSeek R1 — Chinese AI reasoning/thinking models, great for complex questions
+    # DeepSeek R1 — Chinese AI reasoning/thinking models, great for complex
+    # questions
     ModelEntry(
         provider="ollama",
         model_id="deepseek-r1:1.5b",

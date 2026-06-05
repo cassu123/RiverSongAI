@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import BarcodeScanner from '../components/BarcodeScanner'
+import AssetDetailModal from '../components/AssetDetailModal'
+import HomeAuditModal from '../components/HomeAuditModal'
 
 /**
  * InventoryPage — Spatial Intelligence v2.0
@@ -10,16 +12,31 @@ import BarcodeScanner from '../components/BarcodeScanner'
 
 export default function InventoryPage({ setAction }) {
   const { token } = useAuth()
+  const [homeId, setHomeId] = useState(null)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [query, setQuery] = useState('')
   const [scannerOpen, setScannerOpen] = useState(false)
+  const [auditModalOpen, setAuditModalOpen] = useState(false)
+  const [activeItem, setActiveItem] = useState(null)
 
   const fetchItems = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
-      const res = await fetch('/api/inventory/items', { headers: { Authorization: `Bearer ${token}` } })
+      // First get homes to find the active homeId
+      const homesRes = await fetch('/api/inventory/homes', { headers: { Authorization: `Bearer ${token}` } })
+      if (!homesRes.ok) throw new Error('Failed to fetch homes')
+      const homes = await homesRes.json()
+      if (homes.length === 0) {
+        setItems([])
+        return
+      }
+      const activeHomeId = homes[0].id
+      setHomeId(activeHomeId)
+
+      const res = await fetch(`/api/inventory/homes/${activeHomeId}/items`, { headers: { Authorization: `Bearer ${token}` } })
       if (res.ok) setItems(await res.json())
     } catch (err) {
       setError(err.message)
@@ -40,6 +57,23 @@ export default function InventoryPage({ setAction }) {
     low: items.filter(i => i.quantity > 0 && i.quantity <= 2).length,
     out: items.filter(i => i.quantity <= 0).length,
   }), [items])
+
+  const handleScanDetected = async (code) => {
+    setScannerOpen(false)
+    try {
+      const res = await fetch(`/api/inventory/scan/${code}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const item = await res.json()
+        setActiveItem(item)
+      } else {
+        alert('Item not found for barcode: ' + code)
+      }
+    } catch (err) {
+      alert('Error scanning item: ' + err.message)
+    }
+  }
 
   // Contextual Action Bar
   useEffect(() => {
@@ -67,6 +101,10 @@ export default function InventoryPage({ setAction }) {
             <span className="material-symbols-rounded">barcode_scanner</span>
             <span className="rs-speak-actions-label">SCAN</span>
           </button>
+          <button className="rs-btn-primary" onClick={() => setAuditModalOpen(true)} style={{ height: 48, padding: '0 24px', background: 'rgba(250,204,21,0.2)', color: '#facc15' }} disabled={!homeId}>
+            <span className="material-symbols-rounded">fact_check</span>
+            <span className="rs-speak-actions-label">AUDIT</span>
+          </button>
           <button className="rs-pill" onClick={fetchItems} title="Refresh Stash">
             <span className="material-symbols-rounded">sync</span>
           </button>
@@ -74,7 +112,7 @@ export default function InventoryPage({ setAction }) {
       </div>
     )
     return () => setAction(null)
-  }, [query, setAction, fetchItems])
+  }, [query, setAction, fetchItems, homeId])
 
   return (
     <div className="rs-foyer">
@@ -84,7 +122,27 @@ export default function InventoryPage({ setAction }) {
       </div>
 
       {scannerOpen && (
-        <BarcodeScanner onDetected={(code) => { setScannerOpen(false) }} onClose={() => setScannerOpen(false)} />
+        <BarcodeScanner onDetected={handleScanDetected} onClose={() => setScannerOpen(false)} />
+      )}
+
+      {auditModalOpen && homeId && (
+        <HomeAuditModal 
+          homeId={homeId} 
+          token={token} 
+          onClose={() => setAuditModalOpen(false)} 
+        />
+      )}
+
+      {activeItem && (
+        <AssetDetailModal 
+          item={activeItem} 
+          token={token} 
+          onUpdate={(updatedItem) => {
+            setActiveItem(updatedItem)
+            setItems(items.map(i => i.id === updatedItem.id ? updatedItem : i))
+          }} 
+          onClose={() => setActiveItem(null)} 
+        />
       )}
 
       {/* Cockpit Analytics Slate */}
@@ -126,7 +184,7 @@ export default function InventoryPage({ setAction }) {
           </div>
         ) : (
           filtered.map(item => (
-            <div key={item.id} className="rs-card is-tappable animate-page-in">
+            <div key={item.id} className="rs-card is-tappable animate-page-in" onClick={() => setActiveItem(item)}>
               <div className="rs-card-inner">
                 <div className="rs-card-head">
                   <span className="rs-card-label">{(item.category || 'ASSET').toUpperCase()}</span>
@@ -139,14 +197,22 @@ export default function InventoryPage({ setAction }) {
                   </div>
                 </div>
                 <div className="rs-card-value" style={{ fontSize: '1.3rem', marginBottom: 4 }}>{item.name}</div>
-                <div className="rs-card-meta">
+                <div className="rs-card-meta" style={{ marginBottom: 12 }}>
                   <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', verticalAlign: 'middle', marginRight: 6 }}>location_on</span>
                   {item.location || 'SECTOR UNKNOWN'}
                 </div>
                 
-                <div style={{ marginTop: 24, display: 'flex', gap: 10 }}>
-                  <button className="rs-pill is-active" style={{ flex: 1 }}>ADJUST</button>
-                  <button className="rs-pill" onClick={() => {
+                {(item.receipt_url || item.warranty_url) && (
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                    {item.receipt_url && <span className="rs-card-meta" style={{ color: '#4ade80' }}><span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: 'middle' }}>receipt</span> Receipt</span>}
+                    {item.warranty_url && <span className="rs-card-meta" style={{ color: '#4ade80' }}><span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: 'middle' }}>verified</span> Warranty</span>}
+                  </div>
+                )}
+                
+                <div style={{ marginTop: 'auto', display: 'flex', gap: 10 }}>
+                  <button className="rs-pill is-active" style={{ flex: 1 }} onClick={(e) => { e.stopPropagation(); setActiveItem(item); }}>ADJUST</button>
+                  <button className="rs-pill" onClick={(e) => {
+                     e.stopPropagation();
                      localStorage.setItem('rs-chat-intent', JSON.stringify({ text: `River, status brief on ${item.name}.`, docId: null }));
                      window.dispatchEvent(new Event('rs-navigate-chat'));
                   }}>

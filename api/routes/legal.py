@@ -293,7 +293,8 @@ _PRIVACY_HTML = """<!DOCTYPE html>
 
 
 @router.get("/privacy", response_class=HTMLResponse, include_in_schema=False)
-@router.get("/privacy-policy", response_class=HTMLResponse, include_in_schema=False)
+@router.get("/privacy-policy", response_class=HTMLResponse,
+            include_in_schema=False)
 async def privacy_policy():
     return _PRIVACY_HTML
 
@@ -572,6 +573,7 @@ _TERMS_HTML = """<!DOCTYPE html>
 
 
 @router.get("/terms", response_class=HTMLResponse, include_in_schema=False)
-@router.get("/terms-of-service", response_class=HTMLResponse, include_in_schema=False)
+@router.get("/terms-of-service", response_class=HTMLResponse,
+            include_in_schema=False)
 async def terms_of_service():
     return _TERMS_HTML

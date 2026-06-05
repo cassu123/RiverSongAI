@@ -98,7 +98,25 @@ class LLMProvider(ABC):
         Raises:
             RuntimeError: If the LLM service is unreachable or returns an error.
         """
-        ...
+        yield ""
+
+    async def chat(self, messages: List[dict]) -> str:
+        """
+        Non-streaming chat response.
+        Default implementation accumulates the stream.
+        """
+        out = ""
+        async for chunk in self.stream_response(messages):
+            out += chunk
+        return out
+
+    async def chat_with_tools(
+            self, messages: List[dict], tools: List[dict], system: str = "") -> dict:
+        """
+        Send a message with tools.
+        Default implementation returns empty dict.
+        """
+        return {}
 
     async def stream_response_thinking(
         self, messages: List[dict]
@@ -138,9 +156,11 @@ class TTSProvider(ABC):
         """
         ...
 
-    async def stream_synthesize(self, text: str) -> AsyncGenerator[bytes, None]:
+    # type: ignore
+    async def stream_synthesize(
+            self, text: str) -> AsyncGenerator[bytes, None]:
         """
-        Stream audio bytes for the given text. 
+        Stream audio bytes for the given text.
         Default implementation just calls synthesize and yields once.
         """
         result = await self.synthesize(text)

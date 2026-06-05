@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 
 from config.settings import get_settings
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
+from core.errors import forbidden, not_found, unauthorized
 from core.webhook_tokens import generate_token, hash_token
 
 router = APIRouter(prefix="/api/webhook-tokens", tags=["webhook-tokens"])
@@ -36,8 +36,8 @@ router = APIRouter(prefix="/api/webhook-tokens", tags=["webhook-tokens"])
 # -----------------------------------------------------------------------------
 
 class TokenCreate(BaseModel):
-    label:      str           = Field(..., min_length=1, max_length=120)
-    scopes:     List[str]     = Field(default_factory=list)
+    label: str = Field(..., min_length=1, max_length=120)
+    scopes: List[str] = Field(default_factory=list)
     expires_at: Optional[str] = Field(
         default=None,
         description="ISO-8601 UTC timestamp. Omit for no expiry.",
@@ -53,7 +53,8 @@ def _require_enabled() -> None:
         raise not_found("Webhook tokens are disabled.")
 
 
-async def _require_admin(authorization: Optional[str] = Header(default=None)) -> str:
+async def _require_admin(
+        authorization: Optional[str] = Header(default=None)) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))

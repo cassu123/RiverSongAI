@@ -11,12 +11,13 @@ import base64
 import json
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import ollama
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
+
 
 class VisionProvider:
     """
@@ -39,7 +40,7 @@ class VisionProvider:
 
         try:
             image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-            
+
             response = await self._client.chat(
                 model=self._model,
                 messages=[{
@@ -50,7 +51,8 @@ class VisionProvider:
             )
             if isinstance(response, dict):
                 return response.get("message", {}).get("content", "")
-            return getattr(getattr(response, "message", None), "content", "") or ""
+            return getattr(getattr(response, "message", None),
+                           "content", "") or ""
         except Exception as exc:
             logger.error("Ollama vision analysis failed: %s", exc)
             return f"Error during image analysis: {str(exc)}"
@@ -64,9 +66,11 @@ class VisionProvider:
             "Return as JSON with keys: title, ingredients (list of strings), notes."
         )
         raw = await self.analyze_image(image_bytes, prompt)
-        return self._parse_json(raw, {"title": "", "ingredients": [], "notes": raw})
+        return self._parse_json(
+            raw, {"title": "", "ingredients": [], "notes": raw})
 
-    async def extract_inventory_item(self, image_bytes: bytes) -> Dict[str, Any]:
+    async def extract_inventory_item(
+            self, image_bytes: bytes) -> Dict[str, Any]:
         """
         Extracts structured inventory details from a product/item image.
         """
@@ -76,9 +80,11 @@ class VisionProvider:
             "Return as JSON with keys: name, category, description."
         )
         raw = await self.analyze_image(image_bytes, prompt)
-        return self._parse_json(raw, {"name": "", "category": "other", "description": raw})
+        return self._parse_json(
+            raw, {"name": "", "category": "other", "description": raw})
 
-    async def suggest_listing_details(self, image_bytes: bytes) -> Dict[str, Any]:
+    async def suggest_listing_details(
+            self, image_bytes: bytes) -> Dict[str, Any]:
         """
         Suggests details for an online commerce listing based on an image.
         """
@@ -87,9 +93,11 @@ class VisionProvider:
             "5 relevant tags. Return as JSON with keys: title, description, tags (list)."
         )
         raw = await self.analyze_image(image_bytes, prompt)
-        return self._parse_json(raw, {"title": "", "description": raw, "tags": []})
+        return self._parse_json(
+            raw, {"title": "", "description": raw, "tags": []})
 
-    def _parse_json(self, text: str, fallback: Dict[str, Any]) -> Dict[str, Any]:
+    def _parse_json(self, text: str,
+                    fallback: Dict[str, Any]) -> Dict[str, Any]:
         """Attempts to extract and parse a JSON block from the model's text response."""
         try:
             # Look for JSON code block or just any {} structure

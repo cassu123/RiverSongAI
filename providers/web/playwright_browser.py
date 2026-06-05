@@ -41,7 +41,8 @@ def _enabled() -> bool:
 
 
 def _max_chars() -> int:
-    return int(getattr(get_settings(), "playwright_browser_max_page_chars", 40_000))
+    return int(
+        getattr(get_settings(), "playwright_browser_max_page_chars", 40_000))
 
 
 def _headless() -> bool:
@@ -49,8 +50,12 @@ def _headless() -> bool:
 
 
 def _html_to_text(html: str) -> str:
-    text = re.sub(r"<script[\s\S]*?</script>", " ", html or "", flags=re.IGNORECASE)
-    text = re.sub(r"<style[\s\S]*?</style>",   " ", text,        flags=re.IGNORECASE)
+    text = re.sub(
+        r"<script[\s\S]*?</script>",
+        " ",
+        html or "",
+        flags=re.IGNORECASE)
+    text = re.sub(r"<style[\s\S]*?</style>", " ", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", " ", text)
     return re.sub(r"\s+", " ", text).strip()
 
@@ -69,10 +74,10 @@ class PlaywrightBrowser:
     _instance: Optional["PlaywrightBrowser"] = None
 
     def __init__(self) -> None:
-        self._lock      = asyncio.Lock()
-        self._pw        = None
-        self._browser   = None
-        self._context   = None
+        self._lock = asyncio.Lock()
+        self._pw = None
+        self._browser = None
+        self._context = None
         self._available = None  # tri-state: None=untested, True/False=tested
 
     @classmethod
@@ -87,10 +92,10 @@ class PlaywrightBrowser:
             return self._available
         try:
             import playwright  # noqa: F401
-            self._available = True
+            self._available = True  # type: ignore
         except Exception:
-            self._available = False
-        return self._available
+            self._available = False  # type: ignore
+        return self._available  # type: ignore
 
     async def _ensure_started(self) -> None:
         if self._browser is not None:
@@ -103,8 +108,9 @@ class PlaywrightBrowser:
         # Imports kept here so the module loads even when playwright is absent.
         from playwright.async_api import async_playwright
         self._pw = await async_playwright().start()
-        self._browser = await self._pw.chromium.launch(headless=_headless())
-        self._context = await self._browser.new_context()
+        # type: ignore
+        self._browser = await self._pw.chromium.launch(headless=_headless())  # type: ignore
+        self._context = await self._browser.new_context()  # type: ignore
 
     async def close(self) -> None:
         async with self._lock:
@@ -120,7 +126,7 @@ class PlaywrightBrowser:
                     pass
             self._browser = None
             self._context = None
-            self._pw      = None
+            self._pw = None
 
     async def _new_page(self):
         """Open a fresh page in the shared browser+context.
@@ -135,7 +141,7 @@ class PlaywrightBrowser:
         page lifecycle) is the deliberate price of that isolation.
         """
         await self._ensure_started()
-        return await self._context.new_page()
+        return await self._context.new_page()  # type: ignore
 
     # -------------------------------------------------------------------------
     # Public operations
@@ -167,7 +173,8 @@ class PlaywrightBrowser:
             finally:
                 await page.close()
 
-    async def click(self, selector: str, url: Optional[str] = None) -> Dict[str, Any]:
+    async def click(self, selector: str,
+                    url: Optional[str] = None) -> Dict[str, Any]:
         async with self._lock:
             page = await self._new_page()
             try:
@@ -178,7 +185,8 @@ class PlaywrightBrowser:
             finally:
                 await page.close()
 
-    async def screenshot(self, url: Optional[str] = None, full_page: bool = True) -> Dict[str, Any]:
+    async def screenshot(
+            self, url: Optional[str] = None, full_page: bool = True) -> Dict[str, Any]:
         async with self._lock:
             page = await self._new_page()
             try:
@@ -186,9 +194,9 @@ class PlaywrightBrowser:
                     await page.goto(url, wait_until="domcontentloaded", timeout=20_000)
                 png_bytes = await page.screenshot(full_page=bool(full_page))
                 return {
-                    "url":           page.url,
-                    "image_base64":  base64.b64encode(png_bytes).decode("ascii"),
-                    "mime":          "image/png",
+                    "url": page.url,
+                    "image_base64": base64.b64encode(png_bytes).decode("ascii"),
+                    "mime": "image/png",
                 }
             finally:
                 await page.close()
@@ -224,7 +232,9 @@ class PlaywrightBrowser:
                         f"Screenshot URL: {shot['url']}\nQuestion: {prompt}\n"
                         "Note: image was rendered headless; reason from text/cues only."},
                 ])
-                description = (res.get("content") if isinstance(res, dict) else str(res)) or ""
+                description = (
+                    res.get("content") if isinstance(
+                        res, dict) else str(res)) or ""
         except Exception as exc:
             description = f"(vision unavailable: {exc})"
         return {**shot, "description": description}
@@ -325,7 +335,7 @@ PLAYWRIGHT_TOOL_SCHEMAS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "url":      {"type": "string", "description": "URL to load first."},
+                "url": {"type": "string", "description": "URL to load first."},
                 "selector": {"type": "string", "description": "CSS selector to click."},
             },
             "required": ["url", "selector"],
@@ -337,7 +347,7 @@ PLAYWRIGHT_TOOL_SCHEMAS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "url":       {"type": "string", "description": "URL to load."},
+                "url": {"type": "string", "description": "URL to load."},
                 "full_page": {"type": "boolean", "description": "Capture the entire page height. Defaults to true."},
             },
             "required": ["url"],
@@ -349,7 +359,7 @@ PLAYWRIGHT_TOOL_SCHEMAS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "url":    {"type": "string", "description": "URL to load before capturing."},
+                "url": {"type": "string", "description": "URL to load before capturing."},
                 "prompt": {"type": "string", "description": "Question or instruction for the visual analysis."},
             },
             "required": ["url", "prompt"],
@@ -359,9 +369,9 @@ PLAYWRIGHT_TOOL_SCHEMAS = [
 
 
 PLAYWRIGHT_TOOL_DISPATCH = {
-    "browser_navigate":       tool_navigate,
-    "browser_extract_text":   tool_extract_text,
-    "browser_click":          tool_click,
-    "browser_screenshot":     tool_screenshot,
+    "browser_navigate": tool_navigate,
+    "browser_extract_text": tool_extract_text,
+    "browser_click": tool_click,
+    "browser_screenshot": tool_screenshot,
     "browser_vision_on_page": tool_vision_on_page,
 }

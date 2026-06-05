@@ -14,19 +14,25 @@ export default function MemoryPage({ setAction }) {
   const [filter, setFilter] = useState('')
 
   useEffect(() => {
-    fetch('/api/memory/browse', {
-      headers: { Authorization: `Bearer ${token}` }
+    Promise.all([
+      fetch('/api/memory/facts', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
+      fetch('/api/memory/preferences', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
+      fetch('/api/memory/summaries', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : [])
+    ]).then(([facts, prefs, summaries]) => {
+      const combined = [
+        ...facts.map(f => ({ ...f, _type: 'FACT', text: `${f.key}: ${f.value}` })),
+        ...prefs.map(p => ({ ...p, _type: 'PREF', text: `${p.topic}: ${p.preference}` })),
+        ...summaries.map(s => ({ ...s, _type: 'SUMMARY', text: s.summary }))
+      ]
+      combined.sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0))
+      setMemories(combined)
+      setLoading(false)
     })
-      .then(r => r.json())
-      .then(data => {
-        setMemories(data)
-        setLoading(false)
-      })
   }, [token])
 
   const filtered = memories.filter(m => 
-    m.text.toLowerCase().includes(filter.toLowerCase()) || 
-    m.type.toLowerCase().includes(filter.toLowerCase())
+    (m.text || '').toLowerCase().includes(filter.toLowerCase()) || 
+    (m._type || '').toLowerCase().includes(filter.toLowerCase())
   )
 
   useEffect(() => {
@@ -60,12 +66,18 @@ export default function MemoryPage({ setAction }) {
           <div className="rs-card-meta">No matching memories found.</div>
         ) : (
           filtered.map((m, i) => (
-            <div key={m.id ?? `${m.type}-${m.timestamp}-${i}`} className="rs-card is-wide">
+            <div key={m.id || i} className="rs-card is-wide animate-page-in">
               <div className="rs-card-head">
-                <span className="rs-card-label">{m.type}</span>
-                <span className="rs-card-label" style={{ opacity: 0.4 }}>{new Date(m.timestamp).toLocaleDateString()}</span>
+                <span className="rs-card-label" style={{ color: m._type === 'FACT' ? 'var(--primary)' : m._type === 'PREF' ? 'var(--rs-status-warning)' : 'var(--text-dim)' }}>
+                  {m._type}
+                </span>
+                <span className="rs-card-label" style={{ opacity: 0.4 }}>
+                  {m.created_at || m.timestamp ? new Date(m.created_at || m.timestamp).toLocaleDateString() : ''}
+                </span>
               </div>
-              <div className="rs-card-value" style={{ fontSize: '1rem', lineHeight: 1.5 }}>{m.text}</div>
+              <div className="rs-card-value" style={{ fontSize: '1rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                {m.text}
+              </div>
               {m.metadata && (
                 <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {Object.entries(m.metadata).map(([k, v]) => (

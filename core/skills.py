@@ -45,7 +45,7 @@ def _top_k() -> int:
 def _skill_text(skill: dict) -> str:
     """The string that gets embedded — name + trigger phrases + prompt body."""
     parts = [skill.get("name", "")]
-    trig  = skill.get("trigger_phrases") or ""
+    trig = skill.get("trigger_phrases") or ""
     if trig.strip():
         parts.append(trig)
     body = skill.get("prompt") or ""
@@ -54,7 +54,8 @@ def _skill_text(skill: dict) -> str:
     return "\n".join(parts).strip()
 
 
-async def index_skill(skill: dict, owner_id: str, vector_store: Optional[VectorStore] = None) -> None:
+async def index_skill(skill: dict, owner_id: str,
+                      vector_store: Optional[VectorStore] = None) -> None:
     """Upsert a skill into the vector store. Safe no-op when disabled."""
     if not _is_enabled():
         return
@@ -67,18 +68,22 @@ async def index_skill(skill: dict, owner_id: str, vector_store: Optional[VectorS
             id=f"skill:{skill['id']}",
             text=text,
             metadata={
-                "kind":      _SKILL_METADATA_KIND,
-                "owner_id":  owner_id,
-                "skill_id":  skill["id"],
-                "name":      skill.get("name", ""),
+                "kind": _SKILL_METADATA_KIND,
+                "owner_id": owner_id,
+                "skill_id": skill["id"],
+                "name": skill.get("name", ""),
                 "is_active": 1 if skill.get("is_active", True) else 0,
             },
         )
     except Exception as exc:
-        logger.warning("Skill index upsert failed for %s: %s", skill.get("id"), exc)
+        logger.warning(
+            "Skill index upsert failed for %s: %s",
+            skill.get("id"),
+            exc)
 
 
-async def remove_skill_from_index(skill_id: str, vector_store: Optional[VectorStore] = None) -> None:
+async def remove_skill_from_index(
+        skill_id: str, vector_store: Optional[VectorStore] = None) -> None:
     """Best-effort delete by id. ChromaDB delete is idempotent."""
     if not _is_enabled():
         return
@@ -115,14 +120,14 @@ async def get_relevant_skills(
     if not (query and query.strip()):
         return []
     vs = vector_store or VectorStore()
-    k  = top_k if top_k is not None else _top_k()
+    k = top_k if top_k is not None else _top_k()
     hits = await vs.search(
         query_text=query,
         n_results=k,
         where={
             "$and": [
-                {"kind":      {"$eq": _SKILL_METADATA_KIND}},
-                {"owner_id":  {"$eq": owner_id}},
+                {"kind": {"$eq": _SKILL_METADATA_KIND}},
+                {"owner_id": {"$eq": owner_id}},
                 {"is_active": {"$eq": 1}},
             ]
         },
@@ -132,8 +137,8 @@ async def get_relevant_skills(
         meta = h.get("metadata") or {}
         out.append({
             "skill_id": meta.get("skill_id"),
-            "name":     meta.get("name", ""),
-            "text":     h.get("text", ""),
+            "name": meta.get("name", ""),
+            "text": h.get("text", ""),
             "distance": h.get("distance"),
         })
     return out

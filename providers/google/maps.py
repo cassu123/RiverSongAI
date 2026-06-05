@@ -74,7 +74,10 @@ class GoogleMapsProvider:
         loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(_executor, _fetch)
         if result:
-            logger.debug("Geocoded '%s' to %s.", address, result.get("formatted_address"))
+            logger.debug(
+                "Geocoded '%s' to %s.",
+                address,
+                result.get("formatted_address"))
         else:
             logger.warning("No geocode results for '%s'.", address)
         return result
@@ -135,8 +138,12 @@ class GoogleMapsProvider:
         route = await loop.run_in_executor(_executor, _fetch)
         if route:
             legs = route.get("legs", [])
-            total_dist = legs[0].get("distance", {}).get("text", "?") if legs else "?"
-            total_dur = legs[0].get("duration", {}).get("text", "?") if legs else "?"
+            total_dist = legs[0].get(
+                "distance", {}).get(
+                "text", "?") if legs else "?"
+            total_dur = legs[0].get(
+                "duration", {}).get(
+                "text", "?") if legs else "?"
             logger.info(
                 "Directions from '%s' to '%s' (%s): %s, %s.",
                 origin,

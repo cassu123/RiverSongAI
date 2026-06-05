@@ -77,7 +77,8 @@ async def send_ntfy(
             if owns_client:
                 await c.aclose()
         if resp.status_code >= 400:
-            logger.warning("ntfy %s -> %s: %s", topic, resp.status_code, resp.text[:200])
+            logger.warning("ntfy %s -> %s: %s", topic,
+                           resp.status_code, resp.text[:200])
             return False
         return True
     except Exception as exc:

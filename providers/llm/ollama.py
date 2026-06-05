@@ -90,11 +90,13 @@ class OllamaLLM(LLMProvider):
                 print(chunk, end="", flush=True)
         """
         if not messages:
-            logger.warning("stream_response called with an empty messages list.")
+            logger.warning(
+                "stream_response called with an empty messages list.")
             return
 
         logger.debug(
-            "Sending %d message(s) to Ollama model '%s'.", len(messages), self._model
+            "Sending %d message(s) to Ollama model '%s'.", len(
+                messages), self._model
         )
 
         try:
@@ -132,24 +134,27 @@ class OllamaLLM(LLMProvider):
             ) from exc
         except Exception as exc:
             raise RuntimeError(
-                f"Failed to communicate with Ollama at '{self._base_url}': {exc}"
+                f"Failed to communicate with Ollama at '{
+                    self._base_url}': {exc}"
             ) from exc
 
-    async def stream_chat(self, messages: list[dict]) -> AsyncGenerator[str, None]:
+    async def stream_chat(
+            self, messages: list[dict]) -> AsyncGenerator[str, None]:
         """
         Alias for stream_response, specifically for Phase 2 implementation.
         """
         async for chunk in self.stream_response(messages):
             yield chunk
 
-    async def chat_with_tools(self, messages: list, tools: list) -> dict:
+    async def chat_with_tools(self, messages: list, tools: list) -> dict:  # type: ignore
         """
         Send a message to Ollama with a list of available tools.
         Returns a tool_call dict if a tool is requested, else a text response.
         """
         try:
             # We must map our tool schemas to Ollama's format if they differ.
-            # Ollama uses the same format as OpenAI/Anthropic for the most part.
+            # Ollama uses the same format as OpenAI/Anthropic for the most
+            # part.
             formatted_tools = []
             for t in tools:
                 formatted_tools.append({
@@ -182,4 +187,5 @@ class OllamaLLM(LLMProvider):
 
         except Exception as exc:
             logger.error("Ollama tool use call failed: %s", exc)
-            return {"type": "text", "content": f"My local brain had a hiccup during tool use: {exc}"}
+            return {
+                "type": "text", "content": f"My local brain had a hiccup during tool use: {exc}"}

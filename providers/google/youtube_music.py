@@ -39,7 +39,8 @@ logger = logging.getLogger(__name__)
 
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="ytmusic")
 
-# yt-dlp format selector: best audio-only, prefer opus/webm, fallback to any audio.
+# yt-dlp format selector: best audio-only, prefer opus/webm, fallback to
+# any audio.
 _YTDLP_FORMAT = "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio"
 
 
@@ -70,7 +71,7 @@ class YouTubeMusicProvider:
         """Return a YTMusic instance, initializing it on first use."""
         if self._ytm is None:
             from ytmusicapi import YTMusic
-            self._ytm = YTMusic()
+            self._ytm = YTMusic()  # type: ignore
         return self._ytm
 
     # -------------------------------------------------------------------------
@@ -122,7 +123,7 @@ class YouTubeMusicProvider:
             try:
                 ytm = self._get_ytm()
                 charts = ytm.get_charts(country=country)
-                
+
                 # The structure varies: sometimes it's a dict with 'items' key,
                 # sometimes the section itself is the list of items.
                 for key in ["trending", "videos", "songs"]:
@@ -135,17 +136,21 @@ class YouTubeMusicProvider:
                         if items:
                             break
             except Exception as e:
-                logger.warning("Failed to fetch standard YouTube Music charts: %s", e)
+                logger.warning(
+                    "Failed to fetch standard YouTube Music charts: %s", e)
 
-            # Fallback: if no individual tracks found in charts, search for trending songs
+            # Fallback: if no individual tracks found in charts, search for
+            # trending songs
             if not any(item.get("videoId") for item in items):
                 try:
                     ytm = self._get_ytm()
-                    search_results = ytm.search("trending songs", filter="songs", limit=20)
+                    search_results = ytm.search(
+                        "trending songs", filter="songs", limit=20)
                     if search_results:
                         items = search_results
                 except Exception as e:
-                    logger.error("Music discovery fallback search failed: %s", e)
+                    logger.error(
+                        "Music discovery fallback search failed: %s", e)
 
             sanitized = []
             for track in items:
@@ -221,12 +226,14 @@ class YouTubeMusicProvider:
         video_id = first.get("videoId")
         title = first.get("title", "Unknown title")
         artists_raw = first.get("artists", [])
-        artist_names = ", ".join(a.get("name", "") for a in artists_raw if a.get("name"))
+        artist_names = ", ".join(a.get("name", "")
+                                 for a in artists_raw if a.get("name"))
 
         if not video_id:
             return "Sorry, that result did not have a playable stream."
 
-        # Start playback in the background -- do not await so TTS can speak first.
+        # Start playback in the background -- do not await so TTS can speak
+        # first.
         asyncio.create_task(self.play_video_id(video_id))
 
         if artist_names:
@@ -267,9 +274,11 @@ class YouTubeMusicProvider:
                 "--quiet",
                 url,
             ]
-            result = subprocess.run(cmd, capture_output=True, timeout=60, shell=False)
+            result = subprocess.run(
+                cmd, capture_output=True, timeout=60, shell=False)
             if result.returncode != 0:
-                stderr = result.stderr.decode("utf-8", errors="replace").strip()
+                stderr = result.stderr.decode(
+                    "utf-8", errors="replace").strip()
                 raise RuntimeError(
                     f"yt-dlp failed (exit {result.returncode}): {stderr}"
                 )
@@ -321,9 +330,14 @@ class YouTubeMusicProvider:
             )
             duration = r.get("duration", "")
             if artists:
-                lines.append(f"{i}. {title} by {artists}{', ' + duration if duration else ''}.")
+                lines.append(
+                    f"{i}. {title} by {artists}{
+                        ', ' + duration if duration else ''}.")
             else:
-                lines.append(f"{i}. {title}{', ' + duration if duration else ''}.")
+                lines.append(
+                    f"{i}. {title}{
+                        ', ' +
+                        duration if duration else ''}.")
 
         return " ".join(lines)
 

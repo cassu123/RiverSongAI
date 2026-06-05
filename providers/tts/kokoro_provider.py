@@ -26,7 +26,6 @@ import asyncio
 import io
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional
 
 from providers.base import TTSProvider
 
@@ -53,11 +52,15 @@ class KokoroTTS(TTSProvider):
     """
 
     def __init__(self, voice_code: str = "af_river") -> None:
-        self._voice_code  = voice_code
-        self._lang_code   = _lang_code_from_voice(voice_code)
-        self._pipeline    = None          # lazy — initialized on first use
-        self._executor    = ThreadPoolExecutor(max_workers=1, thread_name_prefix="kokoro")
-        logger.info("KokoroTTS configured (voice=%s, lang=%s)", voice_code, self._lang_code)
+        self._voice_code = voice_code
+        self._lang_code = _lang_code_from_voice(voice_code)
+        self._pipeline = None          # lazy — initialized on first use
+        self._executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="kokoro")
+        logger.info(
+            "KokoroTTS configured (voice=%s, lang=%s)",
+            voice_code,
+            self._lang_code)
 
     # -------------------------------------------------------------------------
     # Internal helpers
@@ -82,7 +85,9 @@ class KokoroTTS(TTSProvider):
                 "Kokoro is not installed. Run: pip install kokoro==0.9.4"
             ) from exc
 
-        logger.info("Loading Kokoro pipeline (lang=%s) — first run downloads ~325 MB …", self._lang_code)
+        logger.info(
+            "Loading Kokoro pipeline (lang=%s) — first run downloads ~325 MB …",
+            self._lang_code)
         self._pipeline = KPipeline(lang_code=self._lang_code)
         logger.info("Kokoro pipeline ready.")
 
@@ -98,7 +103,10 @@ class KokoroTTS(TTSProvider):
         chunks = []
         sample_rate = 24_000   # Kokoro outputs at 24 kHz
 
-        generator = self._pipeline(text, voice=self._voice_code, speed=1.0)
+        generator = self._pipeline(
+            text,
+            voice=self._voice_code,
+            speed=1.0)  # type: ignore
         for _, _, audio in generator:
             if audio is not None and len(audio) > 0:
                 chunks.append(audio)

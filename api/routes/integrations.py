@@ -17,7 +17,7 @@ serve different downstream consumers; do not collapse without first
 migrating ``providers/google/*`` to read from the SQLite table.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
+from fastapi import APIRouter, HTTPException, status, Request, Header
 from fastapi.responses import RedirectResponse
 from typing import Optional
 from pydantic import BaseModel
@@ -42,7 +42,8 @@ router = APIRouter(prefix="/api/integrations", tags=["integrations"])
 # Auth helper
 # ---------------------------------------------------------------------------
 
-async def _require_admin(request: Request, authorization: Optional[str]) -> dict:
+async def _require_admin(request: Request,
+                         authorization: Optional[str]) -> dict:
     """Validate a Bearer JWT and require admin role. Returns the full payload."""
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
@@ -73,8 +74,10 @@ class IntegrationStatus(BaseModel):
     connected: bool
     metadata: dict = {}
 
+
 class IntegrationListResponse(BaseModel):
     integrations: dict  # {service_key: {connected, metadata}}
+
 
 class IntegrationUpdateRequest(BaseModel):
     access_token: Optional[str] = None
@@ -96,11 +99,14 @@ def _get_encryption_key() -> bytes:
         os.environ["TOKEN_ENCRYPTION_KEY"] = key
     return key.encode()
 
+
 def encrypt_token(token: str) -> str:
     return Fernet(_get_encryption_key()).encrypt(token.encode()).decode()
 
+
 def decrypt_token(encrypted_token: str) -> str:
-    return Fernet(_get_encryption_key()).decrypt(encrypted_token.encode()).decode()
+    return Fernet(_get_encryption_key()).decrypt(
+        encrypted_token.encode()).decode()
 
 
 def _get_store(request: Request) -> SQLiteStore:
@@ -121,10 +127,16 @@ async def get_integration_status(
     store = _get_store(request)
 
     integrations = await store.get_user_integrations(user_id)
-    available_services = ["google", "shopify", "amazon_sp_api", "walmart", "tiktok"]
+    available_services = [
+        "google",
+        "shopify",
+        "amazon_sp_api",
+        "walmart",
+        "tiktok"]
     result = {}
     for service in available_services:
-        integration = next((i for i in integrations if i["service"] == service), None)
+        integration = next(
+            (i for i in integrations if i["service"] == service), None)
         if integration and integration.get("is_active"):
             result[service] = {
                 "connected": True,
@@ -166,9 +178,12 @@ async def store_integration_tokens(
     user_id = payload.get("sub") or payload.get("id") or "admin_user"
     store = _get_store(request)
 
-    access_token = encrypt_token(token_data.access_token) if token_data.access_token else None
-    refresh_token = encrypt_token(token_data.refresh_token) if token_data.refresh_token else None
-    expires_at = token_data.token_expires_at.isoformat() if token_data.token_expires_at else None
+    access_token = encrypt_token(
+        token_data.access_token) if token_data.access_token else None
+    refresh_token = encrypt_token(
+        token_data.refresh_token) if token_data.refresh_token else None
+    expires_at = token_data.token_expires_at.isoformat(
+    ) if token_data.token_expires_at else None
 
     await store.upsert_user_integration(
         user_id=user_id,
@@ -190,7 +205,8 @@ def _load_google_client() -> dict:
     from pathlib import Path
     path = Path(settings.google_client_secrets_path)
     if not path.exists():
-        raise HTTPException(status_code=500, detail="Google client secrets not configured.")
+        raise HTTPException(status_code=500,
+                            detail="Google client secrets not configured.")
     data = json.loads(path.read_text())
     return data.get("web") or data.get("installed") or {}
 
@@ -220,7 +236,9 @@ async def google_authorize(
     from providers.google.auth import DEFAULT_SCOPES
     client = _load_google_client()
     client_id = client.get("client_id", "")
-    auth_uri = client.get("auth_uri", "https://accounts.google.com/o/oauth2/auth")
+    auth_uri = client.get(
+        "auth_uri",
+        "https://accounts.google.com/o/oauth2/auth")
 
     # CSRF protection: generate a one-time nonce, persist it server-side bound
     # to (user_id, service), and pass ONLY the nonce in the OAuth state param.
@@ -229,7 +247,9 @@ async def google_authorize(
     store = _get_store(request)
     await store.put_oauth_nonce(state_nonce, str(user_id), "google", ttl_seconds=600)
 
-    redirect_uri = f"{request.url.scheme}://{request.url.netloc}/api/integrations/google/callback"
+    redirect_uri = f"{
+        request.url.scheme}://{
+        request.url.netloc}/api/integrations/google/callback"
     params = urllib.parse.urlencode({
         "client_id": client_id,
         "redirect_uri": redirect_uri,
@@ -261,7 +281,9 @@ async def google_callback(
         return RedirectResponse("/profile?error=state_validation_failed")
 
     client = _load_google_client()
-    redirect_uri = f"{request.url.scheme}://{request.url.netloc}/api/integrations/google/callback"
+    redirect_uri = f"{
+        request.url.scheme}://{
+        request.url.netloc}/api/integrations/google/callback"
     token_uri = client.get("token_uri", "https://oauth2.googleapis.com/token")
 
     async with httpx.AsyncClient(timeout=10.0) as http:
@@ -280,7 +302,10 @@ async def google_callback(
     refresh = tokens.get("refresh_token")
     refresh_token = encrypt_token(refresh) if refresh else None
     expires_in = tokens.get("expires_in", 3600)
-    expires_at = (datetime.utcnow() + timedelta(seconds=expires_in)).isoformat()
+    expires_at = (
+        datetime.utcnow() +
+        timedelta(
+            seconds=expires_in)).isoformat()
 
     await store.upsert_user_integration(
         user_id=user_id,

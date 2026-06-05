@@ -5,7 +5,7 @@ import os
 import time
 import base64
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import httpx
 from config.settings import get_settings
@@ -23,11 +23,13 @@ _cache_eb: Dict[str, Any] = {}
 _cache_reddit_token: Dict[str, Any] = {}
 CACHE_MAX_ENTRIES = 1000
 
+
 def _get_cached(cache_dict: dict, key: str, ttl: int) -> Any:
     entry = cache_dict.get(key)
     if entry and time.time() - entry["ts"] < ttl:
         return entry["data"]
     return None
+
 
 def _set_cached(cache_dict: dict, key: str, data: Any):
     if len(cache_dict) >= CACHE_MAX_ENTRIES:
@@ -35,8 +37,10 @@ def _set_cached(cache_dict: dict, key: str, data: Any):
         del cache_dict[oldest]
     cache_dict[key] = {"data": data, "ts": time.time()}
 
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
 
 async def _fetch_hn() -> list[Dict[str, Any]]:
     ckey = "hn_top"
@@ -50,16 +54,17 @@ async def _fetch_hn() -> list[Dict[str, Any]]:
             res = await client.get(HN_TOP_URL)
             if res.status_code == 200:
                 top_ids = res.json()[:15]
-                
+
                 async def fetch_item(item_id):
                     r = await client.get(HN_ITEM_URL.format(id=item_id))
                     if r.status_code == 200:
                         return r.json()
                     return None
-                
+
                 items = await asyncio.gather(*(fetch_item(i) for i in top_ids))
                 for item in items:
-                    if not item: continue
+                    if not item:
+                        continue
                     results.append({
                         "source": "hackernews",
                         "id": str(item.get("id")),
@@ -78,6 +83,7 @@ async def _fetch_hn() -> list[Dict[str, Any]]:
     _set_cached(_cache_hn, ckey, results)
     return results
 
+
 async def _get_reddit_token() -> str:
     ckey = "reddit_token"
     cached = _get_cached(_cache_reddit_token, ckey, 3000)
@@ -86,7 +92,10 @@ async def _get_reddit_token() -> str:
 
     s = get_settings()
     client_id = getattr(s, "reddit_client_id", os.getenv("REDDIT_CLIENT_ID"))
-    client_secret = getattr(s, "reddit_client_secret", os.getenv("REDDIT_CLIENT_SECRET"))
+    client_secret = getattr(
+        s,
+        "reddit_client_secret",
+        os.getenv("REDDIT_CLIENT_SECRET"))
     if not client_id or not client_secret:
         return ""
 
@@ -109,6 +118,7 @@ async def _get_reddit_token() -> str:
     except Exception as e:
         logger.warning(f"Reddit auth failed: {e}")
     return ""
+
 
 async def _fetch_reddit(subs: list[str]) -> list[Dict[str, Any]]:
     subs_str = "+".join(subs) if subs else "all"
@@ -139,8 +149,14 @@ async def _fetch_reddit(subs: list[str]) -> list[Dict[str, Any]]:
                     img_url = None
                     preview = d.get("preview", {}).get("images", [])
                     if preview:
-                        img_url = preview[0].get("source", {}).get("url", "").replace("&amp;", "&")
-                    
+                        img_url = preview[0].get(
+                            "source",
+                            {}).get(
+                            "url",
+                            "").replace(
+                            "&amp;",
+                            "&")
+
                     results.append({
                         "source": "reddit",
                         "id": d.get("id"),
@@ -159,15 +175,19 @@ async def _fetch_reddit(subs: list[str]) -> list[Dict[str, Any]]:
     _set_cached(_cache_reddit, ckey, results)
     return results
 
+
 def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     R = 3958.8
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lon2 - lon1)
-    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    a = math.sin(dphi / 2)**2 + math.cos(phi1) * \
+        math.cos(phi2) * math.sin(dlambda / 2)**2
     return 2 * R * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-async def _fetch_eventbrite(lat: Optional[float], lon: Optional[float], radius_mi: int) -> list[Dict[str, Any]]:
+
+async def _fetch_eventbrite(
+        lat: Optional[float], lon: Optional[float], radius_mi: int) -> list[Dict[str, Any]]:
     if lat is None or lon is None:
         return []
     ckey = f"{round(lat, 2)}_{round(lon, 2)}_{radius_mi}"
@@ -175,7 +195,10 @@ async def _fetch_eventbrite(lat: Optional[float], lon: Optional[float], radius_m
     if cached is not None:
         return cached
 
-    eb_token = getattr(get_settings(), "eventbrite_oauth_token", os.getenv("EVENTBRITE_OAUTH_TOKEN"))
+    eb_token = getattr(
+        get_settings(),
+        "eventbrite_oauth_token",
+        os.getenv("EVENTBRITE_OAUTH_TOKEN"))
     if not eb_token:
         return []
 
@@ -200,10 +223,17 @@ async def _fetch_eventbrite(lat: Optional[float], lon: Optional[float], radius_m
                     vlat, vlon = v.get("latitude"), v.get("longitude")
                     dist = 0
                     if vlat and vlon:
-                        dist = _haversine(lat, lon, float(vlat), float(vlon))
-                    
+                        dist = _haversine(
+                            lat, lon, float(vlat), float(vlon))  # type: ignore
+
                     tcs = e.get("ticket_classes", [])
-                    prices = [float(tc.get("cost", {}).get("major_value", 0)) for tc in tcs if tc.get("cost")]
+                    prices = [
+                        float(
+                            tc.get(
+                                "cost",
+                                {}).get(
+                                "major_value",
+                                0)) for tc in tcs if tc.get("cost")]
                     pmin = min(prices) if prices else 0.0
                     pmax = max(prices) if prices else 0.0
 
@@ -228,7 +258,9 @@ async def _fetch_eventbrite(lat: Optional[float], lon: Optional[float], radius_m
     _set_cached(_cache_eb, ckey, results)
     return results
 
-async def fetch_happenings(lat: float | None, lon: float | None, subs: list[str], radius_mi: int = 25) -> dict[str, Any]:
+
+async def fetch_happenings(lat: float | None, lon: float | None,
+                           subs: list[str], radius_mi: int = 25) -> dict[str, Any]:
     hn_task = _fetch_hn()
     reddit_task = _fetch_reddit(subs)
     eb_task = _fetch_eventbrite(lat, lon, radius_mi)

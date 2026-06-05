@@ -208,6 +208,34 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
           });
           onUpdated();
         }}>+ PART</button>
+        <button className="rs-pill" style={{marginLeft: '4px', color: 'var(--primary)'}} onClick={async () => {
+          const q = window.prompt(`Describe the part to look up for ${cp.description}:`);
+          if (!q) return;
+          try {
+             const res = await apiFetch(`/api/vehicles/${vehicleId}/parts/lookup`, token, {
+               method: 'POST',
+               body: JSON.stringify({ checkpoint_id: cp.id, query: q })
+             });
+             if (res.oem || res.alternatives) {
+               const pn = res.oem && res.oem !== 'Unknown' ? res.oem : (res.alternatives?.[0]?.part_number || null);
+               const pbrand = res.alternatives?.[0]?.brand || 'OEM';
+               await apiFetch(`/api/vehicles/${vehicleId}/parts`, token, {
+                 method: 'POST',
+                 body: JSON.stringify({
+                   check_point_id: cp.id,
+                   part_name: `${pbrand} Part - ${q}`,
+                   part_number: pn
+                 })
+               });
+               onUpdated();
+               alert(`Found and added: ${pbrand} ${pn}`);
+             } else {
+               alert('No matching parts found.');
+             }
+          } catch(e) {
+             alert('Lookup failed: ' + e.message);
+          }
+        }}><span className="material-symbols-rounded" style={{fontSize: '1rem'}}>psychology</span> AI LOOKUP</button>
         {cp.parts && cp.parts.map(p => (
            <span key={p.id} className="cp-interval-tag" style={{borderColor: 'var(--primary)', color: 'var(--primary)', marginLeft: '4px'}}>
              {p.part_name} {p.part_number ? `(${p.part_number})` : ''}

@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 _APRISE: apprise.Apprise | None = None
 
+
 def _get_client() -> apprise.Apprise:
     global _APRISE
     if _APRISE is None:
@@ -19,6 +20,7 @@ def _get_client() -> apprise.Apprise:
                 _APRISE.add(url)
     return _APRISE
 
+
 async def push(title: str, body: str, tag: str | None = None) -> bool:
     """
     Send a notification via Apprise to all configured URLs.
@@ -26,7 +28,7 @@ async def push(title: str, body: str, tag: str | None = None) -> bool:
     if not (os.getenv("APPRISE_URLS") or "").strip():
         logger.warning("APPRISE_URLS not configured")
         return False
-    
+
     # Run sync model in a thread to keep the event loop responsive
     def _run():
         client = _get_client()

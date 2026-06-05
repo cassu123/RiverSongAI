@@ -41,6 +41,7 @@ _CLOUD_DELAY_WARNING = (
     "Response time depends on network and model load."
 )
 
+
 def _friendly_error(exc: Exception) -> str:
     err_str = str(exc).lower()
     if "rate limit" in err_str or "429" in err_str or "throttling" in err_str:
@@ -81,9 +82,13 @@ class BedrockLLM(LLMProvider):
             aws_secret_access_key=settings.aws_secret_access_key,
         )
 
-        logger.info("BedrockLLM initialized (model=%s, region=%s).", self._model, self._region)
+        logger.info(
+            "BedrockLLM initialized (model=%s, region=%s).",
+            self._model,
+            self._region)
 
-    async def stream_response(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+    async def stream_response(
+            self, messages: List[dict]) -> AsyncGenerator[str, None]:
         """
         Stream a chat completion from Amazon Bedrock via the Converse API.
 
@@ -129,7 +134,8 @@ class BedrockLLM(LLMProvider):
             "temperature": self._temperature,
         }
 
-        # boto3 is synchronous — run in thread pool to avoid blocking the event loop
+        # boto3 is synchronous — run in thread pool to avoid blocking the event
+        # loop
         queue: asyncio.Queue[str | None] = asyncio.Queue()
         loop = asyncio.get_running_loop()
 

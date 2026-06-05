@@ -39,24 +39,24 @@ router = APIRouter(prefix="/api/presets", tags=["presets"])
 
 class PresetConfig(BaseModel):
     """All fields optional — preset can specialise any subset."""
-    provider:                Optional[str]  = None
-    model:                   Optional[str]  = None
-    voice_id:                Optional[str]  = None
-    thinking_mode:           Optional[str]  = None  # off | thinking | pro
-    web_search:              Optional[bool] = None
-    tool_use_enabled:        Optional[bool] = None
-    system_prompt_addendum:  Optional[str]  = None
+    provider: Optional[str] = None
+    model: Optional[str] = None
+    voice_id: Optional[str] = None
+    thinking_mode: Optional[str] = None  # off | thinking | pro
+    web_search: Optional[bool] = None
+    tool_use_enabled: Optional[bool] = None
+    system_prompt_addendum: Optional[str] = None
 
 
 class PresetCreate(BaseModel):
-    name:   str = Field(..., min_length=1, max_length=80)
+    name: str = Field(..., min_length=1, max_length=80)
     config: PresetConfig = Field(default_factory=PresetConfig)
 
 
 class PresetUpdate(BaseModel):
-    name:       Optional[str]          = Field(default=None, min_length=1, max_length=80)
-    config:     Optional[PresetConfig] = None
-    is_default: Optional[bool]         = None
+    name: Optional[str] = Field(default=None, min_length=1, max_length=80)
+    config: Optional[PresetConfig] = None
+    is_default: Optional[bool] = None
 
 
 # -----------------------------------------------------------------------------
@@ -113,12 +113,13 @@ async def create_preset(
 ):
     _require_enabled()
     user_id = await _require_user(authorization)
-    store   = _store(request)
+    store = _store(request)
 
     cap = int(getattr(get_settings(), "session_presets_max_per_user", 30))
     count = await store.count_presets(user_id)
     if count >= cap:
-        raise bad_request(f"Preset cap reached ({cap}). Delete one to add another.")
+        raise bad_request(
+            f"Preset cap reached ({cap}). Delete one to add another.")
 
     preset = await store.create_preset(user_id, body.name.strip(), _config_dict(body.config))
     return preset
@@ -134,7 +135,7 @@ async def update_preset(
     _require_enabled()
     user_id = await _require_user(authorization)
     name = body.name.strip() if body.name is not None else None
-    cfg  = _config_dict(body.config) if body.config is not None else None
+    cfg = _config_dict(body.config) if body.config is not None else None
     updated = await _store(request).update_preset(
         user_id, preset_id, name=name, config=cfg, is_default=body.is_default,
     )
@@ -170,8 +171,8 @@ async def apply_preset(
     """
     _require_enabled()
     user_id = await _require_user(authorization)
-    store   = _store(request)
-    mm      = request.app.state.memory_manager
+    store = _store(request)
+    request.app.state.memory_manager
 
     preset = await store.get_preset(user_id, preset_id)
     if preset is None:
@@ -181,17 +182,20 @@ async def apply_preset(
 
     # Persist the subset that maps to LLMSettings.
     current = await store.get_llm_settings(user_id)
-    if cfg.get("provider"): current.provider = cfg["provider"]
-    if cfg.get("model"):    current.model    = cfg["model"]
-    if cfg.get("voice_id"): current.voice_id = cfg["voice_id"]
+    if cfg.get("provider"):
+        current.provider = cfg["provider"]
+    if cfg.get("model"):
+        current.model = cfg["model"]
+    if cfg.get("voice_id"):
+        current.voice_id = cfg["voice_id"]
     await store.save_llm_settings(current)
 
     return {
-        "applied":         True,
-        "preset_id":       preset_id,
-        "persisted":       {
+        "applied": True,
+        "preset_id": preset_id,
+        "persisted": {
             "provider": current.provider,
-            "model":    current.model,
+            "model": current.model,
             "voice_id": current.voice_id,
         },
         "session_overlay": {

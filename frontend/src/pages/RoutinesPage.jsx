@@ -38,6 +38,24 @@ export default function RoutinesPage({ setAction }) {
     }
   }
 
+  const runRoutine = async (id) => {
+    try {
+      const res = await fetch(`/api/routines/${id}/run`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        alert(`Execution Complete: ${data.response}`)
+        fetchRoutines()
+      } else {
+        alert('Execution Failed.')
+      }
+    } catch(err) {
+      alert('Execution Error: ' + err.message)
+    }
+  }
+
   useEffect(() => {
     setAction(
       <button className="rs-btn-primary" onClick={() => alert('New Routine logic planned for Phase 4.')}>
@@ -72,13 +90,18 @@ export default function RoutinesPage({ setAction }) {
               </div>
               <div className="rs-card-value">{r.name}</div>
               <div className="rs-card-meta">
-                {r.trigger_type === 'cron' ? `SCHEDULED: ${r.trigger_val}` : `EVENT: ${r.trigger_val}`}
+                {r.trigger === 'cron' ? `SCHEDULED: ${r.time} on ${r.days?.join(',')}` : `EVENT: ${r.trigger}`}
               </div>
               {r.last_run && (
                 <div className="rs-card-meta" style={{ fontSize: '0.7rem' }}>
                   LAST EXECUTION: {new Date(r.last_run).toLocaleString()}
                 </div>
               )}
+              <div style={{ marginTop: 16 }}>
+                <button className="rs-pill" onClick={() => runRoutine(r.id)}>
+                  <span className="material-symbols-rounded">play_arrow</span> EXECUTE
+                </button>
+              </div>
             </div>
           ))
         )}

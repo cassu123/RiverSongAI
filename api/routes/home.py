@@ -13,17 +13,25 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
 from config.settings import get_settings
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/home", tags=["home"])
 
-VISIBLE_DOMAINS = {"light", "switch", "fan", "cover", "lock", "climate", "scene", "script", "input_boolean"}
+VISIBLE_DOMAINS = {
+    "light",
+    "switch",
+    "fan",
+    "cover",
+    "lock",
+    "climate",
+    "scene",
+    "script",
+    "input_boolean"}
 
 
 async def _require_user(authorization: Optional[str]) -> str:
@@ -31,14 +39,17 @@ async def _require_user(authorization: Optional[str]) -> str:
         raise HTTPException(status_code=401, detail="Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token.")
     return payload["sub"]
 
 
 def _get_client():
     from providers.smart_home.home_assistant import HomeAssistantClient
     s = get_settings()
-    return HomeAssistantClient(base_url=s.home_assistant_url, token=s.home_assistant_token)
+    return HomeAssistantClient(
+        base_url=s.home_assistant_url, token=s.home_assistant_token)
 
 
 def _is_configured() -> bool:
@@ -77,12 +88,12 @@ async def get_devices(authorization: Optional[str] = Header(default=None)):
                 continue
             attrs = s.get("attributes", {})
             devices.append({
-                "entity_id":    s["entity_id"],
-                "domain":       domain,
-                "state":        s["state"],
-                "name":         attrs.get("friendly_name", s["entity_id"]),
-                "brightness":   attrs.get("brightness"),
-                "temperature":  attrs.get("temperature"),
+                "entity_id": s["entity_id"],
+                "domain": domain,
+                "state": s["state"],
+                "name": attrs.get("friendly_name", s["entity_id"]),
+                "brightness": attrs.get("brightness"),
+                "temperature": attrs.get("temperature"),
                 "current_temp": attrs.get("current_temperature"),
             })
         return devices
@@ -99,7 +110,8 @@ class ActionBody(BaseModel):
 
 
 @router.post("/action")
-async def call_action(body: ActionBody, authorization: Optional[str] = Header(default=None)):
+async def call_action(body: ActionBody,
+                      authorization: Optional[str] = Header(default=None)):
     await _require_user(authorization)
     if not _is_configured():
         return {"ok": False, "detail": "Home Assistant not configured."}

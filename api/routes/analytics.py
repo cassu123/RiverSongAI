@@ -16,14 +16,12 @@ from __future__ import annotations
 
 import logging
 import json
-import re
 from typing import Dict, Optional
 
 from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from core.auth import decode_token
-from core.errors import bad_request, forbidden, not_found, unauthorized
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
@@ -34,14 +32,17 @@ async def _require_user(authorization: Optional[str]) -> str:
         raise HTTPException(status_code=401, detail="Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token.")
     return payload["sub"]
 
 
 def _store(request: Request):
     mm = getattr(request.app.state, "memory_manager", None)
     if mm is None:
-        raise HTTPException(status_code=503, detail="Memory manager not available.")
+        raise HTTPException(status_code=503,
+                            detail="Memory manager not available.")
     return mm._store
 
 
@@ -78,12 +79,15 @@ async def get_business_report(
     """
     user_id = await _require_user(authorization)
     from core.tools import _exec_generate_business_report
-    
+
     try:
         report = await _exec_generate_business_report({"days": days}, user_id)
         return {"report": report}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(exc)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate report: {
+                str(exc)}")
 
 
 @router.get("/platforms")
@@ -142,40 +146,44 @@ async def get_platform_summary(
     platform = platform.lower()
     if platform not in allowed_platforms:
         raise HTTPException(
-            status_code=400, 
-            detail=f"Platform '{platform}' not supported for AI summary. Use one of: {', '.join(allowed_platforms)}"
+            status_code=400,
+            detail=f"Platform '{platform}' not supported for AI summary. Use one of: {
+                ', '.join(allowed_platforms)}"
         )
 
     user_id = await _require_user(authorization)
     store = _store(request)
-    
+
     # 1. Fetch recent metrics
     snapshots = await store.get_analytics_snapshots(user_id, platform, days=30)
     if not snapshots:
-        raise HTTPException(status_code=404, detail=f"No analytics data found for {platform} in the last 30 days.")
+        raise HTTPException(
+            status_code=404,
+            detail=f"No analytics data found for {platform} in the last 30 days.")
 
     # 2. Call OllamaLLM to generate insights
     from core.conversation_loop import _build_llm_provider
     from datetime import datetime
-    
+
     try:
-        llm = _build_llm_provider()
+        llm, _ = _build_llm_provider()
         # We assume _build_llm_provider returns an OllamaLLM or compatible provider.
         # If the provider itself fails to initialize, it should raise.
     except Exception as exc:
         logger.error("Failed to initialize LLM provider: %s", exc)
-        raise HTTPException(status_code=503, detail="Ollama LLM is currently unavailable.")
-    
+        raise HTTPException(status_code=503,
+                            detail="Ollama LLM is currently unavailable.")
+
     prompt = (
         f"Analyze these {platform} analytics snapshots from the last 30 days:\n"
         f"{json.dumps(snapshots)}\n\n"
         f"Provide exactly 3 concise bullet-point insights about trends, growth, or anomalies. "
         f"Keep it brief and professional. Do not include any other text."
     )
-    
+
     try:
         insights = await llm.chat([{"role": "user", "content": prompt}])
-        
+
         return {
             "platform": platform,
             "insights": insights.strip(),
@@ -183,7 +191,8 @@ async def get_platform_summary(
         }
     except Exception as exc:
         logger.error("Ollama analysis failed for %s: %s", platform, exc)
-        raise HTTPException(status_code=503, detail="Ollama LLM failed to generate insights.")
+        raise HTTPException(status_code=503,
+                            detail="Ollama LLM failed to generate insights.")
 
 
 # ---------------------------------------------------------------------------

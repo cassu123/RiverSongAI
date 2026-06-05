@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
+import { CommerceMembers, CommerceCustomers, CommerceSuppliers, CommerceSales } from '../components/CommerceComponents.jsx'
 
 // ---------------------------------------------------------------------------
 // Constants & Helpers
@@ -356,6 +357,7 @@ export default function CommercePage({ setAction }) {
   const [loading, setLoading]       = useState(false);
   const [search, setSearch]         = useState('');
   const [filterCat, setFilterCat]   = useState('ALL');
+  const [activeTab, setActiveTab]   = useState('PRODUCTS');
   const [formMode, setFormMode]     = useState('none');
   const [editProduct, setEditProduct] = useState(null);
 
@@ -497,7 +499,26 @@ export default function CommercePage({ setAction }) {
           <CreateWorkspaceForm token={token} onCreate={setWorkspace} />
         </div>
       ) : (
-        <div className="rs-card-flow">
+        <>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 24, overflowX: 'auto', paddingBottom: 8 }}>
+            {['PRODUCTS', 'SALES', 'CUSTOMERS', 'SUPPLIERS', 'MEMBERS'].map(tab => (
+              <button 
+                key={tab}
+                className={`rs-pill ${activeTab === tab ? 'is-active' : ''}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === 'SALES' && <CommerceSales workspace={workspace} token={token} />}
+          {activeTab === 'CUSTOMERS' && <CommerceCustomers workspace={workspace} token={token} />}
+          {activeTab === 'SUPPLIERS' && <CommerceSuppliers workspace={workspace} token={token} />}
+          {activeTab === 'MEMBERS' && <CommerceMembers workspace={workspace} token={token} />}
+
+          {activeTab === 'PRODUCTS' && (
+            <div className="rs-card-flow">
           {formMode !== 'none' && (
             <ProductForm
               initial={editProduct}
@@ -532,7 +553,9 @@ export default function CommercePage({ setAction }) {
               <div className="rs-card-meta">No products found matching your criteria.</div>
             </div>
           )}
-        </div>
+          </div>
+        )}
+        </>
       )}
     </div>
   );
