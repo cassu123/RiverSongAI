@@ -54,14 +54,13 @@ async def n8n_webhook_receiver(
         try:
             settings = get_settings()
             store = request.app.state.memory_manager._store
-            subs = await store.get_push_subscriptions(settings.default_user_id)
-            if subs:
-                from providers.push.sender import send_push
-                for sub_json in subs:
-                    try:
-                        await send_push(sub_json, title=title, body=message)
-                    except Exception as push_err:
-                        logger.warning("n8n push send failed: %s", push_err)
+            from providers.push.notifier import notify_user
+            await notify_user(
+                store,
+                settings.default_user_id,
+                title=title,
+                body=message,
+            )
         except Exception as e:
             logger.error("n8n notify: failed to send push: %s", e)
 

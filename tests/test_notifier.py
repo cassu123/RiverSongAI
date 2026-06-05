@@ -110,8 +110,10 @@ class TestNotifyUser:
         with patch.object(notifier_mod, "get_settings", return_value=_S()), \
              patch.object(notifier_mod, "send_push", side_effect=fake_send):
             n = _run(notifier_mod.notify_user(store, "u1", "t", "b"))
-        # Counted as 1 (treated as transient — don't delete), but no crash.
-        assert n == 1
+        # Tri-state: exception → None outcome. Neither counted as delivered
+        # nor pruned as expired. Caller sees an honest 0 rather than an
+        # inflated success metric on transport failure.
+        assert n == 0
         assert store.deleted == []
 
     def test_store_lookup_raise_is_swallowed(self):

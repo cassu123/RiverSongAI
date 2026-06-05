@@ -318,6 +318,10 @@ class ConversationLoop:
         # of silently dropped, and so they can be awaited at shutdown.
         # (audit LOGIC-002)
         self._background_tasks: "set[asyncio.Task]" = set()
+        # Per-conversation cache of (query_text → skills_block). Avoids
+        # re-embedding + re-querying Chroma for the same transcript across
+        # back-to-back turns (e.g. when the user re-issues the same query).
+        self._skills_block_cache: "dict[str, str]" = {}
 
     def cancel_generation(self) -> None:
         """Immediately abort the current LLM + TTS generation task."""
@@ -490,6 +494,62 @@ class ConversationLoop:
 
         except Exception as exc:
             logger.debug("Startup briefing skipped: %s", exc)
+
+    # Stable markers used to splice dynamic blocks (RAG, skills) into the
+    # system prompt while keeping the operation idempotent across turns.
+    # Prior block (from a previous turn) is stripped before the new block
+    # is appended so the system message does not grow unboundedly.
+    _RAG_BLOCK_MARKER    = "\n\nRELEVANT DOCUMENT EXCERPTS:"
+    _SKILLS_BLOCK_MARKER = "\n\n[ User skills relevant to this turn ]"
+
+    def _splice_system_block(self, marker: str, body: str) -> None:
+        """Replace (or append) a dynamic block in the system prompt.
+
+        Strips any previous block starting at `marker` from the system
+        message's content, then appends `marker + body` (if body is
+        non-empty). Safe no-op when `_history` is empty or the first
+        message is not a system message.
+        """
+        if not self._history or self._history[0].get("role") != "system":
+            return
+        current = self._history[0].get("content") or ""
+        idx = current.find(marker)
+        base = current[:idx] if idx >= 0 else current
+        new_content = base + (marker + body if body else "")
+        self._history[0] = {"role": "system", "content": new_content}
+
+    async def _inject_skills_block(self, query: str) -> None:
+        """Vector-retrieve top-k skills for `query` and splice them into the
+        system prompt. Cached per-conversation so back-to-back identical
+        transcripts hit the cache instead of re-embedding.
+        """
+        if not getattr(self._settings, "skills_enabled", False):
+            self._splice_system_block(self._SKILLS_BLOCK_MARKER, "")
+            return
+        try:
+            cached = self._skills_block_cache.get(query)
+            if cached is not None:
+                block = cached
+            else:
+                from core.skills import get_relevant_skills, render_skills_block
+                hits = await get_relevant_skills(query, owner_id=self._user_id)
+                block = render_skills_block(hits)
+                self._skills_block_cache[query] = block
+                # Bound the cache so a long-running conversation can't OOM.
+                if len(self._skills_block_cache) > 64:
+                    # Drop oldest insertion order — dicts preserve insertion.
+                    oldest = next(iter(self._skills_block_cache))
+                    self._skills_block_cache.pop(oldest, None)
+            # render_skills_block starts with the same header string we use
+            # as our splice marker — strip it so we don't double up the
+            # header in the system prompt.
+            header = self._SKILLS_BLOCK_MARKER.lstrip("\n")
+            body = block
+            if body.startswith(header):
+                body = body[len(header):].lstrip("\n")
+            self._splice_system_block(self._SKILLS_BLOCK_MARKER, "\n" + body if body else "")
+        except Exception as exc:
+            logger.warning("Skill injection failed: %s", exc)
 
     async def _rebuild_system_prompt(self) -> None:
         """Rebuild the system prompt with current memory context, then reset history."""
@@ -699,38 +759,24 @@ class ConversationLoop:
             spoken_response = ""
             intent_name = "conversation"
 
-        # Inject RAG document context when the document_qa intent was triggered
+        # Inject RAG document context when the document_qa intent was triggered.
+        # Uses _splice_system_block so a prior turn's RAG block is replaced
+        # rather than appended (prevents the system prompt from growing
+        # unboundedly across multi-turn QA sessions).
+        rag_body = ""
         if intent_name == "document_qa" and self._settings.semantic_memory_enabled:
             try:
                 from providers.rag.rag_provider import RAGProvider
                 rag = RAGProvider()
                 rag_results = await rag.query_documents(transcript, n_results=5)
                 if rag_results:
-                    doc_context = rag.format_context(rag_results)
-                    # Prepend to the current turn's system prompt without mutating history
-                    if self._history and self._history[0]["role"] == "system":
-                        self._history[0] = {
-                            "role": "system",
-                            "content": self._history[0]["content"] + f"\n\nRELEVANT DOCUMENT EXCERPTS:\n{doc_context}"
-                        }
+                    rag_body = "\n" + rag.format_context(rag_results)
             except Exception as exc:
-                logger.warning("RAG context injection failed: %s", exc)
+                logger.warning("RAG context lookup failed: %s", exc)
+        self._splice_system_block(self._RAG_BLOCK_MARKER, rag_body)
 
-        # Q2#7 — Skills injection. Vector-retrieve top-k user skills relevant
-        # to this turn's transcript and prepend their text to the system
-        # prompt. Flag-gated; safe no-op when disabled or no matches.
-        if getattr(self._settings, "skills_enabled", False):
-            try:
-                from core.skills import get_relevant_skills, render_skills_block
-                hits = await get_relevant_skills(transcript, owner_id=self._user_id)
-                block = render_skills_block(hits)
-                if block and self._history and self._history[0]["role"] == "system":
-                    self._history[0] = {
-                        "role": "system",
-                        "content": self._history[0]["content"] + "\n\n" + block,
-                    }
-            except Exception as exc:
-                logger.warning("Skill injection failed: %s", exc)
+        # Skills injection — flag-gated, cached, idempotent across turns.
+        await self._inject_skills_block(transcript)
 
         if intent_name != "conversation" and spoken_response and intent_name != "document_qa":
             # Google provider handled this turn. Add to history and speak.
@@ -891,36 +937,20 @@ class ConversationLoop:
             spoken_response = ""
             intent_name = "conversation"
 
-        # Inject RAG document context when the document_qa intent was triggered
+        # RAG + Skills injection — both go through helpers that splice into
+        # the system prompt idempotently. See voice-path comments above.
+        rag_body = ""
         if intent_name == "document_qa" and self._settings.semantic_memory_enabled:
             try:
                 from providers.rag.rag_provider import RAGProvider
                 rag = RAGProvider()
                 rag_results = await rag.query_documents(text, n_results=5)
                 if rag_results:
-                    doc_context = rag.format_context(rag_results)
-                    if self._history and self._history[0]["role"] == "system":
-                        self._history[0] = {
-                            "role": "system",
-                            "content": self._history[0]["content"] + f"\n\nRELEVANT DOCUMENT EXCERPTS:\n{doc_context}"
-                        }
+                    rag_body = "\n" + rag.format_context(rag_results)
             except Exception as exc:
-                logger.warning("RAG context injection failed: %s", exc)
-
-        # Q2#7 — Skills injection (text-input turn). Same pattern as the voice
-        # path above. Flag-gated; safe no-op when disabled or no matches.
-        if getattr(self._settings, "skills_enabled", False):
-            try:
-                from core.skills import get_relevant_skills, render_skills_block
-                hits = await get_relevant_skills(text, owner_id=self._user_id)
-                block = render_skills_block(hits)
-                if block and self._history and self._history[0]["role"] == "system":
-                    self._history[0] = {
-                        "role": "system",
-                        "content": self._history[0]["content"] + "\n\n" + block,
-                    }
-            except Exception as exc:
-                logger.warning("Skill injection failed: %s", exc)
+                logger.warning("RAG context lookup failed: %s", exc)
+        self._splice_system_block(self._RAG_BLOCK_MARKER, rag_body)
+        await self._inject_skills_block(text)
 
         if intent_name != "conversation" and spoken_response and intent_name != "document_qa":
             self._history.append({"role": "user", "content": text})
@@ -1050,6 +1080,7 @@ class ConversationLoop:
         all providers (which would reload the Whisper model, etc.).
         """
         self._history = []
+        self._skills_block_cache.clear()
         if flush_memory:
             self._suppress_memory = True
         await self._rebuild_system_prompt()

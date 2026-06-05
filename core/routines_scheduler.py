@@ -113,20 +113,19 @@ async def _run_proactive_routine(app: FastAPI, user_id: str, routine: dict):
         store = app.state.memory_manager._store
         await store.update_routine(routine["id"], user_id, {"last_run": datetime.now(zoneinfo.ZoneInfo("UTC")).isoformat()})
         
-        # ── Web Push Notification ──
-        import json
-        from providers.push.sender import send_push
-        subscriptions = await store.get_push_subscriptions(user_id)
-        for sub_json in subscriptions:
-            success = await send_push(
-                sub_json,
-                title="River Song",
-                body=f"New briefing: {routine['name']}",
+        # ── Notification fan-out — routes through the central helper so
+        # Web Push, ntfy, and Apprise all fire together when configured,
+        # and 410-Gone subscriptions are pruned automatically.
+        try:
+            from providers.push.notifier import notify_user
+            await notify_user(
+                store,
+                user_id,
+                title=f"River Song — {routine['name']}",
+                body="New briefing ready.",
             )
-            if not success:
-                # 410 Gone — subscription expired, remove it
-                sub = json.loads(sub_json)
-                await store.delete_push_subscription(user_id, sub["endpoint"])
+        except Exception as push_exc:
+            logger.warning("Routine push fan-out failed for %s: %s", user_id, push_exc)
 
     except Exception as exc:
         logger.error("Failed to run proactive routine for %s: %s", user_id, exc)

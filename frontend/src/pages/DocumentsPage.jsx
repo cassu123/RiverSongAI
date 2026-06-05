@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuthHeaders, API_BASE } from '../utils/useApi.js'
+import FlagGatedPage from '../components/FlagGatedPage.jsx'
 
 /**
  * DocumentsPage — Q2#6.
@@ -10,8 +11,6 @@ import { useAuth } from '../context/AuthContext'
  * Backed by /api/documents (flag-gated by settings.documents_enabled).
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || ''
-
 const KINDS = [
   { value: 'markdown', label: 'MD' },
   { value: 'text',     label: 'TXT' },
@@ -21,7 +20,7 @@ const KINDS = [
 ]
 
 export default function DocumentsPage({ setAction }) {
-  const { token } = useAuth()
+  const authHeaders = useAuthHeaders()
   const [docs,        setDocs]        = useState([])
   const [activeId,    setActiveId]    = useState(null)
   const [activeDoc,   setActiveDoc]   = useState(null)
@@ -32,11 +31,6 @@ export default function DocumentsPage({ setAction }) {
 
   const saveTimer = useRef(null)
   const dirtyRef  = useRef(null)
-
-  const authHeaders = useCallback(() => ({
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  }), [token])
 
   const refreshList = useCallback(async () => {
     try {
@@ -55,6 +49,15 @@ export default function DocumentsPage({ setAction }) {
   useEffect(() => { refreshList() }, [refreshList])
 
   const openDoc = useCallback(async (id) => {
+    // Cancel any pending debounced save and drop its dirty patch BEFORE
+    // we switch docs — otherwise the timer would persist edits made to
+    // the previous doc against the new doc's id (and silently overwrite
+    // both: doc A loses its change, doc B gets it). See code review #3.
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current)
+      saveTimer.current = null
+    }
+    dirtyRef.current = null
     setError('')
     setActiveId(id)
     try {

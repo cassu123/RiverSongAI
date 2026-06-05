@@ -202,3 +202,15 @@ class TestChallengeToken:
         from core.auth import decode_challenge_token
         assert decode_challenge_token("not.a.token") is None
         assert decode_challenge_token("") is None
+
+    def test_challenge_token_rejected_by_decode_token(self):
+        """A TOTP challenge token must NOT authenticate as an access token.
+
+        Regression for the 2FA-bypass risk: without the purpose check in
+        decode_token, a leaked challenge token could be presented as
+        Bearer auth to any access-token endpoint.
+        """
+        import asyncio
+        from core.auth import create_totp_challenge_token, decode_token
+        t = create_totp_challenge_token("user-abc")
+        assert asyncio.run(decode_token(t)) is None

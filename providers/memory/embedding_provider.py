@@ -18,9 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import List, Optional
-
-import ollama
+from typing import Any, List, Optional
 
 from config.settings import get_settings
 
@@ -40,12 +38,30 @@ class EmbeddingProvider:
     Both backends are async — the Ollama path is natively async, the
     fastembed path runs sync inference inside `asyncio.to_thread` so it
     does not block the event loop.
+
+    The Ollama client and the `ollama` package are both lazy-loaded on
+    first use of the Ollama backend so that fastembed-only deployments
+    (which may not have `ollama` installed) don't pay an unconditional
+    import cost.
     """
 
     def __init__(self) -> None:
         self._settings = get_settings()
         self._backend  = (getattr(self._settings, "embedding_backend", "ollama") or "ollama").lower()
+        self._ollama_client: Optional[Any] = None
+
+    def _get_ollama_client(self) -> Optional[Any]:
+        if self._ollama_client is not None:
+            return self._ollama_client
+        try:
+            import ollama  # lazy import — keeps fastembed-only installs slim
+        except ImportError:
+            logger.warning(
+                "Ollama package missing; install 'ollama' to use the ollama embedding backend."
+            )
+            return None
         self._ollama_client = ollama.AsyncClient(host=self._settings.ollama_base_url)
+        return self._ollama_client
 
     async def embed(self, text: str) -> Optional[List[float]]:
         """
@@ -66,8 +82,11 @@ class EmbeddingProvider:
     # -------------------------------------------------------------------------
 
     async def _embed_ollama(self, text: str) -> Optional[List[float]]:
+        client = self._get_ollama_client()
+        if client is None:
+            return None
         try:
-            response = await self._ollama_client.embeddings(
+            response = await client.embeddings(
                 model=self._settings.embedding_model,
                 prompt=text,
             )

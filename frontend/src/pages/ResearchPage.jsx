@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuthHeaders, API_BASE } from '../utils/useApi.js'
+import FlagGatedPage from '../components/FlagGatedPage.jsx'
 
 /**
  * ResearchPage — Q3#11.
@@ -9,20 +10,13 @@ import { useAuth } from '../context/AuthContext'
  * displays the body inline and links to the saved doc.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || ''
-
 export default function ResearchPage({ setAction, onNavigate }) {
-  const { token } = useAuth()
+  const authHeaders = useAuthHeaders()
   const [query,    setQuery]    = useState('')
   const [running,  setRunning]  = useState(false)
   const [result,   setResult]   = useState(null)
   const [error,    setError]    = useState('')
   const [disabled, setDisabled] = useState(null)
-
-  const authHeaders = useCallback(() => ({
-    'Content-Type': 'application/json',
-    Authorization:  `Bearer ${token}`,
-  }), [token])
 
   // Probe the flag on mount via a HEAD-like dry call.
   useEffect(() => {

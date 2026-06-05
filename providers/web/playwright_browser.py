@@ -123,6 +123,17 @@ class PlaywrightBrowser:
             self._pw      = None
 
     async def _new_page(self):
+        """Open a fresh page in the shared browser+context.
+
+        Design note: each public op (navigate/extract_text/click/screenshot/
+        vision_on_page) calls `_new_page` and closes the page in a finally
+        block. The browser binary + context are reused across ops (cheap),
+        but the page itself is per-op (isolation). Sharing a page across
+        ops would carry state (cookies, console state, in-flight requests)
+        between unrelated calls and is unsafe for the MCP tool surface
+        where each call is independent. The cost (~50–100 ms per op for
+        page lifecycle) is the deliberate price of that isolation.
+        """
         await self._ensure_started()
         return await self._context.new_page()
 

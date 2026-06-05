@@ -395,11 +395,23 @@ async def post_alert(body: AlertBody, x_unit_token: str = Header(default=None)):
     
     if body.level.lower() == "critical":
         try:
-            admin_users = await store.execute_read_async("SELECT id FROM users WHERE role IN ('admin', 'operator')")
-            for u in admin_users:
-                subs = await store.get_push_subscriptions(u["id"])
-                for sub in subs:
-                    await send_push(sub, "Critical Fleet Alert", f"{body.title}: {body.message}")
+            from providers.push.notifier import notify_user
+            admin_users = await store.execute_read_async(
+                "SELECT id FROM users WHERE role IN ('admin', 'operator')"
+            )
+            # Fan out in parallel across admins + their devices via notify_user.
+            import asyncio as _asyncio
+            await _asyncio.gather(
+                *[
+                    notify_user(
+                        store, u["id"],
+                        title="Critical Fleet Alert",
+                        body=f"{body.title}: {body.message}",
+                    )
+                    for u in admin_users
+                ],
+                return_exceptions=True,
+            )
         except Exception as e:
             logger.error(f"Push notification failed: {e}")
 

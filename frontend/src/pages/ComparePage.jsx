@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuthHeaders, API_BASE } from '../utils/useApi.js'
+import FlagGatedPage from '../components/FlagGatedPage.jsx'
 
 /**
  * ComparePage — Q3#12.
@@ -8,10 +9,8 @@ import { useAuth } from '../context/AuthContext'
  * side-by-side. Voting reveals which model produced which response.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || ''
-
 export default function ComparePage({ setAction }) {
-  const { token } = useAuth()
+  const authHeaders = useAuthHeaders()
   const [prompt,      setPrompt]      = useState('')
   const [modelA,      setModelA]      = useState({ provider: 'ollama', model: '' })
   const [modelB,      setModelB]      = useState({ provider: 'ollama', model: '' })
@@ -23,11 +22,6 @@ export default function ComparePage({ setAction }) {
   const [disabled,    setDisabled]    = useState(null)
   const [history,     setHistory]     = useState([])
   const [board,       setBoard]       = useState([])
-
-  const authHeaders = useCallback(() => ({
-    'Content-Type': 'application/json',
-    Authorization:  `Bearer ${token}`,
-  }), [token])
 
   const refresh = useCallback(async () => {
     try {

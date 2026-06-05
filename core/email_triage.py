@@ -28,6 +28,7 @@ Design:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -248,15 +249,15 @@ async def triage_inbox(
         logger.warning("get_unread_messages failed during triage: %s", exc)
         return []
 
-    enriched: List[Dict[str, Any]] = []
-    for msg in unread:
-        body = ""
+    # Parallelize per-message body fetch + classify so a 10-message inbox
+    # finishes in ~one LLM round-trip instead of ten. Order is preserved
+    # via the zip below — gather returns results in input order.
+    async def _enrich_one(msg: Dict[str, Any]) -> Dict[str, Any]:
         try:
             body = await gmail_provider.get_message_body(msg["id"])
         except Exception as exc:
             logger.debug("get_message_body failed for %s: %s", msg.get("id"), exc)
             body = msg.get("snippet", "") or ""
-
         body = (body or "")[:body_chars]
         classification = await classify_message(
             subject=msg.get("subject", ""),
@@ -264,6 +265,9 @@ async def triage_inbox(
             body=body,
             llm=llm,
         )
-        enriched.append({**msg, "triage": classification})
+        return {**msg, "triage": classification}
 
-    return enriched
+    if not unread:
+        return []
+    enriched = await asyncio.gather(*[_enrich_one(m) for m in unread])
+    return list(enriched)

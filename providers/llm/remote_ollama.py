@@ -113,6 +113,14 @@ class RemoteOllamaLLM(LLMProvider):
         async for chunk in self.stream_response(messages):
             yield chunk
 
+    async def stream_response_thinking(self, messages: List[dict]) -> AsyncGenerator[str, None]:
+        # Ollama has no separate "thinking" channel; the model emits the
+        # full chain-of-thought inline when prompted for it. Delegating to
+        # stream_response keeps RemoteOllamaLLM swappable into ProviderPair
+        # without raising AttributeError on the thinking path.
+        async for chunk in self.stream_response(messages):
+            yield chunk
+
     async def chat(self, messages: list[dict]) -> dict:
         out = ""
         async for chunk in self.stream_response(messages):

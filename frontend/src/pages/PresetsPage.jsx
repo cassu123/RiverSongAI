@@ -1,27 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuthHeaders, API_BASE } from '../utils/useApi.js'
+import FlagGatedPage from '../components/FlagGatedPage.jsx'
 
 /**
  * PresetsPage — Q2#9. CRUD UI for saved session presets.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || ''
-
 const THINKING_OPTIONS = ['', 'off', 'thinking', 'pro']
 
 export default function PresetsPage({ setAction }) {
-  const { token } = useAuth()
+  const authHeaders = useAuthHeaders()
   const [presets,  setPresets]  = useState([])
   const [draft,    setDraft]    = useState(null)
   const [editId,   setEditId]   = useState(null)
   const [loading,  setLoading]  = useState(true)
   const [disabled, setDisabled] = useState(false)
   const [error,    setError]    = useState('')
-
-  const authHeaders = useCallback(() => ({
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  }), [token])
 
   const refresh = useCallback(async () => {
     try {

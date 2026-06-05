@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuthHeaders, API_BASE } from '../utils/useApi.js'
+import FlagGatedPage from '../components/FlagGatedPage.jsx'
 
 /**
  * SkillsPage — Q2#7.
@@ -9,10 +10,8 @@ import { useAuth } from '../context/AuthContext'
  * conversation time and prepended to the system prompt.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || ''
-
 export default function SkillsPage({ setAction }) {
-  const { token } = useAuth()
+  const authHeaders = useAuthHeaders()
   const [skills,   setSkills]   = useState([])
   const [activeId, setActiveId] = useState(null)
   const [draft,    setDraft]    = useState(null)
@@ -20,11 +19,6 @@ export default function SkillsPage({ setAction }) {
   const [error,    setError]    = useState('')
   const [disabled, setDisabled] = useState(false)
   const [saving,   setSaving]   = useState(false)
-
-  const authHeaders = useCallback(() => ({
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  }), [token])
 
   const refresh = useCallback(async () => {
     try {

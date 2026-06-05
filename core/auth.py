@@ -61,7 +61,16 @@ async def decode_token(token: str) -> Optional[dict]:
     settings = get_settings()
     try:
         payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
-        
+
+        # Reject any token that carries a `purpose` claim (e.g. TOTP challenge
+        # tokens with purpose='totp_challenge'). Access tokens are minted by
+        # create_access_token() which never sets a purpose; only short-lived
+        # ceremonial tokens do. Without this guard, a challenge token leaked
+        # between step 1 and step 2 of 2FA login could be presented as a
+        # Bearer token to any endpoint and authenticate as the user.
+        if payload.get("purpose"):
+            return None
+
         # Check revocation
         jti = payload.get("jti")
         if jti:

@@ -211,10 +211,16 @@ async def login_totp(request: Request, body: TotpLoginBody):
         raise unauthorized("User not found.")
 
     totp = await store.get_totp_state(user["id"])
-    if not totp.get("enabled"):
+    # Fail-closed: only the explicit boolean True bypasses TOTP verification.
+    # A missing/falsy 'enabled' key (DB anomaly, schema migration drift) must
+    # NOT silently issue an access token — that would be a 2FA bypass.
+    if totp.get("enabled") is False:
         # User disabled 2FA between step 1 and step 2 — treat as plain login.
         token = create_access_token(user_id=user["id"], email=user["email"], role=user["role"])
         return {"token": token, "user": _user_login_payload(user)}
+    if totp.get("enabled") is not True:
+        # Anything other than True/False means the state record is malformed.
+        raise unauthorized("2FA state unavailable; contact an administrator.")
 
     used_recovery = False
     if body.recovery_code:

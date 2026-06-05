@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuthHeaders, API_BASE } from '../utils/useApi.js'
+import FlagGatedPage from '../components/FlagGatedPage.jsx'
 
 /**
  * WebhookTokensPage — Q2#10 admin UI.
@@ -11,12 +12,10 @@ import { useAuth } from '../context/AuthContext'
  * a one-shot panel and never store it client-side.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || ''
-
 const SCOPE_SUGGESTIONS = ['routines.run', 'killswitch.activate', 'commerce.write', 'memory.read']
 
 export default function WebhookTokensPage({ setAction }) {
-  const { token } = useAuth()
+  const authHeaders = useAuthHeaders()
   const [tokens,        setTokens]        = useState([])
   const [draft,         setDraft]         = useState(null)
   const [freshlyMinted, setFreshlyMinted] = useState(null)
@@ -25,11 +24,6 @@ export default function WebhookTokensPage({ setAction }) {
   const [loading,       setLoading]       = useState(true)
   const [disabled,      setDisabled]      = useState(false)
   const [error,         setError]         = useState('')
-
-  const authHeaders = useCallback(() => ({
-    'Content-Type': 'application/json',
-    Authorization:  `Bearer ${token}`,
-  }), [token])
 
   const refresh = useCallback(async () => {
     try {
@@ -110,22 +104,14 @@ export default function WebhookTokensPage({ setAction }) {
     setAction(<button className="rs-pill" onClick={startNew}>+ ISSUE TOKEN</button>)
   }, [setAction])
 
-  if (loading) {
-    return <div className="rs-foyer animate-fade-in"><div className="rs-card-meta">LOADING TOKENS…</div></div>
-  }
-
-  if (disabled) {
-    return (
-      <div className="rs-foyer animate-fade-in">
-        <div className="rs-foyer-head">
-          <h1 className="rs-greeting">Webhook Tokens</h1>
-          <div className="rs-greeting-sub">Disabled. Set WEBHOOK_TOKENS_ENABLED=true and restart.</div>
-        </div>
-      </div>
-    )
-  }
-
   return (
+    <FlagGatedPage
+      title="Webhook Tokens"
+      loading={loading}
+      disabled={disabled}
+      loadingLabel="LOADING TOKENS…"
+      disabledMessage="Disabled. Set WEBHOOK_TOKENS_ENABLED=true and restart."
+    >
     <div className="rs-foyer animate-fade-in">
       <div className="rs-foyer-head">
         <h1 className="rs-greeting">Webhook Tokens</h1>
@@ -294,6 +280,7 @@ export default function WebhookTokensPage({ setAction }) {
         </div>
       )}
     </div>
+    </FlagGatedPage>
   )
 }
 
