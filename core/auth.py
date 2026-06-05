@@ -9,6 +9,37 @@ import jwt
 from config.settings import get_settings
 
 
+def create_totp_challenge_token(user_id: str, ttl_seconds: int = 300) -> str:
+    """
+    Short-lived JWT issued after step 1 of 2FA login (email+password
+    verified, awaiting TOTP code). Carries `purpose='totp_challenge'`
+    so it can't be confused with an access token.
+    """
+    settings = get_settings()
+    now    = datetime.now(tz=timezone.utc)
+    expire = now + timedelta(seconds=ttl_seconds)
+    payload = {
+        "sub":     user_id,
+        "purpose": "totp_challenge",
+        "iat":     now,
+        "exp":     expire,
+        "jti":     str(uuid.uuid4()),
+    }
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+
+
+def decode_challenge_token(token: str) -> Optional[dict]:
+    """Verify a TOTP challenge token. Returns payload if valid and unexpired."""
+    settings = get_settings()
+    try:
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+    except jwt.PyJWTError:
+        return None
+    if payload.get("purpose") != "totp_challenge":
+        return None
+    return payload
+
+
 def create_access_token(user_id: str, email: str, role: str, impersonator_id: Optional[str] = None) -> str:
     settings = get_settings()
     now = datetime.now(tz=timezone.utc)

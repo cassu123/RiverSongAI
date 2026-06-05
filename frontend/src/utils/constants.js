@@ -5,9 +5,9 @@
  * Extracted here to prevent circular dependencies between components.
  */
 
-export const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'admin_settings'])
+export const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'admin_settings', 'remote_ollama', 'webhook_tokens'])
 
-export const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings', 'chronos', 'briefing'])
+export const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings', 'chronos', 'briefing', 'documents', 'skills', 'presets', 'research', 'compare'])
 
 export const STATE_TABS = ['idle', 'listening', 'thinking', 'speaking']
 
@@ -38,6 +38,11 @@ export const NAV_GROUPS = [
     items: [
       { key: 'memory',      label: 'Memory',      icon: 'memory' },
       { key: 'chronos',     label: 'Notes',       icon: 'chronos' },
+      { key: 'documents',   label: 'Docs',        icon: 'documents' },
+      { key: 'skills',      label: 'Skills',      icon: 'skills' },
+      { key: 'presets',     label: 'Presets',     icon: 'presets' },
+      { key: 'research',    label: 'Research',    icon: 'research' },
+      { key: 'compare',     label: 'Compare',     icon: 'compare' },
       { key: 'routines',    label: 'Routines',    icon: 'routines' },
       { key: 'inventory',   label: 'Stash',       icon: 'inventory' },
       { key: 'culinary',    label: 'Kitchen',     icon: 'culinary' },
@@ -57,6 +62,8 @@ export const NAV_GROUPS = [
       { key: 'dashboard',      label: 'System Hub',     icon: 'dashboard' },
       { key: 'users',          label: 'Users',          icon: 'users' },
       { key: 'admin_settings', label: 'Admin Settings', icon: 'admin_settings' },
+      { key: 'remote_ollama',  label: 'Remote Ollama',  icon: 'remote_ollama' },
+      { key: 'webhook_tokens', label: 'Webhook Tokens', icon: 'webhook_tokens' },
       { key: 'killswitch',     label: 'Kill Switch',    icon: 'killswitch' },
     ]
   }

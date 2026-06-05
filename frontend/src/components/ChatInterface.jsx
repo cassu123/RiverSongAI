@@ -3,6 +3,7 @@ import ConversationPanel   from './ConversationPanel.jsx'
 import { useAuth }         from '../context/AuthContext.jsx'
 import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
 import RateIndicator       from './RateIndicator.jsx'
+import PresetSelector      from './PresetSelector.jsx'
 
 /**
  * ChatInterface — Spatial Intelligence v2.0
@@ -344,6 +345,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
         </div>
 
         <div className="rs-chat-input-right">
+          <PresetSelector />
           <button className="rs-pill" onClick={openModelPicker}>
             <span className="material-symbols-rounded">
               {selectedModel?.provider === 'auto' ? 'auto_awesome' : selectedModel?.provider === 'nvidia_nim' ? 'memory_alt' : selectedModel?.provider === 'ollama' ? 'memory' : 'cloud'}

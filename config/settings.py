@@ -585,6 +585,25 @@ class Settings(BaseSettings):
         default="nomic-embed-text",
         description="Ollama model name used for generating semantic embeddings.",
     )
+    embedding_backend: str = Field(
+        default="ollama",
+        description=(
+            "Which embedding backend to use: 'ollama' (default — current "
+            "behavior, calls local Ollama with `embedding_model`) or "
+            "'fastembed' (ONNX CPU embeddings, no Ollama dependency, faster "
+            "for small batches). WARNING: switching backends on an existing "
+            "Chroma collection will break queries — the vector dimension and "
+            "embedding space change. Re-ingest or start a new collection."
+        ),
+    )
+    fastembed_model: str = Field(
+        default="BAAI/bge-small-en-v1.5",
+        description=(
+            "fastembed model identifier (HF hub format). Used only when "
+            "embedding_backend='fastembed'. Default is 384-dim, ~30 MB, "
+            "downloaded lazily on first use. Requires `pip install fastembed`."
+        ),
+    )
     chroma_path: str = Field(
         default="/mnt/data/river-song/chroma",
         description="Absolute path to the ChromaDB persistent storage directory.",
@@ -614,6 +633,16 @@ class Settings(BaseSettings):
     rag_top_k: int = Field(
         default=5,
         description="Number of chunks retrieved per RAG query.",
+    )
+    rag_extractor: str = Field(
+        default="unstructured",
+        description=(
+            "Which document extractor to use for RAG ingestion: "
+            "'unstructured' (default — current behavior, requires the "
+            "unstructured package) or 'markitdown' (Microsoft MarkItDown, "
+            "lighter, MD-shaped output, requires `pip install markitdown`). "
+            "Unlocks PDF/DOCX/PPTX → markdown ingestion for Sifter/WAPS."
+        ),
     )
     llm_streaming_enabled: bool = Field(
         default=False,
@@ -734,6 +763,40 @@ class Settings(BaseSettings):
     vapid_claims_email: str = Field(
         default="mailto:admin@riversong.local",
         description="Contact email embedded in VAPID claims.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Q4#16 / Q4#17 — Notification fan-out + ntfy.sh fallback channel
+    # -------------------------------------------------------------------------
+    killswitch_push_enabled: bool = Field(
+        default=False,
+        description=(
+            "If True and Web Push is enabled, kill-switch activation pushes "
+            "an alert to every admin. Independent of activation itself."
+        ),
+    )
+    ntfy_enabled: bool = Field(
+        default=False,
+        description=(
+            "Enable ntfy.sh as a parallel push channel. Used alongside Web "
+            "Push so off-device alerts arrive even without a registered "
+            "service worker."
+        ),
+    )
+    ntfy_base_url: str = Field(
+        default="https://ntfy.sh",
+        description="Base URL of the ntfy server (use self-hosted if desired).",
+    )
+    ntfy_default_topic: str = Field(
+        default="",
+        description=(
+            "Default ntfy topic used when no per-user override is set. "
+            "Per-user topics can be set via env var NTFY_TOPIC_<user_id>."
+        ),
+    )
+    ntfy_auth_token: str = Field(
+        default="",
+        description="Optional bearer token for protected ntfy topics.",
     )
 
     # -------------------------------------------------------------------------
@@ -949,6 +1012,193 @@ class Settings(BaseSettings):
     waps_documents_path: str = Field(
         default="/mnt/data/river-song/waps",
         description="Path to the directory containing documents for Sifter to index.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Hardware Cookbook (Q1 — capability merge from Odysseus)
+    # -------------------------------------------------------------------------
+    hardware_cookbook_enabled: bool = Field(
+        default=False,
+        description=(
+            "Admin-only Hardware Cookbook in Settings. Scans local GPU/RAM/CPU "
+            "and scores every local model (LLMRegistry) as fits / tight / "
+            "ram_fallback / oom. Off by default per anti-regression guardrail; "
+            "set to True after the Q1 verification gate passes."
+        ),
+    )
+
+    # -------------------------------------------------------------------------
+    # Documents workspace (Q2#6 — capability merge from Odysseus)
+    # -------------------------------------------------------------------------
+    documents_enabled: bool = Field(
+        default=False,
+        description=(
+            "Per-user document workspace (Markdown / plaintext / CSV) with "
+            "multi-tab editing. Off by default per anti-regression guardrail. "
+            "When False the routes 404 and the drawer entry is hidden. "
+            "Required for Q3#11 Deep Research report storage."
+        ),
+    )
+    documents_max_bytes: int = Field(
+        default=2_000_000,
+        description="Maximum size (bytes) of a single document body. Default ~2 MB.",
+    )
+    documents_max_per_user: int = Field(
+        default=500,
+        description="Soft cap on document count per user. Creation rejected past this.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Skills system (Q2#7 — capability merge from Odysseus)
+    # -------------------------------------------------------------------------
+    skills_enabled: bool = Field(
+        default=False,
+        description=(
+            "Per-user skill library — saved prompts/recipes that are "
+            "vector-retrieved and prepended to the conversation system "
+            "prompt. Reuses the existing ChromaDB collection with metadata "
+            "kind='skill'. Off by default per anti-regression guardrail."
+        ),
+    )
+    skills_top_k: int = Field(
+        default=3,
+        description="How many top-scoring skills to inject into the prompt.",
+    )
+    skills_max_per_user: int = Field(
+        default=100,
+        description="Soft cap on skills per user.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Gmail triage (Q2#8 — capability merge from Odysseus)
+    # -------------------------------------------------------------------------
+    gmail_triage_enabled: bool = Field(
+        default=False,
+        description=(
+            "On-demand inbox triage: classifies unread Gmail by urgency, "
+            "attaches tags, drafts a reply for HIGH-urgency mail only. "
+            "Routes 404 when off. Off by default per anti-regression "
+            "guardrail."
+        ),
+    )
+    gmail_triage_model: str = Field(
+        default="",
+        description=(
+            "Ollama model used for triage classification. Empty string "
+            "(default) means 'use settings.llm_model'."
+        ),
+    )
+    gmail_triage_max_messages: int = Field(
+        default=15,
+        description="Hard cap on number of messages triaged per request.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Session presets (Q2#9 — capability merge from Odysseus)
+    # -------------------------------------------------------------------------
+    session_presets_enabled: bool = Field(
+        default=False,
+        description=(
+            "Saved combinations of (model, voice, thinking mode, web search, "
+            "tool use). Surfaced as a selector on the Conversation and Chat "
+            "pages. Off by default per anti-regression guardrail."
+        ),
+    )
+    session_presets_max_per_user: int = Field(
+        default=30,
+        description="Soft cap on number of saved presets per user.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Webhook tokens (Q2#10 — admin-issuable scoped tokens)
+    # -------------------------------------------------------------------------
+    webhook_tokens_enabled: bool = Field(
+        default=False,
+        description=(
+            "Admin-issuable webhook tokens with scopes, expiry, revocation, "
+            "and audit log. When off the admin route surface is hidden and "
+            "the verification helper rejects every token. Off by default "
+            "per anti-regression guardrail."
+        ),
+    )
+
+    # -------------------------------------------------------------------------
+    # Deep Research (Q3#11 — capability merge from Odysseus)
+    # -------------------------------------------------------------------------
+    deep_research_enabled: bool = Field(
+        default=False,
+        description=(
+            "Multi-step research orchestrator: decompose → parallel web "
+            "search → fetch + extract → synthesize a cited Markdown report "
+            "stored as a `research`-kind document (Q2#6). Off by default "
+            "per anti-regression guardrail."
+        ),
+    )
+    deep_research_max_sources: int = Field(
+        default=10,
+        description="Hard cap on unique URLs visited per research run.",
+    )
+    deep_research_subquery_count: int = Field(
+        default=4,
+        description="How many sub-queries to decompose the prompt into.",
+    )
+    deep_research_model: str = Field(
+        default="",
+        description=(
+            "Ollama model used for query decomposition + synthesis. Empty "
+            "string (default) means 'use settings.llm_model'."
+        ),
+    )
+
+    # -------------------------------------------------------------------------
+    # Blind model comparison (Q3#12 — capability merge from Odysseus)
+    # -------------------------------------------------------------------------
+    blind_compare_enabled: bool = Field(
+        default=False,
+        description=(
+            "Blind A/B model comparison: identities hidden until vote; "
+            "votes persisted with prompt fingerprint and aggregated into a "
+            "model leaderboard. Off by default per anti-regression guardrail."
+        ),
+    )
+
+    # -------------------------------------------------------------------------
+    # Playwright browser MCP tool (Q3#13)
+    # -------------------------------------------------------------------------
+    playwright_browser_enabled: bool = Field(
+        default=False,
+        description=(
+            "Headless Playwright browser exposed as MCP tools "
+            "(navigate / click / extract / screenshot / vision_on_page). "
+            "Off by default. Requires the `playwright` package and "
+            "`playwright install chromium` to be run by the operator. "
+            "Excluded from the safety-excluded list per Q3 plan."
+        ),
+    )
+    playwright_browser_headless: bool = Field(
+        default=True,
+        description="Run the Playwright browser without a UI.",
+    )
+    playwright_browser_max_page_chars: int = Field(
+        default=40_000,
+        description="Truncate page text extractions to this many characters.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Remote Ollama rigs (Q3#14)
+    # -------------------------------------------------------------------------
+    remote_ollama_enabled: bool = Field(
+        default=False,
+        description=(
+            "Allow registering remote Ollama hosts (typically SSH-tunneled "
+            "to http://localhost:<port>) as additional model providers. "
+            "Admin-only CRUD; falls back to local Ollama when the remote is "
+            "offline. Off by default per anti-regression guardrail."
+        ),
+    )
+    remote_ollama_health_timeout_seconds: float = Field(
+        default=3.0,
+        description="Per-rig health-check timeout (seconds).",
     )
 
     # -------------------------------------------------------------------------

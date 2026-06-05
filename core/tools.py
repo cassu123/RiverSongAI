@@ -354,6 +354,18 @@ TOOL_SCHEMAS = [
     }
 ]
 
+# Q3#13 — Append Playwright browser tools when the flag is enabled at startup.
+# The provider also short-circuits on every call when the flag is off, so even
+# a hot-toggle leaves the system in a safe state.
+try:
+    from config.settings import get_settings as _gs_pw
+    if getattr(_gs_pw(), "playwright_browser_enabled", False):
+        from providers.web.playwright_browser import PLAYWRIGHT_TOOL_SCHEMAS
+        TOOL_SCHEMAS.extend(PLAYWRIGHT_TOOL_SCHEMAS)
+except Exception:
+    # Settings unavailable at module import time → leave tools unexposed.
+    pass
+
 # =============================================================================
 # Tool Executor
 # =============================================================================
@@ -448,6 +460,17 @@ async def execute_tool(tool_name: str, tool_input: Dict[str, Any], context: Dict
 
         elif tool_name == "code_interpreter":
             return await _exec_code_interpreter(tool_input, user_id)
+
+        elif tool_name in ("browser_navigate", "browser_extract_text",
+                           "browser_click", "browser_screenshot",
+                           "browser_vision_on_page"):
+            # Q3#13 — Playwright browser tools. Flag-gated; the provider
+            # short-circuits when disabled.
+            from providers.web.playwright_browser import PLAYWRIGHT_TOOL_DISPATCH
+            fn = PLAYWRIGHT_TOOL_DISPATCH.get(tool_name)
+            if fn is None:
+                return f"Unknown browser tool: {tool_name}"
+            return await fn(tool_input or {})
 
         elif tool_name == "mow_command":
             return await _exec_mow_command(tool_input, user_id)

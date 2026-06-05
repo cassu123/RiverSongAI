@@ -199,6 +199,30 @@ async def list_models(
 
 
 # =============================================================================
+# GET /api/models/hardware  — Hardware Cookbook (admin, flag-gated)
+# =============================================================================
+
+@router.get("/models/hardware")
+async def get_hardware_cookbook(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Detect host GPU/RAM/CPU and score every local model as fits / tight /
+    ram_fallback / oom. Admin-only. Returns 404 when the feature flag
+    `hardware_cookbook_enabled` is False, so the UI can hide the section
+    cleanly without leaking its existence.
+    """
+    await _require_admin(authorization)
+    settings = get_settings()
+    if not getattr(settings, "hardware_cookbook_enabled", False):
+        raise not_found("Hardware Cookbook is disabled.")
+
+    from core.hardware_cookbook import build_cookbook
+    return build_cookbook()
+
+
+# =============================================================================
 # User Preferences (General)
 # =============================================================================
 

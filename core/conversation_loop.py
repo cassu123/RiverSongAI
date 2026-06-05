@@ -716,6 +716,22 @@ class ConversationLoop:
             except Exception as exc:
                 logger.warning("RAG context injection failed: %s", exc)
 
+        # Q2#7 — Skills injection. Vector-retrieve top-k user skills relevant
+        # to this turn's transcript and prepend their text to the system
+        # prompt. Flag-gated; safe no-op when disabled or no matches.
+        if getattr(self._settings, "skills_enabled", False):
+            try:
+                from core.skills import get_relevant_skills, render_skills_block
+                hits = await get_relevant_skills(transcript, owner_id=self._user_id)
+                block = render_skills_block(hits)
+                if block and self._history and self._history[0]["role"] == "system":
+                    self._history[0] = {
+                        "role": "system",
+                        "content": self._history[0]["content"] + "\n\n" + block,
+                    }
+            except Exception as exc:
+                logger.warning("Skill injection failed: %s", exc)
+
         if intent_name != "conversation" and spoken_response and intent_name != "document_qa":
             # Google provider handled this turn. Add to history and speak.
             logger.info("Intent '%s' handled. Skipping LLM.", intent_name)
@@ -890,6 +906,21 @@ class ConversationLoop:
                         }
             except Exception as exc:
                 logger.warning("RAG context injection failed: %s", exc)
+
+        # Q2#7 — Skills injection (text-input turn). Same pattern as the voice
+        # path above. Flag-gated; safe no-op when disabled or no matches.
+        if getattr(self._settings, "skills_enabled", False):
+            try:
+                from core.skills import get_relevant_skills, render_skills_block
+                hits = await get_relevant_skills(text, owner_id=self._user_id)
+                block = render_skills_block(hits)
+                if block and self._history and self._history[0]["role"] == "system":
+                    self._history[0] = {
+                        "role": "system",
+                        "content": self._history[0]["content"] + "\n\n" + block,
+                    }
+            except Exception as exc:
+                logger.warning("Skill injection failed: %s", exc)
 
         if intent_name != "conversation" and spoken_response and intent_name != "document_qa":
             self._history.append({"role": "user", "content": text})

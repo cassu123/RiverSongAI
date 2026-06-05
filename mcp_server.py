@@ -66,6 +66,21 @@ EXPOSED_TOOL_NAMES = {
     "code_interpreter",
 }
 
+# Q3#13 — Playwright browser tools. Off the safety-excluded list explicitly,
+# but only exposed when the operator opts in via settings.
+try:
+    from config.settings import get_settings as _gs_mcp_pw
+    if getattr(_gs_mcp_pw(), "playwright_browser_enabled", False):
+        EXPOSED_TOOL_NAMES.update({
+            "browser_navigate",
+            "browser_extract_text",
+            "browser_click",
+            "browser_screenshot",
+            "browser_vision_on_page",
+        })
+except Exception:
+    pass
+
 # River Song HTTP base — the MCP server calls back into the live FastAPI app
 # rather than re-implementing tool dispatch. This keeps audit logs / auth /
 # rate-limiting in one place.

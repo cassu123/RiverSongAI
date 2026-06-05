@@ -41,6 +41,13 @@ const VehiclePage             = lazy(() => import('./pages/VehiclePage.jsx'))
 const CulinaryPage            = lazy(() => import('./pages/CulinaryPage.jsx'))
 const EnvironmentPage         = lazy(() => import('./pages/EnvironmentPage.jsx'))
 const VectorFleetPage         = lazy(() => import('./pages/VectorFleetPage.jsx'))
+const DocumentsPage           = lazy(() => import('./pages/DocumentsPage.jsx'))
+const SkillsPage              = lazy(() => import('./pages/SkillsPage.jsx'))
+const PresetsPage             = lazy(() => import('./pages/PresetsPage.jsx'))
+const ResearchPage            = lazy(() => import('./pages/ResearchPage.jsx'))
+const ComparePage             = lazy(() => import('./pages/ComparePage.jsx'))
+const RemoteOllamaPage        = lazy(() => import('./pages/RemoteOllamaPage.jsx'))
+const WebhookTokensPage       = lazy(() => import('./pages/WebhookTokensPage.jsx'))
 const GoogleCallbackPage      = lazy(() => import('./pages/GoogleCallbackPage.jsx'))
 const ReadingOAuthCallbackPage = lazy(() => import('./pages/ReadingOAuthCallbackPage.jsx'))
 const ForcePasswordChangePage  = lazy(() => import('./pages/ForcePasswordChangePage.jsx'))
@@ -74,6 +81,13 @@ const PAGE_TO_PATH = {
   environment:      '/environment',
   culinary:         '/culinary',
   fleet:            '/fleet',
+  documents:        '/documents',
+  skills:           '/skills',
+  presets:          '/presets',
+  research:         '/research',
+  compare:          '/compare',
+  remote_ollama:    '/admin/remote-ollama',
+  webhook_tokens:   '/admin/webhook-tokens',
   google_callback:  '/callback',
   reading_callback: '/reading-oauth-callback',
 }
@@ -444,6 +458,13 @@ export default function App() {
               {currentPage === 'environment'&& <EnvironmentPage setAction={setPageAction} />}
               {currentPage === 'culinary'   && <CulinaryPage setAction={setPageAction} />}
               {currentPage === 'fleet'      && <VectorFleetPage setAction={setPageAction} />}
+              {currentPage === 'documents'  && <DocumentsPage setAction={setPageAction} />}
+              {currentPage === 'skills'     && <SkillsPage setAction={setPageAction} />}
+              {currentPage === 'presets'    && <PresetsPage setAction={setPageAction} />}
+              {currentPage === 'research'   && <ResearchPage setAction={setPageAction} onNavigate={handleNavigate} />}
+              {currentPage === 'compare'    && <ComparePage setAction={setPageAction} />}
+              {currentPage === 'remote_ollama' && <RemoteOllamaPage setAction={setPageAction} />}
+              {currentPage === 'webhook_tokens' && <WebhookTokensPage setAction={setPageAction} />}
             </div>
           </Suspense>
         </ErrorBoundary>

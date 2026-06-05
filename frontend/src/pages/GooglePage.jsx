@@ -58,6 +58,9 @@ export default function GooglePage() {
   const [status, setStatus] = useState({ connected: false, loading: true })
   const [calendar, setCalendar] = useState({ events: [], loading: false })
   const [gmail, setGmail] = useState({ messages: [], loading: false })
+  // Q2#8 — Gmail triage. When `available` is null we haven't probed yet;
+  // a 404 from the route sets `available=false` and hides the button.
+  const [triage, setTriage] = useState({ messages: [], loading: false, available: null, error: '' })
   const [books, setBooks] = useState({ library: [], loading: false })
   const [tasks, setTasks] = useState({ list: [], loading: false })
   const [error, setError] = useState('')
@@ -262,14 +265,70 @@ export default function GooglePage() {
              display: 'flex',
              flexDirection: 'column'
            }}>
-              <div className="rs-card-head">
+              <div className="rs-card-head" style={{ justifyContent: 'space-between' }}>
                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <IconMail />
                     <span className="rs-card-label">UNREAD MESSAGES</span>
                  </div>
+                 {status.connected && triage.available !== false && (
+                   <button
+                     className="rs-pill"
+                     disabled={triage.loading}
+                     onClick={async () => {
+                       setTriage(t => ({ ...t, loading: true, error: '' }))
+                       try {
+                         const res = await fetch(`${API_BASE}/gmail/triage?max_results=10`, { headers: authHeaders() })
+                         if (res.status === 404) { setTriage({ messages: [], loading: false, available: false, error: '' }); return }
+                         if (!res.ok) throw new Error('Triage failed.')
+                         const data = await res.json()
+                         setTriage({ messages: data.messages || [], loading: false, available: true, error: '' })
+                       } catch (e) {
+                         setTriage(t => ({ ...t, loading: false, error: e.message }))
+                       }
+                     }}
+                     style={{ fontSize: '0.65rem' }}
+                   >
+                     {triage.loading ? 'TRIAGING…' : 'TRIAGE'}
+                   </button>
+                 )}
               </div>
               <div style={{ flex: 1 }}>
                 {status.connected ? (
+                  triage.messages.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {triage.messages.slice(0, 5).map(msg => {
+                        const t = msg.triage || {}
+                        const urgencyColor = t.urgency === 'high' ? 'var(--md-error)' : t.urgency === 'low' ? 'var(--md-on-surface-variant)' : 'var(--md-secondary)'
+                        return (
+                          <div key={msg.id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                              <span className="rs-pill" style={{ fontSize: '0.55rem', padding: '1px 7px', background: urgencyColor, color: 'var(--bg-base)' }}>
+                                {(t.urgency || 'med').toUpperCase()}
+                              </span>
+                              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--md-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {(msg.from || '').split('<')[0].trim()}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{msg.subject}</div>
+                            {t.summary && <div style={{ fontSize: '0.72rem', opacity: 0.7, marginTop: 4, lineHeight: 1.35 }}>{t.summary}</div>}
+                            {(t.tags || []).length > 0 && (
+                              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+                                {t.tags.slice(0, 4).map((tag, i) => (
+                                  <span key={i} className="rs-pill" style={{ fontSize: '0.55rem', padding: '1px 6px', opacity: 0.7 }}>{tag}</span>
+                                ))}
+                              </div>
+                            )}
+                            {t.draft_reply && (
+                              <details style={{ marginTop: 8 }}>
+                                <summary style={{ fontSize: '0.7rem', fontWeight: 700, opacity: 0.8, cursor: 'pointer' }}>DRAFT REPLY</summary>
+                                <div style={{ fontSize: '0.78rem', marginTop: 4, padding: 8, background: 'rgba(0,0,0,0.2)', borderRadius: 6, whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{t.draft_reply}</div>
+                              </details>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) :
                   gmail.loading ? <div className="rs-card-meta">Loading messages...</div> :
                   gmail.messages.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -282,6 +341,7 @@ export default function GooglePage() {
                     </div>
                   ) : <div className="rs-card-meta">No unread messages.</div>
                 ) : <div className="rs-card-meta">Connect account to see emails</div>}
+                {triage.error && <div style={{ color: 'var(--md-error)', fontSize: '0.7rem', marginTop: 6 }}>{triage.error}</div>}
               </div>
            </div>
 

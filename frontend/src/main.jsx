@@ -26,3 +26,14 @@ root.render(
     </BrowserRouter>
   </React.StrictMode>
 )
+
+// Q4#15 — Register the PWA service worker so push notifications + offline
+// shell actually work. Production-only to avoid stale-asset pain during dev.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('Service worker registration failed:', err)
+    })
+  })
+}
+

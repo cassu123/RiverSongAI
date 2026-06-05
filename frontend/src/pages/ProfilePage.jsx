@@ -85,10 +85,247 @@ const SERVICES = [
   }
 ]
 
-export default function ProfilePage({ 
-  profile, onSave, 
+/* =============================================================================
+ * Two-Factor Authentication card — Q1#5
+ *   Status fetch → enroll (QR + verify + recovery codes) → optionally disable.
+ *   Reuses existing rs-card / rs-pill / rs-btn-primary classes — no new CSS.
+ * ============================================================================= */
+function TwoFactorCard({ token }) {
+  const [status, setStatus]               = React.useState(null)
+  const [phase, setPhase]                 = React.useState('idle')  // idle | enrolling | confirming | showing-codes | disabling
+  const [enrollment, setEnrollment]       = React.useState(null)    // {secret, qr_png_b64, otpauth_uri}
+  const [verifyCode, setVerifyCode]       = React.useState('')
+  const [recoveryCodes, setRecoveryCodes] = React.useState(null)    // shown ONCE after enrol
+  const [disablePwd, setDisablePwd]       = React.useState('')
+  const [disableCode, setDisableCode]     = React.useState('')
+  const [error, setError]                 = React.useState('')
+
+  const refreshStatus = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/auth/2fa/status', { headers: { Authorization: `Bearer ${token}` } })
+      if (res.ok) setStatus(await res.json())
+    } catch (e) { /* swallow — card just stays in idle */ }
+  }, [token])
+
+  React.useEffect(() => { refreshStatus() }, [refreshStatus])
+
+  const beginEnrol = async () => {
+    setError('')
+    try {
+      const res = await fetch('/api/auth/2fa/enroll/start', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}))
+        setError(e.detail || 'Could not start enrolment.')
+        return
+      }
+      setEnrollment(await res.json())
+      setPhase('confirming')
+    } catch (e) {
+      setError('Network error.')
+    }
+  }
+
+  const confirmEnrol = async () => {
+    setError('')
+    if (!verifyCode || verifyCode.length !== 6) {
+      setError('Enter the 6-digit code from your authenticator.')
+      return
+    }
+    try {
+      const res = await fetch('/api/auth/2fa/enroll/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ secret: enrollment.secret, code: verifyCode }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.detail || 'Code did not match — try the next one.')
+        return
+      }
+      setRecoveryCodes(data.recovery_codes || [])
+      setVerifyCode('')
+      setEnrollment(null)
+      setPhase('showing-codes')
+      refreshStatus()
+    } catch (e) {
+      setError('Network error.')
+    }
+  }
+
+  const cancelEnrol = () => {
+    setEnrollment(null)
+    setVerifyCode('')
+    setError('')
+    setPhase('idle')
+  }
+
+  const dismissRecoveryCodes = () => {
+    setRecoveryCodes(null)
+    setPhase('idle')
+  }
+
+  const disable2fa = async () => {
+    setError('')
+    try {
+      const res = await fetch('/api/auth/2fa/disable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password: disablePwd, code: disableCode }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.detail || 'Could not disable 2FA.')
+        return
+      }
+      setDisablePwd('')
+      setDisableCode('')
+      setPhase('idle')
+      refreshStatus()
+    } catch (e) {
+      setError('Network error.')
+    }
+  }
+
+  const enabled = !!status?.enabled
+
+  return (
+    <div className="rs-card is-wide">
+      <div className="rs-card-head">
+        <span className="rs-card-label">TWO-FACTOR AUTHENTICATION</span>
+        <span className="rs-card-label" style={{ color: enabled ? 'var(--primary)' : 'var(--md-outline)', opacity: 1 }}>
+          {enabled ? 'ENABLED' : 'DISABLED'}
+        </span>
+      </div>
+
+      {phase === 'idle' && !enabled && (
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div className="rs-card-meta">
+              Protect your account with an authenticator app (Aegis, 1Password, Authy, Google Authenticator).
+              You'll be asked for a 6-digit code on every login.
+            </div>
+          </div>
+          <button className="rs-btn-primary" onClick={beginEnrol}>ENABLE 2FA</button>
+        </div>
+      )}
+
+      {phase === 'idle' && enabled && (
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div className="rs-card-meta">
+              2FA is active. {status?.recovery_codes_left ?? 0} recovery {(status?.recovery_codes_left ?? 0) === 1 ? 'code' : 'codes'} remaining.
+            </div>
+          </div>
+          <button className="rs-pill" onClick={() => setPhase('disabling')}>DISABLE 2FA</button>
+        </div>
+      )}
+
+      {phase === 'confirming' && enrollment && (
+        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          {enrollment.qr_png_b64 && (
+            <img
+              src={`data:image/png;base64,${enrollment.qr_png_b64}`}
+              alt="2FA QR code"
+              style={{ width: 180, height: 180, background: 'white', padding: 12, borderRadius: 8 }}
+            />
+          )}
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <div className="rs-card-meta" style={{ marginBottom: 8 }}>
+              Scan the code, or paste this secret manually:
+            </div>
+            <code
+              style={{
+                display: 'block', padding: '8px 12px',
+                background: 'var(--md-surface-container)',
+                borderRadius: 6, fontSize: '0.85rem',
+                wordBreak: 'break-all', marginBottom: 16,
+              }}
+            >
+              {enrollment.secret}
+            </code>
+            <div className="rs-card-label" style={{ fontSize: '0.6rem', marginBottom: 6 }}>VERIFY WITH FIRST CODE</div>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              className="rs-pill"
+              style={{ width: '100%', padding: '12px 16px', background: 'var(--md-surface-container)', letterSpacing: '0.2em' }}
+              value={verifyCode}
+              onChange={e => setVerifyCode(e.target.value.replace(/\D/g, ''))}
+              placeholder="000000"
+            />
+            <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+              <button className="rs-btn-primary" onClick={confirmEnrol}>CONFIRM</button>
+              <button className="rs-pill" onClick={cancelEnrol}>CANCEL</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {phase === 'showing-codes' && recoveryCodes && (
+        <div>
+          <div className="rs-card-meta" style={{ marginBottom: 12 }}>
+            Save these recovery codes somewhere safe. Each works once and replaces the 6-digit code
+            if you ever lose your authenticator. <strong>You will not see them again.</strong>
+          </div>
+          <div
+            style={{
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              gap: 8, marginBottom: 16,
+              padding: 12, background: 'var(--md-surface-container)', borderRadius: 8,
+            }}
+          >
+            {recoveryCodes.map((c, i) => (
+              <code key={i} style={{ fontSize: '0.9rem', textAlign: 'center' }}>{c}</code>
+            ))}
+          </div>
+          <button className="rs-btn-primary" onClick={dismissRecoveryCodes}>I'VE SAVED THEM</button>
+        </div>
+      )}
+
+      {phase === 'disabling' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360 }}>
+          <div className="rs-card-meta">Confirm with your password and a current 6-digit code.</div>
+          <input
+            type="password"
+            className="rs-pill"
+            style={{ padding: '12px 16px', background: 'var(--md-surface-container)' }}
+            placeholder="Password"
+            value={disablePwd}
+            onChange={e => setDisablePwd(e.target.value)}
+          />
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            className="rs-pill"
+            style={{ padding: '12px 16px', background: 'var(--md-surface-container)', letterSpacing: '0.2em' }}
+            placeholder="000000"
+            value={disableCode}
+            onChange={e => setDisableCode(e.target.value.replace(/\D/g, ''))}
+          />
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button className="rs-btn-primary" onClick={disable2fa}>DISABLE 2FA</button>
+            <button className="rs-pill" onClick={() => { setPhase('idle'); setError('') }}>CANCEL</button>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="rs-card-meta" style={{ color: 'var(--md-error)', marginTop: 12 }}>{error}</div>
+      )}
+    </div>
+  )
+}
+
+
+export default function ProfilePage({
+  profile, onSave,
   universe, environment, mood,
-  onUniverseChange, onEnvironmentChange, onMoodChange 
+  onUniverseChange, onEnvironmentChange, onMoodChange
 }) {
   const { user, token } = useAuth()
   const [displayName, setDisplayName] = useState(profile.displayName || '')
@@ -292,6 +529,9 @@ export default function ProfilePage({
             </button>
           </div>
         </div>
+
+        {/* Two-Factor Authentication (Q1#5) */}
+        <TwoFactorCard token={token} />
 
         {/* Admin Integrations (Links) */}
         {user?.role === 'admin' && integrations && (

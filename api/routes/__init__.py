@@ -37,6 +37,13 @@ from .legal import router as legal_router
 from .usage import router as usage_router
 from .integrations import router as integrations_router
 from .vector_fleet import router as vector_fleet_router
+from .documents import router as documents_router
+from .skills import router as skills_router
+from .session_presets import router as session_presets_router
+from .webhook_tokens import router as webhook_tokens_router
+from .research import router as research_router
+from .compare import router as compare_router
+from .remote_ollama import router as remote_ollama_router
 
 __all__ = [
     "health_router",
@@ -78,4 +85,11 @@ __all__ = [
     "usage_router",
     "integrations_router",
     "vector_fleet_router",
+    "documents_router",
+    "skills_router",
+    "session_presets_router",
+    "webhook_tokens_router",
+    "research_router",
+    "compare_router",
+    "remote_ollama_router",
 ]

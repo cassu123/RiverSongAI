@@ -11,13 +11,14 @@ POST /api/killswitch/reset    -- reset with password
 from __future__ import annotations
 
 import logging
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 from typing import Optional
 
 from fastapi import Header
 
+from config.settings import get_settings
 from core.auth import decode_token
 from core.errors import bad_request, forbidden, not_found, unauthorized
 from core.kill_switch import (
@@ -55,11 +56,26 @@ async def get_status(authorization: Optional[str] = Header(default=None)):
 
 
 @router.post("/activate")
-async def activate(body: ActivateBody, authorization: Optional[str] = Header(default=None)):
+async def activate(body: ActivateBody, request: Request, authorization: Optional[str] = Header(default=None)):
     await _require_admin(authorization)
     activate_global_kill_switch(origin=body.origin)
     safe_origin = body.origin.replace("\r", "").replace("\n", "").replace("\t", "")
     logger.critical("Kill switch activated via API (origin=%s).", safe_origin)
+
+    settings = get_settings()
+    if getattr(settings, "killswitch_push_enabled", False):
+        mm = getattr(request.app.state, "memory_manager", None)
+        if mm is not None:
+            try:
+                from providers.push.notifier import notify_admins
+                await notify_admins(
+                    mm._store,
+                    title="River Song — Kill Switch ACTIVE",
+                    body=f"Origin: {safe_origin}. Restart required to resume.",
+                )
+            except Exception as exc:
+                logger.error("Kill-switch push fan-out failed: %s", exc)
+
     return {"active": True, "message": "Kill switch activated."}
 
 

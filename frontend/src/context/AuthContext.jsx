@@ -73,6 +73,29 @@ export function AuthProvider({ children }) {
     })
     if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Login failed.') }
     const data = await res.json()
+    // Q1#5 — 2FA step. Caller (LoginPage) reads this object shape and
+    // renders the TOTP step instead of finishing login here.
+    if (data.require_totp) {
+      return { require_totp: true, challenge_token: data.challenge_token }
+    }
+    setToken(data.token)
+    setUser(data.user)
+    localStorage.setItem(TOKEN_KEY, data.token)
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user))
+    return data.user
+  }, [])
+
+  const loginTotp = useCallback(async (challengeToken, code, recoveryCode) => {
+    const body = recoveryCode
+      ? { challenge_token: challengeToken, recovery_code: recoveryCode }
+      : { challenge_token: challengeToken, code }
+    const res = await fetch(`${API_BASE}/api/auth/login/totp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || '2FA check failed.') }
+    const data = await res.json()
     setToken(data.token)
     setUser(data.user)
     localStorage.setItem(TOKEN_KEY, data.token)
@@ -160,7 +183,7 @@ export function AuthProvider({ children }) {
   }, [logout])
 
   return (
-    <AuthContext.Provider value={{ token, user, loading, setupRequired, setupAdmin, login, signup, loginWithGoogle, logout, impersonate, revertImpersonation, isAdminImpersonating }}>
+    <AuthContext.Provider value={{ token, user, loading, setupRequired, setupAdmin, login, loginTotp, signup, loginWithGoogle, logout, impersonate, revertImpersonation, isAdminImpersonating }}>
       {children}
     </AuthContext.Provider>
   )

@@ -191,6 +191,31 @@ async def get_gmail_unread(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+@router.get("/gmail/triage")
+async def get_gmail_triage(
+    max_results: int = 10,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Q2#8 — Gmail triage. Returns unread messages annotated with urgency,
+    tags, summary, and an optional drafted reply for HIGH-urgency mail.
+
+    Flag-gated by settings.gmail_triage_enabled; returns 404 when off.
+    """
+    from config.settings import get_settings as _gs
+    if not getattr(_gs(), "gmail_triage_enabled", False):
+        raise HTTPException(status_code=404, detail="Gmail triage is disabled.")
+
+    user_id = await _require_user(authorization)
+    from core.email_triage import triage_inbox
+    try:
+        enriched = await triage_inbox(user_id, max_results=max_results)
+        return {"messages": enriched}
+    except Exception as exc:
+        logger.error("Triage failed for %s: %s", user_id, exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 # ---------------------------------------------------------------------------
 # Tasks
 # ---------------------------------------------------------------------------

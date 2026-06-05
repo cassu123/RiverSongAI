@@ -52,12 +52,17 @@ const btnGoogle = {
 }
 
 export default function LoginPage({ onSwitchToSignup }) {
-  const { login } = useAuth()
+  const { login, loginTotp } = useAuth()
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  // Q1#5 — 2FA two-step. When non-null, render the TOTP step.
+  const [challengeToken, setChallengeToken] = useState(null)
+  const [totpCode,       setTotpCode]       = useState('')
+  const [useRecovery,    setUseRecovery]    = useState(false)
+  const [recoveryCode,   setRecoveryCode]   = useState('')
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true)
@@ -79,12 +84,40 @@ export default function LoginPage({ onSwitchToSignup }) {
     setError('')
     setLoading(true)
     try {
-      await login(email, password)
+      const result = await login(email, password)
+      if (result && result.require_totp) {
+        setChallengeToken(result.challenge_token)
+      }
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleTotpSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      if (useRecovery) {
+        await loginTotp(challengeToken, null, recoveryCode)
+      } else {
+        await loginTotp(challengeToken, totpCode, null)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const cancelTotp = () => {
+    setChallengeToken(null)
+    setTotpCode('')
+    setRecoveryCode('')
+    setUseRecovery(false)
+    setError('')
   }
 
   return (
@@ -99,6 +132,7 @@ export default function LoginPage({ onSwitchToSignup }) {
           <div className="rs-card-label" style={{ opacity: 0.45, fontSize: '0.65rem' }}>NEURAL LINK INTERFACE</div>
         </div>
 
+        {!challengeToken ? (
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
             <div className="rs-card-label" style={{ marginBottom: 6, paddingLeft: 2, fontSize: '0.62rem', opacity: 0.7 }}>IDENTIFIER</div>
@@ -131,13 +165,75 @@ export default function LoginPage({ onSwitchToSignup }) {
             {loading ? 'SYNCHRONIZING...' : 'ESTABLISH LINK'}
           </button>
         </form>
+        ) : (
+        <form onSubmit={handleTotpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="rs-card-label" style={{ textAlign: 'center', fontSize: '0.7rem', opacity: 0.85, marginBottom: 4 }}>
+            TWO-FACTOR REQUIRED
+          </div>
+          {!useRecovery ? (
+            <div>
+              <div className="rs-card-label" style={{ marginBottom: 6, paddingLeft: 2, fontSize: '0.62rem', opacity: 0.7 }}>6-DIGIT CODE</div>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                style={{ ...inputStyle, letterSpacing: '0.4em', textAlign: 'center', fontSize: '1.1rem' }}
+                value={totpCode}
+                onChange={e => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="000000"
+                required
+                autoFocus
+              />
+            </div>
+          ) : (
+            <div>
+              <div className="rs-card-label" style={{ marginBottom: 6, paddingLeft: 2, fontSize: '0.62rem', opacity: 0.7 }}>RECOVERY CODE</div>
+              <input
+                type="text"
+                style={inputStyle}
+                value={recoveryCode}
+                onChange={e => setRecoveryCode(e.target.value)}
+                placeholder="xxxxx-xxxxx"
+                required
+                autoFocus
+              />
+            </div>
+          )}
 
+          {error && <div style={{ color: 'var(--md-error)', fontSize: '0.75rem', textAlign: 'center' }}>{error.toUpperCase()}</div>}
+
+          <button type="submit" disabled={loading} style={{ ...btnPrimary, opacity: loading ? 0.7 : 1 }}>
+            {loading ? 'VERIFYING...' : 'VERIFY'}
+          </button>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+            <button
+              type="button"
+              onClick={() => { setUseRecovery(!useRecovery); setError(''); setTotpCode(''); setRecoveryCode('') }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-on-surface-variant)', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit', opacity: 0.6 }}
+            >
+              {useRecovery ? 'USE AUTHENTICATOR' : 'USE RECOVERY CODE'}
+            </button>
+            <button
+              type="button"
+              onClick={cancelTotp}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-on-surface-variant)', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit', opacity: 0.6 }}
+            >
+              CANCEL
+            </button>
+          </div>
+        </form>
+        )}
+
+        {!challengeToken && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '1.25rem 0' }}>
           <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
           <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', opacity: 0.4 }}>OR</span>
           <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
         </div>
+        )}
 
+        {!challengeToken && (
         <button onClick={handleGoogleSignIn} disabled={googleLoading} style={{ ...btnGoogle, opacity: googleLoading ? 0.7 : 1 }}>
           <svg width="17" height="17" viewBox="0 0 18 18">
             <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
@@ -147,7 +243,9 @@ export default function LoginPage({ onSwitchToSignup }) {
           </svg>
           {googleLoading ? 'REDIRECTING...' : 'GOOGLE GATEWAY'}
         </button>
+        )}
 
+        {!challengeToken && (
         <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
           <button
             type="button"
@@ -157,6 +255,7 @@ export default function LoginPage({ onSwitchToSignup }) {
             NEW OPERATOR? REGISTER HERE
           </button>
         </div>
+        )}
       </div>
     </div>
   )

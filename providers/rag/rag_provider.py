@@ -15,6 +15,7 @@ from config.settings import get_settings
 from providers.memory.vector_store import VectorStore
 from providers.rag.chunker import chunk_text
 from providers.rag.extractors import unstructured_extract
+from providers.rag.markitdown_loader import markitdown_extract
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,14 @@ class RAGProvider:
         Returns the number of chunks ingested.
         """
         filename = metadata.get('filename', 'unknown')
-        elements = unstructured_extract(file_bytes=file_bytes, filename=filename)
+        backend  = (getattr(self._settings, "rag_extractor", "unstructured") or "unstructured").lower()
+        if backend == "markitdown":
+            elements = markitdown_extract(file_bytes=file_bytes, filename=filename)
+            if not elements:
+                logger.info("MarkItDown returned nothing for %s; trying unstructured.", filename)
+                elements = unstructured_extract(file_bytes=file_bytes, filename=filename)
+        else:
+            elements = unstructured_extract(file_bytes=file_bytes, filename=filename)
         
         if not elements:
             logger.warning("No elements extracted from document %s for ingestion.", filename)

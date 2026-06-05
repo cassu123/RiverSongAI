@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from 'react'
+import PresetSelector from '../components/PresetSelector.jsx'
 import ConversationPanel  from '../components/ConversationPanel.jsx'
 import AudioVisualizer    from '../components/AudioVisualizer.jsx'
 import Sheet, { SheetRow } from '../chrome/Sheet.jsx'
@@ -379,6 +380,7 @@ export default function ConversationPage({ setAction }) {
           </div>
 
           <div className="rs-chat-input-right">
+            <PresetSelector />
             <button
               className="rs-pill"
               onClick={openModelPicker}

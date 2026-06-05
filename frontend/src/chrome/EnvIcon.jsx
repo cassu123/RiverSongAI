@@ -25,6 +25,9 @@ const BASE = {
   briefing: 'auto_stories', dashboard: 'dashboard', chat: 'chat_bubble',
   speak: 'graphic_eq', memory: 'psychology', home: 'home',
   chronos: 'menu_book', pulse: 'bolt', routines: 'settings_suggest',
+  documents: 'description', skills: 'auto_awesome', presets: 'tune',
+  research: 'travel_explore', compare: 'compare_arrows',
+  remote_ollama: 'lan', webhook_tokens: 'vpn_key',
   // Secondary
   inventory: 'inventory_2', culinary: 'restaurant', garage: 'directions_car',
   vehicles: 'directions_car',

@@ -530,6 +530,103 @@ CREATE TABLE IF NOT EXISTS vector_session_events (
 );
 CREATE INDEX IF NOT EXISTS idx_events_session ON vector_session_events(session_id, timestamp);
 
+-- Q2#6 — Documents workspace (Markdown / plaintext / CSV / research-report)
+CREATE TABLE IF NOT EXISTS documents (
+    id          TEXT PRIMARY KEY,
+    owner_id    TEXT NOT NULL,
+    title       TEXT NOT NULL DEFAULT 'Untitled',
+    kind        TEXT NOT NULL DEFAULT 'markdown',
+    body        TEXT NOT NULL DEFAULT '',
+    pinned      INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_documents_owner ON documents(owner_id, updated_at DESC);
+
+-- Q2#7 — Skills library (vector-retrieved prompts/recipes prepended to system prompt)
+CREATE TABLE IF NOT EXISTS skills (
+    id               TEXT PRIMARY KEY,
+    owner_id         TEXT NOT NULL,
+    name             TEXT NOT NULL,
+    prompt           TEXT NOT NULL DEFAULT '',
+    trigger_phrases  TEXT NOT NULL DEFAULT '',
+    is_active        INTEGER NOT NULL DEFAULT 1,
+    created_at       TEXT NOT NULL,
+    updated_at       TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_skills_owner ON skills(owner_id, is_active);
+
+-- Q2#9 — Session presets (saved model/voice/thinking/web/tool combinations)
+CREATE TABLE IF NOT EXISTS session_presets (
+    id          TEXT PRIMARY KEY,
+    owner_id    TEXT NOT NULL,
+    name        TEXT NOT NULL,
+    config_json TEXT NOT NULL DEFAULT '{}',
+    is_default  INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_session_presets_owner ON session_presets(owner_id);
+
+-- Q2#10 — Webhook tokens (admin-issuable scoped tokens for /webhooks/*)
+CREATE TABLE IF NOT EXISTS webhook_tokens (
+    id              TEXT PRIMARY KEY,
+    label           TEXT NOT NULL,
+    token_hash      TEXT NOT NULL UNIQUE,
+    scopes_json     TEXT NOT NULL DEFAULT '[]',
+    created_by      TEXT NOT NULL,
+    created_at      TEXT NOT NULL,
+    expires_at      TEXT,
+    revoked_at      TEXT,
+    last_used_at    TEXT,
+    use_count       INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_webhook_tokens_hash ON webhook_tokens(token_hash);
+
+CREATE TABLE IF NOT EXISTS webhook_token_audit (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_id        TEXT,
+    action          TEXT NOT NULL,
+    detail          TEXT NOT NULL DEFAULT '',
+    actor           TEXT,
+    ts              TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_webhook_token_audit_token ON webhook_token_audit(token_id);
+
+-- Q3#12 — Blind model comparison vote history
+CREATE TABLE IF NOT EXISTS compare_history (
+    id               TEXT PRIMARY KEY,
+    owner_id         TEXT NOT NULL,
+    prompt_hash      TEXT NOT NULL,
+    prompt           TEXT NOT NULL,
+    model_a_provider TEXT NOT NULL,
+    model_a_id       TEXT NOT NULL,
+    model_b_provider TEXT NOT NULL,
+    model_b_id       TEXT NOT NULL,
+    response_a       TEXT NOT NULL,
+    response_b       TEXT NOT NULL,
+    winner           TEXT NOT NULL DEFAULT '',  -- 'a' | 'b' | 'tie' | ''
+    created_at       TEXT NOT NULL,
+    voted_at         TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_compare_history_owner ON compare_history(owner_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_compare_history_prompt_hash ON compare_history(prompt_hash);
+
+-- Q3#14 — Remote Ollama rigs
+CREATE TABLE IF NOT EXISTS remote_ollama_rigs (
+    id              TEXT PRIMARY KEY,
+    label           TEXT NOT NULL,
+    base_url        TEXT NOT NULL,
+    is_active       INTEGER NOT NULL DEFAULT 1,
+    notes           TEXT NOT NULL DEFAULT '',
+    last_health     TEXT NOT NULL DEFAULT 'unknown',  -- 'ok' | 'down' | 'unknown'
+    last_checked_at TEXT,
+    last_models     TEXT NOT NULL DEFAULT '[]',
+    created_by      TEXT NOT NULL,
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
+
 """
 
 
@@ -604,6 +701,10 @@ class SQLiteStore:
             "ALTER TABLE users ADD COLUMN force_password_change INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE users ADD COLUMN is_suspended INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE users ADD COLUMN tokens_valid_after TEXT",
+            # Q1#5 — TOTP 2FA. Per-user opt-in; default off so existing logins are untouched.
+            "ALTER TABLE users ADD COLUMN totp_secret TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN totp_recovery_codes TEXT NOT NULL DEFAULT ''",
             # One-time mapping: legacy palette -> universe (idempotent via default-gate)
             "UPDATE users SET universe='halo' WHERE palette='halo' AND universe='dune'",
             # One-time mapping: legacy theme -> mood (idempotent — only rewrites rows still at default)
@@ -1816,6 +1917,980 @@ class SQLiteStore:
             (password_hash, force_val, now, user_id)
         )
         conn.commit()
+
+    # -------------------------------------------------------------------------
+    # TOTP 2FA (Q1#5)
+    # -------------------------------------------------------------------------
+
+    async def get_totp_state(self, user_id: str) -> dict:
+        """Return {enabled, secret, recovery_codes (list of bcrypt hashes)}."""
+        return await self._run(self._sync_get_totp_state, user_id)
+
+    def _sync_get_totp_state(self, user_id: str) -> dict:
+        conn = self._get_conn()
+        cur  = conn.execute(
+            "SELECT totp_enabled, totp_secret, totp_recovery_codes FROM users WHERE id = ?",
+            (user_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return {"enabled": False, "secret": "", "recovery_codes": []}
+        try:
+            recovery = json.loads(row[2]) if row[2] else []
+            if not isinstance(recovery, list):
+                recovery = []
+        except (ValueError, TypeError):
+            recovery = []
+        return {
+            "enabled":        bool(row[0]),
+            "secret":         row[1] or "",
+            "recovery_codes": recovery,
+        }
+
+    async def enable_totp(self, user_id: str, secret: str, recovery_hashes: list[str]) -> None:
+        await self._run(self._sync_enable_totp, user_id, secret, recovery_hashes)
+
+    def _sync_enable_totp(self, user_id: str, secret: str, recovery_hashes: list[str]) -> None:
+        conn = self._get_conn()
+        now  = _now_str()
+        conn.execute(
+            "UPDATE users SET totp_secret = ?, totp_enabled = 1, totp_recovery_codes = ?, updated_at = ? WHERE id = ?",
+            (secret, json.dumps(recovery_hashes), now, user_id),
+        )
+        conn.commit()
+
+    async def disable_totp(self, user_id: str) -> None:
+        await self._run(self._sync_disable_totp, user_id)
+
+    def _sync_disable_totp(self, user_id: str) -> None:
+        conn = self._get_conn()
+        now  = _now_str()
+        conn.execute(
+            "UPDATE users SET totp_secret = '', totp_enabled = 0, totp_recovery_codes = '', updated_at = ? WHERE id = ?",
+            (now, user_id),
+        )
+        conn.commit()
+
+    async def consume_recovery_code(self, user_id: str, index: int) -> None:
+        """Remove a single recovery code (by index) from the stored list."""
+        await self._run(self._sync_consume_recovery_code, user_id, index)
+
+    def _sync_consume_recovery_code(self, user_id: str, index: int) -> None:
+        state = self._sync_get_totp_state(user_id)
+        codes = state["recovery_codes"]
+        if 0 <= index < len(codes):
+            codes.pop(index)
+        conn = self._get_conn()
+        now  = _now_str()
+        conn.execute(
+            "UPDATE users SET totp_recovery_codes = ?, updated_at = ? WHERE id = ?",
+            (json.dumps(codes), now, user_id),
+        )
+        conn.commit()
+
+    # -------------------------------------------------------------------------
+    # Documents workspace (Q2#6)
+    # -------------------------------------------------------------------------
+
+    async def list_documents(self, owner_id: str) -> List[dict]:
+        return await self._run(self._sync_list_documents, owner_id)
+
+    def _sync_list_documents(self, owner_id: str) -> List[dict]:
+        conn = self._get_conn()
+        cur = conn.execute(
+            "SELECT id, title, kind, pinned, created_at, updated_at, LENGTH(body) "
+            "FROM documents WHERE owner_id=? ORDER BY pinned DESC, updated_at DESC",
+            (owner_id,),
+        )
+        out: List[dict] = []
+        for row in cur.fetchall():
+            out.append({
+                "id":         row[0],
+                "title":      row[1],
+                "kind":       row[2],
+                "pinned":     bool(row[3]),
+                "created_at": row[4],
+                "updated_at": row[5],
+                "size":       int(row[6] or 0),
+            })
+        return out
+
+    async def get_document(self, owner_id: str, doc_id: str) -> Optional[dict]:
+        return await self._run(self._sync_get_document, owner_id, doc_id)
+
+    def _sync_get_document(self, owner_id: str, doc_id: str) -> Optional[dict]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT id, title, kind, body, pinned, created_at, updated_at "
+            "FROM documents WHERE id=? AND owner_id=?",
+            (doc_id, owner_id),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "id":         row[0],
+            "title":      row[1],
+            "kind":       row[2],
+            "body":       row[3],
+            "pinned":     bool(row[4]),
+            "created_at": row[5],
+            "updated_at": row[6],
+        }
+
+    async def count_documents(self, owner_id: str) -> int:
+        return await self._run(self._sync_count_documents, owner_id)
+
+    def _sync_count_documents(self, owner_id: str) -> int:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT COUNT(*) FROM documents WHERE owner_id=?", (owner_id,)
+        ).fetchone()
+        return int(row[0]) if row else 0
+
+    async def create_document(self, owner_id: str, title: str, kind: str, body: str) -> dict:
+        return await self._run(self._sync_create_document, owner_id, title, kind, body)
+
+    def _sync_create_document(self, owner_id: str, title: str, kind: str, body: str) -> dict:
+        conn = self._get_conn()
+        doc_id = str(uuid.uuid4())
+        now = _now_str()
+        conn.execute(
+            "INSERT INTO documents (id, owner_id, title, kind, body, pinned, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, 0, ?, ?)",
+            (doc_id, owner_id, title, kind, body, now, now),
+        )
+        conn.commit()
+        return {
+            "id":         doc_id,
+            "title":      title,
+            "kind":       kind,
+            "body":       body,
+            "pinned":     False,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    async def update_document(
+        self,
+        owner_id: str,
+        doc_id: str,
+        *,
+        title: Optional[str] = None,
+        kind: Optional[str] = None,
+        body: Optional[str] = None,
+        pinned: Optional[bool] = None,
+    ) -> Optional[dict]:
+        return await self._run(
+            self._sync_update_document, owner_id, doc_id, title, kind, body, pinned
+        )
+
+    def _sync_update_document(
+        self,
+        owner_id: str,
+        doc_id: str,
+        title: Optional[str],
+        kind: Optional[str],
+        body: Optional[str],
+        pinned: Optional[bool],
+    ) -> Optional[dict]:
+        existing = self._sync_get_document(owner_id, doc_id)
+        if existing is None:
+            return None
+        new_title = existing["title"] if title is None else title
+        new_kind  = existing["kind"]  if kind  is None else kind
+        new_body  = existing["body"]  if body  is None else body
+        new_pin   = existing["pinned"] if pinned is None else bool(pinned)
+        now = _now_str()
+        conn = self._get_conn()
+        conn.execute(
+            "UPDATE documents SET title=?, kind=?, body=?, pinned=?, updated_at=? "
+            "WHERE id=? AND owner_id=?",
+            (new_title, new_kind, new_body, 1 if new_pin else 0, now, doc_id, owner_id),
+        )
+        conn.commit()
+        return {
+            "id":         doc_id,
+            "title":      new_title,
+            "kind":       new_kind,
+            "body":       new_body,
+            "pinned":     new_pin,
+            "created_at": existing["created_at"],
+            "updated_at": now,
+        }
+
+    async def delete_document(self, owner_id: str, doc_id: str) -> bool:
+        return await self._run(self._sync_delete_document, owner_id, doc_id)
+
+    def _sync_delete_document(self, owner_id: str, doc_id: str) -> bool:
+        conn = self._get_conn()
+        cur = conn.execute(
+            "DELETE FROM documents WHERE id=? AND owner_id=?", (doc_id, owner_id)
+        )
+        conn.commit()
+        return cur.rowcount > 0
+
+    # -------------------------------------------------------------------------
+    # Skills library (Q2#7)
+    # -------------------------------------------------------------------------
+
+    async def list_skills(self, owner_id: str, *, active_only: bool = False) -> List[dict]:
+        return await self._run(self._sync_list_skills, owner_id, active_only)
+
+    def _sync_list_skills(self, owner_id: str, active_only: bool) -> List[dict]:
+        conn = self._get_conn()
+        sql = (
+            "SELECT id, name, prompt, trigger_phrases, is_active, created_at, updated_at "
+            "FROM skills WHERE owner_id=?"
+        )
+        params: tuple = (owner_id,)
+        if active_only:
+            sql += " AND is_active=1"
+        sql += " ORDER BY updated_at DESC"
+        rows = conn.execute(sql, params).fetchall()
+        return [self._row_to_skill(r) for r in rows]
+
+    @staticmethod
+    def _row_to_skill(row) -> dict:
+        return {
+            "id":              row[0],
+            "name":            row[1],
+            "prompt":          row[2],
+            "trigger_phrases": row[3],
+            "is_active":       bool(row[4]),
+            "created_at":      row[5],
+            "updated_at":      row[6],
+        }
+
+    async def get_skill(self, owner_id: str, skill_id: str) -> Optional[dict]:
+        return await self._run(self._sync_get_skill, owner_id, skill_id)
+
+    def _sync_get_skill(self, owner_id: str, skill_id: str) -> Optional[dict]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT id, name, prompt, trigger_phrases, is_active, created_at, updated_at "
+            "FROM skills WHERE id=? AND owner_id=?",
+            (skill_id, owner_id),
+        ).fetchone()
+        return self._row_to_skill(row) if row else None
+
+    async def count_skills(self, owner_id: str) -> int:
+        return await self._run(self._sync_count_skills, owner_id)
+
+    def _sync_count_skills(self, owner_id: str) -> int:
+        conn = self._get_conn()
+        row = conn.execute("SELECT COUNT(*) FROM skills WHERE owner_id=?", (owner_id,)).fetchone()
+        return int(row[0]) if row else 0
+
+    async def create_skill(
+        self,
+        owner_id: str,
+        name: str,
+        prompt: str,
+        trigger_phrases: str = "",
+    ) -> dict:
+        return await self._run(
+            self._sync_create_skill, owner_id, name, prompt, trigger_phrases
+        )
+
+    def _sync_create_skill(
+        self, owner_id: str, name: str, prompt: str, trigger_phrases: str
+    ) -> dict:
+        conn = self._get_conn()
+        skill_id = str(uuid.uuid4())
+        now = _now_str()
+        conn.execute(
+            "INSERT INTO skills (id, owner_id, name, prompt, trigger_phrases, is_active, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, 1, ?, ?)",
+            (skill_id, owner_id, name, prompt, trigger_phrases, now, now),
+        )
+        conn.commit()
+        return {
+            "id":              skill_id,
+            "name":            name,
+            "prompt":          prompt,
+            "trigger_phrases": trigger_phrases,
+            "is_active":       True,
+            "created_at":      now,
+            "updated_at":      now,
+        }
+
+    async def update_skill(
+        self,
+        owner_id: str,
+        skill_id: str,
+        *,
+        name: Optional[str] = None,
+        prompt: Optional[str] = None,
+        trigger_phrases: Optional[str] = None,
+        is_active: Optional[bool] = None,
+    ) -> Optional[dict]:
+        return await self._run(
+            self._sync_update_skill,
+            owner_id, skill_id, name, prompt, trigger_phrases, is_active,
+        )
+
+    def _sync_update_skill(
+        self,
+        owner_id: str,
+        skill_id: str,
+        name: Optional[str],
+        prompt: Optional[str],
+        trigger_phrases: Optional[str],
+        is_active: Optional[bool],
+    ) -> Optional[dict]:
+        existing = self._sync_get_skill(owner_id, skill_id)
+        if existing is None:
+            return None
+        new_name    = existing["name"]            if name            is None else name
+        new_prompt  = existing["prompt"]          if prompt          is None else prompt
+        new_trig    = existing["trigger_phrases"] if trigger_phrases is None else trigger_phrases
+        new_active  = existing["is_active"]       if is_active       is None else bool(is_active)
+        now = _now_str()
+        conn = self._get_conn()
+        conn.execute(
+            "UPDATE skills SET name=?, prompt=?, trigger_phrases=?, is_active=?, updated_at=? "
+            "WHERE id=? AND owner_id=?",
+            (new_name, new_prompt, new_trig, 1 if new_active else 0, now, skill_id, owner_id),
+        )
+        conn.commit()
+        return {
+            "id":              skill_id,
+            "name":            new_name,
+            "prompt":          new_prompt,
+            "trigger_phrases": new_trig,
+            "is_active":       new_active,
+            "created_at":      existing["created_at"],
+            "updated_at":      now,
+        }
+
+    async def delete_skill(self, owner_id: str, skill_id: str) -> bool:
+        return await self._run(self._sync_delete_skill, owner_id, skill_id)
+
+    def _sync_delete_skill(self, owner_id: str, skill_id: str) -> bool:
+        conn = self._get_conn()
+        cur = conn.execute(
+            "DELETE FROM skills WHERE id=? AND owner_id=?", (skill_id, owner_id)
+        )
+        conn.commit()
+        return cur.rowcount > 0
+
+    # -------------------------------------------------------------------------
+    # Session presets (Q2#9)
+    # -------------------------------------------------------------------------
+
+    async def list_presets(self, owner_id: str) -> List[dict]:
+        return await self._run(self._sync_list_presets, owner_id)
+
+    def _sync_list_presets(self, owner_id: str) -> List[dict]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT id, name, config_json, is_default, created_at, updated_at "
+            "FROM session_presets WHERE owner_id=? ORDER BY is_default DESC, updated_at DESC",
+            (owner_id,),
+        ).fetchall()
+        return [self._row_to_preset(r) for r in rows]
+
+    @staticmethod
+    def _row_to_preset(row) -> dict:
+        try:
+            cfg = json.loads(row[2]) if row[2] else {}
+            if not isinstance(cfg, dict):
+                cfg = {}
+        except (ValueError, TypeError):
+            cfg = {}
+        return {
+            "id":         row[0],
+            "name":       row[1],
+            "config":     cfg,
+            "is_default": bool(row[3]),
+            "created_at": row[4],
+            "updated_at": row[5],
+        }
+
+    async def get_preset(self, owner_id: str, preset_id: str) -> Optional[dict]:
+        return await self._run(self._sync_get_preset, owner_id, preset_id)
+
+    def _sync_get_preset(self, owner_id: str, preset_id: str) -> Optional[dict]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT id, name, config_json, is_default, created_at, updated_at "
+            "FROM session_presets WHERE id=? AND owner_id=?",
+            (preset_id, owner_id),
+        ).fetchone()
+        return self._row_to_preset(row) if row else None
+
+    async def count_presets(self, owner_id: str) -> int:
+        return await self._run(self._sync_count_presets, owner_id)
+
+    def _sync_count_presets(self, owner_id: str) -> int:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT COUNT(*) FROM session_presets WHERE owner_id=?", (owner_id,)
+        ).fetchone()
+        return int(row[0]) if row else 0
+
+    async def create_preset(self, owner_id: str, name: str, config: dict) -> dict:
+        return await self._run(self._sync_create_preset, owner_id, name, config)
+
+    def _sync_create_preset(self, owner_id: str, name: str, config: dict) -> dict:
+        conn = self._get_conn()
+        preset_id = str(uuid.uuid4())
+        now = _now_str()
+        conn.execute(
+            "INSERT INTO session_presets (id, owner_id, name, config_json, is_default, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, 0, ?, ?)",
+            (preset_id, owner_id, name, json.dumps(config or {}), now, now),
+        )
+        conn.commit()
+        return {
+            "id":         preset_id,
+            "name":       name,
+            "config":     config or {},
+            "is_default": False,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    async def update_preset(
+        self,
+        owner_id: str,
+        preset_id: str,
+        *,
+        name: Optional[str] = None,
+        config: Optional[dict] = None,
+        is_default: Optional[bool] = None,
+    ) -> Optional[dict]:
+        return await self._run(
+            self._sync_update_preset, owner_id, preset_id, name, config, is_default
+        )
+
+    def _sync_update_preset(
+        self,
+        owner_id: str,
+        preset_id: str,
+        name: Optional[str],
+        config: Optional[dict],
+        is_default: Optional[bool],
+    ) -> Optional[dict]:
+        existing = self._sync_get_preset(owner_id, preset_id)
+        if existing is None:
+            return None
+        new_name   = existing["name"]       if name       is None else name
+        new_cfg    = existing["config"]     if config     is None else config
+        new_def    = existing["is_default"] if is_default is None else bool(is_default)
+        now = _now_str()
+        conn = self._get_conn()
+        if new_def:
+            # Only one default per owner — clear the flag on others first.
+            conn.execute(
+                "UPDATE session_presets SET is_default=0 WHERE owner_id=? AND id!=?",
+                (owner_id, preset_id),
+            )
+        conn.execute(
+            "UPDATE session_presets SET name=?, config_json=?, is_default=?, updated_at=? "
+            "WHERE id=? AND owner_id=?",
+            (new_name, json.dumps(new_cfg or {}), 1 if new_def else 0, now, preset_id, owner_id),
+        )
+        conn.commit()
+        return {
+            "id":         preset_id,
+            "name":       new_name,
+            "config":     new_cfg or {},
+            "is_default": new_def,
+            "created_at": existing["created_at"],
+            "updated_at": now,
+        }
+
+    async def delete_preset(self, owner_id: str, preset_id: str) -> bool:
+        return await self._run(self._sync_delete_preset, owner_id, preset_id)
+
+    def _sync_delete_preset(self, owner_id: str, preset_id: str) -> bool:
+        conn = self._get_conn()
+        cur = conn.execute(
+            "DELETE FROM session_presets WHERE id=? AND owner_id=?",
+            (preset_id, owner_id),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+
+    # -------------------------------------------------------------------------
+    # Webhook tokens (Q2#10)
+    # -------------------------------------------------------------------------
+
+    async def create_webhook_token(
+        self,
+        label: str,
+        token_hash: str,
+        scopes: list,
+        created_by: str,
+        expires_at: Optional[str] = None,
+    ) -> dict:
+        return await self._run(
+            self._sync_create_webhook_token,
+            label, token_hash, scopes, created_by, expires_at,
+        )
+
+    def _sync_create_webhook_token(
+        self,
+        label: str,
+        token_hash: str,
+        scopes: list,
+        created_by: str,
+        expires_at: Optional[str],
+    ) -> dict:
+        conn = self._get_conn()
+        token_id = str(uuid.uuid4())
+        now = _now_str()
+        conn.execute(
+            "INSERT INTO webhook_tokens (id, label, token_hash, scopes_json, created_by, created_at, expires_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (token_id, label, token_hash, json.dumps(scopes or []), created_by, now, expires_at),
+        )
+        conn.execute(
+            "INSERT INTO webhook_token_audit (token_id, action, detail, actor, ts) VALUES (?, ?, ?, ?, ?)",
+            (token_id, "issued", json.dumps({"label": label, "scopes": scopes}), created_by, now),
+        )
+        conn.commit()
+        return {
+            "id":         token_id,
+            "label":      label,
+            "scopes":     scopes or [],
+            "created_by": created_by,
+            "created_at": now,
+            "expires_at": expires_at,
+            "revoked_at": None,
+        }
+
+    async def list_webhook_tokens(self, include_revoked: bool = False) -> List[dict]:
+        return await self._run(self._sync_list_webhook_tokens, include_revoked)
+
+    def _sync_list_webhook_tokens(self, include_revoked: bool) -> List[dict]:
+        conn = self._get_conn()
+        sql = (
+            "SELECT id, label, scopes_json, created_by, created_at, expires_at, "
+            "revoked_at, last_used_at, use_count FROM webhook_tokens"
+        )
+        if not include_revoked:
+            sql += " WHERE revoked_at IS NULL"
+        sql += " ORDER BY created_at DESC"
+        rows = conn.execute(sql).fetchall()
+        out: List[dict] = []
+        for r in rows:
+            try:
+                scopes = json.loads(r[2]) if r[2] else []
+            except (ValueError, TypeError):
+                scopes = []
+            out.append({
+                "id":           r[0],
+                "label":        r[1],
+                "scopes":       scopes,
+                "created_by":   r[3],
+                "created_at":   r[4],
+                "expires_at":   r[5],
+                "revoked_at":   r[6],
+                "last_used_at": r[7],
+                "use_count":    int(r[8] or 0),
+            })
+        return out
+
+    async def get_webhook_token_by_hash(self, token_hash: str) -> Optional[dict]:
+        return await self._run(self._sync_get_webhook_token_by_hash, token_hash)
+
+    def _sync_get_webhook_token_by_hash(self, token_hash: str) -> Optional[dict]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT id, label, scopes_json, created_by, created_at, expires_at, revoked_at "
+            "FROM webhook_tokens WHERE token_hash=?",
+            (token_hash,),
+        ).fetchone()
+        if not row:
+            return None
+        try:
+            scopes = json.loads(row[2]) if row[2] else []
+        except (ValueError, TypeError):
+            scopes = []
+        return {
+            "id":         row[0],
+            "label":      row[1],
+            "scopes":     scopes,
+            "created_by": row[3],
+            "created_at": row[4],
+            "expires_at": row[5],
+            "revoked_at": row[6],
+        }
+
+    async def revoke_webhook_token(self, token_id: str, actor: str) -> bool:
+        return await self._run(self._sync_revoke_webhook_token, token_id, actor)
+
+    def _sync_revoke_webhook_token(self, token_id: str, actor: str) -> bool:
+        conn = self._get_conn()
+        now = _now_str()
+        cur = conn.execute(
+            "UPDATE webhook_tokens SET revoked_at=? WHERE id=? AND revoked_at IS NULL",
+            (now, token_id),
+        )
+        if cur.rowcount > 0:
+            conn.execute(
+                "INSERT INTO webhook_token_audit (token_id, action, detail, actor, ts) VALUES (?, ?, ?, ?, ?)",
+                (token_id, "revoked", "", actor, now),
+            )
+            conn.commit()
+            return True
+        conn.commit()
+        return False
+
+    async def record_webhook_token_use(self, token_id: str, detail: str = "") -> None:
+        await self._run(self._sync_record_webhook_token_use, token_id, detail)
+
+    def _sync_record_webhook_token_use(self, token_id: str, detail: str) -> None:
+        conn = self._get_conn()
+        now = _now_str()
+        conn.execute(
+            "UPDATE webhook_tokens SET last_used_at=?, use_count=use_count+1 WHERE id=?",
+            (now, token_id),
+        )
+        conn.execute(
+            "INSERT INTO webhook_token_audit (token_id, action, detail, actor, ts) VALUES (?, ?, ?, ?, ?)",
+            (token_id, "used", detail, None, now),
+        )
+        conn.commit()
+
+    async def list_webhook_token_audit(self, token_id: Optional[str] = None, limit: int = 200) -> List[dict]:
+        return await self._run(self._sync_list_webhook_token_audit, token_id, limit)
+
+    def _sync_list_webhook_token_audit(self, token_id: Optional[str], limit: int) -> List[dict]:
+        conn = self._get_conn()
+        if token_id:
+            rows = conn.execute(
+                "SELECT id, token_id, action, detail, actor, ts FROM webhook_token_audit "
+                "WHERE token_id=? ORDER BY ts DESC LIMIT ?",
+                (token_id, int(limit)),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, token_id, action, detail, actor, ts FROM webhook_token_audit "
+                "ORDER BY ts DESC LIMIT ?",
+                (int(limit),),
+            ).fetchall()
+        return [
+            {"id": r[0], "token_id": r[1], "action": r[2], "detail": r[3], "actor": r[4], "ts": r[5]}
+            for r in rows
+        ]
+
+    # -------------------------------------------------------------------------
+    # Blind model comparison (Q3#12)
+    # -------------------------------------------------------------------------
+
+    async def create_compare_run(
+        self,
+        owner_id: str,
+        prompt: str,
+        prompt_hash: str,
+        model_a: dict,
+        model_b: dict,
+        response_a: str,
+        response_b: str,
+    ) -> dict:
+        return await self._run(
+            self._sync_create_compare_run,
+            owner_id, prompt, prompt_hash, model_a, model_b, response_a, response_b,
+        )
+
+    def _sync_create_compare_run(
+        self,
+        owner_id: str,
+        prompt: str,
+        prompt_hash: str,
+        model_a: dict,
+        model_b: dict,
+        response_a: str,
+        response_b: str,
+    ) -> dict:
+        conn = self._get_conn()
+        run_id = str(uuid.uuid4())
+        now = _now_str()
+        conn.execute(
+            "INSERT INTO compare_history (id, owner_id, prompt_hash, prompt, "
+            "model_a_provider, model_a_id, model_b_provider, model_b_id, "
+            "response_a, response_b, winner, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?)",
+            (
+                run_id, owner_id, prompt_hash, prompt,
+                model_a.get("provider", ""), model_a.get("model", ""),
+                model_b.get("provider", ""), model_b.get("model", ""),
+                response_a, response_b, now,
+            ),
+        )
+        conn.commit()
+        return {
+            "id":         run_id,
+            "prompt":     prompt,
+            "model_a":    model_a,
+            "model_b":    model_b,
+            "response_a": response_a,
+            "response_b": response_b,
+            "winner":     "",
+            "created_at": now,
+        }
+
+    async def record_compare_vote(self, run_id: str, owner_id: str, winner: str) -> Optional[dict]:
+        return await self._run(self._sync_record_compare_vote, run_id, owner_id, winner)
+
+    def _sync_record_compare_vote(self, run_id: str, owner_id: str, winner: str) -> Optional[dict]:
+        if winner not in {"a", "b", "tie"}:
+            return None
+        conn = self._get_conn()
+        now = _now_str()
+        cur = conn.execute(
+            "UPDATE compare_history SET winner=?, voted_at=? "
+            "WHERE id=? AND owner_id=? AND (winner='' OR winner IS NULL)",
+            (winner, now, run_id, owner_id),
+        )
+        conn.commit()
+        if cur.rowcount == 0:
+            return None
+        return self._sync_get_compare_run(owner_id, run_id)
+
+    async def get_compare_run(self, owner_id: str, run_id: str) -> Optional[dict]:
+        return await self._run(self._sync_get_compare_run, owner_id, run_id)
+
+    def _sync_get_compare_run(self, owner_id: str, run_id: str) -> Optional[dict]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT id, prompt, model_a_provider, model_a_id, model_b_provider, "
+            "model_b_id, response_a, response_b, winner, created_at, voted_at "
+            "FROM compare_history WHERE id=? AND owner_id=?",
+            (run_id, owner_id),
+        ).fetchone()
+        if not row:
+            return None
+        return {
+            "id":         row[0],
+            "prompt":     row[1],
+            "model_a":    {"provider": row[2], "model": row[3]},
+            "model_b":    {"provider": row[4], "model": row[5]},
+            "response_a": row[6],
+            "response_b": row[7],
+            "winner":     row[8],
+            "created_at": row[9],
+            "voted_at":   row[10],
+        }
+
+    async def list_compare_history(self, owner_id: str, limit: int = 50) -> List[dict]:
+        return await self._run(self._sync_list_compare_history, owner_id, limit)
+
+    def _sync_list_compare_history(self, owner_id: str, limit: int) -> List[dict]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT id, prompt, model_a_provider, model_a_id, model_b_provider, "
+            "model_b_id, winner, created_at, voted_at "
+            "FROM compare_history WHERE owner_id=? "
+            "ORDER BY created_at DESC LIMIT ?",
+            (owner_id, int(limit)),
+        ).fetchall()
+        return [
+            {
+                "id":         r[0],
+                "prompt":     r[1],
+                "model_a":    {"provider": r[2], "model": r[3]},
+                "model_b":    {"provider": r[4], "model": r[5]},
+                "winner":     r[6],
+                "created_at": r[7],
+                "voted_at":   r[8],
+            }
+            for r in rows
+        ]
+
+    async def compare_leaderboard(self, owner_id: Optional[str] = None) -> List[dict]:
+        """Aggregate win-counts per (provider, model) across voted runs."""
+        return await self._run(self._sync_compare_leaderboard, owner_id)
+
+    def _sync_compare_leaderboard(self, owner_id: Optional[str]) -> List[dict]:
+        conn = self._get_conn()
+        params: tuple = ()
+        scope = ""
+        if owner_id:
+            scope = " AND owner_id=?"
+            params = (owner_id,)
+        rows_a = conn.execute(
+            "SELECT model_a_provider, model_a_id, "
+            "SUM(CASE WHEN winner='a' THEN 1 ELSE 0 END), "
+            "SUM(CASE WHEN winner='tie' THEN 1 ELSE 0 END), "
+            "COUNT(*) "
+            "FROM compare_history WHERE winner!='' " + scope +
+            " GROUP BY model_a_provider, model_a_id",
+            params,
+        ).fetchall()
+        rows_b = conn.execute(
+            "SELECT model_b_provider, model_b_id, "
+            "SUM(CASE WHEN winner='b' THEN 1 ELSE 0 END), "
+            "SUM(CASE WHEN winner='tie' THEN 1 ELSE 0 END), "
+            "COUNT(*) "
+            "FROM compare_history WHERE winner!='' " + scope +
+            " GROUP BY model_b_provider, model_b_id",
+            params,
+        ).fetchall()
+        stats: dict = {}
+        for prov, mid, wins, ties, total in list(rows_a) + list(rows_b):
+            key = (prov or "", mid or "")
+            entry = stats.setdefault(key, {"provider": prov, "model": mid, "wins": 0, "ties": 0, "total": 0})
+            entry["wins"]  += int(wins or 0)
+            entry["ties"]  += int(ties or 0)
+            entry["total"] += int(total or 0)
+        out = list(stats.values())
+        for e in out:
+            e["losses"]   = max(0, e["total"] - e["wins"] - e["ties"])
+            e["win_rate"] = round(e["wins"] / e["total"], 3) if e["total"] else 0.0
+        out.sort(key=lambda r: (-r["win_rate"], -r["wins"]))
+        return out
+
+    # -------------------------------------------------------------------------
+    # Remote Ollama rigs (Q3#14)
+    # -------------------------------------------------------------------------
+
+    async def list_remote_rigs(self, *, include_inactive: bool = True) -> List[dict]:
+        return await self._run(self._sync_list_remote_rigs, include_inactive)
+
+    def _sync_list_remote_rigs(self, include_inactive: bool) -> List[dict]:
+        conn = self._get_conn()
+        sql = (
+            "SELECT id, label, base_url, is_active, notes, last_health, "
+            "last_checked_at, last_models, created_by, created_at, updated_at "
+            "FROM remote_ollama_rigs"
+        )
+        if not include_inactive:
+            sql += " WHERE is_active=1"
+        sql += " ORDER BY created_at DESC"
+        rows = conn.execute(sql).fetchall()
+        return [self._row_to_rig(r) for r in rows]
+
+    @staticmethod
+    def _row_to_rig(row) -> dict:
+        try:
+            models = json.loads(row[7]) if row[7] else []
+            if not isinstance(models, list):
+                models = []
+        except (ValueError, TypeError):
+            models = []
+        return {
+            "id":              row[0],
+            "label":           row[1],
+            "base_url":        row[2],
+            "is_active":       bool(row[3]),
+            "notes":           row[4],
+            "last_health":     row[5],
+            "last_checked_at": row[6],
+            "last_models":     models,
+            "created_by":      row[8],
+            "created_at":      row[9],
+            "updated_at":      row[10],
+        }
+
+    async def get_remote_rig(self, rig_id: str) -> Optional[dict]:
+        return await self._run(self._sync_get_remote_rig, rig_id)
+
+    def _sync_get_remote_rig(self, rig_id: str) -> Optional[dict]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT id, label, base_url, is_active, notes, last_health, "
+            "last_checked_at, last_models, created_by, created_at, updated_at "
+            "FROM remote_ollama_rigs WHERE id=?",
+            (rig_id,),
+        ).fetchone()
+        return self._row_to_rig(row) if row else None
+
+    async def create_remote_rig(
+        self,
+        label: str,
+        base_url: str,
+        notes: str,
+        created_by: str,
+    ) -> dict:
+        return await self._run(
+            self._sync_create_remote_rig, label, base_url, notes, created_by
+        )
+
+    def _sync_create_remote_rig(
+        self, label: str, base_url: str, notes: str, created_by: str
+    ) -> dict:
+        conn = self._get_conn()
+        rig_id = str(uuid.uuid4())
+        now = _now_str()
+        conn.execute(
+            "INSERT INTO remote_ollama_rigs (id, label, base_url, is_active, notes, "
+            "last_health, last_checked_at, last_models, created_by, created_at, updated_at) "
+            "VALUES (?, ?, ?, 1, ?, 'unknown', NULL, '[]', ?, ?, ?)",
+            (rig_id, label, base_url, notes, created_by, now, now),
+        )
+        conn.commit()
+        return self._sync_get_remote_rig(rig_id)
+
+    async def update_remote_rig(
+        self,
+        rig_id: str,
+        *,
+        label: Optional[str] = None,
+        base_url: Optional[str] = None,
+        notes: Optional[str] = None,
+        is_active: Optional[bool] = None,
+    ) -> Optional[dict]:
+        return await self._run(
+            self._sync_update_remote_rig, rig_id, label, base_url, notes, is_active
+        )
+
+    def _sync_update_remote_rig(
+        self,
+        rig_id: str,
+        label: Optional[str],
+        base_url: Optional[str],
+        notes: Optional[str],
+        is_active: Optional[bool],
+    ) -> Optional[dict]:
+        existing = self._sync_get_remote_rig(rig_id)
+        if existing is None:
+            return None
+        new_label = existing["label"]     if label     is None else label
+        new_url   = existing["base_url"]  if base_url  is None else base_url
+        new_notes = existing["notes"]     if notes     is None else notes
+        new_act   = existing["is_active"] if is_active is None else bool(is_active)
+        now = _now_str()
+        conn = self._get_conn()
+        conn.execute(
+            "UPDATE remote_ollama_rigs SET label=?, base_url=?, notes=?, is_active=?, updated_at=? WHERE id=?",
+            (new_label, new_url, new_notes, 1 if new_act else 0, now, rig_id),
+        )
+        conn.commit()
+        return self._sync_get_remote_rig(rig_id)
+
+    async def record_remote_rig_health(
+        self, rig_id: str, *, health: str, models: List[str]
+    ) -> Optional[dict]:
+        return await self._run(self._sync_record_remote_rig_health, rig_id, health, models)
+
+    def _sync_record_remote_rig_health(
+        self, rig_id: str, health: str, models: List[str]
+    ) -> Optional[dict]:
+        if health not in {"ok", "down", "unknown"}:
+            health = "unknown"
+        now = _now_str()
+        conn = self._get_conn()
+        cur = conn.execute(
+            "UPDATE remote_ollama_rigs SET last_health=?, last_checked_at=?, last_models=?, updated_at=? WHERE id=?",
+            (health, now, json.dumps(list(models or [])), now, rig_id),
+        )
+        conn.commit()
+        if cur.rowcount == 0:
+            return None
+        return self._sync_get_remote_rig(rig_id)
+
+    async def delete_remote_rig(self, rig_id: str) -> bool:
+        return await self._run(self._sync_delete_remote_rig, rig_id)
+
+    def _sync_delete_remote_rig(self, rig_id: str) -> bool:
+        conn = self._get_conn()
+        cur = conn.execute("DELETE FROM remote_ollama_rigs WHERE id=?", (rig_id,))
+        conn.commit()
+        return cur.rowcount > 0
 
     async def delete_user(self, user_id: str) -> bool:
         return await self._run(self._sync_delete_user, user_id)

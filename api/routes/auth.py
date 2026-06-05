@@ -24,7 +24,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 import httpx
 
-from core.auth import create_access_token, decode_token
+from core.auth import create_access_token, decode_token, create_totp_challenge_token, decode_challenge_token
 from core.errors import api_error, bad_request, conflict, forbidden, not_found, unauthorized
 from config.settings import get_settings
 from core.limiter import limiter
@@ -145,6 +145,15 @@ async def login(request: Request, body: LoginBody):
     if not user["is_approved"]:
         raise forbidden("Your account is pending admin approval.")
 
+    # Q1#5 — TOTP 2FA. If the user has enrolled, hold the access token until
+    # they complete step 2 via POST /api/auth/login/totp. Users without 2FA
+    # take the unchanged fast path.
+    totp = await store.get_totp_state(user["id"])
+    if totp.get("enabled"):
+        challenge = create_totp_challenge_token(user_id=user["id"])
+        logger.info("2FA challenge issued for %s", body.email.replace('\n', '').replace('\r', ''))
+        return {"require_totp": True, "challenge_token": challenge}
+
     token = create_access_token(user_id=user["id"], email=user["email"], role=user["role"])
     logger.info("User logged in: %s", body.email.replace('\n', '').replace('\r', ''))
     return {
@@ -158,6 +167,200 @@ async def login(request: Request, body: LoginBody):
             "force_password_change": user.get("force_password_change", False)
         },
     }
+
+
+# =============================================================================
+# Two-Factor Authentication (TOTP) — Q1#5
+# =============================================================================
+
+class TotpLoginBody(BaseModel):
+    challenge_token: str
+    code: Optional[str] = None             # 6-digit TOTP
+    recovery_code: Optional[str] = None    # fallback when phone lost
+
+
+class TotpEnrollVerifyBody(BaseModel):
+    secret: str
+    code: str
+
+
+class TotpDisableBody(BaseModel):
+    password: str
+    code: str
+
+
+@router.post("/login/totp")
+@limiter.limit(get_settings().rate_limit_auth_login)
+async def login_totp(request: Request, body: TotpLoginBody):
+    """
+    Step 2 of 2FA login. Takes the challenge_token from /login plus either
+    a current 6-digit TOTP code or one of the user's recovery codes.
+    """
+    from core.twofa import verify_totp, verify_recovery_code
+
+    payload = decode_challenge_token(body.challenge_token)
+    if not payload:
+        raise unauthorized("Invalid or expired 2FA challenge.")
+
+    if not body.code and not body.recovery_code:
+        raise bad_request("Provide a 6-digit code or a recovery code.")
+
+    store = _get_store(request)
+    user  = await store.get_user_by_id(payload["sub"])
+    if not user:
+        raise unauthorized("User not found.")
+
+    totp = await store.get_totp_state(user["id"])
+    if not totp.get("enabled"):
+        # User disabled 2FA between step 1 and step 2 — treat as plain login.
+        token = create_access_token(user_id=user["id"], email=user["email"], role=user["role"])
+        return {"token": token, "user": _user_login_payload(user)}
+
+    used_recovery = False
+    if body.recovery_code:
+        idx = verify_recovery_code(body.recovery_code, totp.get("recovery_codes") or [])
+        if idx is None:
+            raise unauthorized("Invalid recovery code.")
+        await store.consume_recovery_code(user["id"], idx)
+        used_recovery = True
+    else:
+        if not verify_totp(totp["secret"], body.code or ""):
+            raise unauthorized("Invalid 2FA code.")
+
+    token = create_access_token(user_id=user["id"], email=user["email"], role=user["role"])
+    logger.info(
+        "2FA login completed for %s (recovery=%s).",
+        user["email"].replace('\n', '').replace('\r', ''),
+        used_recovery,
+    )
+    return {"token": token, "user": _user_login_payload(user), "used_recovery_code": used_recovery}
+
+
+def _user_login_payload(user: dict) -> dict:
+    return {
+        "id":                    user["id"],
+        "email":                 user["email"],
+        "display_name":          user["display_name"],
+        "role":                  user["role"],
+        "is_approved":           user["is_approved"],
+        "force_password_change": user.get("force_password_change", False),
+    }
+
+
+@router.get("/2fa/status")
+async def twofa_status(request: Request, authorization: Optional[str] = Header(default=None)):
+    """Whether the current user has 2FA enabled, and how many recovery codes remain."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise unauthorized("Not authenticated.")
+    payload = await decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise unauthorized("Invalid or expired token.")
+
+    store = _get_store(request)
+    state = await store.get_totp_state(payload["sub"])
+    return {
+        "enabled":              bool(state.get("enabled")),
+        "recovery_codes_left":  len(state.get("recovery_codes") or []),
+    }
+
+
+@router.post("/2fa/enroll/start")
+async def twofa_enroll_start(request: Request, authorization: Optional[str] = Header(default=None)):
+    """
+    Generate a fresh TOTP secret + provisioning URI + QR code (PNG b64).
+    The secret is NOT persisted yet — the user must verify the first code
+    via /2fa/enroll/verify before we flip the flag.
+    """
+    from core.twofa import generate_secret, provisioning_uri, make_qr_png_base64
+
+    if not authorization or not authorization.startswith("Bearer "):
+        raise unauthorized("Not authenticated.")
+    payload = await decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise unauthorized("Invalid or expired token.")
+
+    store = _get_store(request)
+    user  = await store.get_user_by_id(payload["sub"])
+    if not user:
+        raise unauthorized("User not found.")
+
+    existing = await store.get_totp_state(user["id"])
+    if existing.get("enabled"):
+        raise conflict("2FA is already enabled. Disable it first to re-enrol.")
+
+    secret = generate_secret()
+    uri    = provisioning_uri(secret, user["email"])
+    return {
+        "secret":      secret,
+        "otpauth_uri": uri,
+        "qr_png_b64":  make_qr_png_base64(uri),
+    }
+
+
+@router.post("/2fa/enroll/verify")
+async def twofa_enroll_verify(body: TotpEnrollVerifyBody, request: Request, authorization: Optional[str] = Header(default=None)):
+    """
+    Confirm the user has the secret on their authenticator by checking one
+    valid code. On success, persist the secret, generate recovery codes,
+    and return them ONCE — they are bcrypt-hashed before storage.
+    """
+    from core.twofa import verify_totp, generate_recovery_codes, hash_recovery_codes
+
+    if not authorization or not authorization.startswith("Bearer "):
+        raise unauthorized("Not authenticated.")
+    payload = await decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise unauthorized("Invalid or expired token.")
+
+    if not verify_totp(body.secret, body.code):
+        raise unauthorized("Code does not match. Try again — the clock may have ticked.")
+
+    store = _get_store(request)
+    user  = await store.get_user_by_id(payload["sub"])
+    if not user:
+        raise unauthorized("User not found.")
+
+    recovery_plain  = generate_recovery_codes()
+    recovery_hashed = hash_recovery_codes(recovery_plain)
+    await store.enable_totp(user["id"], body.secret, recovery_hashed)
+    logger.info("2FA enabled for %s.", user["email"].replace('\n', '').replace('\r', ''))
+
+    return {"enabled": True, "recovery_codes": recovery_plain}
+
+
+@router.post("/2fa/disable")
+async def twofa_disable(body: TotpDisableBody, request: Request, authorization: Optional[str] = Header(default=None)):
+    """
+    Disable 2FA. Requires the current password AND a valid TOTP code —
+    losing the phone is recoverable via recovery codes against /login/totp,
+    not this endpoint.
+    """
+    from core.twofa import verify_totp
+
+    if not authorization or not authorization.startswith("Bearer "):
+        raise unauthorized("Not authenticated.")
+    payload = await decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise unauthorized("Invalid or expired token.")
+
+    store = _get_store(request)
+    user  = await store.get_user_by_id(payload["sub"])
+    if not user:
+        raise unauthorized("User not found.")
+
+    if not bcrypt.checkpw(body.password.encode("utf-8"), user["password_hash"].encode("utf-8")):
+        raise unauthorized("Password is incorrect.")
+
+    state = await store.get_totp_state(user["id"])
+    if not state.get("enabled"):
+        raise bad_request("2FA is not enabled.")
+
+    if not verify_totp(state["secret"], body.code):
+        raise unauthorized("Invalid 2FA code.")
+
+    await store.disable_totp(user["id"])
+    logger.info("2FA disabled for %s.", user["email"].replace('\n', '').replace('\r', ''))
+    return {"enabled": False}
 
 
 @router.post("/logout", status_code=204)
