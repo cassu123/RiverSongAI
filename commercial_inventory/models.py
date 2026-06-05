@@ -1,4 +1,3 @@
-from typing import Optional, Any
 """
 commercial_inventory/models.py
 
@@ -21,10 +20,11 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
+from typing import Optional, Any
 
 from sqlalchemy import (  # type: ignore
     Boolean,
-    Column, mapped_column,
+    Column,
     DateTime,
     Enum,
     ForeignKey,

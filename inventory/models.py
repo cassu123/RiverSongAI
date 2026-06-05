@@ -8,7 +8,7 @@ def _now():
 
 from sqlalchemy import (  # type: ignore
     Boolean,
-    Column, mapped_column,
+    Column,
     Date,
     DateTime,
     Enum,

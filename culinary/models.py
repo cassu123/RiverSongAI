@@ -5,7 +5,7 @@ from enum import Enum as PyEnum
 
 from sqlalchemy import (  # type: ignore
     Boolean,
-    Column, mapped_column,
+    Column,
     DateTime,
     Enum,
     Float,
