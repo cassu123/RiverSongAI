@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth }        from './context/AuthContext.jsx'
+import { setupFcm }       from './utils/fcm.js'
 import Shell              from './chrome/Shell.jsx'
 import Drawer             from './chrome/Drawer.jsx'
 import ErrorBoundary      from './components/ErrorBoundary.jsx'
@@ -201,6 +202,12 @@ export default function App() {
     document.body.classList.add('rs-stage-active')
     return () => document.body.classList.remove('rs-stage-active')
   }, [])
+
+  // Capacitor native shell registers for FCM once an auth token is present.
+  // No-op in the browser build — Web Push covers that path.
+  useEffect(() => {
+    if (token) setupFcm(token)
+  }, [token])
 
   // URL is the source of truth, but we mirror the page key into localStorage
   // so a user who returns to the root '/' lands on their last-used page.

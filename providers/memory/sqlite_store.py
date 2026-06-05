@@ -263,6 +263,14 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
     PRIMARY KEY (user_id, endpoint)
 );
 
+CREATE TABLE IF NOT EXISTS fcm_tokens (
+    user_id    TEXT NOT NULL,
+    token      TEXT NOT NULL,
+    platform   TEXT NOT NULL DEFAULT 'android',
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, token)
+);
+
 CREATE TABLE IF NOT EXISTS feed_preferences (
     user_id             TEXT PRIMARY KEY,
     news_sources        TEXT NOT NULL DEFAULT '[]',
@@ -4017,6 +4025,49 @@ class SQLiteStore:
         conn.execute(
             "DELETE FROM push_subscriptions WHERE user_id=? AND endpoint=?",
             (user_id, endpoint),
+        )
+        conn.commit()
+
+    # -------------------------------------------------------------------------
+    # FCM tokens (Capacitor native app)
+    # -------------------------------------------------------------------------
+    async def save_fcm_token(
+            self, user_id: str, token: str, platform: str = "android") -> None:
+        await self._run(self._sync_save_fcm_token, user_id, token, platform)
+
+    def _sync_save_fcm_token(
+            self, user_id: str, token: str, platform: str) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            """
+            INSERT INTO fcm_tokens (user_id, token, platform, created_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(user_id, token) DO UPDATE SET
+                platform = excluded.platform
+            """,
+            (user_id, token, platform, _now_str()),
+        )
+        conn.commit()
+
+    async def get_fcm_tokens(self, user_id: str) -> list[str]:
+        return await self._run(self._sync_get_fcm_tokens, user_id)
+
+    def _sync_get_fcm_tokens(self, user_id: str) -> list[str]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT token FROM fcm_tokens WHERE user_id=?",
+            (user_id,),
+        ).fetchall()
+        return [row[0] for row in rows]
+
+    async def delete_fcm_token(self, user_id: str, token: str) -> None:
+        await self._run(self._sync_delete_fcm_token, user_id, token)
+
+    def _sync_delete_fcm_token(self, user_id: str, token: str) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            "DELETE FROM fcm_tokens WHERE user_id=? AND token=?",
+            (user_id, token),
         )
         conn.commit()
 

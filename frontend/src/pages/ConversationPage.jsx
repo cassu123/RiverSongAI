@@ -16,6 +16,7 @@ import {
   familyHasAnyTier,
   TIER_ORDER,
 } from '../utils/modelFamilies.js'
+import { API_BASE } from '../utils/useApi.js'
 
 function fmtCost(v) {
   if (v == null) return null
@@ -80,7 +81,10 @@ function pickVoiceTier(family) {
 
 export default function ConversationPage({ setAction }) {
   const { token, user } = useAuth()
-  const wsUrl = `${WS_PROTOCOL}//${window.location.host}/ws/conversation`
+  
+  const backendHost = API_BASE ? new URL(API_BASE).host : window.location.host;
+  const wsProtocol = API_BASE ? (API_BASE.startsWith('https') ? 'wss:' : 'ws:') : WS_PROTOCOL;
+  const wsUrl = `${wsProtocol}//${backendHost}/ws/conversation`
 
   const [convState,         setConvState]         = useState('connecting')
   const [messages,          setMessages]          = useState([])

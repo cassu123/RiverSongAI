@@ -15,6 +15,8 @@
 // =============================================================================
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { Capacitor } from '@capacitor/core'
+import { Network } from '@capacitor/network'
 
 const RECONNECT_DELAY_MS       = 3000
 const MAX_RECONNECT_ATTEMPTS   = 5
@@ -69,7 +71,12 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
         if (kioskToken) url.searchParams.set('token', kioskToken)
       }
 
-      if (url.hostname !== window.location.hostname) {
+      // Same-origin guard: in the browser build the WS target must match the
+      // page's host or a hijacked-DNS scenario could dial out to a malicious
+      // endpoint. The Capacitor native shell legitimately runs the webview
+      // on localhost while the API lives at riversongai.com, so the guard is
+      // bypassed only when we're actually on a native platform.
+      if (!Capacitor.isNativePlatform() && url.hostname !== window.location.hostname) {
         console.error('[useWebSocket] Blocked connection to non-same-origin host:', url.hostname)
         setConnectionStatus('error')
         return
@@ -158,10 +165,24 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
       }
     }, 20000)
 
+    // Force reconnect immediately when network signal is restored
+    const networkListener = Network.addListener('networkStatusChange', status => {
+      if (status.connected && isMountedRef.current) {
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+          console.log('[useWebSocket] Network restored. Forcing reconnect...')
+          clearTimeout(reconnectTimerRef.current)
+          reconnectCountRef.current = 0 // Reset attempt counter
+          connect()
+        }
+      }
+    })
+
     return () => {
       isMountedRef.current = false
       clearTimeout(reconnectTimerRef.current)
       clearInterval(pingInterval)
+      
+      networkListener.then(listener => listener.remove()).catch(() => {})
 
       if (wsRef.current) {
         // Null the onclose handler so the cleanup close does not trigger reconnect

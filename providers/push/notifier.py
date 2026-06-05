@@ -26,6 +26,7 @@ from typing import Optional
 from config.settings import get_settings
 from providers.push.sender import send_push
 from providers.push.ntfy import send_ntfy
+from providers.push.fcm import send_fcm, is_configured as fcm_is_configured
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,15 @@ async def _send_one_webpush(sub_json: str, title: str, body: str, icon: str):
         logger.warning("notify: send_push raised: %s", exc)
         return None
     return bool(ok)
+
+
+async def _send_one_fcm(token: str, title: str, body: str):
+    """Same tri-state contract as _send_one_webpush. FCM 4xx → prune token."""
+    try:
+        return await send_fcm(token, title=title, body=body)
+    except Exception as exc:
+        logger.warning("notify: send_fcm raised: %s", exc)
+        return None
 
 
 async def _send_ntfy_silent(user_id: str, title: str, body: str) -> None:
@@ -115,6 +125,33 @@ async def notify_user(
                 await asyncio.gather(
                     *[store.delete_push_subscription(user_id, ep)
                       for ep in to_delete],
+                    return_exceptions=True,
+                )
+
+    if fcm_is_configured():
+        try:
+            tokens = await store.get_fcm_tokens(user_id)
+        except Exception as exc:
+            logger.warning(
+                "notify_user: fcm token lookup failed for %s: %s",
+                user_id, exc,
+            )
+            tokens = []
+        if tokens:
+            fcm_results = await asyncio.gather(
+                *[_send_one_fcm(t, title, body) for t in tokens],
+                return_exceptions=False,
+            )
+            to_delete_tokens: list[str] = []
+            for tok, outcome in zip(tokens, fcm_results):
+                if outcome is True:
+                    delivered += 1
+                elif outcome is False:
+                    to_delete_tokens.append(tok)
+            if to_delete_tokens:
+                await asyncio.gather(
+                    *[store.delete_fcm_token(user_id, tok)
+                      for tok in to_delete_tokens],
                     return_exceptions=True,
                 )
 

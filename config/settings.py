@@ -800,6 +800,33 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
+    # FCM (Firebase Cloud Messaging) — native-app push channel
+    #
+    # Used by the Capacitor Android wrap; Web Push covers the browser. To turn
+    # on: create a Firebase project, download the service-account JSON, drop
+    # it at fcm_service_account_path, set fcm_project_id, flip fcm_enabled=True.
+    # -------------------------------------------------------------------------
+    fcm_enabled: bool = Field(
+        default=False,
+        description=(
+            "Enable FCM (Firebase Cloud Messaging) as a parallel push channel. "
+            "Targets the Capacitor Android wrap; requires fcm_service_account_path "
+            "and fcm_project_id to be set."
+        ),
+    )
+    fcm_service_account_path: str = Field(
+        default="",
+        description=(
+            "Absolute path to the Firebase service-account JSON file. The "
+            "account needs the 'Firebase Cloud Messaging API' scope."
+        ),
+    )
+    fcm_project_id: str = Field(
+        default="",
+        description="Firebase project ID (visible in Firebase console URL).",
+    )
+
+    # -------------------------------------------------------------------------
     # Startup Briefing
     # -------------------------------------------------------------------------
     startup_briefing_enabled: bool = Field(

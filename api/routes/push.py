@@ -48,6 +48,15 @@ class UnsubscribeBody(BaseModel):
     endpoint: str
 
 
+class FcmRegisterBody(BaseModel):
+    token: str
+    platform: str = "android"
+
+
+class FcmUnregisterBody(BaseModel):
+    token: str
+
+
 @router.get("/vapid-public-key")
 async def get_vapid_public_key():
     """Returns the VAPID public key for frontend subscription."""
@@ -111,3 +120,32 @@ async def test_push(
             sent_count += 1
 
     return {"sent": sent_count}
+
+
+@router.post("/fcm/register")
+async def fcm_register(
+    body: FcmRegisterBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Register an FCM token for the current user (Capacitor native app)."""
+    settings = get_settings()
+    if not getattr(settings, "fcm_enabled", False):
+        raise HTTPException(status_code=404, detail="FCM is disabled.")
+    user_id = await _require_user(authorization)
+    store = _store(request)
+    await store.save_fcm_token(user_id, body.token, body.platform)
+    return {"status": "registered"}
+
+
+@router.delete("/fcm/unregister")
+async def fcm_unregister(
+    body: FcmUnregisterBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Remove an FCM token for the current user."""
+    user_id = await _require_user(authorization)
+    store = _store(request)
+    await store.delete_fcm_token(user_id, body.token)
+    return {"status": "unregistered"}
