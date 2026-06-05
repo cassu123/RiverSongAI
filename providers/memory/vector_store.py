@@ -40,7 +40,15 @@ class VectorStore:
             self._initialize_chroma()
 
     def _initialize_chroma(self) -> None:
-        """Create Chroma client and get/create collection."""
+        """Create Chroma client and get/create collection.
+
+        SECURITY: This MUST stay on PersistentClient (embedded, on-disk).
+        chromadb HttpClient + the `chroma run` server are affected by
+        GHSA-f4j7-r4q5-qw2c (pre-auth RCE via trust_remote_code on
+        /api/v2/.../collections). The embedded path does not expose that
+        endpoint, so the CVE does not apply to us. Do not switch to
+        HttpClient without first confirming a patched ChromaDB release.
+        """
         if chromadb is None:
             logger.warning("chromadb package not found. Semantic memory will be disabled.")
             self._enabled = False
