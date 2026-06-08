@@ -1297,6 +1297,21 @@ class Settings(BaseSettings):
         default=2.0,
         description="Per-write timeout for episode ingestion — failures warn but never block the caller.",
     )
+    # graphiti-core uses an LLM for entity extraction on every episode.
+    # We default to local Ollama via its OpenAI-compatible endpoint so
+    # episode ingestion never bills a cloud API. Per [[feedback_local_first]].
+    graphiti_llm_model: str = Field(
+        default="llama3.2:3b",
+        description="Ollama model used by graphiti-core for entity extraction.",
+    )
+    graphiti_llm_base_url: str = Field(
+        default="http://localhost:11434/v1",
+        description="OpenAI-compatible base URL for the graphiti LLM client. Ollama exposes /v1.",
+    )
+    graphiti_embedder_model: str = Field(
+        default="nomic-embed-text",
+        description="Ollama embedding model for graphiti-core node/edge embeddings.",
+    )
 
     # -------------------------------------------------------------------------
     # Analytics AI Summaries

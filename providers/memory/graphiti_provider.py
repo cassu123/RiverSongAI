@@ -101,7 +101,14 @@ class GraphitiProvider:
         return self._enabled_cache
 
     def _build_client(self) -> Optional[Any]:
-        """Lazy-construct the graphiti-core client. Returns None on any failure."""
+        """Lazy-construct the graphiti-core client.
+
+        Wires the entity-extraction LLM to local Ollama via its
+        OpenAI-compatible /v1 endpoint, per [[feedback_local_first]] — so
+        episode ingestion never calls a cloud API.
+
+        Returns None on any failure (import, Neo4j unreachable, etc.).
+        """
         if not self.enabled:
             return None
 
@@ -115,13 +122,27 @@ class GraphitiProvider:
             )
             return None
 
+        llm_client = _build_local_llm_client(settings)
+        embedder = _build_local_embedder(settings)
+
         try:
-            client = Graphiti(
-                uri=settings.neo4j_uri,
-                user=settings.neo4j_user,
-                password=settings.neo4j_password,
+            kwargs: dict = {
+                "uri": settings.neo4j_uri,
+                "user": settings.neo4j_user,
+                "password": settings.neo4j_password,
+            }
+            if llm_client is not None:
+                kwargs["llm_client"] = llm_client
+            if embedder is not None:
+                kwargs["embedder"] = embedder
+
+            client = Graphiti(**kwargs)
+            logger.info(
+                "Graphiti client initialised against %s (llm=%s, embedder=%s)",
+                settings.neo4j_uri,
+                "ollama:" + settings.graphiti_llm_model if llm_client else "graphiti-default",
+                "ollama:" + settings.graphiti_embedder_model if embedder else "graphiti-default",
             )
-            logger.info("Graphiti client initialised against %s", settings.neo4j_uri)
             return client
         except Exception as e:
             logger.error("Failed to construct Graphiti client: %s", e)
@@ -278,6 +299,71 @@ class GraphitiProvider:
         except Exception as e:
             logger.warning("Graphiti recall_related failed: %s", e)
             return []
+
+
+def _build_local_llm_client(settings: Any) -> Optional[Any]:
+    """Construct graphiti-core's OpenAI-compatible LLM client pointed at Ollama.
+
+    Returns None if the import probe fails (graphiti-core's API may differ
+    between releases) — the caller then falls back to graphiti's default,
+    which would call OpenAI. We log loudly in that case so the user can see
+    they're about to be billed.
+    """
+    try:
+        # graphiti-core ≥ 0.3 ships an OpenAI-compatible client + LLMConfig.
+        from graphiti_core.llm_client.config import LLMConfig  # type: ignore
+        from graphiti_core.llm_client.openai_client import OpenAIClient  # type: ignore
+    except ImportError as e:
+        logger.warning(
+            "graphiti-core LLMClient probe failed (%s). Falling back to library default — "
+            "this will call OpenAI on every episode and incur cost. Set GRAPHITI_ENABLED=false "
+            "or upgrade graphiti-core if you want local-only.",
+            e,
+        )
+        return None
+
+    try:
+        config = LLMConfig(
+            api_key="ollama",  # dummy — Ollama ignores the key
+            base_url=settings.graphiti_llm_base_url,
+            model=settings.graphiti_llm_model,
+        )
+        return OpenAIClient(config=config)
+    except Exception as e:
+        logger.warning("Failed to build local Ollama LLM client for Graphiti: %s", e)
+        return None
+
+
+def _build_local_embedder(settings: Any) -> Optional[Any]:
+    """Construct graphiti-core's embedder pointed at Ollama's embedding endpoint.
+
+    Same defensive pattern as _build_local_llm_client — returns None and logs
+    loudly if the import probe fails so the user knows graphiti would otherwise
+    bill a cloud embeddings API.
+    """
+    try:
+        from graphiti_core.embedder.openai import (  # type: ignore
+            OpenAIEmbedder, OpenAIEmbedderConfig,
+        )
+    except ImportError as e:
+        logger.warning(
+            "graphiti-core Embedder probe failed (%s). Falling back to library default — "
+            "this will call cloud embeddings on every episode. Set GRAPHITI_ENABLED=false "
+            "or upgrade graphiti-core if you want local-only.",
+            e,
+        )
+        return None
+
+    try:
+        config = OpenAIEmbedderConfig(
+            api_key="ollama",
+            base_url=settings.graphiti_llm_base_url,
+            embedding_model=settings.graphiti_embedder_model,
+        )
+        return OpenAIEmbedder(config=config)
+    except Exception as e:
+        logger.warning("Failed to build local Ollama embedder for Graphiti: %s", e)
+        return None
 
 
 def _to_recall_result(item: Any) -> RecallResult:

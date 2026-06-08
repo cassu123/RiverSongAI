@@ -91,56 +91,65 @@ class InvocationRecord:
 # ---------------------------------------------------------------------------
 # Default role → model assignments
 # ---------------------------------------------------------------------------
-# Picks favour balance + low cost; the user can override any of these at
-# runtime via the admin panel (later task). Cloud model ids match entries
-# in `providers/llm/registry.py`.
+# LOCAL-FIRST per [[feedback_local_first]] (2026-06-08).
+#
+# Every default points at an Ollama model from providers/llm/registry.py.
+# Cloud LLMs are NEVER a default — they are escape hatches that River Song's
+# chat path may opt into mid-turn (runtime escalation), not background work.
+#
+# Model picks here target the user's hardware (GTX 1050 Ti, 4GB VRAM, 32GB RAM):
+#   - Roles needing low latency get GPU-resident models (≤2.2GB VRAM)
+#   - Roles tolerant of slower responses get RAM-resident models for capacity
+#
+# To override at runtime: AgentRoleRegistry.set_config(role, RoleConfig(...))
+# or the (future) SLAE admin panel role editor.
 
 _DEFAULTS: Dict[AgentRole, RoleConfig] = {
     AgentRole.PRIMARY: RoleConfig(
         role=AgentRole.PRIMARY,
-        provider="anthropic",
-        model_id="claude-sonnet-4-6",
+        provider="ollama",
+        model_id="llama3.2:3b",
         temperature=0.7,
         max_tokens=2048,
-        notes="Main user-facing assistant turn (chat, speak).",
+        notes="Main user-facing assistant turn. Local-first; chat path may escalate at runtime.",
     ),
     AgentRole.ASSISTANT: RoleConfig(
         role=AgentRole.ASSISTANT,
-        provider="anthropic",
-        model_id="claude-haiku-4-5-20251001",
+        provider="ollama",
+        model_id="llama3.2:3b",
         temperature=0.7,
         max_tokens=1024,
-        notes="Secondary conversation flows (briefings, follow-ups).",
+        notes="Secondary conversation flows (briefings, follow-ups). GPU-resident.",
     ),
     AgentRole.SIMPLE: RoleConfig(
         role=AgentRole.SIMPLE,
-        provider="openai",
-        model_id="gpt-4o-mini",
+        provider="ollama",
+        model_id="llama3.2:1b",
         temperature=0.3,
         max_tokens=512,
-        notes="One-shot completions, classifiers, short rewrites.",
+        notes="One-shot completions, classifiers, short rewrites. Fastest model.",
     ),
     AgentRole.SCRIBE: RoleConfig(
         role=AgentRole.SCRIBE,
-        provider="openai",
-        model_id="gpt-4o-mini",
+        provider="ollama",
+        model_id="llama3.2:3b",
         temperature=0.4,
         max_tokens=1024,
         notes="CHRONOS Scribe daemon — note synthesis from raw context.",
     ),
     AgentRole.SIFTER: RoleConfig(
         role=AgentRole.SIFTER,
-        provider="gemini",
-        model_id="gemini-2.0-flash",
+        provider="ollama",
+        model_id="llama3.2:1b",
         temperature=0.2,
         max_tokens=512,
         json_mode=True,
-        notes="Sifter daemon — triage / filtering with structured output.",
+        notes="Sifter daemon — fast triage / filtering with structured output.",
     ),
     AgentRole.WARDEN: RoleConfig(
         role=AgentRole.WARDEN,
-        provider="anthropic",
-        model_id="claude-haiku-4-5-20251001",
+        provider="ollama",
+        model_id="llama3.2:3b",
         temperature=0.0,
         max_tokens=512,
         json_mode=True,
@@ -148,41 +157,41 @@ _DEFAULTS: Dict[AgentRole, RoleConfig] = {
     ),
     AgentRole.REFINER: RoleConfig(
         role=AgentRole.REFINER,
-        provider="anthropic",
-        model_id="claude-haiku-4-5-20251001",
+        provider="ollama",
+        model_id="llama3.2:3b",
         temperature=0.3,
         max_tokens=1024,
         notes="Polish raw model output before user sees it.",
     ),
     AgentRole.REPORTER: RoleConfig(
         role=AgentRole.REPORTER,
-        provider="openai",
-        model_id="gpt-4o-mini",
+        provider="ollama",
+        model_id="qwen2.5:3b",
         temperature=0.2,
         max_tokens=1024,
         json_mode=True,
-        notes="Structured reports — analytics summaries, daemon outputs.",
+        notes="Structured reports — analytics summaries, daemon outputs. Qwen handles JSON well.",
     ),
     AgentRole.SEARCHER: RoleConfig(
         role=AgentRole.SEARCHER,
-        provider="gemini",
-        model_id="gemini-2.5-flash-preview-04-17",
+        provider="ollama",
+        model_id="llama3.1:8b",
         temperature=0.5,
         max_tokens=2048,
-        notes="Research + retrieval synthesis. 1M context Flash.",
+        notes="Research + retrieval synthesis. RAM-resident; more capacity for synthesis.",
     ),
     AgentRole.CODER: RoleConfig(
         role=AgentRole.CODER,
-        provider="anthropic",
-        model_id="claude-sonnet-4-6",
+        provider="ollama",
+        model_id="qwen2.5-coder:7b",
         temperature=0.2,
         max_tokens=4096,
-        notes="Code generation / explanation.",
+        notes="Code generation / explanation. Specialised coder model.",
     ),
     AgentRole.REFLECTOR: RoleConfig(
         role=AgentRole.REFLECTOR,
-        provider="anthropic",
-        model_id="claude-haiku-4-5-20251001",
+        provider="ollama",
+        model_id="llama3.2:3b",
         temperature=0.5,
         max_tokens=1024,
         notes="Self-critique passes after primary output.",
