@@ -29,6 +29,7 @@ from google import genai
 from google.genai import types as genai_types
 
 from config.settings import get_settings
+from core.observability import trace_llm
 from providers.base import LLMProvider
 
 
@@ -73,6 +74,7 @@ class GeminiLLM(LLMProvider):
 
         logger.info("GeminiLLM initialized (model=%s).", self._model)
 
+    @trace_llm("gemini")
     async def stream_response(
         self, messages: List[dict]
     ) -> AsyncGenerator[str, None]:
@@ -135,6 +137,7 @@ class GeminiLLM(LLMProvider):
             logger.error("Gemini API call failed: %s", exc, exc_info=True)
             yield _friendly_error(exc)
 
+    @trace_llm("gemini")
     async def stream_response_thinking(
             self, messages: List[dict]) -> AsyncGenerator[str, None]:
         """Thinking mode for Gemini 2.5 models. Falls back for 2.0 and older."""

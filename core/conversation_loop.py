@@ -37,6 +37,7 @@ from core.kill_switch import is_kill_switch_active
 from core.intent_router import get_intent_router
 from core.memory_manager import MemoryManager
 from providers.base import LLMProvider, STTProvider, TTSProvider
+from providers.memory.graphiti_provider import Episode, get_graphiti_provider
 
 
 logger = logging.getLogger(__name__)
@@ -918,6 +919,21 @@ class ConversationLoop:
                         logger.warning(
                             "Summary recording failed (user=%s): %s", self._user_id, exc)
 
+                # Graphiti episode — best-effort, no-op when disabled, never raises.
+                try:
+                    await get_graphiti_provider().add_episode(Episode(
+                        group_id=f"user:{self._user_id}",
+                        name="conversation_turn",
+                        episode_body=(
+                            f"User: {transcript}\n\n"
+                            f"River Song: {full_response}"
+                        ),
+                        source="conversation_loop.run_once",
+                        metadata={"user_id": self._user_id, "channel": "voice"},
+                    ))
+                except Exception as ge:
+                    logger.debug("Graphiti episode write skipped: %s", ge)
+
                 await on_event({"type": "idle"})
 
             except asyncio.CancelledError:
@@ -1156,6 +1172,21 @@ class ConversationLoop:
                     "Summary recording failed (user=%s): %s",
                     self._user_id,
                     exc)
+
+        # Graphiti episode — best-effort, no-op when disabled, never raises.
+        try:
+            await get_graphiti_provider().add_episode(Episode(
+                group_id=f"user:{self._user_id}",
+                name="conversation_turn",
+                episode_body=(
+                    f"User: {text}\n\n"
+                    f"River Song: {full_response}"
+                ),
+                source="conversation_loop.run_text",
+                metadata={"user_id": self._user_id, "channel": "text"},
+            ))
+        except Exception as ge:
+            logger.debug("Graphiti episode write skipped: %s", ge)
 
         await on_event({"type": "idle"})
 

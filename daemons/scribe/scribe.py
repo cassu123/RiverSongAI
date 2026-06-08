@@ -1,11 +1,14 @@
 import asyncio
 import logging
 import os
+import time
 from pathlib import Path
 from datetime import datetime, timezone
 
 from daemons.base_daemon import BaseDaemon
 from config.settings import get_settings
+from providers.llm.agent_roles import AgentRole, get_role_registry
+from providers.memory.graphiti_provider import Episode, get_graphiti_provider
 
 logger = logging.getLogger(__name__)
 
@@ -72,9 +75,15 @@ class ScribeDaemon(BaseDaemon):
             reindexed_count = 0
             facts_extracted = 0
 
-            # 2. For each stale note, extract facts
+            # 2. For each stale note, extract facts.
+            # Route via the Scribe agent role so the assigned model + tuning live
+            # in providers/llm/agent_roles.py (visible in the SLAE admin panel).
             from core.conversation_loop import _build_llm_provider
-            llm, _ = _build_llm_provider()
+            role_cfg = get_role_registry().get(AgentRole.SCRIBE)
+            llm, _ = _build_llm_provider(
+                provider_override=role_cfg.provider,
+                model_override=role_cfg.model_id,
+            )
             
             for note in stale_notes:
                 vpath = note["virtual_path"]
@@ -106,6 +115,23 @@ class ScribeDaemon(BaseDaemon):
                                 source="scribe"
                             )
                             facts_extracted += 1
+
+                    # 4. Write a Graphiti episode for cross-runtime recall.
+                    # Best-effort; the provider no-ops when disabled and never raises.
+                    try:
+                        await get_graphiti_provider().add_episode(Episode(
+                            group_id="vault",
+                            name=f"scribe:{vpath}",
+                            episode_body=content[:4000],
+                            source="scribe",
+                            metadata={
+                                "user_id": user_id,
+                                "facts_extracted": len(facts) if facts else 0,
+                                "virtual_path": vpath,
+                            },
+                        ))
+                    except Exception as ge:
+                        logger.debug("Scribe: graphiti episode write skipped: %s", ge)
                     
                     # 4. Mark as indexed
                     now = datetime.now(tz=timezone.utc).timestamp()
@@ -135,7 +161,11 @@ class ScribeDaemon(BaseDaemon):
         conn.commit()
 
     async def _extract_facts_from_note(self, llm, content: str) -> list[dict]:
-        """Use LLM to extract facts from note content."""
+        """Use LLM to extract facts from note content.
+
+        Wraps the call in invocation tracking so the SLAE admin panel can show
+        Scribe activity live (success/failure dot + elapsed ms).
+        """
         prompt = (
             "Extract key facts or preferences from this markdown note. "
             "Return a JSON list of objects with 'key' and 'value'. "
@@ -143,7 +173,10 @@ class ScribeDaemon(BaseDaemon):
             "If no facts found, return [].\n\n"
             f"--- NOTE CONTENT ---\n{content}\n--- END ---"
         )
-        
+
+        registry = get_role_registry()
+        started = time.perf_counter()
+
         try:
             full = ""
             async for chunk in llm.stream_response([
@@ -151,17 +184,27 @@ class ScribeDaemon(BaseDaemon):
                 {"role": "user", "content": prompt}
             ]):
                 full += chunk
-            
-            # Basic JSON cleanup/parsing
+
             import json, re
             match = re.search(r"\[.*\]", full, re.DOTALL)
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            registry.record_invocation(AgentRole.SCRIBE, success=True, elapsed_ms=elapsed_ms)
             if match:
                 return json.loads(match.group(0))
             return []
         except (json.JSONDecodeError, ValueError) as e:
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            registry.record_invocation(
+                AgentRole.SCRIBE, success=False, elapsed_ms=elapsed_ms,
+                error=f"json_parse: {e}",
+            )
             logger.debug("Scribe: fact extraction JSON parse failed: %s", e)
             return []
         except Exception as e:
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            registry.record_invocation(
+                AgentRole.SCRIBE, success=False, elapsed_ms=elapsed_ms, error=str(e),
+            )
             logger.warning("Scribe: fact extraction failed: %s", e)
             return []
 

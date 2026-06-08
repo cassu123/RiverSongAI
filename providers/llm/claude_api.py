@@ -11,6 +11,7 @@ from typing import AsyncGenerator, List, Optional
 
 import anthropic
 from config.settings import get_settings
+from core.observability import trace_llm
 from core.token_tracker import record_usage
 from providers.base import LLMProvider
 
@@ -66,6 +67,7 @@ class ClaudeAPILLM(LLMProvider):
             logger.error("Claude API call failed: %s", exc, exc_info=True)
             return _friendly_error(exc)
 
+    @trace_llm("anthropic")
     async def stream_response(
             self, messages: List[dict]) -> AsyncGenerator[str, None]:
         """Stream response from Claude."""
@@ -96,6 +98,7 @@ class ClaudeAPILLM(LLMProvider):
             logger.error("Claude streaming failed: %s", exc, exc_info=True)
             yield _friendly_error(exc)
 
+    @trace_llm("anthropic")
     async def stream_response_thinking(
             self, messages: List[dict]) -> AsyncGenerator[str, None]:
         """Extended thinking mode for Claude. Temperature forced to 1, budget 5000 tokens."""

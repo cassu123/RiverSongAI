@@ -1229,6 +1229,76 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
+    # Observability — Langfuse (LLM tracing)
+    # -------------------------------------------------------------------------
+    # Plan: docs/LANGFUSE_INTEGRATION_PLAN.md. Self-hosted only — Langfuse
+    # runs as a docker-compose sidecar under the `observability` profile and
+    # binds to 127.0.0.1. No data leaves the box. When LANGFUSE_ENABLED is
+    # false (the default), core/observability.py returns a no-op client and
+    # all LLM calls behave exactly as before.
+    langfuse_enabled: bool = Field(
+        default=False,
+        description="Master switch for Langfuse LLM tracing. Off by default.",
+    )
+    langfuse_host: str = Field(
+        default="http://127.0.0.1:3000",
+        description="Langfuse web UI + ingest endpoint. Localhost only.",
+    )
+    langfuse_public_key: str = Field(
+        default="",
+        description="Langfuse public key (generated in the Langfuse UI after first run).",
+    )
+    langfuse_secret_key: str = Field(
+        default="",
+        description="Langfuse secret key. Treat as a secret; do not log.",
+    )
+    langfuse_project_id: str = Field(
+        default="river-song",
+        description="Arbitrary project identifier shown in the Langfuse dashboard.",
+    )
+    langfuse_flush_interval_seconds: float = Field(
+        default=5.0,
+        description="How often the SDK batches queued traces to Langfuse.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Observability — Graphiti (knowledge graph on Neo4j)
+    # -------------------------------------------------------------------------
+    # Plan: docs/GRAPHITI_INTEGRATION_PLAN.md. Option B (library mode):
+    # graphiti-core runs inside RiverSong's Python venv; only Neo4j is a
+    # sidecar. When GRAPHITI_ENABLED is false (the default), the provider
+    # returns no-op responses and conversation_loop / scribe write-paths
+    # become awaits-on-no-op.
+    graphiti_enabled: bool = Field(
+        default=False,
+        description="Master switch for Graphiti knowledge-graph memory. Off by default.",
+    )
+    graphiti_mode: str = Field(
+        default="library",
+        description="'library' (Option B; in-process) or 'service' (Option A; HTTP sidecar). Currently only 'library' is implemented.",
+    )
+    neo4j_uri: str = Field(
+        default="bolt://127.0.0.1:7687",
+        description="Neo4j Bolt URI used by graphiti-core.",
+    )
+    neo4j_user: str = Field(
+        default="neo4j",
+        description="Neo4j database user.",
+    )
+    neo4j_password: str = Field(
+        default="",
+        description="Neo4j password. Empty means disabled; set in .env before turning Graphiti on.",
+    )
+    neo4j_browser_url: str = Field(
+        default="http://127.0.0.1:7474",
+        description="Neo4j Browser URL surfaced on the SLAE admin panel.",
+    )
+    graphiti_write_timeout_seconds: float = Field(
+        default=2.0,
+        description="Per-write timeout for episode ingestion — failures warn but never block the caller.",
+    )
+
+    # -------------------------------------------------------------------------
     # Analytics AI Summaries
     # -------------------------------------------------------------------------
     analytics_ai_enabled: bool = Field(

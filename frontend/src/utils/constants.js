@@ -5,7 +5,7 @@
  * Extracted here to prevent circular dependencies between components.
  */
 
-export const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'admin_settings', 'remote_ollama', 'webhook_tokens'])
+export const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'admin_settings', 'remote_ollama', 'webhook_tokens', 'slae'])
 
 export const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings', 'chronos', 'briefing', 'documents', 'skills', 'presets', 'research', 'compare'])
 
@@ -64,6 +64,7 @@ export const NAV_GROUPS = [
       { key: 'admin_settings', label: 'Admin Settings', icon: 'admin_settings' },
       { key: 'remote_ollama',  label: 'Remote Ollama',  icon: 'remote_ollama' },
       { key: 'webhook_tokens', label: 'Webhook Tokens', icon: 'webhook_tokens' },
+      { key: 'slae',           label: 'SLAE Control',   icon: 'slae' },
       { key: 'killswitch',     label: 'Kill Switch',    icon: 'killswitch' },
     ]
   }

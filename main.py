@@ -346,6 +346,7 @@ def create_app() -> FastAPI:
         research_router,
         compare_router,
         remote_ollama_router,
+        slae_router,
     )
 
     app.include_router(auth_router)
@@ -393,6 +394,7 @@ def create_app() -> FastAPI:
     app.include_router(research_router)
     app.include_router(compare_router)
     app.include_router(remote_ollama_router)
+    app.include_router(slae_router)
 
     # Serve the built React frontend — must be last so API routes take priority
     import os

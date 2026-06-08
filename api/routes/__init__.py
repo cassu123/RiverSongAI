@@ -44,6 +44,7 @@ from .webhook_tokens import router as webhook_tokens_router
 from .research import router as research_router
 from .compare import router as compare_router
 from .remote_ollama import router as remote_ollama_router
+from .slae import router as slae_router
 
 __all__ = [
     "health_router",
@@ -92,4 +93,5 @@ __all__ = [
     "research_router",
     "compare_router",
     "remote_ollama_router",
+    "slae_router",
 ]

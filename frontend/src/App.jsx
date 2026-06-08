@@ -52,6 +52,7 @@ const WebhookTokensPage       = lazy(() => import('./pages/WebhookTokensPage.jsx
 const GoogleCallbackPage      = lazy(() => import('./pages/GoogleCallbackPage.jsx'))
 const ReadingOAuthCallbackPage = lazy(() => import('./pages/ReadingOAuthCallbackPage.jsx'))
 const ForcePasswordChangePage  = lazy(() => import('./pages/ForcePasswordChangePage.jsx'))
+const SlaePage                 = lazy(() => import('./pages/SlaePage.jsx'))
 
 import { ADMIN_PAGES, ALWAYS_VISIBLE } from './utils/constants.js'
 
@@ -89,6 +90,7 @@ const PAGE_TO_PATH = {
   compare:          '/compare',
   remote_ollama:    '/admin/remote-ollama',
   webhook_tokens:   '/admin/webhook-tokens',
+  slae:             '/admin/slae',
   google_callback:  '/callback',
   reading_callback: '/reading-oauth-callback',
 }
@@ -472,6 +474,7 @@ export default function App() {
               {currentPage === 'compare'    && <ComparePage setAction={setPageAction} />}
               {currentPage === 'remote_ollama' && <RemoteOllamaPage setAction={setPageAction} />}
               {currentPage === 'webhook_tokens' && <WebhookTokensPage setAction={setPageAction} />}
+              {currentPage === 'slae'           && <SlaePage setAction={setPageAction} />}
             </div>
           </Suspense>
         </ErrorBoundary>

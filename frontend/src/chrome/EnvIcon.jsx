@@ -27,7 +27,7 @@ const BASE = {
   chronos: 'menu_book', pulse: 'bolt', routines: 'settings_suggest',
   documents: 'description', skills: 'auto_awesome', presets: 'tune',
   research: 'travel_explore', compare: 'compare_arrows',
-  remote_ollama: 'lan', webhook_tokens: 'vpn_key',
+  remote_ollama: 'lan', webhook_tokens: 'vpn_key', slae: 'hub',
   // Secondary
   inventory: 'inventory_2', culinary: 'restaurant', garage: 'directions_car',
   vehicles: 'directions_car',

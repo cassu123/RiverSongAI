@@ -28,6 +28,7 @@ from typing import AsyncGenerator, List
 import openai
 
 from config.settings import get_settings
+from core.observability import trace_llm
 from core.token_tracker import record_usage
 from providers.base import LLMProvider
 
@@ -72,6 +73,7 @@ class OpenAILLM(LLMProvider):
 
         logger.info("OpenAILLM initialized (model=%s).", self._model)
 
+    @trace_llm("openai")
     async def stream_response(
         self, messages: List[dict]
     ) -> AsyncGenerator[str, None]:

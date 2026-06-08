@@ -41,6 +41,12 @@ networks:
   ai_net:
     name: ai_net
     driver: bridge
+  obs_net:
+    name: obs_net
+    driver: bridge
+  mem_net:
+    name: mem_net
+    driver: bridge
 
 services:
   # --- Phase 2: Core Services ---
@@ -367,3 +373,64 @@ services:
       - POSTGRES_PASSWORD=${MEMGPT_DB_PASSWORD}
     volumes:
       - ./infra/memgpt/db:/var/lib/postgresql/data
+
+  # ---------------------------------------------------------------------------
+  # Observability profile — Langfuse (LLM tracing) + Neo4j (Graphiti memory)
+  # ---------------------------------------------------------------------------
+  # Bring up with:
+  #   docker compose --profile observability up -d
+  #
+  # Plans: docs/LANGFUSE_INTEGRATION_PLAN.md and docs/GRAPHITI_INTEGRATION_PLAN.md.
+  # All services bind to 127.0.0.1 — never expose to LAN without a reverse proxy.
+
+  langfuse-db:
+    profiles: ["observability"]
+    image: postgres:16-alpine
+    restart: unless-stopped
+    networks:
+      - obs_net
+    environment:
+      - POSTGRES_DB=langfuse
+      - POSTGRES_USER=langfuse
+      - POSTGRES_PASSWORD=${LANGFUSE_DB_PASSWORD}
+    volumes:
+      - ./infra/langfuse/db:/var/lib/postgresql/data
+
+  langfuse-web:
+    profiles: ["observability"]
+    image: langfuse/langfuse:2
+    restart: unless-stopped
+    depends_on:
+      - langfuse-db
+    networks:
+      - obs_net
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://langfuse:${LANGFUSE_DB_PASSWORD}@langfuse-db:5432/langfuse
+      - NEXTAUTH_URL=${LANGFUSE_HOST:-http://127.0.0.1:3000}
+      - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET}
+      - SALT=${LANGFUSE_SALT}
+      - TELEMETRY_ENABLED=false
+      # First-run UX — set to true to allow account creation in the local UI:
+      - LANGFUSE_INIT_PROJECT_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+      - LANGFUSE_INIT_PROJECT_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+
+  neo4j-graphiti:
+    profiles: ["observability"]
+    image: neo4j:5.20-community
+    restart: unless-stopped
+    networks:
+      - mem_net
+    ports:
+      - "127.0.0.1:7474:7474"   # Neo4j Browser UI
+      - "127.0.0.1:7687:7687"   # Bolt protocol (Graphiti client)
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_memory_heap_max__size=1G
+    volumes:
+      - ./infra/neo4j/data:/data
+      - ./infra/neo4j/logs:/logs
+      - ./infra/neo4j/import:/var/lib/neo4j/import
+      - ./infra/neo4j/plugins:/plugins

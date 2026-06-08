@@ -176,3 +176,16 @@ mcp>=1.0.0
 resemblyzer>=0.1.4
 zeroconf
 croniter
+
+# -----------------------------------------------------------------------------
+# Observability — Langfuse LLM tracing (docs/LANGFUSE_INTEGRATION_PLAN.md)
+# -----------------------------------------------------------------------------
+# Self-hosted Langfuse SDK. No-ops when LANGFUSE_ENABLED=false.
+langfuse>=2.0,<3.0
+
+# -----------------------------------------------------------------------------
+# Observability — Graphiti knowledge graph (docs/GRAPHITI_INTEGRATION_PLAN.md)
+# -----------------------------------------------------------------------------
+# Option B (library mode). graphiti-core needs a running Neo4j; it no-ops
+# at the provider level when GRAPHITI_ENABLED=false.
+graphiti-core>=0.3
