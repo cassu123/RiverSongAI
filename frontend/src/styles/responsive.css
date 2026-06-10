@@ -10,3 +10,32 @@
 @media (max-width: 767px) {
   .rs-map .leaflet-draw { margin-top: 40px; }
 }
+
+/* ── 7-day forecast row (WeatherTab) ─────────────────────────────────────────
+   day | icon | condition | temp range bar | min·max temps.
+   Phones drop the range bar — the min·max numbers carry the same info. */
+.rs-weather-row {
+  display: grid;
+  grid-template-columns: 46px 28px 1fr 130px 70px;
+  align-items: center;
+  gap: 12px;
+}
+@media (max-width: 520px) {
+  .rs-weather-row { grid-template-columns: 46px 28px minmax(50px, 1fr) 76px; gap: 8px; }
+  .rs-weather-row .rs-weather-bar { display: none; }
+}
+
+/* ── Flights radar list row (FlightsTab) ─────────────────────────────────────
+   callsign | country | alt | kts | hdg | status.
+   Phones drop country + heading; callsign/alt/speed/status stay legible. */
+.rs-flights-row {
+  display: grid;
+  grid-template-columns: 1.7fr 1.4fr 1.6fr 0.9fr 0.55fr 1fr;
+  gap: 6px;
+  align-items: center;
+}
+@media (max-width: 600px) {
+  .rs-flights-row { grid-template-columns: 1.6fr 1.2fr 0.9fr 0.9fr; }
+  .rs-flights-row .rs-flight-country,
+  .rs-flights-row .rs-flight-hdg { display: none; }
+}

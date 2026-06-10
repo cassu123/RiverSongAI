@@ -672,7 +672,7 @@ export default function SettingsPage({
             className="settings-select"
             value={llmSettings?.whisper_model || 'base'}
             onChange={e => saveFallback({ whisper_model: e.target.value })}
-            style={{ width: '200px' }}
+            style={{ width: '200px', maxWidth: '100%' }}
           >
             <option value="tiny">Tiny (Fastest, low VRAM)</option>
             <option value="base">Base (Balanced)</option>

@@ -264,7 +264,7 @@ export default function BriefingPage({ onNavigate }) {
           <div className="rs-card-head">
             <span className="rs-card-label">QUICK ACTIONS</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: 12 }}>
             <button className="rs-pill" onClick={() => onNavigate('chat')}>NEW CHAT</button>
             <button className="rs-pill" onClick={() => onNavigate('chronos')}>NOTES</button>
             <button className="rs-pill" onClick={() => onNavigate('inventory')}>STASH</button>

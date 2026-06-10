@@ -7,8 +7,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import 'leaflet/dist/leaflet.css'
 import { InlineSettingsSection, SettingsRow, ToggleGroup } from '../TabSettingsPanel.jsx'
 
-const LIST_COLS = '1.7fr 1.4fr 1.6fr 0.9fr 0.55fr 1fr'
-
 function trackArrow(deg) {
   if (deg == null) return '·'
   return ['↑','↗','→','↘','↓','↙','←','↖'][Math.round(deg / 45) % 8]
@@ -156,9 +154,7 @@ function FlightMap({ lat, lon, radiusDeg, aircraft }) {
 function AircraftRow({ a, i, total }) {
   const statusColor = a.on_ground ? 'var(--md-on-surface-variant)' : 'oklch(71% 0.17 145)'
   return (
-    <div style={{
-      display: 'grid', gridTemplateColumns: LIST_COLS,
-      gap: 6, alignItems: 'center',
+    <div className="rs-flights-row" style={{
       padding: '8px 12px',
       borderBottom: i < total - 1 ? '1px solid var(--md-outline-variant)' : 'none',
     }}>
@@ -170,7 +166,7 @@ function AircraftRow({ a, i, total }) {
           {a.icao24}
         </div>
       </div>
-      <div className="rs-card-meta" style={{ fontSize: '0.64rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div className="rs-card-meta rs-flight-country" style={{ fontSize: '0.64rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {a.origin_country || '—'}
       </div>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
@@ -179,7 +175,7 @@ function AircraftRow({ a, i, total }) {
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
         {a.velocity_kts != null ? `${a.velocity_kts}` : '—'}
       </div>
-      <div style={{ fontSize: '0.85rem', textAlign: 'center' }}>
+      <div className="rs-flight-hdg" style={{ fontSize: '0.85rem', textAlign: 'center' }}>
         {trackArrow(a.heading_deg)}
       </div>
       <div style={{ fontSize: '0.6rem', fontWeight: 700, color: statusColor, textAlign: 'right' }}>
@@ -452,14 +448,13 @@ export default function FlightsTab({ token, active }) {
             border: '1px solid var(--md-outline-variant)', borderRadius: 8, overflow: 'hidden',
           }}>
             {/* Column headers */}
-            <div style={{
-              display: 'grid', gridTemplateColumns: LIST_COLS,
-              gap: 6, padding: '7px 12px', flexShrink: 0,
+            <div className="rs-flights-row" style={{
+              padding: '7px 12px', flexShrink: 0,
               borderBottom: '1px solid var(--md-outline-variant)',
               background: 'var(--md-surface-container)',
             }}>
               {['CALLSIGN', 'COUNTRY', 'ALT', 'KTS', 'HDG', 'STATUS'].map(h => (
-                <div key={h} className="rs-card-label" style={{
+                <div key={h} className={'rs-card-label' + (h === 'COUNTRY' ? ' rs-flight-country' : h === 'HDG' ? ' rs-flight-hdg' : '')} style={{
                   fontSize: '0.47rem', opacity: 0.45,
                   textAlign: h === 'STATUS' ? 'right' : 'left',
                 }}>{h}</div>
@@ -471,9 +466,8 @@ export default function FlightsTab({ token, active }) {
               {loading && (
                 <div>
                   {[0,1,2,3,4,5].map(i => (
-                    <div key={i} style={{
-                      display: 'grid', gridTemplateColumns: LIST_COLS,
-                      gap: 6, padding: '8px 12px', alignItems: 'center',
+                    <div key={i} className="rs-flights-row" style={{
+                      padding: '8px 12px',
                       borderBottom: '1px solid var(--md-outline-variant)',
                     }}>
                       <div style={{ height: 9, width: '80%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />

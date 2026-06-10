@@ -383,7 +383,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
       {!loading && statNames.length > 0 && (
         <div className="rs-card" style={{ padding: 16, marginBottom: 16 }}>
           <div className="rs-card-label" style={{ fontSize: '0.6rem', marginBottom: 12, opacity: 0.6 }}>TEAM STATS</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px 16px', alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px 12px', alignItems: 'center' }}>
             <div className="rs-card-label" style={{ fontSize: '0.55rem', textAlign: 'left', opacity: 0.5 }}>
               {away.team?.abbreviation || 'AWAY'}
             </div>
