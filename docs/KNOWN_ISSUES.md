@@ -5,6 +5,17 @@ Wiring gaps, minor bugs, and deferred follow-ups noticed during the
 they are recorded here so the next session can address them deliberately
 without re-discovering each one.
 
+> **2026-06-10 update:** the following entries were FIXED in the June 2026
+> cleanup session (branch `claude/riversongai-code-review-8tr8xu`):
+> C-3 analytics flag (now enforced + honors ANALYTICS_LLM_MODEL), n8n router
+> (now mounted), Sifter daemon (real document indexer implemented), Scribe
+> analyze_note (implemented), CHRONOS shared/ root (implemented), RAG chunk
+> settings (now drive the chunker and top-k), HANDOFF.md path typo.
+> Remaining open items are now tracked as GitHub issues: Warden vision
+> pipeline (#56), httpOnly cookie auth (#57), culinary split (#58),
+> deploy gate (#59), satellite fleet-API adoption (#60), ecosystem doc
+> drift (#61). Entries below are kept for historical context.
+
 ---
 
 ## C-3 wiring — analytics AI flag is not enforced

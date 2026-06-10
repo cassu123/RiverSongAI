@@ -38,6 +38,7 @@ from .usage import router as usage_router
 from .integrations import router as integrations_router
 from .vector_fleet import router as vector_fleet_router
 from .documents import router as documents_router
+from .fleet import fleet_routers
 from .skills import router as skills_router
 from .session_presets import router as session_presets_router
 from .webhook_tokens import router as webhook_tokens_router
@@ -87,6 +88,7 @@ __all__ = [
     "integrations_router",
     "vector_fleet_router",
     "documents_router",
+    "fleet_routers",
     "skills_router",
     "session_presets_router",
     "webhook_tokens_router",

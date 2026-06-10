@@ -822,7 +822,7 @@ class ConversationLoop:
             try:
                 from providers.rag.rag_provider import RAGProvider
                 rag = RAGProvider()
-                rag_results = await rag.query_documents(transcript, n_results=5)
+                rag_results = await rag.query_documents(transcript)
                 if rag_results:
                     rag_body = "\n" + rag.format_context(rag_results)
             except Exception as exc:
@@ -1036,7 +1036,7 @@ class ConversationLoop:
             try:
                 from providers.rag.rag_provider import RAGProvider
                 rag = RAGProvider()
-                rag_results = await rag.query_documents(text, n_results=5)
+                rag_results = await rag.query_documents(text)
                 if rag_results:
                     rag_body = "\n" + rag.format_context(rag_results)
             except Exception as exc:

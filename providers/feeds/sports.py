@@ -330,16 +330,15 @@ async def fetch_teams_feed(teams: list[dict]) -> dict:
                           for t in teams if t.get("league_id")})
 
     # Fetch scoreboards and schedules concurrently
-    scoreboard_task = asyncio.gather(
-        *[get_scoreboard(lid) for lid in unique_leagues], return_exceptions=True
-    )
-    schedule_tasks = [
+    schedule_coros = [
         get_schedule(str(t["id"]), t["league_id"])
         for t in teams if t.get("id") and t.get("league_id")
     ]
-    schedule_task = asyncio.gather(*schedule_tasks, return_exceptions=True)
-
-    scoreboard_results, schedule_results = await asyncio.gather(scoreboard_task, schedule_task)
+    scoreboard_results, schedule_results = await asyncio.gather(
+        asyncio.gather(*[get_scoreboard(lid) for lid in unique_leagues],
+                       return_exceptions=True),
+        asyncio.gather(*schedule_coros, return_exceptions=True),
+    )
 
     results: list[dict] = []
     seen_event_ids: set[str] = set()

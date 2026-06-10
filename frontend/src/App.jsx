@@ -5,6 +5,8 @@ import { setupFcm }       from './utils/fcm.js'
 import Shell              from './chrome/Shell.jsx'
 import Drawer             from './chrome/Drawer.jsx'
 import ErrorBoundary      from './components/ErrorBoundary.jsx'
+import ToastHost          from './components/ToastHost.jsx'
+import { apiFetch }       from './lib/api.js'
 import RsMark             from './components/RsMark.jsx'
 import Stage              from './chrome/Stage.jsx'
 import './styles/chrome-shell.css'
@@ -223,39 +225,29 @@ export default function App() {
     save(universeKey, universe)
     document.documentElement.setAttribute('data-universe', universe)
     if (!user || !token) return
-    fetch('/api/auth/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ universe }),
-    }).catch(err => console.warn('[App] persist universe failed:', err))
+    apiFetch('/api/auth/profile', { method: 'PATCH', body: { universe }, silent: true })
+      .catch(err => console.warn('[App] persist universe failed:', err))
   }, [universe, universeKey, user?.id, token])
 
   useEffect(() => {
     save(envKey, environment)
     document.documentElement.setAttribute('data-env', environment)
     if (!user || !token) return
-    fetch('/api/auth/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ environment }),
-    }).catch(err => console.warn('[App] persist environment failed:', err))
+    apiFetch('/api/auth/profile', { method: 'PATCH', body: { environment }, silent: true })
+      .catch(err => console.warn('[App] persist environment failed:', err))
   }, [environment, envKey, user?.id, token])
 
   useEffect(() => {
     save(moodKey, mood)
     document.documentElement.setAttribute('data-mood', mood)
     if (!user || !token) return
-    fetch('/api/auth/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ mood }),
-    }).catch(err => console.warn('[App] persist mood failed:', err))
+    apiFetch('/api/auth/profile', { method: 'PATCH', body: { mood }, silent: true })
+      .catch(err => console.warn('[App] persist mood failed:', err))
   }, [mood, moodKey, user?.id, token])
 
   useEffect(() => {
     if (!token) { setEnabledFeatures(null); return }
-    fetch('/api/features', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
+    apiFetch('/api/features')
       .then(d => {
         const feats = new Set()
         if (d) {
@@ -268,13 +260,16 @@ export default function App() {
         }
         setEnabledFeatures(feats)
       })
-      .catch(() => setEnabledFeatures(new Set()))
+      .catch(err => {
+        console.warn('[App] features load failed:', err)
+        setEnabledFeatures(new Set())
+      })
   }, [token])
 
   const refreshFeatures = useCallback(() => {
     if (!token) return
-    fetch('/api/features', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(d => {
+    apiFetch('/api/features', { silent: true })
+      .then(d => {
         const feats = new Set()
         if (d) {
           if (Array.isArray(d.features)) d.features.forEach(f => feats.add(f))
@@ -286,6 +281,7 @@ export default function App() {
         }
         setEnabledFeatures(feats)
       })
+      .catch(err => console.warn('[App] features refresh failed:', err))
   }, [token])
 
   const setUniverseSafe = (u) => { setUniverse(u); setEnvironment(UNIVERSE_ENVS[u][0]); setMood(ENV_MOODS[UNIVERSE_ENVS[u][0]][0]); }
@@ -413,6 +409,7 @@ export default function App() {
 
   return (
     <div className="rs-root">
+      <ToastHost />
       {impersonationBanner}
       <Stage environment={environment} />
 

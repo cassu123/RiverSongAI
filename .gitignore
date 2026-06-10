@@ -58,8 +58,8 @@ build/
 develop-eggs/
 dist/
 eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -210,3 +210,5 @@ data/voice_prints/
 # Session turnover logs
 passover/
 passoff/
+.venv-test/
+backups/

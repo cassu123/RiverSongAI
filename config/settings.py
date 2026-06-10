@@ -345,6 +345,16 @@ class Settings(BaseSettings):
     )
     jwt_algorithm: str = Field(default="HS256", description="JWT signing algorithm.")
     jwt_expire_minutes: int = Field(default=1440, description="JWT token lifetime in minutes (default 24 hours).")
+    token_encryption_key: str = Field(
+        default="",
+        description=(
+            "Fernet key encrypting third-party integration tokens at rest. "
+            "Set TOKEN_ENCRYPTION_KEY in .env (generate with: python -c "
+            "\"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"). "
+            "If unset, a key is generated once and persisted to "
+            "data/.token_encryption_key so tokens survive restarts."
+        ),
+    )
 
     # -------------------------------------------------------------------------
     # Kill switch

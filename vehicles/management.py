@@ -1411,7 +1411,9 @@ def attach_receipt(
     log = get_service_log(db, user_id, log_id)
     vehicle_dir = os.path.join(VEHICLE_FILES_BASE_DIR, f"vehicle_{log.vehicle_id}", "receipts")
     os.makedirs(vehicle_dir, exist_ok=True)
-    safe_name = os.path.basename(filename).replace("..", "")
+    # Keep only safe filename characters; reject everything else outright.
+    base = os.path.basename(filename.replace("\\", "/"))
+    safe_name = "".join(c for c in base if c.isalnum() or c in "._- ").strip(". ")
     if not safe_name:
         safe_name = "receipt"
     filepath = os.path.join(vehicle_dir, safe_name)

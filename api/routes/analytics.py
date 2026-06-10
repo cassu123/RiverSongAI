@@ -21,6 +21,7 @@ from typing import Dict, Optional
 from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 
+from config.settings import get_settings
 from core.auth import decode_token
 
 logger = logging.getLogger(__name__)
@@ -154,6 +155,12 @@ async def get_platform_summary(
     user_id = await _require_user(authorization)
     store = _store(request)
 
+    settings = get_settings()
+    if not settings.analytics_ai_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="Analytics AI summaries are disabled by configuration.")
+
     # 1. Fetch recent metrics
     snapshots = await store.get_analytics_snapshots(user_id, platform, days=30)
     if not snapshots:
@@ -166,9 +173,9 @@ async def get_platform_summary(
     from datetime import datetime
 
     try:
-        llm, _ = _build_llm_provider()
-        # We assume _build_llm_provider returns an OllamaLLM or compatible provider.
-        # If the provider itself fails to initialize, it should raise.
+        # Honor ANALYTICS_LLM_MODEL when set; otherwise provider default.
+        llm, _ = _build_llm_provider(
+            model_override=settings.analytics_llm_model or None)
     except Exception as exc:
         logger.error("Failed to initialize LLM provider: %s", exc)
         raise HTTPException(status_code=503,

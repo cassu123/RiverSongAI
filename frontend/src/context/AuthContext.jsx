@@ -12,7 +12,7 @@ export function AuthProvider({ children }) {
   const [loading,       setLoading]       = useState(true)
   const [setupRequired, setSetupRequired] = useState(false)
   
-  const [isAdminImpersonating, setIsAdminImpersonating] = useState(() => !!localStorage.getItem('rs-admin-token'))
+  const [isAdminImpersonating, setIsAdminImpersonating] = useState(() => !!sessionStorage.getItem('rs-admin-token'))
 
   // Check setup status and validate token on mount
   useEffect(() => {
@@ -145,12 +145,12 @@ export function AuthProvider({ children }) {
     setUser(null)
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
-    localStorage.removeItem('rs-admin-token')
+    sessionStorage.removeItem('rs-admin-token')
     setIsAdminImpersonating(false)
   }, [token])
 
   const impersonate = useCallback((newToken, impersonatedUser) => {
-    localStorage.setItem('rs-admin-token', token)
+    sessionStorage.setItem('rs-admin-token', token)
     setToken(newToken)
     setUser(impersonatedUser)
     localStorage.setItem(TOKEN_KEY, newToken)
@@ -160,10 +160,10 @@ export function AuthProvider({ children }) {
   }, [token])
 
   const revertImpersonation = useCallback(async () => {
-    const origToken = localStorage.getItem('rs-admin-token')
+    const origToken = sessionStorage.getItem('rs-admin-token')
     if (origToken) {
       setToken(origToken)
-      localStorage.removeItem('rs-admin-token')
+      sessionStorage.removeItem('rs-admin-token')
       localStorage.setItem(TOKEN_KEY, origToken)
       setIsAdminImpersonating(false)
       try {

@@ -62,16 +62,23 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
   const handleGooglePlay = async () => {
     const res = await apiFetch('/connect/google_play/authorize')
     localStorage.removeItem('rs-books-oauth-code')
+    localStorage.removeItem('rs-books-oauth-error')
     const w = window.open(res.auth_url, 'GoogleAuth', 'width=500,height=600')
     const timer = setInterval(async () => {
       const code = localStorage.getItem('rs-books-oauth-code')
+      const oauthError = localStorage.getItem('rs-books-oauth-error')
       if (code) {
         clearInterval(timer)
         if (w) w.close()
-        await apiFetch('/connect/google_play/callback', { method: 'POST', body: JSON.stringify({ code }) })
         localStorage.removeItem('rs-books-oauth-code')
+        await apiFetch('/connect/google_play/callback', { method: 'POST', body: JSON.stringify({ code }) })
         loadConnections()
         if (onRefresh) onRefresh()
+      } else if (oauthError) {
+        clearInterval(timer)
+        if (w) w.close()
+        localStorage.removeItem('rs-books-oauth-error')
+        console.error('[ReadingIntegrations] Google Play OAuth failed:', oauthError)
       }
       if (w && w.closed) clearInterval(timer)
     }, 1000)

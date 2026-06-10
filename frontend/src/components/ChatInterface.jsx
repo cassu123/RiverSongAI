@@ -103,7 +103,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
     fetch(`${API_BASE}/api/models`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
       .then(data => {
         setModels({
           cloud: data.cloud || [],
@@ -111,15 +111,15 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
         })
         setFamilyOverrides(data.family_overrides || {})
       })
-      .catch(() => {})
+      .catch(err => console.warn('[ChatInterface] models load failed:', err))
 
     if (user) {
       fetch(`${API_BASE}/api/settings/llm?user_id=${user.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-        .then(r => r.json())
+        .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
         .then(s => setSelectedModel({ provider: s.provider, model_id: s.model }))
-        .catch(() => {})
+        .catch(err => console.warn('[ChatInterface] LLM settings load failed:', err))
 
       setHistory(loadHistory(user.id))
     }

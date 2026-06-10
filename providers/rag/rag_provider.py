@@ -96,11 +96,16 @@ class RAGProvider:
         """Alias for backward compatibility."""
         return await self.ingest_document(file_bytes, metadata)
 
-    async def query_documents(self, query_text: str, n_results: int = 5,
+    async def query_documents(self, query_text: str, n_results: int | None = None,
                               where: Optional[dict] = None) -> List[Dict[str, Any]]:
         """
         Retrieves relevant document chunks for a given query.
+
+        n_results defaults to the RAG_TOP_K setting when not given.
         """
+        if n_results is None:
+            from config.settings import get_settings
+            n_results = get_settings().rag_top_k
         # Ensure we only query document sources if not specified otherwise
         if where is None:
             where = {"source_type": "document"}

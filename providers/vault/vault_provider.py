@@ -63,8 +63,8 @@ class VaultProvider:
         if household:
             roots[VROOT_HOUSEHOLD] = household
 
-        # Shared with me is Phase 2+ or deferred? A.1 mentions it.
-        # For Phase 1, we'll just have Personal and Household.
+        # shared/ — one instance-wide root every user can read and write.
+        roots[VROOT_SHARED] = self.base_vault / "shared"
         return roots
 
     def _resolve_virtual(self, user_id: str, virtual_path: str) -> Path:
@@ -84,11 +84,21 @@ class VaultProvider:
         root_path = roots[root_key]
         os.makedirs(root_path, exist_ok=True)
 
-        target = (root_path / sub_path).resolve()
+        unresolved = root_path / sub_path
+        target = unresolved.resolve()
 
-        # Security: must be inside the root
-        if not str(target).startswith(str(root_path.resolve())):
+        # Security: must be inside the root. is_relative_to avoids the
+        # string-prefix pitfall where /vault/alice-evil matches /vault/alice.
+        if not target.is_relative_to(root_path.resolve()):
             raise PermissionError("Access denied: path traversal detected.")
+
+        # Security: reject symlinks anywhere under the root so a link created
+        # inside one vault can never point at another user's files.
+        probe = unresolved
+        while probe != root_path and probe != probe.parent:
+            if probe.is_symlink():
+                raise PermissionError("Access denied: symlinks are not permitted in the vault.")
+            probe = probe.parent
 
         return target
 

@@ -22,8 +22,7 @@ beautifulsoup4==4.14.3          # Culinary: URL recipe scraping
 # -----------------------------------------------------------------------------
 # Configuration
 # -----------------------------------------------------------------------------
-pydantic==2.13.2
-pydantic[email]==2.13.2         # Email validation for auth routes
+pydantic[email]==2.13.2         # [email] extra adds validation for auth routes
 pydantic-settings==2.13.1       # BaseSettings for .env loading
 python-dotenv==1.2.2            # .env file support
 
@@ -174,8 +173,8 @@ mcp>=1.0.0
 # Voice ID (speaker recognition, local)
 # -----------------------------------------------------------------------------
 resemblyzer>=0.1.4
-zeroconf
-croniter
+zeroconf>=0.132.0               # mDNS discovery for vector fleet
+croniter>=2.0.0                 # cron parsing for vector schedules
 
 # -----------------------------------------------------------------------------
 # Observability — Langfuse LLM tracing (docs/LANGFUSE_INTEGRATION_PLAN.md)

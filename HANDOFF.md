@@ -176,7 +176,7 @@ The first pass of the UI rework executed against an external Gemini plan; both t
 
 ## To Restore Claude Memory on a New Machine
 Copy this directory from the Chromebook:
-`~/.claude/projects/-home-river-song-RiverSongAI/memory/`
+`~/.claude/projects/-home-riversong-RiverSongAI/memory/`
 
 ---
 

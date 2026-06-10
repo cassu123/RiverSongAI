@@ -89,7 +89,7 @@ async def query_rag(
         # We need an LLM to answer the question using the context.
         from core.conversation_loop import ConversationLoop
 
-        results = await rag.query_documents(body.question, n_results=5)
+        results = await rag.query_documents(body.question)
         if not results:
             return {
                 "answer": "I couldn't find any information in the uploaded documents.", "chunks": []}
