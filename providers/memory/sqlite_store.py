@@ -4133,7 +4133,11 @@ class SQLiteStore:
 
     async def insert_vector_unit(self, unit_id: str, name: str, platform: str,
                                  unit_token: str, registered_at: str, claimed_at: str) -> None:
-        sql = "INSERT INTO vector_units (unit_id, name, platform, unit_token, registered_at, claimed_at) VALUES (?, ?, ?, ?, ?, ?)"
+        # hardware/safety_floors/home_position are NOT NULL without defaults in
+        # the canonical schema; seed them empty so claiming a unit never fails.
+        sql = ("INSERT INTO vector_units (unit_id, name, platform, unit_token, "
+               "registered_at, claimed_at, hardware, safety_floors, home_position) "
+               "VALUES (?, ?, ?, ?, ?, ?, '{}', '{}', '{}')")
         await self.execute_write_async(sql, (unit_id, name, platform, unit_token, registered_at, claimed_at))
 
     async def get_config_revision(self, unit_id: str) -> int:

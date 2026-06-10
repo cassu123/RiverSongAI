@@ -210,3 +210,4 @@ data/voice_prints/
 # Session turnover logs
 passover/
 passoff/
+.venv-test/
