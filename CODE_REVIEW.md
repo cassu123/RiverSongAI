@@ -1,5 +1,32 @@
 # RiverSongAI — Full Code Review (June 2026)
 
+> **STATUS UPDATE (June 10, 2026):** Items 1–19, 21, and 22 are **FIXED** on this branch
+> (see commits on `claude/riversongai-code-review-8tr8xu`). Validated by the full backend
+> test suite (251 passed, 1 skipped) and a clean frontend production build.
+>
+> **Still open:**
+> - **Item 5 (full fix):** moving auth from localStorage to httpOnly cookie sessions is an
+>   architectural change touching backend + frontend — do as its own project.
+> - **Item 20:** god-file splits (`sqlite_store.py`, `SettingsPage.jsx`, `culinary.py`, …) —
+>   one dedicated session each.
+> - **Item 19 (partial):** `logs` is a git-tracked symlink to `/mnt/data/river-song/logs`.
+>   Left alone deliberately: untracking it would delete it from production on the next
+>   `git pull` and break logging. Revisit during a maintenance window.
+> - The wake-word dep `speexdsp` needs the `swig` system package to build; documented here
+>   since it blocks `pip install -r requirements.txt` on machines without swig.
+>
+> **⚠️ ACTION NEEDED ON THE SERVER:** add `TOKEN_ENCRYPTION_KEY` to the production `.env`
+> (generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`),
+> then reconnect any third-party integrations (Google/Shopify/Amazon) — tokens encrypted
+> under the old auto-generated keys are unrecoverable.
+>
+> Extra bugs found and fixed during implementation (not in the original review):
+> - Acking a vector command as "rejected" crashed on a nonexistent `rejected_at` column.
+> - Claiming a new vector unit crashed: the INSERT omitted NOT NULL columns
+>   (`hardware`, `safety_floors`, `home_position`).
+> - `npm ci` failed from a clean checkout due to a `@zxing/library` peer-dependency
+>   conflict — builds were not reproducible.
+
 A prioritized review of the whole repo: backend security, backend code quality, and frontend.
 Work top-to-bottom — items are ordered by impact. Each item lists the file(s) so you can
 ask Claude to "fix item N in CODE_REVIEW.md" in a future session.
