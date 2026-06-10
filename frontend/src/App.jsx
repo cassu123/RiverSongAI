@@ -255,7 +255,7 @@ export default function App() {
   useEffect(() => {
     if (!token) { setEnabledFeatures(null); return }
     fetch('/api/features', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
       .then(d => {
         const feats = new Set()
         if (d) {
@@ -268,7 +268,10 @@ export default function App() {
         }
         setEnabledFeatures(feats)
       })
-      .catch(() => setEnabledFeatures(new Set()))
+      .catch(err => {
+        console.warn('[App] features load failed:', err)
+        setEnabledFeatures(new Set())
+      })
   }, [token])
 
   const refreshFeatures = useCallback(() => {

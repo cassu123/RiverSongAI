@@ -451,11 +451,12 @@ export default function SettingsPage({
     const loadData = async () => {
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
       const query = user?.id ? `?user_id=${user.id}` : ''
+      const okJson = (r) => { if (!r.ok) throw new Error(`HTTP ${r.status} from ${r.url}`); return r.json() }
       try {
         const [modData, llmData, memData, voiceData, featData, prefData, feedPrefsData] = await Promise.all([
-          fetch(`${API_BASE}/api/models`, { headers }).then(r => r.json()),
-          fetch(`${API_BASE}/api/settings/llm${query}`, { headers }).then(r => r.json()),
-          fetch(`${API_BASE}/api/settings/memory${query}`, { headers }).then(r => r.json()),
+          fetch(`${API_BASE}/api/models`, { headers }).then(okJson),
+          fetch(`${API_BASE}/api/settings/llm${query}`, { headers }).then(okJson),
+          fetch(`${API_BASE}/api/settings/memory${query}`, { headers }).then(okJson),
           fetch(`${API_BASE}/api/settings/voice`, { headers }).then(r => r.json()).catch(() => null),
           fetch(`${API_BASE}/api/features`, { headers }).then(r => r.json()).catch(() => ({ ai_features: {} })),
           fetch(`${API_BASE}/api/settings`, { headers }).then(r => r.json()).catch(() => ({ music_provider: 'youtube_music' })),

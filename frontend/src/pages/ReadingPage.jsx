@@ -64,8 +64,8 @@ export default function ReadingPage({ setAction }) {
 
   const loadShelf = useCallback(() => {
     setLoading(true)
-    apiFetch('/shelf').then(setShelf).catch(() => {})
-    apiFetch('/stats').then(setStats).catch(() => {}).finally(() => setLoading(false))
+    apiFetch('/shelf').then(setShelf).catch(err => console.warn('[ReadingPage] shelf load failed:', err))
+    apiFetch('/stats').then(setStats).catch(err => console.warn('[ReadingPage] stats load failed:', err)).finally(() => setLoading(false))
   }, [])
 
   useEffect(() => { loadShelf() }, [loadShelf])

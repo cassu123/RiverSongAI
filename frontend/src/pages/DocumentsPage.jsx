@@ -32,21 +32,26 @@ export default function DocumentsPage({ setAction }) {
   const saveTimer = useRef(null)
   const dirtyRef  = useRef(null)
 
-  const refreshList = useCallback(async () => {
+  const refreshList = useCallback(async (signal) => {
     try {
-      const res = await fetch(`${API_BASE}/api/documents`, { headers: authHeaders() })
+      const res = await fetch(`${API_BASE}/api/documents`, { headers: authHeaders(), signal })
       if (res.status === 404) { setDisabled(true); setLoading(false); return }
       if (!res.ok) throw new Error('Failed to load documents.')
       const data = await res.json()
       setDocs(data.documents || [])
     } catch (e) {
+      if (e.name === 'AbortError') return
       setError(e.message)
     } finally {
       setLoading(false)
     }
   }, [authHeaders])
 
-  useEffect(() => { refreshList() }, [refreshList])
+  useEffect(() => {
+    const controller = new AbortController()
+    refreshList(controller.signal)
+    return () => controller.abort()
+  }, [refreshList])
 
   const openDoc = useCallback(async (id) => {
     // Cancel any pending debounced save and drop its dirty patch BEFORE
