@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 from daemons.base_daemon import BaseDaemon
+from core.token_tracker import set_usage_source
 from config.settings import get_settings
 from providers.llm.agent_roles import AgentRole, get_role_registry
 from providers.memory.graphiti_provider import Episode, get_graphiti_provider
@@ -46,6 +47,7 @@ class ScribeDaemon(BaseDaemon):
 
     async def _run_heuristic_scan(self) -> None:
         """Scan the vault for notes that need deeper analysis."""
+        set_usage_source("scribe")
         logger.info("Scribe: performing vault heuristic scan...")
         
         try:
@@ -210,6 +212,7 @@ class ScribeDaemon(BaseDaemon):
             return []
 
     async def _analyze_note(self, virtual_path: str, user_id: str | None = None) -> dict:
+        set_usage_source("scribe")
         """On-demand deep analysis of a single note.
 
         Same pipeline as the heuristic scan, scoped to one note: read it,

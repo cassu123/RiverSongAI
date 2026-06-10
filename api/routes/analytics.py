@@ -22,6 +22,7 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from config.settings import get_settings
+from core.token_tracker import set_usage_source
 from core.auth import decode_token
 
 logger = logging.getLogger(__name__)
@@ -143,6 +144,7 @@ async def get_platform_summary(
     Generate an AI-driven summary and insights for a specific platform.
     Uses the local Ollama LLM to generate 3 concise bullet-point insights.
     """
+    set_usage_source("analytics")
     allowed_platforms = ["tiktok", "instagram", "amazon", "etsy", "facebook"]
     platform = platform.lower()
     if platform not in allowed_platforms:

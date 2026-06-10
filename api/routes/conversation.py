@@ -52,6 +52,7 @@ from starlette.websockets import WebSocketState
 
 from core.auth import decode_token
 from core.conversation_loop import ConversationLoop, _build_llm_provider, _build_stt_provider
+from core.token_tracker import set_usage_source
 from core.memory_manager import MemoryManager
 from core.wake_word_service import WakeWordService
 from config.settings import get_settings
@@ -65,6 +66,7 @@ router = APIRouter(tags=["conversation"])
 
 @router.websocket("/ws/conversation")
 async def conversation_websocket(websocket: WebSocket) -> None:
+    set_usage_source("voice")
     """
     WebSocket handler for the River Song conversation loop.
 
@@ -417,6 +419,7 @@ async def chat_http(
     Streams the LLM response as SSE (data: <chunk>\n\n).
     History is passed in by the client; no server-side session state.
     """
+    set_usage_source("chat")
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
     payload = await decode_token(token) if token else None
@@ -535,6 +538,7 @@ async def extract_facts_http(
     Uses the LLM to pull facts the user stated about themselves,
     then saves them to the memory store.
     """
+    set_usage_source("memory")
     import asyncio
     import json as _json
 
@@ -728,6 +732,7 @@ async def enhance_prompt_http(
     Rewrites a short user prompt into a clearer, more detailed version.
     Uses the default LLM. Returns {"enhanced": "<improved prompt>"}.
     """
+    set_usage_source("chat")
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
     payload = await decode_token(token) if token else None
