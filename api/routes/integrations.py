@@ -189,6 +189,10 @@ async def disconnect_service(
             detail=f"No active {service} integration found",
         )
     await store.deactivate_user_integration(user_id, service)
+    if service == "shopify":
+        # Shopify's OAuth callback also stores credentials in the analytics
+        # platform table; revoke those too so analytics stops using them.
+        await store.upsert_analytics_platform(user_id, "shopify", enabled=False)
     return {"message": f"Successfully disconnected {service}"}
 
 
@@ -241,7 +245,12 @@ async def google_authorize(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    """Begin a Google OAuth flow for the calling user."""
+    """Begin a Google OAuth flow for the calling user.
+
+    Returns ``{"auth_url": ...}`` — the frontend fetches this with its JWT
+    (a plain browser navigation can't send the Authorization header) and
+    then redirects the window to the returned URL.
+    """
     # Caller authentication: prefer Authorization header, fall back to cookie.
     token = None
     if authorization and authorization.startswith("Bearer "):
@@ -284,7 +293,7 @@ async def google_authorize(
         "prompt": "consent",
         "state": state_nonce,
     })
-    return RedirectResponse(f"{auth_uri}?{params}")
+    return {"auth_url": f"{auth_uri}?{params}"}
 
 
 @router.get("/google/callback")

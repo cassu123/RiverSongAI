@@ -7,6 +7,8 @@ Shopify OAuth endpoints for connecting stores.
 from __future__ import annotations
 
 import logging
+import re
+import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Query, Request
@@ -18,6 +20,20 @@ from providers.commerce.shopify_auth import ShopifyAuthProvider
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/shopify", tags=["commerce"])
+
+_SHOP_DOMAIN_RE = re.compile(r"^[a-z0-9][a-z0-9-]*\.myshopify\.com$")
+
+
+def _normalize_shop(shop: str) -> str:
+    """Normalize and validate a shop domain. Raises 400 on anything that
+    isn't a plain *.myshopify.com host — the domain is interpolated into
+    OAuth URLs, so it must never be attacker-shaped."""
+    shop = shop.strip().lower().removeprefix("https://").removeprefix("http://").rstrip("/")
+    if not shop.endswith(".myshopify.com"):
+        shop = f"{shop}.myshopify.com"
+    if not _SHOP_DOMAIN_RE.match(shop):
+        raise HTTPException(status_code=400, detail="Invalid shop domain.")
+    return shop
 
 
 async def _require_user(authorization: Optional[str]) -> str:
@@ -56,9 +72,14 @@ async def get_shopify_auth_url(
     Step 1: Get the Shopify authorization URL.
     """
     user_id = await _require_user(authorization)
+    shop = _normalize_shop(shop)
     provider = _get_provider(request)
-    # Use user_id as state to verify on callback
-    auth_url = provider.get_auth_url(shop, state=user_id)
+    # CSRF protection: one-time nonce bound server-side to the user, same
+    # pattern as the Google flow. Never put the raw user_id in state.
+    state_nonce = uuid.uuid4().hex
+    store = request.app.state.memory_manager._store
+    await store.put_oauth_nonce(state_nonce, user_id, "shopify", ttl_seconds=600)
+    auth_url = provider.get_auth_url(shop, state=state_nonce)
     return {"auth_url": auth_url}
 
 
@@ -75,7 +96,7 @@ async def shopify_auth_callback(
     Step 2: Shopify redirects back here.
     Exchange code for access token and save to store.
     """
-    user_id = state  # state is our user_id
+    shop = _normalize_shop(shop)
     provider = _get_provider(request)
 
     # Verify HMAC
@@ -86,11 +107,17 @@ async def shopify_auth_callback(
             shop)
         return RedirectResponse(url="/analytics?error=hmac_mismatch")
 
+    store = request.app.state.memory_manager._store
+    # Validate-and-consume the one-time state nonce; returns the bound user.
+    user_id = await store.consume_oauth_nonce(state, "shopify")
+    if not user_id:
+        logger.warning("Shopify auth callback with invalid/expired state nonce")
+        return RedirectResponse(url="/analytics?error=state_validation_failed")
+
     try:
         creds = await provider.exchange_code(shop, code)
 
-        # Save credentials to the user store
-        store = request.app.state.memory_manager._store
+        # Save credentials for the analytics consumers
         await store.upsert_analytics_platform(
             user_id,
             "shopify",
@@ -98,6 +125,16 @@ async def shopify_auth_callback(
             api_key=creds.access_token,
             api_secret=shop,  # Store the shop domain in the secret field
             notes=f"OAuth Scopes: {creds.scope}"
+        )
+
+        # Also record it in user_integrations (encrypted) so the
+        # Connected Accounts card on the profile page reflects the link.
+        from api.routes.integrations import encrypt_token
+        await store.upsert_user_integration(
+            user_id=user_id,
+            service="shopify",
+            access_token=encrypt_token(creds.access_token),
+            metadata={"store_name": shop},
         )
 
         logger.info(
@@ -141,5 +178,7 @@ async def disconnect_shopify(
     user_id = await _require_user(authorization)
     store = request.app.state.memory_manager._store
     await store.upsert_analytics_platform(user_id, "shopify", enabled=False)
+    # Keep the profile page's Connected Accounts card in sync.
+    await store.deactivate_user_integration(user_id, "shopify")
     logger.info("Shopify disconnected for user %s", user_id)
     return {"ok": True}

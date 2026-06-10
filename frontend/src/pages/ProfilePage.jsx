@@ -49,39 +49,43 @@ const MOODS = {
                { key: 'smoke',            label: 'SMOKE',            primary: '#a0ffaa', bg: '#080c08' }],
 }
 
+// Each connectable service fetches its provider auth URL (with the JWT in
+// the Authorization header) and then redirects the window to it. Services
+// without a built OAuth flow yet are flagged comingSoon so the button is
+// disabled instead of navigating to a 404.
 const SERVICES = [
-  { 
-    key: 'google', 
-    name: 'Google Workspace', 
+  {
+    key: 'google',
+    name: 'Google Workspace',
     icon: 'account_circle',
     authorizeUrl: '/api/integrations/google/authorize'
   },
-  { 
-    key: 'amazon_sp_api', 
-    name: 'Amazon Seller Central', 
+  {
+    key: 'amazon_sp_api',
+    name: 'Amazon Seller Central',
     icon: 'storefront',
-    authorizeUrl: '/api/auth/amazon_sp_api/authorize'
+    comingSoon: true
   },
-  { 
-    key: 'shopify', 
-    name: 'Shopify Store', 
+  {
+    key: 'shopify',
+    name: 'Shopify Store',
     icon: 'shopping_bag',
     requiresInput: true,
     inputLabel: 'Store URL',
     inputPlaceholder: 'your-store.myshopify.com',
-    authorizeUrl: (input) => `/api/shopify_auth/login?shop=${input}`
+    authorizeUrl: (input) => `/api/shopify/auth/url?shop=${encodeURIComponent(input)}`
   },
-  { 
-    key: 'walmart', 
-    name: 'Walmart Marketplace', 
+  {
+    key: 'walmart',
+    name: 'Walmart Marketplace',
     icon: 'store',
-    authorizeUrl: '/api/auth/walmart/authorize'
+    comingSoon: true
   },
-  { 
-    key: 'tiktok', 
-    name: 'TikTok Shop', 
+  {
+    key: 'tiktok',
+    name: 'TikTok Shop',
     icon: 'video_library',
-    authorizeUrl: '/api/auth/tiktok/authorize'
+    comingSoon: true
   }
 ]
 
@@ -346,17 +350,31 @@ export default function ProfilePage({
     }
   }, [user, token])
 
-  const handleConnect = (serviceKey) => {
+  const handleConnect = async (serviceKey) => {
     const serviceConfig = SERVICES.find(s => s.key === serviceKey);
-    if (!serviceConfig) return;
-    
+    if (!serviceConfig || serviceConfig.comingSoon) return;
+
+    let url = serviceConfig.authorizeUrl;
     if (serviceConfig.requiresInput) {
       const userInput = prompt(`Enter your ${serviceConfig.inputLabel} (${serviceConfig.inputPlaceholder}):`);
-      if (userInput) {
-        window.location.href = serviceConfig.authorizeUrl(userInput);
+      if (!userInput) return;
+      url = serviceConfig.authorizeUrl(userInput.trim());
+    }
+
+    // A plain navigation can't carry the Authorization header, so fetch the
+    // provider auth URL with the JWT and redirect the window to the result.
+    try {
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.detail || `HTTP ${res.status}`);
       }
-    } else {
-      window.location.href = serviceConfig.authorizeUrl;
+      const data = await res.json();
+      if (!data.auth_url) throw new Error('No auth URL returned.');
+      window.location.href = data.auth_url;
+    } catch (err) {
+      console.error(`[ProfilePage] ${serviceKey} connect failed:`, err);
+      alert(`Could not start ${serviceConfig.name} connection: ${err.message}`);
     }
   }
 
@@ -547,8 +565,12 @@ export default function ProfilePage({
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {SERVICES.map(service => {
-                  const isConnected = integrations?.[service.key];
-                  
+                  // Status shape: { connected: bool, metadata: {...} } — never
+                  // truthiness-check the object itself, it's always truthy.
+                  const status = integrations?.[service.key];
+                  const isConnected = status?.connected === true;
+                  const meta = status?.metadata || {};
+
                   return (
                     <div 
                       key={service.key}
@@ -573,8 +595,8 @@ export default function ProfilePage({
                             <div style={{ fontSize: '0.75rem', color: '#4ade80', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                               <span className="material-symbols-rounded" style={{ fontSize: '12px' }}>check_circle</span>
                               Connected
-                              {isConnected.email && ` as ${isConnected.email}`}
-                              {isConnected.store_name && ` - ${isConnected.store_name}`}
+                              {meta.email && ` as ${meta.email}`}
+                              {meta.store_name && ` - ${meta.store_name}`}
                             </div>
                           )}
                         </div>
@@ -588,6 +610,15 @@ export default function ProfilePage({
                           style={{ padding: '6px 16px', fontSize: '0.7rem', minWidth: '110px', justifyContent: 'center' }}
                         >
                           {disconnecting === service.key ? 'DISCONNECTING...' : 'DISCONNECT'}
+                        </button>
+                      ) : service.comingSoon ? (
+                        <button
+                          className="rs-pill"
+                          disabled
+                          title="This integration is not available yet."
+                          style={{ padding: '6px 16px', fontSize: '0.7rem', minWidth: '110px', justifyContent: 'center', opacity: 0.5 }}
+                        >
+                          COMING SOON
                         </button>
                       ) : (
                         <button
