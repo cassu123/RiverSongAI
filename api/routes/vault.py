@@ -145,6 +145,8 @@ async def summarize_note(
         content = await provider.read_note(user_id, path)
 
         from core.conversation_loop import _build_llm_provider
+        from core.token_tracker import set_usage_source
+        set_usage_source("vault")
         llm, _ = _build_llm_provider()
 
         prompt = (

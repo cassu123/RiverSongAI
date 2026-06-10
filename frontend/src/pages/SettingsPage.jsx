@@ -86,6 +86,7 @@ export default function SettingsPage({
   const [hardwareCookbook,     setHardwareCookbook]     = useState(null)  // admin: GPU/RAM/CPU + per-model fit (null when flag off)
   const [loading,          setLoading]          = useState(true)
   const [saveStatus,       setSaveStatus]       = useState('')
+  const [saveErrorDetail,  setSaveErrorDetail]  = useState('')
   const [reloadPending,    setReloadPending]    = useState(false)
 
   // ---- Initial data load ----
@@ -161,6 +162,7 @@ export default function SettingsPage({
         console.error('[SettingsPage] Load failed:', err)
         if (!active) return
         setLoading(false)
+        setSaveErrorDetail(err?.message || String(err))
         setSaveStatus('error')
       }
     }
@@ -193,6 +195,7 @@ export default function SettingsPage({
       setTimeout(() => setSaveStatus(''), 2500)
     } catch (e) {
       console.error('[SettingsPage] LLM save failed:', e)
+      setSaveErrorDetail(e?.message || String(e))
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
@@ -222,7 +225,8 @@ export default function SettingsPage({
       if (!res.ok) throw new Error('Save failed')
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2500)
-    } catch {
+    } catch (e) {
+      setSaveErrorDetail(e?.message || String(e))
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
@@ -266,7 +270,8 @@ export default function SettingsPage({
       if (!res.ok) throw new Error('Save failed')
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2500)
-    } catch {
+    } catch (e) {
+      setSaveErrorDetail(e?.message || String(e))
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
@@ -286,7 +291,8 @@ export default function SettingsPage({
       if (!res.ok) throw new Error('Save failed')
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2500)
-    } catch {
+    } catch (e) {
+      setSaveErrorDetail(e?.message || String(e))
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
@@ -308,7 +314,8 @@ export default function SettingsPage({
       if (!res.ok) throw new Error('Save failed')
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2500)
-    } catch {
+    } catch (e) {
+      setSaveErrorDetail(e?.message || String(e))
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
@@ -337,6 +344,7 @@ export default function SettingsPage({
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2500)
     } catch (e) {
+      setSaveErrorDetail(e?.message || String(e))
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
@@ -357,7 +365,8 @@ export default function SettingsPage({
       if (!res.ok) throw new Error('Save failed')
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2500)
-    } catch {
+    } catch (e) {
+      setSaveErrorDetail(e?.message || String(e))
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
@@ -378,7 +387,8 @@ export default function SettingsPage({
       setAiFeatures(prev => ({ ...prev, [flagName]: enabled }))
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2500)
-    } catch {
+    } catch (e) {
+      setSaveErrorDetail(e?.message || String(e))
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
@@ -398,7 +408,8 @@ export default function SettingsPage({
       setPersonaSettings({ system_prompt: prompt })
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2500)
-    } catch {
+    } catch (e) {
+      setSaveErrorDetail(e?.message || String(e))
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
@@ -419,7 +430,8 @@ export default function SettingsPage({
       if (!res.ok) throw new Error('Save failed')
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2500)
-    } catch {
+    } catch (e) {
+      setSaveErrorDetail(e?.message || String(e))
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
@@ -440,7 +452,8 @@ export default function SettingsPage({
       if (!res.ok) throw new Error('Save failed')
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2500)
-    } catch {
+    } catch (e) {
+      setSaveErrorDetail(e?.message || String(e))
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
@@ -456,7 +469,8 @@ export default function SettingsPage({
       setPersonaSettings(data)
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2500)
-    } catch {
+    } catch (e) {
+      setSaveErrorDetail(e?.message || String(e))
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
@@ -475,7 +489,8 @@ export default function SettingsPage({
       if (!res.ok) throw new Error('Task failed')
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2500)
-    } catch {
+    } catch (e) {
+      setSaveErrorDetail(e?.message || String(e))
       setSaveStatus('error')
       setTimeout(() => setSaveStatus(''), 4000)
     }
@@ -585,7 +600,8 @@ export default function SettingsPage({
             <><span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>check_circle</span>SAVED</>
           )}
           {saveStatus === 'error' && (
-            <><span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>error</span>ERROR — CHECK CONSOLE</>
+            <><span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>error</span>
+              ERROR{saveErrorDetail ? ` — ${saveErrorDetail}` : ' — CHECK CONSOLE'}</>
           )}
         </div>
       )}

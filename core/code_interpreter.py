@@ -38,6 +38,8 @@ def _is_enabled() -> bool:
 
 
 async def run_code(code: str) -> str:
+    from core.token_tracker import set_usage_source
+    set_usage_source("code_interpreter")
     """Run Python via Open-Interpreter against the local Ollama instance."""
     if not _is_enabled():
         return (

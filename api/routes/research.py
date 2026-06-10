@@ -64,5 +64,7 @@ async def run_research(
     user_id = await _require_user(authorization)
     store = _store(request)
     from core.deep_research import run_deep_research
+    from core.token_tracker import set_usage_source
+    set_usage_source("research")
     result = await run_deep_research(body.query, user_id=user_id, store=store)
     return result
