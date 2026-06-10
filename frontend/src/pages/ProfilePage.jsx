@@ -277,7 +277,7 @@ function TwoFactorCard({ token }) {
           </div>
           <div
             style={{
-              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))',
               gap: 8, marginBottom: 16,
               padding: 12, background: 'var(--md-surface-container)', borderRadius: 8,
             }}

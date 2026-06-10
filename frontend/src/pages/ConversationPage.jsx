@@ -314,9 +314,11 @@ export default function ConversationPage({ setAction }) {
 
   const openModelPicker = useCallback((e) => {
     const rect = e.currentTarget.getBoundingClientRect()
+    // Clamp so the 300px popover always stays inside the viewport.
+    const rawRight = window.innerWidth - rect.right
     setPopoverPos({
       bottom: window.innerHeight - rect.top + 8,
-      right:  window.innerWidth  - rect.right,
+      right:  Math.max(8, Math.min(rawRight, window.innerWidth - 308)),
     })
     setPickerView('home')
     setModelPickerOpen(true)

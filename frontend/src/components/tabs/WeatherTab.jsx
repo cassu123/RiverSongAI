@@ -596,11 +596,7 @@ function DailyForecast({ daily, unit }) {
           const widthPct = Math.max(2, maxPct - minPct)
           const isLast = i === daily.length - 1
           return (
-            <div key={d.date} style={{
-              display: 'grid',
-              gridTemplateColumns: '46px 28px 1fr 130px 70px',
-              alignItems: 'center',
-              gap: 12,
+            <div key={d.date} className="rs-weather-row" style={{
               padding: '12px 0',
               borderBottom: isLast ? 'none' : '1px solid var(--md-outline-variant)',
             }}>
@@ -614,7 +610,7 @@ function DailyForecast({ daily, unit }) {
                 {d.condition || '—'}
               </span>
               {/* Range bar */}
-              <div style={{ position: 'relative', height: 6, background: 'var(--md-surface-container-high)', borderRadius: 3 }}>
+              <div className="rs-weather-bar" style={{ position: 'relative', height: 6, background: 'var(--md-surface-container-high)', borderRadius: 3 }}>
                 <div style={{
                   position: 'absolute',
                   left: `${minPct}%`,
