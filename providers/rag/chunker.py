@@ -13,11 +13,23 @@ from typing import List
 logger = logging.getLogger(__name__)
 
 
-def chunk_text(text: str, chunk_size: int = 512,
-               overlap: int = 64) -> List[str]:
+def chunk_text(text: str, chunk_size: int | None = None,
+               overlap: int | None = None) -> List[str]:
     """
     Splits text into overlapping chunks by word count.
+
+    Defaults come from the RAG_CHUNK_SIZE / RAG_CHUNK_OVERLAP settings;
+    explicit arguments override them.
     """
+    if chunk_size is None or overlap is None:
+        from config.settings import get_settings
+        settings = get_settings()
+        if chunk_size is None:
+            chunk_size = settings.rag_chunk_size
+        if overlap is None:
+            overlap = settings.rag_chunk_overlap
+    if overlap >= chunk_size:
+        overlap = max(chunk_size // 8, 0)
     words = text.split()
     chunks = []
 

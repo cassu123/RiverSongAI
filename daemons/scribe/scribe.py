@@ -23,7 +23,8 @@ class ScribeDaemon(BaseDaemon):
     async def _handle_task(self, action: str, payload: dict) -> dict:
         if action == "analyze_note":
             path = payload.get("path")
-            return await self._analyze_note(path)
+            user_id = payload.get("user_id")
+            return await self._analyze_note(path, user_id)
         return {"error": f"unknown action {action}"}
 
     async def _main_loop(self) -> None:
@@ -208,8 +209,65 @@ class ScribeDaemon(BaseDaemon):
             logger.warning("Scribe: fact extraction failed: %s", e)
             return []
 
-    async def _analyze_note(self, virtual_path: str) -> dict:
-        """Deep analysis of a single note."""
+    async def _analyze_note(self, virtual_path: str, user_id: str | None = None) -> dict:
+        """On-demand deep analysis of a single note.
+
+        Same pipeline as the heuristic scan, scoped to one note: read it,
+        extract facts via the Scribe-role LLM, persist them, and record a
+        Graphiti episode.
+        """
         logger.info("Scribe: analyzing note %s", virtual_path)
-        # This would be called on-demand or by the main loop.
-        return {"status": "analyzed", "path": virtual_path}
+        if not virtual_path or not user_id:
+            return {"error": "analyze_note requires 'path' and 'user_id' in the payload"}
+
+        from main import get_app
+        from core.conversation_loop import _build_llm_provider
+        from providers.vault.vault_provider import VaultProvider
+
+        app = get_app()
+        memory_manager = getattr(app.state, "memory_manager", None) if app else None
+        if memory_manager is None:
+            return {"error": "memory manager not available"}
+
+        try:
+            v_prov = VaultProvider(store=memory_manager._store)
+            content = await v_prov.read_note(user_id, virtual_path)
+        except (PermissionError, FileNotFoundError) as exc:
+            return {"error": f"cannot read note: {exc}"}
+        if not content:
+            return {"status": "analyzed", "path": virtual_path, "facts_extracted": 0}
+
+        role_cfg = get_role_registry().get(AgentRole.SCRIBE)
+        llm, _ = _build_llm_provider(
+            provider_override=role_cfg.provider,
+            model_override=role_cfg.model_id,
+        )
+        facts = await self._extract_facts_from_note(llm, content)
+        for f in facts:
+            await memory_manager.upsert_fact(
+                user_id=user_id,
+                key=f["key"],
+                value=f["value"],
+                source="scribe",
+            )
+
+        try:
+            await get_graphiti_provider().add_episode(Episode(
+                group_id="vault",
+                name=f"scribe:{virtual_path}",
+                episode_body=content[:4000],
+                source="scribe",
+                metadata={
+                    "user_id": user_id,
+                    "facts_extracted": len(facts),
+                    "virtual_path": virtual_path,
+                },
+            ))
+        except Exception as ge:
+            logger.debug("Scribe: graphiti episode write skipped: %s", ge)
+
+        return {
+            "status": "analyzed",
+            "path": virtual_path,
+            "facts_extracted": len(facts),
+        }

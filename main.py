@@ -378,6 +378,7 @@ def create_app() -> FastAPI:
     app.include_router(willow_router)
     app.include_router(shopify_webhooks_router)
     app.include_router(shopify_auth_router)
+    app.include_router(n8n_webhooks.router)
     app.include_router(image_router)
     app.include_router(push_router)
     app.include_router(legal_router)

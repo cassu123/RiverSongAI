@@ -63,8 +63,8 @@ class VaultProvider:
         if household:
             roots[VROOT_HOUSEHOLD] = household
 
-        # Shared with me is Phase 2+ or deferred? A.1 mentions it.
-        # For Phase 1, we'll just have Personal and Household.
+        # shared/ — one instance-wide root every user can read and write.
+        roots[VROOT_SHARED] = self.base_vault / "shared"
         return roots
 
     def _resolve_virtual(self, user_id: str, virtual_path: str) -> Path:
