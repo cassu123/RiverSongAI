@@ -1,5 +1,9 @@
 #!/bin/bash
 # deploy.sh — pull latest changes from GitHub and restart River Song AI
+#
+# Usage:
+#   ./deploy.sh            full deploy (pull, install, build, restart)
+#   ./deploy.sh --backup   backup databases + .env only (no deploy, no restart)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,6 +12,28 @@ cd "$SCRIPT_DIR"
 ts() { date '+%H:%M:%S'; }
 step() { echo ""; echo "[$(ts)] ==> $*"; }
 trap 'echo ""; echo "[$(ts)] !! Deploy failed at: ${BASH_COMMAND}" >&2' ERR
+
+# ---------------------------------------------------------------------------
+# Backup mode — used by the emergency-backup endpoint (api/routes/health.py).
+# Must never pull code or restart the service.
+# ---------------------------------------------------------------------------
+if [[ "${1:-}" == "--backup" ]]; then
+    BACKUP_DIR="${RS_BACKUP_DIR:-/mnt/data/river-song/backups}"
+    mkdir -p "$BACKUP_DIR" 2>/dev/null || BACKUP_DIR="$SCRIPT_DIR/backups"
+    mkdir -p "$BACKUP_DIR"
+    STAMP="$(date '+%Y%m%d-%H%M%S')"
+    ARCHIVE="$BACKUP_DIR/river-song-$STAMP.tar.gz"
+    step "Backing up databases and .env to $ARCHIVE"
+    FILES=(data/*.db)
+    [[ -f .env ]] && FILES+=(.env)
+    [[ -f data/.token_encryption_key ]] && FILES+=(data/.token_encryption_key)
+    tar -czf "$ARCHIVE" "${FILES[@]}"
+    chmod 600 "$ARCHIVE"
+    # Keep the 14 most recent backups
+    ls -1t "$BACKUP_DIR"/river-song-*.tar.gz 2>/dev/null | tail -n +15 | xargs -r rm -f
+    step "Backup complete: $ARCHIVE"
+    exit 0
+fi
 
 step "Pulling latest from GitHub"
 git pull --ff-only origin main
@@ -31,6 +57,25 @@ if [[ "$NEW_HASH" != "$OLD_HASH" ]]; then
     echo "$NEW_HASH" > "$REQ_HASH_FILE"
 else
     echo "    (requirements.txt unchanged — skipping pip install)"
+fi
+
+step "Ensuring TOKEN_ENCRYPTION_KEY in .env"
+# Integration tokens (Google/Shopify/Amazon) are encrypted with this key.
+# Without it in .env, the app used to invent a new key per restart, orphaning
+# every stored token. Generate once here so the key survives forever.
+if grep -q '^TOKEN_ENCRYPTION_KEY=..*' .env 2>/dev/null; then
+    echo "    (already set)"
+else
+    if [[ -s data/.token_encryption_key ]]; then
+        RS_TOKEN_KEY="$(cat data/.token_encryption_key)"
+        echo "    (adopting key previously auto-generated at data/.token_encryption_key)"
+    else
+        RS_TOKEN_KEY="$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+        echo "    (generated new key and saved it to .env)"
+    fi
+    sed -i '/^TOKEN_ENCRYPTION_KEY=$/d' .env 2>/dev/null || true
+    printf 'TOKEN_ENCRYPTION_KEY=%s\n' "$RS_TOKEN_KEY" >> .env
+    chmod 600 .env
 fi
 
 step "Ensuring espeak-ng data path"

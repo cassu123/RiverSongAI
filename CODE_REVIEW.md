@@ -15,10 +15,14 @@
 > - The wake-word dep `speexdsp` needs the `swig` system package to build; documented here
 >   since it blocks `pip install -r requirements.txt` on machines without swig.
 >
-> **⚠️ ACTION NEEDED ON THE SERVER:** add `TOKEN_ENCRYPTION_KEY` to the production `.env`
-> (generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`),
-> then reconnect any third-party integrations (Google/Shopify/Amazon) — tokens encrypted
-> under the old auto-generated keys are unrecoverable.
+> **TOKEN_ENCRYPTION_KEY is handled automatically:** `deploy.sh` now generates the key
+> once and persists it into the server's `.env` on the next deploy — no manual server
+> step. The only remaining manual task: reconnect any third-party integrations
+> (Google/Shopify/Amazon) once after deploy, since tokens encrypted under the old
+> per-restart keys are unrecoverable.
+> `deploy.sh --backup` also now performs a real backup (databases + .env, 14 kept)
+> instead of accidentally running a full deploy when the emergency-backup endpoint
+> calls it.
 >
 > Extra bugs found and fixed during implementation (not in the original review):
 > - Acking a vector command as "rejected" crashed on a nonexistent `rejected_at` column.
