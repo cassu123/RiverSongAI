@@ -11,17 +11,20 @@
 // All settings are persisted via REST calls to the backend (/api/settings/*).
 // =============================================================================
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useAudioRecorder } from '../hooks/useAudioRecorder'
-import { registerPushNotifications, unregisterPushNotifications, getPushSubscription } from '../utils/pushNotifications'
-import { MODEL_FAMILIES, TIER_ORDER, TIER_META } from '../utils/modelFamilies.js'
 import { API_BASE, Section, Toggle } from './settings/shared.jsx'
 import NimSection from './settings/NimSection.jsx'
 import ModelSection from './settings/ModelSection.jsx'
 import FeedsSection from './settings/FeedsSection.jsx'
 import BriefingSection from './settings/BriefingSection.jsx'
 import PersonaSection from './settings/PersonaSection.jsx'
+import DaemonControlSection from './settings/DaemonControlSection.jsx'
+import LocalAiFeaturesSection from './settings/LocalAiFeaturesSection.jsx'
+import HardwareCookbookSection from './settings/HardwareCookbookSection.jsx'
+import IntentRouterSection from './settings/IntentRouterSection.jsx'
+import ChronosSection from './settings/ChronosSection.jsx'
+import CloudFallbackSection from './settings/CloudFallbackSection.jsx'
 import VoiceSection from './settings/VoiceSection.jsx'
 import AdminWakeWordSection from './settings/AdminWakeWordSection.jsx'
 import ParentChildrenSection from './settings/ParentChildrenSection.jsx'
@@ -44,15 +47,6 @@ const TTL_LABELS = {
 // ---------------------------------------------------------------------------
 // Main settings page
 // ---------------------------------------------------------------------------
-const PROVIDER_NAMES = {
-  anthropic:  'Anthropic Claude',
-  gemini:     'Google Gemini',
-  openai:     'OpenAI',
-  mistral_ai: 'Mistral AI',
-  nvidia_nim: 'NVIDIA NIM',
-  ollama:     'Ollama (local)',
-  auto:       'River Decides (Auto)',
-}
 
 export default function SettingsPage({
   onFeaturesChanged,
@@ -631,131 +625,21 @@ export default function SettingsPage({
       {/* INTENT ROUTER — admin                                            */}
       {/* ================================================================ */}
       {showAdmin && (
-        <Section title="INTENT ROUTER">
-          <Toggle
-            id="intent-router-toggle"
-            label="Enable Auto Model Routing"
-            checked={intentRouterSettings.enabled}
-            onChange={v => saveIntentRouter({ enabled: v })}
-          />
-          <p className="rs-card-meta">
-            Selecting <strong>River Decides</strong> in the chat model picker routes each message
-            to the best provider automatically. Home commands stay local, complex reasoning goes
-            to Nemotron, creative writing to Kimi, research to Gemini.
-          </p>
-
-          {/* Sensitivity selector — min 44px touch targets */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span className="rs-card-meta" style={{ margin: 0, flexShrink: 0 }}>Signal sensitivity</span>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {[
-                { n: 1, label: 'High',          desc: 'Routes on 1+ match' },
-                { n: 2, label: 'Balanced',      desc: 'Routes on 2+ matches' },
-                { n: 3, label: 'Conservative',  desc: 'Routes on 3+ matches' },
-              ].map(({ n, label }) => (
-                <button
-                  key={n}
-                  className={`rs-pill is-tappable${intentRouterSettings.min_hits === n ? ' is-active' : ''}`}
-                  style={{ fontSize: '0.75rem', minHeight: 44, minWidth: 44, padding: '0 14px', cursor: 'pointer' }}
-                  onClick={() => saveIntentRouter({ min_hits: n })}
-                  aria-pressed={intentRouterSettings.min_hits === n}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Routing map — 2-column grid, intent → model */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 6 }}>
-            {[
-              { intent: 'Home Control', model: 'Llama 1B',    icon: 'home',          where: 'local' },
-              { intent: 'Quick Lookup', model: 'Llama 3B',    icon: 'bolt',          where: 'local' },
-              { intent: 'Reasoning',    model: 'Nemotron',    icon: 'psychology',    where: 'NIM' },
-              { intent: 'Creative',     model: 'Kimi K2.6',   icon: 'draw',          where: 'NIM' },
-              { intent: 'Code',         model: 'Qwen Coder',  icon: 'code',          where: 'local' },
-              { intent: 'Commerce',     model: 'Claude',      icon: 'storefront',    where: 'cloud' },
-              { intent: 'Research',     model: 'Gemini',      icon: 'travel_explore', where: 'cloud' },
-              { intent: 'General',      model: 'Llama 3B',    icon: 'chat',          where: 'local' },
-            ].map(({ intent, model, icon, where }) => (
-              <div key={intent} style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.75 }}>{icon}</span>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{intent}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span className="rs-card-meta" style={{ fontSize: '0.68rem' }}>{model}</span>
-                  <span className="rs-pill" style={{
-                    fontSize: '0.65rem', padding: '1px 6px',
-                    opacity: 0.7,
-                    background: where === 'local' ? 'color-mix(in srgb, var(--primary) 12%, transparent)' :
-                                where === 'NIM'   ? 'color-mix(in srgb, var(--md-sys-color-tertiary) 12%, transparent)' :
-                                                    'color-mix(in srgb, var(--md-sys-color-secondary) 12%, transparent)',
-                  }}>{where}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
+        <IntentRouterSection
+          intentRouterSettings={intentRouterSettings}
+          saveIntentRouter={saveIntentRouter}
+        />
       )}
 
       {/* ================================================================ */}
       {/* CHRONOS / SCRIBE — admin                                         */}
       {/* ================================================================ */}
       {showAdmin && (
-        <Section title="CHRONOS · MEMORY VAULT">
-          {/* Header row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '1.6rem', color: 'var(--primary)', flexShrink: 0 }}>history_edu</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Local markdown vault · Obsidian-style</div>
-              <div className="rs-card-meta">Voice-to-note · Conversation memory · Editable facts · Backlinks</div>
-            </div>
-            <span className="rs-pill is-active" style={{ fontSize: '0.6rem', flexShrink: 0 }}>LIVE</span>
-          </div>
-
-          {/* Vault tree — 3-column, folder icons, monospace paths */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
-            {[
-              { path: 'Personal/',       desc: 'Private to you',     icon: 'lock',         color: 'var(--primary)' },
-              { path: 'Household/',      desc: 'Shared with family',  icon: 'home',         color: 'var(--md-sys-color-tertiary)' },
-              { path: 'Shared with me/', desc: 'Explicit invites',    icon: 'group',        color: 'var(--md-sys-color-secondary)' },
-            ].map(({ path, desc, icon, color }) => (
-              <div key={path} style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span className="material-symbols-rounded" style={{ fontSize: '0.95rem', color }}>{icon}</span>
-                  <code style={{ fontSize: '0.7rem', fontWeight: 600 }}>{path}</code>
-                </div>
-                <div className="rs-card-meta" style={{ fontSize: '0.63rem' }}>{desc}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Scribe daemon toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Toggle
-              id="scribe-toggle"
-              label="Enable Scribe Daemon"
-              checked={scribeEnabled}
-              onChange={v => saveScribeEnabled(v)}
-            />
-            <span className="rs-pill" style={{ fontSize: '0.6rem', flexShrink: 0, color: daemonStatus?.scribe?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
-              {daemonStatus?.scribe?.alive ? '● ONLINE' : '○ OFFLINE'}
-            </span>
-          </div>
-          <p className="rs-card-meta" style={{ marginTop: -8 }}>
-            Watches the vault, re-indexes notes, extracts facts, and logs conversation summaries to your daily note.
-            Path: <code>data/vault/</code>
-          </p>
-
-          {/* Status */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'color-mix(in srgb, var(--primary) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)' }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--primary)', flexShrink: 0 }}>check_circle</span>
-            <span className="rs-card-meta" style={{ fontSize: '0.72rem' }}>
-              CHRONOS page, CodeMirror editor, backlinks, search, and Scribe daemon are fully operational. Graph view is Phase 3.
-            </span>
-          </div>
-        </Section>
+        <ChronosSection
+          scribeEnabled={scribeEnabled}
+          saveScribeEnabled={saveScribeEnabled}
+          daemonStatus={daemonStatus}
+        />
       )}
 
       {/* ================================================================ */}
@@ -805,291 +689,29 @@ export default function SettingsPage({
       {/* returns 404 → fetch null → section does not render).             */}
       {/* ================================================================ */}
       {showAdmin && hardwareCookbook && (
-        <Section title="HARDWARE COOKBOOK">
-          <p className="rs-card-meta" style={{ marginBottom: 12 }}>
-            What runs well on this rig. Detected GPU/RAM/CPU vs. every local model in the registry.
-          </p>
-
-          {/* Detected hardware row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" style={{ marginBottom: 14 }}>
-            <div className="rs-card" style={{ padding: 10 }}>
-              <div className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>GPU</div>
-              {hardwareCookbook.hardware.gpus.length === 0 ? (
-                <div className="rs-card-meta" style={{ fontSize: '0.75rem' }}>No NVIDIA GPU detected.</div>
-              ) : hardwareCookbook.hardware.gpus.map(g => (
-                <div key={g.index} style={{ fontSize: '0.78rem' }}>
-                  <div style={{ fontWeight: 600 }}>{g.name}</div>
-                  <div className="rs-card-meta" style={{ fontSize: '0.7rem' }}>
-                    {g.vram_free_gb} / {g.vram_total_gb} GB free · driver {g.driver_version}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="rs-card" style={{ padding: 10 }}>
-              <div className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>RAM</div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 600 }}>
-                {hardwareCookbook.hardware.ram_gb.total_gb} GB
-              </div>
-              <div className="rs-card-meta" style={{ fontSize: '0.7rem' }}>
-                {hardwareCookbook.hardware.ram_gb.available_gb} GB available
-              </div>
-            </div>
-            <div className="rs-card" style={{ padding: 10 }}>
-              <div className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>CPU</div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {hardwareCookbook.hardware.cpu.model}
-              </div>
-              <div className="rs-card-meta" style={{ fontSize: '0.7rem' }}>
-                {hardwareCookbook.hardware.cpu.cores} cores · {hardwareCookbook.hardware.cpu.arch}
-              </div>
-            </div>
-          </div>
-
-          {/* Fit summary pills */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
-            {[
-              ['fits', 'FITS GPU', 'var(--md-primary)'],
-              ['tight', 'TIGHT', 'var(--rs-status-warning)'],
-              ['ram_fallback', 'CPU+RAM', 'var(--md-outline)'],
-              ['oom', 'OOM', 'var(--md-error)'],
-            ].map(([key, label, color]) => (
-              <span key={key} className="rs-pill" style={{ fontSize: '0.65rem', padding: '3px 10px', borderColor: color, color }}>
-                {label} · {hardwareCookbook.summary[key]}
-              </span>
-            ))}
-          </div>
-
-          {/* Per-model fit list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {hardwareCookbook.models.map(m => {
-              const palette = {
-                fits:         { dot: 'var(--md-primary)',         label: 'FITS GPU' },
-                tight:        { dot: 'var(--rs-status-warning)',  label: 'TIGHT' },
-                ram_fallback: { dot: 'var(--md-outline)',         label: 'CPU+RAM' },
-                oom:          { dot: 'var(--md-error)',           label: 'OOM' },
-                unknown:      { dot: 'var(--md-outline-variant)', label: '?' },
-              }[m.status] || { dot: 'var(--md-outline-variant)', label: '?' }
-              return (
-                <div key={m.model_id} className="toggle-row" style={{ alignItems: 'center', gap: 8 }} title={m.reason}>
-                  <span style={{
-                    width: 8, height: 8, borderRadius: '50%',
-                    background: palette.dot, flexShrink: 0,
-                  }} />
-                  <span className="toggle-label" style={{ fontSize: '0.8rem', flex: 1 }}>
-                    {m.display_name}
-                    {m.vram_gb != null && (
-                      <span className="rs-card-meta" style={{ fontSize: '0.65rem', marginLeft: 8 }}>
-                        ~{m.vram_gb} GB
-                      </span>
-                    )}
-                  </span>
-                  <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px', borderColor: palette.dot, color: palette.dot }}>
-                    {palette.label}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-
-          <p className="rs-card-meta" style={{ marginTop: 12, fontSize: '0.68rem' }}>
-            Detected {new Date(hardwareCookbook.hardware.detected_at).toLocaleString()}.
-            Reload Settings to refresh. VRAM estimates assume Q4_K_M quantisation.
-          </p>
-        </Section>
+        <HardwareCookbookSection hardwareCookbook={hardwareCookbook} />
       )}
 
       {/* ================================================================ */}
       {/* DAEMON CONTROL — admin                                          */}
       {/* ================================================================ */}
       {showAdmin && (
-        <Section title="DAEMON CONTROL">
-          <p className="rs-card-meta" style={{ marginBottom: 16 }}>
-            Manage background daemon processes. These run as independent services on the server.
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {/* WARDEN */}
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>WARDEN (Vision/Security)</div>
-                  <div className="rs-card-meta" style={{ margin: 0 }}>RTSP Camera Monitoring</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                  <span className="rs-card-label" style={{ color: daemonStatus.warden?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
-                    {daemonStatus.warden?.alive ? '● ONLINE' : '○ OFFLINE'}
-                  </span>
-                  <Toggle
-                    id="warden-toggle"
-                    label=""
-                    checked={!!aiFeatures.WARDEN_ENABLED}
-                    onChange={v => saveAiFeature('WARDEN_ENABLED', v)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* MECHANIC */}
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>MECHANIC (Telemetry)</div>
-                  <div className="rs-card-meta" style={{ margin: 0 }}>MAVLink / ArduRover Link</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                  <span className="rs-card-label" style={{ color: daemonStatus.mechanic?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
-                    {daemonStatus.mechanic?.alive ? '● ONLINE' : '○ OFFLINE'}
-                  </span>
-                  <Toggle
-                    id="mechanic-toggle"
-                    label=""
-                    checked={!!aiFeatures.MECHANIC_ENABLED}
-                    onChange={v => saveAiFeature('MECHANIC_ENABLED', v)}
-                  />
-                </div>
-              </div>
-              {daemonStatus.mechanic?.alive && (
-                <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                  <button className="rs-pill" onClick={() => triggerDaemonTask('mechanic', 'telemetry')}>TELEMETRY</button>
-                  <button className="rs-pill" onClick={() => triggerDaemonTask('mechanic', 'arm')}>ARM ROVER</button>
-                </div>
-              )}
-            </div>
-
-            {/* HERALD */}
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>HERALD (Casting/Lip-Sync)</div>
-                  <div className="rs-card-meta" style={{ margin: 0 }}>Google Home Hub Integration</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                  <span className="rs-card-label" style={{ color: daemonStatus.herald?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
-                    {daemonStatus.herald?.alive ? '● ONLINE' : '○ OFFLINE'}
-                  </span>
-                  <Toggle
-                    id="herald-toggle"
-                    label=""
-                    checked={!!aiFeatures.HERALD_ENABLED}
-                    onChange={v => saveAiFeature('HERALD_ENABLED', v)}
-                  />
-                </div>
-              </div>
-              {daemonStatus.herald?.alive && (
-                <div style={{ marginTop: 12 }}>
-                  <button className="rs-pill" onClick={() => triggerDaemonTask('herald', 'recast_now')}>RECAST KIOSK</button>
-                </div>
-              )}
-            </div>
-
-            {/* SIFTER */}
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>SIFTER (RAG)</div>
-                  <div className="rs-card-meta" style={{ margin: 0 }}>Background Document Indexing</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                  <span className="rs-card-label" style={{ color: daemonStatus.sifter?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
-                    {daemonStatus.sifter?.alive ? '● ONLINE' : '○ OFFLINE'}
-                  </span>
-                  <Toggle
-                    id="sifter-toggle"
-                    label=""
-                    checked={!!aiFeatures.SIFTER_ENABLED}
-                    onChange={v => saveAiFeature('SIFTER_ENABLED', v)}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </Section>
+        <DaemonControlSection
+          daemonStatus={daemonStatus}
+          aiFeatures={aiFeatures}
+          saveAiFeature={saveAiFeature}
+          triggerDaemonTask={triggerDaemonTask}
+        />
       )}
 
       {/* ================================================================ */}
       {/* LOCAL AI FEATURES — admin                                        */}
       {/* ================================================================ */}
       {showAdmin && (
-        <Section title="LOCAL AI FEATURES">
-          <p className="rs-card-meta" style={{ marginBottom: 16 }}>
-            Toggle advanced AI capabilities. These are global settings that affect all users.
-          </p>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
-              <Toggle
-                id="feat-semantic"
-                label="Semantic Memory"
-                checked={!!aiFeatures.SEMANTIC_MEMORY_ENABLED}
-                onChange={v => saveAiFeature('SEMANTIC_MEMORY_ENABLED', v)}
-              />
-              <p className="rs-card-meta">Use vector search for memory recall</p>
-            </div>
-
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
-              <Toggle
-                id="feat-vision"
-                label="Vision Analysis"
-                checked={!!aiFeatures.VISION_ENABLED}
-                onChange={v => saveAiFeature('VISION_ENABLED', v)}
-              />
-              <p className="rs-card-meta">AI photo analysis for inventory & recipes</p>
-            </div>
-
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
-              <Toggle
-                id="feat-image"
-                label="Image Generation"
-                checked={!!aiFeatures.IMAGE_GENERATION_ENABLED}
-                onChange={v => saveAiFeature('IMAGE_GENERATION_ENABLED', v)}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                <p className="rs-card-meta" style={{ margin: 0 }}>Local product/recipe visuals</p>
-                <span className="rs-card-label" style={{ color: 'var(--md-error)', fontSize: '0.6rem' }}>GPU REQ</span>
-              </div>
-            </div>
-
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
-              <Toggle
-                id="feat-rag"
-                label="RAG Documents"
-                checked={!!aiFeatures.RAG_ENABLED}
-                onChange={v => saveAiFeature('RAG_ENABLED', v)}
-              />
-              <p className="rs-card-meta">Answer questions from documents</p>
-            </div>
-
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
-              <Toggle
-                id="feat-streaming"
-                label="LLM Streaming"
-                checked={!!aiFeatures.LLM_STREAMING_ENABLED}
-                onChange={v => saveAiFeature('LLM_STREAMING_ENABLED', v)}
-              />
-              <p className="rs-card-meta">Stream AI responses token by token</p>
-            </div>
-
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
-              <Toggle
-                id="feat-chatterbox"
-                label="Chatterbox TTS"
-                checked={!!aiFeatures.CHATTERBOX_ENABLED}
-                onChange={v => saveAiFeature('CHATTERBOX_ENABLED', v)}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                <p className="rs-card-meta" style={{ margin: 0 }}>AI voice cloning for River</p>
-                <span className="rs-card-label" style={{ color: 'var(--md-error)', fontSize: '0.6rem' }}>GPU REQ</span>
-              </div>
-            </div>
-          </div>
-          
-          <div style={{ marginTop: 16, padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)', flexShrink: 0 }}>warning</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
-              Backend restart required for changes to take effect.
-            </span>
-          </div>
-        </Section>
+        <LocalAiFeaturesSection
+          aiFeatures={aiFeatures}
+          saveAiFeature={saveAiFeature}
+        />
       )}
 
       {/* ================================================================ */}
@@ -1130,59 +752,12 @@ export default function SettingsPage({
       {/* CLOUD FALLBACK — user                                            */}
       {/* ================================================================ */}
       {showUser && (
-      <Section title="CLOUD FALLBACK">
-        <p className="rs-card-meta" style={{ marginBottom: 12 }}>
-          When local models are unavailable, River can fall back to cloud providers.
-        </p>
-
-        <Toggle
-          id="fallback-toggle"
-          label="Enable cloud fallback"
-          checked={!!(llmSettings?.cloud_fallback_enabled)}
-          onChange={v => saveFallback({ cloud_fallback_enabled: v })}
+        <CloudFallbackSection
+          llmSettings={llmSettings}
+          saveFallback={saveFallback}
+          enabledProviders={enabledProviders}
+          models={models}
         />
-
-        {llmSettings?.cloud_fallback_enabled && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginTop: 16 }}>
-            <div className="rs-card-meta">
-              <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>Provider</span>
-              <select
-                className="settings-select"
-                style={{ width: '100%' }}
-                value={llmSettings?.cloud_fallback_provider || ''}
-                onChange={e => saveFallback({ cloud_fallback_provider: e.target.value, cloud_fallback_model: '' })}
-              >
-                <option value="">— choose —</option>
-                {['anthropic', 'gemini', 'openai', 'mistral_ai'].map(p => (
-                  <option key={p} value={p} disabled={!enabledProviders[p]}>
-                    {PROVIDER_NAMES[p]}{!enabledProviders[p] ? ' (key required)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {llmSettings?.cloud_fallback_provider && (
-              <div className="rs-card-meta">
-                <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>Model</span>
-                <select
-                  className="settings-select"
-                  style={{ width: '100%' }}
-                  value={llmSettings?.cloud_fallback_model || ''}
-                  onChange={e => saveFallback({ cloud_fallback_model: e.target.value })}
-                >
-                  <option value="">— choose —</option>
-                  {models.cloud
-                    .filter(m => m.provider === llmSettings.cloud_fallback_provider)
-                    .map(m => (
-                      <option key={m.model_id} value={m.model_id}>{m.display_name}</option>
-                    ))
-                  }
-                </select>
-              </div>
-            )}
-          </div>
-        )}
-      </Section>
       )}
 
       {/* ================================================================ */}
