@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from core.auth import require_role
 from config.settings import get_settings
-from providers.memory.sqlite_store import SQLiteStore
+from providers.memory.sqlite_store import SQLiteStore, _safe_cols
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/vector", tags=["vector-fleet"])
@@ -881,7 +881,7 @@ async def patch_zone(id: str, body: dict):
             "capture_method"]}
     if not updates:
         return {"status": "ok"}
-    cols = ", ".join([f"{k}=?" for k in updates.keys()])
+    cols = ", ".join([f"{k}=?" for k in _safe_cols(updates.keys())])
     params = list(updates.values()) + [id]
     await SQLiteStore().execute_write_async(f"UPDATE vector_zones SET {cols} WHERE zone_id=?", tuple(params))
     return {"status": "ok"}
@@ -966,7 +966,7 @@ async def patch_program(id: str, body: dict):
             "speed_profile"]}
     if updates:
         updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-        cols = ", ".join([f"{k}=?" for k in updates.keys()])
+        cols = ", ".join([f"{k}=?" for k in _safe_cols(updates.keys())])
         params = list(updates.values()) + [id]
         await store.execute_write_async(f"UPDATE vector_programs SET {cols} WHERE program_id=?", tuple(params))
         if assigned_unit_id:
@@ -1049,7 +1049,7 @@ async def patch_schedule(id: str, body: dict):
             now = datetime.now(timezone.utc).replace(tzinfo=None)
             updates["next_run"] = croniter(
                 updates["cron_utc"], now).get_next(datetime).isoformat()
-        cols = ", ".join([f"{k}=?" for k in updates.keys()])
+        cols = ", ".join([f"{k}=?" for k in _safe_cols(updates.keys())])
         params = list(updates.values()) + [id]
         await SQLiteStore().execute_write_async(f"UPDATE vector_schedules SET {cols} WHERE schedule_id=?", tuple(params))
     return {"status": "ok"}

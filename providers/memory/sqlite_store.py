@@ -40,6 +40,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import sqlite3
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -660,6 +661,21 @@ def _str_to_dt(s: Optional[str]) -> Optional[datetime]:
 
 def _now_str() -> str:
     return datetime.now(tz=timezone.utc).isoformat()
+
+
+_SQL_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _safe_cols(keys) -> List[str]:
+    """Guard dynamic column names interpolated into SQL.
+
+    Callers allowlist keys upstream, but this is the last line of defense:
+    anything that isn't a plain identifier is rejected outright.
+    """
+    bad = [k for k in keys if not _SQL_IDENT_RE.match(str(k))]
+    if bad:
+        raise ValueError(f"Unsafe SQL column name(s): {bad}")
+    return list(keys)
 
 
 # =============================================================================
@@ -4111,7 +4127,7 @@ class SQLiteStore:
     async def update_vector_unit(self, unit_id: str, updates: dict) -> None:
         if not updates:
             return
-        cols = ", ".join([f"{k}=?" for k in updates.keys()])
+        cols = ", ".join([f"{k}=?" for k in _safe_cols(updates.keys())])
         params = list(updates.values()) + [unit_id]
         await self.execute_write_async(f"UPDATE vector_units SET {cols} WHERE unit_id=?", tuple(params))
 
@@ -4133,19 +4149,27 @@ class SQLiteStore:
         sql = "SELECT * FROM vector_commands WHERE unit_id=? AND status='pending' ORDER BY issued_at ASC LIMIT 1"
         return await self.execute_read_one_async(sql, (unit_id,))
 
+    # Statuses with a matching <status>_at timestamp column on vector_commands.
+    _COMMAND_TIMESTAMP_STATUSES = {"dispatched", "acknowledged", "completed"}
+
     async def update_command_status(
             self, command_id: str, status: str) -> None:
-        sql = f"UPDATE vector_commands SET status=?, {status}_at=? WHERE command_id=?"
-        await self.execute_write_async(sql, (status, _now_str(), command_id))
+        if status in self._COMMAND_TIMESTAMP_STATUSES:
+            sql = f"UPDATE vector_commands SET status=?, {status}_at=? WHERE command_id=?"
+            await self.execute_write_async(sql, (status, _now_str(), command_id))
+        else:
+            # e.g. "rejected" has no timestamp column; only update the status.
+            sql = "UPDATE vector_commands SET status=? WHERE command_id=?"
+            await self.execute_write_async(sql, (status, command_id))
 
     async def insert_telemetry(self, fields: dict) -> None:
-        cols = ", ".join(fields.keys())
+        cols = ", ".join(_safe_cols(fields.keys()))
         placeholders = ", ".join(["?"] * len(fields))
         sql = f"INSERT INTO vector_telemetry ({cols}) VALUES ({placeholders})"
         await self.execute_write_async(sql, tuple(fields.values()))
 
     async def insert_alert(self, fields: dict) -> None:
-        cols = ", ".join(fields.keys())
+        cols = ", ".join(_safe_cols(fields.keys()))
         placeholders = ", ".join(["?"] * len(fields))
         sql = f"INSERT INTO vector_alerts ({cols}) VALUES ({placeholders})"
         await self.execute_write_async(sql, tuple(fields.values()))
@@ -4160,7 +4184,7 @@ class SQLiteStore:
         await self.execute_write_async(sql, (session_id, unit_id, program_id, config_version, _now_str()))
 
     async def update_session(self, session_id: str, fields: dict) -> None:
-        cols = ", ".join([f"{k}=?" for k in fields.keys()])
+        cols = ", ".join([f"{k}=?" for k in _safe_cols(fields.keys())])
         params = list(fields.values()) + [session_id]
         await self.execute_write_async(f"UPDATE vector_sessions SET {cols} WHERE session_id=?", tuple(params))
 

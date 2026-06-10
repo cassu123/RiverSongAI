@@ -62,13 +62,12 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
       const url = new URL(baseUrl, window.location.href)
       if (ticket) {
         url.searchParams.set('ticket', ticket)
-      } else if (!token && !kioskToken) {
-        // Fallback for anonymous connection if any exist (none today)
-      } else {
-        // We expected a ticket but didn't get one. 
-        // Fallback to legacy ?token= if configured on server (handled by server)
-        if (token) url.searchParams.set('token', token)
-        if (kioskToken) url.searchParams.set('token', kioskToken)
+      } else if (token || kioskToken) {
+        // Ticket exchange failed. Never fall back to ?token= — it leaks the
+        // JWT into access logs and the server rejects it by default anyway.
+        console.error('[useWebSocket] Ticket exchange failed; not connecting.')
+        setConnectionStatus('error')
+        return
       }
 
       // Same-origin guard: in the browser build the WS target must match the

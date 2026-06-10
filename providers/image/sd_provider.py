@@ -55,8 +55,8 @@ class SDProvider:
                     json={"model": self.settings.llm_model, "keep_alive": 0},
                     timeout=2.0
                 )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Could not unload Ollama before SD start: %s", exc)
 
         # Start the SD process
         port = self.settings.sd_api_url.split(":")[-1].strip("/")
@@ -78,18 +78,23 @@ class SDProvider:
             stderr=subprocess.DEVNULL
         )
 
-        # Poll until API is ready
-        start_time = time.time()
-        while time.time() - start_time < 60:  # 60 seconds timeout
-            try:
-                async with httpx.AsyncClient() as client:
-                    resp = await client.get(f"{self.settings.sd_api_url}/sdapi/v1/options", timeout=1.0)
-                    if resp.status_code == 200:
-                        logger.info("Stable Diffusion process is ready.")
-                        return True
-            except Exception:
-                pass
-            await asyncio.sleep(3)
+        # Poll until API is ready; never leave the child process running if
+        # startup is interrupted (e.g. task cancelled).
+        try:
+            start_time = time.time()
+            while time.time() - start_time < 60:  # 60 seconds timeout
+                try:
+                    async with httpx.AsyncClient() as client:
+                        resp = await client.get(f"{self.settings.sd_api_url}/sdapi/v1/options", timeout=1.0)
+                        if resp.status_code == 200:
+                            logger.info("Stable Diffusion process is ready.")
+                            return True
+                except (httpx.HTTPError, OSError):
+                    pass  # not up yet — keep polling
+                await asyncio.sleep(3)
+        except BaseException:
+            await self._cleanup()
+            raise
 
         await self._cleanup()  # Kill the process if it timed out
         raise RuntimeError(

@@ -21,11 +21,13 @@ from fastapi import APIRouter, HTTPException, status, Request, Header
 from fastapi.responses import RedirectResponse
 from typing import Optional
 from pydantic import BaseModel
+import logging
 import os
 import json
 import uuid
 import urllib.parse
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import httpx
 from cryptography.fernet import Fernet
@@ -34,6 +36,8 @@ from config.settings import get_settings
 from core.auth import decode_token
 from core.errors import unauthorized, forbidden
 from providers.memory.sqlite_store import SQLiteStore
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/integrations", tags=["integrations"])
 
@@ -90,13 +94,34 @@ class IntegrationUpdateRequest(BaseModel):
 # Token encryption
 # ---------------------------------------------------------------------------
 
+_KEY_FILE = Path("data") / ".token_encryption_key"
+
+
 def _get_encryption_key() -> bytes:
-    key = os.getenv("TOKEN_ENCRYPTION_KEY")
+    key = get_settings().token_encryption_key or os.getenv("TOKEN_ENCRYPTION_KEY", "")
+    if not key and _KEY_FILE.exists():
+        key = _KEY_FILE.read_text().strip()
     if not key:
-        # Fallback for dev/testing if not set. In production set TOKEN_ENCRYPTION_KEY
-        # explicitly so the key survives process restarts.
+        # Generate once and persist so encrypted tokens survive restarts.
+        # Set TOKEN_ENCRYPTION_KEY in .env to manage the key explicitly.
         key = Fernet.generate_key().decode()
-        os.environ["TOKEN_ENCRYPTION_KEY"] = key
+        _KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _KEY_FILE.write_text(key)
+        _KEY_FILE.chmod(0o600)
+        logger.warning(
+            "TOKEN_ENCRYPTION_KEY not set; generated a new key and saved it to %s. "
+            "Move this value into .env as TOKEN_ENCRYPTION_KEY and back it up — "
+            "losing it makes stored integration tokens unrecoverable.",
+            _KEY_FILE,
+        )
+    try:
+        Fernet(key.encode())
+    except (ValueError, TypeError) as exc:
+        raise RuntimeError(
+            "TOKEN_ENCRYPTION_KEY is not a valid Fernet key. Generate one with: "
+            "python -c \"from cryptography.fernet import Fernet; "
+            "print(Fernet.generate_key().decode())\""
+        ) from exc
     return key.encode()
 
 

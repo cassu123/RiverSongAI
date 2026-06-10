@@ -117,13 +117,13 @@ class PlaywrightBrowser:
             if self._browser is not None:
                 try:
                     await self._browser.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Error closing Playwright browser: %s", exc)
             if self._pw is not None:
                 try:
                     await self._pw.stop()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Error stopping Playwright: %s", exc)
             self._browser = None
             self._context = None
             self._pw = None

@@ -84,11 +84,21 @@ class VaultProvider:
         root_path = roots[root_key]
         os.makedirs(root_path, exist_ok=True)
 
-        target = (root_path / sub_path).resolve()
+        unresolved = root_path / sub_path
+        target = unresolved.resolve()
 
-        # Security: must be inside the root
-        if not str(target).startswith(str(root_path.resolve())):
+        # Security: must be inside the root. is_relative_to avoids the
+        # string-prefix pitfall where /vault/alice-evil matches /vault/alice.
+        if not target.is_relative_to(root_path.resolve()):
             raise PermissionError("Access denied: path traversal detected.")
+
+        # Security: reject symlinks anywhere under the root so a link created
+        # inside one vault can never point at another user's files.
+        probe = unresolved
+        while probe != root_path and probe != probe.parent:
+            if probe.is_symlink():
+                raise PermissionError("Access denied: symlinks are not permitted in the vault.")
+            probe = probe.parent
 
         return target
 

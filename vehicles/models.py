@@ -188,7 +188,7 @@ class VehiclePart(Base):  # type: ignore
     part_name: Mapped[str] = mapped_column(String, nullable=False)
     oem_part_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     oem_specs: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    alternatives: Mapped[Optional[Any]] = mapped_column(JSON, nullable=True, default=[])
+    alternatives: Mapped[Optional[Any]] = mapped_column(JSON, nullable=True, default=list)
     source: Mapped[Optional[str]] = mapped_column(String, nullable=True)# "manual", "user_added", "ai_lookup"
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)

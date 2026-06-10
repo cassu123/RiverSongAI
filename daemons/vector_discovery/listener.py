@@ -41,7 +41,8 @@ class VectorDiscoveryDaemon(BaseDaemon):
                 if unit_id and info.parsed_addresses():
                     try:
                         ip_address = socket.inet_ntoa(info.parsed_addresses()[0])
-                    except:
+                    except (OSError, ValueError, IndexError) as exc:
+                        logger.debug("Could not parse mDNS address for %s: %s", unit_id, exc)
                         ip_address = "unknown"
                     self._discovered[unit_id] = (time.time(), ip_address, proto_version)
 

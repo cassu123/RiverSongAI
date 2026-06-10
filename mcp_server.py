@@ -78,8 +78,9 @@ try:
             "browser_screenshot",
             "browser_vision_on_page",
         })
-except Exception:
-    pass
+except Exception as exc:
+    logger.warning("Could not check playwright_browser_enabled setting; "
+                   "browser tools stay hidden: %s", exc)
 
 # River Song HTTP base — the MCP server calls back into the live FastAPI app
 # rather than re-implementing tool dispatch. This keeps audit logs / auth /
@@ -186,7 +187,8 @@ async def run_sse(host: str, port: int):
         # Validate eagerly
         try:
             await _resolve_user_id(token)
-        except Exception:
+        except Exception as exc:
+            logger.warning("MCP token validation failed: %s", exc)
             return Response(status_code=401, content="Invalid or expired token")
 
         async with transport.connect_sse(request.scope, request.receive, request._send) as streams:

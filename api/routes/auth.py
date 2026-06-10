@@ -71,6 +71,7 @@ async def setup_status(request: Request):
 
 
 @router.post("/setup")
+@limiter.limit(get_settings().rate_limit_auth_signup)
 async def setup(request: Request, body: SetupBody):
     store = _get_store(request)
 

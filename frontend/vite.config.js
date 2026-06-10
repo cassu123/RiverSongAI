@@ -22,6 +22,7 @@ export default defineConfig({
   plugins: [react()],
 
   build: {
+    sourcemap: false,  // never ship readable source in the production bundle
     chunkSizeWarningLimit: 1200,  // vendor-three (Three.js ecosystem) is ~1.1MB — expected
     rollupOptions: {
       output: {

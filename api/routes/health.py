@@ -263,10 +263,8 @@ async def _trigger_emergency_backup():
     Run the repo's backup/maintenance script.
     """
     try:
-        # Assuming Makefile or a script handles backup
-        # ./Makefile has no backup target usually, checking...
-        process = await asyncio.create_subprocess_shell(
-            "./deploy.sh --backup",  # Placeholder for actual backup flag/script
+        process = await asyncio.create_subprocess_exec(
+            "./deploy.sh", "--backup",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
