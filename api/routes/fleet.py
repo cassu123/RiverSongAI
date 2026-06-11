@@ -291,6 +291,14 @@ def build_fleet_router(program: str) -> APIRouter:
         )
         logger.warning("Fleet %s alert from %s [%s]: %s",
                        program, body.unit_id, body.level, body.message[:200])
+        from core.initiative import InitiativeEvent, get_initiative_engine
+        await get_initiative_engine().submit(InitiativeEvent(
+            kind="device_alert",
+            title=f"{program.capitalize()} unit {body.unit_id}",
+            message=body.message[:300],
+            severity="critical" if body.level.lower() in ("critical", "emergency") else "warning",
+            key=f"{program}:{body.unit_id}:{body.level}",
+        ))
         return {"status": "ok"}
 
     @router.get("/commands")
