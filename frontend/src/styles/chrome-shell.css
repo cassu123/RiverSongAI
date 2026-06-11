@@ -128,6 +128,58 @@
   50%       { opacity: 1;   box-shadow: 0 0 20px var(--primary); }
 }
 
+/* ── Presence states (PresenceOrb.jsx) ─────────────────────────────────────
+   The orb is River's pulse: ripples while she listens, shimmers while she
+   thinks, beats while she speaks, flares when she has something to say. */
+
+.rs-orb.is-listening {
+  opacity: 1;
+  animation: rs-orb-listen 1.6s ease-out infinite;
+}
+@keyframes rs-orb-listen {
+  0%   { box-shadow: 0 0 10px var(--primary),
+                     0 0 0 0 color-mix(in srgb, var(--primary) 55%, transparent); }
+  100% { box-shadow: 0 0 14px var(--primary),
+                     0 0 0 16px color-mix(in srgb, var(--primary) 0%, transparent); }
+}
+
+.rs-orb.is-thinking {
+  opacity: 1;
+  animation: rs-orb-think 2.4s ease-in-out infinite;
+}
+@keyframes rs-orb-think {
+  0%, 100% { filter: saturate(0.7) brightness(0.9); box-shadow: 0 0 10px var(--primary); }
+  50%      { filter: saturate(1.6) brightness(1.25); box-shadow: 0 0 24px var(--primary); }
+}
+
+.rs-orb.is-speaking {
+  opacity: 1;
+  animation: rs-orb-speak 0.55s ease-in-out infinite;
+}
+@keyframes rs-orb-speak {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 12px var(--primary); }
+  50%      { transform: scale(1.22); box-shadow: 0 0 26px var(--primary); }
+}
+
+.rs-orb.is-attention {
+  animation: rs-orb-attention 0.8s ease-out 3;
+}
+@keyframes rs-orb-attention {
+  0%   { box-shadow: 0 0 12px var(--primary),
+                     0 0 0 0 color-mix(in srgb, var(--primary) 70%, transparent); }
+  100% { box-shadow: 0 0 18px var(--primary),
+                     0 0 0 22px color-mix(in srgb, var(--primary) 0%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-orb.is-listening, .rs-orb.is-thinking,
+  .rs-orb.is-speaking, .rs-orb.is-attention {
+    animation: none;
+    opacity: 1;
+    box-shadow: 0 0 20px var(--primary);
+  }
+}
+
 .rs-hamburger {
   background: none;
   border: none;

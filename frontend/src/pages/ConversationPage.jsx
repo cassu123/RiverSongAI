@@ -208,6 +208,15 @@ export default function ConversationPage({ setAction }) {
 
   const canSpeak  = convState === 'idle' && connectionStatus === 'connected'
   const isActive  = convState !== 'idle' && convState !== 'connecting'
+  // Broadcast River's presence state so the header orb (and any future
+  // surface) can react on every page.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('rs-presence', { detail: { state: convState } }))
+    return () => {
+      window.dispatchEvent(new CustomEvent('rs-presence', { detail: { state: 'idle' } }))
+    }
+  }, [convState])
+
   const visualLvl = (convState === 'listening' || convState === 'speaking') ? audioLevel : 0
 
   const handleStartListening = useCallback(async () => {
