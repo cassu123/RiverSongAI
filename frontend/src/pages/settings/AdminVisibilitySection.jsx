@@ -37,6 +37,7 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify({ hidden_voices: next.hidden_voices, hidden_llms: next.hidden_llms }),
       })
+      window.dispatchEvent(new Event('rs-models-changed'))
     } catch (e) {
       console.error('[Admin] visibility save failed:', e)
       onChanged(visibility)

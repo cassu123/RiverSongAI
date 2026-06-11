@@ -16,6 +16,7 @@
    ============================================================ */
 
 :root {
+  color-scheme: dark;
   /* Primary tonal palette */
   --md-primary:                #96CBFF;
   --md-on-primary:             #003354;
