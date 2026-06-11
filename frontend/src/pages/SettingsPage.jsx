@@ -251,7 +251,10 @@ export default function SettingsPage({
     await fetch(`${API_BASE}/api/admin/llm-routing-flags`, {
       method: 'POST', headers, body: JSON.stringify(next),
     }).then(res => {
-      if (res.ok) setReloadPending(true)
+      if (res.ok) {
+        setReloadPending(true)
+        window.dispatchEvent(new Event('rs-models-changed'))
+      }
     }).catch(err => console.error('LLM routing flags save failed:', err))
   }, [llmRoutingFlags, token])
 

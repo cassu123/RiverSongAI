@@ -71,9 +71,21 @@ def _get_ollama_installed_models() -> Set[str]:
                 "Accept": "application/json"})
         with urllib.request.urlopen(req, timeout=3) as resp:
             data = json.loads(resp.read())
-        return {m["name"] for m in data.get("models", [])}
-    except Exception:
-        return set()
+        models = {m["name"] for m in data.get("models", [])}
+        global _ollama_cache
+        _ollama_cache = models
+        return models
+    except Exception as exc:
+        # Ollama restarting / briefly unreachable: serve the last-known list
+        # instead of making every local model vanish from the pickers.
+        logger.warning("Ollama discovery failed (%s); using cached list (%d models)",
+                       exc, len(_ollama_cache))
+        return set(_ollama_cache)
+
+
+# Last successful Ollama /api/tags result, kept so a transient outage
+# doesn't empty the model pickers.
+_ollama_cache: Set[str] = set()
 
 
 def _model_to_dict(m: ModelEntry,
@@ -326,11 +338,20 @@ async def save_llm_settings(
         raise bad_request(f"Unknown model '{body.model_id}' for provider '{body.provider}'. "
                           f"Check /api/models for valid options.")
 
+    # Validate against the SAME state /api/models lists from: admin global
+    # toggles + per-model visibility, not just .env keys. Otherwise a user
+    # can save a model that the picker will never show.
+    admin_config = await request.app.state.memory_manager._store.get_admin_config()
+    hidden = set(admin_config.get("hidden_llms", []))
+    if body.model_id in hidden:
+        raise bad_request(
+            f"Model '{body.model_id}' is hidden by the administrator.")
+
     if entry.is_cloud:
-        enabled = _get_enabled_providers()
+        enabled = _get_enabled_providers(admin_config)
         if not enabled.get(body.provider, False):
-            raise bad_request(f"Provider '{body.provider}' is not enabled or has no API key set. "
-                              f"Set {body.provider.upper()}_ENABLED=true and {body.provider.upper()}_API_KEY in .env.")
+            raise bad_request(f"Provider '{body.provider}' is disabled (admin toggle, "
+                              f"{body.provider.upper()}_ENABLED, or missing API key).")
 
     memory = request.app.state.memory_manager
     settings = LLMSettings(

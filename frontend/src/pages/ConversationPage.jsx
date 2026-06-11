@@ -275,18 +275,31 @@ export default function ConversationPage({ setAction }) {
   }, [user])
 
   // Load models + family overrides + current selection.
-  useEffect(() => {
+  const loadModels = useCallback(() => {
     if (!token) return
     fetch('/api/models', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {
+        // Keep unavailable models in the list — the picker greys them out
+        // with the reason. Hiding them made saved defaults silently vanish.
         setModels({
-          cloud: (data.cloud || []).filter(m => m.available),
-          local: (data.local || []).filter(m => m.available),
+          cloud: data.cloud || [],
+          local: data.local || [],
         })
         setFamilyOverrides(data.family_overrides || {})
       })
       .catch(() => {})
+  }, [token])
+
+  useEffect(() => {
+    loadModels()
+    // Admin toggled provider/model availability elsewhere in the app
+    window.addEventListener('rs-models-changed', loadModels)
+    return () => window.removeEventListener('rs-models-changed', loadModels)
+  }, [loadModels])
+
+  useEffect(() => {
+    if (!token) return
 
     fetch('/api/settings/llm', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
