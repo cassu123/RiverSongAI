@@ -110,6 +110,15 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
             console.error('[useWebSocket] Rejected message with dangerous keys')
             return
           }
+          if (data.type === 'proactive') {
+            // Initiative engine — River speaking first. Surface globally as a
+            // toast in addition to whatever the page does with it.
+            const kind = data.severity === 'critical' ? 'error'
+              : data.severity === 'warning' ? 'info' : 'success'
+            window.dispatchEvent(new CustomEvent('rs-toast', {
+              detail: { message: `${data.title}${data.message ? ' — ' + data.message : ''}`, kind },
+            }))
+          }
           onMessage(data)
         } catch (err) {
           console.error('[useWebSocket] Failed to parse incoming message:', event.data, err)

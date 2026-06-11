@@ -430,6 +430,15 @@ async def post_alert(body: AlertBody,
     fields["timestamp"] = now
     await store.insert_alert(fields)
 
+    from core.initiative import InitiativeEvent, get_initiative_engine
+    await get_initiative_engine().submit(InitiativeEvent(
+        kind="device_alert",
+        title=f"Vector unit {body.unit_id}",
+        message=(getattr(body, "message", None) or getattr(body, "fault_code", None) or body.level)[:300],
+        severity="critical" if body.level.lower() == "critical" else "warning",
+        key=f"vector:{body.unit_id}:{getattr(body, 'fault_code', '') or body.level}",
+    ))
+
     if body.level.lower() == "critical":
         try:
             from providers.push.notifier import notify_user
