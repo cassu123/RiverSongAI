@@ -1,4 +1,5 @@
 import React from 'react'
+import PresenceOrb from './PresenceOrb.jsx'
 import RsMark from '../components/RsMark.jsx'
 
 /**
@@ -48,7 +49,7 @@ export default function Shell({
               <span className="material-symbols-rounded">left_panel_open</span>
             </button>
           )}
-          <button className={`rs-orb ${mode === 'foyer' ? 'is-large' : 'is-small'}`} onClick={onOpenSpeak} aria-label="Speak to River" />
+          <PresenceOrb mode={mode} onClick={onOpenSpeak} />
           <button className="rs-hamburger" onClick={onOpenDrawer} aria-label="Open navigation">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="5" y1="8"  x2="19" y2="8"  />
