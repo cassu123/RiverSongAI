@@ -37,6 +37,7 @@ from .legal import router as legal_router
 from .usage import router as usage_router
 from .integrations import router as integrations_router
 from .vector_fleet import router as vector_fleet_router
+from .vexa import router as vexa_router
 from .documents import router as documents_router
 from .fleet import fleet_routers
 from .initiative import router as initiative_router
@@ -88,6 +89,7 @@ __all__ = [
     "usage_router",
     "integrations_router",
     "vector_fleet_router",
+    "vexa_router",
     "documents_router",
     "fleet_routers",
     "initiative_router",

@@ -32,7 +32,49 @@ She handles conversation, memory, home automation, routines, inventory, feeds, a
 | Voice ID (per-speaker biometric recognition) | ✅ Shipped |
 | Barcode scanner (camera + `@zxing`) | ✅ Shipped |
 | Local AI stack (vision, RAG, image gen, voice cloning, n8n) | ✅ Shipped |
-| Android app | 🔜 Phase 4 |
+| River Vector fleet (autonomous mowers/vehicles, `/api/vector`) | ✅ Shipped |
+| Satellite fleet API (Horizon, Kova, Sentinel, Vortex) | ✅ Shipped |
+| River Vexa driving companion API (`/api/vexa`) | ✅ Shipped |
+| MCP server (drive River Song from Claude or any MCP client) | ✅ Shipped |
+| Android app (River Song frontend) | 🔜 Phase 4 |
+
+---
+
+## River Product Family
+
+River Song is the hub. Satellite products run on their own hardware and
+connect back over device-token REST APIs: an admin claims a unit and gets a
+unit token; the device then authenticates every call with the
+`X-Unit-Token` header.
+
+| Product | Repo | What it is | API surface |
+|---|---|---|---|
+| River Song | [RiverSongAI](https://github.com/cassu123/RiverSongAI) | The hub — voice, memory, tools, dashboard | this repo |
+| River Vector | [river-vector](https://github.com/cassu123/river-vector) | Autonomous mower / ground-vehicle fleet (zones, programs, schedules) | `/api/vector/*` |
+| River Horizon | [river-horizon](https://github.com/cassu123/river-horizon) | Drones | `/api/horizon/*` |
+| River Kova | [river-kova](https://github.com/cassu123/river-kova) | Chore robots | `/api/kova/*` |
+| River Sentinel | [river-sentinel](https://github.com/cassu123/river-sentinel) | Patrol robots | `/api/sentinel/*` |
+| River Vortex | [river-vortex](https://github.com/cassu123/river-vortex) | Home hubs | `/api/vortex/*` |
+| River Vexa | [river-vexa](https://github.com/cassu123/river-vexa) | Voice-first driving companion (Android — motorcycle & car) | `/api/vexa/*` |
+| Android app | [riversong_android_app](https://github.com/cassu123/riversong_android_app) | Android frontend for the hub | — |
+
+### River Vexa (`/api/vexa`)
+
+Vexa turns a motorcycle or car setup into a voice-first driving companion.
+The Android client batches telemetry (GPS, speed, IMU lean angle, OBD-II on
+the car), polls for spoken commands, and forwards voice requests.
+
+Device endpoints (`X-Unit-Token`):
+
+- `POST /api/vexa/session/start` — register a drive/ride; flips rider presence to `driving`
+- `POST /api/vexa/session/end` — close the session; generates a trip summary from ingested telemetry
+- `POST /api/vexa/telemetry` — batched GPS/speed/IMU/OBD-II samples
+- `GET /api/vexa/commands/poll` — River Song → Vexa command queue (`speak`, `task_created`, `reminder_created`, `shopping_item_added`, `calendar_event_created`)
+- `POST /api/vexa/event` — Vexa → River Song events. `voice_task_request` routes to the matching tool (Google Tasks, reminders, shopping list, calendar) and queues a spoken confirmation; `sos` / `crash_detected` / `fuel_low` feed the initiative engine
+- `POST /api/vexa/tts` — one-shot Piper TTS, returns `audio/wav`
+
+Admin endpoints (JWT): claim/list/delete units, queue commands, browse trip
+summaries.
 
 ---
 
