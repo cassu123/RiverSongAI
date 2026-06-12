@@ -33,7 +33,8 @@ She handles conversation, memory, home automation, routines, inventory, feeds, a
 | Barcode scanner (camera + `@zxing`) | ✅ Shipped |
 | Local AI stack (vision, RAG, image gen, voice cloning, n8n) | ✅ Shipped |
 | River Vector fleet (autonomous mowers/vehicles, `/api/vector`) | ✅ Shipped |
-| Satellite fleet API (Horizon, Kova, Sentinel, Vortex) | ✅ Shipped |
+| Satellite fleet API (Horizon, Sentinel, Vortex) | ✅ Shipped |
+| River Kova chore robot API + voice dispatch (`/api/kova`) | ✅ Shipped |
 | River Vexa driving companion API (`/api/vexa`) | ✅ Shipped |
 | MCP server (drive River Song from Claude or any MCP client) | ✅ Shipped |
 | Android app (River Song frontend) | 🔜 Phase 4 |
@@ -52,7 +53,7 @@ unit token; the device then authenticates every call with the
 | River Song | [RiverSongAI](https://github.com/cassu123/RiverSongAI) | The hub — voice, memory, tools, dashboard | this repo |
 | River Vector | [river-vector](https://github.com/cassu123/river-vector) | Autonomous mower / ground-vehicle fleet (zones, programs, schedules) | `/api/vector/*` |
 | River Horizon | [river-horizon](https://github.com/cassu123/river-horizon) | Drones | `/api/horizon/*` |
-| River Kova | [river-kova](https://github.com/cassu123/river-kova) | Chore robots | `/api/kova/*` |
+| River Kova | [river-kova](https://github.com/cassu123/river-kova) | Household chore robots (ROS2, Pi 5) with a dedicated task-queue API | `/api/kova/*` |
 | River Sentinel | [river-sentinel](https://github.com/cassu123/river-sentinel) | Patrol robots | `/api/sentinel/*` |
 | River Vortex | [river-vortex](https://github.com/cassu123/river-vortex) | Home hubs | `/api/vortex/*` |
 | River Vexa | [river-vexa](https://github.com/cassu123/river-vexa) | Voice-first driving companion (Android — motorcycle & car) | `/api/vexa/*` |
@@ -75,6 +76,28 @@ Device endpoints (`X-Unit-Token`):
 
 Admin endpoints (JWT): claim/list/delete units, queue commands, browse trip
 summaries.
+
+### River Kova (`/api/kova`)
+
+Kova chore robots authenticate with a bearer API key plus an `X-Kova-Unit`
+header (claimed per unit by an admin). The robot-side client is
+`connectivity/api_client.py` in the river-kova repo.
+
+Device endpoints:
+
+- `POST /api/kova/units/register` / `POST /api/kova/units/deregister` — boot/shutdown lifecycle
+- `POST /api/kova/heartbeat` — state, safety level, and battery; latest is kept per unit for the dashboard
+- `GET /api/kova/units/{robot_id}/tasks` — poll the remote task queue (`{"tasks": [...]}`)
+- `POST /api/kova/tasks/{task_id}/status` — report task progress/completion
+- `POST /api/kova/telemetry` — metrics snapshots
+- `POST /api/kova/alerts` — safety/system alerts; `CRITICAL` fans out as push notifications to admins
+
+Voice dispatch: the `kova_chores` intent ("River, have Kova vacuum the
+living room") parses the chore and room with the same keyword maps the
+robot uses and queues the task at priority 7 on the best available unit.
+
+Admin endpoints (JWT): claim/list/delete units, queue chores, browse
+alerts.
 
 ---
 

@@ -2,8 +2,9 @@
 api/routes/fleet.py
 
 Generic device-fleet API for the River Song satellite programs that don't
-have a dedicated router yet: Horizon (drones), Kova (chore robots),
-Sentinel (patrol robots), and Vortex (home hubs).
+have a dedicated router yet: Horizon (drones), Sentinel (patrol robots),
+and Vortex (home hubs). Kova (chore robots) graduated to its dedicated
+router in kova.py.
 
 This generalizes the proven River Vector pattern — admin claims a unit and
 receives a unit token; the device then authenticates every call with the
@@ -47,7 +48,7 @@ from providers.memory.sqlite_store import SQLiteStore
 
 logger = logging.getLogger(__name__)
 
-FLEET_PROGRAMS = ("horizon", "kova", "sentinel", "vortex")
+FLEET_PROGRAMS = ("horizon", "sentinel", "vortex")
 
 _MAX_TELEMETRY_BATCH = 50
 _ACK_STATUSES = {"acknowledged", "rejected", "completed", "failed"}

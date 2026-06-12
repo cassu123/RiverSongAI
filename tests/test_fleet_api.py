@@ -1,8 +1,9 @@
 """
 tests/test_fleet_api.py
 
-Generic satellite fleet API (/api/horizon, /api/kova, /api/sentinel,
-/api/vortex): claim → register → heartbeat → telemetry → command round-trip.
+Generic satellite fleet API (/api/horizon, /api/sentinel, /api/vortex):
+claim → register → heartbeat → telemetry → command round-trip.
+(Kova graduated to a dedicated router — see test_kova_api.py.)
 """
 
 import pytest
@@ -27,8 +28,8 @@ def test_device_endpoints_require_unit_token():
 
 
 def test_admin_endpoints_require_auth():
-    assert client.get("/api/kova/units").status_code == 401
-    assert client.post("/api/kova/units/claim", json={"name": "x"}).status_code == 401
+    assert client.get("/api/sentinel/units").status_code == 401
+    assert client.post("/api/sentinel/units/claim", json={"name": "x"}).status_code == 401
 
 
 def test_full_unit_lifecycle(admin_headers):
@@ -105,12 +106,12 @@ def test_full_unit_lifecycle(admin_headers):
 
 
 def test_programs_are_isolated(admin_headers):
-    # A kova unit's token must not work on the vortex prefix.
-    r = client.post("/api/kova/units/claim",
-                    json={"name": "Kova Bot"}, headers=admin_headers)
+    # A sentinel unit's token must not work on the vortex prefix.
+    r = client.post("/api/sentinel/units/claim",
+                    json={"name": "Sentinel Bot"}, headers=admin_headers)
     unit_id, token = r.json()["unit_id"], r.json()["unit_token"]
     r = client.post("/api/vortex/heartbeat",
                     json={"unit_id": unit_id},
                     headers={"X-Unit-Token": token})
     assert r.status_code == 401
-    client.delete(f"/api/kova/units/{unit_id}", headers=admin_headers)
+    client.delete(f"/api/sentinel/units/{unit_id}", headers=admin_headers)
