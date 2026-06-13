@@ -25,7 +25,7 @@ const DashboardPage      = lazy(() => import('./pages/DashboardPage.jsx'))
 
 const ConversationPage   = lazy(() => import('./pages/ConversationPage.jsx'))
 const ChatPage           = lazy(() => import('./pages/ChatPage.jsx'))
-const MemoryPage         = lazy(() => import('./pages/MemoryPage.jsx'))
+const MemoryHubPage      = lazy(() => import('./pages/MemoryHubPage.jsx'))
 const RoutinesPage       = lazy(() => import('./pages/RoutinesPage.jsx'))
 const HomeNodePage       = lazy(() => import('./pages/HomeNodePage.jsx'))
 const UsersPage          = lazy(() => import('./pages/UsersPage.jsx'))
@@ -447,7 +447,7 @@ export default function App() {
 
               {currentPage === 'speak'      && <ConversationPage setAction={setPageAction} />}
               {currentPage === 'chat'       && <ChatPage setAction={setPageAction} onNavigate={handleNavigate} />}
-              {currentPage === 'memory'     && <MemoryPage setAction={setPageAction} />}
+              {currentPage === 'memory'     && <MemoryHubPage setAction={setPageAction} />}
               {currentPage === 'routines'   && <RoutinesPage setAction={setPageAction} />}
               {currentPage === 'home'       && <HomeNodePage setAction={setPageAction} />}
               {currentPage === 'users'      && <UsersPage setAction={setPageAction} />}
