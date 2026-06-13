@@ -84,6 +84,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
   const [viewingSession, setViewingSession] = useState(null)
 
   const [webSearch,        setWebSearch]        = useState(false)
+  const [deepResearch,     setDeepResearch]     = useState(false)
   const [showSystem,       setShowSystem]       = useState(false)
   const [modelPickerOpen,  setModelPickerOpen]  = useState(false)
   const [pickerView,       setPickerView]       = useState('home')
@@ -212,6 +213,28 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
 
     let full = ''
     try {
+      const currentDocId = overrideDocId !== undefined ? overrideDocId : activeDocId
+
+      // Deep Research mode — non-streaming. Run the research orchestrator and
+      // drop its report in as the assistant turn. A document attachment takes
+      // precedence (that's RAG Q&A), so research only runs without one.
+      if (deepResearch && !currentDocId) {
+        const res = await fetch(`${API_BASE}/api/research/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ query: t }),
+          signal: controller.signal,
+        })
+        if (res.status === 404) throw new Error('Research is turned off on the server.')
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || `HTTP ${res.status}`) }
+        const data = await res.json()
+        full = data.report || 'No report produced.'
+        if (data.sources?.length) full += `\n\n---\n_${data.sources.length} source${data.sources.length === 1 ? '' : 's'} · saved to Docs_`
+        setStreamingResponse('')
+        commitAssistant(full)
+        return
+      }
+
       let endpoint = `${API_BASE}/api/conversation/chat`
       let body = {
         message: t,
@@ -223,7 +246,6 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
         ...(systemPrompt.trim() ? { system_prompt: systemPrompt.trim() } : {}),
       }
 
-      const currentDocId = overrideDocId !== undefined ? overrideDocId : activeDocId
       if (currentDocId) {
         endpoint = `${API_BASE}/api/rag/query`
         body = { doc_id: currentDocId, question: t }
@@ -287,7 +309,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
       setIsThinking(false)
       setThinkingStart(null)
     }
-  }, [inputText, isThinking, messages, selectedModel, token, webSearch, systemPrompt, activeDocId, forgetMemory, user, currentSessionId])
+  }, [inputText, isThinking, messages, selectedModel, token, webSearch, deepResearch, systemPrompt, activeDocId, forgetMemory, user, currentSessionId])
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort()
@@ -363,6 +385,11 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
             <span className="material-symbols-rounded">public</span>
             <span className="rs-speak-actions-label">SCAN WEB</span>
           </button>
+
+          <button className={`rs-pill ${deepResearch ? 'is-active' : ''}`} onClick={() => setDeepResearch(!deepResearch)} title="Deep Research: multi-source, saved to Docs">
+            <span className="material-symbols-rounded">travel_explore</span>
+            <span className="rs-speak-actions-label">RESEARCH</span>
+          </button>
         </div>
 
         <div className="rs-chat-input-right">
@@ -390,7 +417,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
         </div>
       </div>
     </div>
-  ), [inputText, handleSend, handleStop, isRecording, startRecording, stopRecording, isThinking, viewingSession, webSearch, selectedModel, selectedModelLabel, token, openModelPicker])
+  ), [inputText, handleSend, handleStop, isRecording, startRecording, stopRecording, isThinking, viewingSession, webSearch, deepResearch, selectedModel, selectedModelLabel, token, openModelPicker])
 
   useEffect(() => {
     if (!embedded && setAction) {

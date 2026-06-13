@@ -1068,12 +1068,12 @@ class Settings(BaseSettings):
     # Documents workspace (Q2#6 — capability merge from Odysseus)
     # -------------------------------------------------------------------------
     documents_enabled: bool = Field(
-        default=False,
+        default=True,
         description=(
             "Per-user document workspace (Markdown / plaintext / CSV) with "
-            "multi-tab editing. Off by default per anti-regression guardrail. "
-            "When False the routes 404 and the drawer entry is hidden. "
-            "Required for Q3#11 Deep Research report storage."
+            "multi-tab editing. Enabled by default — backs the Docs tab in the "
+            "Memory hub and stores Deep Research reports. "
+            "Set DOCUMENTS_ENABLED=false in .env to disable."
         ),
     )
     documents_max_bytes: int = Field(
@@ -1164,12 +1164,14 @@ class Settings(BaseSettings):
     # Deep Research (Q3#11 — capability merge from Odysseus)
     # -------------------------------------------------------------------------
     deep_research_enabled: bool = Field(
-        default=False,
+        default=True,
         description=(
             "Multi-step research orchestrator: decompose → parallel web "
             "search → fetch + extract → synthesize a cited Markdown report "
-            "stored as a `research`-kind document (Q2#6). Off by default "
-            "per anti-regression guardrail."
+            "stored as a `research`-kind document (Q2#6). Enabled by default so "
+            "the in-chat Research toggle works. Live sources require a web "
+            "search provider; without one it falls back to model knowledge. "
+            "Set DEEP_RESEARCH_ENABLED=false in .env to disable."
         ),
     )
     deep_research_max_sources: int = Field(
