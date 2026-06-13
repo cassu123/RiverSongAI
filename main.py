@@ -192,6 +192,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from providers.vault.vault_provider import stop_vault_watcher
     stop_vault_watcher()
 
+    # Stop any running fleet device simulators
+    try:
+        from core.fleet_simulator import stop_all as _stop_sims
+        await _stop_sims()
+    except Exception:  # noqa: BLE001
+        pass
+
     scheduler_task.cancel()
     initiative_task.cancel()
     for _task in (scheduler_task, initiative_task):

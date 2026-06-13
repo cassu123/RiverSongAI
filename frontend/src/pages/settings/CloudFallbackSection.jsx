@@ -21,7 +21,9 @@ export default function CloudFallbackSection({ llmSettings, saveFallback, enable
   return (
     <Section title="CLOUD FALLBACK">
         <p className="rs-card-meta" style={{ marginBottom: 12 }}>
-          When local models are unavailable, River can fall back to cloud providers.
+          Admin only. When local models are unavailable, River falls back to a cloud
+          provider. Anthropic Claude and Google Gemini are supported; usage and cost
+          are tracked in Token Usage below.
         </p>
 
         <Toggle
@@ -42,7 +44,7 @@ export default function CloudFallbackSection({ llmSettings, saveFallback, enable
                 onChange={e => saveFallback({ cloud_fallback_provider: e.target.value, cloud_fallback_model: '' })}
               >
                 <option value="">— choose —</option>
-                {['anthropic', 'gemini', 'openai', 'mistral_ai'].map(p => (
+                {['anthropic', 'gemini'].map(p => (
                   <option key={p} value={p} disabled={!enabledProviders[p]}>
                     {PROVIDER_NAMES[p]}{!enabledProviders[p] ? ' (key required)' : ''}
                   </option>

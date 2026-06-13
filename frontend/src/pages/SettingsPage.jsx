@@ -768,9 +768,9 @@ export default function SettingsPage({
       )}
 
       {/* ================================================================ */}
-      {/* CLOUD FALLBACK — user                                            */}
+      {/* CLOUD FALLBACK — admin only (activated by admin)                 */}
       {/* ================================================================ */}
-      {showUser && (
+      {showAdmin && (
         <CloudFallbackSection
           llmSettings={llmSettings}
           saveFallback={saveFallback}

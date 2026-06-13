@@ -149,7 +149,7 @@ export default function SetupWizard() {
         body: JSON.stringify(formData)
       })
       if (!res.ok) throw new Error(await res.text())
-      navigate(`/fleet/units/${id}`)
+      navigate(`/fleet/vector/units/${id}`)
     } catch(err) {
       setError(err.message)
       setSaving(false)

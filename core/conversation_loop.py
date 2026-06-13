@@ -180,7 +180,14 @@ def _build_llm_provider(
     from api.routes.models_settings import _get_enabled_providers
     enabled_providers = _get_enabled_providers(admin_config)
 
+    # Tracks whether this turn was resolved by the "auto" (River decides)
+    # router. When River routes to a cloud/NIM model we always keep a local
+    # Ollama safety net so a NIM rate-limit or auth failure never dead-ends
+    # the conversation.
+    auto_routed = False
+
     if key == "auto":
+        auto_routed = True
         if settings.model_intent_router_enabled and message_text:
             from providers.llm.model_intent_router import route as router_route
             try:
@@ -198,7 +205,8 @@ def _build_llm_provider(
                 key = fallback_provider or settings.llm_provider
                 model_override = fallback_model or settings.llm_model
         else:
-            key = fallback_provider or settings.llm_provider
+            # Router disabled or no message text yet — default to local.
+            key = "ollama"
             model_override = fallback_model or settings.llm_model
 
     if key != "auto" and key in enabled_providers and not enabled_providers[key]:
@@ -207,6 +215,7 @@ def _build_llm_provider(
 
     primary = _instantiate_llm(key, model_override)
 
+    # Explicit per-user cloud fallback (admin-configured) takes priority.
     if fallback_provider:
         try:
             secondary = _instantiate_llm(fallback_provider, fallback_model)
@@ -215,7 +224,26 @@ def _build_llm_provider(
             logger.warning(
                 "Failed to initialize secondary LLM fallback: %s", exc)
 
+    # River-decided cloud/NIM pick with no explicit fallback: guarantee a
+    # local Ollama safety net so NVIDIA NIM (or any cloud) errors degrade
+    # gracefully to a local model instead of failing the turn.
+    if auto_routed and key != "ollama":
+        try:
+            local_safety = _instantiate_llm("ollama", _get_local_default_model())
+            return FallbackLLMProvider(primary, local_safety), router_label
+        except Exception as exc:
+            logger.warning(
+                "Failed to build local safety-net for auto-routed '%s': %s", key, exc)
+
     return primary, router_label
+
+
+def _get_local_default_model() -> Optional[str]:
+    """Best-effort local model id for the auto-route safety net."""
+    try:
+        return get_settings().llm_model or "llama3.2:3b"
+    except Exception:
+        return "llama3.2:3b"
 
 
 def _build_tts_provider(
@@ -322,6 +350,9 @@ class ConversationLoop:
         self._stt: Optional[STTProvider] = None
         self._llm: Optional[LLMProvider] = None
         self._tts: Optional[TTSProvider] = None
+        # Admin global LLM toggles, cached at initialize() so the per-message
+        # "auto" router (River decides) can respect them without a DB hit.
+        self._admin_config: dict = {}
         self._history: List[dict] = []
         self._initialized: bool = False
         self._turn_transcript: str = ""
@@ -396,6 +427,7 @@ class ConversationLoop:
             except Exception as e:
                 logger.warning(
                     "Failed to fetch admin config for LLM routing: %s", e)
+        self._admin_config = admin_config
 
         try:
             llm_provider_override = self._llm_provider_override
@@ -847,6 +879,12 @@ class ConversationLoop:
         # Step 4: Stream LLM + interleaved TTS
         # -----------------------------------------------------------------
         self._history.append({"role": "user", "content": transcript})
+
+        # Let River Decide: re-resolve the engine for this message.
+        router_label = await self._maybe_route_auto(transcript)
+        if router_label:
+            await on_event({"type": "model_route", "label": router_label})
+
         await on_event({"type": "thinking"})
 
         self._gen_id += 1
@@ -948,6 +986,40 @@ class ConversationLoop:
             await self._generation_task
         except asyncio.CancelledError:
             logger.info("Generation task cancelled.")
+
+    async def _maybe_route_auto(self, text: str) -> Optional[str]:
+        """When the user selected 'Let River Decide', re-resolve the LLM for
+        THIS message via the model intent router.
+
+        The provider is normally built once at initialize() with no message
+        text, which would collapse 'auto' to the local default. Rebuilding per
+        message is what makes River actually pick the best engine (local /
+        NVIDIA NIM / cloud) for what was just said, always wrapped with a local
+        safety net by _build_llm_provider.
+
+        Returns the router's UI label (e.g. "Nemotron · Reasoning") or None.
+        """
+        if self._llm_provider_override != "auto" or not text.strip():
+            return None
+        loop = asyncio.get_running_loop()
+
+        def _build():
+            return _build_llm_provider(
+                provider_override="auto",
+                model_override=None,
+                fallback_provider=self._fallback_provider,
+                fallback_model=self._fallback_model,
+                message_text=text,
+                admin_config=self._admin_config,
+            )
+        try:
+            llm, label = await loop.run_in_executor(None, _build)
+            self._llm = llm
+            return label
+        except Exception as exc:
+            logger.warning(
+                "Auto-route rebuild failed, keeping current LLM: %s", exc)
+            return None
 
     async def _infer_habits(self, user_text: str, assistant_text: str):
         """Analyze the turn to infer new user patterns/habits."""
@@ -1054,6 +1126,11 @@ class ConversationLoop:
             return
 
         self._history.append({"role": "user", "content": text})
+
+        # Let River Decide: re-resolve the engine for this message.
+        router_label = await self._maybe_route_auto(text)
+        if router_label:
+            await on_event({"type": "model_route", "label": router_label})
 
         full_response = ""
         try:

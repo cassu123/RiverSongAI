@@ -261,7 +261,7 @@ export default function UnitDetail() {
 
       {tab === 'settings' && (
         <div className="rs-card">
-          <button className="rs-btn-ghost" onClick={() => navigate(`/fleet/units/${id}/setup`)}>
+          <button className="rs-btn-ghost" onClick={() => navigate(`/fleet/vector/units/${id}/setup`)}>
             Re-run Setup Wizard
           </button>
           
@@ -270,7 +270,7 @@ export default function UnitDetail() {
             <button className="rs-btn-danger" onClick={async () => {
               if (confirm('Delete this unit? This cannot be undone.')) {
                 await fetch(`/api/vector/units/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
-                navigate('/fleet')
+                navigate('/fleet/vector')
               }
             }}>Delete Unit</button>
           </div>

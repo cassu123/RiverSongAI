@@ -297,7 +297,9 @@ async def save_user_preferences_route(
 class LLMSettingsBody(BaseModel):
     provider: str
     model_id: str
-    cloud_fallback_enabled: bool = False
+    # None = "don't touch fallback" (e.g. a plain model pick). Only the
+    # admin Cloud Fallback panel sends these explicitly.
+    cloud_fallback_enabled: Optional[bool] = None
     cloud_fallback_provider: Optional[str] = None
     cloud_fallback_model: Optional[str] = None
     whisper_model: str = "base"
@@ -326,6 +328,10 @@ async def get_llm_settings(
     }
 
 
+# Cloud fallback is admin-controlled and limited to Anthropic + Gemini.
+_FALLBACK_PROVIDERS = {"anthropic", "gemini"}
+
+
 @router.post("/settings/llm")
 async def save_llm_settings(
     request: Request,
@@ -333,34 +339,91 @@ async def save_llm_settings(
     authorization: Optional[str] = Header(default=None),
 ):
     user_id = await _require_user(authorization)
-    entry = LLMRegistry.get(body.provider, body.model_id)
-    if not entry:
-        raise bad_request(f"Unknown model '{body.model_id}' for provider '{body.provider}'. "
-                          f"Check /api/models for valid options.")
 
-    # Validate against the SAME state /api/models lists from: admin global
-    # toggles + per-model visibility, not just .env keys. Otherwise a user
-    # can save a model that the picker will never show.
+    # Is the caller an admin? Cloud fallback activation is admin-only.
+    is_admin = False
+    try:
+        tok = (authorization or "").removeprefix("Bearer ")
+        payload = await decode_token(tok)
+        is_admin = bool(payload) and payload.get("role") == "admin"
+    except Exception:
+        is_admin = False
+
     admin_config = await request.app.state.memory_manager._store.get_admin_config()
-    hidden = set(admin_config.get("hidden_llms", []))
-    if body.model_id in hidden:
-        raise bad_request(
-            f"Model '{body.model_id}' is hidden by the administrator.")
 
-    if entry.is_cloud:
-        enabled = _get_enabled_providers(admin_config)
-        if not enabled.get(body.provider, False):
-            raise bad_request(f"Provider '{body.provider}' is disabled (admin toggle, "
-                              f"{body.provider.upper()}_ENABLED, or missing API key).")
+    # "auto" = River decides per-message via the model intent router. It is a
+    # routing mode, not a catalog entry, so it skips the registry lookup.
+    if body.provider == "auto":
+        entry = None
+        normalized_model = "auto"
+    else:
+        entry = LLMRegistry.get(body.provider, body.model_id)
+        if not entry:
+            raise bad_request(f"Unknown model '{body.model_id}' for provider '{body.provider}'. "
+                              f"Check /api/models for valid options.")
+        normalized_model = body.model_id
+
+        # Validate against the SAME state /api/models lists from: admin global
+        # toggles + per-model visibility, not just .env keys. Otherwise a user
+        # can save a model that the picker will never show.
+        hidden = set(admin_config.get("hidden_llms", []))
+        if body.model_id in hidden:
+            raise bad_request(
+                f"Model '{body.model_id}' is hidden by the administrator.")
+
+        if entry.is_cloud:
+            enabled = _get_enabled_providers(admin_config)
+            if not enabled.get(body.provider, False):
+                raise bad_request(f"Provider '{body.provider}' is disabled (admin toggle, "
+                                  f"{body.provider.upper()}_ENABLED, or missing API key).")
+
+    # ----- Cloud fallback: admin-only, Anthropic/Gemini only -----
+    # Always start from the persisted state. Non-fallback saves (plain model
+    # pick, Whisper change) preserve it untouched. Only an actual *change* to
+    # the fallback config requires admin + validation.
+    memory = request.app.state.memory_manager
+    existing = await memory.get_llm_settings(user_id)
+    fallback_enabled = existing.cloud_fallback_enabled
+    fallback_provider = existing.cloud_fallback_provider
+    fallback_model = existing.cloud_fallback_model
+
+    if body.cloud_fallback_enabled is not None:
+        req_enabled = body.cloud_fallback_enabled
+        req_provider = body.cloud_fallback_provider if req_enabled else None
+        req_model = body.cloud_fallback_model if req_enabled else None
+        changed = (
+            req_enabled != fallback_enabled
+            or req_provider != fallback_provider
+            or req_model != fallback_model
+        )
+        if changed:
+            if not is_admin:
+                raise forbidden(
+                    "Only an administrator can change cloud fallback settings.")
+            if req_enabled:
+                if req_provider not in _FALLBACK_PROVIDERS:
+                    raise bad_request(
+                        "Cloud fallback supports only Anthropic Claude and Google Gemini.")
+                fb_enabled_map = _get_enabled_providers(admin_config)
+                if not fb_enabled_map.get(req_provider, False):
+                    raise bad_request(
+                        f"Fallback provider '{req_provider}' is disabled "
+                        f"({req_provider.upper()}_ENABLED or missing API key).")
+                if req_model and not LLMRegistry.get(req_provider, req_model):
+                    raise bad_request(
+                        f"Unknown fallback model '{req_model}' for '{req_provider}'.")
+            fallback_enabled = req_enabled
+            fallback_provider = req_provider
+            fallback_model = req_model
 
     memory = request.app.state.memory_manager
     settings = LLMSettings(
         user_id=user_id,
         provider=body.provider,
-        model=body.model_id,
-        cloud_fallback_enabled=body.cloud_fallback_enabled,
-        cloud_fallback_provider=body.cloud_fallback_provider,
-        cloud_fallback_model=body.cloud_fallback_model,
+        model=normalized_model,
+        cloud_fallback_enabled=fallback_enabled,
+        cloud_fallback_provider=fallback_provider,
+        cloud_fallback_model=fallback_model,
         whisper_model=body.whisper_model,
     )
     await memory.save_llm_settings(settings)
@@ -377,9 +440,8 @@ async def save_llm_settings(
         _strip(user_id),
         _strip(
             body.provider),
-        _strip(
-            body.model_id))
-    return {"status": "ok", "provider": body.provider, "model": body.model_id}
+        _strip(normalized_model))
+    return {"status": "ok", "provider": body.provider, "model": normalized_model}
 
 
 # =============================================================================

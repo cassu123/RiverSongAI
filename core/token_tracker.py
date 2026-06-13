@@ -54,7 +54,8 @@ _local = threading.local()
 _COST_PER_M: Dict[str, Dict[str, float]] = {
     # Anthropic
     "claude-sonnet-4-6": {"in": 3.00, "out": 15.00},
-    "claude-opus-4-7": {"in": 15.00, "out": 75.00},
+    "claude-opus-4-8": {"in": 5.00, "out": 25.00},
+    "claude-opus-4-7": {"in": 5.00, "out": 25.00},
     "claude-haiku-4-5": {"in": 0.80, "out": 4.00},
     "claude-haiku-4-5-20251001": {"in": 0.80, "out": 4.00},
     # OpenAI
@@ -189,6 +190,21 @@ def _estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
             if model.startswith(key) or key.startswith(model):
                 rates = r
                 break
+    if not rates:
+        # Fall back to the model catalog so every cloud/NIM model (Anthropic
+        # fallback, Gemini, NVIDIA NIM, etc.) is costed in the admin dashboard
+        # without maintaining a second table. Registry stores per-1K USD.
+        try:
+            from providers.llm.registry import LLMRegistry
+            for entry in LLMRegistry.all_models():
+                if entry.model_id == model and entry.is_cloud:
+                    rates = {
+                        "in": (entry.cost_per_1k_input_usd or 0.0) * 1000,
+                        "out": (entry.cost_per_1k_output_usd or 0.0) * 1000,
+                    }
+                    break
+        except Exception:
+            rates = None
     if not rates:
         return 0.0
     return (input_tokens * rates["in"] +

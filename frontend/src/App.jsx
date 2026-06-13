@@ -43,7 +43,7 @@ const ChronosPage             = lazy(() => import('./pages/ChronosPage.jsx'))
 const VehiclePage             = lazy(() => import('./pages/VehiclePage.jsx'))
 const CulinaryPage            = lazy(() => import('./pages/CulinaryPage.jsx'))
 const EnvironmentPage         = lazy(() => import('./pages/EnvironmentPage.jsx'))
-const VectorFleetPage         = lazy(() => import('./pages/VectorFleetPage.jsx'))
+const FleetPage               = lazy(() => import('./pages/FleetPage.jsx'))
 const DocumentsPage           = lazy(() => import('./pages/DocumentsPage.jsx'))
 const SkillsPage              = lazy(() => import('./pages/SkillsPage.jsx'))
 const PresetsPage             = lazy(() => import('./pages/PresetsPage.jsx'))
@@ -463,7 +463,7 @@ export default function App() {
               {currentPage === 'vehicles'   && <VehiclePage onNavigate={handleNavigate} setAction={setPageAction} />}
               {currentPage === 'environment'&& <EnvironmentPage setAction={setPageAction} />}
               {currentPage === 'culinary'   && <CulinaryPage setAction={setPageAction} />}
-              {currentPage === 'fleet'      && <VectorFleetPage setAction={setPageAction} />}
+              {currentPage === 'fleet'      && <FleetPage setAction={setPageAction} />}
               {currentPage === 'documents'  && <DocumentsPage setAction={setPageAction} />}
               {currentPage === 'skills'     && <SkillsPage setAction={setPageAction} />}
               {currentPage === 'presets'    && <PresetsPage setAction={setPageAction} />}

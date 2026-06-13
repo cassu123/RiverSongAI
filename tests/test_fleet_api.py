@@ -114,3 +114,87 @@ def test_programs_are_isolated(admin_headers):
                     headers={"X-Unit-Token": token})
     assert r.status_code == 401
     client.delete(f"/api/kova/units/{unit_id}", headers=admin_headers)
+
+
+def test_vexa_is_mounted(admin_headers):
+    # Vexa (vehicles) must now be a real program prefix.
+    r = client.post("/api/vexa/units/claim",
+                    json={"name": "Test Car"}, headers=admin_headers)
+    assert r.status_code == 200
+    unit_id = r.json()["unit_id"]
+    assert client.get("/api/vexa/units", headers=admin_headers).status_code == 200
+    client.delete(f"/api/vexa/units/{unit_id}", headers=admin_headers)
+
+
+def test_admin_reads_and_controls(admin_headers):
+    r = client.post("/api/vortex/units/claim",
+                    json={"name": "Hub One"}, headers=admin_headers)
+    unit_id, token = r.json()["unit_id"], r.json()["unit_token"]
+    device = {"X-Unit-Token": token}
+
+    client.post("/api/vortex/telemetry",
+                json={"unit_id": unit_id, "snapshots": [{"cpu_pct": 12}]},
+                headers=device)
+    client.post("/api/vortex/alerts",
+                json={"unit_id": unit_id, "level": "warning", "message": "hot"},
+                headers=device)
+
+    # Single unit
+    r = client.get(f"/api/vortex/units/{unit_id}", headers=admin_headers)
+    assert r.status_code == 200 and r.json()["unit_id"] == unit_id
+
+    # Telemetry read
+    r = client.get(f"/api/vortex/units/{unit_id}/telemetry", headers=admin_headers)
+    assert r.status_code == 200 and len(r.json()["telemetry"]) == 1
+
+    # Alerts read + ack
+    r = client.get(f"/api/vortex/units/{unit_id}/alerts", headers=admin_headers)
+    assert r.status_code == 200 and len(r.json()["alerts"]) == 1
+    alert_id = r.json()["alerts"][0]["id"]
+    assert client.post(f"/api/vortex/units/{unit_id}/alerts/{alert_id}/ack",
+                       headers=admin_headers).status_code == 200
+    r = client.get(f"/api/vortex/units/{unit_id}/alerts", headers=admin_headers)
+    assert len(r.json()["alerts"]) == 0
+
+    # Command history
+    client.post(f"/api/vortex/units/{unit_id}/command",
+                json={"command": "cast"}, headers=admin_headers)
+    r = client.get(f"/api/vortex/units/{unit_id}/commands", headers=admin_headers)
+    assert r.status_code == 200 and len(r.json()["commands"]) == 1
+
+    # Rotate token: old token stops working, new one works
+    r = client.post(f"/api/vortex/units/{unit_id}/rotate-token", headers=admin_headers)
+    new_token = r.json()["unit_token"]
+    assert new_token != token
+    assert client.post("/api/vortex/heartbeat", json={"unit_id": unit_id},
+                       headers={"X-Unit-Token": token}).status_code == 401
+    assert client.post("/api/vortex/heartbeat", json={"unit_id": unit_id},
+                       headers={"X-Unit-Token": new_token}).status_code == 200
+
+    client.delete(f"/api/vortex/units/{unit_id}", headers=admin_headers)
+
+
+def test_simulator_profiles():
+    # Profiles are pure functions — drive them directly, no event loop.
+    from core.fleet_simulator import PROFILES
+
+    h = PROFILES["horizon"]
+    st = h["init"]()
+    h["command"](st, "takeoff", {"altitude": 30})
+    for _ in range(15):
+        snap = h["step"](st)
+    assert snap["altitude_m"] > 20  # climbed toward target
+    h["command"](st, "land", {})
+    for _ in range(15):
+        snap = h["step"](st)
+    assert snap["altitude_m"] == 0 and snap["mode"] == "idle"
+
+    v = PROFILES["vexa"]
+    st = v["init"]()
+    assert st["locked"] is True
+    v["command"](st, "unlock", {})
+    assert v["step"](st)["locked"] is False
+    v["command"](st, "summon", {})
+    for _ in range(5):
+        snap = v["step"](st)
+    assert snap["speed_kph"] > 0 and snap["gear"] == "D"

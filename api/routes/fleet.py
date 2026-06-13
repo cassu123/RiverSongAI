@@ -47,7 +47,7 @@ from providers.memory.sqlite_store import SQLiteStore
 
 logger = logging.getLogger(__name__)
 
-FLEET_PROGRAMS = ("horizon", "kova", "sentinel", "vortex")
+FLEET_PROGRAMS = ("horizon", "kova", "sentinel", "vortex", "vexa")
 
 _MAX_TELEMETRY_BATCH = 50
 _ACK_STATUSES = {"acknowledged", "rejected", "completed", "failed"}
@@ -159,6 +159,10 @@ class AckBody(BaseModel):
     status: str = "acknowledged"
 
 
+class SimulateBody(BaseModel):
+    name: Optional[str] = None
+
+
 # ---------------------------------------------------------------------------
 # Router factory — one identical router per program prefix
 # ---------------------------------------------------------------------------
@@ -198,8 +202,145 @@ def build_fleet_router(program: str) -> APIRouter:
                 r["metadata"] = {}
         return {"units": rows}
 
+    @router.get("/units/{unit_id}", dependencies=[Depends(require_role("admin"))])
+    async def get_unit(unit_id: str):
+        store = SQLiteStore()
+        await _ensure_schema(store)
+        row = await store.execute_read_one_async(
+            "SELECT program, unit_id, name, metadata, online, registered_at, last_seen "
+            "FROM fleet_units WHERE program=? AND unit_id=?",
+            (program, unit_id),
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Unit not found")
+        try:
+            row["metadata"] = json.loads(row.get("metadata") or "{}")
+        except ValueError:
+            row["metadata"] = {}
+        return row
+
+    @router.get("/units/{unit_id}/telemetry",
+                dependencies=[Depends(require_role("admin"))])
+    async def unit_telemetry(unit_id: str, limit: int = 100):
+        store = SQLiteStore()
+        await _ensure_schema(store)
+        limit = max(1, min(limit, 1000))
+        rows = await store.execute_read_async(
+            "SELECT timestamp, payload FROM fleet_telemetry "
+            "WHERE program=? AND unit_id=? ORDER BY id DESC LIMIT ?",
+            (program, unit_id, limit),
+        )
+        out = []
+        for r in rows:
+            try:
+                payload = json.loads(r["payload"])
+            except ValueError:
+                payload = {}
+            payload.setdefault("timestamp", r["timestamp"])
+            out.append(payload)
+        out.reverse()  # oldest → newest for charting
+        return {"telemetry": out}
+
+    @router.get("/units/{unit_id}/alerts",
+                dependencies=[Depends(require_role("admin"))])
+    async def unit_alerts(unit_id: str, limit: int = 50):
+        store = SQLiteStore()
+        await _ensure_schema(store)
+        limit = max(1, min(limit, 500))
+        rows = await store.execute_read_async(
+            "SELECT id, timestamp, level, message FROM fleet_alerts "
+            "WHERE program=? AND unit_id=? ORDER BY id DESC LIMIT ?",
+            (program, unit_id, limit),
+        )
+        return {"alerts": rows}
+
+    @router.get("/units/{unit_id}/commands",
+                dependencies=[Depends(require_role("admin"))])
+    async def unit_commands(unit_id: str, limit: int = 50):
+        store = SQLiteStore()
+        await _ensure_schema(store)
+        limit = max(1, min(limit, 500))
+        rows = await store.execute_read_async(
+            "SELECT command_id, payload, status, issued_at, updated_at "
+            "FROM fleet_commands WHERE program=? AND unit_id=? "
+            "ORDER BY issued_at DESC LIMIT ?",
+            (program, unit_id, limit),
+        )
+        for r in rows:
+            try:
+                r["payload"] = json.loads(r["payload"])
+            except ValueError:
+                r["payload"] = {}
+        return {"commands": rows}
+
+    @router.post("/units/{unit_id}/alerts/{alert_id}/ack",
+                 dependencies=[Depends(require_role("admin"))])
+    async def ack_alert(unit_id: str, alert_id: int):
+        store = SQLiteStore()
+        await _ensure_schema(store)
+        await store.execute_write_async(
+            "DELETE FROM fleet_alerts WHERE program=? AND unit_id=? AND id=?",
+            (program, unit_id, alert_id),
+        )
+        return {"status": "ok"}
+
+    @router.post("/units/{unit_id}/rotate-token",
+                 dependencies=[Depends(require_role("admin"))])
+    async def rotate_token(unit_id: str):
+        store = SQLiteStore()
+        await _ensure_schema(store)
+        unit = await store.execute_read_one_async(
+            "SELECT unit_id FROM fleet_units WHERE program=? AND unit_id=?",
+            (program, unit_id),
+        )
+        if not unit:
+            raise HTTPException(status_code=404, detail="Unit not found")
+        new_token = uuid.uuid4().hex + uuid.uuid4().hex
+        await store.execute_write_async(
+            "UPDATE fleet_units SET unit_token=? WHERE program=? AND unit_id=?",
+            (new_token, program, unit_id),
+        )
+        return {"unit_id": unit_id, "unit_token": new_token}
+
     @router.delete("/units/{unit_id}", dependencies=[Depends(require_role("admin"))])
     async def delete_unit(unit_id: str):
+        store = SQLiteStore()
+        await _ensure_schema(store)
+        from core.fleet_simulator import stop_sim
+        await stop_sim(unit_id)
+        await store.execute_write_async(
+            "DELETE FROM fleet_units WHERE program=? AND unit_id=?",
+            (program, unit_id),
+        )
+        return {"status": "ok"}
+
+    # ---- Simulator (admin) — spin up a fake unit you can watch live ----
+
+    @router.post("/units/simulate",
+                 dependencies=[Depends(require_role("admin"))])
+    async def simulate_unit(body: SimulateBody = SimulateBody()):
+        store = SQLiteStore()
+        await _ensure_schema(store)
+        unit_id = "sim-" + uuid.uuid4().hex[:8]
+        unit_token = uuid.uuid4().hex + uuid.uuid4().hex
+        name = (body.name or "").strip() or f"Sim {program.capitalize()} {unit_id[-4:]}"
+        await store.execute_write_async(
+            "INSERT INTO fleet_units "
+            "(program, unit_id, name, unit_token, metadata, online, registered_at, last_seen) "
+            "VALUES (?, ?, ?, ?, ?, 1, ?, ?)",
+            (program, unit_id, name, unit_token,
+             json.dumps({"simulated": True}), _now(), _now()),
+        )
+        from core.fleet_simulator import start_sim
+        await start_sim(program, unit_id)
+        logger.info("Fleet %s: started simulated unit %s", program, unit_id)
+        return {"unit_id": unit_id, "name": name, "simulated": True}
+
+    @router.delete("/units/{unit_id}/simulate",
+                   dependencies=[Depends(require_role("admin"))])
+    async def stop_simulated_unit(unit_id: str):
+        from core.fleet_simulator import stop_sim
+        await stop_sim(unit_id)
         store = SQLiteStore()
         await _ensure_schema(store)
         await store.execute_write_async(

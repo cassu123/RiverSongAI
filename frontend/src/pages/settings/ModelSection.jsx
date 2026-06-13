@@ -49,10 +49,14 @@ function ModelCard({ model, isSelected, isDisabled, onSelect }) {
         )}
 
         {model.is_cloud && (
-          <>
-            {inputCost && <span className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>IN {inputCost}</span>}
-            {outputCost && <span className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>OUT {outputCost}</span>}
-          </>
+          (model.cost_per_1k_input_usd === 0 && model.cost_per_1k_output_usd === 0) ? (
+            <span className="rs-pill is-active" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>FREE</span>
+          ) : (
+            <>
+              {inputCost && <span className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>IN {inputCost}</span>}
+              {outputCost && <span className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>OUT {outputCost}</span>}
+            </>
+          )
         )}
       </div>
 
@@ -90,8 +94,38 @@ export default function ModelSection({
     return true
   })
 
+  const autoSelected = currentProvider === 'auto'
+
   return (
       <Section title="AI MODEL">
+        {/* LET RIVER DECIDE — auto routing via the model intent router */}
+        <div
+          className={`rs-card is-tappable ${autoSelected ? 'is-elev' : ''}`}
+          onClick={() => selectModel({ provider: 'auto', model_id: 'auto' })}
+          style={{
+            padding: '16px',
+            marginBottom: 20,
+            borderColor: autoSelected ? 'var(--primary)' : undefined,
+            background: autoSelected
+              ? 'color-mix(in srgb, var(--primary) 8%, transparent)'
+              : 'color-mix(in srgb, var(--md-tertiary) 6%, transparent)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1.4rem', color: 'var(--primary)' }}>auto_awesome</span>
+            <div style={{ flex: 1 }}>
+              <div className="rs-card-value" style={{ fontSize: '1rem', fontWeight: 600 }}>Let River Decide</div>
+              <div className="rs-card-meta">
+                River picks the best engine per message — local first, then NVIDIA NIM (free)
+                or cloud, with an automatic local fallback if a cloud model is unavailable.
+              </div>
+            </div>
+            {autoSelected && (
+              <span className="material-symbols-rounded" style={{ color: 'var(--primary)', fontSize: '1.2rem' }}>check_circle</span>
+            )}
+          </div>
+        </div>
+
         {showAdmin && (
           <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--md-outline-variant)' }}>
             <div className="rs-card-label" style={{ marginBottom: 8, color: 'var(--md-primary)' }}>ADMIN MASTER SWITCHES</div>
@@ -181,7 +215,7 @@ export default function ModelSection({
               : 'Disabled globally by admin switch above.'}
           </div>
 
-          {['anthropic', 'gemini', 'openai', 'mistral_ai'].map(providerKey => {
+          {['anthropic', 'gemini', 'openai', 'mistral_ai', 'nvidia_nim'].map(providerKey => {
             const provModels = models.cloud.filter(m => m.provider === providerKey)
             const enabled    = !!enabledProviders[providerKey]
             if (!provModels.length) return null
@@ -191,6 +225,7 @@ export default function ModelSection({
               gemini:     'Google Gemini',
               openai:     'OpenAI',
               mistral_ai: 'Mistral AI',
+              nvidia_nim: 'NVIDIA NIM (free tier)',
             }
 
             return (
