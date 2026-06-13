@@ -94,6 +94,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
   const [activeDocId, setActiveDocId] = useState(null)
 
   const inputRef = useRef(null)
+  const abortRef = useRef(null)
 
   const [initialIntentHandled, setInitialIntentHandled] = useState(false)
 
@@ -180,6 +181,36 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
     setStreamingResponse('')
     setToolEvents([])
 
+    // Fresh AbortController per send so the Stop button can cancel the
+    // in-flight stream. Stored in a ref so handleStop can reach it.
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    // Commit an assistant turn + persist to history. Shared by both the normal
+    // completion path and the user-stopped path so a partial reply isn't lost.
+    const commitAssistant = (text) => {
+      const assistantMsg = { role: 'assistant', text: text || '...' }
+      const updated = [...next, assistantMsg]
+      setMessages(updated)
+      if (user) {
+        setHistory(prev => {
+          let newHistory = [...prev]
+          const newSession = { id: currentSessionId || Date.now(), date: new Date().toISOString(), messages: updated }
+          if (currentSessionId) {
+            const idx = newHistory.findIndex(s => s.id === currentSessionId)
+            if (idx !== -1) newHistory[idx] = newSession
+            else newHistory = [newSession, ...newHistory]
+          } else {
+            newHistory = [newSession, ...newHistory]
+            setCurrentSessionId(newSession.id)
+          }
+          saveHistory(user.id, newHistory)
+          return newHistory
+        })
+      }
+    }
+
+    let full = ''
     try {
       let endpoint = `${API_BASE}/api/conversation/chat`
       let body = {
@@ -202,13 +233,13 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
+        signal: controller.signal,
       })
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
-      let full = ''
       let streamDone = false
       let buffer = ''
 
@@ -242,35 +273,25 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
         }
       }
       setStreamingResponse('')
-      const assistantMsg = { role: 'assistant', text: full || '...' }
-      const updated = [...next, assistantMsg]
-      setMessages(updated)
-      
-      // Update persistent history
-      if (user) {
-        setHistory(prev => {
-          let newHistory = [...prev]
-          const newSession = { id: currentSessionId || Date.now(), date: new Date().toISOString(), messages: updated }
-          if (currentSessionId) {
-            const idx = newHistory.findIndex(s => s.id === currentSessionId)
-            if (idx !== -1) newHistory[idx] = newSession
-            else newHistory = [newSession, ...newHistory]
-          } else {
-            newHistory = [newSession, ...newHistory]
-            setCurrentSessionId(newSession.id)
-          }
-          saveHistory(user.id, newHistory)
-          return newHistory
-        })
-      }
+      commitAssistant(full)
     } catch (err) {
-      setError('Neural link severed. Retrying...')
       setStreamingResponse('')
+      if (err.name === 'AbortError') {
+        // User pressed Stop — keep whatever streamed in before the abort.
+        if (full.trim()) commitAssistant(full)
+      } else {
+        setError(`Connection lost (${err.message || 'network error'}). Try again.`)
+      }
     } finally {
+      abortRef.current = null
       setIsThinking(false)
       setThinkingStart(null)
     }
   }, [inputText, isThinking, messages, selectedModel, token, webSearch, systemPrompt, activeDocId, forgetMemory, user, currentSessionId])
+
+  const handleStop = useCallback(() => {
+    abortRef.current?.abort()
+  }, [])
 
   useEffect(() => {
     if (initialIntent && !initialIntentHandled && token) {
@@ -357,13 +378,19 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
             <span className="material-symbols-rounded">{isRecording ? 'stop' : 'mic'}</span>
           </button>
 
-          <button className="rs-btn-primary rs-send-btn" onClick={() => handleSend()} disabled={!inputText.trim() || isThinking} style={{ background: 'var(--primary)', color: 'var(--bg-base)' }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '1.4rem' }}>arrow_upward</span>
-          </button>
+          {isThinking ? (
+            <button className="rs-btn-primary rs-send-btn rs-stop-btn" onClick={handleStop} title="Stop generating" style={{ background: '#dc3c3c', color: '#fff' }}>
+              <span className="material-symbols-rounded" style={{ fontSize: '1.4rem' }}>stop</span>
+            </button>
+          ) : (
+            <button className="rs-btn-primary rs-send-btn" onClick={() => handleSend()} disabled={!inputText.trim()} style={{ background: 'var(--primary)', color: 'var(--bg-base)' }}>
+              <span className="material-symbols-rounded" style={{ fontSize: '1.4rem' }}>arrow_upward</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
-  ), [inputText, handleSend, isRecording, startRecording, stopRecording, isThinking, viewingSession, webSearch, selectedModel, selectedModelLabel, token, openModelPicker])
+  ), [inputText, handleSend, handleStop, isRecording, startRecording, stopRecording, isThinking, viewingSession, webSearch, selectedModel, selectedModelLabel, token, openModelPicker])
 
   useEffect(() => {
     if (!embedded && setAction) {
