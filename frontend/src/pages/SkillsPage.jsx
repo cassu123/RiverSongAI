@@ -57,7 +57,7 @@ export default function SkillsPage({ setAction }) {
   const save = async () => {
     if (!draft) return
     if (!draft.name.trim() || !draft.prompt.trim()) {
-      setError('Name and prompt are required.')
+      setError('Topic and details are required.')
       return
     }
     setSaving(true)
@@ -108,21 +108,21 @@ export default function SkillsPage({ setAction }) {
   useEffect(() => {
     setAction(
       <div style={{ display: 'flex', gap: 8 }}>
-        <button className="rs-pill" onClick={startNew}>+ NEW SKILL</button>
+        <button className="rs-pill" onClick={startNew}>+ ADD</button>
       </div>
     )
   }, [setAction])
 
   if (loading) {
-    return <div className="rs-foyer animate-fade-in"><div className="rs-card-meta">LOADING SKILLS…</div></div>
+    return <div className="rs-foyer animate-fade-in"><div className="rs-card-meta">LOADING…</div></div>
   }
 
   if (disabled) {
     return (
       <div className="rs-foyer animate-fade-in">
         <div className="rs-foyer-head">
-          <h1 className="rs-greeting">Skills</h1>
-          <div className="rs-greeting-sub">Skill library is disabled. Ask the admin to enable it in settings.</div>
+          <h1 className="rs-greeting">About You</h1>
+          <div className="rs-greeting-sub">This is disabled. Ask the admin to enable it in settings.</div>
         </div>
       </div>
     )
@@ -131,36 +131,36 @@ export default function SkillsPage({ setAction }) {
   return (
     <div className="rs-foyer animate-fade-in">
       <div className="rs-foyer-head">
-        <h1 className="rs-greeting">Skill Library</h1>
-        <div className="rs-greeting-sub">Saved prompts River matches to your live request and folds into the system message.</div>
+        <h1 className="rs-greeting">About You</h1>
+        <div className="rs-greeting-sub">What River knows about you. It matches these to your messages and folds them into how it responds — add anything you want it to remember and use.</div>
       </div>
 
       {draft && (
         <div className="rs-card is-wide" style={{ padding: 16, marginBottom: 16 }}>
           <div className="rs-card-label" style={{ marginBottom: 10 }}>
-            {activeId ? 'EDIT SKILL' : 'NEW SKILL'}
+            {activeId ? 'EDIT' : 'NEW'}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <input
               type="text"
               value={draft.name}
               onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
-              placeholder="Name — e.g. Summarize chapter"
+              placeholder="Topic — e.g. My work, My family, How I like answers"
               style={inputStyle}
             />
             <input
               type="text"
               value={draft.trigger_phrases}
               onChange={e => setDraft(d => ({ ...d, trigger_phrases: e.target.value }))}
-              placeholder="Trigger phrases (optional, comma-separated)"
+              placeholder="When to recall this (optional keywords, comma-separated)"
               style={inputStyle}
             />
             <textarea
               value={draft.prompt}
               onChange={e => setDraft(d => ({ ...d, prompt: e.target.value }))}
-              placeholder="When asked to do X, produce Y in the format Z…"
+              placeholder="What River should know — e.g. I'm a night-shift nurse; keep answers short and practical."
               rows={6}
-              style={{ ...inputStyle, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', resize: 'vertical' }}
+              style={{ ...inputStyle, resize: 'vertical' }}
             />
             {error && <div style={{ color: 'var(--md-error)', fontSize: '0.75rem' }}>{error.toUpperCase()}</div>}
             <div style={{ display: 'flex', gap: 10 }}>
@@ -175,7 +175,7 @@ export default function SkillsPage({ setAction }) {
 
       <div className="rs-card-flow">
         {skills.length === 0 && !draft && (
-          <div className="rs-card-meta">No skills yet. Tap + NEW SKILL.</div>
+          <div className="rs-card-meta">Nothing yet. Tap + ADD to tell River about you.</div>
         )}
         {skills.map(s => (
           <div key={s.id} className="rs-card is-wide" style={{ padding: 16, opacity: s.is_active ? 1 : 0.55 }}>

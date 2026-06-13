@@ -1089,12 +1089,13 @@ class Settings(BaseSettings):
     # Skills system (Q2#7 — capability merge from Odysseus)
     # -------------------------------------------------------------------------
     skills_enabled: bool = Field(
-        default=False,
+        default=True,
         description=(
-            "Per-user skill library — saved prompts/recipes that are "
-            "vector-retrieved and prepended to the conversation system "
-            "prompt. Reuses the existing ChromaDB collection with metadata "
-            "kind='skill'. Off by default per anti-regression guardrail."
+            "Per-user knowledge profile ('About You') — saved facts/context "
+            "about the person that are vector-retrieved and folded into the "
+            "conversation system prompt so River tailors itself to them. "
+            "Reuses the ChromaDB collection with metadata kind='skill'. "
+            "Set SKILLS_ENABLED=false in .env to disable."
         ),
     )
     skills_top_k: int = Field(
