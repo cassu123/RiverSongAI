@@ -475,6 +475,7 @@ export default function CulinaryPage({ setAction }) {
   const [activeRecipe, setActiveRecipe] = useState(null)
   const [showShoppingList, setShowShoppingList] = useState(null) // items
   const [showStagingArea, setShowStagingArea] = useState(null) // piles
+  const [adjustItem, setAdjustItem] = useState(null)
 
   const [recommendations, setRecommendations] = useState({}) // bannedId -> recs[]
   const [recLoading, setRecLoading] = useState({}) // bannedId -> bool
@@ -511,6 +512,21 @@ export default function CulinaryPage({ setAction }) {
   }, [api, token])
 
   useEffect(() => { fetchData(activeTab) }, [activeTab, fetchData])
+
+  useEffect(() => {
+    if (!token) return;
+    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/culinary/ws?token=${token}`;
+    const ws = new WebSocket(wsUrl);
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (['stockroom_updated', 'stockroom_deleted', 'stockroom_created'].includes(msg.event)) {
+          if (activeTab === 'stockroom') fetchData('stockroom');
+        }
+      } catch (e) {}
+    };
+    return () => ws.close();
+  }, [token, activeTab, fetchData]);
 
   const getRecommendations = async (id, name) => {
     setRecLoading(prev => ({ ...prev, [id]: true }))
@@ -632,7 +648,7 @@ export default function CulinaryPage({ setAction }) {
              </div>
              <div className="rs-card-value" style={{ fontSize: '1.4rem' }}>{item.name}</div>
              <div style={{ marginTop: 24, display: 'flex', gap: 12 }}>
-                <button className="rs-pill is-active" style={{ flex: 1 }}>ADJUST</button>
+                <button className="rs-pill is-active" style={{ flex: 1 }} onClick={() => setAdjustItem(item)}>ADJUST</button>
                 <button className="rs-pill" onClick={() => {
                      localStorage.setItem('rs-chat-intent', JSON.stringify({ text: `River, status on ${item.name} levels.`, docId: null }));
                      window.dispatchEvent(new Event('rs-navigate-chat'));
@@ -872,6 +888,27 @@ export default function CulinaryPage({ setAction }) {
       }} api={api} />}
       {showStagingArea && <StagingAreaModal piles={showStagingArea} onClose={() => setShowStagingArea(null)} />}
       {showShoppingList && <ShoppingListModal items={showShoppingList} onClose={() => setShowShoppingList(null)} api={api} />}
+      
+      {adjustItem && (
+        <div className="rs-modal-overlay">
+          <div className="rs-modal" style={{ maxWidth: 400 }}>
+            <div className="rs-card-label" style={{ marginBottom: 16 }}>ADJUST STOCK: {adjustItem.name.toUpperCase()}</div>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 24, alignItems: 'center', justifyContent: 'center' }}>
+              <button className="rs-pill" onClick={() => setAdjustItem({...adjustItem, quantity: Math.max(0, adjustItem.quantity - 0.25)})}>-</button>
+              <div style={{ flex: 1, textAlign: 'center', fontSize: '2rem', fontWeight: 800 }}>{adjustItem.quantity.toFixed(2)}</div>
+              <button className="rs-pill" onClick={() => setAdjustItem({...adjustItem, quantity: adjustItem.quantity + 0.25})}>+</button>
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="rs-btn-primary" style={{ flex: 1 }} onClick={async () => {
+                await api.put(`/stockroom/${adjustItem.id}`, { quantity: adjustItem.quantity });
+                setAdjustItem(null);
+                fetchData('stockroom');
+              }}>SAVE</button>
+              <button className="rs-pill" onClick={() => setAdjustItem(null)}>CANCEL</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -60,9 +60,10 @@
   padding-block: 12px;
   padding-block-start: max(12px, env(safe-area-inset-top));
   background: color-mix(in srgb, var(--bg-base) 75%, transparent);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-block-end: 1px solid var(--md-outline-variant);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-block-end: 1px solid rgba(255, 255, 255, 0.08); /* Whisper border */
+  box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.08);
   z-index: 100;
 }
 
@@ -266,7 +267,16 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  animation: slideUpFade 0.6s var(--rs-motion-curve) both;
 }
+
+.rs-card-flow > .rs-card:nth-child(1) { animation-delay: 50ms; }
+.rs-card-flow > .rs-card:nth-child(2) { animation-delay: 150ms; }
+.rs-card-flow > .rs-card:nth-child(3) { animation-delay: 250ms; }
+.rs-card-flow > .rs-card:nth-child(4) { animation-delay: 350ms; }
+.rs-card-flow > .rs-card:nth-child(5) { animation-delay: 450ms; }
+.rs-card-flow > .rs-card:nth-child(6) { animation-delay: 550ms; }
+.rs-card-flow > .rs-card:nth-child(n+7) { animation-delay: 650ms; }
 
 .rs-card.is-wide { grid-column: span 1; }
 .rs-card.is-tall { grid-row: span 2; }
@@ -360,7 +370,8 @@
     grid-area: sidebar;
     background: color-mix(in srgb, var(--bg-base) 45%, transparent);
     backdrop-filter: var(--glass-blur);
-    border-inline-end: 1px solid var(--md-outline-variant);
+    border-inline-end: 1px solid rgba(255, 255, 255, 0.08); /* Whisper border */
+    box-shadow: 20px 0 60px -20px rgba(0, 0, 0, 0.7); /* Heavy shadow casting into main */
     z-index: 140;
     padding-top: var(--rs-header-h);
     overflow-y: auto;

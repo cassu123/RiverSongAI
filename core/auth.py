@@ -123,8 +123,12 @@ def require_role(*roles: str):
         if not user:
             # check header
             auth = request.headers.get("Authorization")
+            token = None
             if auth and auth.startswith("Bearer "):
                 token = auth.split(" ")[1]
+            if not token:
+                token = request.cookies.get("access_token")
+            if token:
                 user = await decode_token(token)
                 if user:
                     request.state.user = user

@@ -19,7 +19,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import bcrypt
-from fastapi import APIRouter, HTTPException, Request, Header
+from fastapi import Response, APIRouter, HTTPException, Request, Header
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 import httpx
@@ -32,6 +32,21 @@ from core.limiter import limiter
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+
+
+def _extract_token(request: Request, authorization: Optional[str]) -> Optional[str]:
+    if authorization and authorization.startswith("Bearer "):
+        return authorization.removeprefix("Bearer ").strip()
+    return request.cookies.get("access_token")
+
+async def _get_auth_payload(request: Request, authorization: Optional[str]) -> dict:
+    token = _extract_token(request, authorization)
+    if not token:
+        raise unauthorized("Not authenticated.")
+    payload = await decode_token(token)
+    if not payload:
+        raise unauthorized("Invalid or expired token.")
+    return payload
 
 class SignupBody(BaseModel):
     email: EmailStr
@@ -72,7 +87,7 @@ async def setup_status(request: Request):
 
 @router.post("/setup")
 @limiter.limit(get_settings().rate_limit_auth_signup)
-async def setup(request: Request, body: SetupBody):
+async def setup(request: Request, response: Response, body: SetupBody):
     store = _get_store(request)
 
     if await store.has_admin():
@@ -109,6 +124,7 @@ async def setup(request: Request, body: SetupBody):
             '').replace(
             '\r',
             ''))
+    response.set_cookie("access_token", token, httponly=True, secure=get_settings().environment == "production", samesite="lax", max_age=get_settings().jwt_expire_minutes * 60)
     return {"token": token, "user": {"id": user_id, "email": body.email.lower(
     ), "display_name": body.display_name, "role": "admin", "is_approved": True}}
 
@@ -259,7 +275,8 @@ async def login_totp(request: Request, body: TotpLoginBody):
             user_id=user["id"],
             email=user["email"],
             role=user["role"])
-        return {"token": token, "user": _user_login_payload(user)}
+        response.set_cookie("access_token", token, httponly=True, secure=get_settings().environment == "production", samesite="lax", max_age=get_settings().jwt_expire_minutes * 60)
+    return {"token": token, "user": _user_login_payload(user)}
     if totp.get("enabled") is not True:
         # Anything other than True/False means the state record is malformed.
         raise unauthorized("2FA state unavailable; contact an administrator.")
@@ -286,6 +303,7 @@ async def login_totp(request: Request, body: TotpLoginBody):
         user["email"].replace('\n', '').replace('\r', ''),
         used_recovery,
     )
+    response.set_cookie("access_token", token, httponly=True, secure=get_settings().environment == "production", samesite="lax", max_age=get_settings().jwt_expire_minutes * 60)
     return {"token": token, "user": _user_login_payload(
         user), "used_recovery_code": used_recovery}
 
@@ -305,11 +323,7 @@ def _user_login_payload(user: dict) -> dict:
 async def twofa_status(request: Request,
                        authorization: Optional[str] = Header(default=None)):
     """Whether the current user has 2FA enabled, and how many recovery codes remain."""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise unauthorized("Not authenticated.")
-    payload = await decode_token(authorization.removeprefix("Bearer "))
-    if not payload:
-        raise unauthorized("Invalid or expired token.")
+    payload = await _get_auth_payload(request, authorization)
 
     store = _get_store(request)
     state = await store.get_totp_state(payload["sub"])
@@ -329,11 +343,7 @@ async def twofa_enroll_start(
     """
     from core.twofa import generate_secret, provisioning_uri, make_qr_png_base64
 
-    if not authorization or not authorization.startswith("Bearer "):
-        raise unauthorized("Not authenticated.")
-    payload = await decode_token(authorization.removeprefix("Bearer "))
-    if not payload:
-        raise unauthorized("Invalid or expired token.")
+    payload = await _get_auth_payload(request, authorization)
 
     store = _get_store(request)
     user = await store.get_user_by_id(payload["sub"])
@@ -363,11 +373,7 @@ async def twofa_enroll_verify(body: TotpEnrollVerifyBody, request: Request,
     """
     from core.twofa import verify_totp, generate_recovery_codes, hash_recovery_codes
 
-    if not authorization or not authorization.startswith("Bearer "):
-        raise unauthorized("Not authenticated.")
-    payload = await decode_token(authorization.removeprefix("Bearer "))
-    if not payload:
-        raise unauthorized("Invalid or expired token.")
+    payload = await _get_auth_payload(request, authorization)
 
     if not verify_totp(body.secret, body.code):
         raise unauthorized(
@@ -402,11 +408,7 @@ async def twofa_disable(body: TotpDisableBody, request: Request,
     """
     from core.twofa import verify_totp
 
-    if not authorization or not authorization.startswith("Bearer "):
-        raise unauthorized("Not authenticated.")
-    payload = await decode_token(authorization.removeprefix("Bearer "))
-    if not payload:
-        raise unauthorized("Invalid or expired token.")
+    payload = await _get_auth_payload(request, authorization)
 
     store = _get_store(request)
     user = await store.get_user_by_id(payload["sub"])
@@ -436,12 +438,12 @@ async def twofa_disable(body: TotpDisableBody, request: Request,
 
 
 @router.post("/logout", status_code=204)
-async def logout(request: Request,
+async def logout(request: Request, response: Response,
                  authorization: Optional[str] = Header(default=None)):
-    if not authorization or not authorization.startswith("Bearer "):
-        return  # Ignore if not logged in
-
-    token = authorization.removeprefix("Bearer ").strip()
+    response.delete_cookie("access_token")
+    token = _extract_token(request, authorization)
+    if not token:
+        return
     payload = await decode_token(token)
     if not payload:
         return  # Already invalid
@@ -461,13 +463,7 @@ async def logout(request: Request,
 @router.get("/me")
 async def me(request: Request,
              authorization: Optional[str] = Header(default=None)):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise unauthorized("Not authenticated.")
-
-    token = authorization.removeprefix("Bearer ")
-    payload = await decode_token(token)
-    if not payload:
-        raise unauthorized("Invalid or expired token.")
+    payload = await _get_auth_payload(request, authorization)
 
     store = _get_store(request)
     user = await store.get_user_by_id(payload["sub"])
@@ -480,13 +476,7 @@ async def me(request: Request,
 @router.patch("/password")
 async def change_password(body: ChangePasswordBody, request: Request,
                           authorization: Optional[str] = Header(default=None)):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise unauthorized("Not authenticated.")
-
-    token = authorization.removeprefix("Bearer ")
-    payload = await decode_token(token)
-    if not payload:
-        raise unauthorized("Invalid or expired token.")
+    payload = await _get_auth_payload(request, authorization)
 
     store = _get_store(request)
     user = await store.get_user_by_id(payload["sub"])
@@ -508,13 +498,7 @@ async def change_password(body: ChangePasswordBody, request: Request,
 @router.post("/force-change-password")
 async def force_change_password(body: ForceChangePasswordBody, request: Request,
                                 authorization: Optional[str] = Header(default=None)):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise unauthorized("Not authenticated.")
-
-    token = authorization.removeprefix("Bearer ")
-    payload = await decode_token(token)
-    if not payload:
-        raise unauthorized("Invalid or expired token.")
+    payload = await _get_auth_payload(request, authorization)
 
     store = _get_store(request)
     user = await store.get_user_by_id(payload["sub"])
@@ -547,11 +531,7 @@ class IntegrationsUpdate(BaseModel):
 
 async def _require_admin(request: Request,
                          authorization: Optional[str]) -> dict:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise unauthorized("Not authenticated.")
-    payload = await decode_token(authorization.removeprefix("Bearer "))
-    if not payload:
-        raise unauthorized("Invalid or expired token.")
+    payload = await _get_auth_payload(request, authorization)
     if payload.get("role") != "admin":
         raise forbidden("Admin access required.")
     return payload

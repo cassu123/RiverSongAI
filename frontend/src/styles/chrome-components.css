@@ -11,14 +11,19 @@
   background: color-mix(in srgb, var(--md-surface-container-low) 45%, transparent);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: 2rem; /* Double-bezel outer radius */
+  /* Double-Bezel Implementation via CSS */
+  border: 1px solid rgba(255, 255, 255, 0.12); /* Whisper border */
+  border-radius: calc(2rem - 4px); /* Inner radius */
   padding: clamp(20px, 5cqi, 32px);
-  box-shadow: 0 8px 32px -12px rgba(0,0,0,0.5),
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.08); /* Inner refraction bezel */
+  box-shadow: 
+    0 0 0 4px rgba(5, 5, 5, 0.6), /* Dark outer shell */
+    0 0 0 5px rgba(255, 255, 255, 0.05), /* Outer shell edge */
+    0 8px 32px -12px rgba(0,0,0,0.5), /* Drop shadow */
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08); /* Inner refraction bezel */
   transition: background var(--rs-motion-fast) var(--rs-motion-curve),
               border-color var(--rs-motion-fast) var(--rs-motion-curve),
-              transform var(--rs-motion-fast) var(--rs-motion-curve);
+              transform var(--rs-motion-fast) var(--rs-motion-curve),
+              box-shadow var(--rs-motion-fast) var(--rs-motion-curve);
   overflow: hidden;
   min-width: 0;
   word-break: break-word;
@@ -45,9 +50,12 @@
 
 .rs-card.is-elev {
   background: color-mix(in srgb, var(--md-surface-container-high) 65%, transparent);
-  border-color: var(--md-outline);
-  box-shadow: 0 16px 64px -16px rgba(0,0,0,0.6),
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 0 0 4px rgba(5, 5, 5, 0.8),
+    0 0 0 5px rgba(255, 255, 255, 0.08),
+    0 16px 64px -16px rgba(0,0,0,0.6),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
 }
 
 .rs-card.is-tappable { cursor: pointer; }
@@ -73,7 +81,7 @@
   align-items: center;
   gap: 10px;
   font-size: 0.65rem;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'JetBrains Mono', monospace; /* Changed to JetBrains Mono */
   color: var(--md-on-surface-variant);
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -209,6 +217,7 @@
   cursor: pointer;
   transition: all var(--rs-motion-fast) var(--rs-motion-curve);
   border: 1px solid transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15); /* 3D Lip */
 }
 
 .rs-pill.is-active {
@@ -222,7 +231,10 @@
   transform: translateY(-1px);
 }
 
-.rs-pill:active { transform: scale(0.96); }
+.rs-pill:active { 
+  transform: scale(0.96); 
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2); 
+}
 
 .rs-btn-primary {
   all: unset;
@@ -242,7 +254,10 @@
 }
 
 .rs-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px -8px var(--primary); }
-.rs-btn-primary:active { transform: translateY(0) scale(0.98); }
+.rs-btn-primary:active { 
+  transform: translateY(0) scale(0.96); 
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2); 
+}
 
 .rs-icon-btn {
   width: 44px;
@@ -271,6 +286,11 @@
 /* =============================================================================
    Dashboard / Foyer Layout Classes
    ============================================================================= */
+@keyframes slideUpFade {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 .rs-dashboard-flow {
   display: flex;
   flex-wrap: wrap;

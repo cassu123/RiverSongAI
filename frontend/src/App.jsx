@@ -55,6 +55,7 @@ const GoogleCallbackPage      = lazy(() => import('./pages/GoogleCallbackPage.js
 const ReadingOAuthCallbackPage = lazy(() => import('./pages/ReadingOAuthCallbackPage.jsx'))
 const ForcePasswordChangePage  = lazy(() => import('./pages/ForcePasswordChangePage.jsx'))
 const SlaePage                 = lazy(() => import('./pages/SlaePage.jsx'))
+const PreviewRoot              = lazy(() => import('./preview/PreviewRoot.jsx'))
 
 import { ADMIN_PAGES, ALWAYS_VISIBLE } from './utils/constants.js'
 
@@ -93,6 +94,7 @@ const PAGE_TO_PATH = {
   remote_ollama:    '/admin/remote-ollama',
   webhook_tokens:   '/admin/webhook-tokens',
   slae:             '/admin/slae',
+  preview:          '/preview',
   google_callback:  '/callback',
   reading_callback: '/reading-oauth-callback',
 }
@@ -472,6 +474,7 @@ export default function App() {
               {currentPage === 'remote_ollama' && <RemoteOllamaPage setAction={setPageAction} />}
               {currentPage === 'webhook_tokens' && <WebhookTokensPage setAction={setPageAction} />}
               {currentPage === 'slae'           && <SlaePage setAction={setPageAction} />}
+              {currentPage === 'preview'        && <PreviewRoot />}
             </div>
           </Suspense>
         </ErrorBoundary>

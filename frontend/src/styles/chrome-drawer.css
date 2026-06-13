@@ -487,7 +487,7 @@
 .rs-greeting {
   font-size: var(--rs-fs-h1);
   line-height: 1.05;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.04em;
   font-weight: 400;
   margin: 0;
   color: var(--md-on-surface);
@@ -496,11 +496,13 @@
 }
 
 .rs-greeting-sub {
-  font-size: var(--rs-fs-body);
-  color: var(--md-on-surface-variant);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--primary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   margin-block-start: 8px;
   text-wrap: balance;
-  opacity: 0.8;
 }
 
 /* ── LOADING SCREEN ─────────────────────────────────────────────────────────── */
