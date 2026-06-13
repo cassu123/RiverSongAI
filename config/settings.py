@@ -1134,11 +1134,12 @@ class Settings(BaseSettings):
     # Session presets (Q2#9 — capability merge from Odysseus)
     # -------------------------------------------------------------------------
     session_presets_enabled: bool = Field(
-        default=False,
+        default=True,
         description=(
             "Saved combinations of (model, voice, thinking mode, web search, "
             "tool use). Surfaced as a selector on the Conversation and Chat "
-            "pages. Off by default per anti-regression guardrail."
+            "pages. Enabled by default — these are per-user settings snapshots. "
+            "Set SESSION_PRESETS_ENABLED=false in .env to hide."
         ),
     )
     session_presets_max_per_user: int = Field(
