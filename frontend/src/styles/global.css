@@ -7,9 +7,10 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=Ibarra+Real+Nova:wght@400;600&family=JetBrains+Mono:wght@400;700&family=Lexend:wght@300;400;600&family=Outfit:wght@300;400;600&family=Inter:wght@400;700;900&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4: single import + load the existing v3-style JS config for the
+   Material You theme tokens via the @config compatibility directive. */
+@import "tailwindcss";
+@config "../../tailwind.config.js";
 
 /* ============================================================
    M3 Color Roles — Dark Scheme
