@@ -27,6 +27,7 @@
 #   3. No other code changes needed -- the router picks it up automatically.
 #
 # Registered intents (in priority order):
+#   kova_chores   - River Kova chore robot dispatch
 #   commerce      - Amazon + Walmart seller inventory/orders (Phase 8)
 #   smart_home    - Home Assistant device control (Phase 3)
 #   calendar      - Google Calendar (Phase 2)
@@ -272,6 +273,113 @@ def _build_confirmation(action: str, device_name: str,
     if action == "run":
         return f"Running {device_name}."
     return f"Done -- {action.replace('_', ' ')} the {device_name}."
+
+
+# =============================================================================
+# Kova chore robot dispatch
+# =============================================================================
+
+# Both maps mirror TaskManager.submit_from_voice() in river-kova
+# tasks/task_manager.py so a command parses the same on either side.
+_KOVA_CHORE_KEYWORDS: Dict[str, str] = {
+    "vacuum": "VACUUM",
+    "mop": "MOP",
+    "clean": "VACUUM",
+    "fetch": "FETCH",
+    "get": "FETCH",
+    "bring": "FETCH",
+    "organize": "ORGANIZE",
+    "organise": "ORGANIZE",
+    "tidy": "ORGANIZE",
+    "wipe": "WIPE_SURFACE",
+    "trash": "TAKE_OUT_TRASH",
+    "rubbish": "TAKE_OUT_TRASH",
+    "dishwasher": "LOAD_DISHWASHER",
+    "dishes": "LOAD_DISHWASHER",
+    "laundry": "LAUNDRY_TRANSFER",
+}
+
+_KOVA_ROOM_KEYWORDS: List[str] = [
+    "kitchen", "living room", "bedroom", "bathroom",
+    "hallway", "dining room", "office", "garage",
+]
+
+_KOVA_CHORE_LABELS: Dict[str, str] = {
+    "VACUUM": "vacuum",
+    "MOP": "mop",
+    "FETCH": "run a fetch errand",
+    "ORGANIZE": "tidy up",
+    "WIPE_SURFACE": "wipe the surfaces",
+    "TAKE_OUT_TRASH": "take out the trash",
+    "LOAD_DISHWASHER": "load the dishwasher",
+    "UNLOAD_DISHWASHER": "unload the dishwasher",
+    "LAUNDRY_TRANSFER": "move the laundry over",
+}
+
+
+def _parse_kova_chore(transcript: str) -> Dict[str, Optional[str]]:
+    """Parse chore type and room from a Kova voice command."""
+    lower = transcript.lower()
+    chore_type = None
+    for keyword, ctype in _KOVA_CHORE_KEYWORDS.items():
+        if keyword in lower:
+            chore_type = ctype
+            break
+    room = None
+    for r in _KOVA_ROOM_KEYWORDS:
+        if r in lower:
+            room = r.replace(" ", "_")
+            break
+    return {"chore_type": chore_type, "room": room}
+
+
+async def _handle_kova_chore(transcript: str, user_id: str) -> str:
+    """
+    Dispatch a chore to a River Kova unit's task queue.
+
+    The unit picks the task up on its next GET /api/kova/units/{id}/tasks
+    poll. Voice tasks queue at priority 7, matching the robot's own
+    submit_from_voice() behavior.
+    """
+    from core.family import is_feature_enabled_for
+    if not await is_feature_enabled_for(user_id, "home"):
+        return "I'm sorry, home automation controls are not enabled for your account."
+
+    try:
+        from api.routes.kova import dispatch_chore
+
+        parsed = _parse_kova_chore(transcript)
+        chore_type = parsed["chore_type"]
+        room = parsed["room"]
+
+        if not chore_type:
+            return (
+                "I heard a Kova request but couldn't match it to a chore. "
+                "Try something like 'have Kova vacuum the living room'."
+            )
+
+        task_id, unit = await dispatch_chore(
+            chore_type, room, priority=7,
+            source="voice", requested_by=user_id)
+        if not task_id or not unit:
+            return (
+                "No Kova units are registered yet. "
+                "Claim one in settings and it will appear once it connects."
+            )
+
+        chore_label = _KOVA_CHORE_LABELS.get(chore_type, chore_type.lower())
+        unit_label = unit.get("name") or unit.get("robot_id")
+        where = f" in the {room.replace('_', ' ')}" if room else ""
+        if unit.get("online"):
+            return f"On it — sending {unit_label} to {chore_label}{where}."
+        return (
+            f"Queued — {unit_label} will {chore_label}{where} "
+            "as soon as it comes back online."
+        )
+
+    except Exception as exc:
+        logger.error("Kova chore handler failed: %s", exc)
+        return "Sorry, I had trouble reaching the Kova fleet right now."
 
 
 async def _handle_calendar(transcript: str, user_id: str) -> str:
@@ -599,6 +707,28 @@ async def _handle_conversation(transcript: str, user_id: str) -> str:
 # =============================================================================
 
 INTENT_REGISTRY: List[Intent] = [
+    Intent(
+        name="kova_chores",
+        phrases=[
+            "have kova",
+            "tell kova",
+            "ask kova",
+            "send kova",
+            "get kova",
+            "kova vacuum",
+            "kova mop",
+            "kova clean",
+            "kova fetch",
+            "kova tidy",
+            "vacuum the",
+            "mop the",
+            "tidy up the",
+        ],
+        keywords=[
+            "kova",
+        ],
+        handler=_handle_kova_chore,
+    ),
     Intent(
         name="commerce",
         phrases=[
