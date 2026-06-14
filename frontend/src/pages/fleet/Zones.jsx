@@ -1,10 +1,49 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { MapContainer, TileLayer, FeatureGroup, Polygon, Popup } from 'react-leaflet'
-import { EditControl } from 'react-leaflet-draw'
+import { MapContainer, TileLayer, FeatureGroup, Polygon, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
+import 'leaflet-draw'   // side effects: registers L.Control.Draw, L.Draw.Event
 import 'leaflet/dist/leaflet.css'
 import 'leaflet-draw/dist/leaflet.draw.css'
+
+/**
+ * DrawControl — replaces the unmaintained react-leaflet-draw <EditControl>
+ * (which doesn't support React 19 / react-leaflet v5). Wires leaflet-draw's
+ * polygon tool straight into the map via useMap() and forwards the draw events.
+ */
+function DrawControl({ onCreated, onEdited, onDeleted }) {
+  const map = useMap()
+  useEffect(() => {
+    const drawControl = new L.Control.Draw({
+      position: 'topright',
+      draw: {
+        polygon: { allowIntersection: false, showArea: true },
+        polyline: false,
+        rectangle: false,
+        circle: false,
+        marker: false,
+        circlemarker: false,
+      },
+    })
+    map.addControl(drawControl)
+
+    const created = (e) => onCreated && onCreated(e)
+    const edited = (e) => onEdited && onEdited(e)
+    const deleted = (e) => onDeleted && onDeleted(e)
+    map.on(L.Draw.Event.CREATED, created)
+    map.on(L.Draw.Event.EDITED, edited)
+    map.on(L.Draw.Event.DELETED, deleted)
+
+    return () => {
+      map.off(L.Draw.Event.CREATED, created)
+      map.off(L.Draw.Event.EDITED, edited)
+      map.off(L.Draw.Event.DELETED, deleted)
+      map.removeControl(drawControl)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map])
+  return null
+}
 
 export default function Zones() {
   const { token } = useAuth()
@@ -127,19 +166,10 @@ export default function Zones() {
             maxZoom={20}
           />
           <FeatureGroup ref={featureGroupRef}>
-            <EditControl
-              position="topright"
+            <DrawControl
               onCreated={handleCreated}
               onEdited={handleEdited}
               onDeleted={handleDeleted}
-              draw={{
-                polygon: { allowIntersection: false, showArea: true },
-                polyline: false,
-                rectangle: false,
-                circle: false,
-                marker: false,
-                circlemarker: false,
-              }}
             />
           </FeatureGroup>
 

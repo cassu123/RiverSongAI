@@ -26,13 +26,15 @@ export default defineConfig({
     chunkSizeWarningLimit: 1200,  // vendor-three (Three.js ecosystem) is ~1.1MB — expected
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-three': [
-            'three',
-            '@react-three/fiber',
-            '@react-three/drei',
-            '@react-three/postprocessing',
-          ],
+        // Function form (rolldown, Vite 8) — splits the Three.js ecosystem
+        // (~1.1MB) into its own vendor chunk.
+        manualChunks(id) {
+          if (
+            id.includes('node_modules/three') ||
+            id.includes('node_modules/@react-three')
+          ) {
+            return 'vendor-three'
+          }
         },
       },
     },
