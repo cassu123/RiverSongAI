@@ -80,9 +80,10 @@ class TestPresetCRUD:
 # -----------------------------------------------------------------------------
 
 class TestRouteSurface:
-    def test_flag_default_off(self):
+    def test_flag_default_on(self):
         from config.settings import get_settings
-        assert getattr(get_settings(), "session_presets_enabled", True) is False
+        # Enabled by default — per-user settings snapshots in the chat selector.
+        assert getattr(get_settings(), "session_presets_enabled", False) is True
 
     def test_router_importable(self):
         from api.routes import session_presets as p

@@ -258,9 +258,10 @@ class TestRunDeepResearch:
 # -----------------------------------------------------------------------------
 
 class TestRouteSurface:
-    def test_flag_default_off(self):
+    def test_flag_default_on(self):
         from config.settings import get_settings
-        assert getattr(get_settings(), "deep_research_enabled", True) is False
+        # Enabled by default so the in-chat Research toggle works out of the box.
+        assert getattr(get_settings(), "deep_research_enabled", False) is True
 
     def test_router_importable(self):
         from api.routes import research

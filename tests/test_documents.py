@@ -114,10 +114,10 @@ class TestPinningOrdering:
 # -----------------------------------------------------------------------------
 
 class TestRouteSurface:
-    def test_flag_default_off(self):
+    def test_flag_default_on(self):
         from config.settings import get_settings
-        # Default OFF per the anti-regression guardrail.
-        assert getattr(get_settings(), "documents_enabled", True) is False
+        # Enabled by default — backs the Docs tab and Deep Research storage.
+        assert getattr(get_settings(), "documents_enabled", False) is True
 
     def test_router_importable(self):
         # Routes file must import cleanly even when the flag is off — it should
