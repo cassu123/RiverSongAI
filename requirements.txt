@@ -32,7 +32,7 @@ python-dotenv==1.2.2            # .env file support
 # Audio capture happens in the browser; server receives WAV bytes over WebSocket
 # -----------------------------------------------------------------------------
 faster-whisper>=1.0.3
-torch>=2.6.0                    # security floor: multiple CVEs in older versions
+torch>=2.12.0                    # security floor: multiple CVEs in older versions
 numpy>=2.1.0                    # 2.x required for Python 3.13+
 scipy>=1.14.0                   # Resampling browser audio to 16 kHz for Whisper
 soundfile==0.13.1               # WAV decode (bytes -> numpy array)
