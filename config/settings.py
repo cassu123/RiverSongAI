@@ -1068,12 +1068,12 @@ class Settings(BaseSettings):
     # Documents workspace (Q2#6 — capability merge from Odysseus)
     # -------------------------------------------------------------------------
     documents_enabled: bool = Field(
-        default=False,
+        default=True,
         description=(
             "Per-user document workspace (Markdown / plaintext / CSV) with "
-            "multi-tab editing. Off by default per anti-regression guardrail. "
-            "When False the routes 404 and the drawer entry is hidden. "
-            "Required for Q3#11 Deep Research report storage."
+            "multi-tab editing. Enabled by default — backs the Docs tab in the "
+            "Memory hub and stores Deep Research reports. "
+            "Set DOCUMENTS_ENABLED=false in .env to disable."
         ),
     )
     documents_max_bytes: int = Field(
@@ -1089,12 +1089,13 @@ class Settings(BaseSettings):
     # Skills system (Q2#7 — capability merge from Odysseus)
     # -------------------------------------------------------------------------
     skills_enabled: bool = Field(
-        default=False,
+        default=True,
         description=(
-            "Per-user skill library — saved prompts/recipes that are "
-            "vector-retrieved and prepended to the conversation system "
-            "prompt. Reuses the existing ChromaDB collection with metadata "
-            "kind='skill'. Off by default per anti-regression guardrail."
+            "Per-user knowledge profile ('About You') — saved facts/context "
+            "about the person that are vector-retrieved and folded into the "
+            "conversation system prompt so River tailors itself to them. "
+            "Reuses the ChromaDB collection with metadata kind='skill'. "
+            "Set SKILLS_ENABLED=false in .env to disable."
         ),
     )
     skills_top_k: int = Field(
@@ -1134,11 +1135,12 @@ class Settings(BaseSettings):
     # Session presets (Q2#9 — capability merge from Odysseus)
     # -------------------------------------------------------------------------
     session_presets_enabled: bool = Field(
-        default=False,
+        default=True,
         description=(
             "Saved combinations of (model, voice, thinking mode, web search, "
             "tool use). Surfaced as a selector on the Conversation and Chat "
-            "pages. Off by default per anti-regression guardrail."
+            "pages. Enabled by default — these are per-user settings snapshots. "
+            "Set SESSION_PRESETS_ENABLED=false in .env to hide."
         ),
     )
     session_presets_max_per_user: int = Field(
@@ -1163,12 +1165,14 @@ class Settings(BaseSettings):
     # Deep Research (Q3#11 — capability merge from Odysseus)
     # -------------------------------------------------------------------------
     deep_research_enabled: bool = Field(
-        default=False,
+        default=True,
         description=(
             "Multi-step research orchestrator: decompose → parallel web "
             "search → fetch + extract → synthesize a cited Markdown report "
-            "stored as a `research`-kind document (Q2#6). Off by default "
-            "per anti-regression guardrail."
+            "stored as a `research`-kind document (Q2#6). Enabled by default so "
+            "the in-chat Research toggle works. Live sources require a web "
+            "search provider; without one it falls back to model knowledge. "
+            "Set DEEP_RESEARCH_ENABLED=false in .env to disable."
         ),
     )
     deep_research_max_sources: int = Field(

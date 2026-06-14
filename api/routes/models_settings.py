@@ -142,8 +142,8 @@ def _get_enabled_providers(admin_config: Optional[dict] = None) -> dict:
 async def _require_user(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
-    payload: dict = decode_token(authorization.removeprefix(
-        "Bearer ")) if authorization else {}  # type: ignore
+    payload: Optional[dict] = await decode_token(
+        authorization.removeprefix("Bearer "))
     if not payload:
         raise unauthorized("Invalid or expired token.")
     return payload["sub"]
@@ -152,8 +152,8 @@ async def _require_user(authorization: Optional[str]) -> str:
 async def _require_admin(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
-    payload: dict = decode_token(authorization.removeprefix(
-        "Bearer ")) if authorization else {}  # type: ignore
+    payload: Optional[dict] = await decode_token(
+        authorization.removeprefix("Bearer "))
     if not payload or payload.get("role") != "admin":
         raise forbidden("Admin role required.")
     return payload["sub"]
@@ -931,8 +931,8 @@ async def save_orchestration_settings(
     authorization: Optional[str] = Header(default=None),
 ):
     user_id = await _require_user(authorization)
-    payload: dict = decode_token(authorization.removeprefix(
-        "Bearer ")) if authorization else {}  # type: ignore
+    payload: Optional[dict] = await decode_token(
+        authorization.removeprefix("Bearer ")) if authorization else None
     if not payload or payload.get("role") != "admin":
         raise forbidden("Only admins can modify orchestration settings.")
 
