@@ -36,6 +36,10 @@ if [[ "${1:-}" == "--backup" ]]; then
 fi
 
 step "Pulling latest from GitHub"
+# `npm install` (below) can rewrite frontend/package-lock.json on disk, leaving
+# local churn that blocks the next fast-forward pull. It's a generated file —
+# discard any such local changes so the pull always succeeds.
+git checkout -- frontend/package-lock.json 2>/dev/null || true
 git pull --ff-only origin main
 
 step "Activating virtualenv"
