@@ -9,7 +9,7 @@
 # -----------------------------------------------------------------------------
 # Web framework
 # -----------------------------------------------------------------------------
-fastapi>=0.130.0
+fastapi>=0.136.3
 uvicorn[standard]==0.44.0       # ASGI server; [standard] pulls websockets + uvloop
 websockets==14.0                # for Home Assistant WS events
 starlette>=0.50.0               # WebSocket state management; >=0.50.0 clears CVE range headers DoS (<=0.49.0)
@@ -32,7 +32,7 @@ python-dotenv==1.2.2            # .env file support
 # Audio capture happens in the browser; server receives WAV bytes over WebSocket
 # -----------------------------------------------------------------------------
 faster-whisper>=1.0.3
-torch>=2.6.0                    # security floor: multiple CVEs in older versions
+torch>=2.12.0                    # security floor: multiple CVEs in older versions
 numpy>=2.1.0                    # 2.x required for Python 3.13+
 scipy>=1.14.0                   # Resampling browser audio to 16 kHz for Whisper
 soundfile==0.13.1               # WAV decode (bytes -> numpy array)
@@ -42,7 +42,7 @@ soundfile==0.13.1               # WAV decode (bytes -> numpy array)
 # LLM — Ollama (local primary) + cloud providers (optional, key required)
 # -----------------------------------------------------------------------------
 ollama==0.6.1                   # Ollama client — local LLM (primary)
-anthropic>=0.37.1,<1.0.0               # Claude API cloud LLM
+anthropic>=0.105.2,<1.0.0               # Claude API cloud LLM
 google-genai==1.16.0            # Google Gemini cloud LLM
 openai==1.82.0                  # OpenAI cloud LLM
 mistralai==1.7.0                # Mistral AI cloud LLM
@@ -54,7 +54,7 @@ boto3==1.38.0                   # Amazon Bedrock (and AWS SDK)
 # Note: elevenlabs SDK not needed — provider calls REST API directly via httpx
 # -----------------------------------------------------------------------------
 apprise==1.8.0
-pywebpush>=2.0.0                # Web Push notifications (push.py route)
+pywebpush>=2.3.0                # Web Push notifications (push.py route)
 
 # Wake word — "Hey River" (openWakeWord)
 # Install manually for now as PyPI versioning is messy for Python 3.14
@@ -107,7 +107,7 @@ python-amazon-sp-api==2.1.8          # Amazon Selling Partner API
 # Memory / Vector Store
 # -----------------------------------------------------------------------------
 chromadb==1.5.9                      # Local vector database for semantic memory
-pybind11==2.13.6                     # C++ bindings required by chroma-hnswlib
+pybind11==3.0.4                     # C++ bindings required by chroma-hnswlib
 # chromadb pulls in opentelemetry + protobuf. Pin them here to avoid the Python
 # 3.14 crash: protobuf 4.x C extension raises TypeError (not ImportError) on
 # Python 3.14, causing a boot-time crash. Protobuf 5.x fixes this natively.
