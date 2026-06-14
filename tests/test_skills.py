@@ -135,9 +135,10 @@ class TestSkillsHelpers:
 # -----------------------------------------------------------------------------
 
 class TestRouteSurface:
-    def test_flag_default_off(self):
+    def test_flag_default_on(self):
         from config.settings import get_settings
-        assert getattr(get_settings(), "skills_enabled", True) is False
+        # Enabled by default — the "About You" knowledge profile.
+        assert getattr(get_settings(), "skills_enabled", False) is True
 
     def test_router_importable(self):
         from api.routes import skills as skills_route
