@@ -99,11 +99,16 @@ const PAGE_TO_PATH = {
   reading_callback: '/reading-oauth-callback',
 }
 
+// Reverse-lookup table, longest path first so e.g. '/admin/webhook-tokens'
+// matches 'webhook_tokens' before any shorter '/admin/...' prefix.
+const PATH_TO_PAGE = Object.entries(PAGE_TO_PATH)
+  .sort((a, b) => b[1].length - a[1].length)
+
 function pageKeyFromPath(pathname) {
   if (!pathname || pathname === '/' || pathname === '') return 'briefing'
-  if (pathname === '/callback')                return 'google_callback'
-  if (pathname === '/reading-oauth-callback')  return 'reading_callback'
-  if (pathname.startsWith('/admin/settings'))  return 'admin_settings'
+  for (const [page, path] of PATH_TO_PAGE) {
+    if (pathname === path || pathname.startsWith(path + '/')) return page
+  }
   // /feeds, /feeds/sports/boxscore/123 → 'feeds'
   const top = pathname.split('/').filter(Boolean)[0] || 'briefing'
   return top
@@ -291,12 +296,12 @@ export default function App() {
 
   const userIsAdmin = user?.role === 'admin'
 
-  const featureEnabled = (page) => {
+  const featureEnabled = useCallback((page) => {
     if (userIsAdmin) return true
     if (ALWAYS_VISIBLE.has(page)) return true
     if (!enabledFeatures) return false
     return enabledFeatures.has(page)
-  }
+  }, [userIsAdmin, enabledFeatures])
 
   useEffect(() => {
     window.addEventListener('rs-features-changed', refreshFeatures)
@@ -317,13 +322,13 @@ export default function App() {
     }
   }, [])
 
-  const handleNavigate = (page) => {
+  const handleNavigate = useCallback((page) => {
     if (ADMIN_PAGES.has(page) && !adminMode) return
     if (!featureEnabled(page)) return
     setCurrentPage(page)
     window.scrollTo(0, 0)
     setDrawerOpen(false)
-  }
+  }, [adminMode, featureEnabled, setCurrentPage])
 
   const handleAdminToggle = (next) => {
     setAdminMode(next)

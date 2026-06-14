@@ -42,6 +42,7 @@ import json
 import os
 import re
 import sqlite3
+import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -698,7 +699,14 @@ class SQLiteStore(
             max_workers=min(4, os.cpu_count() or 1),
             thread_name_prefix="sqlite",
         )
-        self._conn: Optional[sqlite3.Connection] = None
+        # Each worker thread gets its own connection. sqlite3.Connection
+        # objects aren't safe for concurrent use from multiple threads even
+        # with check_same_thread=False — sharing one across the executor's
+        # threads caused intermittent "bad parameter or other API misuse"
+        # errors under concurrent requests.
+        self._local = threading.local()
+        self._conns_lock = threading.Lock()
+        self._conns: list[sqlite3.Connection] = []
 
     # -------------------------------------------------------------------------
     # Lifecycle
@@ -796,29 +804,33 @@ class SQLiteStore(
                 pass
 
     def close(self) -> None:
-        """Close the connection and shut down the thread pool."""
-        if self._conn:
-            self._conn.close()
-            self._conn = None
-        self._executor.shutdown(wait=False)
+        """Close all per-thread connections and shut down the thread pool."""
+        self._executor.shutdown(wait=True)
+        with self._conns_lock:
+            for conn in self._conns:
+                conn.close()
+            self._conns.clear()
 
     # -------------------------------------------------------------------------
     # Internal helpers
     # -------------------------------------------------------------------------
 
     def _get_conn(self) -> sqlite3.Connection:
-        if self._conn is None:
-            self._conn = sqlite3.connect(
+        conn = getattr(self._local, "conn", None)
+        if conn is None:
+            conn = sqlite3.connect(
                 self._db_path,
-                check_same_thread=False,
                 detect_types=sqlite3.PARSE_DECLTYPES,
             )
-            self._conn.row_factory = sqlite3.Row
+            conn.row_factory = sqlite3.Row
             # WAL lets readers proceed while a writer holds the lock.
             # busy_timeout retries for up to 5 s before raising SQLITE_BUSY.
-            self._conn.execute("PRAGMA journal_mode=WAL")
-            self._conn.execute("PRAGMA busy_timeout=5000")
-        return self._conn
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=5000")
+            self._local.conn = conn
+            with self._conns_lock:
+                self._conns.append(conn)
+        return conn
 
     async def _run(self, fn, *args):
         loop = asyncio.get_running_loop()
