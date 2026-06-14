@@ -54,7 +54,7 @@ boto3==1.38.0                   # Amazon Bedrock (and AWS SDK)
 # Note: elevenlabs SDK not needed — provider calls REST API directly via httpx
 # -----------------------------------------------------------------------------
 apprise==1.8.0
-pywebpush>=2.0.0                # Web Push notifications (push.py route)
+pywebpush>=2.3.0                # Web Push notifications (push.py route)
 
 # Wake word — "Hey River" (openWakeWord)
 # Install manually for now as PyPI versioning is messy for Python 3.14
