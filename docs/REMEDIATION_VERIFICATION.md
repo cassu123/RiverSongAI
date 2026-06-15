@@ -72,7 +72,7 @@ strict-transport-security: max-age=31536000; includeSubDomains
 **Command:**
 Issued a command in DB and immediately curled the stream endpoint:
 ```bash
-python issue_cmd.py && curl -s -D - -H "X-Unit-Token: valid_token_123" http://localhost:8000/api/vector/command/stream/VOY-RV-001
+python scripts/issue_cmd.py && curl -s -D - -H "X-Unit-Token: valid_token_123" http://localhost:8000/api/vector/command/stream/VOY-RV-001
 ```
 **Response (instantaneous):**
 ```http
