@@ -10,9 +10,14 @@ const C = {
   sky:     'oklch(71% 0.13 238)',
 }
 
+const CYCLE_INTERVAL = 7000
+const FADE_DURATION  = 320
+
 export default function PulseWidget({ token }) {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
+  const [newsIdx, setNewsIdx] = useState(0)
+  const [visible, setVisible] = useState(true)
 
   const fetchData = useCallback(async () => {
     try {
@@ -31,10 +36,27 @@ export default function PulseWidget({ token }) {
     return () => clearInterval(id)
   }, [fetchData])
 
+  const newsItems = data
+    ? Array.isArray(data.news) ? data.news : (data.news ? [data.news] : [])
+    : []
+
+  useEffect(() => {
+    if (newsItems.length <= 1) return
+    const id = setInterval(() => {
+      setVisible(false)
+      setTimeout(() => {
+        setNewsIdx(i => (i + 1) % newsItems.length)
+        setVisible(true)
+      }, FADE_DURATION)
+    }, CYCLE_INTERVAL)
+    return () => clearInterval(id)
+  }, [newsItems.length])
+
   if (!data && loading) return <PulseSkeleton />
   if (!data) return null
 
   const { markets, flights, ts } = data
+  const currentNews = newsItems[newsIdx] || null
 
   const fmtTs = (epoch) =>
     epoch
@@ -47,58 +69,112 @@ export default function PulseWidget({ token }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-      {markets && (
+      {currentNews && (
         <PulseRow
-          icon="show_chart"
-          iconColor={marketColor}
-          label="MARKETS"
-          time={fmtTs(ts?.markets)}
+          icon="public"
+          iconColor="var(--primary)"
+          label="NEWS"
+          time={fmtTs(ts?.news)}
+          badge={newsItems.length > 1 ? `${newsIdx + 1}/${newsItems.length}` : null}
         >
-          {markets.error ? (
-            <span style={{ fontSize: '0.75rem', color: C.muted, fontStyle: 'italic' }}>
-              No data
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              minWidth: 0,
+              opacity: visible ? 1 : 0,
+              transition: `opacity ${FADE_DURATION}ms ease`,
+            }}
+          >
+            <span style={{
+              flex: 1,
+              fontSize: '0.815rem',
+              fontWeight: 550,
+              color: C.text,
+              letterSpacing: '-0.01em',
+              lineHeight: 1.35,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}>
+              {currentNews.headline || 'No headlines.'}
             </span>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            {currentNews.source && (
               <span style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.68rem',
-                fontWeight: 600,
-                letterSpacing: '0.05em',
+                flexShrink: 0,
+                fontSize: '0.58rem',
+                fontWeight: 700,
+                letterSpacing: '0.07em',
+                textTransform: 'uppercase',
                 color: C.muted,
+                background: 'oklch(20% 0.01 265)',
+                padding: '2px 8px',
+                borderRadius: 4,
+                whiteSpace: 'nowrap',
               }}>
-                {markets.symbol}
+                {currentNews.source}
               </span>
-              <span style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '1.05rem',
-                fontWeight: 750,
-                letterSpacing: '-0.02em',
-                color: C.text,
-              }}>
-                {markets.price != null
-                  ? `$${Number(markets.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                  : '--'}
+            )}
+          </div>
+        </PulseRow>
+      )}
+
+      {markets && (
+        <>
+          <div style={{ height: 1, background: C.divider }} />
+          <PulseRow
+            icon="show_chart"
+            iconColor={marketColor}
+            label="MARKETS"
+            time={fmtTs(ts?.markets)}
+          >
+            {markets.error ? (
+              <span style={{ fontSize: '0.75rem', color: C.muted, fontStyle: 'italic' }}>
+                No data
               </span>
-              {markets.change != null && markets.change_pct != null && (
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
                 <span style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '0.75rem',
-                  fontWeight: 650,
-                  letterSpacing: '-0.01em',
-                  color: marketColor,
+                  fontSize: '0.68rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.05em',
+                  color: C.muted,
                 }}>
-                  {marketUp ? '▲' : '▼'} {Math.abs(markets.change_pct).toFixed(2)}%
+                  {markets.symbol}
                 </span>
-              )}
-            </div>
-          )}
-        </PulseRow>
+                <span style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '1.05rem',
+                  fontWeight: 750,
+                  letterSpacing: '-0.02em',
+                  color: C.text,
+                }}>
+                  {markets.price != null
+                    ? `$${Number(markets.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : '--'}
+                </span>
+                {markets.change != null && markets.change_pct != null && (
+                  <span style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.75rem',
+                    fontWeight: 650,
+                    letterSpacing: '-0.01em',
+                    color: marketColor,
+                  }}>
+                    {marketUp ? '▲' : '▼'} {Math.abs(markets.change_pct).toFixed(2)}%
+                  </span>
+                )}
+              </div>
+            )}
+          </PulseRow>
+        </>
       )}
 
       {flights && (
         <>
-          {markets && <div style={{ height: 1, background: C.divider }} />}
+          <div style={{ height: 1, background: C.divider }} />
           <PulseRow
             icon="flight"
             iconColor={C.sky}
