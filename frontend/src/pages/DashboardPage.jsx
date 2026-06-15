@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import RiverStatusBox from '../components/RiverStatusBox.jsx'
 import HealthCard from '../components/HealthCard.jsx'
-import PulseWidget from '../components/PulseWidget.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 
 /**
@@ -71,8 +70,6 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
   const [date, setDate] = useState(fmtDate())
   const [stats, setStats] = useState(null)
   const [sessions, setSessions] = useState([])
-  const [routines, setRoutines] = useState([])
-  const [rooms, setRooms] = useState({})
   const [loading, setLoading] = useState(true)
   const [expandedCard, setExpandedCard] = useState(null)
 
@@ -91,19 +88,6 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       if (res.ok) setStats(await res.json())
-
-      const rRes = await fetch('/api/routines', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (rRes.ok) setRoutines(await rRes.json())
-
-      const envRes = await fetch('/api/context/rooms', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (envRes.ok) {
-        const data = await envRes.json()
-        setRooms(data.rooms || {})
-      }
     } catch (e) {
       console.error('Fetch failed', e)
     } finally {
@@ -251,64 +235,6 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
           </div>
         </div>
 
-        {/* Pulse / Ambient */}
-        <div 
-          className={getCardClasses('pulse', 'rs-card is-tappable is-small')}
-          onClick={() => toggleExpand('pulse')}
-        >
-          {expandedCard === 'pulse' && (
-            <button 
-              className="rs-icon-btn rs-card-close" 
-              onClick={(e) => { e.stopPropagation(); setExpandedCard(null); }}
-            >
-              <span className="material-symbols-rounded">close</span>
-            </button>
-          )}
-
-          <div className="rs-card-inner">
-            <div className="rs-card-head">
-              <span className="rs-card-label">MARKET & NEWS PULSE</span>
-              <span className="material-symbols-rounded" style={{ opacity: 0.2 }}>sensors</span>
-            </div>
-            <div className="rs-widget-pulse-wrapper">
-              <PulseWidget token={token} />
-            </div>
-            <div className="rs-card-meta">Real-time activity reports</div>
-
-            {expandedCard === 'pulse' && (
-              <div className="rs-card-inner animate-fade-in">
-                <div className="rs-card-label">DETAILED ENVIRONMENT TELEMETRY</div>
-                <div className="rs-archives-grid" style={{ marginTop: 16 }}>
-                  <div className="rs-archive-item">
-                    <div className="rs-card-label">ACTIVE ROOMS</div>
-                    <div className="rs-health-value">
-                      {Object.keys(rooms).length > 0 
-                        ? Object.entries(rooms).map(([name, r]) => `${name.toUpperCase()} (${r.temperature}°C)`).join(' · ') 
-                        : 'NO ACTIVE BEACON'}
-                    </div>
-                    <div className="rs-health-subvalue">Context-aware environment sync</div>
-                  </div>
-                  <div className="rs-archive-item">
-                    <div className="rs-card-label">ROUTINES IN QUEUE</div>
-                    <div className="rs-health-value">
-                      {routines.length > 0 
-                        ? `${routines.length} ACTIVE PATTERNS` 
-                        : 'NONE CONFIGURED'}
-                    </div>
-                    <div className="rs-health-subvalue">Automatic trigger matching</div>
-                  </div>
-                </div>
-                <div className="flex justify-end mt-6">
-                  <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('feeds'); }}>
-                    <span>Open Feeds Panel</span>
-                    <span className="material-symbols-rounded">arrow_forward</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Maintenance / Health */}
         <div 
           className={getCardClasses('integrity', 'rs-card is-tappable is-small')}
@@ -340,7 +266,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
 
             {expandedCard === 'integrity' && (
               <div className="flex justify-end mt-6 animate-fade-in">
-                <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('pulse'); }}>
+                <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('briefing'); }}>
                   <span>Open Pulse Panel</span>
                   <span className="material-symbols-rounded">arrow_forward</span>
                 </button>
