@@ -2,7 +2,7 @@
 > Analytics AI summaries are live for 5 platforms: TikTok, Instagram, Amazon, Etsy, Facebook.
 > The remaining platforms listed below (YouTube, eBay, Shopify, Pinterest, Twitter/X) have
 > `docs/api_registry/*.txt` setup guides but no analytics implementation in code yet.
-> See `DOCS_AUDIT_REPORT.md` issue H-6 and `docs/INTEGRATIONS.md` for current status per integration.
+> See `docs/audits/DOCS_AUDIT_REPORT.md` issue H-6 and `docs/INTEGRATIONS.md` for current status per integration.
 
 ---
 
