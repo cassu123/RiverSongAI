@@ -4,7 +4,7 @@
 > For current architecture, see `README.md` and the actual codebase. For per-subsystem documentation,
 > see `docs/DAEMONS.md`, `docs/INTEGRATIONS.md`, `docs/VOICE_ID.md`, `docs/CHRONOS.md`, etc.
 > Note: phase numbering in this document differs from `docs/gemini_prompts.md` — see
-> `DOCS_AUDIT_REPORT.md` issue M-5 for the cross-reference.
+> `docs/audits/DOCS_AUDIT_REPORT.md` issue M-5 for the cross-reference.
 
 ---
 
