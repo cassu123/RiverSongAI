@@ -133,7 +133,7 @@ specified by the integration plan and just never landed in code.
 ## HANDOFF.md "Restore Claude Memory" path is wrong
 
 The "To Restore Claude Memory on a New Machine" section near the end of
-`HANDOFF.md` references
+`passoff/HANDOFF.md` references
 `~/.claude/projects/-home-river-song-RiverSongAI/memory/`. The actual
 path on this machine is
 `~/.claude/projects/-home-riversong-RiverSongAI/memory/` (no hyphen in

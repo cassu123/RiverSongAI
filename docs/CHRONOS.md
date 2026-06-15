@@ -157,4 +157,4 @@ CHRONOS itself has no dedicated settings — it composes existing ones:
   (`project_chronos_parked.md`).
 - Implementation context for the daemon shape lives in `docs/DAEMONS.md`.
 - Settings audit and the rationale for the Scribe enable flag are in
-  `DOCS_AUDIT_REPORT.md`.
+  `docs/audits/DOCS_AUDIT_REPORT.md`.
