@@ -14,7 +14,7 @@ uvicorn[standard]==0.44.0       # ASGI server; [standard] pulls websockets + uvl
 websockets==14.0                # for Home Assistant WS events
 starlette>=0.50.0               # WebSocket state management; >=0.50.0 clears CVE range headers DoS (<=0.49.0)
 python-multipart==0.0.27        # Form data parsing for FastAPI
-pypdf==6.10.2                   # PDF text extraction for vehicle manual uploads
+pypdf==6.12.0                   # PDF text extraction for vehicle manual uploads (CVE-2026-48155/48156: bump >=6.12.0)
 pymupdf==1.27.2.3               # Culinary: PDF ingestion + image ripping
 beautifulsoup4==4.14.3          # Culinary: URL recipe scraping
 
@@ -76,7 +76,7 @@ speexdsp==0.1.1                 # required for openwakeword audio processing
 # Auth
 # -----------------------------------------------------------------------------
 bcrypt==5.0.0                   # Password hashing for kill switch
-PyJWT==2.12.1                   # JWT token generation and verification
+PyJWT==2.13.0                   # JWT token generation and verification (PYSEC-2026-175/177/178/179: bump >=2.13.0)
 
 
 # -----------------------------------------------------------------------------
