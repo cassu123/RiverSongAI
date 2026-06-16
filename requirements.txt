@@ -13,7 +13,7 @@ fastapi>=0.136.3
 uvicorn[standard]==0.44.0       # ASGI server; [standard] pulls websockets + uvloop
 websockets==14.0                # for Home Assistant WS events
 starlette>=0.50.0               # WebSocket state management; >=0.50.0 clears CVE range headers DoS (<=0.49.0)
-python-multipart==0.0.27        # Form data parsing for FastAPI
+python-multipart==0.0.31        # Form data parsing for FastAPI (CVE-2026-53537/53538/53539/53540: bump >=0.0.31)
 pypdf==6.12.0                   # PDF text extraction for vehicle manual uploads (CVE-2026-48155/48156: bump >=6.12.0)
 pymupdf==1.27.2.3               # Culinary: PDF ingestion + image ripping
 beautifulsoup4==4.14.3          # Culinary: URL recipe scraping
