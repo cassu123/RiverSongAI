@@ -22,7 +22,7 @@ beautifulsoup4==4.14.3          # Culinary: URL recipe scraping
 # -----------------------------------------------------------------------------
 # Configuration
 # -----------------------------------------------------------------------------
-pydantic[email]==2.13.2         # [email] extra adds validation for auth routes
+pydantic[email]==2.13.4         # [email] extra adds validation for auth routes
 pydantic-settings==2.13.1       # BaseSettings for .env loading
 python-dotenv==1.2.2            # .env file support
 
