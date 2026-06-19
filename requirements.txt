@@ -111,7 +111,7 @@ pybind11==3.0.4                     # C++ bindings required by chroma-hnswlib
 # chromadb pulls in opentelemetry + protobuf. Pin them here to avoid the Python
 # 3.14 crash: protobuf 4.x C extension raises TypeError (not ImportError) on
 # Python 3.14, causing a boot-time crash. Protobuf 5.x fixes this natively.
-protobuf>=5.29.0,<6.0
+protobuf>=7.35.1,<8.0
 opentelemetry-proto>=1.29.0
 opentelemetry-exporter-otlp-proto-grpc>=1.29.0
 opentelemetry-exporter-otlp-proto-common>=1.29.0
