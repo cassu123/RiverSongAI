@@ -37,7 +37,7 @@
     "three": "^0.184.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.4.0",
+    "@capacitor/cli": "^8.4.1",
     "@tailwindcss/postcss": "^4.3.1",
     "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.5.0",
