@@ -45,6 +45,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from core.auth import require_role
+from core.webhook_tokens import constant_time_match, hash_token
 from providers.memory.sqlite_store import SQLiteStore
 
 logger = logging.getLogger(__name__)
@@ -134,7 +135,11 @@ async def _verify_unit(store: SQLiteStore, unit_id: str,
                        token: Optional[str]) -> dict:
     unit = await store.execute_read_one_async(
         "SELECT * FROM vexa_units WHERE unit_id=?", (unit_id,))
-    if not unit or not token or token != unit["unit_token"]:
+    # unit_token stores sha256(token); hash the presented token and compare in
+    # constant time. Legacy plaintext rows (pre-hashing) will fail here and must
+    # be re-claimed — intended, since no real hardware is deployed yet.
+    if not unit or not token or not constant_time_match(
+            unit["unit_token"], hash_token(token)):
         raise HTTPException(status_code=401, detail="Invalid unit credentials")
     return unit
 
@@ -294,10 +299,11 @@ async def claim_unit(body: ClaimBody):
     await _ensure_schema(store)
     unit_id = uuid.uuid4().hex[:12]
     unit_token = uuid.uuid4().hex + uuid.uuid4().hex
+    # Store only the hash; the plaintext is returned to the admin once, here.
     await store.execute_write_async(
         "INSERT INTO vexa_units (unit_id, name, unit_token, registered_at) "
         "VALUES (?, ?, ?, ?)",
-        (unit_id, body.name, unit_token, _now()),
+        (unit_id, body.name, hash_token(unit_token), _now()),
     )
     logger.info("Vexa: claimed unit %s (%s)", unit_id, body.name)
     return {"unit_id": unit_id, "unit_token": unit_token}

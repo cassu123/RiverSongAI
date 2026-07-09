@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 from core.auth import require_role
+from core.webhook_tokens import constant_time_match, hash_token
 from config.settings import get_settings
 from providers.memory.sqlite_store import SQLiteStore, _safe_cols
 
@@ -51,7 +52,10 @@ async def _verify_unit_token(
         raise HTTPException(status_code=401, detail="Missing X-Unit-Token")
     store = SQLiteStore()
     unit = await store.get_vector_unit(unit_id)
-    if not unit or unit.get("unit_token") != x_unit_token:
+    # unit_token stores sha256(token); hash the presented header and compare in
+    # constant time. Legacy plaintext rows fail here and must be re-claimed.
+    if not unit or not constant_time_match(
+            unit.get("unit_token") or "", hash_token(x_unit_token)):
         raise HTTPException(status_code=401, detail="Invalid token")
     return unit
 
@@ -65,7 +69,7 @@ async def internal_wake_queue(unit_id: str, request: Request):
     auth_header = request.headers.get("Authorization")
     settings = get_settings()
     expected = f"Bearer {settings.daemon_internal_secret}"
-    if not auth_header or auth_header != expected:
+    if not auth_header or not constant_time_match(auth_header, expected):
         raise HTTPException(status_code=401, detail="Invalid internal secret")
     event = _get_command_event(unit_id)
     event.set()
@@ -92,7 +96,8 @@ async def register_unit(body: RegisterBody, request: Request):
         raise HTTPException(status_code=401, detail="Unit not claimed")
 
     x_unit_token = request.headers.get("X-Unit-Token")
-    if not x_unit_token or x_unit_token != unit.get("unit_token"):
+    if not x_unit_token or not constant_time_match(
+            unit.get("unit_token") or "", hash_token(x_unit_token)):
         raise HTTPException(status_code=401, detail="Invalid token")
 
     now = datetime.now(timezone.utc).isoformat()
@@ -552,11 +557,13 @@ async def claim_unit(unit_id: str, body: ClaimBody):
     now = datetime.now(timezone.utc).isoformat()
     # insert_vector_unit needs unit_id, name, platform, unit_token,
     # registered_at, claimed_at
+    # Store only the hash; the plaintext token was already handed to the device
+    # over the LAN claim call above and is never persisted server-side.
     await store.insert_vector_unit(
         unit_id=unit_id,
         name="New Unit",
         platform="unknown",
-        unit_token=unit_token,
+        unit_token=hash_token(unit_token),
         registered_at=now,
         claimed_at=now
     )
@@ -778,7 +785,8 @@ async def rotate_token(id: str):
     store = SQLiteStore()
     new_token = base64.urlsafe_b64encode(
         secrets.token_bytes(32)).decode("utf-8").rstrip("=")
-    await store.execute_write_async("UPDATE vector_units SET unit_token=? WHERE unit_id=?", (new_token, id))
+    # Persist only the hash; return the plaintext to the admin once, here.
+    await store.execute_write_async("UPDATE vector_units SET unit_token=? WHERE unit_id=?", (hash_token(new_token), id))
     return {"status": "ok", "unit_token": new_token}
 
 

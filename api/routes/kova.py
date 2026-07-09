@@ -47,6 +47,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from core.auth import require_role
+from core.webhook_tokens import constant_time_match, hash_token
 from providers.memory.sqlite_store import SQLiteStore
 
 logger = logging.getLogger(__name__)
@@ -142,7 +143,10 @@ async def _verify_device(store: SQLiteStore,
     api_key = authorization.removeprefix("Bearer ")
     unit = await store.execute_read_one_async(
         "SELECT * FROM kova_units WHERE robot_id=?", (x_kova_unit,))
-    if not unit or unit["api_key"] != api_key:
+    # api_key column stores sha256(key); hash the presented key and compare in
+    # constant time. Legacy plaintext rows fail here and must be re-claimed.
+    if not unit or not constant_time_match(
+            unit["api_key"], hash_token(api_key)):
         raise HTTPException(status_code=401, detail="Invalid unit credentials")
     return unit
 
@@ -260,10 +264,11 @@ async def claim_unit(body: ClaimBody):
     if existing:
         raise HTTPException(status_code=409, detail="robot_id already claimed")
     api_key = uuid.uuid4().hex + uuid.uuid4().hex
+    # Store only the hash; the plaintext key is returned to the admin once, here.
     await store.execute_write_async(
         "INSERT INTO kova_units (robot_id, name, api_key, claimed_at) "
         "VALUES (?, ?, ?, ?)",
-        (body.robot_id, body.name or body.robot_id, api_key, _now()),
+        (body.robot_id, body.name or body.robot_id, hash_token(api_key), _now()),
     )
     logger.info("Kova: claimed unit %s (%s)", body.robot_id, body.name)
     return {"robot_id": body.robot_id, "api_key": api_key}

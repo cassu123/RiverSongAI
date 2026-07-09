@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from main import app
 from providers.memory.sqlite_store import SQLiteStore
+from core.webhook_tokens import hash_token
 import asyncio
 
 client = TestClient(app)
@@ -15,7 +16,8 @@ def setup_db():
 
 def test_register_unit():
     # Units must be claimed (created with a token) before they can register,
-    # so seed a claimed unit directly in the store.
+    # so seed a claimed unit directly in the store. The device holds the
+    # plaintext token; the DB stores only its sha256 hash (audit H-2).
     from datetime import datetime, timezone
     store = SQLiteStore()
     token = "test-unit-token-123"
@@ -23,7 +25,7 @@ def test_register_unit():
     asyncio.run(store.execute_write_async(
         "DELETE FROM vector_units WHERE unit_id=?", ("test_smoke_unit_1",)))
     asyncio.run(store.insert_vector_unit(
-        "test_smoke_unit_1", "Test Mower", "riding", token, now, now))
+        "test_smoke_unit_1", "Test Mower", "riding", hash_token(token), now, now))
 
     # Unhappy path - register without token
     response = client.post("/api/vector/register", json={

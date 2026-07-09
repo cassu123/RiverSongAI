@@ -43,6 +43,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from core.auth import require_role
+from core.webhook_tokens import constant_time_match, hash_token
 from providers.memory.sqlite_store import SQLiteStore
 
 logger = logging.getLogger(__name__)
@@ -117,7 +118,10 @@ async def _verify_unit(store: SQLiteStore, program: str, unit_id: str,
         "SELECT * FROM fleet_units WHERE program=? AND unit_id=?",
         (program, unit_id),
     )
-    if not unit or not token or token != unit["unit_token"]:
+    # unit_token stores sha256(token); hash the presented token and compare in
+    # constant time. Legacy plaintext rows fail here and must be re-claimed.
+    if not unit or not token or not constant_time_match(
+            unit["unit_token"], hash_token(token)):
         raise HTTPException(status_code=401, detail="Invalid unit credentials")
     return unit
 
@@ -178,10 +182,11 @@ def build_fleet_router(program: str) -> APIRouter:
         await _ensure_schema(store)
         unit_id = uuid.uuid4().hex[:12]
         unit_token = uuid.uuid4().hex + uuid.uuid4().hex
+        # Store only the hash; the plaintext is returned to the admin once, here.
         await store.execute_write_async(
             "INSERT INTO fleet_units (program, unit_id, name, unit_token, registered_at) "
             "VALUES (?, ?, ?, ?, ?)",
-            (program, unit_id, body.name, unit_token, _now()),
+            (program, unit_id, body.name, hash_token(unit_token), _now()),
         )
         logger.info("Fleet %s: claimed unit %s (%s)", program, unit_id, body.name)
         return {"unit_id": unit_id, "unit_token": unit_token}
@@ -296,9 +301,10 @@ def build_fleet_router(program: str) -> APIRouter:
         if not unit:
             raise HTTPException(status_code=404, detail="Unit not found")
         new_token = uuid.uuid4().hex + uuid.uuid4().hex
+        # Persist only the hash; return the plaintext to the admin once, here.
         await store.execute_write_async(
             "UPDATE fleet_units SET unit_token=? WHERE program=? AND unit_id=?",
-            (new_token, program, unit_id),
+            (hash_token(new_token), program, unit_id),
         )
         return {"unit_id": unit_id, "unit_token": new_token}
 
