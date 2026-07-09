@@ -22,7 +22,16 @@ def admin_headers():
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_simulate_creates_and_removes_live_unit(admin_headers):
+def test_simulate_creates_and_removes_live_unit(admin_headers, monkeypatch):
+    # Stub the background sim task: we're testing the endpoint's DB contract
+    # (create -> listed as simulated -> teardown), not the 2s telemetry loop
+    # (covered by test_fleet_api::test_simulator_profiles). Without this, the
+    # live task races the teardown for the SQLite write lock.
+    async def _noop(*a, **k):
+        return None
+    monkeypatch.setattr("core.fleet_simulator.start_sim", _noop)
+    monkeypatch.setattr("core.fleet_simulator.stop_sim", _noop)
+
     program = FLEET_PROGRAMS[0]
     r = client.post(f"/api/{program}/units/simulate", json={}, headers=admin_headers)
     assert r.status_code == 200

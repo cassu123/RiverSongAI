@@ -34,4 +34,17 @@ def get_rate_limit_key(request: StarletteRequest) -> str:
     return get_remote_address(request)
 
 
+def get_fleet_unit_key(request: StarletteRequest) -> str:
+    """
+    Rate-limit key for fleet device endpoints: bucket per unit token so one
+    unit's traffic (or one leaked/abused token) can't exhaust the shared IP
+    budget, and a flood from a single unit is throttled independently.
+    Falls back to remote IP when no token is present.
+    """
+    token = request.headers.get("X-Unit-Token")
+    if token:
+        return f"unit:{token}"
+    return get_remote_address(request)
+
+
 limiter = Limiter(key_func=get_rate_limit_key)

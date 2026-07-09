@@ -39,10 +39,12 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
+from config.settings import get_settings
 from core.auth import require_role
+from core.limiter import get_fleet_unit_key, limiter
 from core.webhook_tokens import constant_time_match, hash_token
 from providers.memory.sqlite_store import SQLiteStore
 
@@ -380,7 +382,9 @@ def build_fleet_router(program: str) -> APIRouter:
     # ---- Device surface ----
 
     @router.post("/register")
-    async def register(body: RegisterBody,
+    @limiter.limit(get_settings().rate_limit_fleet_device,
+                   key_func=get_fleet_unit_key)
+    async def register(request: Request, body: RegisterBody,
                        x_unit_token: Optional[str] = Header(default=None)):
         store = SQLiteStore()
         await _ensure_schema(store)
@@ -393,7 +397,9 @@ def build_fleet_router(program: str) -> APIRouter:
         return {"status": "ok"}
 
     @router.post("/heartbeat")
-    async def heartbeat(body: HeartbeatBody,
+    @limiter.limit(get_settings().rate_limit_fleet_device,
+                   key_func=get_fleet_unit_key)
+    async def heartbeat(request: Request, body: HeartbeatBody,
                         x_unit_token: Optional[str] = Header(default=None)):
         store = SQLiteStore()
         await _ensure_schema(store)
@@ -405,7 +411,9 @@ def build_fleet_router(program: str) -> APIRouter:
         return {"status": "ok"}
 
     @router.post("/telemetry")
-    async def telemetry(body: TelemetryBody,
+    @limiter.limit(get_settings().rate_limit_fleet_device,
+                   key_func=get_fleet_unit_key)
+    async def telemetry(request: Request, body: TelemetryBody,
                         x_unit_token: Optional[str] = Header(default=None)):
         store = SQLiteStore()
         await _ensure_schema(store)
@@ -428,7 +436,9 @@ def build_fleet_router(program: str) -> APIRouter:
         return {"status": "ok", "stored": len(body.snapshots)}
 
     @router.post("/alerts")
-    async def alert(body: AlertBody,
+    @limiter.limit(get_settings().rate_limit_fleet_device,
+                   key_func=get_fleet_unit_key)
+    async def alert(request: Request, body: AlertBody,
                     x_unit_token: Optional[str] = Header(default=None)):
         store = SQLiteStore()
         await _ensure_schema(store)
@@ -451,7 +461,9 @@ def build_fleet_router(program: str) -> APIRouter:
         return {"status": "ok"}
 
     @router.get("/commands")
-    async def poll_commands(unit_id: str,
+    @limiter.limit(get_settings().rate_limit_fleet_device,
+                   key_func=get_fleet_unit_key)
+    async def poll_commands(request: Request, unit_id: str,
                             x_unit_token: Optional[str] = Header(default=None)):
         store = SQLiteStore()
         await _ensure_schema(store)
@@ -471,7 +483,9 @@ def build_fleet_router(program: str) -> APIRouter:
         }
 
     @router.post("/commands/{command_id}/ack")
-    async def ack_command(command_id: str, body: AckBody,
+    @limiter.limit(get_settings().rate_limit_fleet_device,
+                   key_func=get_fleet_unit_key)
+    async def ack_command(request: Request, command_id: str, body: AckBody,
                           x_unit_token: Optional[str] = Header(default=None)):
         store = SQLiteStore()
         await _ensure_schema(store)

@@ -124,6 +124,14 @@ class Settings(BaseSettings):
         default="5/minute",
         description="Rate limit for /api/voice-id/enroll. Prevents disk exhaustion via spam.",
     )
+    rate_limit_fleet_device: str = Field(
+        default="300/minute",
+        description=(
+            "Per-unit rate limit for fleet device ingestion (register, "
+            "heartbeat, telemetry, alerts, command poll/ack). Generous enough "
+            "for a normal ~2s device cadence; caps a runaway or abused token."
+        ),
+    )
 
     # -------------------------------------------------------------------------
     # WebSocket Security (Task 3)
