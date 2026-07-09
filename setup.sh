@@ -428,7 +428,10 @@ fi
 
 step "Step 9/9 -- Auto-deploy cron job"
 
-CRON_CMD="cd ${PROJECT_DIR} && git pull origin main --quiet && source venv/bin/activate && pip install -r requirements.txt --no-build-isolation --quiet && cd frontend && npm install --silent && npm run build --silent && cd .. && sudo systemctl restart river-song"
+# Delegate to deploy.sh so the nightly unattended deploy gets the same
+# health-gate + automatic rollback as a manual deploy (a bad commit must not
+# sit live until morning). deploy.sh handles pull, deps, build, and restart.
+CRON_CMD="cd ${PROJECT_DIR} && ./deploy.sh"
 CRON_JOB="0 3 * * * ${CRON_CMD} >> ${PROJECT_DIR}/logs/deploy.log 2>&1"
 
 if crontab -l 2>/dev/null | grep -q "river-song\|deploy.log"; then

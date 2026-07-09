@@ -11,7 +11,7 @@
 # -----------------------------------------------------------------------------
 fastapi>=0.136.3
 uvicorn[standard]==0.44.0       # ASGI server; [standard] pulls websockets + uvloop
-websockets==14.0                # for Home Assistant WS events
+websockets==16.0                # for Home Assistant WS events (Dependabot bump from 14.0)
 starlette>=0.50.0               # WebSocket state management; >=0.50.0 clears CVE range headers DoS (<=0.49.0)
 python-multipart==0.0.27        # Form data parsing for FastAPI
 pypdf==6.12.0                   # PDF text extraction for vehicle manual uploads (CVE-2026-48155/48156: bump >=6.12.0)
@@ -22,7 +22,7 @@ beautifulsoup4==4.14.3          # Culinary: URL recipe scraping
 # -----------------------------------------------------------------------------
 # Configuration
 # -----------------------------------------------------------------------------
-pydantic[email]==2.13.2         # [email] extra adds validation for auth routes
+pydantic[email]==2.13.4         # [email] extra adds validation for auth routes (Dependabot bump from 2.13.2)
 pydantic-settings==2.13.1       # BaseSettings for .env loading
 python-dotenv==1.2.2            # .env file support
 
@@ -46,7 +46,7 @@ anthropic>=0.105.2,<1.0.0               # Claude API cloud LLM
 google-genai==1.16.0            # Google Gemini cloud LLM
 openai==1.82.0                  # OpenAI cloud LLM
 mistralai==1.7.0                # Mistral AI cloud LLM
-boto3==1.38.0                   # Amazon Bedrock (and AWS SDK)
+boto3==1.43.34                  # Amazon Bedrock (and AWS SDK) (Dependabot bump from 1.38.0)
 
 
 # -----------------------------------------------------------------------------
@@ -111,7 +111,10 @@ pybind11==3.0.4                     # C++ bindings required by chroma-hnswlib
 # chromadb pulls in opentelemetry + protobuf. Pin them here to avoid the Python
 # 3.14 crash: protobuf 4.x C extension raises TypeError (not ImportError) on
 # Python 3.14, causing a boot-time crash. Protobuf 5.x fixes this natively.
-protobuf>=5.29.0,<6.0
+# Floor raised to 5.29.5 (patched 5.x) rather than Dependabot's 7.x major:
+# protobuf is pinned <6 on purpose for chromadb + opentelemetry compatibility,
+# so the 7.x jump needs a separate resolve/test against those before it ships.
+protobuf>=5.29.5,<6.0
 opentelemetry-proto>=1.29.0
 opentelemetry-exporter-otlp-proto-grpc>=1.29.0
 opentelemetry-exporter-otlp-proto-common>=1.29.0
@@ -127,7 +130,7 @@ opentelemetry-instrumentation-asgi>=0.63b1
 # -----------------------------------------------------------------------------
 # Inventory System
 # -----------------------------------------------------------------------------
-sqlalchemy==2.0.49                   # ORM for inventory.db (SQLite)
+sqlalchemy==2.0.51                   # ORM for inventory.db (SQLite) (Dependabot bump from 2.0.49)
 qrcode[pil]==8.2                     # QR code PNG generation
 python-barcode[images]==0.16.1       # Code-128 barcode PNG generation
 reportlab==4.4.1                     # PDF label/report generation

@@ -36,7 +36,9 @@ if [[ "${1:-}" == "--backup" ]]; then
 fi
 
 step "Pulling latest from GitHub"
-# `npm install` (below) can rewrite frontend/package-lock.json on disk, leaving
+# Remember where we are so a failed health check can roll the tree back.
+PREV_COMMIT="$(git rev-parse HEAD)"
+# `npm ci` (below) can rewrite frontend/package-lock.json on disk, leaving
 # local churn that blocks the next fast-forward pull. It's a generated file —
 # discard any such local changes so the pull always succeeds.
 git checkout -- frontend/package-lock.json 2>/dev/null || true
@@ -100,10 +102,13 @@ PKG_HASH_FILE="../.npm_package.sha256"
 NEW_PKG_HASH="$(sha256sum package.json package-lock.json 2>/dev/null | sha256sum | awk '{print $1}')"
 OLD_PKG_HASH="$(cat "$PKG_HASH_FILE" 2>/dev/null || echo '')"
 if [[ "$NEW_PKG_HASH" != "$OLD_PKG_HASH" ]]; then
-    npm install --legacy-peer-deps --silent
+    # `npm ci` installs exactly what package-lock.json pins (reproducible), the
+    # same command CI runs. Falls back to `npm install` only if the lockfile is
+    # out of sync, so a lock drift never hard-fails the deploy.
+    npm ci --silent || npm install --legacy-peer-deps --silent
     echo "$NEW_PKG_HASH" > "$PKG_HASH_FILE"
 else
-    echo "    (package.json unchanged — skipping npm install)"
+    echo "    (package.json unchanged — skipping npm ci)"
 fi
 npm run build
 cd ..
@@ -129,6 +134,37 @@ fi
 
 step "Restarting service"
 sudo systemctl restart river-song
+
+# ---------------------------------------------------------------------------
+# Health gate — a bad commit must not sit live after an unattended (cron)
+# deploy. Poll /health; if it never comes up, roll the tree back to the
+# previous commit, rebuild, restart, and exit non-zero.
+# ---------------------------------------------------------------------------
+step "Health check (/health)"
+HEALTH_OK=0
+for _ in $(seq 1 15); do
+    sleep 2
+    if curl -fsS -m 5 http://127.0.0.1:8000/health >/dev/null 2>&1; then
+        HEALTH_OK=1
+        break
+    fi
+done
+
+if [[ "$HEALTH_OK" != "1" ]]; then
+    echo "" >&2
+    echo "[$(ts)] !! Health check FAILED — rolling back to $PREV_COMMIT" >&2
+    git reset --hard "$PREV_COMMIT"
+    # Reinstall/rebuild for the rolled-back tree, then restart.
+    NEW_HASH="$(sha256sum requirements.txt | awk '{print $1}')"
+    if [[ "$NEW_HASH" != "$(cat "$REQ_HASH_FILE" 2>/dev/null || echo '')" ]]; then
+        pip install -r requirements.txt --no-build-isolation --quiet || true
+        echo "$NEW_HASH" > "$REQ_HASH_FILE"
+    fi
+    ( cd frontend && { npm ci --silent || npm install --legacy-peer-deps --silent; } && npm run build ) || true
+    sudo systemctl restart river-song
+    echo "[$(ts)] !! Rolled back to previous commit; service restarted. Investigate the failed deploy." >&2
+    exit 1
+fi
 
 step "Done — River Song is live at https://riversongai.com (tunnel → :8000)"
 sudo systemctl status river-song --no-pager -l
