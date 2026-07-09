@@ -99,6 +99,26 @@ robot uses and queues the task at priority 7 on the best available unit.
 Admin endpoints (JWT): claim/list/delete units, queue chores, browse
 alerts.
 
+### Fleet demo — no hardware required
+
+Every fleet program runs against an in-process simulator, so you can drive
+the whole claim → register → telemetry → command path before any physical
+unit exists. Seed one simulated unit per program (horizon, kova, sentinel,
+vortex, vexa) with a single command and watch live telemetry on the Fleet
+page:
+
+```bash
+# Against a running server. Provide an admin JWT via RS_TOKEN, or run inside
+# the app venv and the script mints one for you.
+python scripts/seed_fleet_demo.py               # start one sim unit per program
+python scripts/seed_fleet_demo.py --stop        # tear all of them down
+```
+
+To drive a single unit over HTTP exactly as real hardware would (register,
+stream telemetry, poll/apply/ack commands), use `scripts/fleet_sim.py`
+after claiming a unit. Device tokens are stored only as a sha256 hash at
+rest; the plaintext is shown once at claim time.
+
 ---
 
 ## Production Setup

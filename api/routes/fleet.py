@@ -330,11 +330,13 @@ def build_fleet_router(program: str) -> APIRouter:
         unit_id = "sim-" + uuid.uuid4().hex[:8]
         unit_token = uuid.uuid4().hex + uuid.uuid4().hex
         name = (body.name or "").strip() or f"Sim {program.capitalize()} {unit_id[-4:]}"
+        # Store the hash, never the plaintext — keeps the fleet_units
+        # no-plaintext-at-rest invariant (audit H-2) true even for sim rows.
         await store.execute_write_async(
             "INSERT INTO fleet_units "
             "(program, unit_id, name, unit_token, metadata, online, registered_at, last_seen) "
             "VALUES (?, ?, ?, ?, ?, 1, ?, ?)",
-            (program, unit_id, name, unit_token,
+            (program, unit_id, name, hash_token(unit_token),
              json.dumps({"simulated": True}), _now(), _now()),
         )
         from core.fleet_simulator import start_sim
