@@ -307,6 +307,46 @@ def create_app() -> FastAPI:
                         _last_warning = datetime.now()
             await self.app(scope, receive, send)
 
+    class _CookieAuthBridgeMiddleware:
+        """Bridge the HttpOnly access_token cookie to the Authorization header.
+
+        Many handlers read the token from `Authorization: Bearer ...` directly
+        and do not check the cookie. When a request carries the access_token
+        cookie but NO Authorization header, inject
+        `Authorization: Bearer <cookie>` so those handlers accept cookie auth
+        too. An explicit Authorization header always wins, so this is fully
+        backward-compatible and inert for the current header-sending frontend —
+        it is the backend foundation for cookie-only auth (audit H-1).
+        Device (X-Unit-Token) and Willow (query-token) flows are untouched.
+        """
+
+        def __init__(self, app):
+            self.app = app
+
+        async def __call__(self, scope, receive, send):
+            if scope.get("type") == "http":
+                headers = scope.get("headers", [])
+                has_auth = any(k == b"authorization" for k, _ in headers)
+                if not has_auth:
+                    raw_cookie = next(
+                        (v for k, v in headers if k == b"cookie"), None)
+                    if raw_cookie:
+                        from http.cookies import SimpleCookie
+                        jar = SimpleCookie()
+                        try:
+                            jar.load(raw_cookie.decode("latin-1"))
+                        except Exception:  # noqa: BLE001 - malformed cookie header
+                            jar = None
+                        token = (jar["access_token"].value
+                                 if jar and "access_token" in jar else None)
+                        if token:
+                            scope = dict(scope)
+                            scope["headers"] = list(headers) + [
+                                (b"authorization",
+                                 f"Bearer {token}".encode("latin-1")),
+                            ]
+            await self.app(scope, receive, send)
+
     # Allow the Vite dev server (and any other configured origins) to connect
     app.add_middleware(
         CORSMiddleware,
@@ -317,6 +357,7 @@ def create_app() -> FastAPI:
     )
 
     app.add_middleware(_CloudflareIPMiddleware)
+    app.add_middleware(_CookieAuthBridgeMiddleware)
 
     # Baseline HTTP security headers. CSP intentionally omitted here — the
     # frontend uses inline styles from CSS-in-JS / Three.js shaders, and an
