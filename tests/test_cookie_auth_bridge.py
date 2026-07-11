@@ -46,3 +46,27 @@ def test_explicit_header_wins_over_cookie():
     c.cookies.set("access_token", "garbage-token")
     r = c.get(URL, headers={"Authorization": f"Bearer {good}"})
     assert r.status_code == 200
+
+
+def test_cookie_auth_sentinel_resolves_to_cookie():
+    # The cookie-only frontend sends the public sentinel as its bearer; with a
+    # valid cookie present it must authenticate from the cookie.
+    tok = create_access_token("bridge-user", "bridge@test.local", "user")
+    c = TestClient(app)
+    c.cookies.set("access_token", tok)
+    r = c.get(URL, headers={"Authorization": "Bearer __rs_cookie__"})
+    assert r.status_code == 200
+
+
+def test_placeholder_bearer_null_resolves_to_cookie():
+    tok = create_access_token("bridge-user", "bridge@test.local", "user")
+    c = TestClient(app)
+    c.cookies.set("access_token", tok)
+    r = c.get(URL, headers={"Authorization": "Bearer null"})
+    assert r.status_code == 200
+
+
+def test_sentinel_without_cookie_is_unauthorized():
+    # The sentinel is not itself a credential — no cookie means no auth.
+    r = TestClient(app).get(URL, headers={"Authorization": "Bearer __rs_cookie__"})
+    assert r.status_code == 401

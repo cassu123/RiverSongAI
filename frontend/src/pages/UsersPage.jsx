@@ -107,19 +107,11 @@ export default function UsersPage() {
 
   const handleImpersonate = async (targetUser) => {
     if (!window.confirm(`Login as ${targetUser.display_name}?`)) return;
+    // impersonate() swaps the HttpOnly cookie server-side and reloads.
     try {
-      const res = await fetch(`/api/admin/users/${targetUser.id}/impersonate`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (res.ok) {
-        const data = await res.json();
-        impersonate(data.access_token, data.impersonated_user);
-      } else {
-        alert('Failed to impersonate user.');
-      }
+      await impersonate(targetUser.id);
     } catch (err) {
-      alert('Network error.');
+      alert(err.message || 'Failed to impersonate user.');
     }
   }
 

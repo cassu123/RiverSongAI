@@ -307,17 +307,26 @@ def create_app() -> FastAPI:
                         _last_warning = datetime.now()
             await self.app(scope, receive, send)
 
+    # Cookie-only frontend sends this public sentinel as its bearer instead of
+    # a real JWT (the token now lives only in the HttpOnly cookie, never in JS).
+    # The bridge below rewrites it — and other never-valid placeholders — to the
+    # cookie token. Kept in sync with frontend/src/context/AuthContext.jsx.
+    _COOKIE_AUTH_SENTINEL = "__rs_cookie__"
+    _PLACEHOLDER_BEARERS = {"", "null", "undefined", _COOKIE_AUTH_SENTINEL}
+
     class _CookieAuthBridgeMiddleware:
         """Bridge the HttpOnly access_token cookie to the Authorization header.
 
         Many handlers read the token from `Authorization: Bearer ...` directly
         and do not check the cookie. When a request carries the access_token
-        cookie but NO Authorization header, inject
-        `Authorization: Bearer <cookie>` so those handlers accept cookie auth
-        too. An explicit Authorization header always wins, so this is fully
-        backward-compatible and inert for the current header-sending frontend —
-        it is the backend foundation for cookie-only auth (audit H-1).
-        Device (X-Unit-Token) and Willow (query-token) flows are untouched.
+        cookie and either has NO Authorization header or carries a placeholder
+        bearer (empty / "null" / "undefined" / the cookie-auth sentinel), set
+        `Authorization: Bearer <cookie>` so those handlers authenticate from the
+        cookie. A real (non-placeholder) bearer always wins, so MCP/API clients
+        with genuine JWTs are unaffected. This is what lets the frontend keep
+        the token out of JS entirely (audit H-1) while every existing
+        `Bearer ${token}` call site keeps working. Device (X-Unit-Token) and
+        Willow (query-token) flows are untouched.
         """
 
         def __init__(self, app):
@@ -326,8 +335,14 @@ def create_app() -> FastAPI:
         async def __call__(self, scope, receive, send):
             if scope.get("type") == "http":
                 headers = scope.get("headers", [])
-                has_auth = any(k == b"authorization" for k, _ in headers)
-                if not has_auth:
+                current = next(
+                    (v for k, v in headers if k == b"authorization"), None)
+                is_placeholder = True
+                if current is not None:
+                    val = current.decode("latin-1").strip()
+                    bearer = val[7:].strip() if val[:7].lower() == "bearer " else val
+                    is_placeholder = bearer in _PLACEHOLDER_BEARERS
+                if is_placeholder:
                     raw_cookie = next(
                         (v for k, v in headers if k == b"cookie"), None)
                     if raw_cookie:
@@ -341,10 +356,11 @@ def create_app() -> FastAPI:
                                  if jar and "access_token" in jar else None)
                         if token:
                             scope = dict(scope)
-                            scope["headers"] = list(headers) + [
-                                (b"authorization",
-                                 f"Bearer {token}".encode("latin-1")),
-                            ]
+                            scope["headers"] = [
+                                (k, v) for k, v in headers
+                                if k != b"authorization"
+                            ] + [(b"authorization",
+                                  f"Bearer {token}".encode("latin-1"))]
             await self.app(scope, receive, send)
 
     # Allow the Vite dev server (and any other configured origins) to connect
