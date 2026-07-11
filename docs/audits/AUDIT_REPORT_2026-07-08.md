@@ -3,8 +3,29 @@
 **Audit date:** 2026-07-08
 **Auditor:** Claude (claude-fable-5), interactive review
 **Scope:** Full program — backend (`api/`, `core/`, `providers/`, `daemons/`, `main.py`, `mcp_server.py`), frontend (`frontend/src/`), infrastructure (`config/`, deploy/setup scripts, systemd, CI), and the satellite-fleet device APIs (Vexa, Kova, Vector).
-**Mode:** READ-ONLY static analysis. **No source code was modified.** Every finding below was verified against source, not pattern-matched.
+**Mode:** Originally READ-ONLY static analysis. Findings were subsequently remediated on branch `claude/home-ai-audit-6sjbte` — see the Remediation Status below.
 **Baseline:** This audit follows `docs/audits/AUDIT_REPORT.md` (2026-05-23). ~122 commits and ~50k line changes landed since then (Vexa/Kova APIs, HttpOnly-cookie auth, fleet ecosystem + simulator, Initiative Engine, Warden vision, React 19 + Vite 8 + Tailwind 4).
+
+---
+
+## 0. Remediation Status (updated 2026-07-11)
+
+All findings below were fixed on `claude/home-ai-audit-6sjbte`. Each item was verified with tests under Python 3.13 (the frontend flip additionally with a production `npm run build`).
+
+| ID | Finding | Status | Where |
+|---|---|---|---|
+| **H-1** | Frontend JWT in `localStorage` defeats the HttpOnly cookie | ✅ Fixed | Token no longer in JS at all: cookie→header bridge + CSRF Origin guard + cookie-based impersonation (`main.py`, `api/routes/admin.py`); frontend holds a public sentinel, session established from the cookie via `/api/auth/me` (`context/AuthContext.jsx`). **Needs a real-browser login/refresh/impersonate smoke test before production.** |
+| **H-2** | Fleet device tokens stored in plaintext | ✅ Fixed | sha256-at-rest + constant-time compare across `fleet.py`, `vector_fleet.py`, `vexa.py`, `kova.py` (reuses `core/webhook_tokens.py`) |
+| **M-1** | Unauthenticated YouTube Music control endpoints | ⏳ Open | Documented; not yet gated (low impact) |
+| **M-2** | No CORS production-wildcard guard | ✅ Fixed | `cors_origins` validator in `config/settings.py` |
+| **M-3** | Unattended auto-deploy, no rollback | ✅ Fixed | `deploy.sh` health-gate + rollback + `npm ci`; cron delegates to it |
+| **M-4** | Sparse rate limiting on device ingestion | ✅ Fixed | Per-unit limit on fleet ingestion (`main`/`core/limiter.py`, `fleet.py`) |
+| **L-1** | Non-constant-time token compare | ✅ Fixed | Folded into H-2 (`constant_time_match`) |
+| **L-2** | Core auth path untested | ✅ Fixed | `tests/test_core_auth.py` |
+| **L-3** | Legacy WS token-in-query still supported | ⏳ Open | Opt-in flag, warned; remove once devices migrate |
+| Deps | Dependabot Python alerts | ◑ Partial | pydantic/sqlalchemy/boto3/websockets bumped; protobuf 7.x major deferred (chromadb/otel pin) — needs the real env |
+
+Still open by design: **M-1**, **L-3**, the **protobuf 7.x** major, and consolidating the four fleet modules into the generic factory.
 
 ---
 
