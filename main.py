@@ -376,6 +376,34 @@ def create_app() -> FastAPI:
             )
         return response
 
+    # CSRF defense-in-depth for cookie-authenticated browser sessions (audit
+    # H-1). The access_token cookie is SameSite=Lax, which already blocks it on
+    # cross-site state-changing requests; this adds an Origin allow-list check
+    # on mutating methods. Only requests that carry the access_token cookie are
+    # checked — token/device clients (Bearer, X-Unit-Token) are not CSRF-able.
+    # Fail-open when no Origin header is present (relies on SameSite=Lax) so
+    # non-browser cookie use and odd proxies are never hard-blocked.
+    from urllib.parse import urlparse as _urlparse
+    _CSRF_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+    _csrf_allowed_origins = set(settings.cors_origins)
+
+    @app.middleware("http")
+    async def _csrf_guard(request, call_next):
+        if (request.method in _CSRF_METHODS
+                and request.cookies.get("access_token")):
+            origin = request.headers.get("origin")
+            if origin:
+                origin_host = _urlparse(origin).netloc
+                host = request.headers.get("host", "")
+                if origin not in _csrf_allowed_origins and origin_host != host:
+                    logger.warning(
+                        "CSRF: blocked %s %s from foreign origin %s",
+                        request.method, request.url.path, origin)
+                    return _JSONResponse(
+                        status_code=403,
+                        content={"detail": "CSRF origin check failed."})
+        return await call_next(request)
+
     if settings.legacy_ws_token_accept:
         logger.warning(
             "LEGACY_WS_TOKEN_ACCEPT=True — accepting JWT-in-query-string for WebSockets. "

@@ -15,11 +15,12 @@ from typing import List, Optional
 import bcrypt
 from core.family_migration import migrate_member_to_family
 
-from fastapi import APIRouter, Request, Header
+from fastapi import APIRouter, Request, Header, Response
 from pydantic import BaseModel
 
 from api.routes.features import ALL_FEATURES, ALL_FEATURE_KEYS
 
+from config.settings import get_settings
 from core.auth import decode_token, create_access_token
 from core.errors import bad_request, forbidden, not_found, unauthorized
 
@@ -41,6 +42,16 @@ async def _require_admin(request: Request,
     if payload.get("role") != "admin":
         raise forbidden("Admin access required.")
     return payload
+
+
+def _set_auth_cookie(response: Response, token: str) -> None:
+    """Set the HttpOnly access_token cookie exactly as the login flow does
+    (auth.py). Cookie-only auth means impersonation/revert must swap it here."""
+    s = get_settings()
+    response.set_cookie(
+        "access_token", token, httponly=True,
+        secure=s.environment == "production", samesite="lax",
+        max_age=s.jwt_expire_minutes * 60)
 
 
 class UpdateUserBody(BaseModel):
@@ -182,6 +193,7 @@ async def force_logout(
 async def impersonate_user(
     user_id: str,
     request: Request,
+    response: Response,
     authorization: Optional[str] = Header(default=None),
 ):
     payload = await _require_admin(request, authorization)
@@ -195,7 +207,8 @@ async def impersonate_user(
     if admin_id == user_id:
         raise bad_request("You cannot impersonate yourself.")
 
-    # Create a token for the target user, but note the impersonator
+    # Create a token for the target user, carrying the impersonator id so
+    # revert can restore the admin session.
     token = create_access_token(
         user_id=target["id"],
         email=target["email"],
@@ -206,8 +219,46 @@ async def impersonate_user(
         admin_id,
         user_id)
 
+    # Swap the session cookie to the impersonated user (cookie-only auth).
+    _set_auth_cookie(response, token)
     return {"access_token": token, "token_type": "bearer",
             "impersonated_user": target}
+
+
+@router.post("/revert-impersonation")
+async def revert_impersonation(
+    request: Request,
+    response: Response,
+    authorization: Optional[str] = Header(default=None),
+):
+    """End an impersonation session and restore the admin's own session.
+
+    Reads the impersonator id from the current (impersonation) token — issued
+    by impersonate_user — reissues a clean admin token, and swaps the cookie
+    back. No admin role is required on the *current* token because during
+    impersonation it carries the target user's (possibly non-admin) role; the
+    impersonator id is the authority, and it must still resolve to an admin.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise unauthorized("Not authenticated.")
+    payload = await decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise unauthorized("Invalid or expired token.")
+
+    impersonator_id = payload.get("impersonator_id")
+    if not impersonator_id:
+        raise bad_request("Not an impersonation session.")
+
+    store = _get_store(request)
+    admin = await store.get_user_by_id(impersonator_id)
+    if not admin or admin.get("role") != "admin":
+        raise forbidden("Impersonator is no longer an admin.")
+
+    token = create_access_token(
+        user_id=admin["id"], email=admin["email"], role=admin["role"])
+    logger.info("Reverted impersonation back to admin %s", impersonator_id)
+    _set_auth_cookie(response, token)
+    return {"access_token": token, "token_type": "bearer", "user": admin}
 
 # =============================================================================
 # Model visibility
