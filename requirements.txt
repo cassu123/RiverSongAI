@@ -11,7 +11,7 @@
 # -----------------------------------------------------------------------------
 fastapi>=0.136.3
 uvicorn[standard]==0.44.0       # ASGI server; [standard] pulls websockets + uvloop
-websockets==16.0                # for Home Assistant WS events (Dependabot bump from 14.0)
+websockets==15.0.1              # for Home Assistant WS events. Highest release under google-genai's <15.1.0 cap (Dependabot's 16.0 conflicts); still upgrades from 14.0.
 starlette>=0.50.0               # WebSocket state management; >=0.50.0 clears CVE range headers DoS (<=0.49.0)
 python-multipart==0.0.27        # Form data parsing for FastAPI
 pypdf==6.12.0                   # PDF text extraction for vehicle manual uploads (CVE-2026-48155/48156: bump >=6.12.0)
