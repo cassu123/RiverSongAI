@@ -1420,6 +1420,24 @@ class Settings(BaseSettings):
             )
         return v
 
+    @field_validator("cors_origins")
+    @classmethod
+    def reject_cors_wildcard_in_production(cls, v, info) -> List[str]:
+        """Block ['*'] CORS origins in production.
+
+        CORS is configured with allow_credentials=True (main.py); a wildcard
+        origin combined with credentials is a credential-exposing
+        misconfiguration. Mirror reject_wildcard_in_production for ALLOWED_HOSTS.
+        """
+        env = (info.data.get("environment") or "production").lower()
+        if env == "production" and "*" in v:
+            raise ValueError(
+                "CORS_ORIGINS must not contain '*' in production — it exposes "
+                "credentialed requests to any origin. Set it to your exact "
+                "origin(s), e.g. CORS_ORIGINS=[\"https://riversongai.com\"]."
+            )
+        return v
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:
