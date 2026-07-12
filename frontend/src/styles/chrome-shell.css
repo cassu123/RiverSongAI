@@ -306,7 +306,7 @@
   border-inline-end: 1px solid var(--md-outline-variant);
   padding: max(env(safe-area-inset-top), 16px) 20px max(env(safe-area-inset-bottom), 16px);
   transform: translateX(-100%);
-  transition: transform var(--rs-motion-mid) var(--rs-motion-curve);
+  transition: transform var(--rs-motion-mid) var(--rs-motion-glide);
   overflow: hidden;
   display: flex;
   flex-direction: column;

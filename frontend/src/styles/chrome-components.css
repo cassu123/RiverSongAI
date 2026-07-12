@@ -315,7 +315,18 @@
               transform var(--rs-motion-mid) var(--rs-motion-curve),
               background var(--rs-motion-fast) var(--rs-motion-curve),
               border-color var(--rs-motion-fast) var(--rs-motion-curve);
+  /* Staggered entry cascade (DESIGN.md §6). `backwards` fill, not `both`:
+     a filling animation would override the transform/opacity transitions
+     the expand/recede states rely on after it finishes. */
+  animation: slideUpFade var(--rs-motion-mid) var(--rs-motion-curve) backwards;
 }
+.rs-dashboard-flow > .rs-card:nth-child(2) { animation-delay: 90ms; }
+.rs-dashboard-flow > .rs-card:nth-child(3) { animation-delay: 180ms; }
+.rs-dashboard-flow > .rs-card:nth-child(4) { animation-delay: 270ms; }
+.rs-dashboard-flow > .rs-card:nth-child(5) { animation-delay: 360ms; }
+.rs-dashboard-flow > .rs-card:nth-child(6) { animation-delay: 450ms; }
+.rs-dashboard-flow > .rs-card:nth-child(7) { animation-delay: 540ms; }
+.rs-dashboard-flow > .rs-card:nth-child(n+8) { animation-delay: 630ms; }
 
 .rs-dashboard-flow > .rs-card.is-wide {
   flex-basis: 100%;
@@ -451,7 +462,7 @@
     0 16px 48px rgba(0, 0, 0, 0.65),
     0 0 0 1px rgba(0,0,0,0.3);
   padding: 6px;
-  animation: rs-mpop-in 160ms var(--rs-motion-curve) both;
+  animation: rs-mpop-in 220ms var(--rs-motion-spring) backwards;
 }
 @keyframes rs-mpop-in {
   from { opacity: 0; transform: translateY(8px) scale(0.97); }

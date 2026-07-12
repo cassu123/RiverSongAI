@@ -76,6 +76,12 @@
   --rs-motion-mid:  350ms;
   --rs-motion-slow: 750ms;
   --rs-motion-curve: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Spring: gentle overshoot for scale/short-travel pops (modals, toggle
+     thumbs). Never use on edge-anchored panels — overshoot opens a gap. */
+  --rs-motion-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+  /* Glide: fast launch, long settle — the "physical panel" curve for
+     Drawer/Sheet slides (overshoot-free). */
+  --rs-motion-glide: cubic-bezier(0.32, 0.72, 0, 1);
 
   /* Semantic Status Colors */
   --rs-status-nominal:  #4ade80;
@@ -190,6 +196,9 @@ p {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    /* Zero the stagger delays too — with `backwards` fill a delayed item
+       would otherwise sit invisible for the whole cascade. */
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;

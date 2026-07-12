@@ -78,6 +78,27 @@
   gap: 4px;
 }
 
+/* Nav items ripple in each time the drawer opens (keyed on .is-open so the
+   cascade replays per open, not once per mount). Short 45ms steps — this is
+   utility navigation, so it reads as a ripple rather than a reveal.
+   `backwards` fill keeps hover/active transitions unaffected afterwards. */
+.rs-drawer.is-open .rs-drawer-list > *,
+.rs-drawer.is-open .rs-drawer-grid > * {
+  animation: rs-slide-up 300ms var(--rs-motion-curve) backwards;
+}
+.rs-drawer.is-open .rs-drawer-list > *:nth-child(2),
+.rs-drawer.is-open .rs-drawer-grid > *:nth-child(2) { animation-delay: 45ms; }
+.rs-drawer.is-open .rs-drawer-list > *:nth-child(3),
+.rs-drawer.is-open .rs-drawer-grid > *:nth-child(3) { animation-delay: 90ms; }
+.rs-drawer.is-open .rs-drawer-list > *:nth-child(4),
+.rs-drawer.is-open .rs-drawer-grid > *:nth-child(4) { animation-delay: 135ms; }
+.rs-drawer.is-open .rs-drawer-list > *:nth-child(5),
+.rs-drawer.is-open .rs-drawer-grid > *:nth-child(5) { animation-delay: 180ms; }
+.rs-drawer.is-open .rs-drawer-list > *:nth-child(6),
+.rs-drawer.is-open .rs-drawer-grid > *:nth-child(6) { animation-delay: 225ms; }
+.rs-drawer.is-open .rs-drawer-list > *:nth-child(n+7),
+.rs-drawer.is-open .rs-drawer-grid > *:nth-child(n+7) { animation-delay: 270ms; }
+
 /* ── Drawer row item ─────────────────────────────────────────────────────── */
 .rs-drawer-item {
   all: unset;
@@ -252,7 +273,8 @@
   height: 16px;
   border-radius: 50%;
   background: #fff;
-  transition: transform var(--rs-motion-mid) var(--rs-motion-curve);
+  /* Spring overshoot stays inside the 40px track (18px travel + ~2px). */
+  transition: transform var(--rs-motion-mid) var(--rs-motion-spring);
   box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
 .rs-drawer-toggle.is-on .rs-toggle-thumb {
@@ -320,7 +342,7 @@
   padding: 14px 18px;
   padding-block-end: max(env(safe-area-inset-bottom), 18px);
   transform: translateY(100%);
-  transition: transform var(--rs-motion-mid) var(--rs-motion-curve);
+  transition: transform var(--rs-motion-mid) var(--rs-motion-glide);
   max-inline-size: min(560px, 100%);
   margin-inline: auto;
   max-block-size: 80svh;
