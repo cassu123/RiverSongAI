@@ -8,9 +8,8 @@
 .rs-card {
   container-type: inline-size;
   position: relative;
-  background: color-mix(in srgb, var(--md-surface-container-low) 45%, transparent);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  background: color-mix(in srgb, var(--md-surface-container-low) 85%, transparent);
+  /* Removed backdrop-filter to fix stuttering on mobile devices */
   /* Double-Bezel Implementation via CSS */
   border: 1px solid rgba(255, 255, 255, 0.12); /* Whisper border */
   border-radius: calc(2rem - 4px); /* Inner radius */
