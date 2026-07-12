@@ -7,7 +7,7 @@
 
 export const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'admin_settings', 'remote_ollama', 'webhook_tokens', 'slae'])
 
-export const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings', 'chronos', 'briefing', 'documents', 'skills', 'presets', 'research', 'compare'])
+export const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings', 'chronos', 'briefing', 'documents', 'skills', 'presets', 'research', 'compare', 'legal'])
 
 export const STATE_TABS = ['idle', 'listening', 'thinking', 'speaking']
 
@@ -49,7 +49,8 @@ export const NAV_GROUPS = [
       { key: 'analytics',   label: 'Analytics',   icon: 'analytics' },
       { key: 'reading',     label: 'Reading',     icon: 'reading' },
       { key: 'google',      label: 'Google',      icon: 'google' },
-      { key: 'environment', label: 'Environment', icon: 'environment' }
+      { key: 'environment', label: 'Environment', icon: 'environment' },
+      { key: 'legal',       label: 'Legal',       icon: 'documents' }
     ]
   },
   {

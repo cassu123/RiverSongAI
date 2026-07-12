@@ -56,6 +56,7 @@ const ReadingOAuthCallbackPage = lazy(() => import('./pages/ReadingOAuthCallback
 const ForcePasswordChangePage  = lazy(() => import('./pages/ForcePasswordChangePage.jsx'))
 const SlaePage                 = lazy(() => import('./pages/SlaePage.jsx'))
 const PreviewRoot              = lazy(() => import('./preview/PreviewRoot.jsx'))
+const LegalPage                = lazy(() => import('./pages/LegalPage.jsx'))
 
 import { ADMIN_PAGES, ALWAYS_VISIBLE } from './utils/constants.js'
 
@@ -97,6 +98,7 @@ const PAGE_TO_PATH = {
   preview:          '/preview',
   google_callback:  '/callback',
   reading_callback: '/reading-oauth-callback',
+  legal:            '/legal',
 }
 
 function pageKeyFromPath(pathname) {
@@ -475,6 +477,7 @@ export default function App() {
               {currentPage === 'webhook_tokens' && <WebhookTokensPage setAction={setPageAction} />}
               {currentPage === 'slae'           && <SlaePage setAction={setPageAction} />}
               {currentPage === 'preview'        && <PreviewRoot />}
+              {currentPage === 'legal'          && <LegalPage />}
             </div>
           </Suspense>
         </ErrorBoundary>
