@@ -164,9 +164,12 @@ p {
   animation: rs-page-in var(--rs-motion-slow) var(--rs-motion-curve) both;
 }
 
+/* Opacity + transform only: an animated filter blur across the whole page
+   repaints every frame at exactly the moment glass panels are re-blurring
+   the new backdrop — the combination is the navigation jank. */
 @keyframes rs-page-in {
-  from { opacity: 0; transform: scale(1.02) translateY(20px); filter: blur(10px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+  from { opacity: 0; transform: scale(1.02) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .animate-slide-up {
@@ -176,4 +179,19 @@ p {
 @keyframes rs-slide-up {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   REDUCED MOTION — global fallback
+   Component files opt out with tailored rules where a static
+   substitute exists; this blanket catches everything else by
+   snapping animations/transitions to their end state.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

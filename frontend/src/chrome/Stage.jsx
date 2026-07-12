@@ -22,7 +22,10 @@ import useCanvasEffect from './useCanvasEffect.js'
  *
  * See public/PREVIEW_IMAGE_PROMPTS.md for the generation prompts.
  */
-export default function Stage({ environment }) {
+/* Memoized: App re-renders constantly (nav, toasts, header context) and the
+   scenes seed their particle fields on mount — only an actual environment
+   change may remount a scene. */
+export default React.memo(function Stage({ environment }) {
   const Scene = SCENES[environment] || SCENES.atreides
   return (
     <div className="rs-stage" aria-hidden="true">
@@ -30,7 +33,7 @@ export default function Stage({ environment }) {
       <Grade />
     </div>
   )
-}
+})
 
 /* ─────────────────────────────────────────────────────────────────────────
    PhotoStage — common DOM skeleton. Per-env children layer on top.

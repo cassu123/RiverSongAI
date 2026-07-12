@@ -1,6 +1,7 @@
 import React from 'react'
 import RsMark from '../components/RsMark.jsx'
 import EnvIcon from './EnvIcon.jsx'
+import useBackdropIdle from './useBackdropIdle.js'
 import { NAV_GROUPS } from '../utils/constants.js'
 
 /**
@@ -18,6 +19,7 @@ export default function Drawer({
   displayName,
   onLogout,
 }) {
+  useBackdropIdle(open)
   const initials = (typeof displayName === 'string' && displayName.trim())
     ? displayName.trim().split(/\s+/).map(w => w ? w[0] : '').join('').slice(0, 2).toUpperCase()
     : 'RS'

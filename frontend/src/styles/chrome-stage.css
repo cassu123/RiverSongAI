@@ -158,6 +158,15 @@
     .rs-pulse, .rs-blink,
     .rs-worm, .rs-thopter, .rs-thopter-wings, .rs-holo, .rs-av { animation: none !important; }
   }
+
+  /* While a heavy glass overlay (Drawer/Sheet) is up, freeze the backdrop:
+     every animated pixel underneath forces the overlay's backdrop-filter to
+     re-blur each frame. Class set on <body> by chrome/useBackdropIdle.js;
+     the same flag parks the canvas particle loops in useCanvasEffect.js. */
+  body.rs-backdrop-idle .rs-stage,
+  body.rs-backdrop-idle .rs-stage * {
+    animation-play-state: paused !important;
+  }
   /* Existing per-scene vignette suppressed — PreviewGrade now owns the
      vignette layer so it can layer with grain + haze consistently. */
   .rs-stage::after { content: none; }

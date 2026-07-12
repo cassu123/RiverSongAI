@@ -304,10 +304,12 @@
   border-start-start-radius: 28px;
   border-start-end-radius: 28px;
 
-  /* Liquid glass core: scene bleeds through heavy blur */
+  /* Liquid glass core: scene bleeds through heavy blur. 40px reads the
+     same as 56px over the dark stage at a fraction of the GPU cost —
+     blur cost grows with radius and this panel spans the full width. */
   background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(56px) saturate(180%) brightness(1.08);
-  -webkit-backdrop-filter: blur(56px) saturate(180%) brightness(1.08);
+  backdrop-filter: blur(40px) saturate(180%) brightness(1.08);
+  -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.08);
 
   /* Specular top edge + depth shadow */
   border-block-start: 1px solid rgba(255, 255, 255, 0.22);

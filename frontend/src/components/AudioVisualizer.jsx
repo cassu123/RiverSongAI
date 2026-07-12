@@ -36,8 +36,14 @@ export default function AudioVisualizer({ audioLevel }) {
     if (!canvas) return
 
     const ctx = canvas.getContext('2d')
-    const W   = canvas.width
-    const H   = canvas.height
+    // Scale the backing store by DPR (capped like the Stage) so the bars
+    // stay crisp instead of a 300px buffer stretched across a hi-dpi cell.
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+    const W   = 300
+    const H   = 300
+    canvas.width  = Math.floor(W * dpr)
+    canvas.height = Math.floor(H * dpr)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     const CX  = W / 2
     const CY  = H / 2
 

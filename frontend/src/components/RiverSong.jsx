@@ -245,6 +245,7 @@ function useCurrentPalette() {
 
 const _tmpWarm = new THREE.Color(), _tmpDeep = new THREE.Color();
 const _tmpAccent = new THREE.Color(), _tmpGlyph = new THREE.Color(), _tmpSil = new THREE.Color();
+const _errWarm = new THREE.Color(0x9a2030), _errAccent = new THREE.Color(0xff5060);
 
 // ─ Inner orb mesh group — runs inside Canvas ───────────────────────────────
 function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
@@ -354,10 +355,9 @@ function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
     _tmpGlyph.setHex(pal.glyph);
     _tmpSil.setHex(pal.silhouette);
     if (tint.errorTint) {
-      const err = new THREE.Color(0x9a2030);
-      _tmpWarm.lerp(err, 0.55);
-      _tmpAccent.lerp(new THREE.Color(0xff5060), 0.5);
-      _tmpSil.lerp(err, 0.4);
+      _tmpWarm.lerp(_errWarm, 0.55);
+      _tmpAccent.lerp(_errAccent, 0.5);
+      _tmpSil.lerp(_errWarm, 0.4);
     }
     vortexMat.uniforms.uWarm.value.lerp(_tmpWarm, 0.06);
     vortexMat.uniforms.uDeep.value.lerp(_tmpDeep, 0.06);
@@ -531,9 +531,13 @@ export default function RiverSong({ state, audioLevel = 0, lipSyncOpen = 0, comp
       <div className="river-song-scanlines" aria-hidden="true" />
       <div className="river-song-vignette"  aria-hidden="true" />
       
+      {/* 1.5 dpr cap matches the Stage's canvas budget; MSAA is wasted
+          through the EffectComposer's offscreen buffers and Bloom softens
+          edges anyway. */}
       <Canvas
         camera={{ position: [0, 0.05, compact ? 5.8 : 7.2], fov: 38 }}
-        gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.9 }}
+        dpr={[1, 1.5]}
+        gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.9 }}
         onCreated={({ gl }) => { gl.outputColorSpace = THREE.SRGBColorSpace }}
       >
         <OrbCore state={state} audioLevel={audioLevel} lipSyncOpen={lipSyncOpen} palette={palette} />

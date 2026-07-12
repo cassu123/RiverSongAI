@@ -1,5 +1,6 @@
 import React from 'react'
 import EnvIcon from './EnvIcon.jsx'
+import useBackdropIdle from './useBackdropIdle.js'
 
 /**
  * Sheet — bottom sheet primitive. Used for model selector, attach picker,
@@ -9,6 +10,7 @@ import EnvIcon from './EnvIcon.jsx'
  * Slides up from bottom on mobile, anchors center-bottom on desktop.
  */
 export default function Sheet({ open, onClose, title, children }) {
+  useBackdropIdle(open)
   return (
     <>
       <div
