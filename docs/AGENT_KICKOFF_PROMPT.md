@@ -39,6 +39,9 @@ The six plans live in `docs/` and form a dependency stack. **Build order:**
 5. `home-inventory-plan.md` — PCS-move asset registry. Same pattern.
 6. `culinary-kitchen-plan.md` — kitchen. Builds the ONE household shopping
    list that the garage and inventory plans reference.
+7. `smart-home-plan.md` — the house. Rooms-first all-in-one Home page over
+   Home Assistant; River as the automation brain (device-event triggers
+   through the routines/initiative spine); built-in safety alert pack.
 
 Each plan contains: the owner's decisions (a table — treat as requirements),
 a code audit with file paths and line references, phased build steps with
