@@ -49,6 +49,7 @@ from .research import router as research_router
 from .compare import router as compare_router
 from .remote_ollama import router as remote_ollama_router
 from .slae import router as slae_router
+from .chat_sessions import router as chat_sessions_router
 
 __all__ = [
     "health_router",
@@ -102,4 +103,5 @@ __all__ = [
     "compare_router",
     "remote_ollama_router",
     "slae_router",
+    "chat_sessions_router",
 ]

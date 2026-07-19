@@ -932,6 +932,23 @@ INTENT_REGISTRY: List[Intent] = [
         handler=_handle_maps,
     ),
     Intent(
+        name="deep_research",
+        phrases=[
+            "research in depth",
+            "deep dive",
+            "comprehensive report",
+            "in-depth research",
+            "research this thoroughly",
+        ],
+        keywords=[
+            "research",
+            "investigate",
+            "deep dive",
+            "report",
+        ],
+        handler=None,  # Let conversation loop handle LLM turn to use deep_research tool
+    ),
+    Intent(
         name="document_qa",
         phrases=[
             "according to the manual",

@@ -155,6 +155,7 @@ class SettingsStoreMixin:
         return UserPreferences(
             user_id=row["user_id"],
             music_provider=row["music_provider"],
+            voice_toggle=row.get("voice_toggle", "auto") if "voice_toggle" in row.keys() else "auto",
         )
 
     async def save_user_preferences(self, prefs: UserPreferences) -> None:
@@ -165,13 +166,14 @@ class SettingsStoreMixin:
         conn = self._get_conn()
         conn.execute(
             """
-            INSERT INTO user_preferences (user_id, music_provider, updated_at)
-            VALUES (?, ?, ?)
+            INSERT INTO user_preferences (user_id, music_provider, voice_toggle, updated_at)
+            VALUES (?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET
                 music_provider = excluded.music_provider,
+                voice_toggle   = excluded.voice_toggle,
                 updated_at     = excluded.updated_at
             """,
-            (prefs.user_id, prefs.music_provider, _now_str()),
+            (prefs.user_id, prefs.music_provider, prefs.voice_toggle, _now_str()),
         )
         conn.commit()
 

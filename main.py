@@ -360,6 +360,7 @@ def create_app() -> FastAPI:
         compare_router,
         remote_ollama_router,
         slae_router,
+        chat_sessions_router,
     )
 
     app.include_router(auth_router)
@@ -418,6 +419,11 @@ def create_app() -> FastAPI:
     app.include_router(compare_router)
     app.include_router(remote_ollama_router)
     app.include_router(slae_router)
+    app.include_router(
+        chat_sessions_router,
+        prefix="/api/chat",
+        tags=["Chat Sessions"]
+    )
 
     # Serve the built React frontend — must be last so API routes take priority
     import os

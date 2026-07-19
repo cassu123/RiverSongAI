@@ -1,62 +1,12 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import ConversationPanel   from './ConversationPanel.jsx'
 import { useAuth }         from '../context/AuthContext.jsx'
-import { useAudioRecorder } from '../hooks/useAudioRecorder.js'
 import RateIndicator       from './RateIndicator.jsx'
 import PresetSelector      from './PresetSelector.jsx'
+import ModelPickerPopover  from './ModelPickerPopover.jsx'
+import { useConversation } from '../hooks/useConversation.js'
+import { API_BASE } from '../utils/useApi.js'
 
-/**
- * ChatInterface — Spatial Intelligence v2.0
- * -----------------------------------------------------------------------------
- * High-performance chat interface.
- * Implements 'Cockpit' density and 'Double-Bezel' message architecture.
- */
-
-const API_BASE = import.meta.env.VITE_API_URL || ''
-const MAX_HISTORY_SESSIONS = 30
-
-function fmtCost(v) {
-  if (v == null) return null
-  return `$${(v * 1000000).toFixed(2)}/M`
-}
-
-/* ── Model picker micro-components ─────────────────────────────────────────── */
-function MpopRow({ icon, title, sub, active, dimmed, chevron, badge, onClick }) {
-  return (
-    <button
-      className={`rs-mpop-row${active ? ' is-active' : ''}${dimmed ? ' is-dimmed' : ''}`}
-      onClick={onClick}
-    >
-      <span className="material-symbols-rounded rs-mpop-icon">{icon}</span>
-      <span className="rs-mpop-body">
-        <span className="rs-mpop-title">
-          {title}
-          {badge && <span className="rs-mpop-badge">{badge}</span>}
-        </span>
-        {sub && <span className="rs-mpop-sub">{sub}</span>}
-      </span>
-      {active  && <span className="material-symbols-rounded rs-mpop-check">check</span>}
-      {chevron && !active && <span className="material-symbols-rounded rs-mpop-chevron">chevron_right</span>}
-    </button>
-  )
-}
-
-function MpopBack({ label, onClick }) {
-  return (
-    <button className="rs-mpop-back" onClick={onClick}>
-      <span className="material-symbols-rounded">arrow_back</span>
-      {label}
-    </button>
-  )
-}
-
-function historyKey(userId) { return `rs-history:${userId}` }
-function loadHistory(userId) {
-  try { return JSON.parse(localStorage.getItem(historyKey(userId)) || '[]') } catch { return [] }
-}
-function saveHistory(userId, sessions) {
-  try { localStorage.setItem(historyKey(userId), JSON.stringify(sessions.slice(0, MAX_HISTORY_SESSIONS))) } catch {}
-}
 function fmtDate(iso) {
   if (!iso) return ''
   return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -65,85 +15,97 @@ function fmtDate(iso) {
 export default function ChatInterface({ setAction, onNavigate, initialIntent, embedded, onClose }) {
   const { token, user } = useAuth()
 
-  const [messages,          setMessages]          = useState([])
-  const [streamingResponse, setStreamingResponse] = useState('')
-  const [toolEvents,        setToolEvents]        = useState([])
-  const [inputText,         setInputText]         = useState('')
-  const [isThinking,        setIsThinking]        = useState(false)
-  const [thinkingStart,     setThinkingStart]     = useState(null)
-  const [error,             setError]             = useState(null)
-
   const [models,          setModels]          = useState({ cloud: [], local: [] })
-  const [familyOverrides, setFamilyOverrides] = useState({})
   const [selectedModel,   setSelectedModel]   = useState(null)
   const [savingModel,     setSavingModel]     = useState(false)
 
-  const [history,        setHistory]        = useState([])
+  const [historySessions, setHistorySessions] = useState([])
   const [currentSessionId, setCurrentSessionId] = useState(null)
-  const [showHistory,    setShowHistory]    = useState(false)
-  const [viewingSession, setViewingSession] = useState(null)
+  const [showHistory,     setShowHistory]     = useState(false)
+  const [viewingSession,  setViewingSession]  = useState(null)
 
   const [webSearch,        setWebSearch]        = useState(false)
   const [deepResearch,     setDeepResearch]     = useState(false)
   const [showSystem,       setShowSystem]       = useState(false)
   const [modelPickerOpen,  setModelPickerOpen]  = useState(false)
-  const [pickerView,       setPickerView]       = useState('home')
   const [popoverPos,       setPopoverPos]       = useState({ bottom: 100, right: 20 })
 
   const [systemPrompt, setSystemPrompt] = useState('')
   const [forgetMemory, setForgetMemory] = useState(false)
   const [activeDocId, setActiveDocId] = useState(null)
 
+  const [inputText,        setInputText]        = useState('')
   const inputRef = useRef(null)
-  const abortRef = useRef(null)
 
-  const [initialIntentHandled, setInitialIntentHandled] = useState(false)
+  const [voiceToggle, setVoiceToggle] = useState('auto') // 'auto', 'always', 'never'
 
-  // -- Initialization --
+  // Initialize Session Hook
+  const {
+    convState,
+    messages,
+    streamingContent,
+    toolEvents,
+    error,
+    setError,
+    isRecording,
+    startRecording,
+    stopRecording,
+    sendText,
+    resetSession,
+    abortGeneration,
+    sendMessage,
+    setMessages
+  } = useConversation({ token, user, sessionId: currentSessionId })
+
+  const isThinking = convState === 'thinking' || convState === 'speaking' || streamingContent !== ''
+
+  // Load Models & History
   useEffect(() => {
     if (!token) return
-    fetch(`${API_BASE}/api/models`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+    fetch(`${API_BASE}/api/models`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
       .then(data => {
-        setModels({
-          cloud: data.cloud || [],
-          local: data.local || [],
-        })
-        setFamilyOverrides(data.family_overrides || {})
+        setModels({ cloud: data.cloud || [], local: data.local || [] })
       })
-      .catch(err => console.warn('[ChatInterface] models load failed:', err))
+      .catch(() => {})
 
     if (user) {
-      fetch(`${API_BASE}/api/settings/llm?user_id=${user.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      fetch(`${API_BASE}/api/settings/llm?user_id=${user.id}`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
         .then(s => setSelectedModel({ provider: s.provider, model_id: s.model }))
-        .catch(err => console.warn('[ChatInterface] LLM settings load failed:', err))
+        .catch(() => {})
+        
+      fetch(`${API_BASE}/api/chat/sessions`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(data => {
+            if (data.sessions) {
+                setHistorySessions(data.sessions)
+            }
+        })
+        .catch(() => {})
 
-      setHistory(loadHistory(user.id))
+      fetch(`${API_BASE}/api/settings`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(data => {
+            if (data.voice_toggle) setVoiceToggle(data.voice_toggle)
+        })
+        .catch(() => {})
     }
   }, [user?.id, token])
 
-  // -- Model Mapping --
   const localModels  = useMemo(() => models.local, [models.local])
   const nimModels    = useMemo(() => models.cloud.filter(m => m.provider === 'nvidia_nim'), [models.cloud])
   const cloudModels  = useMemo(() => models.cloud.filter(m => m.provider !== 'nvidia_nim'), [models.cloud])
-
   const hasNvidia    = nimModels.length > 0
   const hasCloud     = cloudModels.some(m => m.available)
 
-  const closeModelPicker = () => { setModelPickerOpen(false); setPickerView('home') }
-
+  const closeModelPicker = () => { setModelPickerOpen(false) }
   const openModelPicker = useCallback((e) => {
     const rect = e.currentTarget.getBoundingClientRect()
     setPopoverPos({
       bottom: window.innerHeight - rect.top + 8,
       right:  window.innerWidth  - rect.right,
     })
-    setPickerView('home')
     setModelPickerOpen(true)
   }, [])
 
@@ -169,188 +131,85 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
     setSavingModel(false)
   }
 
-  // -- Actions --
-  const handleSend = useCallback(async (overrideText, overrideDocId) => {
+  const handleSend = useCallback((overrideText, overrideDocId) => {
     const t = typeof overrideText === 'string' ? overrideText.trim() : inputText.trim()
     if (!t || isThinking) return
     if (typeof overrideText !== 'string') setInputText('')
     setError(null)
-    const next = [...messages, { role: 'user', text: t }]
-    setMessages(next)
-    setIsThinking(true)
-    setThinkingStart(Date.now())
-    setStreamingResponse('')
-    setToolEvents([])
-
-    // Fresh AbortController per send so the Stop button can cancel the
-    // in-flight stream. Stored in a ref so handleStop can reach it.
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    // Commit an assistant turn + persist to history. Shared by both the normal
-    // completion path and the user-stopped path so a partial reply isn't lost.
-    const commitAssistant = (text) => {
-      const assistantMsg = { role: 'assistant', text: text || '...' }
-      const updated = [...next, assistantMsg]
-      setMessages(updated)
-      if (user) {
-        setHistory(prev => {
-          let newHistory = [...prev]
-          const newSession = { id: currentSessionId || Date.now(), date: new Date().toISOString(), messages: updated }
-          if (currentSessionId) {
-            const idx = newHistory.findIndex(s => s.id === currentSessionId)
-            if (idx !== -1) newHistory[idx] = newSession
-            else newHistory = [newSession, ...newHistory]
-          } else {
-            newHistory = [newSession, ...newHistory]
-            setCurrentSessionId(newSession.id)
-          }
-          saveHistory(user.id, newHistory)
-          return newHistory
-        })
-      }
-    }
-
-    let full = ''
-    try {
-      const currentDocId = overrideDocId !== undefined ? overrideDocId : activeDocId
-
-      // Deep Research mode — non-streaming. Run the research orchestrator and
-      // drop its report in as the assistant turn. A document attachment takes
-      // precedence (that's RAG Q&A), so research only runs without one.
-      if (deepResearch && !currentDocId) {
-        const res = await fetch(`${API_BASE}/api/research/run`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ query: t }),
-          signal: controller.signal,
-        })
-        if (res.status === 404) throw new Error('Research is turned off on the server.')
-        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || `HTTP ${res.status}`) }
-        const data = await res.json()
-        full = data.report || 'No report produced.'
-        if (data.sources?.length) full += `\n\n---\n_${data.sources.length} source${data.sources.length === 1 ? '' : 's'} · saved to Docs_`
-        setStreamingResponse('')
-        commitAssistant(full)
-        return
-      }
-
-      let endpoint = `${API_BASE}/api/conversation/chat`
-      let body = {
-        message: t,
-        history: next.slice(-20).map(m => ({ role: m.role, content: m.text })),
-        provider: selectedModel?.provider,
-        model_id: selectedModel?.model_id,
-        web_search: webSearch,
-        forget_memory: forgetMemory,
-        ...(systemPrompt.trim() ? { system_prompt: systemPrompt.trim() } : {}),
-      }
-
-      if (currentDocId) {
-        endpoint = `${API_BASE}/api/rag/query`
-        body = { doc_id: currentDocId, question: t }
-      }
-
-      const res = await fetch(endpoint, {
+    setViewingSession(null)
+    
+    // Deep Research
+    const currentDocId = overrideDocId !== undefined ? overrideDocId : activeDocId
+    if (deepResearch && !currentDocId) {
+      setMessages(p => [...p, { role: 'user', text: t }])
+      fetch(`${API_BASE}/api/research/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
-        signal: controller.signal,
+        body: JSON.stringify({ query: t }),
+      }).then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      }).then(data => {
+        let full = data.report || 'No report produced.'
+        if (data.sources?.length) full += `\n\n---\n_${data.sources.length} source${data.sources.length === 1 ? '' : 's'} · saved to Docs_`
+        setMessages(p => [...p, { role: 'assistant', text: full }])
+      }).catch(err => {
+        setError(err.message)
       })
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let streamDone = false
-      let buffer = ''
-
-      while (!streamDone) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop()
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const piece = line.slice(6)
-            if (piece === '[DONE]') { streamDone = true; break }
-            try {
-              const evt = JSON.parse(piece)
-              if (evt.type === 'text') {
-                full += evt.content
-                setStreamingResponse(full)
-              } else if (evt.type === 'tool_use' || evt.type === 'tool_result') {
-                setToolEvents(prev => [...prev, evt])
-              } else if (evt.type === 'error') {
-                setError(`Server Error: ${evt.content}`)
-                streamDone = true; break
-              }
-            } catch {
-              full += piece
-              setStreamingResponse(full)
-            }
-          }
-        }
-      }
-      setStreamingResponse('')
-      commitAssistant(full)
-    } catch (err) {
-      setStreamingResponse('')
-      if (err.name === 'AbortError') {
-        // User pressed Stop — keep whatever streamed in before the abort.
-        if (full.trim()) commitAssistant(full)
-      } else {
-        setError(`Connection lost (${err.message || 'network error'}). Try again.`)
-      }
-    } finally {
-      abortRef.current = null
-      setIsThinking(false)
-      setThinkingStart(null)
+      return
     }
-  }, [inputText, isThinking, messages, selectedModel, token, webSearch, deepResearch, systemPrompt, activeDocId, forgetMemory, user, currentSessionId])
 
-  const handleStop = useCallback(() => {
-    abortRef.current?.abort()
-  }, [])
+    let speakOverride = null
+    if (voiceToggle === 'always') speakOverride = true
+    if (voiceToggle === 'never') speakOverride = false
 
-  useEffect(() => {
-    if (initialIntent && !initialIntentHandled && token) {
-      setInitialIntentHandled(true)
-      setActiveDocId(initialIntent.docId)
-      // Small delay to allow state to settle
-      setTimeout(() => handleSend(initialIntent.text, initialIntent.docId), 50)
-    }
-  }, [initialIntent, initialIntentHandled, token, handleSend])
+    sendText(t, { 
+      provider: selectedModel?.provider,
+      model_id: selectedModel?.model_id,
+      web_search: webSearch,
+      forget_memory: forgetMemory,
+      system_prompt: systemPrompt.trim() ? systemPrompt.trim() : undefined,
+      doc_id: currentDocId,
+      speak: speakOverride
+    })
+  }, [inputText, isThinking, sendText, selectedModel, webSearch, forgetMemory, systemPrompt, activeDocId, deepResearch, voiceToggle, setMessages, token, setError])
 
   const handleReset = useCallback(() => {
-    setMessages([])
-    setStreamingResponse('')
-    setToolEvents([])
-    setError(null)
+    resetSession()
+    setCurrentSessionId(null)
     setViewingSession(null)
     setActiveDocId(null)
-    setCurrentSessionId(null)
-  }, [])
+  }, [resetSession])
 
-  const handleAudioComplete = useCallback(async (wavB64) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/conversation/transcribe`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ audio: wavB64 }),
+  const loadSession = useCallback((sessionId) => {
+    setCurrentSessionId(sessionId)
+    sendMessage({ type: 'attach', session_id: sessionId })
+    fetch(`${API_BASE}/api/chat/sessions/${sessionId}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(s => {
+        setMessages(s.messages || [])
+        setViewingSession(null)
+        setShowHistory(false)
       })
-      if (res.ok) {
-        const { text } = await res.json()
-        if (text) setInputText(p => p ? `${p} ${text}` : text)
-      }
-    } catch {}
+      .catch(() => setError('Failed to load session'))
+  }, [sendMessage, token, setMessages, setError])
+
+  const toggleVoiceMode = useCallback(() => {
+      setVoiceToggle(prev => {
+          let next = 'auto'
+          if (prev === 'auto') next = 'always'
+          if (prev === 'always') next = 'never'
+          
+          fetch(`${API_BASE}/api/settings`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ music_provider: 'youtube_music', voice_toggle: next })
+          }).catch(() => {})
+
+          return next
+      })
   }, [token])
 
-  const { startRecording, stopRecording, isRecording } = useAudioRecorder({ onComplete: handleAudioComplete })
-
-  // -- Bottom Action Slot --
   const ActionSlot = useMemo(() => (
     <div className="rs-chat-input-container">
       <textarea
@@ -386,7 +245,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
             <span className="rs-speak-actions-label">SCAN WEB</span>
           </button>
 
-          <button className={`rs-pill ${deepResearch ? 'is-active' : ''}`} onClick={() => setDeepResearch(!deepResearch)} title="Deep Research: multi-source, saved to Docs">
+          <button className={`rs-pill ${deepResearch ? 'is-active' : ''}`} onClick={() => setDeepResearch(!deepResearch)} title="Deep Research">
             <span className="material-symbols-rounded">travel_explore</span>
             <span className="rs-speak-actions-label">RESEARCH</span>
           </button>
@@ -401,12 +260,21 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
             <span className="rs-speak-actions-label">{selectedModelLabel}</span>
           </button>
 
+          <button className="rs-pill" onClick={toggleVoiceMode} title="Voice Output Mode">
+             <span className="material-symbols-rounded">
+                 {voiceToggle === 'auto' ? 'volume_up' : voiceToggle === 'always' ? 'record_voice_over' : 'volume_off'}
+             </span>
+             <span className="rs-speak-actions-label">
+                 {voiceToggle === 'auto' ? 'AUTO' : voiceToggle === 'always' ? 'ALWAYS' : 'NEVER'}
+             </span>
+          </button>
+
           <button className={`rs-pill ${isRecording ? 'is-active' : ''}`} onClick={() => isRecording ? stopRecording() : startRecording()} disabled={isThinking}>
             <span className="material-symbols-rounded">{isRecording ? 'stop' : 'mic'}</span>
           </button>
 
           {isThinking ? (
-            <button className="rs-btn-primary rs-send-btn rs-stop-btn" onClick={handleStop} title="Stop generating" style={{ background: '#dc3c3c', color: '#fff' }}>
+            <button className="rs-btn-primary rs-send-btn rs-stop-btn" onClick={abortGeneration} title="Stop generating" style={{ background: '#dc3c3c', color: '#fff' }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1.4rem' }}>stop</span>
             </button>
           ) : (
@@ -417,7 +285,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
         </div>
       </div>
     </div>
-  ), [inputText, handleSend, handleStop, isRecording, startRecording, stopRecording, isThinking, viewingSession, webSearch, deepResearch, selectedModel, selectedModelLabel, token, openModelPicker])
+  ), [inputText, handleSend, abortGeneration, isRecording, startRecording, stopRecording, isThinking, viewingSession, webSearch, deepResearch, selectedModel, selectedModelLabel, token, openModelPicker, voiceToggle, toggleVoiceMode])
 
   useEffect(() => {
     if (!embedded && setAction) {
@@ -427,12 +295,11 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
   }, [ActionSlot, setAction, embedded])
 
   const displayMessages = viewingSession ? viewingSession.messages : messages
-  const displayStreaming = viewingSession ? '' : streamingResponse
+  const displayStreaming = viewingSession ? '' : streamingContent
 
   return (
     <div className={`rs-foyer ${embedded ? 'is-embedded' : ''}`} style={embedded ? { padding: 0, height: '100%', display: 'flex', flexDirection: 'column' } : {}}>
       
-      {/* Dynamic Overlay Bar */}
       {embedded && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>Vehicle Assistant</h3>
@@ -473,17 +340,16 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
 
       {showHistory ? (
         <div className="rs-card-flow">
-          {history.length === 0 ? (
+          {historySessions.length === 0 ? (
             <div className="rs-card-meta" style={{ padding: 48, textAlign: 'center' }}>Neural archives empty.</div>
           ) : (
-            history.map(s => (
-              <div key={s.id} className="rs-card is-tappable is-wide animate-page-in" onClick={() => { setViewingSession(s); setShowHistory(false) }}>
+            historySessions.map(s => (
+              <div key={s.id} className="rs-card is-tappable is-wide animate-page-in" onClick={() => loadSession(s.id)}>
                 <div className="rs-card-inner">
                   <div className="rs-card-head">
-                    <span className="rs-card-label">{fmtDate(s.date)}</span>
-                    <span className="rs-card-label" style={{ background: 'var(--primary)', color: 'var(--bg-base)', padding: '2px 8px', borderRadius: 4 }}>{s.messages.length} MSG</span>
+                    <span className="rs-card-label">{fmtDate(s.updated_at)}</span>
+                    <span className="rs-card-label" style={{ background: 'var(--primary)', color: 'var(--bg-base)', padding: '2px 8px', borderRadius: 4 }}>{s.title}</span>
                   </div>
-                  <div className="rs-card-value" style={{ fontSize: '1.1rem', opacity: 0.9 }}>{s.messages[0]?.text || 'Voice interaction'}</div>
                 </div>
               </div>
             ))
@@ -517,53 +383,24 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
             messages={displayMessages}
             streamingContent={displayStreaming}
             isThinking={isThinking && !viewingSession}
-            thinkingStart={thinkingStart}
             toolEvents={toolEvents}
             onNavigate={onNavigate}
           />
         </div>
       )}
 
-      {/* Model picker — floating popover near the button */}
-      {modelPickerOpen && (
-        <>
-          {/* Click-outside dismissal */}
-          <div style={{ position: 'fixed', inset: 0, zIndex: 9990 }} onClick={closeModelPicker} />
-
-          <div className="rs-mpop" style={{ bottom: popoverPos.bottom, right: popoverPos.right }}>
-
-            {/* HOME */}
-            {pickerView === 'home' && <>
-              <MpopRow icon="auto_awesome" title="River Decides" sub="Auto-routes to the best model" active={selectedModel?.provider === 'auto'} onClick={() => { closeModelPicker(); handleModelSelect('auto', 'auto') }} />
-              <MpopRow icon="memory" title="Local" sub={localModels.filter(m => m.available).length > 0 ? `${localModels.filter(m => m.available).length} ready · Ollama` : 'No models installed'} active={selectedModel?.provider === 'ollama'} chevron onClick={() => setPickerView('local')} />
-              {hasNvidia && <MpopRow icon="memory_alt" title="NVIDIA NIM" sub="Free cloud inference" active={selectedModel?.provider === 'nvidia_nim'} chevron onClick={() => setPickerView('nvidia')} />}
-              {hasCloud  && <MpopRow icon="cloud" title="Cloud" sub="Claude · Gemini · GPT" active={!!selectedModel && !['auto','ollama','nvidia_nim'].includes(selectedModel.provider)} chevron onClick={() => setPickerView('cloud')} />}
-            </>}
-
-            {/* LOCAL */}
-            {pickerView === 'local' && <>
-              <MpopBack label="Local Models" onClick={() => setPickerView('home')} />
-              {localModels.length === 0
-                ? <p className="rs-mpop-empty">Pull a model via Ollama first.</p>
-                : localModels.map(m => <MpopRow key={m.model_id} icon="memory" title={m.display_name} sub={m.notes || (m.vram_gb ? `${m.vram_gb} GB VRAM` : m.model_id)} active={selectedModel?.model_id === m.model_id && selectedModel?.provider === 'ollama'} dimmed={!m.available} onClick={() => { closeModelPicker(); handleModelSelect('ollama', m.model_id) }} />)
-              }
-            </>}
-
-            {/* NVIDIA */}
-            {pickerView === 'nvidia' && <>
-              <MpopBack label="NVIDIA NIM" onClick={() => setPickerView('home')} />
-              {nimModels.map(m => <MpopRow key={m.model_id} icon="memory_alt" title={m.display_name} sub={m.available ? (m.notes || 'Free · NIM') : 'Enable NIM in .env'} badge={m.available ? 'FREE' : null} active={selectedModel?.model_id === m.model_id && selectedModel?.provider === 'nvidia_nim'} dimmed={!m.available} onClick={() => { closeModelPicker(); handleModelSelect('nvidia_nim', m.model_id) }} />)}
-            </>}
-
-            {/* CLOUD */}
-            {pickerView === 'cloud' && <>
-              <MpopBack label="Cloud Providers" onClick={() => setPickerView('home')} />
-              {cloudModels.map(m => <MpopRow key={`${m.provider}::${m.model_id}`} icon="cloud" title={m.display_name} sub={m.available ? (m.cost_per_1k_input_usd != null ? fmtCost(m.cost_per_1k_input_usd) : m.provider) : 'Enable in admin settings'} active={selectedModel?.model_id === m.model_id && selectedModel?.provider === m.provider} dimmed={!m.available} onClick={() => { closeModelPicker(); handleModelSelect(m.provider, m.model_id) }} />)}
-            </>}
-
-          </div>
-        </>
-      )}
+      <ModelPickerPopover
+        isOpen={modelPickerOpen}
+        onClose={closeModelPicker}
+        pos={popoverPos}
+        selectedModel={selectedModel}
+        onSelect={(p, m) => { handleModelSelect(p, m); closeModelPicker(); }}
+        localModels={localModels}
+        nimModels={nimModels}
+        cloudModels={cloudModels}
+        hasNvidia={hasNvidia}
+        hasCloud={hasCloud}
+      />
 
       {embedded && (
         <div style={{ marginTop: 'auto', paddingTop: 16 }}>

@@ -113,6 +113,26 @@ CREATE INDEX IF NOT EXISTS idx_summaries_user_id
 CREATE INDEX IF NOT EXISTS idx_facts_user_id ON facts(user_id);
 CREATE INDEX IF NOT EXISTS idx_preferences_user_id ON preferences(user_id);
 
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    id            TEXT PRIMARY KEY,
+    user_id       TEXT NOT NULL,
+    title         TEXT DEFAULT '',
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL,
+    distilled_at  TEXT,
+    archived      INTEGER DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id  TEXT NOT NULL REFERENCES chat_sessions(id),
+    role        TEXT NOT NULL,
+    content     TEXT NOT NULL,
+    meta        TEXT DEFAULT '{}',
+    created_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session
+    ON chat_messages(session_id, id);
+
 CREATE TABLE IF NOT EXISTS memory_settings (
     user_id            TEXT PRIMARY KEY,
     summaries_enabled  INTEGER NOT NULL DEFAULT 1,
@@ -664,6 +684,7 @@ from providers.memory.store import (  # noqa: E402
     ContentStoreMixin,
     OpsStoreMixin,
     VectorStoreMixin,
+    ChatStoreMixin,
 )
 
 # =============================================================================
@@ -681,6 +702,7 @@ class SQLiteStore(
     ContentStoreMixin,
     OpsStoreMixin,
     VectorStoreMixin,
+    ChatStoreMixin,
 ):
     """
     Async-friendly SQLite persistence layer for the River Song memory system.
@@ -757,7 +779,8 @@ class SQLiteStore(
             "CREATE TABLE IF NOT EXISTS pulse_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT NOT NULL, data_json TEXT NOT NULL, ts REAL NOT NULL)",
             "CREATE TABLE IF NOT EXISTS voice_id_events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, identified_user_id TEXT, score REAL, runner_up_user_id TEXT, runner_up_score REAL, audio_duration_ms INTEGER, session_kind TEXT NOT NULL)",
             "CREATE TABLE IF NOT EXISTS user_integrations (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, service TEXT NOT NULL, access_token TEXT, refresh_token TEXT, token_expires_at TEXT, metadata TEXT NOT NULL DEFAULT '{}', is_active INTEGER NOT NULL DEFAULT 1, connected_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(user_id, service), FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)",
-            "CREATE TABLE IF NOT EXISTS user_preferences (user_id TEXT PRIMARY KEY, music_provider TEXT NOT NULL DEFAULT 'youtube_music', updated_at TEXT NOT NULL DEFAULT '')",
+            "CREATE TABLE IF NOT EXISTS user_preferences (user_id TEXT PRIMARY KEY, music_provider TEXT NOT NULL DEFAULT 'youtube_music', voice_toggle TEXT NOT NULL DEFAULT 'auto', updated_at TEXT NOT NULL DEFAULT '')",
+            "ALTER TABLE user_preferences ADD COLUMN voice_toggle TEXT NOT NULL DEFAULT 'auto'",
             "ALTER TABLE feed_preferences ADD COLUMN sports_favorite_leagues TEXT NOT NULL DEFAULT '[\"nba\",\"nfl\",\"mlb\"]'",
             "ALTER TABLE feed_preferences ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}'",
             # OAuth CSRF nonce store (for /api/integrations/google/callback

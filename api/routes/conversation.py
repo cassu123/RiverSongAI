@@ -133,6 +133,7 @@ async def conversation_websocket(websocket: WebSocket) -> None:
     voice_id = None
     fb_provider = None
     fb_model = None
+    whisper_model = None
     if memory_manager and user_id != "default":
         try:
             store = memory_manager._store
@@ -153,6 +154,8 @@ async def conversation_websocket(websocket: WebSocket) -> None:
         except Exception as exc:
             logger.warning("Could not load user settings: %s", exc)
 
+    session_id: str | None = websocket.query_params.get("session_id")
+
     loop = ConversationLoop(
         user_id=user_id,
         memory_manager=memory_manager,
@@ -161,7 +164,8 @@ async def conversation_websocket(websocket: WebSocket) -> None:
         voice_id_override=voice_id,
         fallback_provider=fb_provider,
         fallback_model=fb_model,
-        stt_model_override=whisper_model if 'whisper_model' in locals() else None,
+        stt_model_override=whisper_model,
+        session_id=session_id,
     )
 
     await _send(websocket, {"type": "connected"})
@@ -327,12 +331,14 @@ async def conversation_websocket(websocket: WebSocket) -> None:
 
             elif msg_type == "text_input":
                 text = message.get("text", "").strip()
+                speak = message.get("speak", None)
                 if not text:
                     await _send(websocket, {"type": "idle"})
                     continue
                 await loop.run_text(
                     text=text,
                     on_event=lambda evt: _send(websocket, evt),
+                    speak=speak
                 )
                 if get_settings().llm_streaming_enabled:
                     await _send(websocket, {"type": "stream_done"})
@@ -341,6 +347,20 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                 flush = bool(message.get("flush_memory", False))
                 await loop.reset_history(flush_memory=flush)
                 waiting_for_audio = False
+                await _send(websocket, {"type": "idle"})
+                
+            elif msg_type == "attach":
+                sess_id = message.get("session_id")
+                if sess_id:
+                    await loop.reset_history(session_id=sess_id)
+                waiting_for_audio = False
+                await _send(websocket, {"type": "session_attached", "session_id": loop._session_id})
+                await _send(websocket, {"type": "idle"})
+                
+            elif msg_type == "new_session":
+                await loop.reset_history(new_session=True)
+                waiting_for_audio = False
+                await _send(websocket, {"type": "session_attached", "session_id": loop._session_id})
                 await _send(websocket, {"type": "idle"})
 
             elif msg_type == "ping":
@@ -402,10 +422,11 @@ class _ChatRequest(BaseModel):
     history: list[dict] = []
     provider: str | None = None
     model_id: str | None = None
-    web_search: bool = False
+    web_search: bool | None = None
     system_prompt: str | None = None
     thinking_mode: str | None = None  # "fast" | "thinking" | "pro"
     forget_memory: bool = False
+    session_id: str | None = None
 
 
 @router.post("/api/conversation/chat")
@@ -431,12 +452,13 @@ async def chat_http(
     memory_manager: MemoryManager | None = getattr(
         request.app.state, "memory_manager", None)
 
-    # We use ConversationLoop to get full tool support and consistent behavior
     loop = ConversationLoop(
         user_id=user_id,
         memory_manager=memory_manager,
         llm_provider_override=body.provider,
         llm_model_override=body.model_id,
+        mode="text",
+        session_id=body.session_id,
     )
     loop._suppress_memory = body.forget_memory
     loop._web_search = body.web_search
@@ -444,14 +466,16 @@ async def chat_http(
     if body.system_prompt and body.system_prompt.strip():
         loop._system_prompt = loop._system_prompt + "\n\n" + body.system_prompt.strip()
 
-    # Re-inject history into the loop
-    for m in body.history[-20:]:
-        role = m.get("role", "user")
-        content = m.get("content", "")
-        if role in ("user", "assistant") and content:
-            loop._history.append({"role": role, "content": content})
-
     await loop.initialize()
+
+    # Re-inject history into the loop ONLY if no session_id is provided,
+    # as initialize() will load it automatically if session_id is provided.
+    if not body.session_id:
+        for m in body.history[-20:]:
+            role = m.get("role", "user")
+            content = m.get("content", "")
+            if role in ("user", "assistant") and content:
+                loop._history.append({"role": role, "content": content})
 
     async def _stream():
         queue: asyncio.Queue = asyncio.Queue()
@@ -524,7 +548,7 @@ async def chat_http(
 # ---------------------------------------------------------------------------
 
 class _ExtractFactsRequest(BaseModel):
-    messages: list[dict]  # [{"role": "user"|"assistant", "content": "..."}]
+    session_id: str
 
 
 @router.post("/api/conversation/extract-facts", status_code=202)
@@ -534,14 +558,9 @@ async def extract_facts_http(
     request: Request,
 ) -> dict:
     """
-    Called fire-and-forget when a chat session ends.
-    Uses the LLM to pull facts the user stated about themselves,
-    then saves them to the memory store.
+    Manual trigger to distill a session. The automatic distiller runs in the background.
     """
     set_usage_source("memory")
-    import asyncio
-    import json as _json
-
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
     payload = await decode_token(token) if token else None
@@ -550,168 +569,19 @@ async def extract_facts_http(
         raise HTTPException(status_code=401, detail="Authentication required.")
 
     user_id: str = payload["sub"]
-    memory_manager: MemoryManager | None = getattr(
-        request.app.state, "memory_manager", None)
+    memory_manager = getattr(request.app.state, "memory_manager", None)
     if not memory_manager:
         return {"status": "no memory manager"}
+        
+    store = memory_manager._store
+    session = await store.get_chat_session(user_id, body.session_id)
+    if not session:
+        return {"status": "not found"}
 
-    if len(body.messages) < 2:
-        return {"status": "too short"}
-
-    conversation_text = "\n".join(
-        f"{m['role'].upper()}: {m.get('content', '')}"
-        for m in body.messages
-        if m.get("role") in ("user", "assistant")
-    )
-
-    extraction_prompt = (
-        "You are building a memory profile for an AI assistant. "
-        "Extract ANYTHING from the USER's messages that would help the AI know them better in future conversations.\n\n"
-        "Use ONLY these canonical snake_case keys:\n"
-        "- Identity: full_name, first_name, last_name, age, gender, location, nationality\n"
-        "- Work: job_title, employer, industry, role, career_goals\n"
-        "- Family: spouse_name, child_name, pet_name, relative_name, friend_name\n"
-        "- Health: health_condition, medication, diet, fitness_habit\n"
-        "- Interests: hobby, interest, favorite_food, favorite_music, favorite_tv_show, favorite_book\n"
-        "- Style: preference, dislike, communication_style, tone_preference\n"
-        "- Context: current_project, problem, plan, upcoming_event, mood\n\n"
-        "Capture broadly but categorize into these keys. Output ONLY a raw JSON array.\n"
-        "Each item: {\"key\": \"canonical_key\", \"value\": \"concise plain text value\"}\n"
-        "If the user shared nothing about themselves at all, output: []\n\n"
-        f"CONVERSATION:\n{conversation_text}\n\n"
-        "JSON array:"
-    )
-
-    import re as _re
-
-    def _clean(text: str) -> str:
-        text = _re.sub(
-            r"<think>.*?</think>",
-            "",
-            text,
-            flags=_re.DOTALL).strip()
-        text = _re.sub(r"```(?:json)?\s*", "", text).strip()
-        return text
-
-    def _parse_json_array(text: str):
-        start = text.find("[")
-        end = text.rfind("]") + 1
-        if start == -1 or end == 0:
-            return None
-        return _json.loads(text[start:end])
-
-    async def _extract_facts():
-        try:
-            llm, _ = _build_llm_provider()
-            full = ""
-            async for chunk in llm.stream_response([
-                {"role": "system",
-                 "content": "You are a precise fact extractor. Output only valid JSON."},
-                {"role": "user", "content": extraction_prompt},
-            ]):
-                full += chunk
-            full = _clean(full)
-            logger.info("Fact extraction output (user=%s): %s",
-                        user_id, full[:300])
-            items = _parse_json_array(full)
-            if not items:
-                return
-            saved = 0
-            for f in items:
-                key = str(f.get("key", "")).strip()
-                value = str(f.get("value", "")).strip()
-                if key and value:
-                    await memory_manager.upsert_fact(user_id, key, value, source="inferred")
-                    saved += 1
-            logger.info("Facts saved (user=%s): %d", user_id, saved)
-        except Exception as exc:
-            logger.warning(
-                "Fact extraction failed (user=%s): %s",
-                user_id,
-                exc)
-
-    async def _extract_preferences():
-        pref_prompt = (
-            "Identify communication and interaction preferences from the USER's messages.\n"
-            "Look for: preferred response length, tone (formal/casual), topics they enjoy or avoid, "
-            "how they like to be addressed, patience level, expertise areas they have.\n"
-            "Output ONLY a raw JSON array — no markdown, no code fences.\n"
-            "Each item: {\"category\": \"snake_case_category\", \"value\": \"description\", \"confidence\": \"low|medium|high\"}\n"
-            "Example: [{\"category\": \"tone\", \"value\": \"casual and friendly\", \"confidence\": \"medium\"}]\n"
-            "If no preferences are evident, output: []\n\n"
-            f"CONVERSATION:\n{conversation_text}\n\nJSON array:"
-        )
-        try:
-            llm, _ = _build_llm_provider()
-            full = ""
-            async for chunk in llm.stream_response([
-                {"role": "system",
-                 "content": "You are a preference extractor. Output only valid JSON."},
-                {"role": "user", "content": pref_prompt},
-            ]):
-                full += chunk
-            full = _clean(full)
-            items = _parse_json_array(full)
-            if not items:
-                return
-            saved = 0
-            for p in items:
-                cat = str(p.get("category", "")).strip()
-                value = str(p.get("value", "")).strip()
-                conf = str(p.get("confidence", "low")).strip()
-                if cat and value:
-                    await memory_manager.upsert_preference(user_id, cat, value, confidence=conf)
-                    saved += 1
-            logger.info("Preferences saved (user=%s): %d", user_id, saved)
-        except Exception as exc:
-            logger.warning(
-                "Preference extraction failed (user=%s): %s",
-                user_id,
-                exc)
-
-    vault_store = getattr(memory_manager, "_store", None)
-
-    async def _generate_summary():
-        summary_prompt = (
-            "Write a 2-3 sentence summary of this conversation for future reference.\n"
-            "Focus on what was discussed, any decisions made, and key information shared.\n"
-            "Be concise and factual. Plain text only — no lists, no markdown.\n\n"
-            f"CONVERSATION:\n{conversation_text}\n\nSummary:"
-        )
-        try:
-            llm, _ = _build_llm_provider()
-            full = ""
-            async for chunk in llm.stream_response([
-                {"role": "system", "content": "You are a concise summarizer."},
-                {"role": "user", "content": summary_prompt},
-            ]):
-                full += chunk
-            full = _clean(full).strip()
-            if full:
-                await memory_manager.record_summary(user_id, full)
-                logger.info("Summary saved (user=%s): %s", user_id, full[:100])
-                # Append the same summary as a section in today's daily note.
-                # Best-effort; vault failures must not break fact extraction.
-                try:
-                    provider = VaultProvider(store=vault_store)
-                    await provider.append_to_daily(user_id, "Conversation summary", full)
-                except Exception as vexc:
-                    logger.debug(
-                        "Daily-note append skipped (user=%s): %s", user_id, vexc)
-        except Exception as exc:
-            logger.warning(
-                "Summary generation failed (user=%s): %s",
-                user_id,
-                exc)
-
-    async def _run():
-        await asyncio.gather(
-            _extract_facts(),
-            _extract_preferences(),
-            _generate_summary(),
-        )
-
-    asyncio.create_task(_run())
+    from core.distiller import _distill_session
+    import asyncio
+    asyncio.create_task(_distill_session(request.app, session))
+    
     return {"status": "processing"}
 
 

@@ -255,6 +255,7 @@ async def get_hardware_cookbook(
 class UserPreferencesSchema(BaseModel):
     music_provider: Literal["youtube_music",
                             "spotify", "none"] = "youtube_music"
+    voice_toggle: Literal["auto", "always", "never"] = "auto"
 
 
 @router.get("/settings", response_model=UserPreferencesSchema)
@@ -264,7 +265,7 @@ async def get_user_preferences_route(
     user_id = await _require_user(authorization)
     store = request.app.state.memory_manager._store
     prefs = await store.get_user_preferences(user_id)
-    return UserPreferencesSchema(music_provider=prefs.music_provider)
+    return UserPreferencesSchema(music_provider=prefs.music_provider, voice_toggle=prefs.voice_toggle)
 
 
 @router.post("/settings")
@@ -278,7 +279,7 @@ async def save_user_preferences_route(
     store = request.app.state.memory_manager._store
 
     from providers.memory.models import UserPreferences as UserPrefsModel
-    prefs = UserPrefsModel(user_id=user_id, music_provider=body.music_provider)
+    prefs = UserPrefsModel(user_id=user_id, music_provider=body.music_provider, voice_toggle=body.voice_toggle)
 
     try:
         await store.save_user_preferences(prefs)

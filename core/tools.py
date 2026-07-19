@@ -24,6 +24,17 @@ logger = logging.getLogger(__name__)
 
 TOOL_SCHEMAS = [
     {
+        "name": "deep_research",
+        "description": "Perform an in-depth web research on a specific topic. Use this when the user explicitly asks for a deep dive, comprehensive research, or an in-depth report on a subject. Do NOT use for simple facts.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The detailed topic or question to research."},
+            },
+            "required": ["query"]
+        }
+    },
+    {
         "name": "create_calendar_event",
         "description": "Create a new event on the user's Google Calendar.",
         "input_schema": {
@@ -391,7 +402,10 @@ async def execute_tool(
         tool_input)
 
     try:
-        if tool_name == "create_calendar_event":
+        if tool_name == "deep_research":
+            return await _exec_deep_research(tool_input, user_id)
+
+        elif tool_name == "create_calendar_event":
             return await _exec_calendar_event(tool_input, user_id)
 
         elif tool_name == "add_inventory_item":
@@ -486,11 +500,102 @@ async def execute_tool(
 
     except Exception as exc:
         logger.error(
-            "Error executing tool '%s': %s",
+            "Unexpected error executing tool '%s': %s",
             tool_name,
-            exc,
-            exc_info=True)
-        return f"I tried to run the '{tool_name}' tool but encountered an error: {str(exc)}"
+            exc)
+        return f"Tool execution failed due to an internal error: {exc}"
+
+
+async def _exec_deep_research(args: dict, user_id: str) -> str:
+    try:
+        query = args.get("query", "").strip()
+        if not query:
+            return "Please provide a query for deep research."
+            
+        from core.deep_research import decompose_query, run_deep_research
+        from config.settings import get_settings
+        
+        if not getattr(get_settings(), "deep_research_enabled", False):
+            return "Deep Research is disabled in settings."
+            
+        # Try to estimate complexity
+        sub_queries = await decompose_query(query, count=2)
+        count = len(sub_queries)
+        
+        # Quick: run inside the turn. Big: enqueue background job.
+        
+        def _get_store():
+            try:
+                from main import get_app
+                app = get_app()
+                if app:
+                    return app.state.memory_manager._store
+            except Exception:
+                pass
+            return None
+            
+        store = _get_store()
+        if not store:
+            return "Cannot run research without document store."
+            
+        if count <= 2:
+            # Inline execution
+            try:
+                result = await run_deep_research(query, user_id=user_id, store=store)
+                report = result.get("report", "")
+                doc_id = result.get("document_id")
+                return f"I've completed the deep research. The report is saved to your Documents (ID: {doc_id}).\n\n{report}"
+            except Exception as e:
+                logger.error(f"Inline deep research failed: {e}")
+                return f"Deep research encountered an error: {e}"
+
+        # Big: background execution
+        import asyncio
+        
+        async def background_research():
+            try:
+                result = await run_deep_research(query, user_id=user_id, store=store)
+                logger.info(f"Background research complete for '{query}': doc_id={result.get('document_id')}")
+                
+                # Append to the session
+                session_id = args.get("session_id") or context.get("session_id")
+                if session_id:
+                    report = result.get("report", "Research complete.")
+                    doc_id = result.get("document_id")
+                    
+                    content = f"I've finished the deep research on '{query}'.\n\n"
+                    if doc_id:
+                        content += f"I've saved the full report to your Documents.\n\n"
+                    content += report
+                        
+                    await store.save_chat_message(
+                        user_id=user_id,
+                        session_id=session_id,
+                        role="assistant",
+                        content=content
+                    )
+                    
+                    # Try to push via FCM
+                    try:
+                        from providers.notifier.fcm_notifier import FCMNotifier
+                        await FCMNotifier(store).send_notification(
+                            user_id=user_id,
+                            title="Research Complete",
+                            body=f"Your deep research on '{query}' is ready.",
+                            data={"session_id": session_id, "doc_id": doc_id or ""}
+                        )
+                    except Exception as e:
+                        logger.debug("Failed to push FCM notification for research: %s", e)
+                        
+            except Exception as e:
+                logger.error(f"Background research failed: {e}")
+                
+        asyncio.create_task(background_research())
+        return f"I'm starting a deep dive on '{query}'. I'll let you know when the report is ready. It will be saved to your documents."
+        
+    except Exception as exc:
+        logger.error("deep_research failed: %s", exc)
+        return f"Deep research failed: {exc}"
 
 
 # -----------------------------------------------------------------------------

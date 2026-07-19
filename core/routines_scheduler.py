@@ -11,6 +11,7 @@ from datetime import datetime
 import zoneinfo
 from fastapi import FastAPI
 from core.conversation_loop import ConversationLoop
+from core.distiller import run_distiller, sweep_messages
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,12 @@ async def start_scheduler(app: FastAPI):
             await _check_routines(app)
         except Exception as exc:
             logger.error("Error in routine scheduler: %s", exc)
+            
+        try:
+            await run_distiller(app)
+            await sweep_messages(app)
+        except Exception as exc:
+            logger.error("Error in distiller scheduler: %s", exc)
 
         # Wait until the next minute
         now = datetime.now()

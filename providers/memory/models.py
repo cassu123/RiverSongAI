@@ -230,3 +230,4 @@ class UserPreferences:
     """
     user_id: str
     music_provider: str = "youtube_music"  # "youtube_music" | "spotify" | "none"
+    voice_toggle: str = "auto" # "auto" | "always" | "never"

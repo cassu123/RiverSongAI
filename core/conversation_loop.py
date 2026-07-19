@@ -335,11 +335,14 @@ class ConversationLoop:
         fallback_provider: Optional[str] = None,
         fallback_model: Optional[str] = None,
         stt_model_override: Optional[str] = None,
+        mode: str = "voice",
+        session_id: Optional[str] = None,
     ) -> None:
         settings = get_settings()
         self._settings = settings
         self._system_prompt: str = settings.river_song_system_prompt
         self._user_id: str = user_id or settings.default_user_id
+        self._session_id: Optional[str] = session_id
         self._memory: Optional[MemoryManager] = memory_manager
         self._llm_provider_override: Optional[str] = llm_provider_override
         self._llm_model_override: Optional[str] = llm_model_override
@@ -347,6 +350,7 @@ class ConversationLoop:
         self._fallback_provider: Optional[str] = fallback_provider
         self._fallback_model: Optional[str] = fallback_model
         self._stt_model_override: Optional[str] = stt_model_override
+        self._mode: str = mode
         self._stt: Optional[STTProvider] = None
         self._llm: Optional[LLMProvider] = None
         self._tts: Optional[TTSProvider] = None
@@ -357,7 +361,7 @@ class ConversationLoop:
         self._initialized: bool = False
         self._turn_transcript: str = ""
         self._flush_memory: bool = False
-        self._web_search: bool = False
+        self._web_search: Optional[bool] = None
         # "fast" | "thinking" | "pro"
         self._thinking_mode: Optional[str] = "fast"
         self._suppress_memory: bool = False
@@ -438,7 +442,7 @@ class ConversationLoop:
             stt_model_override = self._stt_model_override
 
             def _build_all():
-                stt = _build_stt_provider(model_size=stt_model_override)
+                stt = _build_stt_provider(model_size=stt_model_override) if self._mode == "voice" else None
                 llm, _router_label = _build_llm_provider(
                     provider_override=llm_provider_override,
                     model_override=llm_model_override,
@@ -446,7 +450,7 @@ class ConversationLoop:
                     fallback_model=fallback_model,
                     admin_config=admin_config,
                 )
-                tts = _build_tts_provider(voice_id_override=voice_id_override)
+                tts = _build_tts_provider(voice_id_override=voice_id_override) if self._mode == "voice" else None
                 return stt, llm, tts
 
             self._stt, self._llm, self._tts = await loop.run_in_executor(None, _build_all)
@@ -456,6 +460,28 @@ class ConversationLoop:
             ) from exc
 
         await self._rebuild_system_prompt()
+
+        # Load history if session_id is present
+        if self._session_id and self._memory and hasattr(self._memory._store, 'get_chat_messages'):
+            try:
+                db_msgs = await self._memory._store.get_chat_messages(self._user_id, self._session_id)
+                # Take last 20 messages to prevent infinite context growth
+                for m in db_msgs[-20:]:
+                    role = m.get("role")
+                    content = m.get("content")
+                    # meta = m.get("meta") # not currently parsed back into loop
+                    if role and content:
+                        self._history.append({"role": role, "content": content})
+                logger.info("ConversationLoop initialized with session %s (%d msgs loaded)", self._session_id, len(db_msgs))
+            except Exception as e:
+                logger.error("Failed to load history for session %s: %s", self._session_id, e)
+        else:
+            if not self._session_id and self._memory and hasattr(self._memory._store, 'create_chat_session'):
+                try:
+                    self._session_id = await self._memory._store.create_chat_session(self._user_id, "")
+                except Exception as e:
+                    logger.error("Failed to create chat session: %s", e)
+
         self._initialized = True
         logger.info("ConversationLoop ready.")
 
@@ -678,6 +704,21 @@ class ConversationLoop:
         # (session-scoped)
         self._flush_memory = False
 
+    async def _append_history(self, role: str, content: Any, meta: Dict[str, Any] = None) -> None:
+        """Append to in-memory history and persist to DB if enabled."""
+        self._history.append({"role": role, "content": content})
+        if self._memory and self._session_id and hasattr(self._memory._store, 'add_chat_message'):
+            try:
+                content_str = str(content) if not isinstance(content, str) else content
+                await self._memory._store.add_chat_message(
+                    self._session_id,
+                    role,
+                    content_str,
+                    meta or {}
+                )
+            except Exception as e:
+                logger.error("Failed to persist message to DB: %s", e)
+
     async def _stream_sentences(self, stream: AsyncGenerator[str, None], on_token: Callable[[
                                 str], Coroutine[Any, Any, None]]) -> AsyncGenerator[str, None]:
         """Buffer LLM tokens and yield complete sentences for TTS."""
@@ -867,9 +908,8 @@ class ConversationLoop:
         if intent_name != "conversation" and spoken_response and intent_name != "document_qa":
             # Google provider handled this turn. Add to history and speak.
             logger.info("Intent '%s' handled. Skipping LLM.", intent_name)
-            self._history.append({"role": "user", "content": transcript})
-            self._history.append(
-                {"role": "assistant", "content": spoken_response})
+            await self._append_history("user", transcript, {"input_mode": "voice"})
+            await self._append_history("assistant", spoken_response, {"model_label": "intent_router"})
             await on_event({"type": "response_complete", "text": spoken_response})
             await self._speak_and_send(spoken_response, on_event)
             await on_event({"type": "idle"})
@@ -878,7 +918,7 @@ class ConversationLoop:
         # -----------------------------------------------------------------
         # Step 4: Stream LLM + interleaved TTS
         # -----------------------------------------------------------------
-        self._history.append({"role": "user", "content": transcript})
+        await self._append_history("user", transcript, {"input_mode": "voice"})
 
         # Let River Decide: re-resolve the engine for this message.
         router_label = await self._maybe_route_auto(transcript)
@@ -901,40 +941,50 @@ class ConversationLoop:
                 # Handle Tool Use first if enabled
                 if self._settings.tool_use_enabled:
                     from core.tools import TOOL_SCHEMAS, execute_tool
-                    if hasattr(self._llm, "chat_with_tools"):
-                        # type: ignore
-                        res = await self._llm.chat_with_tools(self._history, TOOL_SCHEMAS)  # type: ignore
-                        if res["type"] == "tool_call":
-                            result_text = await execute_tool(res["tool_name"], res["tool_input"], {"user_id": self._user_id})
-                            # Add to history and get final response
-                            # summarization
-                            if self._llm.__class__.__name__ == "ClaudeAPILLM":
-                                self._history.append({"role": "assistant",
-                                                      "content": [{"type": "tool_use",
-                                                                   "id": res["tool_use_id"],
-                                                                   "name": res["tool_name"],
-                                                                   "input": res["tool_input"]}]})
-                                self._history.append({"role": "user", "content": [
-                                                     {"type": "tool_result", "tool_use_id": res["tool_use_id"], "content": result_text}]})
-                            else:
-                                self._history.append({"role": "assistant", "content": "", "tool_calls": [
-                                                     {"function": {"name": res["tool_name"], "arguments": res["tool_input"]}}]})
-                                self._history.append(
-                                    {"role": "tool", "content": result_text})
-
-                # Run the streaming pipeline
-                stream_fn = getattr(
-                    self._llm,
-                    "stream_chat",
-                    self._llm.stream_response)  # type: ignore
-                llm_stream = stream_fn(self._history)
+                    from core.agent_loop import run_agent_loop
+                    
+                    active_tools = TOOL_SCHEMAS
+                    if self._web_search is False:
+                        active_tools = [t for t in TOOL_SCHEMAS if t["name"] != "web_search"]
+                        
+                    tool_system_prompt = (
+                        "You have access to tools. If the user asks for an action that matches "
+                        "a tool, use the tool. If not, respond normally."
+                    )
+                    
+                    final_buffered = await run_agent_loop(
+                        self._llm,
+                        self._history,
+                        active_tools,
+                        execute_tool,
+                        on_event,
+                        self._append_history,
+                        self._user_id,
+                        self._session_id,
+                        tool_system_prompt
+                    )
+                    
+                    if final_buffered:
+                        async def dummy_stream():
+                            yield final_buffered
+                        llm_stream = dummy_stream()
+                    else:
+                        stream_fn = getattr(self._llm, "stream_chat", self._llm.stream_response)
+                        llm_stream = stream_fn(self._history)
+                else:
+                    # Run the streaming pipeline
+                    stream_fn = getattr(
+                        self._llm,
+                        "stream_chat",
+                        self._llm.stream_response)  # type: ignore
+                    llm_stream = stream_fn(self._history)
+                
                 sentence_stream = self._stream_sentences(llm_stream, on_token)
 
                 # Interleave TTS synthesis with LLM token arrival
                 await self._process_tts_stream(sentence_stream, on_event)
 
-                self._history.append(
-                    {"role": "assistant", "content": full_response})
+                await self._append_history("assistant", full_response, {"model_label": router_label or "default"})
                 await on_event({"type": "response_complete", "text": full_response})
 
                 # -----------------------------------------------------------------
@@ -1077,7 +1127,7 @@ class ConversationLoop:
             logger.error("TTS synthesis failed: %s", exc)
             await on_event({"type": "error", "message": f"TTS error: {exc}"})
 
-    async def run_text(self, text: str, on_event: EventCallback) -> None:
+    async def run_text(self, text: str, on_event: EventCallback, speak: Optional[bool] = None) -> None:
         """Execute one conversation turn from typed text, skipping STT."""
         if not self._initialized:
             raise RuntimeError(
@@ -1117,15 +1167,15 @@ class ConversationLoop:
         await self._inject_skills_block(text)
 
         if intent_name != "conversation" and spoken_response and intent_name != "document_qa":
-            self._history.append({"role": "user", "content": text})
-            self._history.append(
-                {"role": "assistant", "content": spoken_response})
+            await self._append_history("user", text, {"input_mode": "text"})
+            await self._append_history("assistant", spoken_response, {"model_label": "intent_router"})
             await on_event({"type": "response_complete", "text": spoken_response})
-            await self._speak_and_send(spoken_response, on_event)
+            if speak if speak is not None else self._mode == "voice":
+                await self._speak_and_send(spoken_response, on_event)
             await on_event({"type": "idle"})
             return
 
-        self._history.append({"role": "user", "content": text})
+        await self._append_history("user", text, {"input_mode": "text"})
 
         # Let River Decide: re-resolve the engine for this message.
         router_label = await self._maybe_route_auto(text)
@@ -1139,10 +1189,11 @@ class ConversationLoop:
             # Phase 3: Tool Use / Function Calling
             if self._settings.tool_use_enabled:
                 from core.tools import TOOL_SCHEMAS, execute_tool
+                from core.agent_loop import run_agent_loop
 
                 # Filter tools based on session settings
                 active_tools = TOOL_SCHEMAS
-                if not self._web_search:
+                if self._web_search is False:
                     active_tools = [
                         t for t in TOOL_SCHEMAS if t["name"] != "web_search"]
 
@@ -1155,52 +1206,25 @@ class ConversationLoop:
                 use_thinking = self._thinking_mode in ("thinking", "pro")
                 stream_method = self._llm.stream_response_thinking if use_thinking else self._llm.stream_response  # type: ignore
 
-                if hasattr(self._llm, "chat_with_tools"):
-                    messages_with_tools = self._history.copy()
-                    if messages_with_tools[0]["role"] == "system":
-                        messages_with_tools[0]["content"] += f"\n\n{tool_system_prompt}"
-
-                    # type: ignore
-                    res = await self._llm.chat_with_tools(messages_with_tools, active_tools)  # type: ignore
-                    if res["type"] == "tool_call":
-                        tool_name = res["tool_name"]
-                        tool_input = res["tool_input"]
-                        tool_id = res.get("tool_use_id")
-                        logger.info("LLM requested tool: %s", tool_name)
-
-                        await on_event({"type": "tool_use", "tool": tool_name, "input": tool_input})
-
-                        result_text = await execute_tool(tool_name, tool_input, {"user_id": self._user_id})
-
-                        await on_event({"type": "tool_result", "tool": tool_name, "result": result_text})
-
-                        if self._llm.__class__.__name__ == "ClaudeAPILLM":
-                            self._history.append({
-                                "role": "assistant",
-                                "content": [{"type": "tool_use", "id": tool_id, "name": tool_name, "input": tool_input}]
-                            })
-                            self._history.append({
-                                "role": "user",
-                                "content": [{"type": "tool_result", "tool_use_id": tool_id, "content": result_text}]
-                            })
-                        else:
-                            self._history.append({
-                                "role": "assistant", "content": "",
-                                "tool_calls": [{"function": {"name": tool_name, "arguments": tool_input}}]
-                            })
-                            self._history.append(
-                                {"role": "tool", "content": result_text})
-
-                        async for chunk in stream_method(self._history):
-                            full_response += chunk
-                            await on_event({"type": "token", "content": chunk})
-                    else:
-                        full_response = res["content"]
-                        await on_event({"type": "token", "content": full_response})
+                final_buffered = await run_agent_loop(
+                    self._llm,
+                    self._history,
+                    active_tools,
+                    execute_tool,
+                    on_event,
+                    self._append_history,
+                    self._user_id,
+                    self._session_id,
+                    tool_system_prompt
+                )
+                
+                if final_buffered:
+                    full_response = final_buffered
+                    await on_event({"type": "token", "content": full_response})
                 else:
                     async for chunk in stream_method(self._history):
                         full_response += chunk
-                        await on_event({"type": "response_chunk", "text": chunk})
+                        await on_event({"type": "token", "content": chunk})
 
             # Phase 2: Normal streaming (no tool use enabled)
             elif self._settings.llm_streaming_enabled and self._llm.__class__.__name__ == "OllamaLLM":
@@ -1232,10 +1256,11 @@ class ConversationLoop:
             full_response,
             flags=_re.DOTALL).strip()
 
-        self._history.append({"role": "assistant", "content": full_response})
+        await self._append_history("assistant", full_response, {"model_label": router_label or "default"})
         await on_event({"type": "response_complete", "text": full_response})
 
-        await self._speak_and_send(full_response, on_event)
+        if speak if speak is not None else self._mode == "voice":
+            await self._speak_and_send(full_response, on_event)
 
         if self._memory:
             try:
@@ -1267,7 +1292,7 @@ class ConversationLoop:
 
         await on_event({"type": "idle"})
 
-    async def reset_history(self, flush_memory: bool = False) -> None:
+    async def reset_history(self, flush_memory: bool = False, session_id: Optional[str] = None, new_session: bool = False) -> None:
         """
         Clear conversation history and rebuild the system prompt with fresh memory context.
 
@@ -1276,11 +1301,35 @@ class ConversationLoop:
         """
         self._history = []
         self._skills_block_cache.clear()
+
+        if new_session:
+            self._session_id = None
+        elif session_id is not None:
+            self._session_id = session_id
+
+        if not self._session_id and self._memory and hasattr(self._memory._store, 'create_chat_session'):
+            try:
+                self._session_id = await self._memory._store.create_chat_session(self._user_id, "")
+            except Exception as e:
+                logger.error("Failed to create chat session during reset: %s", e)
+        elif self._session_id and self._memory and hasattr(self._memory._store, 'get_chat_messages'):
+            try:
+                db_msgs = await self._memory._store.get_chat_messages(self._user_id, self._session_id)
+                for m in db_msgs[-20:]:
+                    role = m.get("role")
+                    content = m.get("content")
+                    if role and content:
+                        self._history.append({"role": role, "content": content})
+                logger.info("History loaded for session %s (%d msgs)", self._session_id, len(db_msgs))
+            except Exception as e:
+                logger.error("Failed to load history for session %s: %s", self._session_id, e)
+
         if flush_memory:
             self._suppress_memory = True
         await self._rebuild_system_prompt()
         self._flush_memory = flush_memory
         logger.info(
-            "Conversation history reset (user=%s, suppress_memory=%s).",
+            "Conversation history reset (user=%s, suppress_memory=%s, session_id=%s).",
             self._user_id,
-            self._suppress_memory)
+            self._suppress_memory,
+            self._session_id)

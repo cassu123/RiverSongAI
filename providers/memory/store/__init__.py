@@ -15,9 +15,11 @@ from providers.memory.store.family import FamilyStoreMixin
 from providers.memory.store.content import ContentStoreMixin
 from providers.memory.store.ops import OpsStoreMixin
 from providers.memory.store.vector import VectorStoreMixin
+from providers.memory.store.chat import ChatStoreMixin
 
 __all__ = [
     "AnalyticsStoreMixin",
+    "ChatStoreMixin",
     "ContentStoreMixin",
     "FactsStoreMixin",
     "FamilyStoreMixin",

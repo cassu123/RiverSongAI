@@ -100,30 +100,69 @@ async def query_rag(
         loop = ConversationLoop(
             memory_manager=request.app.state.memory_manager,
             user_id=user_id,
+            mode="text",
         )
         await loop.initialize()
 
-        answer_parts = []
+        prompt = f"Using the following context from vehicle documents, please answer this question: {body.question}\n\nContext:\n{context}"
 
-        async def collect(event: dict) -> None:
-            if event.get("type") == "response_chunk" and event.get("text"):
-                answer_parts.append(event["text"])
-            elif event.get("type") == "response_complete" and event.get("text"):
-                if not answer_parts:
-                    answer_parts.append(event["text"])
+        async def _stream():
+            import asyncio
+            import json as _json
+            queue: asyncio.Queue = asyncio.Queue()
 
-        prompt = f"Using the following context from vehicle documents, please answer this question: {
-            body.question}\n\nContext:\n{context}"
-        await loop.run_text(prompt, collect)  # type: ignore
+            async def on_event(evt: dict):
+                await queue.put(evt)
 
-        return {
-            "answer": "".join(answer_parts),
-            "chunks": [
-                {"text": r["text"], "source": r["metadata"].get(
-                    "filename", "Unknown")}
-                for r in results
-            ]
-        }
+            # Run the conversation turn in a background task
+            task = asyncio.create_task(loop.run_text(prompt, on_event))  # type: ignore
+
+            try:
+                while True:
+                    # Drain any already-queued events first
+                    while not queue.empty():
+                        evt = queue.get_nowait()
+                        if evt["type"] in ("response_chunk", "token"):
+                            text = evt.get("text") or evt.get("content", "")
+                            yield f"data: {_json.dumps({'type': 'text', 'content': text})}\n\n"
+                        elif evt["type"] in ("tool_use", "tool_result"):
+                            yield f"data: {_json.dumps(evt)}\n\n"
+                        elif evt["type"] == "error":
+                            yield f"data: {_json.dumps({'type': 'error', 'content': evt['message']})}\n\n"
+
+                    if task.done() and queue.empty():
+                        break
+
+                    # Wait for the next event or task completion
+                    try:
+                        evt = await asyncio.wait_for(queue.get(), timeout=0.05)
+                        if evt["type"] in ("response_chunk", "token"):
+                            text = evt.get("text") or evt.get("content", "")
+                            yield f"data: {_json.dumps({'type': 'text', 'content': text})}\n\n"
+                        elif evt["type"] in ("tool_use", "tool_result"):
+                            yield f"data: {_json.dumps(evt)}\n\n"
+                        elif evt["type"] == "error":
+                            yield f"data: {_json.dumps({'type': 'error', 'content': evt['message']})}\n\n"
+                    except asyncio.TimeoutError:
+                        pass
+                
+                # Append sources footnote
+                sources = [{"text": r["text"], "source": r["metadata"].get("filename", "Unknown")} for r in results]
+                unique_sources = list(set(s["source"] for s in sources))
+                if unique_sources:
+                    footnote = "\n\n---\n_Sources: " + ", ".join(unique_sources) + "_"
+                    yield f"data: {_json.dumps({'type': 'text', 'content': footnote})}\n\n"
+                
+                yield "data: [DONE]\n\n"
+            except Exception as exc:
+                logger.error("RAG query stream error: %s", exc, exc_info=True)
+                yield f"data: {_json.dumps({'type': 'error', 'content': str(exc)})}\n\n"
+            finally:
+                if not task.done():
+                    task.cancel()
+
+        from fastapi.responses import StreamingResponse
+        return StreamingResponse(_stream(), media_type="text/event-stream")
     except Exception as e:
         logger.error("RAG query failed: %s", e)
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
