@@ -218,9 +218,11 @@ class FamilyStoreMixin:
             "days": json.loads(row["days"] or "[]"),
             "prompt": row["prompt"],
             "type": row["type"],
+            "severity": row.get("severity", "info"),
             "webhook_url": row["webhook_url"],
             "enabled": bool(row["enabled"]),
             "last_run": row["last_run"],
+            "last_output": row.get("last_output"),
             "created_at": row["created_at"],
             "updated_at": row["updated_at"],
         }
@@ -246,15 +248,16 @@ class FamilyStoreMixin:
         conn.execute(
             """
             INSERT INTO routines
-                (id, user_id, name, trigger, time, days, prompt, type, webhook_url, enabled, created_at, updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                (id, user_id, name, trigger, time, days, prompt, type, severity, webhook_url, enabled, created_at, updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (rid, routine["user_id"], routine["name"], routine.get("trigger", "manual"),
              routine.get("time"), json.dumps(
                 routine.get(
                     "days", [])), routine.get(
                 "prompt", ""),
-                routine.get("type", "simple"), routine.get("webhook_url"),
+                routine.get("type", "simple"),
+                routine.get("severity", "info"), routine.get("webhook_url"),
                 int(routine.get("enabled", True)), now, now),
         )
         conn.commit()
@@ -276,9 +279,11 @@ class FamilyStoreMixin:
             "days",
             "prompt",
             "type",
+            "severity",
             "webhook_url",
             "enabled",
-            "last_run"}
+            "last_run",
+            "last_output"}
         set_parts, vals = [], []
         for k, v in fields.items():
             if k not in allowed:

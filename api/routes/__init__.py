@@ -50,6 +50,8 @@ from .compare import router as compare_router
 from .remote_ollama import router as remote_ollama_router
 from .slae import router as slae_router
 from .chat_sessions import router as chat_sessions_router
+from .proactive import router as proactive_router
+from .sweeps import router as sweeps_router
 
 __all__ = [
     "health_router",
@@ -104,4 +106,6 @@ __all__ = [
     "remote_ollama_router",
     "slae_router",
     "chat_sessions_router",
+    "proactive_router",
+    "sweeps_router",
 ]

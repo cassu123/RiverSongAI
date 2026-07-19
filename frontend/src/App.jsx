@@ -56,6 +56,7 @@ const ReadingOAuthCallbackPage = lazy(() => import('./pages/ReadingOAuthCallback
 const ForcePasswordChangePage  = lazy(() => import('./pages/ForcePasswordChangePage.jsx'))
 const SlaePage                 = lazy(() => import('./pages/SlaePage.jsx'))
 const PreviewRoot              = lazy(() => import('./preview/PreviewRoot.jsx'))
+const ProactivePage            = lazy(() => import('./pages/ProactivePage.jsx'))
 
 import { ADMIN_PAGES, ALWAYS_VISIBLE } from './utils/constants.js'
 
@@ -95,6 +96,7 @@ const PAGE_TO_PATH = {
   webhook_tokens:   '/admin/webhook-tokens',
   slae:             '/admin/slae',
   preview:          '/preview',
+  proactive:        '/proactive',
   google_callback:  '/callback',
   reading_callback: '/reading-oauth-callback',
 }
@@ -448,7 +450,8 @@ export default function App() {
               {currentPage === 'speak'      && <ConversationPage setAction={setPageAction} />}
               {currentPage === 'chat'       && <ChatPage setAction={setPageAction} onNavigate={handleNavigate} />}
               {currentPage === 'memory'     && <MemoryHubPage setAction={setPageAction} />}
-              {currentPage === 'routines'   && <RoutinesPage setAction={setPageAction} />}
+              {currentPage === 'routines'   && <RoutinesPage  setAction={setPageAction} />}
+              {currentPage === 'proactive'  && <ProactivePage />}
               {currentPage === 'home'       && <HomeNodePage setAction={setPageAction} />}
               {currentPage === 'users'      && <UsersPage setAction={setPageAction} />}
               {currentPage === 'killswitch' && <KillSwitchPage setAction={setPageAction} />}

@@ -58,11 +58,11 @@ async def test_quiet_hours_suppress_noncritical_but_not_critical(engine, monkeyp
 
 async def test_master_switch_disables_everything(engine, monkeypatch):
     import types
-    import core.initiative as initiative_mod
+    import core.proactive as proactive_mod
     stub = types.SimpleNamespace(initiative_enabled=False,
                                  initiative_quiet_start=22,
                                  initiative_quiet_end=7)
-    monkeypatch.setattr(initiative_mod, "get_settings", lambda: stub)
+    monkeypatch.setattr(proactive_mod, "get_settings", lambda: stub)
     r = await engine.submit(InitiativeEvent(
         kind="custom", title="X", message="", severity="critical", key="c"))
     assert r == {"delivered": False, "reason": "disabled"}

@@ -16,25 +16,7 @@ from core.distiller import run_distiller, sweep_messages
 logger = logging.getLogger(__name__)
 
 
-async def start_scheduler(app: FastAPI):
-    """Polls for scheduled routines every minute."""
-    logger.info("Routine scheduler started.")
-    while True:
-        try:
-            await _check_routines(app)
-        except Exception as exc:
-            logger.error("Error in routine scheduler: %s", exc)
-            
-        try:
-            await run_distiller(app)
-            await sweep_messages(app)
-        except Exception as exc:
-            logger.error("Error in distiller scheduler: %s", exc)
 
-        # Wait until the next minute
-        now = datetime.now()
-        sleep_secs = 60 - now.second
-        await asyncio.sleep(sleep_secs)
 
 
 async def _check_routines(app: FastAPI):
@@ -113,66 +95,70 @@ async def _check_routines(app: FastAPI):
 
 
 async def _run_proactive_routine(app: FastAPI, user_id: str, routine: dict):
-    """Executes a routine and pushes the response to active WebSockets."""
-    active_sockets = app.state.active_connections.get(user_id, [])
-    if not active_sockets:
-        logger.info(
-            "No active WebSocket for user %s. Routine will run silently (save to history).",
-            user_id)
-
-    # Define a sender that broadcasts to all active tabs for this user
-    output_parts: list = []
-    async def broadcast(event: dict):
+    # Instead of direct sockets, we just run the agent and submit to DeliveryRouter
+    output_parts = []
+    receipts = []
+    async def capture(event: dict):
         if event.get("type") == "response_chunk" and event.get("text"):
             output_parts.append(event["text"])
         elif event.get("type") == "response_complete" and event.get("text"):
             if not output_parts:
                 output_parts.append(event["text"])
-
-        for ws in active_sockets:
-            try:
-                await ws.send_json(event)
-            except Exception:
-                pass
+        elif event.get("type") == "tool_execution" and event.get("tool"):
+            # build a receipt
+            res = str(event.get("result", ""))
+            if len(res) > 200:
+                res = res[:197] + "..."
+            receipts.append(f"- **{event['tool']}**: {res}")
 
     try:
+        from core.conversation_loop import ConversationLoop
         loop = ConversationLoop(
             user_id=user_id,
             memory_manager=app.state.memory_manager
         )
         await loop.initialize()
 
-        # For proactive briefings, we use run_text with the routine prompt
-        await broadcast({"type": "proactive_briefing_start", "name": routine["name"]})
-        await loop.run_text(routine["prompt"], broadcast)  # type: ignore
+        # Run the routine
+        await loop.run_text(routine["prompt"], capture)
+        final_text = "".join(output_parts)
+        
+        # Add receipts to text if any
+        if receipts:
+            final_text += "\n\n**Action Receipts:**\n" + "\n".join(receipts)
+
+        # Submit via DeliveryRouter
+        from core.proactive import get_delivery_router, ProactiveItem
+        router = get_delivery_router()
+        if router:
+            await router.submit(ProactiveItem(
+                user_id=user_id,
+                kind="routine",
+                dedupe_key=f"routine_{routine['id']}_{datetime.now(zoneinfo.ZoneInfo('UTC')).strftime('%Y%m%d%H%M')}",
+                severity=routine.get("severity", "info"),
+                title=f"Routine: {routine['name']}",
+                body=final_text
+            ))
 
         # Update last run time
         store = app.state.memory_manager._store
         await store.update_routine(routine["id"], user_id, {
             "last_run": datetime.now(zoneinfo.ZoneInfo("UTC")).isoformat(),
-            "last_output": "".join(output_parts)
+            "last_output": final_text
         })
-
-        # ── Notification fan-out — routes through the central helper so
-        # Web Push, ntfy, and Apprise all fire together when configured,
-        # and 410-Gone subscriptions are pruned automatically.
-        try:
-            from providers.push.notifier import notify_user
-            await notify_user(
-                store,
-                user_id,
-                title=f"River Song — {routine['name']}",
-                body="New briefing ready.",
-                url="/routines"
-            )
-        except Exception as push_exc:
-            logger.warning(
-                "Routine push fan-out failed for %s: %s",
-                user_id,
-                push_exc)
 
     except Exception as exc:
         logger.error(
             "Failed to run proactive routine for %s: %s",
             user_id,
             exc)
+
+async def _run_simple_routine(user_id: str, routine_id: str, name: str, prompt: str, severity: str):
+    from main import app
+    routine = {
+        "id": routine_id,
+        "name": name,
+        "prompt": prompt,
+        "severity": severity
+    }
+    await _run_proactive_routine(app, user_id, routine)

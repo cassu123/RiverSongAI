@@ -174,13 +174,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         logger.warning("Failed to purge expired tokens: %s", e)
 
-    # Start routine scheduler
-    from core.routines_scheduler import start_scheduler
-    scheduler_task = asyncio.create_task(start_scheduler(app))
-
-    # Initiative engine — weather watcher (River speaks first)
-    from core.initiative import weather_watch_loop
-    initiative_task = asyncio.create_task(weather_watch_loop())
+    # Register Sweeps
+    from core.sweeps import register_sweep, start_sweeps, stop_sweeps
+    from core.routines_scheduler import _check_routines
+    from core.distiller import run_distiller, sweep_messages
+    from core.initiative import weather_sweep_func
+    from core.brief import brief_sweep_func
+    
+    async def _routines_sweep():
+        await _check_routines(app)
+    register_sweep("routines", 60, _routines_sweep)
+    
+    async def _distiller_sweep():
+        await run_distiller(app)
+        await sweep_messages(app)
+    register_sweep("distiller", 3600, _distiller_sweep)
+    
+    register_sweep("weather", 900, weather_sweep_func)
+    register_sweep("briefings", 900, brief_sweep_func)
+    
+    await start_sweeps(app)
 
     # CHRONOS: Start vault watcher
     from providers.vault.vault_provider import start_vault_watcher
@@ -199,13 +212,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:  # noqa: BLE001
         pass
 
-    scheduler_task.cancel()
-    initiative_task.cancel()
-    for _task in (scheduler_task, initiative_task):
-        try:
-            await _task
-        except asyncio.CancelledError:
-            pass
+    await stop_sweeps()
     store.close()
     logger.info("River Song AI shutting down.")
 
@@ -361,6 +368,8 @@ def create_app() -> FastAPI:
         remote_ollama_router,
         slae_router,
         chat_sessions_router,
+        proactive_router,
+        sweeps_router,
     )
 
     app.include_router(auth_router)
@@ -412,6 +421,8 @@ def create_app() -> FastAPI:
     for _fleet_router in fleet_routers:
         app.include_router(_fleet_router)
     app.include_router(initiative_router)
+    app.include_router(proactive_router)
+    app.include_router(sweeps_router)
     app.include_router(skills_router)
     app.include_router(session_presets_router)
     app.include_router(webhook_tokens_router)

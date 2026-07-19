@@ -88,9 +88,14 @@ export default function RoutinesPage({ setAction }) {
                   {r.enabled ? 'ACTIVE' : 'DORMANT'}
                 </button>
               </div>
-              <div className="rs-card-value">{r.name}</div>
+              <div className="rs-card-value">
+                {r.name}
+                <span className={`rs-badge ${r.severity === 'critical' ? 'is-danger' : r.severity === 'warning' ? 'is-warning' : 'is-info'}`} style={{ marginLeft: 8, fontSize: '0.6rem' }}>
+                  {r.severity || 'info'}
+                </span>
+              </div>
               <div className="rs-card-meta">
-                {r.trigger === 'cron' ? `SCHEDULED: ${r.time} on ${r.days?.join(',')}` : `EVENT: ${r.trigger}`}
+                {r.trigger === 'cron' || r.time ? `SCHEDULED: ${r.time} on ${r.days?.length ? r.days.join(', ') : 'every day'}` : `EVENT: ${r.trigger}`}
               </div>
               {r.last_run && (
                 <div className="rs-card-meta" style={{ fontSize: '0.7rem' }}>
@@ -111,6 +116,41 @@ export default function RoutinesPage({ setAction }) {
           ))
         )}
       </div>
+
+      <div className="rs-foyer-head" style={{ marginTop: '2rem' }}>
+        <h2 className="rs-greeting" style={{ fontSize: '1.2rem' }}>Execution History</h2>
+      </div>
+      <RoutineHistory token={token} />
+    </div>
+  )
+}
+
+function RoutineHistory({ token }) {
+  const [logs, setLogs] = useState([])
+  
+  useEffect(() => {
+    fetch('/api/proactive/log', { headers: { Authorization: `Bearer ${token}` }})
+      .then(r => r.json())
+      .then(d => {
+        if(d.log) setLogs(d.log.filter(l => l.kind === 'routine'))
+      })
+      .catch(console.warn)
+  }, [token])
+
+  if(!logs.length) return <div className="rs-card-meta">No routine history found.</div>
+
+  return (
+    <div className="rs-card-flow" style={{ marginTop: '1rem' }}>
+      {logs.map(l => (
+        <div key={l.id} className="rs-card">
+          <div className="rs-card-head">
+            <span className="rs-card-label">{new Date(l.created_at).toLocaleString()}</span>
+            <span className="rs-card-label">{l.delivered ? 'DELIVERED' : 'BLOCKED'}</span>
+          </div>
+          <div className="rs-card-value">{l.title}</div>
+          {l.reason && <div className="rs-card-meta" style={{ color: '#ff6b6b' }}>{l.reason}</div>}
+        </div>
+      ))}
     </div>
   )
 }

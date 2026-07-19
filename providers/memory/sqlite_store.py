@@ -174,6 +174,7 @@ CREATE TABLE IF NOT EXISTS routines (
     days        TEXT NOT NULL DEFAULT '[]',
     prompt      TEXT NOT NULL DEFAULT '',
     type        TEXT NOT NULL DEFAULT 'simple',
+    severity    TEXT NOT NULL DEFAULT 'info',
     webhook_url TEXT,
     enabled     INTEGER NOT NULL DEFAULT 1,
     last_run    TEXT,
@@ -243,6 +244,12 @@ CREATE TABLE IF NOT EXISTS proactive_prefs (
     quiet_start  INTEGER, quiet_end INTEGER,
     min_push_severity TEXT DEFAULT 'info',
     kinds_muted  TEXT DEFAULT '[]'
+);
+
+CREATE TABLE IF NOT EXISTS sweeps_state (
+    name         TEXT PRIMARY KEY,
+    last_run_at  TEXT,
+    last_error   TEXT
 );
 
 CREATE TABLE IF NOT EXISTS revoked_tokens (
@@ -788,6 +795,7 @@ class SQLiteStore(
             "UPDATE users SET mood='spice-hall'                                                 WHERE theme='dune'            AND mood='caladan'",
             "ALTER TABLE llm_settings ADD COLUMN voice_id TEXT NOT NULL DEFAULT 'river'",
             "ALTER TABLE routines ADD COLUMN type TEXT NOT NULL DEFAULT 'simple'",
+            "ALTER TABLE routines ADD COLUMN severity TEXT NOT NULL DEFAULT 'info'",
             "ALTER TABLE routines ADD COLUMN webhook_url TEXT",
             "ALTER TABLE routines ADD COLUMN last_output TEXT",
             "INSERT OR IGNORE INTO admin_config (key, value) VALUES ('__global__', '{}')",
@@ -809,6 +817,7 @@ class SQLiteStore(
             "CREATE INDEX IF NOT EXISTS idx_proactive_log_user ON proactive_log(user_id)",
             "CREATE INDEX IF NOT EXISTS idx_proactive_log_dedupe ON proactive_log(kind, dedupe_key)",
             "CREATE TABLE IF NOT EXISTS proactive_prefs (user_id TEXT PRIMARY KEY, quiet_start INTEGER, quiet_end INTEGER, min_push_severity TEXT DEFAULT 'info', kinds_muted TEXT DEFAULT '[]')",
+            "CREATE TABLE IF NOT EXISTS sweeps_state (name TEXT PRIMARY KEY, last_run_at TEXT, last_error TEXT)",
             "ALTER TABLE feed_preferences ADD COLUMN sports_favorite_leagues TEXT NOT NULL DEFAULT '[\"nba\",\"nfl\",\"mlb\"]'",
             "ALTER TABLE feed_preferences ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}'",
             # OAuth CSRF nonce store (for /api/integrations/google/callback

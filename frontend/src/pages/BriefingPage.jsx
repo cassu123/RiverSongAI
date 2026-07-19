@@ -80,6 +80,22 @@ export default function BriefingPage({ onNavigate }) {
   const [musicPrefs, setMusicPrefs] = useState({ music_provider: 'youtube_music' })
   const [musicTracks, setMusicTracks] = useState([])
   const [musicLoading, setMusicLoading] = useState(false)
+  const [morningBrief, setMorningBrief] = useState(null)
+
+  // Fetch morning brief from proactive log
+  const fetchMorningBrief = useCallback(async () => {
+    try {
+      const res = await fetch('/api/proactive/log', { headers: { Authorization: `Bearer ${token}` }})
+      const d = await res.json()
+      if (d.log) {
+        const todayStr = new Date().toISOString().slice(0, 10)
+        const brief = d.log.find(l => l.kind === 'brief' && l.dedupe_key === `brief_${todayStr}`)
+        if (brief) {
+          setMorningBrief(brief)
+        }
+      }
+    } catch(e) {}
+  }, [token])
 
   // Fetch daily note
   const fetchData = useCallback(async () => {
@@ -172,7 +188,8 @@ export default function BriefingPage({ onNavigate }) {
     fetchData()
     fetchCalendar()
     fetchMusic()
-  }, [fetchData, fetchCalendar, fetchMusic])
+    fetchMorningBrief()
+  }, [fetchData, fetchCalendar, fetchMusic, fetchMorningBrief])
 
   const firstName = user?.display_name?.split(' ')[0] || 'Operator'
 
@@ -185,6 +202,35 @@ export default function BriefingPage({ onNavigate }) {
       </header>
 
       <div className="rs-card-flow">
+
+        {/* Briefing Settings */}
+        <div className="rs-card">
+          <div className="rs-card-head">
+            <span className="rs-card-label">BRIEFING SETTINGS</span>
+          </div>
+          <div className="rs-card-meta" style={{ marginBottom: 12 }}>
+            Configure your morning brief time, sections, and mode (auto/manual).
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="rs-pill" onClick={() => alert('Settings menu planned for next phase.')}>
+              <span className="material-symbols-rounded">settings</span> CONFIGURE
+            </button>
+          </div>
+        </div>
+
+        {morningBrief && (
+          <div className="rs-card is-elev is-wide" style={{ background: 'linear-gradient(135deg, rgba(65, 88, 208, 0.2) 0%, rgba(200, 80, 192, 0.2) 100%)' }}>
+            <div className="rs-card-head">
+              <span className="rs-card-label" style={{ color: '#fff', fontWeight: 'bold' }}>GENERATED MORNING BRIEF</span>
+            </div>
+            <div style={{ lineHeight: 1.6, fontSize: '1rem', color: 'rgba(255,255,255,0.95)' }}>
+              <RsMarkdown onNavigate={onNavigate}>{morningBrief.body}</RsMarkdown>
+            </div>
+            <div className="rs-card-meta" style={{ marginTop: 12 }}>
+              Generated today by River Song.
+            </div>
+          </div>
+        )}
 
         {/* Daily Summary */}
         <div className="rs-card is-elev is-wide">

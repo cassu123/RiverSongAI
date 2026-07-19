@@ -487,98 +487,37 @@ class ConversationLoop:
 
     async def run_startup_briefing(self, on_event: EventCallback) -> None:
         """
-        Check calendar and greet the user with upcoming events on first connect.
-        Ambient, non-blocking, non-history briefing.
+        Deliver pending brief if any, with TTS behavior.
         """
-        config = {}
         try:
-            assert self._memory is not None
-
-            config = await self._memory._store.get_admin_config()
-        except Exception:
-            pass
-
-        enabled = config.get(
-            "startup_briefing_enabled",
-            self._settings.startup_briefing_enabled)
-        if not enabled:
-            return
-
-        try:
-            from core.tools import get_upcoming_events
-            from datetime import datetime
-            import asyncio
-
-            # 1. Fetch events & pulse snapshots
-            events = await get_upcoming_events(self._user_id, hours_ahead=self._settings.startup_briefing_hours_ahead)
-
+            from datetime import datetime, timezone
             assert self._memory is not None
             store = self._memory._store
-            news_snap = await store.get_latest_pulse_snapshot("news")
-            markets_snap = await store.get_latest_pulse_snapshot("markets")
-
-            if not events and not news_snap and not markets_snap:
-                return
-
-            # 2. Build briefing prompt
-            prompt_parts = [
-                "The user has just opened the app. Greet them warmly as River Song and provide a quick startup briefing."
-            ]
-
-            if events:
-                event_list = "\n".join([
-                    f"- {
-                        e['title']} at {
-                        datetime.fromisoformat(
-                            e['time']).strftime('%I:%M %p')}"
-                    for e in events
-                ])
-                prompt_parts.append(f"Upcoming Calendar Events:\n{event_list}")
-
-            if news_snap and "data" in news_snap:
-                n_data = news_snap["data"]
-                if n_data and n_data.get("headline"):
-                    prompt_parts.append(
-                        f"Top News Pulse: '{
-                            n_data.get('headline')}' (Source: {
-                            n_data.get('source')})")
-
-            if markets_snap and "data" in markets_snap:
-                m_data = markets_snap["data"]
-                if m_data and "error" not in m_data and m_data.get("symbol"):
-                    prompt_parts.append(
-                        f"Market Pulse for {
-                            m_data.get('symbol')}: {m_data}")
-
-            prompt_parts.append(
-                "Weave the available events, news, and market pulse naturally into a friendly greeting. "
-                "Do not read raw JSON or list it dryly. Be conversational and brief — 2 to 3 sentences max. No markdown."
+            
+            # Find undelivered brief for today
+            now = datetime.now(timezone.utc)
+            today_str = now.strftime("%Y-%m-%d")
+            dedupe = f"brief_{today_str}"
+            
+            pending = await store._fetch_one(
+                "SELECT id, body FROM proactive_log WHERE user_id = ? AND dedupe_key = ? AND delivered = 0",
+                (self._user_id, dedupe)
             )
-
-            prompt = "\n\n".join(prompt_parts)
-
-            # 3. Generate greeting (10s timeout)
-            try:
-                response = ""
-
-                async def _collect():
-                    nonlocal response
-                    assert self._llm is not None
-
-                    async for chunk in self._llm.stream_response([{"role": "user", "content": prompt}]):
-                        response += chunk
-                await asyncio.wait_for(_collect(), timeout=10.0)
-            except asyncio.TimeoutError:
-                logger.debug("Startup briefing LLM timed out.")
+            
+            if not pending:
                 return
-
+                
+            response = pending["body"]
             if not response:
                 return
 
-            # 4. Dispatch events
+            # Mark as delivered
+            await store._execute("UPDATE proactive_log SET delivered = 1 WHERE id = ?", (pending["id"],))
+
+            # Dispatch events
             await on_event({"type": "proactive_briefing_start", "text": response})
 
-            # 5. Synthesize TTS
+            # Synthesize TTS
             await on_event({"type": "speaking"})
             assert self._tts is not None
             audio_bytes = await self._tts.synthesize(response)
@@ -589,6 +528,7 @@ class ConversationLoop:
                 fmt = "mp3" if self._tts.__class__.__name__ == "ElevenLabsTTS" else "wav"
                 await on_event({"type": "audio", "data": b64, "format": fmt})
 
+            await on_event({"type": "response_complete", "text": response})
             await on_event({"type": "idle"})
 
         except Exception as exc:
