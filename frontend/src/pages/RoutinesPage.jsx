@@ -97,6 +97,11 @@ export default function RoutinesPage({ setAction }) {
                   LAST EXECUTION: {new Date(r.last_run).toLocaleString()}
                 </div>
               )}
+              {r.last_output && (
+                <div className="rs-card-meta" style={{ marginTop: '8px', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px', whiteSpace: 'pre-wrap', color: '#fff' }}>
+                  {r.last_output}
+                </div>
+              )}
               <div style={{ marginTop: 16 }}>
                 <button className="rs-pill" onClick={() => runRoutine(r.id)}>
                   <span className="material-symbols-rounded">play_arrow</span> EXECUTE

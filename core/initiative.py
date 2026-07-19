@@ -24,7 +24,7 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Deque, Dict, Optional
 
 from config.settings import get_settings
@@ -62,24 +62,49 @@ class InitiativeEngine:
 
     # -- decision gates ------------------------------------------------------
 
-    def _in_quiet_hours(self) -> bool:
+    async def _in_quiet_hours(self, user_id: Optional[str]) -> bool:
         s = get_settings()
         start = getattr(s, "initiative_quiet_start", 22)
         end = getattr(s, "initiative_quiet_end", 7)
-        hour = datetime.now().hour
+        
+        # Determine local hour based on user's timezone if available
+        user_tz_str = "UTC"
+        if user_id:
+            try:
+                from main import get_app
+                app = get_app()
+                if app:
+                    store = app.state.memory_manager._store
+                    llm_settings = await store.get_llm_settings(user_id)
+                    if isinstance(llm_settings, dict):
+                        user_tz_str = llm_settings.get("timezone", "UTC")
+                    else:
+                        user_tz_str = getattr(llm_settings, "timezone", "UTC")
+            except Exception:
+                pass
+                
+        import zoneinfo
+        try:
+            user_tz = zoneinfo.ZoneInfo(user_tz_str)
+        except Exception:
+            user_tz = zoneinfo.ZoneInfo("UTC")
+            
+        now_local = datetime.now(timezone.utc).astimezone(user_tz)
+        hour = now_local.hour
+        
         if start == end:
             return False
         if start < end:
             return start <= hour < end
         return hour >= start or hour < end  # window crosses midnight
 
-    def _should_deliver(self, ev: InitiativeEvent) -> tuple[bool, str]:
+    async def _should_deliver(self, ev: InitiativeEvent) -> tuple[bool, str]:
         s = get_settings()
         if not getattr(s, "initiative_enabled", True):
             return False, "disabled"
         if ev.severity not in SEVERITIES:
             ev.severity = "info"
-        if ev.severity != "critical" and self._in_quiet_hours():
+        if ev.severity != "critical" and await self._in_quiet_hours(ev.user_id):
             return False, "quiet_hours"
         cd_key = (ev.kind, ev.key or ev.title)
         cooldown = _DEFAULT_COOLDOWNS.get(ev.kind, _FALLBACK_COOLDOWN)
@@ -98,7 +123,7 @@ class InitiativeEngine:
         """
         try:
             async with self._lock:
-                ok, reason = self._should_deliver(ev)
+                ok, reason = await self._should_deliver(ev)
                 record = {
                     "kind": ev.kind, "title": ev.title, "message": ev.message,
                     "severity": ev.severity, "key": ev.key, "user_id": ev.user_id,

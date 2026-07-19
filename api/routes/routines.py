@@ -156,5 +156,8 @@ async def run_routine(routine_id: str, request: Request,
             logger.error("Routine run failed: %s", e)
             return {"output": f"Error running routine: {e}"}
 
-    await store.update_routine(routine_id, user_id, {"last_run": datetime.now(timezone.utc).isoformat()})
+    await store.update_routine(routine_id, user_id, {
+        "last_run": datetime.now(timezone.utc).isoformat(),
+        "last_output": output_text
+    })
     return {"output": output_text}

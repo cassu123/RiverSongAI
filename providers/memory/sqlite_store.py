@@ -177,6 +177,7 @@ CREATE TABLE IF NOT EXISTS routines (
     webhook_url TEXT,
     enabled     INTEGER NOT NULL DEFAULT 1,
     last_run    TEXT,
+    last_output TEXT,
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL
 );
@@ -221,6 +222,28 @@ CREATE TABLE IF NOT EXISTS pulse_snapshots (
 
 CREATE INDEX IF NOT EXISTS ix_pulse_snapshots_source_ts ON pulse_snapshots(source, ts DESC);
 
+
+CREATE TABLE IF NOT EXISTS proactive_log (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id      TEXT NOT NULL,
+    kind         TEXT NOT NULL,
+    dedupe_key   TEXT NOT NULL,
+    severity     TEXT NOT NULL,
+    title        TEXT, body TEXT,
+    delivered    INTEGER NOT NULL,
+    reason       TEXT,
+    channels     TEXT DEFAULT '[]',
+    created_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_proactive_log_user ON proactive_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_proactive_log_dedupe ON proactive_log(kind, dedupe_key);
+
+CREATE TABLE IF NOT EXISTS proactive_prefs (
+    user_id      TEXT PRIMARY KEY,
+    quiet_start  INTEGER, quiet_end INTEGER,
+    min_push_severity TEXT DEFAULT 'info',
+    kinds_muted  TEXT DEFAULT '[]'
+);
 
 CREATE TABLE IF NOT EXISTS revoked_tokens (
     jti         TEXT PRIMARY KEY,
@@ -766,6 +789,7 @@ class SQLiteStore(
             "ALTER TABLE llm_settings ADD COLUMN voice_id TEXT NOT NULL DEFAULT 'river'",
             "ALTER TABLE routines ADD COLUMN type TEXT NOT NULL DEFAULT 'simple'",
             "ALTER TABLE routines ADD COLUMN webhook_url TEXT",
+            "ALTER TABLE routines ADD COLUMN last_output TEXT",
             "INSERT OR IGNORE INTO admin_config (key, value) VALUES ('__global__', '{}')",
             # FIX B11: Remove (user_id, category) uniqueness to allow
             # multi-value preferences
@@ -781,6 +805,10 @@ class SQLiteStore(
             "CREATE TABLE IF NOT EXISTS user_integrations (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, service TEXT NOT NULL, access_token TEXT, refresh_token TEXT, token_expires_at TEXT, metadata TEXT NOT NULL DEFAULT '{}', is_active INTEGER NOT NULL DEFAULT 1, connected_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(user_id, service), FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)",
             "CREATE TABLE IF NOT EXISTS user_preferences (user_id TEXT PRIMARY KEY, music_provider TEXT NOT NULL DEFAULT 'youtube_music', voice_toggle TEXT NOT NULL DEFAULT 'auto', updated_at TEXT NOT NULL DEFAULT '')",
             "ALTER TABLE user_preferences ADD COLUMN voice_toggle TEXT NOT NULL DEFAULT 'auto'",
+            "CREATE TABLE IF NOT EXISTS proactive_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, kind TEXT NOT NULL, dedupe_key TEXT NOT NULL, severity TEXT NOT NULL, title TEXT, body TEXT, delivered INTEGER NOT NULL, reason TEXT, channels TEXT DEFAULT '[]', created_at TEXT NOT NULL)",
+            "CREATE INDEX IF NOT EXISTS idx_proactive_log_user ON proactive_log(user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_proactive_log_dedupe ON proactive_log(kind, dedupe_key)",
+            "CREATE TABLE IF NOT EXISTS proactive_prefs (user_id TEXT PRIMARY KEY, quiet_start INTEGER, quiet_end INTEGER, min_push_severity TEXT DEFAULT 'info', kinds_muted TEXT DEFAULT '[]')",
             "ALTER TABLE feed_preferences ADD COLUMN sports_favorite_leagues TEXT NOT NULL DEFAULT '[\"nba\",\"nfl\",\"mlb\"]'",
             "ALTER TABLE feed_preferences ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}'",
             # OAuth CSRF nonce store (for /api/integrations/google/callback

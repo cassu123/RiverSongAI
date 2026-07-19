@@ -75,6 +75,19 @@ async def _check_routines(app: FastAPI):
 
         # Schedule check (e.g. "08:00")
         if r["trigger"] == "time" and r["time"] == now_local.strftime("%H:%M"):
+            # Check days (empty = every day)
+            days = r.get("days") or []
+            if isinstance(days, str):
+                import json
+                try:
+                    days = json.loads(days)
+                except Exception:
+                    days = []
+            if days:
+                today_str = now_local.strftime("%a")  # e.g., "Mon"
+                if not any(d.lower() == today_str.lower() for d in days):
+                    continue
+
             # Check if it ran recently to avoid double-triggers in the same
             # minute
             last_run = r.get("last_run")
@@ -108,7 +121,14 @@ async def _run_proactive_routine(app: FastAPI, user_id: str, routine: dict):
             user_id)
 
     # Define a sender that broadcasts to all active tabs for this user
+    output_parts: list = []
     async def broadcast(event: dict):
+        if event.get("type") == "response_chunk" and event.get("text"):
+            output_parts.append(event["text"])
+        elif event.get("type") == "response_complete" and event.get("text"):
+            if not output_parts:
+                output_parts.append(event["text"])
+
         for ws in active_sockets:
             try:
                 await ws.send_json(event)
@@ -128,7 +148,10 @@ async def _run_proactive_routine(app: FastAPI, user_id: str, routine: dict):
 
         # Update last run time
         store = app.state.memory_manager._store
-        await store.update_routine(routine["id"], user_id, {"last_run": datetime.now(zoneinfo.ZoneInfo("UTC")).isoformat()})
+        await store.update_routine(routine["id"], user_id, {
+            "last_run": datetime.now(zoneinfo.ZoneInfo("UTC")).isoformat(),
+            "last_output": "".join(output_parts)
+        })
 
         # ── Notification fan-out — routes through the central helper so
         # Web Push, ntfy, and Apprise all fire together when configured,
@@ -140,6 +163,7 @@ async def _run_proactive_routine(app: FastAPI, user_id: str, routine: dict):
                 user_id,
                 title=f"River Song — {routine['name']}",
                 body="New briefing ready.",
+                url="/routines"
             )
         except Exception as push_exc:
             logger.warning(

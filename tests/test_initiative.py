@@ -21,7 +21,8 @@ def engine():
 
 
 async def test_event_delivers_and_cooldown_suppresses_repeat(engine, monkeypatch):
-    monkeypatch.setattr(engine, "_in_quiet_hours", lambda: False)
+    async def mock_quiet_hours(user_id=None): return False
+    monkeypatch.setattr(engine, "_in_quiet_hours", mock_quiet_hours)
     sent = []
 
     async def fake_deliver(ev):
@@ -38,7 +39,8 @@ async def test_event_delivers_and_cooldown_suppresses_repeat(engine, monkeypatch
 
 
 async def test_quiet_hours_suppress_noncritical_but_not_critical(engine, monkeypatch):
-    monkeypatch.setattr(engine, "_in_quiet_hours", lambda: True)
+    async def mock_quiet_hours(user_id=None): return True
+    monkeypatch.setattr(engine, "_in_quiet_hours", mock_quiet_hours)
     sent = []
 
     async def fake_deliver(ev):
