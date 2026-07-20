@@ -4,6 +4,7 @@ import BarcodeScanner from '../components/BarcodeScanner'
 import AssetDetailModal from '../components/AssetDetailModal'
 import HomeAuditModal from '../components/HomeAuditModal'
 import RoomSweepModal from '../components/RoomSweepModal'
+import ReassignHomeModal from '../components/ReassignHomeModal'
 
 /**
  * InventoryPage — Spatial Intelligence v2.0
@@ -22,6 +23,7 @@ export default function InventoryPage({ setAction }) {
   const [scannerOpen, setScannerOpen] = useState(false)
   const [auditModalOpen, setAuditModalOpen] = useState(false)
   const [sweepModalOpen, setSweepModalOpen] = useState(false)
+  const [reassignModalOpen, setReassignModalOpen] = useState(false)
   const [activeItem, setActiveItem] = useState(null)
 
   const fetchItems = useCallback(async (activeId = null) => {
@@ -173,6 +175,18 @@ export default function InventoryPage({ setAction }) {
             <span className="material-symbols-rounded">print</span>
             <span className="rs-speak-actions-label">LABELS</span>
           </a>
+          <a href={homeId ? `/api/inventory/homes/${homeId}/manifest?format=pdf&token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary" style={{ height: 48, padding: '0 24px', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }} disabled={!homeId} title="Download PDF Dossier">
+            <span className="material-symbols-rounded">picture_as_pdf</span>
+            <span className="rs-speak-actions-label">DOSSIER</span>
+          </a>
+          <a href={homeId ? `/api/inventory/homes/${homeId}/manifest?format=csv&token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary" style={{ height: 48, padding: '0 24px', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }} disabled={!homeId} title="Download CSV Manifest">
+            <span className="material-symbols-rounded">csv</span>
+            <span className="rs-speak-actions-label">CSV</span>
+          </a>
+          <button className="rs-btn-primary" onClick={() => setReassignModalOpen(true)} style={{ height: 48, padding: '0 24px', background: 'var(--md-error-container)', color: 'var(--md-on-error-container)' }} disabled={!homeId || homes.length < 2} title="Move All Assets (PCS)">
+            <span className="material-symbols-rounded">local_shipping</span>
+            <span className="rs-speak-actions-label">MOVE</span>
+          </button>
           <button className="rs-pill" onClick={fetchItems} title="Refresh Stash">
             <span className="material-symbols-rounded">sync</span>
           </button>
@@ -224,6 +238,19 @@ export default function InventoryPage({ setAction }) {
           homeId={homeId} 
           token={token} 
           onClose={() => setAuditModalOpen(false)} 
+        />
+      )}
+
+      {reassignModalOpen && homeId && (
+        <ReassignHomeModal
+          homeId={homeId}
+          homes={homes}
+          token={token}
+          onClose={() => setReassignModalOpen(false)}
+          onComplete={() => {
+            setReassignModalOpen(false);
+            fetchItems(homeId); // Refresh after move
+          }}
         />
       )}
 

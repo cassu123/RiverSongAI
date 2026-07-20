@@ -111,6 +111,7 @@ class InvHome(Base):  # type: ignore
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     owner_id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), ForeignKey("inv_users.id"), nullable=False)
     default_qr_standard: Mapped[QRCodeStandard] = mapped_column(Enum(QRCodeStandard), default=QRCodeStandard.QR, nullable=False)
+    manifest_generated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 

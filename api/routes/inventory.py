@@ -43,6 +43,7 @@ from inventory.management import (
     edit_home,
     fast_scan_item,
     generate_insurance_manifest,
+    generate_audit_discrepancy_report,
     get_attachments,
     get_active_audit,
     get_audit_history,
@@ -52,6 +53,7 @@ from inventory.management import (
     get_or_create_inv_user,
     manage_collaborators,
     process_receipt,
+    reassign_items_to_home,
     record_scan,
     start_audit,
     update_item,
@@ -167,6 +169,10 @@ class HomePatch(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     qr_standard: Optional[QRCodeStandard] = None
+
+class ReassignHome(BaseModel):
+    target_home_id: str
+    item_ids: Optional[list[str]] = None
 
 
 class ItemCreate(BaseModel):
@@ -327,6 +333,16 @@ def delete_home_route(home_id: str, db: Session = Depends(
         raise forbidden("Only the owner can delete a home")
     db.delete(home)
     db.commit()
+
+
+@router.post("/homes/{home_id}/reassign")
+def reassign_home_route(home_id: str, body: ReassignHome, db: Session = Depends(
+        get_db), user: InvUser = Depends(get_current_inv_user)):
+    try:
+        count = reassign_items_to_home(db, str(user.id), home_id, body.target_home_id, body.item_ids)
+        return {"reassigned_count": count}
+    except Exception as e:
+        raise _http(e)
 
 
 # ---------------------------------------------------------------------------
@@ -492,6 +508,30 @@ def complete_audit_route(audit_id: str, body: AuditCompleteBody, db: Session = D
     except Exception as e:
         raise _http(e)
 
+
+@router.post("/audits/{audit_id}/discrepancy")
+def get_audit_discrepancy_report(
+    audit_id: str,
+    mark_missing: bool = False,
+    db: Session = Depends(get_db),
+    user: InvUser = Depends(get_current_inv_user),
+):
+    from inventory.file_utils import INVENTORY_FILES_BASE_DIR
+    try:
+        pdf_path = generate_audit_discrepancy_report(db, str(user.id), audit_id, mark_missing)
+        base = os.path.realpath(INVENTORY_FILES_BASE_DIR)
+        full_path = os.path.realpath(pdf_path)
+        if not full_path.startswith(base + os.sep):
+            raise bad_request("Invalid file path.")
+        return FileResponse(
+            full_path,
+            media_type="application/pdf",
+            filename=os.path.basename(full_path),
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise _http(e)
 
 @router.get("/homes/{home_id}/audit/history")
 def audit_history(home_id: str, db: Session = Depends(get_db),
@@ -818,21 +858,24 @@ def remove_collaborator(home_id: str, collab_user_id: str, db: Session = Depends
 # ---------------------------------------------------------------------------
 
 @router.get("/homes/{home_id}/manifest")
-def insurance_manifest(home_id: str, db: Session = Depends(
+def insurance_manifest(home_id: str, fmt: str = "pdf", db: Session = Depends(
         get_db), user: InvUser = Depends(get_current_inv_user)):
     from inventory.file_utils import INVENTORY_FILES_BASE_DIR
     try:
-        pdf_path = generate_insurance_manifest(db, str(user.id), home_id)
+        manifest_files = generate_insurance_manifest(db, str(user.id), home_id)
+        file_path = manifest_files.get(fmt)
+        if not file_path:
+            raise bad_request(f"Invalid format requested: {fmt}")
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         raise _http(e)
     base = os.path.realpath(INVENTORY_FILES_BASE_DIR)
-    full_path = os.path.realpath(pdf_path)
+    full_path = os.path.realpath(file_path)
     if not full_path.startswith(base + os.sep):
         raise bad_request("Invalid file path.")
     return FileResponse(
         full_path,
-        media_type="application/pdf",
+        media_type="application/pdf" if fmt == "pdf" else "text/csv",
         filename=os.path.basename(full_path),
     )

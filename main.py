@@ -241,6 +241,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from core.garage import garage_sweep_func
     register_sweep("garage", 86400, garage_sweep_func)
     
+    from core.inventory_sweep import inventory_sweep_func
+    register_sweep("inventory", 86400, inventory_sweep_func)
+    
     await start_sweeps(app)
 
     # CHRONOS: Start vault watcher
