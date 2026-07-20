@@ -6,10 +6,14 @@ import { API_BASE } from '../utils/useApi.js'
 
 const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 
-export function useConversation({ token, user, sessionId }) {
+export function useConversation({ token, user, sessionId, extraQueryParams = {} }) {
   const backendHost = API_BASE ? new URL(API_BASE).host : window.location.host;
   const wsProtocol = API_BASE ? (API_BASE.startsWith('https') ? 'wss:' : 'ws:') : WS_PROTOCOL;
-  const wsUrl = `${wsProtocol}//${backendHost}/ws/conversation${sessionId ? `?session_id=${sessionId}` : ''}`
+  
+  const params = new URLSearchParams(extraQueryParams);
+  if (sessionId) params.append('session_id', sessionId);
+  const qStr = params.toString();
+  const wsUrl = `${wsProtocol}//${backendHost}/ws/conversation${qStr ? '?' + qStr : ''}`
 
   const [convState, setConvState] = useState('connecting')
   const [messages, setMessages] = useState([])

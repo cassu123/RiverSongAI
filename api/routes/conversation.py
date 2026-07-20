@@ -155,6 +155,10 @@ async def conversation_websocket(websocket: WebSocket) -> None:
             logger.warning("Could not load user settings: %s", exc)
 
     session_id: str | None = websocket.query_params.get("session_id")
+    vehicle_id: str | None = websocket.query_params.get("vehicle_id")
+    tool_context_extras = {}
+    if vehicle_id:
+        tool_context_extras["vehicle_id"] = vehicle_id
 
     loop = ConversationLoop(
         user_id=user_id,
@@ -166,6 +170,7 @@ async def conversation_websocket(websocket: WebSocket) -> None:
         fallback_model=fb_model,
         stt_model_override=whisper_model,
         session_id=session_id,
+        tool_context_extras=tool_context_extras,
     )
 
     await _send(websocket, {"type": "connected"})

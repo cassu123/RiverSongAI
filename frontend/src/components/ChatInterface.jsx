@@ -12,7 +12,7 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-export default function ChatInterface({ setAction, onNavigate, initialIntent, embedded, onClose }) {
+export default function ChatInterface({ setAction, onNavigate, initialIntent, embedded, onClose, vehicleId }) {
   const { token, user } = useAuth()
 
   const [models,          setModels]          = useState({ cloud: [], local: [] })
@@ -39,6 +39,12 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
 
   const [voiceToggle, setVoiceToggle] = useState('auto') // 'auto', 'always', 'never'
 
+  const extraQueryParams = useMemo(() => {
+    const q = {};
+    if (vehicleId) q.vehicle_id = vehicleId;
+    return q;
+  }, [vehicleId]);
+
   // Initialize Session Hook
   const {
     convState,
@@ -55,7 +61,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
     abortGeneration,
     sendMessage,
     setMessages
-  } = useConversation({ token, user, sessionId: currentSessionId })
+  } = useConversation({ token, user, sessionId: currentSessionId, extraQueryParams })
 
   const isThinking = convState === 'thinking' || convState === 'speaking' || streamingContent !== ''
 
@@ -75,7 +81,11 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
         .then(s => setSelectedModel({ provider: s.provider, model_id: s.model }))
         .catch(() => {})
         
-      fetch(`${API_BASE}/api/chat/sessions`, { headers: { Authorization: `Bearer ${token}` } })
+      const url = new URL(`${API_BASE}/api/chat/sessions`)
+      if (vehicleId) {
+        url.searchParams.append('scope', `vehicle:${vehicleId}`)
+      }
+      fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
         .then(data => {
             if (data.sessions) {

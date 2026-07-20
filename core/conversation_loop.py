@@ -337,6 +337,7 @@ class ConversationLoop:
         stt_model_override: Optional[str] = None,
         mode: str = "voice",
         session_id: Optional[str] = None,
+        tool_context_extras: Optional[dict] = None,
     ) -> None:
         settings = get_settings()
         self._settings = settings
@@ -375,7 +376,7 @@ class ConversationLoop:
         # re-embedding + re-querying Chroma for the same transcript across
         # back-to-back turns (e.g. when the user re-issues the same query).
         self._skills_block_cache: "dict[str, str]" = {}
-        self._tool_context_extras: "dict[str, Any]" = {}
+        self._tool_context_extras: "dict[str, Any]" = tool_context_extras or {}
 
     def cancel_generation(self) -> None:
         """Immediately abort the current LLM + TTS generation task."""
@@ -479,7 +480,10 @@ class ConversationLoop:
         else:
             if not self._session_id and self._memory and hasattr(self._memory._store, 'create_chat_session'):
                 try:
-                    self._session_id = await self._memory._store.create_chat_session(self._user_id, "")
+                    meta = {}
+                    if self._tool_context_extras.get("vehicle_id"):
+                        meta["scope"] = f"vehicle:{self._tool_context_extras['vehicle_id']}"
+                    self._session_id = await self._memory._store.create_chat_session(self._user_id, "", meta=meta)
                 except Exception as e:
                     logger.error("Failed to create chat session: %s", e)
 
@@ -635,7 +639,22 @@ class ConversationLoop:
                 "or anything outside your training cutoff."
             )
 
-        full_system = self._system_prompt + memory_block + context_block + mode_block
+        vehicle_block = ""
+        vid = self._tool_context_extras.get("vehicle_id")
+        if vid:
+            try:
+                from api.routes.vehicles import get_vehicles
+                from core.tools import _get_db_for_tools
+                db, close = _get_db_for_tools({})
+                vehicles = get_vehicles(db, self._user_id)
+                v = next((x for x in vehicles if str(x.id) == vid), None)
+                if v:
+                    vehicle_block = f"\n\nVEHICLE CONTEXT:\nYou are actively assisting with the vehicle '{v.nickname or v.model}' ({v.year} {v.make} {v.model}, VIN: {v.vin or 'Unknown'}). When using vehicle tools, this vehicle is implied."
+                if close: db.close()
+            except Exception as e:
+                logger.debug("Vehicle context injection skipped: %s", e)
+
+        full_system = self._system_prompt + memory_block + context_block + mode_block + vehicle_block
         if self._history and self._history[0].get("role") == "system":
             self._history[0]["content"] = full_system
         else:
@@ -1251,7 +1270,10 @@ class ConversationLoop:
 
         if not self._session_id and self._memory and hasattr(self._memory._store, 'create_chat_session'):
             try:
-                self._session_id = await self._memory._store.create_chat_session(self._user_id, "")
+                meta = {}
+                if self._tool_context_extras.get("vehicle_id"):
+                    meta["scope"] = f"vehicle:{self._tool_context_extras['vehicle_id']}"
+                self._session_id = await self._memory._store.create_chat_session(self._user_id, "", meta=meta)
             except Exception as e:
                 logger.error("Failed to create chat session during reset: %s", e)
         elif self._session_id and self._memory and hasattr(self._memory._store, 'get_chat_messages'):
@@ -1270,7 +1292,9 @@ class ConversationLoop:
             self._suppress_memory = True
         await self._rebuild_system_prompt()
         self._flush_memory = flush_memory
-        self._tool_context_extras = {}
+        # Preserve vehicle_id across resets
+        vid = self._tool_context_extras.get("vehicle_id")
+        self._tool_context_extras = {"vehicle_id": vid} if vid else {}
         logger.info(
             "Conversation history reset (user=%s, suppress_memory=%s, session_id=%s).",
             self._user_id,

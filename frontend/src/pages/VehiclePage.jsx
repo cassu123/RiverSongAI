@@ -182,6 +182,7 @@ export default function VehiclePage({ setAction }) {
             <ChatInterface 
               embedded={true} 
               onClose={() => setActiveAskVehicle(null)}
+              vehicleId={activeAskVehicle.id}
               initialIntent={{ 
                 text: `River, status on the ${activeAskVehicle.nickname || activeAskVehicle.model}.`, 
                 docId: `vehicle_${activeAskVehicle.id}` 

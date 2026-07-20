@@ -6,35 +6,46 @@ from datetime import datetime, timezone
 class ChatStoreMixin:
     # Requires self._run and self._get_conn from the main SQLiteStore
 
-    async def get_chat_sessions(self, user_id: str) -> List[Dict[str, Any]]:
+    async def get_chat_sessions(self, user_id: str, scope: Optional[str] = None) -> List[Dict[str, Any]]:
         def _get() -> List[Dict[str, Any]]:
             conn = self._get_conn()
             conn.row_factory = dict_factory
-            c = conn.execute(
+            if scope:
+                query = """
+                    SELECT s.id, s.title, s.updated_at, COUNT(m.id) as message_count
+                    FROM chat_sessions s
+                    LEFT JOIN chat_messages m ON s.id = m.session_id
+                    WHERE s.user_id = ? AND s.archived = 0 AND s.meta LIKE ?
+                    GROUP BY s.id
+                    ORDER BY s.updated_at DESC
                 """
-                SELECT s.id, s.title, s.updated_at, COUNT(m.id) as message_count
-                FROM chat_sessions s
-                LEFT JOIN chat_messages m ON s.id = m.session_id
-                WHERE s.user_id = ? AND s.archived = 0
-                GROUP BY s.id
-                ORDER BY s.updated_at DESC
-                """,
-                (user_id,)
-            )
+                params = (user_id, f'%"{scope}"%')
+            else:
+                query = """
+                    SELECT s.id, s.title, s.updated_at, COUNT(m.id) as message_count
+                    FROM chat_sessions s
+                    LEFT JOIN chat_messages m ON s.id = m.session_id
+                    WHERE s.user_id = ? AND s.archived = 0 AND (s.meta IS NULL OR s.meta NOT LIKE '%"scope"%')
+                    GROUP BY s.id
+                    ORDER BY s.updated_at DESC
+                """
+                params = (user_id,)
+            c = conn.execute(query, params)
             return [dict(row) for row in c.fetchall()]
         return await self._run(_get)
 
-    async def create_chat_session(self, user_id: str, title: str = "") -> str:
+    async def create_chat_session(self, user_id: str, title: str = "", meta: Optional[Dict[str, Any]] = None) -> str:
         session_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
+        meta_json = json.dumps(meta or {})
         def _create() -> str:
             conn = self._get_conn()
             conn.execute(
                 """
-                INSERT INTO chat_sessions (id, user_id, title, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO chat_sessions (id, user_id, title, created_at, updated_at, meta)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (session_id, user_id, title, now, now)
+                (session_id, user_id, title, now, now, meta_json)
             )
             conn.commit()
             return session_id

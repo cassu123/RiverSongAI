@@ -120,7 +120,8 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL,
     distilled_at  TEXT,
-    archived      INTEGER DEFAULT 0
+    archived      INTEGER DEFAULT 0,
+    meta          TEXT DEFAULT '{}'
 );
 CREATE TABLE IF NOT EXISTS chat_messages (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -848,6 +849,7 @@ class SQLiteStore(
             "ALTER TABLE vector_units ADD COLUMN notes TEXT",
             "ALTER TABLE vector_units RENAME COLUMN unit_name TO name",
             "ALTER TABLE vector_units RENAME COLUMN platform_type TO platform",
+            "ALTER TABLE chat_sessions ADD COLUMN meta TEXT DEFAULT '{}'",
         ]:
             try:
                 conn.execute(migration)

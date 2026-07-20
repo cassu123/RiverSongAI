@@ -23,12 +23,12 @@ class CreateSessionRequest(BaseModel):
     title: str = ""
 
 @router.get("/sessions")
-async def list_sessions(request: Request, user_id: str = Depends(_require_user)):
+async def list_sessions(request: Request, scope: Optional[str] = None, user_id: str = Depends(_require_user)):
     memory_manager = getattr(request.app.state, "memory_manager", None)
     if not memory_manager:
         raise HTTPException(status_code=500, detail="Memory manager not initialized")
     
-    sessions = await memory_manager._store.get_chat_sessions(user_id)
+    sessions = await memory_manager._store.get_chat_sessions(user_id, scope=scope)
     return {"sessions": sessions}
 
 @router.post("/sessions")

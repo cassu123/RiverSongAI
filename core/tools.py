@@ -110,8 +110,66 @@ TOOL_SCHEMAS = [
                 "service_type": {"type": "string", "description": "What was done (e.g., oil change, tire rotation)."},
                 "date": {"type": "string", "description": "Date of service (YYYY-MM-DD)."},
                 "mileage": {"type": "integer", "description": "Odometer reading at time of service."},
+                "cost": {"type": "number", "description": "Cost of the service."},
+                "notes": {"type": "string", "description": "Any additional notes."}
             },
-            "required": ["vehicle_name", "service_type", "date"]
+            "required": ["service_type"]
+        }
+    },
+    {
+        "name": "list_vehicles",
+        "description": "List all vehicles in the family garage along with their current effective odometer.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "get_vehicle_status",
+        "description": "Get the maintenance timeline status (next up, upcoming, overdue) for a specific vehicle.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "vehicle_name": {"type": "string", "description": "Name or make/model of the vehicle."}
+            },
+            "required": ["vehicle_name"]
+        }
+    },
+    {
+        "name": "get_vehicle_spec",
+        "description": "Look up checkpoint specs (torque, fluid, volume) for a vehicle.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "vehicle_name": {"type": "string", "description": "Name of the vehicle."},
+                "item": {"type": "string", "description": "What to look up (e.g., drain plug torque, engine oil)."}
+            },
+            "required": ["vehicle_name", "item"]
+        }
+    },
+    {
+        "name": "query_vehicle_manual",
+        "description": "Ask a question about a vehicle by searching its uploaded owner's manual.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "vehicle_name": {"type": "string", "description": "Name of the vehicle."},
+                "question": {"type": "string", "description": "Question to answer from the manual."}
+            },
+            "required": ["vehicle_name", "question"]
+        }
+    },
+    {
+        "name": "record_odometer",
+        "description": "Record a new odometer/mileage reading for a vehicle.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "vehicle_name": {"type": "string", "description": "Name of the vehicle."},
+                "value": {"type": "integer", "description": "Odometer reading."}
+            },
+            "required": ["vehicle_name", "value"]
         }
     },
     {
@@ -477,6 +535,21 @@ async def execute_tool(
             # type: ignore
             return await _exec_vehicle_maintenance(tool_input, context)  # type: ignore
 
+        elif tool_name == "list_vehicles":
+            return await _exec_list_vehicles(tool_input, context)
+            
+        elif tool_name == "get_vehicle_status":
+            return await _exec_get_vehicle_status(tool_input, context)
+            
+        elif tool_name == "get_vehicle_spec":
+            return await _exec_get_vehicle_spec(tool_input, context)
+            
+        elif tool_name == "query_vehicle_manual":
+            return await _exec_query_vehicle_manual(tool_input, context)
+            
+        elif tool_name == "record_odometer":
+            return await _exec_record_odometer(tool_input, context)
+
         elif tool_name == "add_recipe_to_library":
             return await _exec_add_recipe(tool_input, user_id)
 
@@ -830,17 +903,27 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
         else:
             close_db = False
 
-        try:
-            vehicles = get_vehicles(db, user_id)  # type: ignore
-            v = next((v for v in vehicles if str(v.id) == vehicle_id), None)
-            if not v:
-                return {"error": "Vehicle not found."}
+            # If vehicle_id is missing, try to resolve from args
+            if not vehicle_id:
+                vehicle_name = args.get('vehicle_name')
+                if not vehicle_name:
+                    return {"error": "Must specify a vehicle_name if not already in context."}
+                
+                v = _resolve_vehicle_sync(db, user_id, vehicle_name)
+                if not v:
+                    return {"error": f"Could not find a vehicle matching '{vehicle_name}'."}
+                vehicle_id = str(v.id)
+            else:
+                vehicles = get_vehicles(db, user_id)  # type: ignore
+                v = next((v for v in vehicles if str(v.id) == vehicle_id), None)
+                if not v:
+                    return {"error": "Vehicle not found."}
 
             service_type = args.get('service_type', '')
-            date_str = args.get(
-                'date', datetime.now(
-                    timezone.utc).date().isoformat())
+            date_str = args.get('date', datetime.now(timezone.utc).date().isoformat())
             mileage = args.get('mileage')
+            cost = args.get('cost')
+            notes = args.get('notes', '')
 
             try:
                 service_date = datetime.strptime(date_str, "%Y-%m-%d")
@@ -851,8 +934,7 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
             checkpoints = {cp.description: cp for cp in v.check_points}
             descriptions = list(checkpoints.keys())
 
-            matches = difflib.get_close_matches(
-                service_type, descriptions, n=1, cutoff=0.6)
+            matches = difflib.get_close_matches(service_type, descriptions, n=1, cutoff=0.6)
             matched_cp = None
             if matches:
                 matched_cp = checkpoints[matches[0]]
@@ -866,7 +948,8 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
                     "passed": True
                 })
                 # Update checkpoint explicitly
-                matched_cp.last_service_odometer = mileage
+                if mileage is not None:
+                    matched_cp.last_service_odometer = mileage
                 matched_cp.last_service_date = service_date
                 db.commit()
 
@@ -875,8 +958,23 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
                 service_date=service_date,
                 odometer=mileage,
                 service_type=service_type,
+                cost=cost,
+                notes=notes,
                 check_results=check_results
             )
+            
+            # Record usage reading if mileage provided
+            if mileage is not None:
+                from vehicles.models import UsageReading, UsageUnit, UsageSource
+                ur = UsageReading(
+                    vehicle_id=v.id,
+                    value=mileage,
+                    unit=UsageUnit.MILES,
+                    source=UsageSource.SERVICE_LOG,
+                    recorded_at=service_date
+                )
+                db.add(ur)
+                db.commit()
 
             result = {
                 "success": True,
@@ -891,6 +989,223 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
 
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _sync_work)
+
+
+def _resolve_vehicle_sync(db, user_id, query):
+    import difflib
+    from api.routes.vehicles import get_vehicles
+    vehicles = get_vehicles(db, user_id)
+    if not vehicles:
+        return None
+    
+    # Try exact nickname
+    for v in vehicles:
+        if v.nickname and v.nickname.lower() == query.lower():
+            return v
+    
+    names = {}
+    for v in vehicles:
+        n1 = v.nickname or ""
+        n2 = f"{v.year} {v.make} {v.model}"
+        names[n1.lower()] = v
+        names[n2.lower()] = v
+    
+    matches = difflib.get_close_matches(query.lower(), list(names.keys()), n=1, cutoff=0.4)
+    if matches:
+        return names[matches[0]]
+    return vehicles[0] # fallback
+
+
+def _get_db_for_tools(context):
+    db = context.get("db")
+    if not db:
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        engine = create_engine(os.environ.get("VEHICLES_DB_URL", "sqlite:///./data/vehicles.db"))
+        return sessionmaker(bind=engine)(), True
+    return db, False
+
+
+async def _exec_list_vehicles(args: dict, context: dict) -> dict:
+    user_id = context.get("user_id")
+    def _sync():
+        db, close = _get_db_for_tools(context)
+        try:
+            from api.routes.vehicles import get_vehicles, get_maintenance_timeline
+            vehicles = get_vehicles(db, user_id)
+            res = []
+            for v in vehicles:
+                try:
+                    tl = get_maintenance_timeline(str(v.id), None, None, db, user_id)
+                except Exception:
+                    tl = {}
+                res.append({
+                    "id": str(v.id),
+                    "name": v.nickname or f"{v.year} {v.make} {v.model}",
+                    "effective_odometer": tl.get("eff_odometer")
+                })
+            return {"vehicles": res}
+        finally:
+            if close: db.close()
+    return await asyncio.get_running_loop().run_in_executor(None, _sync)
+
+
+async def _exec_get_vehicle_status(args: dict, context: dict) -> dict:
+    user_id = context.get("user_id")
+    v_id = context.get("vehicle_id")
+    v_name = args.get("vehicle_name")
+    
+    def _sync():
+        db, close = _get_db_for_tools(context)
+        try:
+            from api.routes.vehicles import get_maintenance_timeline
+            vehicle_id = v_id
+            if not vehicle_id and v_name:
+                v = _resolve_vehicle_sync(db, user_id, v_name)
+                if not v: return {"error": "Vehicle not found."}
+                vehicle_id = str(v.id)
+            
+            if not vehicle_id:
+                return {"error": "Could not determine vehicle."}
+                
+            tl = get_maintenance_timeline(vehicle_id, None, None, db, user_id)
+            return tl
+        finally:
+            if close: db.close()
+    return await asyncio.get_running_loop().run_in_executor(None, _sync)
+
+
+async def _exec_get_vehicle_spec(args: dict, context: dict) -> dict:
+    user_id = context.get("user_id")
+    v_id = context.get("vehicle_id")
+    v_name = args.get("vehicle_name")
+    item = args.get("item", "")
+    
+    def _sync():
+        import difflib
+        db, close = _get_db_for_tools(context)
+        try:
+            vehicle_id = v_id
+            if not vehicle_id and v_name:
+                v = _resolve_vehicle_sync(db, user_id, v_name)
+                if not v: return {"error": "Vehicle not found."}
+                vehicle_id = str(v.id)
+            else:
+                from api.routes.vehicles import get_vehicles
+                v = next((x for x in get_vehicles(db, user_id) if str(x.id) == vehicle_id), None)
+                
+            if not v:
+                return {"error": "Could not determine vehicle."}
+                
+            cps = {cp.description: cp for cp in v.check_points}
+            matches = difflib.get_close_matches(item, list(cps.keys()), n=1, cutoff=0.3)
+            if matches:
+                cp = cps[matches[0]]
+                return {
+                    "checkpoint": cp.description,
+                    "expected_spec": cp.expected_spec,
+                    "volume": cp.volume,
+                    "unit": cp.unit,
+                    "torque": f"{cp.ft_lb} ft-lb" if cp.ft_lb else None
+                }
+            return {"error": "Spec not found."}
+        finally:
+            if close: db.close()
+    return await asyncio.get_running_loop().run_in_executor(None, _sync)
+
+
+async def _exec_query_vehicle_manual(args: dict, context: dict) -> dict:
+    user_id = context.get("user_id")
+    v_id = context.get("vehicle_id")
+    v_name = args.get("vehicle_name")
+    question = args.get("question", "")
+    
+    # We must run this async as it uses memory_manager / llm
+    db, close = _get_db_for_tools(context)
+    try:
+        vehicle_id = v_id
+        if not vehicle_id and v_name:
+            v = await asyncio.get_running_loop().run_in_executor(None, _resolve_vehicle_sync, db, user_id, v_name)
+            if not v: return {"error": "Vehicle not found."}
+            vehicle_id = str(v.id)
+        
+        if not vehicle_id:
+            return {"error": "Could not determine vehicle."}
+    finally:
+        if close: db.close()
+        
+    # Use RAG with metadata filter
+    from core.memory_manager import MemoryManager
+    try:
+        from main import get_app
+        app = get_app()
+        if app:
+            memory_manager = app.state.memory_manager
+        else:
+            return {"error": "App not ready."}
+    except Exception:
+        return {"error": "App not ready."}
+        
+    results = await memory_manager.search_rag(user_id, question, n_results=5)
+    # Filter strictly to vehicle_id if possible, or just return the text
+    filtered = []
+    for r in results:
+        meta = r.get("metadata", {})
+        if meta.get("vehicle_id") == vehicle_id or meta.get("doc_type") == "vehicle_manual":
+            filtered.append(r["text"])
+            
+    if not filtered:
+        return {"answer": "No relevant manual pages found."}
+        
+    context_str = "\n".join(filtered)
+    # Summarize with LLM
+    from core.llm_service import _generate_text
+    prompt = f"Answer the following question about a vehicle based on the provided manual excerpts.\n\nQuestion: {question}\n\nExcerpts:\n{context_str}"
+    ans = await _generate_text([{"role": "user", "content": prompt}], user_id)
+    return {"answer": ans}
+
+
+async def _exec_record_odometer(args: dict, context: dict) -> dict:
+    user_id = context.get("user_id")
+    v_id = context.get("vehicle_id")
+    v_name = args.get("vehicle_name")
+    val = args.get("value")
+    
+    if not val:
+        return {"error": "Value required."}
+        
+    def _sync():
+        db, close = _get_db_for_tools(context)
+        try:
+            vehicle_id = v_id
+            if not vehicle_id and v_name:
+                v = _resolve_vehicle_sync(db, user_id, v_name)
+                if not v: return {"error": "Vehicle not found."}
+                vehicle_id = str(v.id)
+            else:
+                from api.routes.vehicles import get_vehicles
+                v = next((x for x in get_vehicles(db, user_id) if str(x.id) == vehicle_id), None)
+                
+            if not v:
+                return {"error": "Could not determine vehicle."}
+                
+            from vehicles.models import UsageReading, UsageUnit, UsageSource
+            from datetime import datetime, timezone
+            ur = UsageReading(
+                vehicle_id=v.id,
+                value=val,
+                unit=UsageUnit.MILES,
+                source=UsageSource.MANUAL,
+                recorded_at=datetime.now(timezone.utc)
+            )
+            db.add(ur)
+            db.commit()
+            return {"success": True, "message": f"Recorded {val} miles for {v.nickname or v.model}."}
+        finally:
+            if close: db.close()
+    return await asyncio.get_running_loop().run_in_executor(None, _sync)
+
+
 
 
 async def _exec_add_recipe(args: dict, user_id: str) -> str:
