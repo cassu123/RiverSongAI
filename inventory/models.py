@@ -131,6 +131,7 @@ class ItemAttachment(Base):  # type: ignore
     stored_path: Mapped[str] = mapped_column(String, nullable=False)# relative to INVENTORY_FILES_BASE_DIR
     file_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     mime_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
     item = relationship("InventoryItem", back_populates="attachments")
@@ -196,13 +197,16 @@ class InventoryItem(Base):  # type: ignore
     qr_standard: Mapped[QRCodeStandard] = mapped_column(Enum(QRCodeStandard), default=QRCodeStandard.QR, nullable=False)
     qr_code_data: Mapped[Optional[str]] = mapped_column(Text, nullable=True)# base64 PNG or SVG
 
-    # --- custody / status ---
+    # --- status ---
     asset_status: Mapped[AssetStatus] = mapped_column(Enum(AssetStatus), default=AssetStatus.SERVICEABLE, nullable=False)
-    current_custodian_id: Mapped[Optional[Any]] = mapped_column(Uuid(as_uuid=True), ForeignKey("inv_users.id"), nullable=True)
-    issued_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-
-    # --- flags ---
     is_insured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # --- custody (Deprecated/Removed) ---
+    current_custodian_id: Mapped[Optional[Any]] = mapped_column(Uuid(as_uuid=True), ForeignKey("inv_users.id"), nullable=True) # Deprecated
+    issued_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True) # Deprecated
+
+    # --- labels ---
+    label_printed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # --- timestamps ---
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)

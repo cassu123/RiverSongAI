@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { apiFetch } from '../utils/api'
+import { apiFetch } from '../lib/api'
 
 export default function ProactivePage() {
   const [log, setLog] = useState([])

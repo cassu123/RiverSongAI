@@ -760,41 +760,37 @@ async def _exec_calendar_event(args: dict, user_id: str) -> str:
 
 
 async def _exec_add_inventory(args: dict, user_id: str) -> str:
-    settings = get_settings()
-    db_path = settings.db_path
-
     def _sync_work():
-        conn = sqlite3.connect(db_path)
+        from api.routes.inventory import get_db as get_inventory_db
+        from inventory.management import create_item, get_or_create_inv_user, get_homes_for_user, create_home, ItemCategory
+        from core.family import resolve_module_owner
+        
+        db = next(get_inventory_db())
         try:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS inventory_items (
-                    id INTEGER PRIMARY KEY,
-                    user_id TEXT,
-                    name TEXT,
-                    quantity INTEGER,
-                    unit TEXT,
-                    location TEXT,
-                    category TEXT,
-                    created_at TEXT
-                )
-            """)
-            conn.execute(
-                """INSERT INTO inventory_items (user_id, name, quantity, unit, location, category, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (user_id,
-                 args['name'],
-                    args['quantity'],
-                    args.get('unit',
-                             ''),
-                    args['location'],
-                    args.get('category',
-                             'Other'),
-                    datetime.now(timezone.utc).isoformat())
-            )
-            conn.commit()
-            return f"Added {args['quantity']} x {args['name']} to the inventory at {args['location']}."
+            eff_user = resolve_module_owner(user_id, "inventory")
+            inv_user = get_or_create_inv_user(db, eff_user, f"{eff_user}@local", eff_user)
+            homes = get_homes_for_user(db, str(inv_user.id))
+            if not homes:
+                home = create_home(db, str(inv_user.id), "Primary Residence", "")
+            else:
+                home = homes[0]
+            
+            cat_str = args.get('category', 'Other').upper()
+            try:
+                cat = ItemCategory(cat_str)
+            except ValueError:
+                cat = ItemCategory.OTHER
+                
+            item = create_item(db, str(inv_user.id), str(home.id), {
+                "name": args['name'],
+                "quantity": args.get('quantity', 1),
+                "location": args.get('location'),
+                "category": cat
+            })
+            return f"Added {item.quantity} x {item.name} to the inventory at {item.location}."
         finally:
-            conn.close()
+            db.close()
+            
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _sync_work)
 

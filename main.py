@@ -110,6 +110,51 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.ws_tickets = {} # ticket_uuid -> {"user_id": str, "expires_at": float, "is_kiosk": bool}
     logger.info("Memory layer ready (db=%s).", settings.db_path)
 
+    # I0.4 Shadow table migration
+    try:
+        import sqlite3
+        from inventory.management import create_item, get_or_create_inv_user, get_homes_for_user, create_home, ItemCategory
+        from api.routes.inventory import get_db as get_inventory_db
+        from core.family import resolve_module_owner
+        conn = sqlite3.connect(settings.db_path)
+        cur = conn.cursor()
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='inventory_items'")
+        if cur.fetchone():
+            # Only shadow table has 'unit' and 'user_id', real one has 'ein' and 'home_id'
+            cur.execute("PRAGMA table_info(inventory_items)")
+            columns = [info[1] for info in cur.fetchall()]
+            if 'user_id' in columns:
+                logger.info("Migrating shadow inventory_items table to real system...")
+                cur.execute("SELECT id, user_id, name, quantity, location, category FROM inventory_items")
+                rows = cur.fetchall()
+                db = next(get_inventory_db())
+                for row in rows:
+                    try:
+                        row_id, r_user, r_name, r_qty, r_loc, r_cat = row
+                        eff_user = resolve_module_owner(r_user, "inventory")
+                        inv_user = get_or_create_inv_user(db, eff_user, f"{eff_user}@local", eff_user)
+                        homes = get_homes_for_user(db, str(inv_user.id))
+                        if not homes:
+                            home = create_home(db, str(inv_user.id), "Primary Residence", "")
+                        else:
+                            home = homes[0]
+                        cat = ItemCategory.OTHER
+                        try:
+                            cat = ItemCategory(r_cat.upper() if r_cat else "OTHER")
+                        except ValueError:
+                            pass
+                        create_item(db, str(inv_user.id), str(home.id), {
+                            "name": r_name, "quantity": r_qty or 1, "location": r_loc, "category": cat
+                        })
+                    except Exception as e:
+                        logger.error(f"Error migrating item {row}: {e}")
+                cur.execute("DROP TABLE inventory_items")
+                conn.commit()
+                logger.info("Shadow inventory_items dropped.")
+        conn.close()
+    except Exception as e:
+        logger.error("Error checking/migrating shadow inventory table: %s", e)
+
     # Daemon registry (Task A)
     from daemons.registry import DaemonRegistry
     app.state.daemon_registry = DaemonRegistry()

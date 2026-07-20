@@ -263,42 +263,8 @@ def fast_scan_item(db: Session, user_id: str, ein: str) -> InventoryItem:
 
 
 # ---------------------------------------------------------------------------
-# Custody
+# Custody (Deprecated/Removed)
 # ---------------------------------------------------------------------------
-
-def issue_item(db: Session, admin_user_id: str, item_id: str, collaborator_user_id: str) -> InventoryItem:
-    item = _get_item_or_raise(db, item_id)
-    home = db.query(InvHome).filter(InvHome.id == _uid(item.home_id)).first()
-    if not home or str(home.owner_id) != admin_user_id:
-        raise PermissionDeniedError("Only the home owner can issue items.")
-
-    collaborator = db.query(InvUser).filter(InvUser.id == _uid(collaborator_user_id)).first()
-    if not collaborator:
-        raise NoResultFound(f"User '{collaborator_user_id}' not found.")
-    if item.current_custodian_id == collaborator.id:
-        raise ValueError(f"Item '{item.name}' is already issued to that user.")
-
-    item.current_custodian_id = collaborator.id
-    item.issued_at            = _now()
-    item.asset_status         = AssetStatus.IN_USE
-    db.commit()
-    db.refresh(item)
-    return item
-
-
-def return_item(db: Session, user_id: str, item_id: str) -> InventoryItem:
-    item = _get_item_or_raise(db, item_id)
-    home = db.query(InvHome).filter(InvHome.id == _uid(item.home_id)).first()
-    # Owner or current custodian can return
-    if str(home.owner_id) != user_id and str(item.current_custodian_id) != user_id:  # type: ignore
-        raise PermissionDeniedError("Only the home owner or current custodian can return an item.")
-
-    item.current_custodian_id = None
-    item.issued_at            = None
-    item.asset_status         = AssetStatus.SERVICEABLE
-    db.commit()
-    db.refresh(item)
-    return item
 
 
 # ---------------------------------------------------------------------------

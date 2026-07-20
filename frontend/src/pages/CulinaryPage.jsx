@@ -496,11 +496,7 @@ export default function CulinaryPage({ setAction }) {
         try { setActivePrep(await api.get('/prep')) } catch { setActivePrep(null) }
       }
       if (tab === 'grocery') {
-        const homes = await fetch('/api/inventory/homes', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json())
-        if (homes[0]) {
-          const manifest = await fetch(`/api/inventory/homes/${homes[0].id}/manifest`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json())
-          setGrocery(manifest.filter(i => i.status === 'low' || i.quantity <= i.min_quantity))
-        }
+        try { setGrocery(await api.get('/grocery')) } catch { setGrocery([]) }
       }
       if (tab === 'equipment') setEquipment(await api.get('/household/equipment'))
       if (tab === 'banned') setBanned(await api.get('/household/banned'))

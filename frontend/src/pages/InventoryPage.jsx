@@ -13,6 +13,7 @@ import HomeAuditModal from '../components/HomeAuditModal'
 export default function InventoryPage({ setAction }) {
   const { token } = useAuth()
   const [homeId, setHomeId] = useState(null)
+  const [homes, setHomes] = useState(null)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -21,22 +22,25 @@ export default function InventoryPage({ setAction }) {
   const [auditModalOpen, setAuditModalOpen] = useState(false)
   const [activeItem, setActiveItem] = useState(null)
 
-  const fetchItems = useCallback(async () => {
+  const fetchItems = useCallback(async (activeId = null) => {
     setLoading(true)
     setError(null)
     try {
-      // First get homes to find the active homeId
       const homesRes = await fetch('/api/inventory/homes', { headers: { Authorization: `Bearer ${token}` } })
       if (!homesRes.ok) throw new Error('Failed to fetch homes')
-      const homes = await homesRes.json()
-      if (homes.length === 0) {
+      const fetchedHomes = await homesRes.json()
+      setHomes(fetchedHomes)
+      
+      if (fetchedHomes.length === 0) {
         setItems([])
+        setHomeId(null)
         return
       }
-      const activeHomeId = homes[0].id
-      setHomeId(activeHomeId)
+      
+      const targetHomeId = activeId || fetchedHomes[0].id
+      setHomeId(targetHomeId)
 
-      const res = await fetch(`/api/inventory/homes/${activeHomeId}/items`, { headers: { Authorization: `Bearer ${token}` } })
+      const res = await fetch(`/api/inventory/homes/${targetHomeId}/items`, { headers: { Authorization: `Bearer ${token}` } })
       if (res.ok) setItems(await res.json())
     } catch (err) {
       setError(err.message)
@@ -47,16 +51,41 @@ export default function InventoryPage({ setAction }) {
 
   useEffect(() => { fetchItems() }, [fetchItems])
 
+  const createHome = async (e) => {
+    e.preventDefault();
+    const name = e.target.elements.homeName.value;
+    try {
+      const res = await fetch('/api/inventory/homes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name })
+      });
+      if (res.ok) {
+        fetchItems();
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const filtered = useMemo(() => (items || []).filter(i => 
     (i.name || '').toLowerCase().includes(query.toLowerCase()) || 
     (i.category || '').toLowerCase().includes(query.toLowerCase())
   ), [items, query])
 
-  const stats = useMemo(() => ({
-    total: items.length,
-    low: items.filter(i => i.quantity > 0 && i.quantity <= 2).length,
-    out: items.filter(i => i.quantity <= 0).length,
-  }), [items])
+  const stats = useMemo(() => {
+    let value = 0;
+    let missingDocs = 0;
+    items.forEach(i => {
+      value += (i.replacement_cost || i.purchase_price || 0);
+      if (!i.serial_number || !i.replacement_cost) missingDocs++;
+    });
+    return {
+      total: items.length,
+      value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value),
+      missingDocs
+    };
+  }, [items]);
 
   const handleScanDetected = async (code) => {
     setScannerOpen(false)
@@ -105,6 +134,14 @@ export default function InventoryPage({ setAction }) {
             <span className="material-symbols-rounded">fact_check</span>
             <span className="rs-speak-actions-label">AUDIT</span>
           </button>
+          <button className="rs-btn-primary" onClick={() => setActiveItem({ _isNew: true })} style={{ height: 48, padding: '0 24px', background: 'var(--md-primary)', color: 'var(--md-on-primary)' }} disabled={!homeId}>
+            <span className="material-symbols-rounded">add</span>
+            <span className="rs-speak-actions-label">ADD ASSET</span>
+          </button>
+          <a href={homeId ? `/api/inventory/homes/${homeId}/labels.pdf?token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary" style={{ height: 48, padding: '0 24px', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }} disabled={!homeId} title="Print QR Labels">
+            <span className="material-symbols-rounded">print</span>
+            <span className="rs-speak-actions-label">LABELS</span>
+          </a>
           <button className="rs-pill" onClick={fetchItems} title="Refresh Stash">
             <span className="material-symbols-rounded">sync</span>
           </button>
@@ -116,10 +153,36 @@ export default function InventoryPage({ setAction }) {
 
   return (
     <div className="rs-foyer">
-      <div className="rs-foyer-head">
-        <h1 className="rs-greeting">The Stash</h1>
-        <div className="rs-greeting-sub">Operational asset tracking and sector inventory.</div>
+      <div className="rs-foyer-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 className="rs-greeting">The Stash</h1>
+          <div className="rs-greeting-sub">Operational asset tracking and sector inventory.</div>
+        </div>
+        {homes && homes.length > 1 && (
+          <select 
+            className="rs-input" 
+            style={{ width: 'auto', background: 'var(--md-surface-container)' }} 
+            value={homeId || ''} 
+            onChange={(e) => fetchItems(e.target.value)}
+          >
+            {homes.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+          </select>
+        )}
       </div>
+
+      {homes && homes.length === 0 && (
+        <div className="rs-card is-wide" style={{ marginTop: 32, padding: 48, textAlign: 'center' }}>
+          <span className="material-symbols-rounded" style={{ fontSize: '3rem', color: 'var(--md-primary)', marginBottom: 16 }}>home</span>
+          <h2 style={{ margin: '0 0 8px 0', fontSize: '1.5rem' }}>Welcome to The Stash</h2>
+          <div className="rs-card-meta" style={{ marginBottom: 24 }}>Before you can track assets, you need to create a Home or Location.</div>
+          <form onSubmit={createHome} style={{ display: 'flex', gap: 12, justifyContent: 'center', maxWidth: 400, margin: '0 auto' }}>
+            <input type="text" name="homeName" className="rs-input" placeholder="e.g. River's House, Storage Unit" autoFocus required style={{ flex: 1 }} />
+            <button type="submit" className="rs-btn-primary">CREATE</button>
+          </form>
+        </div>
+      )}
+
+      {homes && homes.length > 0 && <>
 
       {scannerOpen && (
         <BarcodeScanner onDetected={handleScanDetected} onClose={() => setScannerOpen(false)} />
@@ -135,11 +198,16 @@ export default function InventoryPage({ setAction }) {
 
       {activeItem && (
         <AssetDetailModal 
-          item={activeItem} 
+          item={activeItem._isNew ? null : activeItem} 
+          homeId={homeId}
           token={token} 
           onUpdate={(updatedItem) => {
             setActiveItem(updatedItem)
-            setItems(items.map(i => i.id === updatedItem.id ? updatedItem : i))
+            if (activeItem._isNew) {
+               setItems(prev => [...prev, updatedItem])
+            } else {
+               setItems(items.map(i => i.id === updatedItem.id ? updatedItem : i))
+            }
           }} 
           onClose={() => setActiveItem(null)} 
         />
@@ -155,17 +223,17 @@ export default function InventoryPage({ setAction }) {
                  <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)' }}>{stats.total}</div>
                </div>
                <div>
-                 <div className="rs-card-label" style={{ color: 'var(--warn)' }}>LOW THRESHOLD</div>
-                 <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)', color: stats.low > 0 ? 'var(--warn)' : 'inherit' }}>{stats.low}</div>
+                 <div className="rs-card-label" style={{ color: 'var(--md-primary)' }}>REPLACEMENT VALUE</div>
+                 <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)' }}>{stats.value}</div>
                </div>
                <div>
-                 <div className="rs-card-label" style={{ color: 'var(--md-error)' }}>DEPLETED</div>
-                 <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)', color: stats.out > 0 ? 'var(--md-error)' : 'inherit' }}>{stats.out}</div>
+                 <div className="rs-card-label" style={{ color: 'var(--warn)' }}>MISSING INFO</div>
+                 <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)', color: stats.missingDocs > 0 ? 'var(--warn)' : 'inherit' }}>{stats.missingDocs}</div>
                </div>
                <div style={{ flex: 1, minWidth: 200, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                   <div className="rs-status-strip">
-                    <span className="rs-status-dot" style={{ background: '#4ade80' }} />
-                    <span>STASH NOMINAL</span>
+                    <span className="rs-status-dot" style={{ background: stats.missingDocs === 0 ? '#4ade80' : 'var(--warn)' }} />
+                    <span>{stats.missingDocs === 0 ? 'CLAIM READY' : 'NEEDS ATTENTION'}</span>
                   </div>
                </div>
              </div>
@@ -225,6 +293,7 @@ export default function InventoryPage({ setAction }) {
           ))
         )}
       </div>
+      </>}
     </div>
   )
 }

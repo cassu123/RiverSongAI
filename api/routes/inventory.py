@@ -25,7 +25,7 @@ from typing import Generator, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -50,11 +50,9 @@ from inventory.management import (
     get_item,
     get_items_for_home,
     get_or_create_inv_user,
-    issue_item,
     manage_collaborators,
     process_receipt,
     record_scan,
-    return_item,
     start_audit,
     update_item,
 )
@@ -94,6 +92,15 @@ _engine = create_engine(
 )
 _Session = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
 Base.metadata.create_all(_engine)
+with _engine.begin() as conn:
+    try:
+        conn.execute(text("ALTER TABLE inv_item_attachments ADD COLUMN is_primary BOOLEAN NOT NULL DEFAULT 0"))
+    except Exception:
+        pass
+    try:
+        conn.execute(text("ALTER TABLE inventory_items ADD COLUMN label_printed_at DATETIME"))
+    except Exception:
+        pass
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -111,9 +118,12 @@ def get_db() -> Generator[Session, None, None]:
 async def get_current_inv_user(
         request: Request, db: Session = Depends(get_db)) -> InvUser:
     auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
+    token = auth.removeprefix("Bearer ").strip()
+    if not token:
+        token = request.query_params.get("token", "").strip()
+    if not token:
         raise unauthorized("Missing Bearer token")
-    payload = await decode_token(auth.removeprefix("Bearer ").strip())
+    payload = await decode_token(token)
     if not payload:
         raise unauthorized("Invalid or expired token")
 
@@ -203,8 +213,7 @@ class CollaboratorRoleUpdate(BaseModel):
     role: CollaboratorRole
 
 
-class IssueItem(BaseModel):
-    collaborator_email: str
+
 
 
 class AuditScanBody(BaseModel):
@@ -241,12 +250,6 @@ def _ser_home(h: InvHome, db: Session) -> dict:
 
 
 def _ser_item(i: InventoryItem) -> dict:
-    custodian = None
-    if i.current_custodian:
-        custodian = {
-            "id": str(
-                i.current_custodian.id),
-            "email": i.current_custodian.email}
     return {
         "id": str(i.id),
         "ein": i.ein,
@@ -265,8 +268,6 @@ def _ser_item(i: InventoryItem) -> dict:
         "warranty_expiry_date": i.warranty_expiry_date.isoformat() if i.warranty_expiry_date else None,
         "is_insured": i.is_insured,
         "asset_status": i.asset_status.value if i.asset_status else None,
-        "current_custodian": custodian,
-        "issued_at": i.issued_at.isoformat() if i.issued_at else None,
         "qr_standard": i.qr_standard.value if i.qr_standard else None,
         "qr_code_data": i.qr_code_data,
         "receipt_image_path": i.receipt_image_path,
@@ -595,6 +596,53 @@ def remove_attachment(attachment_id: str, db: Session = Depends(
 
 
 # ---------------------------------------------------------------------------
+# Label Generation
+# ---------------------------------------------------------------------------
+
+@router.get("/homes/{home_id}/labels.pdf")
+def get_home_labels(
+    home_id: str,
+    only_unprinted: bool = False,
+    db: Session = Depends(get_db),
+    user: InvUser = Depends(get_current_inv_user),
+):
+    from fastapi.responses import StreamingResponse
+    from inventory.labels import generate_labels_pdf
+    from datetime import datetime, timezone
+    
+    home = db.query(InvHome).filter(InvHome.id == _uid(home_id)).first()
+    if not home:
+        raise not_found("Home not found")
+        
+    try:
+        get_homes_for_user(db, str(user.id))
+    except PermissionDeniedError:
+        raise forbidden("Not permitted")
+        
+    query = db.query(InventoryItem).filter(InventoryItem.home_id == home.id)
+    if only_unprinted:
+        query = query.filter(InventoryItem.label_printed_at == None)
+        
+    items = query.all()
+    if not items:
+        raise bad_request("No items found to print labels for.")
+        
+    pdf_buffer = generate_labels_pdf(items)
+    
+    # Update label_printed_at
+    if only_unprinted:
+        now = datetime.now(timezone.utc)
+        for item in items:
+            item.label_printed_at = now
+        db.commit()
+    
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=labels_{home_id}.pdf"}
+    )
+
+# ---------------------------------------------------------------------------
 # Receipt / warranty uploads
 # ---------------------------------------------------------------------------
 
@@ -682,30 +730,6 @@ async def upload_warranty_image(
         raise _http(e)
 
 
-# ---------------------------------------------------------------------------
-# Custody
-# ---------------------------------------------------------------------------
-
-@router.post("/items/{item_id}/issue")
-def issue_item_route(item_id: str, body: IssueItem, db: Session = Depends(
-        get_db), user: InvUser = Depends(get_current_inv_user)):
-    collab = db.query(InvUser).filter(
-        InvUser.email == body.collaborator_email).first()
-    if not collab:
-        raise not_found(f"No user with email '{body.collaborator_email}'")
-    try:
-        return _ser_item(issue_item(db, str(user.id), item_id, str(collab.id)))
-    except Exception as e:
-        raise _http(e)
-
-
-@router.post("/items/{item_id}/return")
-def return_item_route(item_id: str, db: Session = Depends(
-        get_db), user: InvUser = Depends(get_current_inv_user)):
-    try:
-        return _ser_item(return_item(db, str(user.id), item_id))
-    except Exception as e:
-        raise _http(e)
 
 
 # ---------------------------------------------------------------------------
