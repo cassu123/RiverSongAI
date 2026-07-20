@@ -193,6 +193,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     register_sweep("weather", 900, weather_sweep_func)
     register_sweep("briefings", 900, brief_sweep_func)
     
+    from core.garage import garage_sweep_func
+    register_sweep("garage", 86400, garage_sweep_func)
+    
     await start_sweeps(app)
 
     # CHRONOS: Start vault watcher

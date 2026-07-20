@@ -60,6 +60,18 @@ class VehicleType(PyEnum):
     OTHER = "other"
 
 
+class UsageUnit(PyEnum):
+    MILES = "miles"
+    HOURS = "hours"
+
+
+class UsageSource(PyEnum):
+    MANUAL = "manual"
+    SERVICE_LOG = "service_log"
+    ESTIMATED = "estimated"
+    TELEMETRY = "telemetry"
+
+
 class ServiceLevel(PyEnum):
     INSPECT = "inspect"   # visual / tactile check — no parts changed
     SERVICE = "service"   # fluid top-off, adjustment, lubrication
@@ -98,6 +110,19 @@ class Vehicle(Base):  # type: ignore
     check_points = relationship("VehicleCheckPoint", back_populates="vehicle", cascade="all, delete-orphan")
     service_logs = relationship("ServiceLog",        back_populates="vehicle", cascade="all, delete-orphan")
     assignments  = relationship("VehicleAssignment", back_populates="vehicle", cascade="all, delete-orphan")
+    usage_readings = relationship("UsageReading", back_populates="vehicle", cascade="all, delete-orphan")
+
+
+class UsageReading(Base):  # type: ignore
+    __tablename__ = "vehicle_usage_readings"
+    id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vehicle_id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), index=True, nullable=False)
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    unit: Mapped[UsageUnit] = mapped_column(Enum(UsageUnit), default=UsageUnit.MILES, nullable=False)
+    source: Mapped[UsageSource] = mapped_column(Enum(UsageSource), default=UsageSource.MANUAL, nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime, default=_now, nullable=False)
+
+    vehicle = relationship("Vehicle", back_populates="usage_readings")
     # Legacy — kept for DB compat, not surfaced in UI
     fluid_specs  = relationship("VehicleFluidSpec",  back_populates="vehicle", cascade="all, delete-orphan")
     torque_specs = relationship("VehicleTorqueSpec", back_populates="vehicle", cascade="all, delete-orphan")

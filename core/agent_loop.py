@@ -16,7 +16,8 @@ async def run_agent_loop(
     append_history_fn: Callable,
     user_id: str,
     session_id: str = "",
-    tool_system_prompt: str = ""
+    tool_system_prompt: str = "",
+    tool_context: Dict[str, Any] = None
 ) -> str:
     """
     Runs the multi-step tool execution loop.
@@ -57,8 +58,12 @@ async def run_agent_loop(
         
         ok = False
         try:
+            ctx = {"user_id": user_id, "session_id": session_id}
+            if tool_context:
+                ctx.update(tool_context)
+                
             result_text = await asyncio.wait_for(
-                execute_tool_fn(tool_name, tool_input, {"user_id": user_id, "session_id": session_id}),
+                execute_tool_fn(tool_name, tool_input, ctx),
                 timeout=TOOL_TIMEOUT
             )
             ok = True

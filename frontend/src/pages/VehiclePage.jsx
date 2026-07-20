@@ -151,7 +151,7 @@ export default function VehiclePage({ setAction }) {
                         setUploadingDoc(true)
                         const fd = new FormData(); fd.append('file', file)
                         try {
-                          await fetch(`/api/rag/ingest?doc_id=vehicle_${v.id}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
+                          await fetch(`/api/vehicles/${v.id}/manual`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
                         } finally { setUploadingDoc(false) }
                     }} />
                   </label>

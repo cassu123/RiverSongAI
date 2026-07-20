@@ -375,6 +375,7 @@ class ConversationLoop:
         # re-embedding + re-querying Chroma for the same transcript across
         # back-to-back turns (e.g. when the user re-issues the same query).
         self._skills_block_cache: "dict[str, str]" = {}
+        self._tool_context_extras: "dict[str, Any]" = {}
 
     def cancel_generation(self) -> None:
         """Immediately abort the current LLM + TTS generation task."""
@@ -1155,7 +1156,8 @@ class ConversationLoop:
                     self._append_history,
                     self._user_id,
                     self._session_id,
-                    tool_system_prompt
+                    tool_system_prompt,
+                    tool_context=self._tool_context_extras
                 )
                 
                 if final_buffered:
@@ -1268,6 +1270,7 @@ class ConversationLoop:
             self._suppress_memory = True
         await self._rebuild_system_prompt()
         self._flush_memory = flush_memory
+        self._tool_context_extras = {}
         logger.info(
             "Conversation history reset (user=%s, suppress_memory=%s, session_id=%s).",
             self._user_id,

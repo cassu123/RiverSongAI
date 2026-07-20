@@ -146,6 +146,27 @@ def _migrate(engine) -> None:
                     sqlalchemy.text(
                         f"ALTER TABLE vehicle_service_check_results ADD COLUMN {col} {typedef}"))
 
+        # Backfill vehicle_usage_readings from service logs
+        readings_count = conn.execute(
+            sqlalchemy.text("SELECT COUNT(*) FROM vehicle_usage_readings")
+        ).scalar()
+        if readings_count == 0:
+            import uuid
+            from datetime import datetime, timezone
+            now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f")
+            conn.execute(sqlalchemy.text("""
+                INSERT INTO vehicle_usage_readings (id, vehicle_id, value, unit, source, recorded_at)
+                SELECT 
+                    lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6))),
+                    vehicle_id, 
+                    odometer, 
+                    'MILES', 
+                    'SERVICE_LOG', 
+                    service_date 
+                FROM vehicle_service_logs 
+                WHERE odometer IS NOT NULL
+            """))
+
         conn.commit()
 
 
@@ -237,8 +258,23 @@ def _ser_vehicle(v) -> dict:
             _ser_checkpoint(cp)
             for cp in sorted(v.check_points, key=lambda x: x.sort_order)
         ],
+        "usage_readings": [
+            _ser_usage_reading(ur)
+            for ur in sorted(v.usage_readings, key=lambda x: x.recorded_at, reverse=True)
+        ] if hasattr(v, "usage_readings") and v.usage_readings else [],
         "created_at": v.created_at.isoformat() if v.created_at else None,
         "updated_at": v.updated_at.isoformat() if v.updated_at else None,
+    }
+
+
+def _ser_usage_reading(ur) -> dict:
+    return {
+        "id": str(ur.id),
+        "vehicle_id": str(ur.vehicle_id),
+        "value": ur.value,
+        "unit": ur.unit.value if hasattr(ur.unit, "value") else str(ur.unit),
+        "source": ur.source.value if hasattr(ur.source, "value") else str(ur.source),
+        "recorded_at": ur.recorded_at.isoformat() if ur.recorded_at else None,
     }
 
 
@@ -384,6 +420,11 @@ class PartLookupQuery(BaseModel):
 class MaintenanceAIQuery(BaseModel):
     question: str
     current_odometer: Optional[int] = None
+
+class UsageReadingCreate(BaseModel):
+    value: float
+    unit: str = "miles"
+    source: str = "manual"
 
 
 class VehiclePatch(BaseModel):
@@ -576,6 +617,54 @@ def get_vehicle_route(
         raise _http(e)
 
 
+@router.get("/{vehicle_id}/usage")
+def get_vehicle_usage(
+    vehicle_id: str,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    try:
+        vehicles = get_vehicles(db, user_id)
+        v = next((v for v in vehicles if str(v.id) == vehicle_id), None)
+        if not v:
+            raise not_found("Vehicle not found")
+        return [
+            _ser_usage_reading(ur)
+            for ur in sorted(v.usage_readings, key=lambda x: x.recorded_at, reverse=True)
+        ]
+    except Exception as e:
+        raise _http(e)
+
+
+@router.post("/{vehicle_id}/usage")
+def post_vehicle_usage(
+    vehicle_id: str,
+    body: UsageReadingCreate,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    from vehicles.models import UsageReading, UsageUnit, UsageSource
+    try:
+        vehicles = get_vehicles(db, user_id)
+        v = next((v for v in vehicles if str(v.id) == vehicle_id), None)
+        if not v:
+            raise not_found("Vehicle not found")
+            
+        ur = UsageReading(
+            vehicle_id=v.id,
+            value=body.value,
+            unit=UsageUnit(body.unit),
+            source=UsageSource(body.source),
+            recorded_at=datetime.now(timezone.utc)
+        )
+        db.add(ur)
+        db.commit()
+        db.refresh(ur)
+        return _ser_usage_reading(ur)
+    except Exception as e:
+        raise _http(e)
+
+
 @router.get("/{vehicle_id}/maintenance-timeline")
 def get_maintenance_timeline(
     vehicle_id: str,
@@ -594,11 +683,40 @@ def get_maintenance_timeline(
             'Z', '+00:00')).date() if current_date else datetime.now(timezone.utc).date()
 
         # Determine actual current odometer to use
-        logs = get_service_logs(db, user_id, vehicle_id)
-        last_log_odo = max(
-            (log.odometer for log in logs if log.odometer is not None),
-            default=0)
-        eff_odometer = current_odometer if current_odometer is not None else last_log_odo
+        eff_odometer = current_odometer
+        odometer_estimated = False
+        last_reading_at = None
+
+        if eff_odometer is None:
+            # Estimator logic
+            readings = sorted(
+                [r for r in getattr(v, "usage_readings", []) if r.unit.value == "miles"],
+                key=lambda x: x.recorded_at
+            )
+            if not readings:
+                # Fallback to service logs if no readings at all
+                logs = get_service_logs(db, user_id, vehicle_id)
+                last_log_odo = max((log.odometer for log in logs if log.odometer is not None), default=0)
+                eff_odometer = last_log_odo
+            else:
+                last_reading = readings[-1]
+                last_reading_at = last_reading.recorded_at.isoformat()
+                
+                # Default rate
+                daily_rate = 27.4
+                
+                if len(readings) >= 2:
+                    # Simple linear fit between first and last of the most recent 10 readings
+                    recent = readings[-10:]
+                    first = recent[0]
+                    last = recent[-1]
+                    days_diff = (last.recorded_at - first.recorded_at).total_seconds() / (24 * 3600)
+                    if days_diff > 1:
+                        daily_rate = max(0, (last.value - first.value) / days_diff)
+                
+                days_since = (datetime.now(timezone.utc) - last_reading.recorded_at).total_seconds() / (24 * 3600)
+                eff_odometer = int(last_reading.value + (daily_rate * max(0, days_since)))
+                odometer_estimated = True
 
         timeline_items = []
         for cp in v.check_points:
@@ -656,6 +774,9 @@ def get_maintenance_timeline(
         upcoming = timeline_items[1:4] if len(timeline_items) > 1 else []
 
         return {
+            "eff_odometer": eff_odometer,
+            "odometer_estimated": odometer_estimated,
+            "last_reading_at": last_reading_at,
             "next_up": next_up,
             "upcoming": upcoming
         }
@@ -957,13 +1078,13 @@ def lookup_part_ai(
 @router.post("/{vehicle_id}/maintenance-ai")
 async def maintenance_ai(
     vehicle_id: str, body: MaintenanceAIQuery,
+    request: Request,
     db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
 ):
     from providers.rag.rag_provider import RAGProvider
-    from core.tools import get_vehicle_tools, execute_tool  # type: ignore
-    from config.settings import get_settings
+    from core.conversation_loop import ConversationLoop
     import json
-    import httpx
+    import asyncio
 
     try:
         # Get timeline context
@@ -975,12 +1096,13 @@ async def maintenance_ai(
         rag = RAGProvider()
         chunks = await rag.query_documents(body.question, where={"vehicle_id": vehicle_id}, n_results=5)
 
-        context_text = "\n".join([f"- {c['content']}" for c in chunks])
+        context_text = "\n".join([f"- {c.get('text', '')}" for c in chunks])
 
         from vehicles.models import Vehicle
         v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+        if not v:
+            raise bad_request("Vehicle not found")
 
-        assert v is not None
         prompt = f"""Vehicle: {v.year} {v.make} {v.model}
 Current Odometer: {body.current_odometer or 'Unknown'}
 Next Service Due: {next_up['description'] if next_up else 'None'}
@@ -989,96 +1111,59 @@ Parts on file: {json.dumps(next_up.get('parts', [])) if next_up else '[]'}
 Owner's Manual Context:
 {context_text}
 
-User Question: {body.question}
-
 Instructions: Answer using the manual and current vehicle status.
 If the user is reporting a completed service, you MUST call the `log_vehicle_maintenance` tool.
 If asking about parts, cite OEM and verified alternatives from the context above if available."""
 
-        settings = get_settings()
-        ollama_url = getattr(
-            settings,
-            "ollama_base_url",
-            None) or "http://localhost:11434"
-        ollama_model = getattr(settings, "ollama_model", None) or "mistral"
-
-        # Provide tools
-        tools = get_vehicle_tools()
-        ollama_tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": t.name,
-                    "description": t.description,
-                    "parameters": t.input_schema
-                }
-            }
-            for t in tools
-        ]
-
-        messages = [{"role": "system", "content": prompt}]
-
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{ollama_url}/api/chat",
-                json={
-                    "model": ollama_model,
-                    "messages": messages,
-                    "stream": False,
-                    "tools": ollama_tools
-                },
-                timeout=45.0
-            )
-
-            if resp.status_code != 200:
-                raise bad_request(f"AI error: {resp.text}")
-
-            resp_data = resp.json()
-            message = resp_data.get("message", {})
-
-            # Check for tool call
-            if message.get("tool_calls"):
-                tool_call = message["tool_calls"][0]
-                tool_name = tool_call["function"]["name"]
-                tool_args = tool_call["function"]["arguments"]
-
-                # Execute tool
-                tool_result = await execute_tool(
-                    tool_name, tool_args,
-                    context={
-                        "user_id": user_id,
-                        "vehicle_id": vehicle_id,
-                        "db": db}
-                )
-
-                # Send result back to get final answer
-                messages.append(message)
-                messages.append({
-                    "role": "tool",
-                    "content": json.dumps(tool_result),
-                    "name": tool_name
-                })
-
-                final_resp = await client.post(
-                    f"{ollama_url}/api/chat",
-                    json={
-                        "model": ollama_model,
-                        "messages": messages,
-                        "stream": False
-                    },
-                    timeout=30.0
-                )
-                return {
-                    "answer": final_resp.json().get("message", {}).get("content", ""),
-                    "tool_invoked": tool_name,
-                    "tool_result": tool_result
-                }
-
-            return {
-                "answer": message.get("content", ""),
-                "tool_invoked": None,
-                "tool_result": None
-            }
+        memory_manager = getattr(request.app.state, "memory_manager", None)
+        loop = ConversationLoop(
+            user_id=user_id,
+            session_id=f"vehicle_{vehicle_id}_ask",
+            mode="text",
+            memory_manager=memory_manager,
+        )
+        loop._tool_context_extras = {"vehicle_id": vehicle_id, "db": db}
+        loop._system_prompt = prompt
+        
+        await loop.initialize()
+        
+        # We don't want history across queries for the one-off "ask" in the drawer, 
+        # or maybe we do. The session_id caches it in DB. Let's just run text.
+        queue: asyncio.Queue = asyncio.Queue()
+        async def on_event(evt: dict):
+            await queue.put(evt)
+            
+        task = asyncio.create_task(loop.run_text(body.question, on_event))
+        
+        answer = ""
+        tool_invoked = None
+        tool_result = None
+        
+        while True:
+            # We must wait for task to finish or events to come in
+            try:
+                evt = await asyncio.wait_for(queue.get(), timeout=1.0)
+            except asyncio.TimeoutError:
+                if task.done():
+                    break
+                continue
+                
+            if evt["type"] in ("token", "response_chunk"):
+                answer += evt.get("content", "") or evt.get("text", "")
+            elif evt["type"] == "tool_use":
+                tool_invoked = evt.get("tool")
+            elif evt["type"] == "tool_result":
+                tool_result = evt.get("result")
+            elif evt["type"] == "error":
+                raise bad_request(evt["message"])
+                
+        await task
+        
+        return {
+            "answer": answer,
+            "tool_invoked": tool_invoked,
+            "tool_result": tool_result
+        }
 
     except Exception as e:
         logger.error(f"Maintenance AI error: {e}")
