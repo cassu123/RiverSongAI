@@ -49,18 +49,63 @@ TOOL_SCHEMAS = [
         }
     },
     {
-        "name": "add_inventory_item",
-        "description": "Add a new physical item to the user's home inventory.",
+        "name": "add_asset",
+        "description": "Add a new physical item (asset) to the user's home inventory.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "name": {"type": "string", "description": "Name of the item."},
-                "quantity": {"type": "integer", "description": "How many units."},
-                "unit": {"type": "string", "description": "Unit of measure (e.g., pieces, gallons, boxes)."},
                 "location": {"type": "string", "description": "Where the item is stored (e.g., Kitchen Pantry, Garage)."},
-                "category": {"type": "string", "description": "Broad classification (e.g., Food, Tools, Electronics)."},
+                "home": {"type": "string", "description": "Optional name of the home/stash (e.g., Main House, Storage)."},
+                "category": {"type": "string", "description": "Category (FURNITURE/ELECTRONICS/APPLIANCES/TOOLS/CLOTHING/VEHICLES/SPORTING_GOODS/ART/JEWELRY/DOCUMENT/OTHER)."},
+                "details": {"type": "string", "description": "Any extra notes or description."}
             },
-            "required": ["name", "quantity", "location"]
+            "required": ["name", "location"]
+        }
+    },
+    {
+        "name": "find_asset",
+        "description": "Find an item/asset in the user's home inventory by name, serial, or EIN.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Name, serial number, or EIN to search for."}
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "asset_summary",
+        "description": "Get a summary of inventory counts and total replacement value.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "scope": {"type": "string", "description": "Optional filter scope like 'home', 'category', or 'room/location'."}
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "registry_health",
+        "description": "Check the registry health for missing photos, serials, values, or receipts.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "home": {"type": "string", "description": "Optional home name to check."}
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "warranty_check",
+        "description": "Check warranty status of items or find items with expiring warranties.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "item_name": {"type": "string", "description": "Optional item name to check specifically."},
+                "expiring_within_days": {"type": "integer", "description": "Optional number of days to look ahead for expiring warranties."}
+            },
+            "required": []
         }
     },
     {
@@ -519,8 +564,16 @@ async def execute_tool(
         elif tool_name == "create_calendar_event":
             return await _exec_calendar_event(tool_input, user_id)
 
-        elif tool_name == "add_inventory_item":
-            return await _exec_add_inventory(tool_input, user_id)
+        elif tool_name == "add_asset":
+            return await _exec_add_asset(tool_input, user_id)
+        elif tool_name == "find_asset":
+            return await _exec_find_asset(tool_input, user_id)
+        elif tool_name == "asset_summary":
+            return await _exec_asset_summary(tool_input, user_id)
+        elif tool_name == "registry_health":
+            return await _exec_registry_health(tool_input, user_id)
+        elif tool_name == "warranty_check":
+            return await _exec_warranty_check(tool_input, user_id)
 
         elif tool_name == "add_shopping_list_item":
             return await _exec_add_shopping_list(tool_input, user_id)
@@ -759,10 +812,11 @@ async def _exec_calendar_event(args: dict, user_id: str) -> str:
         return f"I tried to create the calendar event for '{args['title']}', but encountered an issue: {str(exc)}. Make sure Google is linked in Settings."
 
 
-async def _exec_add_inventory(args: dict, user_id: str) -> str:
+async def _exec_add_asset(args: dict, user_id: str) -> str:
     def _sync_work():
         from api.routes.inventory import get_db as get_inventory_db
         from inventory.management import create_item, get_or_create_inv_user, get_homes_for_user, create_home, ItemCategory
+        from inventory.models import InvHome
         from core.family import resolve_module_owner
         
         db = next(get_inventory_db())
@@ -770,12 +824,18 @@ async def _exec_add_inventory(args: dict, user_id: str) -> str:
             eff_user = resolve_module_owner(user_id, "inventory")
             inv_user = get_or_create_inv_user(db, eff_user, f"{eff_user}@local", eff_user)
             homes = get_homes_for_user(db, str(inv_user.id))
-            if not homes:
-                home = create_home(db, str(inv_user.id), "Primary Residence", "")
-            else:
-                home = homes[0]
             
-            cat_str = args.get('category', 'Other').upper()
+            home = None
+            if args.get('home'):
+                home = next((h for h in homes if h.name.lower() == args['home'].lower()), None)
+            
+            if not home:
+                if not homes:
+                    home = create_home(db, str(inv_user.id), "Primary Residence", "")
+                else:
+                    home = homes[0]
+            
+            cat_str = args.get('category', 'OTHER').upper()
             try:
                 cat = ItemCategory(cat_str)
             except ValueError:
@@ -783,11 +843,155 @@ async def _exec_add_inventory(args: dict, user_id: str) -> str:
                 
             item = create_item(db, str(inv_user.id), str(home.id), {
                 "name": args['name'],
-                "quantity": args.get('quantity', 1),
                 "location": args.get('location'),
-                "category": cat
+                "category": cat,
+                "description": args.get('details', '')
             })
-            return f"Added {item.quantity} x {item.name} to the inventory at {item.location}."
+            return f"Added {item.name} to the inventory at {item.location} in {home.name}."
+        finally:
+            db.close()
+            
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _sync_work)
+
+async def _exec_find_asset(args: dict, user_id: str) -> str:
+    def _sync_work():
+        from api.routes.inventory import get_db as get_inventory_db
+        from inventory.models import InventoryItem, InvHome
+        from inventory.management import get_or_create_inv_user
+        from core.family import resolve_module_owner
+        
+        db = next(get_inventory_db())
+        try:
+            eff_user = resolve_module_owner(user_id, "inventory")
+            inv_user = get_or_create_inv_user(db, eff_user, f"{eff_user}@local", eff_user)
+            
+            query_str = args.get('query', '').lower()
+            
+            items = db.query(InventoryItem).join(InvHome).filter(InvHome.owner_id == inv_user.id).all()
+            matches = []
+            for item in items:
+                if (query_str in item.name.lower() or 
+                    (item.ein and query_str in item.ein.lower()) or 
+                    (item.serial_number and query_str in item.serial_number.lower())):
+                    matches.append(item)
+                    
+            if not matches:
+                return f"No assets found matching '{query_str}'."
+            
+            lines = [f"Found {len(matches)} matching asset(s):"]
+            for m in matches:
+                audit_info = f"Last seen: {m.last_audit_date.date()}" if m.last_audit_date else "Never audited"
+                home_name = m.home.name if m.home else "Unknown Home"
+                lines.append(f"- {m.name} (Location: {m.location} in {home_name}). {audit_info}.")
+            return "\\n".join(lines)
+        finally:
+            db.close()
+            
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _sync_work)
+
+async def _exec_asset_summary(args: dict, user_id: str) -> str:
+    def _sync_work():
+        from api.routes.inventory import get_db as get_inventory_db
+        from inventory.models import InventoryItem, InvHome
+        from inventory.management import get_or_create_inv_user
+        from core.family import resolve_module_owner
+        from decimal import Decimal
+        
+        db = next(get_inventory_db())
+        try:
+            eff_user = resolve_module_owner(user_id, "inventory")
+            inv_user = get_or_create_inv_user(db, eff_user, f"{eff_user}@local", eff_user)
+            scope = args.get('scope', '').lower()
+            
+            items = db.query(InventoryItem).join(InvHome).filter(InvHome.owner_id == inv_user.id).all()
+            
+            if scope and 'home' not in scope and 'room' not in scope and 'categor' not in scope:
+                items = [i for i in items if scope in i.name.lower() or (i.category and scope in i.category.value.lower()) or (i.location and scope in i.location.lower()) or (i.home and scope in i.home.name.lower())]
+                
+            total_count = len(items)
+            total_value = sum((i.replacement_cost or i.purchase_price or Decimal('0.0')) for i in items)
+            
+            return f"Asset Summary: You have {total_count} items matching your criteria, with a total estimated replacement value of ${total_value:,.2f}."
+        finally:
+            db.close()
+            
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _sync_work)
+
+async def _exec_registry_health(args: dict, user_id: str) -> str:
+    def _sync_work():
+        from api.routes.inventory import get_db as get_inventory_db
+        from inventory.models import InventoryItem, InvHome
+        from inventory.management import get_or_create_inv_user
+        from core.family import resolve_module_owner
+        
+        db = next(get_inventory_db())
+        try:
+            eff_user = resolve_module_owner(user_id, "inventory")
+            inv_user = get_or_create_inv_user(db, eff_user, f"{eff_user}@local", eff_user)
+            home_filter = args.get('home')
+            
+            query = db.query(InventoryItem).join(InvHome).filter(InvHome.owner_id == inv_user.id)
+            if home_filter:
+                query = query.filter(InvHome.name.ilike(f"%{home_filter}%"))
+                
+            items = query.all()
+            missing_photos = sum(1 for i in items if not i.attachments)
+            missing_serials = sum(1 for i in items if not i.serial_number)
+            missing_values = sum(1 for i in items if not i.replacement_cost and not i.purchase_price)
+            missing_receipts = sum(1 for i in items if not i.receipt_image_path)
+            
+            return (f"Registry Health Report (Total Items: {len(items)}):\\n"
+                    f"- Missing Photos: {missing_photos}\\n"
+                    f"- Missing Serial Numbers: {missing_serials}\\n"
+                    f"- Missing Values: {missing_values}\\n"
+                    f"- Missing Receipts: {missing_receipts}\\n"
+                    f"Please update your stash for better claims readiness.")
+        finally:
+            db.close()
+            
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _sync_work)
+
+async def _exec_warranty_check(args: dict, user_id: str) -> str:
+    def _sync_work():
+        from api.routes.inventory import get_db as get_inventory_db
+        from inventory.models import InventoryItem, InvHome
+        from inventory.management import get_or_create_inv_user
+        from core.family import resolve_module_owner
+        from datetime import date, timedelta
+        
+        db = next(get_inventory_db())
+        try:
+            eff_user = resolve_module_owner(user_id, "inventory")
+            inv_user = get_or_create_inv_user(db, eff_user, f"{eff_user}@local", eff_user)
+            item_name = args.get('item_name')
+            days = args.get('expiring_within_days', 30)
+            
+            query = db.query(InventoryItem).join(InvHome).filter(InvHome.owner_id == inv_user.id)
+            if item_name:
+                query = query.filter(InventoryItem.name.ilike(f"%{item_name}%"))
+                
+            items = query.all()
+            today = date.today()
+            cutoff = today + timedelta(days=days)
+            
+            if item_name and len(items) == 1:
+                item = items[0]
+                if not item.warranty_expiry_date:
+                    return f"The {item.name} does not have a warranty expiration date recorded."
+                status = "expired" if item.warranty_expiry_date < today else "valid"
+                return f"The warranty for {item.name} is {status} (expires/expired on {item.warranty_expiry_date.isoformat()})."
+                
+            expiring_soon = [i for i in items if i.warranty_expiry_date and today <= i.warranty_expiry_date <= cutoff]
+            expired = [i for i in items if i.warranty_expiry_date and i.warranty_expiry_date < today]
+            
+            lines = [f"Warranty Check (Looking ahead {days} days):"]
+            lines.append(f"Expiring Soon ({len(expiring_soon)}): " + ", ".join(f"{i.name} ({i.warranty_expiry_date})" for i in expiring_soon) if expiring_soon else "Expiring Soon: None")
+            lines.append(f"Already Expired ({len(expired)}): " + ", ".join(f"{i.name}" for i in expired) if expired else "Already Expired: None")
+            return "\\n".join(lines)
         finally:
             db.close()
             
@@ -899,6 +1103,7 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
         else:
             close_db = False
 
+        try:
             # If vehicle_id is missing, try to resolve from args
             if not vehicle_id:
                 vehicle_name = args.get('vehicle_name')
