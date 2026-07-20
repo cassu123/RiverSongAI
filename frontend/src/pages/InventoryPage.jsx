@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import BarcodeScanner from '../components/BarcodeScanner'
 import AssetDetailModal from '../components/AssetDetailModal'
 import HomeAuditModal from '../components/HomeAuditModal'
+import RoomSweepModal from '../components/RoomSweepModal'
 
 /**
  * InventoryPage — Spatial Intelligence v2.0
@@ -11,15 +12,16 @@ import HomeAuditModal from '../components/HomeAuditModal'
  */
 
 export default function InventoryPage({ setAction }) {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const [homeId, setHomeId] = useState(null)
-  const [homes, setHomes] = useState(null)
+  const [homes, setHomes] = useState([])
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [query, setQuery] = useState('')
   const [scannerOpen, setScannerOpen] = useState(false)
   const [auditModalOpen, setAuditModalOpen] = useState(false)
+  const [sweepModalOpen, setSweepModalOpen] = useState(false)
   const [activeItem, setActiveItem] = useState(null)
 
   const fetchItems = useCallback(async (activeId = null) => {
@@ -96,6 +98,31 @@ export default function InventoryPage({ setAction }) {
       if (res.ok) {
         const item = await res.json()
         setActiveItem(item)
+      } else if (res.status === 404) {
+        if (window.confirm('Asset not found in Stash. Look up product details via UPC?')) {
+          setLoading(true);
+          try {
+            const upcRes = await fetch(`/api/inventory/lookup/upc/${code}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (upcRes.ok) {
+              const product = await upcRes.json();
+              setActiveItem({
+                 _isNew: true,
+                 name: product.name,
+                 manufacturer: product.manufacturer || '',
+                 category: product.category || 'OTHER',
+                 model_number: product.model_number || '',
+                 description: product.description || ''
+              });
+            } else {
+              alert('Product lookup failed. You can add it manually.');
+              setActiveItem({ _isNew: true, serial_number: code }); // Use as serial/identifier just in case
+            }
+          } finally {
+            setLoading(false);
+          }
+        }
       } else {
         alert('Item not found for barcode: ' + code)
       }
@@ -133,6 +160,10 @@ export default function InventoryPage({ setAction }) {
           <button className="rs-btn-primary" onClick={() => setAuditModalOpen(true)} style={{ height: 48, padding: '0 24px', background: 'rgba(250,204,21,0.2)', color: '#facc15' }} disabled={!homeId}>
             <span className="material-symbols-rounded">fact_check</span>
             <span className="rs-speak-actions-label">AUDIT</span>
+          </button>
+          <button className="rs-btn-primary" onClick={() => setSweepModalOpen(true)} style={{ height: 48, padding: '0 24px', background: 'var(--md-tertiary)', color: 'var(--md-on-tertiary)' }} disabled={!homeId}>
+            <span className="material-symbols-rounded">360</span>
+            <span className="rs-speak-actions-label">ROOM SWEEP</span>
           </button>
           <button className="rs-btn-primary" onClick={() => setActiveItem({ _isNew: true })} style={{ height: 48, padding: '0 24px', background: 'var(--md-primary)', color: 'var(--md-on-primary)' }} disabled={!homeId}>
             <span className="material-symbols-rounded">add</span>
@@ -210,6 +241,14 @@ export default function InventoryPage({ setAction }) {
             }
           }} 
           onClose={() => setActiveItem(null)} 
+        />
+      )}
+
+      {sweepModalOpen && homeId && (
+        <RoomSweepModal 
+          homeId={homeId} 
+          onClose={() => setSweepModalOpen(false)} 
+          onComplete={fetchItems} 
         />
       )}
 

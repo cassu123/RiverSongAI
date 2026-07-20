@@ -96,6 +96,28 @@ async def extract_inventory(
     return await _vision_provider.extract_inventory_item(content)
 
 
+@router.post("/serial-plate")
+async def extract_serial_plate(
+    file: UploadFile = File(...),
+    user_id: str = Depends(_require_user)
+):
+    _check_vision_enabled()
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large (max 10MB).")
+    return await _vision_provider.extract_serial_plate(content)
+
+@router.post("/receipt")
+async def extract_receipt(
+    file: UploadFile = File(...),
+    user_id: str = Depends(_require_user)
+):
+    _check_vision_enabled()
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large (max 10MB).")
+    return await _vision_provider.extract_receipt(content)
+
 @router.post("/listing")
 async def suggest_listing(
     file: UploadFile = File(...),

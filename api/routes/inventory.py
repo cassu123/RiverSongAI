@@ -596,6 +596,19 @@ def remove_attachment(attachment_id: str, db: Session = Depends(
 
 
 # ---------------------------------------------------------------------------
+# UPC Lookup
+# ---------------------------------------------------------------------------
+
+@router.get("/lookup/upc/{upc}")
+def lookup_upc(upc: str, user: InvUser = Depends(get_current_inv_user)):
+    from providers.product_lookup import get_product_lookup_provider
+    provider = get_product_lookup_provider()
+    result = provider.lookup_upc(upc)
+    if not result:
+        raise not_found("Product not found for the given UPC")
+    return result.dict()
+
+# ---------------------------------------------------------------------------
 # Label Generation
 # ---------------------------------------------------------------------------
 

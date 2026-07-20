@@ -128,17 +128,51 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
   };
 
   const handleAddPhoto = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // If it's a new item, let's use the photo to identify it automatically
     if (isNew) {
-      alert("Please save the item first before adding a photo.");
-      return;
+       setUploadingImage(true);
+       try {
+         const data = await uploadFile('/api/vision/inventory-item', file, () => {});
+         if (data) {
+           setFormData(prev => ({
+             ...prev,
+             name: data.name || prev.name,
+             category: data.category?.toUpperCase() || prev.category,
+             description: data.description || prev.description,
+             manufacturer: data.manufacturer || prev.manufacturer
+           }));
+         }
+         alert("Photo analyzed. Please save the item first, then attach photos.");
+       } catch (err) {
+         alert("Analysis failed: " + err.message);
+       } finally {
+         setUploadingImage(false);
+       }
+       return;
     }
+    
+    try {
+      const att = await uploadFile(`/api/inventory/items/${item.id}/attachments`, file, setUploadingImage);
+      setAttachments(prev => [...prev, att]);
+    } catch(err) {
+      alert(err.message);
+    }
+  };
+
+  const handleSmartSerial = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      const att = await uploadFile(`/api/inventory/items/${item.id}/attachments`, file, setUploadingImage);
-      // For now, assume the backend just adds it. We can refetch or just push:
-      setAttachments(prev => [...prev, att]);
-    } catch(err) {
+      const data = await uploadFile('/api/vision/serial-plate', file, () => {});
+      setFormData(prev => ({
+        ...prev,
+        serial_number: data.serial_number || prev.serial_number,
+        model_number: data.model_number || prev.model_number
+      }));
+    } catch (err) {
       alert(err.message);
     }
   };
@@ -148,9 +182,32 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
     const file = e.target.files[0];
     if (!file) return;
     try {
-      const updated = await uploadFile(`/api/inventory/items/${item.id}/receipt`, file, setUploadingReceipt);
+      setUploadingReceipt(true);
+      const vData = await uploadFile('/api/vision/receipt', file, () => {});
+      
+      const fd = new FormData();
+      fd.append('file', file);
+      
+      if (vData.purchase_price) {
+        if (!formData.purchase_price || window.confirm(`Found purchase price: $${vData.purchase_price}. Update it?`)) {
+           fd.append('manual_price', vData.purchase_price);
+        }
+      }
+      if (vData.purchase_date) {
+        if (!formData.purchase_date || window.confirm(`Found purchase date: ${vData.purchase_date}. Update it?`)) {
+           fd.append('manual_date', vData.purchase_date);
+        }
+      }
+      
+      const res = await fetch(`/api/inventory/items/${item.id}/receipt`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd
+      });
+      if (!res.ok) throw new Error('Upload failed');
+      const updated = await res.json();
       onUpdate(updated);
-    } catch(err) { alert(err.message); }
+    } catch(err) { alert(err.message); } finally { setUploadingReceipt(false); }
   };
   
   const handleUploadWarranty = async (e) => {
@@ -242,7 +299,14 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
             </div>
 
             <div className="rs-form-group" style={{ gridColumn: '1 / -1' }}>
-              <label>Serial Number</label>
+              <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 Serial Number
+                 <button type="button" className="rs-pill" onClick={() => document.getElementById('serialPhotoInput').click()} style={{ padding: '2px 8px', fontSize: '0.75rem', height: 'auto' }}>
+                    <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4, verticalAlign: 'middle' }}>document_scanner</span>
+                    Scan Plate
+                 </button>
+                 <input type="file" accept="image/*" capture="environment" id="serialPhotoInput" style={{ display: 'none' }} onChange={handleSmartSerial} />
+              </label>
               <input type="text" className="rs-input" name="serial_number" value={formData.serial_number} onChange={handleChange} style={{ fontFamily: 'var(--font-mono)' }} />
             </div>
 

@@ -75,13 +75,13 @@ class VisionProvider:
         Extracts structured inventory details from a product/item image.
         """
         prompt = (
-            "Look at this product/item image. Extract: item name, estimated quantity if visible, "
-            "category (food/electronics/clothing/household/other), brief description. "
-            "Return as JSON with keys: name, category, description."
+            "Look at this product/item image. Extract: item name, manufacturer/brand, "
+            "category (FURNITURE/ELECTRONICS/APPLIANCES/TOOLS/CLOTHING/VEHICLES/SPORTING_GOODS/ART/JEWELRY/DOCUMENT/OTHER), brief description. "
+            "Return as JSON with keys: name, manufacturer, category, description."
         )
         raw = await self.analyze_image(image_bytes, prompt)
         return self._parse_json(
-            raw, {"name": "", "category": "other", "description": raw})
+            raw, {"name": "", "manufacturer": "", "category": "OTHER", "description": raw})
 
     async def suggest_listing_details(
             self, image_bytes: bytes) -> Dict[str, Any]:
@@ -95,6 +95,22 @@ class VisionProvider:
         raw = await self.analyze_image(image_bytes, prompt)
         return self._parse_json(
             raw, {"title": "", "description": raw, "tags": []})
+
+    async def extract_serial_plate(self, image_bytes: bytes) -> Dict[str, Any]:
+        prompt = (
+            "Look at this serial number plate or product label. Extract the serial number and model number if visible. "
+            "Return as JSON with keys: serial_number, model_number."
+        )
+        raw = await self.analyze_image(image_bytes, prompt)
+        return self._parse_json(raw, {"serial_number": "", "model_number": ""})
+
+    async def extract_receipt(self, image_bytes: bytes) -> Dict[str, Any]:
+        prompt = (
+            "Look at this receipt. Extract the total purchase price (as a float, no currency symbols) and the purchase date (YYYY-MM-DD format). "
+            "Return as JSON with keys: purchase_price, purchase_date."
+        )
+        raw = await self.analyze_image(image_bytes, prompt)
+        return self._parse_json(raw, {"purchase_price": None, "purchase_date": None})
 
     def _parse_json(self, text: str,
                     fallback: Dict[str, Any]) -> Dict[str, Any]:
