@@ -72,6 +72,31 @@ _DDL = """
 PRAGMA journal_mode=WAL;
 PRAGMA foreign_keys=ON;
 
+CREATE TABLE IF NOT EXISTS rooms (
+    id           TEXT PRIMARY KEY,
+    name         TEXT NOT NULL,
+    created_at   TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    id            TEXT PRIMARY KEY,
+    user_id       TEXT NOT NULL,
+    title         TEXT DEFAULT '',
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL,
+    distilled_at  TEXT,
+    archived      INTEGER DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id  TEXT NOT NULL REFERENCES chat_sessions(id),
+    role        TEXT NOT NULL,
+    content     TEXT NOT NULL,
+    meta        TEXT DEFAULT '{}',
+    created_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id, id);
+
 CREATE TABLE IF NOT EXISTS facts (
     id          TEXT PRIMARY KEY,
     user_id     TEXT NOT NULL,
@@ -965,3 +990,48 @@ class SQLiteStore(
             self, sql: str, params: tuple = ()) -> Optional[dict]:
         return await self._run(self._execute_read_one, sql, params)
 
+    async def get_chat_sessions(self, user_id: str, scope: Optional[str] = None) -> List[dict]:
+        rows = await self._run(self._execute_read,
+            "SELECT id, title, updated_at, (SELECT count(*) FROM chat_messages WHERE session_id=chat_sessions.id) as message_count FROM chat_sessions WHERE user_id = ? AND archived = 0 ORDER BY updated_at DESC",
+            (user_id,)
+        )
+        return rows
+
+    async def create_chat_session(self, user_id: str, title: str, **kwargs) -> str:
+        session_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        await self._run(self._execute_write,
+            "INSERT INTO chat_sessions (id, user_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            (session_id, user_id, title, now, now)
+        )
+        return session_id
+
+    async def get_chat_session(self, user_id: str, session_id: str) -> Optional[dict]:
+        return await self._run(self._execute_read_one, "SELECT * FROM chat_sessions WHERE id = ? AND user_id = ?", (session_id, user_id))
+
+    async def get_chat_messages(self, user_id: str, session_id: str) -> List[dict]:
+        rows = await self._run(self._execute_read, "SELECT role, content, meta, created_at FROM chat_messages WHERE session_id = ? ORDER BY id ASC", (session_id,))
+        result = []
+        for r in rows:
+            d = dict(r)
+            if d.get("meta"):
+                try:
+                    d["meta"] = json.loads(d["meta"])
+                except:
+                    d["meta"] = {}
+            else:
+                d["meta"] = {}
+            result.append(d)
+        return result
+
+    async def archive_chat_session(self, user_id: str, session_id: str) -> None:
+        await self._run(self._execute_write, "UPDATE chat_sessions SET archived = 1 WHERE id = ? AND user_id = ?", (session_id, user_id))
+
+    async def add_chat_message(self, session_id: str, role: str, content: str, meta: dict = None) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        meta_str = json.dumps(meta) if meta else "{}"
+        await self._run(self._execute_write,
+            "INSERT INTO chat_messages (session_id, role, content, meta, created_at) VALUES (?, ?, ?, ?, ?)",
+            (session_id, role, content, meta_str, now)
+        )
+        await self._run(self._execute_write, "UPDATE chat_sessions SET updated_at = ? WHERE id = ?", (now, session_id))

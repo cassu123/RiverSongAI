@@ -196,6 +196,9 @@ async def conversation_websocket(websocket: WebSocket) -> None:
         await websocket.close(code=1011)
         return
 
+    if loop._session_id:
+        await _send(websocket, {"type": "session", "session_id": loop._session_id, "title": ""})
+
     await _send(websocket, {"type": "idle"})
 
     # Wake word detection for Ambient Mode

@@ -6,7 +6,7 @@ import { API_BASE } from '../utils/useApi.js'
 
 const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 
-export function useConversation({ token, user, sessionId, extraQueryParams = {} }) {
+export function useConversation({ token, user, sessionId, onSessionId, extraQueryParams = {} }) {
   const backendHost = API_BASE ? new URL(API_BASE).host : window.location.host;
   const wsProtocol = API_BASE ? (API_BASE.startsWith('https') ? 'wss:' : 'ws:') : WS_PROTOCOL;
   
@@ -102,7 +102,10 @@ export function useConversation({ token, user, sessionId, extraQueryParams = {} 
         break
       case 'error':   setError(message || 'An unknown error occurred.'); break
       case 'session':
-        // The server sent us the session ID we are now attached to
+        if (onSessionId) onSessionId(session_id)
+        break
+      case 'session_attached':
+        if (onSessionId) onSessionId(session_id)
         break
       default: break
     }

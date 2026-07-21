@@ -61,7 +61,28 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
     abortGeneration,
     sendMessage,
     setMessages
-  } = useConversation({ token, user, sessionId: currentSessionId, extraQueryParams })
+  } = useConversation({ 
+    token, 
+    user, 
+    sessionId: currentSessionId, 
+    extraQueryParams,
+    onSessionId: (id) => {
+      if (currentSessionId !== id) {
+        setCurrentSessionId(id)
+        // Refresh session list
+        if (token) {
+          const url = new URL(`${API_BASE}/api/chat/sessions`)
+          if (vehicleId) url.searchParams.append('scope', `vehicle:${vehicleId}`)
+          fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } })
+            .then(r => r.json())
+            .then(data => {
+              if (data.sessions) setHistorySessions(data.sessions)
+            })
+            .catch(() => {})
+        }
+      }
+    }
+  })
 
   const isThinking = convState === 'thinking' || convState === 'speaking' || streamingContent !== ''
 

@@ -443,8 +443,7 @@ class ConversationLoop:
             fallback_model = self._fallback_model
             stt_model_override = self._stt_model_override
 
-            def _build_all():
-                stt = _build_stt_provider(model_size=stt_model_override) if self._mode == "voice" else None
+            def _build_llm():
                 llm, _router_label = _build_llm_provider(
                     provider_override=llm_provider_override,
                     model_override=llm_model_override,
@@ -452,10 +451,19 @@ class ConversationLoop:
                     fallback_model=fallback_model,
                     admin_config=admin_config,
                 )
-                tts = _build_tts_provider(voice_id_override=voice_id_override) if self._mode == "voice" else None
-                return stt, llm, tts
+                return llm
 
-            self._stt, self._llm, self._tts = await loop.run_in_executor(None, _build_all)
+            self._llm = await loop.run_in_executor(None, _build_llm)
+            
+            if self._mode == "voice":
+                from core.provider_pool import ProviderPool
+                pool = await ProviderPool.get_instance()
+                self._stt = await pool.get_stt(model_size=stt_model_override)
+                self._tts = await pool.get_tts(voice_id=voice_id_override)
+            else:
+                self._stt = None
+                self._tts = None
+
         except Exception as exc:
             raise RuntimeError(
                 f"ConversationLoop failed to initialize: {exc}"
