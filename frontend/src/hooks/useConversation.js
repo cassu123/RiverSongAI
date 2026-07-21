@@ -72,8 +72,10 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
         if (text) {
           setMessages(p => {
             const last = p[p.length - 1]
+            const msgObj = { role: 'assistant', text }
+            if (event.receipts) msgObj.meta = { receipts: event.receipts }
             if (last?.role === 'assistant' && last.text === text) return p
-            return [...p, { role: 'assistant', text }]
+            return [...p, msgObj]
           })
         }
         setStreamingContent('')

@@ -77,6 +77,24 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
                   </a>
                 </div>
               )}
+              {msg.meta && msg.meta.receipts && msg.meta.receipts.length > 0 && (
+                <div style={{ marginTop: 12, padding: 12, background: 'var(--bg-elev)', borderRadius: 8, border: '1px solid var(--md-outline-variant)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, marginBottom: 8, textTransform: 'uppercase' }}>
+                    Agent Tasks Completed
+                  </div>
+                  {msg.meta.receipts.map((rcpt, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: i < msg.meta.receipts.length - 1 ? 6 : 0 }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: rcpt.ok ? '#4CAF50' : '#dc3c3c' }}>
+                        {rcpt.ok ? 'check_circle' : 'error'}
+                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>{rcpt.tool}</span>
+                        <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{rcpt.summary}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               {msg.chunks && msg.chunks.length > 0 && (
                 <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6, borderTop: '1px solid var(--md-outline-variant)', paddingTop: 8 }}>
                   {msg.chunks.map((chunk, i) => (

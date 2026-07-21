@@ -36,6 +36,8 @@ async def run_agent_loop(
             msgs[0]["content"] += f"\n\n{tool_system_prompt}"
         return msgs
     
+    previous_calls = set()
+    
     for step in range(MAX_TOOL_STEPS):
         try:
             res = await llm.chat_with_tools(get_messages(), active_tools)
@@ -47,11 +49,21 @@ async def run_agent_loop(
             # If we used tools, or even if we didn't, we might have buffered content
             if receipts:
                 await on_event({"type": "receipt", "items": receipts})
-            return res.get("content", "")
+            return res.get("content", ""), receipts
             
         tool_name = res["tool_name"]
         tool_input = res["tool_input"]
         tool_id = res.get("tool_use_id")
+        
+        # Identical-call-twice breaker
+        call_sig = f"{tool_name}:{tool_input}"
+        if call_sig in previous_calls:
+            logger.warning("Identical tool call detected: %s. Breaking loop.", call_sig)
+            if receipts:
+                await on_event({"type": "receipt", "items": receipts})
+            return "Error: I seem to be repeating myself and cannot complete the request.", receipts
+            
+        previous_calls.add(call_sig)
         
         logger.info("Agent loop step %d: calling tool %s", step, tool_name)
         await on_event({"type": "tool_use", "tool": tool_name, "input": tool_input})
@@ -88,4 +100,4 @@ async def run_agent_loop(
     if receipts:
         await on_event({"type": "receipt", "items": receipts})
         
-    return ""
+    return "", receipts

@@ -920,8 +920,10 @@ class ConversationLoop:
                         "You have access to tools. If the user asks for an action that matches "
                         "a tool, use the tool. If not, respond normally."
                     )
+                    if self._web_search is True:
+                        tool_system_prompt += " The user has explicitly enabled web search. Prefer searching the web for real-time or factual queries."
                     
-                    final_buffered = await run_agent_loop(
+                    final_buffered, receipts = await run_agent_loop(
                         self._llm,
                         self._history,
                         active_tools,
@@ -942,6 +944,7 @@ class ConversationLoop:
                         llm_stream = stream_fn(self._history)
                 else:
                     # Run the streaming pipeline
+                    receipts = []
                     stream_fn = getattr(
                         self._llm,
                         "stream_chat",
@@ -953,8 +956,15 @@ class ConversationLoop:
                 # Interleave TTS synthesis with LLM token arrival
                 await self._process_tts_stream(sentence_stream, on_event)
 
-                await self._append_history("assistant", full_response, {"model_label": router_label or "default"})
-                await on_event({"type": "response_complete", "text": full_response})
+                meta = {"model_label": router_label or "default"}
+                if receipts:
+                    meta["receipts"] = receipts
+                await self._append_history("assistant", full_response, meta)
+                
+                evt = {"type": "response_complete", "text": full_response}
+                if receipts:
+                    evt["receipts"] = receipts
+                await on_event(evt)
 
                 # -----------------------------------------------------------------
                 # Step 6: Record conversation summary
@@ -1186,12 +1196,14 @@ class ConversationLoop:
                     "You have access to tools. If the user asks for an action that matches "
                     "a tool, use the tool. If not, respond normally."
                 )
+                if self._web_search is True:
+                    tool_system_prompt += " The user has explicitly enabled web search. Prefer searching the web for real-time or factual queries."
 
                 # Use thinking stream if requested
                 use_thinking = self._thinking_mode in ("thinking", "pro")
                 stream_method = self._llm.stream_response_thinking if use_thinking else self._llm.stream_response  # type: ignore
 
-                final_buffered = await run_agent_loop(
+                final_buffered, receipts = await run_agent_loop(
                     self._llm,
                     self._history,
                     active_tools,
@@ -1214,6 +1226,7 @@ class ConversationLoop:
 
             # Phase 2: Normal streaming (no tool use enabled)
             elif self._settings.llm_streaming_enabled and self._llm.__class__.__name__ == "OllamaLLM":
+                receipts = []
                 use_thinking = self._thinking_mode in ("thinking", "pro")
                 stream_chat_fn = self._llm.stream_response_thinking if use_thinking else getattr(  # type: ignore
                     self._llm, "stream_chat", self._llm.stream_response)  # type: ignore
@@ -1221,6 +1234,7 @@ class ConversationLoop:
                     full_response += chunk
                     await on_event({"type": "token", "content": chunk})
             else:
+                receipts = []
                 use_thinking = self._thinking_mode in ("thinking", "pro")
                 stream_chat_fn = self._llm.stream_response_thinking if use_thinking else self._llm.stream_response  # type: ignore
                 async for chunk in stream_chat_fn(self._history):
@@ -1242,8 +1256,15 @@ class ConversationLoop:
             full_response,
             flags=_re.DOTALL).strip()
 
-        await self._append_history("assistant", full_response, {"model_label": router_label or "default"})
-        await on_event({"type": "response_complete", "text": full_response})
+        meta = {"model_label": router_label or "default"}
+        if receipts:
+            meta["receipts"] = receipts
+        await self._append_history("assistant", full_response, meta)
+        
+        evt = {"type": "response_complete", "text": full_response}
+        if receipts:
+            evt["receipts"] = receipts
+        await on_event(evt)
 
         if speak if speak is not None else self._mode == "voice":
             await self._speak_and_send(full_response, on_event)
