@@ -228,19 +228,35 @@ async def approve_habit(habit_id: str, request: Request,
     if not habit:
         raise not_found("Pending habit not found")
 
-    # Move to preferences
-    from providers.memory.models import Preference
-    import uuid
-    from datetime import datetime, timezone
-    pref = Preference(
-        id=str(uuid.uuid4()),
+    # Move to preferences. Structured suggestions (e.g. distiller preferences)
+    # carry a JSON payload with the real category/value/provenance; plain habit
+    # inferences fall back to a "habit" category keyed off the pattern text.
+    import json
+    category = "habit"
+    value = habit.get("pattern", "")
+    source_kind = "habit_inference"
+    source_ref = None
+    payload_raw = habit.get("payload")
+    if payload_raw:
+        try:
+            p = json.loads(payload_raw)
+            category = p.get("category", category)
+            value = p.get("value", value)
+            source_kind = p.get("source_kind", source_kind)
+            source_ref = p.get("source_ref")
+        except (ValueError, TypeError):
+            pass
+
+    # Route through the manager so the vector is written and provenance is set.
+    # Human approval upgrades confidence to high.
+    await mm.upsert_preference(
         user_id=user_id,
-        category="habit",
-        value=habit["pattern"],
-        confidence="medium",  # Upgraded confidence since human approved it
-        last_updated=datetime.now(tz=timezone.utc)
+        category=category,
+        value=value,
+        confidence="high",
+        source_kind=source_kind,
+        source_ref=source_ref,
     )
-    await mm._store.upsert_preference(pref)
 
     # Delete from pending
     await mm.delete_pending_habit(habit_id, user_id)

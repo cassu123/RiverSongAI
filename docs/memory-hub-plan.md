@@ -1,5 +1,14 @@
 # River Song — Memory Hub / Chronos: Full Build Plan
 
+> **Implementation status (2026-07-21): COMPLETE.** Phases M0–M5 are all
+> implemented — real vector deletion, semantic recall wired per turn, summary
+> embedding, provenance on every writer (distiller/scribe/tools/manual/habit),
+> the glass-box Memory tab (edit/add/delete, badges, TTL, suggestions), the
+> conversational memory tools (remember/forget/recall/update) with the
+> confidence split, and the scribe/note tools (take_note/append_note/journal/
+> find_notes/read_note). MemGPT is retired and Graphiti is paused (default
+> off). The audit and phase sections below are retained as the design record.
+
 Handoff document for the implementing agent (Kimi / Antigravity). Self-contained:
 read this top to bottom and you can execute without prior session context.
 
