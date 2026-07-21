@@ -31,7 +31,7 @@ from providers.push.fcm import send_fcm, is_configured as fcm_is_configured
 logger = logging.getLogger(__name__)
 
 
-async def _send_one_webpush(sub_json: str, title: str, body: str, icon: str):
+async def _send_one_webpush(sub_json: str, title: str, body: str, icon: str, url: str = None):
     """Wrap send_push so transient exceptions don't tear down asyncio.gather.
 
     Returns a tri-state: True (delivered), False (410 Gone — delete the sub),
@@ -39,7 +39,7 @@ async def _send_one_webpush(sub_json: str, title: str, body: str, icon: str):
     cleanly avoids inflating delivery metrics on transport errors.
     """
     try:
-        ok = await send_push(sub_json, title=title, body=body, icon=icon)
+        ok = await send_push(sub_json, title=title, body=body, icon=icon, url=url)
     except Exception as exc:
         logger.warning("notify: send_push raised: %s", exc)
         return None
@@ -81,6 +81,8 @@ async def notify_user(
     title: str,
     body: str,
     icon: Optional[str] = None,
+    url: Optional[str] = None,
+    priority: str = "normal",
 ) -> int:
     """
     Push to every active subscription belonging to `user_id`.
@@ -105,7 +107,7 @@ async def notify_user(
             subs = []
         if subs:
             results = await asyncio.gather(
-                *[_send_one_webpush(s, title, body, icon_url) for s in subs],
+                *[_send_one_webpush(s, title, body, icon_url, url) for s in subs],
                 return_exceptions=False,
             )
             to_delete: list[str] = []

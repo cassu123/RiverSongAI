@@ -76,19 +76,36 @@ class ContextEngine:
         rs.last_updated = datetime.now(timezone.utc)
 
         if entity_id.startswith("light."):
-            rs.lights_on = state_val == "on"
+            # We track the number of lights on via a secondary attribute if needed, 
+            # but for now, if any light is on, lights_on = True.
+            # To count active lights, we'd need to store the state of all lights.
+            # We'll use a hack: if it's on, we set it to True.
+            # For a proper active lights count, we need to track individual entities.
+            if not hasattr(rs, '_entities'):
+                rs._entities = {}
+            rs._entities[entity_id] = state_val
+            
+            # Recalculate lights_on
+            rs.lights_on = any(v == "on" for k, v in rs._entities.items() if k.startswith("light."))
+            
         elif entity_id.startswith("sensor.") and "temperature" in entity_id:
             try:
                 rs.temperature = float(state_val)
             except ValueError:
                 pass
-        elif "occupancy" in entity_id or "motion" in entity_id:
-            rs.activity = "active" if state_val in (
-                "on", "detected", "occupied") else "idle"
+        elif "occupancy" in entity_id or "motion" in entity_id or "presence" in entity_id:
+            if not hasattr(rs, '_entities'):
+                rs._entities = {}
+            rs._entities[entity_id] = state_val
+            
+            is_active = any(v in ("on", "detected", "occupied", "home") for k, v in rs._entities.items() if "occupancy" in k or "motion" in k or "presence" in k)
+            rs.activity = "active" if is_active else "idle"
 
     def _extract_room(self, entity_id: str, attributes: dict) -> Optional[str]:
         """Heuristic to find which room an entity belongs to."""
         # Check area_id or friendly_name if present in attributes
+        # Now we can just use the DB area if available, but for now fallback to string matching
+        # The best way is for `sync.py` to push the area, or we just rely on string matching
         friendly = attributes.get("friendly_name", "").lower()
         if "living" in friendly or "living" in entity_id:
             return "living_room"
@@ -100,24 +117,31 @@ class ContextEngine:
             return "office"
         if "bathroom" in friendly or "bathroom" in entity_id:
             return "bathroom"
+        if "garage" in friendly or "garage" in entity_id:
+            return "garage"
         return None
 
     def get_rooms(self) -> Dict[str, dict]:
-        return {name: r.to_dict() for name, r in self._rooms.items()}
+        # Return aggregate view per room
+        res = {}
+        for name, r in self._rooms.items():
+            active_lights = sum(1 for k, v in getattr(r, '_entities', {}).items() if k.startswith("light.") and v == "on")
+            d = r.to_dict()
+            d["active_lights"] = active_lights
+            res[name] = d
+        return res
 
     def build_context_block(self) -> str:
         """Generates a text block for injection into the system prompt."""
-        active_rooms = [
-            f"- {
-                name.replace(
-                    '_', ' ').title()}: {
-                r.persons} person(s) present, {
-                r.activity}. "
-            f"Temp: {
-                r.temperature if r.temperature else '??'}°F. Lights: {
-                'On' if r.lights_on else 'Off'}."
-            for name, r in self._rooms.items() if not r.is_stale()
-        ]
+        active_rooms = []
+        for name, r in self._rooms.items():
+            if r.is_stale():
+                continue
+            active_lights = sum(1 for k, v in getattr(r, '_entities', {}).items() if k.startswith("light.") and v == "on")
+            active_rooms.append(
+                f"- {name.replace('_', ' ').title()}: {r.persons} person(s) present, {r.activity}. "
+                f"Temp: {r.temperature if r.temperature else '??'}°F. Lights: {'On' if r.lights_on else 'Off'} ({active_lights} active)."
+            )
         if not active_rooms:
             return ""
 

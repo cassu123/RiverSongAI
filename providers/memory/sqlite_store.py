@@ -78,6 +78,8 @@ CREATE TABLE IF NOT EXISTS facts (
     key         TEXT NOT NULL,
     value       TEXT NOT NULL,
     source      TEXT NOT NULL DEFAULT 'explicit',
+    source_kind TEXT NOT NULL DEFAULT 'conversation',
+    source_ref  TEXT,
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL,
     UNIQUE(user_id, key)
@@ -89,6 +91,8 @@ CREATE TABLE IF NOT EXISTS preferences (
     category     TEXT NOT NULL,
     value        TEXT NOT NULL,
     confidence   TEXT NOT NULL DEFAULT 'low',
+    source_kind  TEXT NOT NULL DEFAULT 'conversation',
+    source_ref   TEXT,
     last_updated TEXT NOT NULL,
     UNIQUE(user_id, category, value)
 );
@@ -101,6 +105,8 @@ CREATE TABLE IF NOT EXISTS conversation_summaries (
     expires_at      TEXT,
     reference_count INTEGER NOT NULL DEFAULT 0,
     last_referenced TEXT,
+    source_kind     TEXT NOT NULL DEFAULT 'conversation',
+    source_ref      TEXT,
     created_at      TEXT NOT NULL
 );
 
@@ -253,6 +259,37 @@ CREATE TABLE IF NOT EXISTS sweeps_state (
     last_error   TEXT
 );
 
+CREATE TABLE IF NOT EXISTS devices (
+    id           TEXT PRIMARY KEY,
+    user_id      TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    kind         TEXT NOT NULL,          -- browser | phone | vexa | kova | vector
+    room         TEXT,
+    capabilities TEXT DEFAULT '{}',      -- JSON: {"tts": true, "push": true, "display": true}
+    last_seen    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_devices_user ON devices(user_id);
+CREATE INDEX IF NOT EXISTS idx_devices_room ON devices(room);
+
+CREATE TABLE IF NOT EXISTS ha_entities (
+    entity_id    TEXT PRIMARY KEY,
+    domain       TEXT NOT NULL,
+    name         TEXT NOT NULL,          -- HA friendly_name
+    area         TEXT,                   -- HA area name (nullable)
+    device_class TEXT,                   -- HA device_class (door, moisture, …)
+    aliases      TEXT DEFAULT '[]',      -- user-added spoken aliases (JSON)
+    hidden       INTEGER DEFAULT 0,      -- user hid it from UI/voice
+    updated_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ha_entities_domain ON ha_entities(domain);
+CREATE INDEX IF NOT EXISTS idx_ha_entities_area ON ha_entities(area);
+
+CREATE TABLE IF NOT EXISTS rooms (
+    id           TEXT PRIMARY KEY,       -- slug e.g. "living_room"
+    name         TEXT NOT NULL,          -- "Living Room"
+    zone         TEXT                    -- e.g. "Main Floor", "Upstairs"
+);
+
 CREATE TABLE IF NOT EXISTS revoked_tokens (
     jti         TEXT PRIMARY KEY,
     user_id     TEXT NOT NULL,
@@ -361,6 +398,8 @@ CREATE TABLE IF NOT EXISTS pending_habits (
     user_id      TEXT NOT NULL,
     pattern      TEXT NOT NULL,
     confidence   TEXT NOT NULL DEFAULT 'low',
+    kind         TEXT NOT NULL DEFAULT 'habit',
+    payload      TEXT,
     created_at   TEXT NOT NULL
 );
 
@@ -781,6 +820,15 @@ class SQLiteStore(
             "ALTER TABLE users ADD COLUMN totp_secret TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE users ADD COLUMN totp_recovery_codes TEXT NOT NULL DEFAULT ''",
+            # Phase M3: Provenance
+            "ALTER TABLE facts ADD COLUMN source_kind TEXT NOT NULL DEFAULT 'conversation'",
+            "ALTER TABLE facts ADD COLUMN source_ref TEXT",
+            "ALTER TABLE preferences ADD COLUMN source_kind TEXT NOT NULL DEFAULT 'conversation'",
+            "ALTER TABLE preferences ADD COLUMN source_ref TEXT",
+            "ALTER TABLE conversation_summaries ADD COLUMN source_kind TEXT NOT NULL DEFAULT 'conversation'",
+            "ALTER TABLE conversation_summaries ADD COLUMN source_ref TEXT",
+            "ALTER TABLE pending_habits ADD COLUMN kind TEXT NOT NULL DEFAULT 'habit'",
+            "ALTER TABLE pending_habits ADD COLUMN payload TEXT",
             # One-time mapping: legacy palette -> universe (idempotent via
             # default-gate)
             "UPDATE users SET universe='halo' WHERE palette='halo' AND universe='dune'",
@@ -850,6 +898,7 @@ class SQLiteStore(
             "ALTER TABLE vector_units RENAME COLUMN unit_name TO name",
             "ALTER TABLE vector_units RENAME COLUMN platform_type TO platform",
             "ALTER TABLE chat_sessions ADD COLUMN meta TEXT DEFAULT '{}'",
+            "ALTER TABLE routines ADD COLUMN last_output TEXT",
         ]:
             try:
                 conn.execute(migration)

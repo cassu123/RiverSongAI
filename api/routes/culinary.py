@@ -69,14 +69,17 @@ from culinary.models import (
     DinnerProposal,
     Household,
     KitchenEquipment,
+    ListSource,
     MealType,
     PrepSession,
     PrepSessionRecipe,
     Recipe,
+    ShoppingListItem,
     SourceType,
     StockroomItem,
     StockState,
     WalmartMapping,
+    MealPlanEntry,
 )
 
 logger = logging.getLogger(__name__)
@@ -110,6 +113,49 @@ def _migrate_culinary_schema() -> None:
                 "ALTER TABLE cul_recipes ADD COLUMN rating INTEGER"
             ))
             conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE cul_banned_ingredients ADD COLUMN substitute TEXT"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+
+        # Migrate shadow shopping_list rows to cul_shopping_list
+        try:
+            res = conn.execute(sqlalchemy.text("SELECT * FROM shopping_list")).fetchall()
+            if res:
+                # Get the first household as fallback
+                hh_id = None
+                hh_res = conn.execute(sqlalchemy.text("SELECT id FROM cul_households LIMIT 1")).fetchone()
+                if hh_res:
+                    hh_id = hh_res[0]
+                
+                if hh_id:
+                    from datetime import datetime, timezone
+                    import uuid
+                    for row in res:
+                        # row: (id, user_id, item, quantity, added_at)
+                        uid = row[1]
+                        # try to get actual household for user
+                        uhh_res = conn.execute(sqlalchemy.text("SELECT id FROM cul_households WHERE owner_id = :uid"), {"uid": uid}).fetchone()
+                        target_hh = uhh_res[0] if uhh_res else hh_id
+                        conn.execute(sqlalchemy.text("""
+                            INSERT INTO cul_shopping_list (id, household_id, name, qty, category, source, added_by, created_at)
+                            VALUES (:id, :hh, :nm, :qty, 'grocery', 'chat', :uid, :dt)
+                        """), {
+                            "id": str(uuid.uuid4()),
+                            "hh": target_hh,
+                            "nm": row[2],
+                            "qty": str(row[3]) if row[3] else None,
+                            "uid": uid,
+                            "dt": datetime.now(timezone.utc).isoformat()
+                        })
+                # Drop the shadow table
+                conn.execute(sqlalchemy.text("DROP TABLE shopping_list"))
+                conn.commit()
         except Exception:
             pass
         try:
@@ -1349,6 +1395,21 @@ async def vote_dinner(
     if body.vote == "yes":
         yes_list.append(uid)
         p.status = "approved"
+        # Create MealPlanEntry for tonight
+        today = _now().replace(hour=0, minute=0, second=0, microsecond=0)
+        existing_plan = db.query(MealPlanEntry).filter_by(
+            household_id=hh.id, plan_date=today, slot=MealType.DINNER
+        ).first()
+        if not existing_plan:
+            plan = MealPlanEntry(
+                household_id=hh.id,
+                plan_date=today,
+                slot=MealType.DINNER,
+                recipe_id=p.recipe_id,
+                status="planned",
+                created_by=uid
+            )
+            db.add(plan)
     elif body.vote == "no":
         no_list.append(uid)
     else:
@@ -1385,9 +1446,10 @@ async def dismiss_dinner(
 async def cook_now(
     proposal_id: str,
     request: Request,
+    target_servings: int = 4,
     db: Session = Depends(get_db),
 ):
-    """Scale the proposed recipe to 4 servings and return a single-use shopping list."""
+    """Scale the proposed recipe and return a single-use shopping list."""
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     p = db.query(DinnerProposal).filter_by(
@@ -1399,7 +1461,6 @@ async def cook_now(
         raise not_found("Recipe not found")
 
     original_servings = recipe.servings or 4
-    target_servings = 4
     factor = target_servings / original_servings
 
     scaled = []
@@ -1411,6 +1472,25 @@ async def cook_now(
 
     # Dismiss the proposal — it's been acted on
     db.delete(p)
+    
+    # Create MealPlanEntry for tonight
+    today = _now().replace(hour=0, minute=0, second=0, microsecond=0)
+    existing_plan = db.query(MealPlanEntry).filter_by(
+        household_id=hh.id, plan_date=today, slot=MealType.DINNER
+    ).first()
+    if not existing_plan:
+        plan = MealPlanEntry(
+            household_id=hh.id,
+            plan_date=today,
+            slot=MealType.DINNER,
+            recipe_id=recipe.id,
+            status="cooked",
+            created_by=uid
+        )
+        db.add(plan)
+    else:
+        existing_plan.status = "cooked"
+
     db.commit()
     proposals = [_proposal_out(x) for x in _active_proposals(db, hh.id)]
     await _ws_manager.broadcast(hh.id, "dinner_updated", {"proposals": proposals})
@@ -1838,9 +1918,26 @@ async def update_stockroom_item(
         item.quantity = body.quantity
     if body.min_quantity is not None:
         item.min_quantity = body.min_quantity
+
+    # Auto-inject into grocery list if LOW
+    if item.state == StockState.LOW or item.quantity <= item.min_quantity:
+        existing_list_item = db.query(ShoppingListItem).filter_by(
+            household_id=hh.id, name=item.name, checked_at=None
+        ).first()
+        if not existing_list_item:
+            sl_item = ShoppingListItem(
+                household_id=hh.id,
+                name=item.name,
+                category="grocery",
+                source=ListSource.STOCKROOM_AUTO,
+                added_by=uid
+            )
+            db.add(sl_item)
+
     db.commit()
     db.refresh(item)
     await _ws_manager.broadcast(hh.id, "stockroom_updated", _stock_out(item))
+    await _ws_manager.broadcast(hh.id, "grocery_updated", {})
     return _stock_out(item)
 
 
@@ -1894,12 +1991,28 @@ async def scan_barcode(
             state=StockState.GOOD if body.quantity > 0.25 else StockState.LOW,
         )
         db.add(item)
-
         db.commit()
         db.refresh(item)
         out = _stock_out(item)
+        existing = item
+
+    if existing.state == StockState.LOW or existing.quantity <= existing.min_quantity:
+        existing_list_item = db.query(ShoppingListItem).filter_by(
+            household_id=hh.id, name=existing.name, checked_at=None
+        ).first()
+        if not existing_list_item:
+            sl_item = ShoppingListItem(
+                household_id=hh.id,
+                name=existing.name,
+                category="grocery",
+                source=ListSource.STOCKROOM_AUTO,
+                added_by=uid
+            )
+            db.add(sl_item)
+            db.commit()
 
     await _ws_manager.broadcast(hh.id, "stockroom_updated", out)
+    await _ws_manager.broadcast(hh.id, "grocery_updated", {})
     return out
 
 
@@ -1933,11 +2046,28 @@ async def deplete_item(
         item.quantity = max(0, item.quantity - body.quantity)
         item.state = StockState.GOOD if item.quantity > 0.25 else StockState.LOW
 
+    # Auto-inject into grocery list if LOW
+    if item.state == StockState.LOW or item.quantity <= item.min_quantity:
+        existing_list_item = db.query(ShoppingListItem).filter_by(
+            household_id=hh.id, name=item.name, checked_at=None
+        ).first()
+        if not existing_list_item:
+            sl_item = ShoppingListItem(
+                household_id=hh.id,
+                name=item.name,
+                category="grocery",
+                source=ListSource.STOCKROOM_AUTO,
+                added_by=uid
+            )
+            db.add(sl_item)
+            # We don't await here directly but we commit at the end
+
     db.commit()
 
     db.refresh(item)
     out = _stock_out(item)
     await _ws_manager.broadcast(hh.id, "stockroom_updated", out)
+    await _ws_manager.broadcast(hh.id, "grocery_updated", {})
     return out
 
 
@@ -2179,6 +2309,21 @@ async def complete_prep_session(
     if not session:
         raise not_found("Prep session not found")
     session.is_active = False
+
+    # Mark corresponding meal plan entries as cooked
+    recipe_ids = [r.recipe_id for r in session.recipes if r.recipe_id]
+    if recipe_ids:
+        today = _now().replace(hour=0, minute=0, second=0, microsecond=0)
+        entries = db.query(MealPlanEntry).filter(
+            MealPlanEntry.household_id == hh.id,
+            MealPlanEntry.plan_date >= today,
+            MealPlanEntry.status == "planned",
+            MealPlanEntry.recipe_id.in_(recipe_ids)
+        ).all()
+        for entry in entries:
+            entry.status = "cooked"
+
+    await _ws_manager.broadcast(hh.id, "meal_plan_updated", {})
     session.completed_at = datetime.now(timezone.utc)
     db.commit()
     await _ws_manager.broadcast(hh.id, "prep_completed", {"session_id": session_id})
@@ -2332,3 +2477,385 @@ async def walmart_export(
         "mapped_count": len(cart_items),
         "unmapped": unmapped,
     }
+
+from pydantic import BaseModel
+from typing import List, Optional
+
+class ShoppingItemCreate(BaseModel):
+    name: str
+    qty: Optional[str] = None
+    category: Optional[str] = "grocery"
+
+class ShoppingItemUpdate(BaseModel):
+    name: Optional[str] = None
+    qty: Optional[str] = None
+    category: Optional[str] = None
+    checked: Optional[bool] = None
+
+@router.get("/grocery")
+async def get_shopping_list(request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    
+    # Also fetch low stock automatically to inject into the returned list?
+    # Actually, K1 says "Stockroom min_quantity triggers auto-add to the list (via _ws_manager broadcast)."
+    
+    items = db.query(ShoppingListItem).filter(
+        ShoppingListItem.household_id == hh.id
+    ).order_by(
+        ShoppingListItem.checked_at.is_(None).desc(), # Unchecked first
+        ShoppingListItem.created_at.desc()
+    ).all()
+    
+    return [
+        {
+            "id": i.id,
+            "name": i.name,
+            "qty": i.qty,
+            "category": i.category,
+            "source": i.source.value if i.source else "manual",
+            "checked": bool(i.checked_at)
+        }
+        for i in items
+    ]
+
+@router.post("/grocery")
+async def add_shopping_item(
+    body: ShoppingItemCreate,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    
+    item = ShoppingListItem(
+        household_id=hh.id,
+        name=body.name,
+        qty=body.qty,
+        category=body.category or "grocery",
+        source=ListSource.MANUAL,
+        added_by=uid
+    )
+    db.add(item)
+    db.commit()
+    
+    await _ws_manager.broadcast(hh.id, "grocery_updated", {})
+    return {"status": "ok", "id": item.id}
+
+@router.patch("/grocery/{item_id}")
+async def update_shopping_item(
+    item_id: str,
+    body: ShoppingItemUpdate,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    
+    item = db.query(ShoppingListItem).filter_by(id=item_id, household_id=hh.id).first()
+    if not item:
+        raise not_found("Item not found")
+        
+    if body.name is not None:
+        item.name = body.name
+    if body.qty is not None:
+        item.qty = body.qty
+    if body.category is not None:
+        item.category = body.category
+    if body.checked is not None:
+        if body.checked and not item.checked_at:
+            item.checked_at = _now()
+        elif not body.checked and item.checked_at:
+            item.checked_at = None
+            
+    db.commit()
+    await _ws_manager.broadcast(hh.id, "grocery_updated", {})
+    return {"status": "ok"}
+
+@router.delete("/grocery/{item_id}")
+async def delete_shopping_item(
+    item_id: str,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    
+    item = db.query(ShoppingListItem).filter_by(id=item_id, household_id=hh.id).first()
+    if item:
+        db.delete(item)
+        db.commit()
+        await _ws_manager.broadcast(hh.id, "grocery_updated", {})
+    return {"status": "ok"}
+
+@router.post("/grocery/clear")
+async def clear_checked_items(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    
+    items = db.query(ShoppingListItem).filter(
+        ShoppingListItem.household_id == hh.id,
+        ShoppingListItem.checked_at.isnot(None)
+    ).all()
+    
+    for item in items:
+        db.delete(item)
+        
+    db.commit()
+    await _ws_manager.broadcast(hh.id, "grocery_updated", {})
+    return {"status": "ok", "cleared": len(items)}
+
+class MealPlanEntryCreate(BaseModel):
+    plan_date: str
+    slot: str
+    recipe_id: Optional[str] = None
+    label: Optional[str] = None
+    status: Optional[str] = "planned"
+
+@router.get("/meal-plan")
+async def get_meal_plan(start: str, request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    
+    start_dt = datetime.fromisoformat(start).replace(hour=0, minute=0, second=0, microsecond=0)
+    items = db.query(MealPlanEntry).filter(
+        MealPlanEntry.household_id == hh.id,
+        MealPlanEntry.plan_date >= start_dt
+    ).all()
+    
+    return [
+        {
+            "id": i.id,
+            "plan_date": i.plan_date.isoformat(),
+            "slot": i.slot.value,
+            "recipe_id": i.recipe_id,
+            "recipe_title": i.recipe.title if i.recipe else None,
+            "label": i.label,
+            "status": i.status
+        }
+        for i in items
+    ]
+
+@router.post("/meal-plan")
+async def create_meal_plan(body: MealPlanEntryCreate, request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    
+    plan_dt = datetime.fromisoformat(body.plan_date).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    entry = MealPlanEntry(
+        household_id=hh.id,
+        plan_date=plan_dt,
+        slot=MealType(body.slot),
+        recipe_id=body.recipe_id,
+        label=body.label,
+        status=body.status or "planned",
+        created_by=uid
+    )
+    db.add(entry)
+    db.commit()
+    await _ws_manager.broadcast(hh.id, "meal_plan_updated", {})
+    return {"status": "ok", "id": entry.id}
+
+@router.patch("/meal-plan/{entry_id}")
+async def update_meal_plan(entry_id: str, body: dict, request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    
+    entry = db.query(MealPlanEntry).filter_by(id=entry_id, household_id=hh.id).first()
+    if not entry:
+        raise not_found("Entry not found")
+        
+    if "status" in body:
+        entry.status = body["status"]
+    if "label" in body:
+        entry.label = body["label"]
+        
+    db.commit()
+    await _ws_manager.broadcast(hh.id, "meal_plan_updated", {})
+    return {"status": "ok"}
+
+@router.delete("/meal-plan/{entry_id}")
+async def delete_meal_plan(entry_id: str, request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    
+    entry = db.query(MealPlanEntry).filter_by(id=entry_id, household_id=hh.id).first()
+    if entry:
+        db.delete(entry)
+        db.commit()
+        await _ws_manager.broadcast(hh.id, "meal_plan_updated", {})
+    return {"status": "ok"}
+
+def _aggregate_ingredients(db: Session, hh_id: str, recipes_data: List[dict]):
+    good_stock = {
+        s.name.lower().strip()
+        for s in db.query(StockroomItem).filter_by(household_id=hh_id).all()
+        if s.state == StockState.GOOD
+    }
+    
+    aggregated: Dict[str, dict] = {}
+    for data in recipes_data:
+        ingredients_json = data.get("ingredients_json", "[]")
+        try:
+            ingredients = json.loads(ingredients_json)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        for ing in ingredients:
+            name = ing.get("name", "")
+            if not name:
+                continue
+            name_key = name.lower().strip()
+            if name_key in good_stock:
+                continue
+            if name_key in aggregated:
+                try:
+                    aggregated[name_key]["qty"] = _format_qty(
+                        _parse_qty(str(aggregated[name_key]["qty"]))
+                        + _parse_qty(str(ing.get("qty", 0)))
+                    )
+                except (ValueError, TypeError):
+                    pass
+            else:
+                aggregated[name_key] = {
+                    "name": name,
+                    "qty": ing.get("qty", ""),
+                    "unit": ing.get("unit", ""),
+                }
+    return list(aggregated.values())
+
+@router.post("/meal-plan/shop-this-week")
+async def shop_this_week(request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    
+    today = _now().replace(hour=0, minute=0, second=0, microsecond=0)
+    entries = db.query(MealPlanEntry).filter(
+        MealPlanEntry.household_id == hh.id,
+        MealPlanEntry.plan_date >= today,
+        MealPlanEntry.status == "planned"
+    ).all()
+    
+    recipes_data = []
+    for entry in entries:
+        if entry.recipe:
+            recipes_data.append({
+                "ingredients_json": entry.recipe.ingredients_json
+            })
+            
+    items_to_buy = _aggregate_ingredients(db, hh.id, recipes_data)
+    
+    for it in items_to_buy:
+        sl_item = ShoppingListItem(
+            household_id=hh.id,
+            name=it["name"],
+            qty=str(it.get("qty", "")),
+            unit=it.get("unit", ""),
+            category="grocery",
+            source=ListSource.MEAL_PLAN,
+            added_by=uid
+        )
+        db.add(sl_item)
+    
+    db.commit()
+    await _ws_manager.broadcast(hh.id, "grocery_updated", {})
+    return {"status": "ok", "items_added": len(items_to_buy)}
+
+@router.post("/prep/{session_id}/send-to-list")
+async def prep_send_to_list(session_id: str, request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
+    if not session:
+        raise not_found("Prep session not found")
+        
+    recipes_data = []
+    for entry in session.recipes:
+        recipes_data.append({
+            "ingredients_json": entry.scaled_ingredients_json or (entry.recipe.ingredients_json if entry.recipe else "[]")
+        })
+        
+    items_to_buy = _aggregate_ingredients(db, hh.id, recipes_data)
+    for it in items_to_buy:
+        sl_item = ShoppingListItem(
+            household_id=hh.id,
+            name=it["name"],
+            qty=str(it.get("qty", "")),
+            unit=it.get("unit", ""),
+            category="grocery",
+            source=ListSource.PREP,
+            source_ref=session_id,
+            added_by=uid
+        )
+        db.add(sl_item)
+        
+    db.commit()
+    await _ws_manager.broadcast(hh.id, "grocery_updated", {})
+    return {"status": "ok", "items_added": len(items_to_buy)}
+
+
+class MealPlanPrepRequest(BaseModel):
+    entry_ids: List[str]
+
+@router.post("/meal-plan/create-prep-session")
+async def create_prep_from_plan(body: MealPlanPrepRequest, request: Request, db: Session = Depends(get_db)):
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    
+    entries = db.query(MealPlanEntry).filter(
+        MealPlanEntry.household_id == hh.id,
+        MealPlanEntry.id.in_(body.entry_ids)
+    ).all()
+    
+    if not entries:
+        raise not_found("No valid plan entries found")
+        
+    session = PrepSession(
+        household_id=hh.id,
+        created_by=uid,
+        is_active=True
+    )
+    db.add(session)
+    db.flush()
+    
+    # Disable any previously active session
+    old_sessions = db.query(PrepSession).filter(
+        PrepSession.household_id == hh.id,
+        PrepSession.is_active == True,
+        PrepSession.id != session.id
+    ).all()
+    for os in old_sessions:
+        os.is_active = False
+        
+    for entry in entries:
+        if not entry.recipe_id:
+            continue
+        recipe = db.query(Recipe).filter_by(id=entry.recipe_id, household_id=hh.id).first()
+        if not recipe:
+            continue
+            
+        target_servings = hh.family_size or 4
+        original_servings = recipe.servings or 4
+        factor = target_servings / original_servings
+        
+        scaled = []
+        for ing in _safe_json(recipe.ingredients_json, []):
+            raw_qty = _parse_qty(str(ing.get("qty", ""))) * factor
+            qty_out = _format_qty(raw_qty) if raw_qty > 0 else ing.get("qty", "")
+            scaled.append({"name": ing.get("name", ""), "qty": qty_out, "unit": ing.get("unit", "")})
+            
+        pr = PrepSessionRecipe(
+            session_id=session.id,
+            recipe_id=recipe.id,
+            target_servings=target_servings,
+            scaled_ingredients_json=json.dumps(scaled),
+            scaling_factor=factor
+        )
+        db.add(pr)
+        
+    db.commit()
+    db.refresh(session)
+    return {"status": "ok", "session_id": session.id}

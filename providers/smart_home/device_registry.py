@@ -118,55 +118,71 @@ class DeviceRegistry:
             self._path,
         )
 
-    def resolve(self, name: str) -> Optional[EntityOrGroup]:
+    async def resolve(self, name: str) -> Optional[EntityOrGroup]:
         """
         Resolve a spoken device name to a HA entity ID or list of entity IDs.
-
-        Args:
-            name: Plain-English device name as spoken by the user, e.g.
-                "living room lights", "all the lights", "the garage".
-
-        Returns:
-            - str: A single entity ID if a single device matched.
-            - List[str]: A list of entity IDs if a group matched.
-            - None: If no match was found above the fuzzy threshold.
+        Looks in synced SQLite ha_entities first, then legacy JSON fallback.
         """
         lower = name.lower().strip()
+        
+        try:
+            from main import get_app
+            app = get_app()
+            if app:
+                store = app.state.memory_manager._store
+                
+                # Check exact name or alias match
+                # Also check compound area + domain e.g. "kitchen lights"
+                # For simplicity, we just fetch all non-hidden and try matching in python
+                entities = await store._fetch_all("SELECT entity_id, domain, name, area, aliases FROM ha_entities WHERE hidden = 0")
+                
+                # 1. Exact name match or alias
+                for e in entities:
+                    if e["name"].lower() == lower:
+                        return e["entity_id"]
+                    try:
+                        aliases = json.loads(e["aliases"])
+                        if lower in [a.lower() for a in aliases]:
+                            return e["entity_id"]
+                    except Exception:
+                        pass
+                        
+                # 2. Exact compound match: "{area} {domain}s" e.g. "kitchen lights"
+                for e in entities:
+                    if not e["area"]:
+                        continue
+                    area_domain = f'{e["area"].lower()} {e["domain"].lower()}s'
+                    if lower == area_domain:
+                        # Find all entities in this area with this domain
+                        return [x["entity_id"] for x in entities if x["area"] and x["area"].lower() == e["area"].lower() and x["domain"] == e["domain"]]
 
-        # 1. Exact device match.
+                # 3. Fuzzy match against synced entities
+                names = {e["name"].lower(): e["entity_id"] for e in entities}
+                best_key, best_score = _best_match(lower, names.keys())
+                if best_score >= _FUZZY_THRESHOLD:
+                    return names[best_key]
+
+        except Exception as e:
+            logger.error("Error resolving against ha_entities: %s", e)
+
+        # Fallback to legacy JSON
         if lower in self._devices:
-            result = self._devices[lower]
-            logger.debug("Exact device match: '%s' -> '%s'.", name, result)
-            return result
-
-        # 2. Exact group match.
+            return self._devices[lower]
         if lower in self._groups:
-            result = self._groups[lower]  # type: ignore
-            logger.debug("Exact group match: '%s' -> %s.", name, result)
-            return result
+            return self._groups[lower]
 
-        # 3. Fuzzy device match.
         best_key, best_score = _best_match(lower, self._devices.keys())
         if best_score >= _FUZZY_THRESHOLD:
-            result = self._devices[best_key]
-            logger.debug(
-                "Fuzzy device match: '%s' -> '%s' (score=%.2f).", name, result, best_score
-            )
-            return result
+            return self._devices[best_key]
 
-        # 4. Fuzzy group match.
         best_key, best_score = _best_match(lower, self._groups.keys())
         if best_score >= _FUZZY_THRESHOLD:
-            result = self._groups[best_key]  # type: ignore
-            logger.debug(
-                "Fuzzy group match: '%s' -> %s (score=%.2f).", name, result, best_score
-            )
-            return result
+            return self._groups[best_key]
 
         logger.warning("Device registry: no match found for '%s'.", name)
         return None
 
-    def all_names(self) -> List[str]:
+    async def all_names(self) -> List[str]:
         """
         Return all known plain-English device and group names.
 

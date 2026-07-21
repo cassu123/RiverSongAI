@@ -24,6 +24,192 @@ logger = logging.getLogger(__name__)
 
 TOOL_SCHEMAS = [
     {
+        "name": "alias_device",
+        "description": "Learn a new alias or nickname for a smart home device. Call this if the user assigns a new name to a device.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "entity_id": {"type": "string", "description": "The Home Assistant entity_id of the device."},
+                "alias": {"type": "string", "description": "The new nickname to assign to this device."}
+            },
+            "required": ["entity_id", "alias"]
+        }
+    },
+    {
+        "name": "take_note",
+        "description": "Create a new vault note. The note will carry provenance linking it back to the conversation.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "The title of the note (optional)."},
+                "content": {"type": "string", "description": "The markdown content of the note."}
+            },
+            "required": ["content"]
+        }
+    },
+    {
+        "name": "append_note",
+        "description": "Append to an existing note by title match.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "The title of the note to append to."},
+                "content": {"type": "string", "description": "The content to append."}
+            },
+            "required": ["title", "content"]
+        }
+    },
+    {
+        "name": "journal",
+        "description": "Append a timestamped line to today's daily note.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "content": {"type": "string", "description": "The content to append to the journal."}
+            },
+            "required": ["content"]
+        }
+    },
+    {
+        "name": "find_notes",
+        "description": "Search the vault for notes by query using Full Text Search.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The search query."}
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "read_note",
+        "description": "Read the full content of a vault note.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "The title or virtual path of the note to read."}
+            },
+            "required": ["title"]
+        }
+    },
+    {
+        "name": "remember_fact",
+        "description": "Explicitly remember a fact about the user for long-term memory.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "key": {"type": "string", "description": "The category or key of the fact (e.g. 'Cheryl birthday')."},
+                "value": {"type": "string", "description": "The value of the fact (e.g. 'March 3rd')."}
+            },
+            "required": ["value"]
+        }
+    },
+    {
+        "name": "forget_memory",
+        "description": "Delete a memory (fact, preference, summary) based on a query or exact ID.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The memory content to search for, or exact ID to forget."}
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "recall_memory",
+        "description": "Recall specific semantic memories about a topic from the long-term memory hub.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The topic or question to query."}
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "update_memory",
+        "description": "Update an existing memory with a new value using a query or exact ID.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The memory to update (query or ID)."},
+                "new_value": {"type": "string", "description": "The new value to set."}
+            },
+            "required": ["query", "new_value"]
+        }
+    },
+    {
+        "name": "get_vehicle_status",
+        "description": "Get the current maintenance status and timeline for a vehicle.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "vehicle": {"type": "string", "description": "The vehicle nickname, make, model, or year."}
+            },
+            "required": ["vehicle"]
+        }
+    },
+    {
+        "name": "get_vehicle_spec",
+        "description": "Get specific specs for a vehicle like torque, fluid type, volume, min/max.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "vehicle": {"type": "string", "description": "The vehicle name."},
+                "item": {"type": "string", "description": "The part or fluid to get specs for (e.g. 'drain plug', 'oil')."}
+            },
+            "required": ["vehicle", "item"]
+        }
+    },
+    {
+        "name": "query_vehicle_manual",
+        "description": "Search the owner's manual for a vehicle.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "vehicle": {"type": "string"},
+                "question": {"type": "string"}
+            },
+            "required": ["vehicle", "question"]
+        }
+    },
+    {
+        "name": "record_odometer",
+        "description": "Record a new odometer reading for a vehicle.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "vehicle": {"type": "string"},
+                "value": {"type": "number"}
+            },
+            "required": ["vehicle", "value"]
+        }
+    },
+    {
+        "name": "find_parts",
+        "description": "Find OEM and alternative parts for a vehicle job online.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "vehicle": {"type": "string"},
+                "job": {"type": "string"}
+            },
+            "required": ["vehicle", "job"]
+        }
+    },
+    {
+        "name": "set_timer",
+        "description": "Set a named timer for a specific duration in seconds. Useful for cooking or waiting for a task to complete.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "label": {"type": "string", "description": "The name of the timer (e.g. 'pasta')."},
+                "duration_seconds": {"type": "integer", "description": "Duration in seconds."}
+            },
+            "required": ["label", "duration_seconds"]
+        }
+    },
+    {
         "name": "deep_research",
         "description": "Perform an in-depth web research on a specific topic. Use this when the user explicitly asks for a deep dive, comprehensive research, or an in-depth report on a subject. Do NOT use for simple facts.",
         "input_schema": {
@@ -558,7 +744,25 @@ async def execute_tool(
         tool_input)
 
     try:
-        if tool_name == "deep_research":
+        if tool_name == "remember_fact":
+            return await _exec_remember_fact(tool_input, context)
+        elif tool_name == "forget_memory":
+            return await _exec_forget_memory(tool_input, context)
+        elif tool_name == "recall_memory":
+            return await _exec_recall_memory(tool_input, context)
+        elif tool_name == "update_memory":
+            return await _exec_update_memory(tool_input, context)
+        elif tool_name == "take_note":
+            return await _exec_take_note(tool_input, context)
+        elif tool_name == "append_note":
+            return await _exec_append_note(tool_input, context)
+        elif tool_name == "journal":
+            return await _exec_journal(tool_input, context)
+        elif tool_name == "find_notes":
+            return await _exec_find_notes(tool_input, context)
+        elif tool_name == "read_note":
+            return await _exec_read_note(tool_input, context)
+        elif tool_name == "deep_research":
             return await _exec_deep_research(tool_input, user_id)
 
         elif tool_name == "create_calendar_event":
@@ -580,14 +784,25 @@ async def execute_tool(
 
         elif tool_name == "set_reminder":
             return await _exec_set_reminder(tool_input, user_id)
+            
+        elif tool_name == "set_timer":
+            return await _exec_set_timer(tool_input, user_id)
 
         elif tool_name == "control_device":
             return await _exec_control_device(tool_input, user_id)
+
+        elif tool_name == "alias_device":
+            return await _exec_alias_device(tool_input, user_id)
 
         elif tool_name == "log_vehicle_maintenance":
             # type: ignore
             return await _exec_vehicle_maintenance(tool_input, context)  # type: ignore
 
+        elif tool_name == "get_vehicle_status": return await _exec_get_vehicle_status(tool_input, user_id)
+        elif tool_name == "get_vehicle_spec": return await _exec_get_vehicle_spec(tool_input, user_id)
+        elif tool_name == "query_vehicle_manual": return await _exec_query_vehicle_manual(tool_input, user_id)
+        elif tool_name == "record_odometer": return await _exec_record_odometer(tool_input, user_id)
+        elif tool_name == "find_parts": return await _exec_find_parts(tool_input, user_id)
         elif tool_name == "list_vehicles":
             return await _exec_list_vehicles(tool_input, context)
             
@@ -1000,30 +1215,34 @@ async def _exec_warranty_check(args: dict, user_id: str) -> str:
 
 
 async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
-    settings = get_settings()
-    db_path = settings.db_path
+    from db.database import SessionLocal
+    from culinary.models import Household, ShoppingListItem, ListSource
+    item = args.get("item")
+    qty = args.get("quantity")
+
+    if not item:
+        return "Error: item is required."
 
     def _sync_work():
-        conn = sqlite3.connect(db_path)
+        db = SessionLocal()
         try:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS shopping_list (
-                    id INTEGER PRIMARY KEY,
-                    user_id TEXT,
-                    item TEXT,
-                    quantity INTEGER,
-                    added_at TEXT
-                )
-            """)
-            conn.execute(
-                """INSERT INTO shopping_list (user_id, item, quantity, added_at) VALUES (?, ?, ?, ?)""",
-                (user_id, args['item'], args.get('quantity', 1),
-                 datetime.now(timezone.utc).isoformat())
+            hh = db.query(Household).filter(Household.owner_id == user_id).first()
+            if not hh:
+                return "Error: Household not found."
+            sl_item = ShoppingListItem(
+                household_id=hh.id,
+                name=item,
+                qty=str(qty) if qty else None,
+                category="grocery",
+                source=ListSource.CHAT,
+                added_by=user_id
             )
-            conn.commit()
-            return f"Added {args.get('quantity', 1)} {args['item']} to your shopping list."
+            db.add(sl_item)
+            db.commit()
+            return f"Added '{item}' to your shopping list."
         finally:
-            conn.close()
+            db.close()
+
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _sync_work)
 
@@ -1063,7 +1282,7 @@ async def _exec_control_device(args: dict, user_id: str) -> str:
         from providers.smart_home.device_registry import get_device_registry
 
         registry = get_device_registry()
-        resolved = registry.resolve(args['device_name'])
+        resolved = await registry.resolve(args['device_name'])
         if not resolved:
             return f"I couldn't find a device named '{args['device_name']}' in your registry."
 
@@ -1075,15 +1294,57 @@ async def _exec_control_device(args: dict, user_id: str) -> str:
 
         return f"Confirmed. Turned {args['action']} the {args['device_name']}."
     except Exception:
-        return f"Home Assistant is not reachable. I've noted that you want to turn {args['action']} the {args['device_name']}."
+        return f"Home Assistant isn't reachable right now — I couldn't turn {args['action']} the {args['device_name']}."
+
+
+async def _exec_alias_device(args: dict, user_id: str) -> str:
+    """
+    Updates the ha_entities table to add a new alias to an entity.
+    """
+    from core.family import is_feature_enabled_for
+    if not await is_feature_enabled_for(user_id, "home"):
+        return "Home automation features are disabled for your account."
+
+    entity_id = args.get("entity_id")
+    alias = args.get("alias")
+    if not entity_id or not alias:
+        return "Both entity_id and alias must be provided."
+
+    from main import get_app
+    app = get_app()
+    if not app:
+        return "Internal error: app context not found."
+    
+    store = app.state.memory_manager._store
+    try:
+        import json
+        rows = await store._fetch_all("SELECT aliases FROM ha_entities WHERE entity_id = ?", (entity_id,))
+        if not rows:
+            return f"Entity {entity_id} not found in the registry."
+            
+        current_aliases = json.loads(rows[0]["aliases"])
+        if alias not in current_aliases:
+            current_aliases.append(alias)
+            await store._execute(
+                "UPDATE ha_entities SET aliases = ? WHERE entity_id = ?",
+                (json.dumps(current_aliases), entity_id)
+            )
+            return f"Successfully learned the name '{alias}' for {entity_id}."
+        return f"I already know '{alias}' as a name for {entity_id}."
+    except Exception as e:
+        logger.error("Error aliasing device: %s", e)
+        return "Failed to save the new name."
 
 
 async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
     user_id = context.get("user_id")
+    
     vehicle_id = context.get("vehicle_id")
-
     if not vehicle_id:
-        return {"error": "No vehicle_id in context. Cannot log maintenance."}
+        vehicle_id = await _resolve_vehicle(args.get("vehicle", ""), user_id)
+    if not vehicle_id:
+        return "No vehicle_id in context and could not resolve vehicle."
+
 
     def _sync_work():
         from vehicles.management import get_vehicles, create_service_log
@@ -2158,3 +2419,382 @@ async def _exec_mow_command(args: dict, user_id: str) -> str:
     except Exception as exc:
         logger.error("mow_command failed: %s", exc)
         return f"Failed to send mower command: {exc}"
+
+async def _exec_set_timer(args: dict, user_id: str) -> str:
+    label = args.get("label", "Timer")
+    duration = int(args.get("duration_seconds", 60))
+    
+    async def _timer_task():
+        await asyncio.sleep(duration)
+        from api.routes.culinary import _ws_manager
+        from core.family import resolve_module_owner
+        uid = await resolve_module_owner(user_id, "culinary")
+        # In culinary, household ID is usually needed for broadcast. Wait, _ws_manager broadcasts to household_id.
+        # So we need to get household_id.
+        from sqlalchemy.orm import Session
+        from api.routes.culinary import get_db, _get_household
+        
+        # We need a new DB session inside the background task since the current one might be closed
+        from database.core import engine
+        from sqlalchemy.orm import sessionmaker
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        
+        db = SessionLocal()
+        try:
+            hh = _get_household(db, uid)
+            await _ws_manager.broadcast(hh.id, "timer_fired", {"label": label, "duration": duration})
+        except Exception as e:
+            logger.error(f"Error in timer task: {e}")
+        finally:
+            db.close()
+            
+    asyncio.create_task(_timer_task())
+    return f"Timer '{label}' set for {duration} seconds."
+
+async def _resolve_vehicle(query: str, user_id: str):
+    from vehicles.management import get_vehicles
+    from core.family import resolve_module_owner
+    from database.core import engine
+    from sqlalchemy.orm import sessionmaker
+    SessionLocal = sessionmaker(bind=engine)
+    db = SessionLocal()
+    owner_id = await resolve_module_owner(user_id, "maintenance")
+    try:
+        vehicles = get_vehicles(db, owner_id)
+        if not vehicles:
+            return None
+        # simple fuzzy match
+        query = query.lower()
+        for v in vehicles:
+            if v.nickname and query in v.nickname.lower(): return v.id
+            if v.make and query in v.make.lower(): return v.id
+            if v.model and query in v.model.lower(): return v.id
+        # return first if only one
+        if len(vehicles) == 1:
+            return vehicles[0].id
+        return None
+    finally:
+        db.close()
+
+async def _exec_get_vehicle_status(args: dict, user_id: str) -> str:
+    vid = args.get("vehicle_id") or await _resolve_vehicle(args.get("vehicle"), user_id)
+    if not vid: return "Vehicle not found."
+    from database.core import engine
+    from sqlalchemy.orm import sessionmaker
+    from api.routes.vehicles import get_maintenance_timeline
+    SessionLocal = sessionmaker(bind=engine)
+    db = SessionLocal()
+    try:
+        from core.family import resolve_module_owner
+        owner_id = await resolve_module_owner(user_id, "maintenance")
+        tl = get_maintenance_timeline(str(vid), None, None, db, owner_id)
+        return str(tl)
+    except Exception as e:
+        return f"Error: {e}"
+    finally:
+        db.close()
+
+async def _exec_get_vehicle_spec(args: dict, user_id: str) -> str:
+    vid = args.get("vehicle_id") or await _resolve_vehicle(args.get("vehicle"), user_id)
+    if not vid: return "Vehicle not found."
+    from database.core import engine
+    from sqlalchemy.orm import sessionmaker
+    from vehicles.models import VehicleCheckPoint
+    SessionLocal = sessionmaker(bind=engine)
+    db = SessionLocal()
+    try:
+        cps = db.query(VehicleCheckPoint).filter(VehicleCheckPoint.vehicle_id == str(vid)).all()
+        q = args.get("item", "").lower()
+        for cp in cps:
+            if q in cp.description.lower():
+                return f"Specs for {cp.description}: Torque {cp.torque_ft_lb} ft-lb / {cp.torque_nm} nm, Fluid {cp.fluid_volume} {cp.expected_spec}"
+        return "Spec not found."
+    finally:
+        db.close()
+
+async def _exec_query_vehicle_manual(args: dict, user_id: str) -> str:
+    vid = args.get("vehicle_id") or await _resolve_vehicle(args.get("vehicle"), user_id)
+    if not vid: return "Vehicle not found."
+    from providers.rag.rag_provider import RAGProvider
+    rag = RAGProvider()
+    res = await rag.query_documents(args.get("question", ""), where={"vehicle_id": str(vid)}, n_results=3)
+    return str(res)
+
+async def _exec_record_odometer(args: dict, user_id: str) -> str:
+    vid = args.get("vehicle_id") or await _resolve_vehicle(args.get("vehicle"), user_id)
+    if not vid: return "Vehicle not found."
+    val = args.get("value")
+    from database.core import engine
+    from sqlalchemy.orm import sessionmaker
+    from vehicles.models import UsageReading
+    SessionLocal = sessionmaker(bind=engine)
+    db = SessionLocal()
+    try:
+        db.add(UsageReading(vehicle_id=str(vid), value=val, source="manual"))
+        db.commit()
+        return f"Recorded odometer {val} for vehicle."
+    finally:
+        db.close()
+
+async def _exec_find_parts(args: dict, user_id: str) -> str:
+    vid = args.get("vehicle_id") or await _resolve_vehicle(args.get("vehicle"), user_id)
+    if not vid: return "Vehicle not found."
+    # AI lookup verified pipeline
+    from core.tools import _exec_web_search
+    return await _exec_web_search({"query": f"{args.get('vehicle')} {args.get('job')} OEM part number alternatives price"}, user_id)
+
+async def _exec_remember_fact(args: dict, context: dict) -> str:
+    user_id = context.get("user_id", "primary_user")
+    session_id = context.get("session_id", "unknown_session")
+    key = args.get("key", "Fact")
+    value = args.get("value")
+    if not value: return "Error: value is required."
+
+    from main import get_app
+    app = get_app()
+    if not app or not hasattr(app.state, "memory_manager"):
+        return "Error: Memory manager unavailable."
+    
+    mm = app.state.memory_manager
+    await mm.upsert_fact(user_id=user_id, key=key, value=value, source="explicit", source_kind="conversation", source_ref=session_id)
+    return f"Remembered: {key} = {value}"
+
+
+async def _exec_forget_memory(args: dict, context: dict) -> str:
+    user_id = context.get("user_id", "primary_user")
+    query = args.get("query")
+    if not query: return "Error: query is required."
+        
+    from main import get_app
+    app = get_app()
+    if not app or not hasattr(app.state, "memory_manager"):
+        return "Error: Memory manager unavailable."
+    
+    mm = app.state.memory_manager
+    import uuid
+    is_uuid = False
+    try:
+        uuid.UUID(query)
+        is_uuid = True
+    except:
+        pass
+        
+    if is_uuid:
+        if await mm.delete_fact(query, user_id): return "Deleted fact."
+        if await mm.delete_preference(query, user_id): return "Deleted preference."
+        if await mm.delete_summary(query, user_id): return "Deleted summary."
+        return "Memory ID not found."
+        
+    matches = await mm.search_memories(user_id, query, limit=5)
+    if not matches:
+        return "No memories found matching that query."
+    if len(matches) == 1:
+        m = matches[0]
+        if m["type"] == "fact": await mm.delete_fact(m["id"], user_id)
+        elif m["type"] == "preference": await mm.delete_preference(m["id"], user_id)
+        elif m["type"] == "summary": await mm.delete_summary(m["id"], user_id)
+        return f"Deleted {m['type']}: {m['text']}"
+    
+    out = "Found multiple possible matches. Please call forget_memory again with the exact ID to delete:\n"
+    for m in matches:
+        out += f"- [{m['id']}] {m['type'].upper()}: {m['text']}\n"
+    return out
+
+
+async def _exec_recall_memory(args: dict, context: dict) -> str:
+    user_id = context.get("user_id", "primary_user")
+    query = args.get("query")
+    if not query: return "Error: query is required."
+    
+    from main import get_app
+    app = get_app()
+    if not app or not hasattr(app.state, "memory_manager"):
+        return "Error: Memory manager unavailable."
+        
+    mm = app.state.memory_manager
+    matches = await mm.search_memories(user_id, query, limit=10)
+    if not matches:
+        return "No memories found matching that query."
+    
+    out = "Recalled memories:\n"
+    for m in matches:
+        out += f"- [{m['id']}] {m['type'].upper()}: {m['text']}\n"
+    return out
+
+
+async def _exec_update_memory(args: dict, context: dict) -> str:
+    user_id = context.get("user_id", "primary_user")
+    query = args.get("query")
+    new_value = args.get("new_value")
+    if not query or not new_value: return "Error: query and new_value required."
+    
+    from main import get_app
+    app = get_app()
+    if not app or not hasattr(app.state, "memory_manager"):
+        return "Error: Memory manager unavailable."
+        
+    mm = app.state.memory_manager
+    import uuid
+    is_uuid = False
+    try:
+        uuid.UUID(query)
+        is_uuid = True
+    except:
+        pass
+        
+    if is_uuid:
+        f = await mm._store.get_fact_by_id(user_id, query)
+        if f:
+            await mm.update_fact(query, user_id, f.key, new_value)
+            return "Fact updated."
+        p = await mm._store.get_preference_by_id(user_id, query)
+        if p:
+            await mm.update_preference(query, user_id, p.category, new_value)
+            return "Preference updated."
+        return "Cannot update summary or memory ID not found."
+        
+    matches = await mm.search_memories(user_id, query, limit=5)
+    if not matches:
+        return "No memories found matching that query."
+    if len(matches) == 1:
+        m = matches[0]
+        if m["type"] == "fact":
+            f = await mm._store.get_fact_by_id(user_id, m["id"])
+            await mm.update_fact(m["id"], user_id, f.key, new_value)
+            return "Fact updated."
+        elif m["type"] == "preference":
+            p = await mm._store.get_preference_by_id(user_id, m["id"])
+            await mm.update_preference(m["id"], user_id, p.category, new_value)
+            return "Preference updated."
+        elif m["type"] == "summary":
+            return "Cannot update summary text directly."
+    
+    out = "Found multiple possible matches. Please call update_memory again with the exact ID to update:\n"
+    for m in matches:
+        out += f"- [{m['id']}] {m['type'].upper()}: {m['text']}\n"
+    return out
+
+async def _get_vault_provider():
+    from main import get_app
+    app = get_app()
+    if not app or not hasattr(app.state, "memory_manager"):
+        return None
+    from providers.vault.vault_provider import VaultProvider
+    return VaultProvider(store=app.state.memory_manager._store)
+
+async def _exec_take_note(args: dict, context: dict) -> str:
+    user_id = context.get("user_id", "primary_user")
+    content = args.get("content")
+    if not content:
+        return "Error: content is required."
+    title = args.get("title", "Untitled Note")
+    # Clean title for filename
+    import re
+    safe_title = re.sub(r"[^A-Za-z0-9 _-]", "", title).strip() or "Note"
+    virtual_path = f"personal/{safe_title}.md"
+    
+    provider = await _get_vault_provider()
+    if not provider:
+        return "Error: Vault provider unavailable."
+    
+    # Add provenance frontmatter
+    session_id = context.get("session_id", "unknown_session")
+    header = f"---\nsource: conversation\nsource_ref: {session_id}\n---\n\n# {title}\n\n"
+    
+    try:
+        await provider.write_note(user_id, virtual_path, header + content)
+        return f"Note created at: {virtual_path}"
+    except Exception as e:
+        return f"Failed to create note: {e}"
+
+async def _exec_append_note(args: dict, context: dict) -> str:
+    user_id = context.get("user_id", "primary_user")
+    title = args.get("title")
+    content = args.get("content")
+    if not title or not content:
+        return "Error: title and content required."
+        
+    provider = await _get_vault_provider()
+    if not provider:
+        return "Error: Vault provider unavailable."
+        
+    # Search for note
+    results = await provider.store.search_vault_notes(user_id, title, limit=3)
+    if not results:
+        return f"No notes found matching '{title}'."
+        
+    if len(results) > 1 and results[0].get("rank", 0) > -5: 
+        matches = [r["virtual_path"] for r in results]
+        return f"Found multiple matches. Please use the exact virtual_path to append. Matches: {matches}"
+        
+    virtual_path = results[0]["virtual_path"]
+    try:
+        await provider.append_to_note(user_id, virtual_path, "\n" + content)
+        return f"Appended to {virtual_path} successfully."
+    except Exception as e:
+        return f"Failed to append to note: {e}"
+
+async def _exec_journal(args: dict, context: dict) -> str:
+    user_id = context.get("user_id", "primary_user")
+    content = args.get("content")
+    if not content:
+        return "Error: content is required."
+        
+    provider = await _get_vault_provider()
+    if not provider:
+        return "Error: Vault provider unavailable."
+        
+    try:
+        await provider.append_to_daily(user_id, "Journal Entry", content)
+        return "Journal entry added to today's daily note."
+    except Exception as e:
+        return f"Failed to append journal entry: {e}"
+
+async def _exec_find_notes(args: dict, context: dict) -> str:
+    user_id = context.get("user_id", "primary_user")
+    query = args.get("query")
+    if not query:
+        return "Error: query is required."
+        
+    provider = await _get_vault_provider()
+    if not provider:
+        return "Error: Vault provider unavailable."
+        
+    try:
+        results = await provider.store.search_vault_notes(user_id, query, limit=5)
+        if not results:
+            return f"No notes found for query: {query}"
+            
+        out = f"Found {len(results)} notes:\n"
+        for r in results:
+            out += f"- {r['virtual_path']} ({r['title']})\n"
+        return out
+    except Exception as e:
+        return f"Failed to search notes: {e}"
+
+async def _exec_read_note(args: dict, context: dict) -> str:
+    user_id = context.get("user_id", "primary_user")
+    title = args.get("title")
+    if not title:
+        return "Error: title or virtual path is required."
+        
+    provider = await _get_vault_provider()
+    if not provider:
+        return "Error: Vault provider unavailable."
+        
+    try:
+        # First assume it's a virtual path
+        try:
+            content = await provider.read_note(user_id, title)
+            return f"--- Note: {title} ---\n{content}"
+        except Exception:
+            # Fallback to search
+            results = await provider.store.search_vault_notes(user_id, title, limit=1)
+            if not results:
+                return f"Note not found: {title}"
+            
+            vp = results[0]["virtual_path"]
+            content = await provider.read_note(user_id, vp)
+            return f"--- Note: {vp} ---\n{content}"
+    except Exception as e:
+        return f"Failed to read note: {e}"

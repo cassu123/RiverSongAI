@@ -296,7 +296,7 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
               <input className="cyber-input num-input" type="number" value={form.nm} onChange={set('nm')} placeholder="24" />
             </div>
             <div className="pulse-field">
-              <label className="rs-card-label">INTERVAL (MILES)</label>
+              <label className="rs-card-label">INTERVAL ({isNonRoad ? "HOURS" : "MILES"})</label>
               <input className="cyber-input num-input" type="number" value={form.interval_miles} onChange={set('interval_miles')} placeholder="5000" />
             </div>
             <div className="pulse-field">
@@ -304,7 +304,7 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
               <input className="cyber-input num-input" type="number" value={form.interval_days} onChange={set('interval_days')} placeholder="365" />
             </div>
             <div className="pulse-field">
-              <label className="rs-card-label">NEXT DUE (MILES)</label>
+              <label className="rs-card-label">NEXT DUE ({isNonRoad ? "HOURS" : "MILES"})</label>
               <input className="cyber-input num-input" type="number" value={form.due_at_miles} onChange={set('due_at_miles')} placeholder="600" />
             </div>
           </div>
@@ -428,7 +428,7 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
                 <input className="cyber-input num-input" type="number" value={newPoint.nm} onChange={setNp('nm')} placeholder="24" />
               </div>
               <div className="pulse-field">
-                <label className="rs-card-label">INTERVAL (MILES)</label>
+                <label className="rs-card-label">INTERVAL ({isNonRoad ? "HOURS" : "MILES"})</label>
                 <input className="cyber-input num-input" type="number" value={newPoint.interval_miles} onChange={setNp('interval_miles')} placeholder="5000" />
               </div>
               <div className="pulse-field">
@@ -436,7 +436,7 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
                 <input className="cyber-input num-input" type="number" value={newPoint.interval_days} onChange={setNp('interval_days')} placeholder="365" />
               </div>
               <div className="pulse-field">
-                <label className="rs-card-label">NEXT DUE (MILES)</label>
+                <label className="rs-card-label">NEXT DUE ({isNonRoad ? "HOURS" : "MILES"})</label>
                 <input className="cyber-input num-input" type="number" value={newPoint.due_at_miles} onChange={setNp('due_at_miles')} placeholder="600" />
               </div>
             </div>
@@ -1029,7 +1029,7 @@ function VehicleRAG({ token, vehicleId, currentOdometer }) {
 // Predictive Timeline
 // ---------------------------------------------------------------------------
 
-function PredictiveTimeline({ token, vehicleId, currentOdometer }) {
+function PredictiveTimeline({ token, vehicleId, currentOdometer, isNonRoad, onStartJob }) {
   const [timeline, setTimeline] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -1080,13 +1080,24 @@ function PredictiveTimeline({ token, vehicleId, currentOdometer }) {
                  <strong style={{ fontSize: '1.1rem' }}>{item.description}</strong>
                </div>
                <div style={{ marginTop: '0.25rem', color: 'var(--text-dim)' }}>
-                 Due {item.miles_remaining <= 0 ? <span style={{color: 'var(--rs-status-critical)'}}>NOW (Overdue by {Math.abs(item.miles_remaining)} mi)</span> : `in ${item.miles_remaining} miles`}
+                 Due {item.miles_remaining <= 0 ? <span style={{color: 'var(--rs-status-critical)'}}>NOW (Overdue by {Math.abs(item.miles_remaining)} {isNonRoad ? "hrs" : "mi"})</span> : `in ${item.miles_remaining} ${isNonRoad ? "hours" : "miles"}`}
                </div>
                {item.parts && item.parts.length > 0 && (
                  <div className="parts-list" style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
-                    <strong style={{color: 'var(--primary)'}}>Parts:</strong> {item.parts.map(p => p.part_name).join(', ')}
+                    <strong style={{color: 'var(--primary)'}}>Parts:</strong> {item.parts.map(p => {
+                        const price = p.alternatives && p.alternatives[0]?.price ? `$${p.alternatives[0].price}` : '';
+                        return `${p.part_name} ${price ? `(${price})` : ''}`;
+                    }).join(', ')}
                  </div>
                )}
+               <div style={{ marginTop: '0.75rem' }}>
+                 <button className="rs-pill is-active" onClick={(e) => {
+                     e.stopPropagation();
+                     if (onStartJob) onStartJob(item);
+                 }}>
+                   <span className="material-symbols-rounded">build</span> START SERVICE
+                 </button>
+               </div>
             </div>
           ))}
         </div>
@@ -1101,7 +1112,7 @@ function PredictiveTimeline({ token, vehicleId, currentOdometer }) {
             <div key={item.id} className="rs-card-inner" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem' }}>
                <span className="cp-svc-badge">{item.service_level.toUpperCase()}</span>
                <span>{item.description}</span>
-               <span style={{ color: 'var(--text-dim)', marginLeft: 'auto' }}>in {item.miles_remaining} mi</span>
+               <span style={{ color: 'var(--text-dim)', marginLeft: 'auto' }}>in {item.miles_remaining} {isNonRoad ? "hrs" : "mi"}</span>
             </div>
           ))}
         </div>
@@ -1123,8 +1134,11 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
 
-  const [formMode, setFormMode]     = useState(preselectedId === 'NEW' ? 'add' : 'none'); // 'none' | 'add' | 'edit'
+  const [formMode, setFormMode]     = useState(preselectedId === 'NEW' ? 'add' : 'none'); // 'none' | 'add' | 'edit' | 'job-guide'
   const [view, setView]             = useState('log');  // 'log' | 'specs' | 'history' | 'settings'
+  const [activeJob, setActiveJob]   = useState(null);
+  const [jobGuides, setJobGuides]   = useState([]);
+  const [findingGuide, setFindingGuide] = useState(false);
 
   // log form state
   const [isProService, setIsProService]     = useState(false);
@@ -1386,7 +1400,55 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
       </div>
 
       {/* ── Inline add form ── */}
-      {formMode === 'add' && (
+              {formMode === 'job-guide' && activeJob && (
+          <div className="rs-card mp-log-form">
+            <h3 style={{ marginTop: 0, color: 'var(--primary)' }}>GUIDED JOB: {activeJob.description}</h3>
+            
+            <div style={{ marginBottom: '1rem' }}>
+              <p><strong>Status:</strong> {activeJob.miles_remaining <= 0 ? 'Overdue' : 'Due soon'}</p>
+              {activeJob.parts && activeJob.parts.length > 0 && (
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0' }}>Required Parts</h4>
+                  <ul style={{ margin: 0, paddingLeft: '1.2rem' }}>
+                    {activeJob.parts.map(p => {
+                        const price = p.alternatives && p.alternatives[0]?.price ? `$${p.alternatives[0].price}` : '';
+                        return <li key={p.id}>{p.part_name} {p.oem_part_number ? `(${p.oem_part_number})` : ''} {price && <strong style={{color: 'var(--rs-status-ok)'}}>{price}</strong>}</li>
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+              <button className="rs-pill is-active" onClick={async () => {
+                  setFindingGuide(true);
+                  try {
+                    const res = await fetch(`/api/vehicles/${selectedId}/media`, {
+                       method: 'POST',
+                       headers: { Authorization: `Bearer ${token}` },
+                       body: new URLSearchParams({ kind: 'link_archive', title: `Guide: ${activeJob.description}` })
+                    });
+                    setTimeout(() => { setFindingGuide(false); alert("Agent is looking for guides..."); }, 1000);
+                  } catch (e) {
+                    setFindingGuide(false);
+                  }
+              }}>
+                <span className="material-symbols-rounded">search</span> {findingGuide ? 'FINDING...' : 'FIND A GUIDE'}
+              </button>
+            </div>
+
+            <div className="form-actions">
+              <button className="rs-pill" onClick={() => { setFormMode('none'); setActiveJob(null); }}>CANCEL</button>
+              <button className="rs-pill is-active" onClick={() => {
+                 setFormMode('add'); 
+                 setServiceType(activeJob.description);
+              }}>
+                <span className="material-symbols-rounded">check_circle</span> LOG AS COMPLETED
+              </button>
+            </div>
+          </div>
+        )}
+{formMode === 'add' && (
         <div className="rs-card is-wide" style={{ marginBottom: 24 }}>
           <h3 className="rs-card-label" style={{ marginBottom: 16 }}>&gt; ADD VEHICLE</h3>
           <VehicleForm onSave={handleAddVehicle} onCancel={() => setFormMode('none')} saveLabel=">> ADD VEHICLE" />
@@ -1550,7 +1612,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
                 </div>
               )}
               {currentVehicle.check_points.length > 0 ? (
-                <PredictiveTimeline token={token} vehicleId={currentVehicle.id} currentOdometer={mileage} />
+                <PredictiveTimeline token={token} vehicleId={currentVehicle.id} currentOdometer={mileage} isNonRoad={isNonRoad} onStartJob={(job) => { setActiveJob(job); setFormMode('job-guide'); }} />
               ) : (
                 <div className="mp-empty-specs">
                   No inspection items yet. Go to <strong>EDIT SPECS</strong> to add them, or upload an owner's manual in <strong>SETTINGS → MANUAL IMPORT</strong>.

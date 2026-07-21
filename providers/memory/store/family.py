@@ -327,6 +327,6 @@ class FamilyStoreMixin:
     def _sync_get_enabled_routines(self) -> list:
         conn = self._get_conn()
         rows = conn.execute(
-            "SELECT id,user_id,name,trigger,time,days,prompt,enabled,last_run,created_at,updated_at FROM routines WHERE enabled=1",
+            "SELECT * FROM routines WHERE enabled=1",
         ).fetchall()
         return [self._row_to_routine(r) for r in rows]

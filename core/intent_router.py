@@ -200,8 +200,23 @@ async def _handle_smart_home(transcript: str, user_id: str) -> str:
             )
 
         registry = get_device_registry()
-        resolved = registry.resolve(device_name)
+        resolved = await registry.resolve(device_name)
 
+        if resolved is None:
+            # Fallback: check if the ContextEngine knows where the user is
+            from main import get_app
+            app = get_app()
+            if app and hasattr(app.state, 'context_engine'):
+                ctx = app.state.context_engine
+                rooms = ctx.get_rooms()
+                # Find the single active room if there is exactly one
+                active_rooms = [name for name, r in rooms.items() if r.get('activity') == 'active']
+                if len(active_rooms) == 1:
+                    implied_name = f"{active_rooms[0].replace('_', ' ')} {device_name}"
+                    resolved = await registry.resolve(implied_name)
+                    if resolved:
+                        device_name = implied_name
+            
         if resolved is None:
             return (
                 f"I could not find a device called '{device_name}' in your registry. "

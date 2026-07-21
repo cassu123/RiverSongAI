@@ -101,6 +101,32 @@ class UsersStoreMixin:
             "force_password_change": bool(row[6]),
             "created_at": row[7]
         }
+        
+    async def get_all_users(self) -> list[dict]:
+        return await self._run(self._sync_get_all_users)
+
+    def _sync_get_all_users(self) -> list[dict]:
+        conn = self._get_conn()
+        cursor = conn.execute(
+            """
+            SELECT id, email, name, role, is_active, is_approved,
+                   force_password_change, created_at
+            FROM users
+            """
+        )
+        return [
+            {
+                "id": row[0],
+                "email": row[1],
+                "name": row[2],
+                "role": row[3],
+                "is_active": bool(row[4]),
+                "is_approved": bool(row[5]),
+                "force_password_change": bool(row[6]),
+                "created_at": row[7]
+            }
+            for row in cursor.fetchall()
+        ]
 
     async def get_user_by_id(self, user_id: str) -> Optional[dict]:
         return await self._run(self._sync_get_user_by_id, user_id)

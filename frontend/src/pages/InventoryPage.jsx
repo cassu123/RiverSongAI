@@ -322,10 +322,7 @@ export default function InventoryPage({ setAction }) {
               <div className="rs-card-inner">
                 <div className="rs-card-head">
                   <span className="rs-card-label">{(item.category || 'ASSET').toUpperCase()}</span>
-                  <div className="rs-status-strip" style={{ 
-                    background: item.quantity <= 0 ? 'rgba(248,113,113,0.1)' : item.quantity <= 2 ? 'rgba(250,204,21,0.1)' : 'rgba(74,222,128,0.1)',
-                    color: item.quantity <= 0 ? '#f87171' : item.quantity <= 2 ? '#facc15' : '#4ade80'
-                  }}>
+                  <div className="rs-status-strip" style={{ background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 900 }}>{item.quantity}</span>
                     <span style={{ fontSize: '0.6rem' }}>{(item.unit || 'UNIT').toUpperCase()}</span>
                   </div>

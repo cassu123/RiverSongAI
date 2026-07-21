@@ -115,7 +115,9 @@ class ScribeDaemon(BaseDaemon):
                                 user_id=user_id,
                                 key=f["key"],
                                 value=f["value"],
-                                source="scribe"
+                                source="scribe",
+                                source_kind="note",
+                                source_ref=vpath
                             )
                             facts_extracted += 1
 

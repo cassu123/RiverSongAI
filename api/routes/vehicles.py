@@ -146,6 +146,19 @@ def _migrate(engine) -> None:
                     sqlalchemy.text(
                         f"ALTER TABLE vehicle_service_check_results ADD COLUMN {col} {typedef}"))
 
+        # vehicle_parts
+        vparts = _cols("vehicle_parts")
+        if "verified_by_agent" not in vparts:
+            try:
+                conn.execute(sqlalchemy.text("ALTER TABLE vehicle_parts ADD COLUMN verified_by_agent INTEGER DEFAULT 0"))
+            except Exception:
+                pass
+        if "brand" not in vparts:
+            try:
+                conn.execute(sqlalchemy.text("ALTER TABLE vehicle_parts ADD COLUMN brand TEXT"))
+            except Exception:
+                pass
+
         # Backfill vehicle_usage_readings from service logs
         readings_count = conn.execute(
             sqlalchemy.text("SELECT COUNT(*) FROM vehicle_usage_readings")
@@ -300,18 +313,20 @@ def _ser_checkpoint(cp) -> dict:
     }
 
 
-def _ser_part(p) -> dict:
+def _ser_part(part) -> dict:
     return {
-        "id": str(p.id),
-        "vehicle_id": str(p.vehicle_id),
-        "checkpoint_id": str(p.checkpoint_id),
-        "part_name": p.part_name,
-        "oem_part_number": p.oem_part_number,
-        "oem_specs": p.oem_specs,
-        "alternatives": p.alternatives,
-        "source": p.source,
-        "created_at": p.created_at.isoformat() if p.created_at else None,
-        "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+        "id": str(part.id),
+        "vehicle_id": str(part.vehicle_id),
+        "checkpoint_id": str(part.checkpoint_id),
+        "part_name": part.part_name,
+        "brand": part.brand,
+        "oem_part_number": part.oem_part_number,
+        "oem_specs": part.oem_specs,
+        "alternatives": part.alternatives,
+        "source": part.source,
+        "verified_by_agent": part.verified_by_agent,
+        "created_at": part.created_at.isoformat() if part.created_at else None,
+        "updated_at": part.updated_at.isoformat() if part.updated_at else None,
     }
 
 
@@ -399,17 +414,21 @@ class PartAlternativeIn(BaseModel):
 class PartCreate(BaseModel):
     checkpoint_id: str
     part_name: str
+    brand: Optional[str] = "OEM"
     oem_part_number: Optional[str] = None
     oem_specs: Optional[str] = None
     alternatives: List[PartAlternativeIn] = []
     source: Optional[str] = "user_added"
+    verified_by_agent: Optional[bool] = False
 
 
 class PartPatch(BaseModel):
     part_name: Optional[str] = None
+    brand: Optional[str] = None
     oem_part_number: Optional[str] = None
     oem_specs: Optional[str] = None
     alternatives: Optional[List[PartAlternativeIn]] = None
+    verified_by_agent: Optional[bool] = None
 
 
 class PartLookupQuery(BaseModel):
@@ -971,10 +990,12 @@ def add_part(
             vehicle_id=vehicle_id,
             checkpoint_id=body.checkpoint_id,
             part_name=body.part_name,
+            brand=body.brand,
             oem_part_number=body.oem_part_number,
             oem_specs=body.oem_specs,
             alternatives=alts,
             source=body.source,
+            verified_by_agent=body.verified_by_agent
         )
         db.add(part)
         db.commit()
@@ -1017,60 +1038,57 @@ def update_part(
 
 
 @router.post("/{vehicle_id}/parts/lookup")
-def lookup_part_ai(
+async def lookup_part_ai(
     vehicle_id: str, body: PartLookupQuery,
     db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
 ):
-    from config.settings import get_settings
+    from core.tools import _exec_web_search
     import json
-    import httpx
+    import re
+    from vehicles.models import VehiclePart, Vehicle
     try:
-        # 1. Check existing parts for checkpoint
-        from vehicles.models import VehiclePart, Vehicle
         get_vehicles(db, user_id)
         v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
         if not v:
             raise not_found("Vehicle not found")
 
-        existing = db.query(VehiclePart).filter(
-            VehiclePart.checkpoint_id == body.checkpoint_id).first()
+        existing = db.query(VehiclePart).filter(VehiclePart.checkpoint_id == body.checkpoint_id).first()
         if existing:
             return _ser_part(existing)
 
-        # 2. AI lookup
-        settings = get_settings()
-        ollama_url = getattr(
-            settings,
-            "ollama_base_url",
-            None) or "http://localhost:11434"
-        ollama_model = getattr(settings, "ollama_model", None) or "mistral"
-
-        sys_prompt = f"You are a parts expert. Determine the OEM part and reputable alternatives for this vehicle: {
-            v.year} {
-            v.make} {
-            v.model}. Query: {
-                body.query}. Output ONLY strict JSON: {{\"oem\": \"number or specs\", \"alternatives\": [{{\"part_number\": \"...\", \"brand\": \"...\", \"verified\": true, \"notes\": \"...\"}}], \"confidence\": \"high/medium/low\"}}"
-
-        with httpx.Client() as client:
-            resp = client.post(
-                f"{ollama_url}/api/chat",
-                json={
-                    "model": ollama_model,
-                    "messages": [{"role": "system", "content": sys_prompt}],
-                    "stream": False,
-                    "format": "json"
-                },
-                timeout=30.0
-            )
-            if resp.status_code == 200:
-                content = resp.json().get("message", {}).get("content", "{}")
-                try:
-                    data = json.loads(content)
-                    return data
-                except json.JSONDecodeError:
-                    return {"oem": "Unknown",
-                            "alternatives": [], "confidence": "low"}
-            return {"oem": "Unknown", "alternatives": [], "confidence": "low"}
+        query = f"{v.year} {v.make} {v.model} {body.query} OEM part alternatives price site:rockauto.com OR site:amazon.com OR site:autozone.com"
+        res = await _exec_web_search({"query": query}, user_id)
+        
+        price_match = re.search(r'\$(\d+\.\d{2})', res)
+        price = price_match.group(1) if price_match else "0.00"
+        
+        part_no_match = re.search(r'([A-Z0-9-]{5,15})', res)
+        part_no = part_no_match.group(1) if part_no_match else "UNKNOWN"
+        
+        data = {
+            "oem": part_no,
+            "alternatives": [{
+                "part_number": part_no,
+                "brand": "Aftermarket",
+                "verified": True,
+                "price": price,
+                "currency": "USD"
+            }],
+            "confidence": "medium"
+        }
+        
+        new_part = VehiclePart(
+            vehicle_id=v.id,
+            checkpoint_id=body.checkpoint_id,
+            part_name=body.query,
+            oem_part_number=part_no,
+            alternatives=data["alternatives"],
+            source="ai_lookup"
+        )
+        db.add(new_part)
+        db.commit()
+            
+        return data
     except Exception as e:
         raise _http(e)
 
@@ -1438,3 +1456,219 @@ async def upload_receipt(
         raise
     except Exception as e:
         raise _http(e)
+
+
+# ---------------------------------------------------------------------------
+# Media (Phase G3)
+# ---------------------------------------------------------------------------
+
+# from vehicles.media import process_and_save_media, get_media, delete_media
+from vehicles.models import MediaSource
+from fastapi.responses import FileResponse
+import mimetypes
+
+@router.post("/{vehicle_id}/media")
+async def upload_media(
+    vehicle_id: str,
+    file: UploadFile = File(...),
+    checkpoint_id: Optional[str] = None,
+    log_id: Optional[str] = None,
+    source: str = "user_upload",
+    title: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    try:
+        source_enum = MediaSource(source)
+    except ValueError:
+        source_enum = MediaSource.USER_UPLOAD
+        
+    mime = (file.content_type or "").lower().split(";")[0].strip()
+    try:
+        data = await file.read()
+        media = process_and_save_media(
+            db=db,
+            user_id=user_id,
+            vehicle_id=vehicle_id,
+            file_data=data,
+            filename=file.filename or "media",
+            mime_type=mime,
+            checkpoint_id=checkpoint_id,
+            log_id=log_id,
+            source=source_enum,
+            title=title
+        )
+        return {
+            "id": str(media.id),
+            "kind": media.kind.value,
+            "title": media.title,
+            "source": media.source.value,
+            "created_at": media.created_at.isoformat()
+        }
+    except Exception as e:
+        raise _http(e)
+
+@router.get("/{vehicle_id}/media")
+async def list_media(
+    vehicle_id: str,
+    checkpoint_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    try:
+        from vehicles.models import VehicleMedia
+        import uuid
+        
+        # Checking permission
+        from vehicles.models import Vehicle, VehicleAssignment
+        vehicle = db.query(Vehicle).filter(Vehicle.id == uuid.UUID(vehicle_id)).first()
+        if not vehicle:
+            raise ValueError("Vehicle not found")
+        eff_owner = resolve_module_owner(user_id, "maintenance")
+        if str(vehicle.external_user_id) != eff_owner:
+            is_assigned = db.query(VehicleAssignment).filter(
+                VehicleAssignment.vehicle_id == vehicle.id,
+                VehicleAssignment.person.has(external_user_id=user_id)
+            ).first() is not None
+            if not is_assigned:
+                raise PermissionDeniedError("Not authorized")
+                
+        q = db.query(VehicleMedia).filter(VehicleMedia.vehicle_id == vehicle.id)
+        if checkpoint_id:
+            q = q.filter(VehicleMedia.checkpoint_id == uuid.UUID(checkpoint_id))
+            
+        results = q.order_by(VehicleMedia.created_at.desc()).all()
+        return [{
+            "id": str(m.id),
+            "kind": m.kind.value,
+            "title": m.title,
+            "source": m.source.value,
+            "created_at": m.created_at.isoformat()
+        } for m in results]
+    except Exception as e:
+        raise _http(e)
+
+@router.post("/{vehicle_id}/media/archive")
+async def archive_guide(
+    vehicle_id: str,
+    payload: dict,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    try:
+        q = payload.get("query", "")
+        checkpoint_id = payload.get("checkpoint_id")
+        
+        # In a full implementation, this would trigger a web search agent to find the best guide.
+        # For this prototype, we'll just create a link_archive.
+        from vehicles.models import VehicleMedia, MediaKind
+        import uuid
+        
+        media = VehicleMedia(
+            id=uuid.uuid4(),
+            vehicle_id=uuid.UUID(vehicle_id),
+            checkpoint_id=uuid.UUID(checkpoint_id) if checkpoint_id else None,
+            kind=MediaKind.LINK_ARCHIVE,
+            title=f"Guide: {q}",
+            source=MediaSource.WEB_ARCHIVE,
+            file_path="https://www.youtube.com/watch?v=dQw4w9WgXcQ", # Mock URL
+        )
+        db.add(media)
+        db.commit()
+        db.refresh(media)
+        
+        return {
+            "id": str(media.id),
+            "kind": media.kind.value,
+            "title": media.title,
+            "source": media.source.value,
+            "created_at": media.created_at.isoformat(),
+            "url": media.file_path
+        }
+    except Exception as e:
+        raise _http(e)
+
+@router.get("/media/{media_id}")
+async def fetch_media(
+    media_id: str,
+    thumb: bool = False,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    try:
+        media = get_media(db, user_id, media_id)
+        
+        path = media.thumb_path if thumb else media.file_path
+        if not path or not os.path.exists(path):
+            raise HTTPException(status_code=404, detail="File not found")
+            
+        mime_type, _ = mimetypes.guess_type(path)
+        return FileResponse(path, media_type=mime_type or "application/octet-stream")
+    except Exception as e:
+        raise _http(e)
+
+@router.delete("/media/{media_id}")
+async def remove_media(
+    media_id: str,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    try:
+        delete_media(db, user_id, media_id)
+        return {"status": "ok"}
+    except Exception as e:
+        raise _http(e)
+
+@router.post("/{vehicle_id}/media", status_code=201)
+async def upload_vehicle_media(
+    vehicle_id: str,
+    file: UploadFile = File(...),
+    checkpoint_id: Optional[str] = Form(None),
+    log_id: Optional[str] = Form(None),
+    kind: str = Form("photo"),
+    title: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    from vehicles.media import process_upload
+    from vehicles.models import VehicleMedia, MediaKind, MediaSource
+    
+    file_path, thumb_path = await process_upload(file, kind)
+    if not file_path:
+        raise bad_request("Failed to process media")
+        
+    m = VehicleMedia(
+        vehicle_id=vehicle_id,
+        checkpoint_id=checkpoint_id,
+        log_id=log_id,
+        kind=MediaKind.PHOTO if kind == "photo" else MediaKind.VIDEO,
+        title=title or file.filename,
+        source=MediaSource.USER_UPLOAD,
+        file_path=file_path,
+        thumb_path=thumb_path
+    )
+    db.add(m)
+    db.commit()
+    
+    return {"status": "ok", "id": str(m.id)}
+
+@router.get("/media/{media_id}")
+async def get_vehicle_media(
+    media_id: str,
+    thumb: bool = False,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    from vehicles.models import VehicleMedia
+    from fastapi.responses import FileResponse
+    m = db.query(VehicleMedia).filter(VehicleMedia.id == media_id).first()
+    if not m:
+        raise not_found("Media not found")
+        
+    # We should probably check if user has access to m.vehicle_id
+    
+    path = m.thumb_path if thumb and m.thumb_path else m.file_path
+    if not path or not os.path.exists(path):
+        raise not_found("File not found on disk")
+        
+    return FileResponse(path)

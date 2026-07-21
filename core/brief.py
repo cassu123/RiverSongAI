@@ -77,5 +77,6 @@ async def brief_sweep_func():
                 dedupe_key=dedupe,
                 severity="info",
                 title="Morning Briefing",
-                body=brief_text
+                message=brief_text,
+                speak=True
             ))

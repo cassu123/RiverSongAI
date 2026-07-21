@@ -47,6 +47,16 @@ Base = declarative_base()
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
+class MediaKind(str, PyEnum):
+    PHOTO = "photo"
+    VIDEO = "video"
+    DOCUMENT = "document"
+
+class MediaSource(str, PyEnum):
+    USER_UPLOAD = "user_upload"
+    SYSTEM_GENERATED = "system_generated"
+    URL = "url"
+
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -57,6 +67,9 @@ class VehicleType(PyEnum):
     MOTO  = "moto"
     TRUCK = "truck"
     ATV   = "atv"
+    MOWER = "mower"
+    TRACTOR = "tractor"
+    GENERATOR = "generator"
     OTHER = "other"
 
 
@@ -327,3 +340,17 @@ class ServiceCheckResult(Base):  # type: ignore
 
     log         = relationship("ServiceLog",       back_populates="check_results")
     check_point = relationship("VehicleCheckPoint", back_populates="check_results")
+
+class VehicleMedia(Base):
+    __tablename__ = "vehicle_media"
+    id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vehicle_id: Mapped[Any] = mapped_column(Uuid(as_uuid=True), ForeignKey("vehicles.id"), index=True, nullable=False)
+    checkpoint_id: Mapped[Optional[Any]] = mapped_column(Uuid(as_uuid=True), ForeignKey("vehicle_check_points.id"), nullable=True)
+    log_id: Mapped[Optional[Any]] = mapped_column(Uuid(as_uuid=True), ForeignKey("vehicle_service_logs.id"), nullable=True)
+    kind: Mapped[MediaKind] = mapped_column(Enum(MediaKind), default=MediaKind.PHOTO, nullable=False)
+    title: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    source: Mapped[MediaSource] = mapped_column(Enum(MediaSource), default=MediaSource.USER_UPLOAD, nullable=False)
+    source_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    file_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    thumb_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)

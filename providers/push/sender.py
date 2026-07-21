@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 async def send_push(subscription_json: str, title: str, body: str,
-                    icon: str = "/favicon.ico") -> bool:
+                    icon: str = "/favicon.ico", url: str = None) -> bool:
     """
     Send a single push notification.
     Returns True on success, False if subscription is gone (caller should delete).
@@ -28,7 +28,10 @@ async def send_push(subscription_json: str, title: str, body: str,
         )
 
     subscription = json.loads(subscription_json)
-    payload = json.dumps({"title": title, "body": body, "icon": icon})
+    payload_dict = {"title": title, "body": body, "icon": icon}
+    if url:
+        payload_dict["url"] = url
+    payload = json.dumps(payload_dict)
 
     try:
         await asyncio.get_running_loop().run_in_executor(

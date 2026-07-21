@@ -27,6 +27,22 @@ class FactCreate(BaseModel):
     key: str
     value: str
 
+class FactUpdate(BaseModel):
+    key: Optional[str] = None
+    value: Optional[str] = None
+
+class PreferenceCreate(BaseModel):
+    category: str
+    value: str
+    confidence: Optional[str] = "low"
+
+class PreferenceUpdate(BaseModel):
+    category: Optional[str] = None
+    value: Optional[str] = None
+
+class SummaryUpdate(BaseModel):
+    ttl_setting: Optional[str] = None
+
 
 def _mm(request: Request):
     mm = getattr(request.app.state, "memory_manager", None)
@@ -59,6 +75,8 @@ async def get_facts(request: Request,
             "key": f.key,
             "value": f.value,
             "source": f.source,
+            "source_kind": f.source_kind,
+            "source_ref": f.source_ref,
             "created_at": f.created_at.isoformat() if f.created_at else None,
             "updated_at": f.updated_at.isoformat() if f.updated_at else None,
         }
@@ -83,9 +101,32 @@ async def create_fact(body: FactCreate, request: Request,
             "key": created.key,
             "value": created.value,
             "source": created.source,
+            "source_kind": created.source_kind,
+            "source_ref": created.source_ref,
             "created_at": created.created_at.isoformat() if created.created_at else None,
             "updated_at": created.updated_at.isoformat() if created.updated_at else None,
         }
+    return {"status": "ok"}
+
+
+@router.patch("/facts/{fact_id}")
+async def update_fact(fact_id: str, body: FactUpdate, request: Request,
+                      authorization: Optional[str] = Header(default=None)):
+    user_id = await _require_user(authorization)
+    mm = _mm(request)
+    existing = await mm._store.get_fact_by_id(user_id, fact_id)
+    if not existing:
+        raise not_found("Fact not found")
+
+    new_key = body.key if body.key is not None else existing.key
+    new_value = body.value if body.value is not None else existing.value
+
+    if not new_key.strip() or not new_value.strip():
+        raise bad_request("key and value cannot be empty")
+
+    ok = await mm.update_fact(fact_id, user_id, new_key, new_value)
+    if not ok:
+        raise not_found("Fact not found or not modified")
     return {"status": "ok"}
 
 
@@ -111,10 +152,50 @@ async def get_preferences(request: Request,
             "category": p.category,
             "value": p.value,
             "confidence": p.confidence,
+            "source_kind": p.source_kind,
+            "source_ref": p.source_ref,
             "last_updated": p.last_updated.isoformat() if p.last_updated else None,
         }
         for p in prefs
     ]
+
+
+@router.post("/preferences", status_code=201)
+async def create_preference(body: PreferenceCreate, request: Request,
+                            authorization: Optional[str] = Header(default=None)):
+    user_id = await _require_user(authorization)
+    if not body.category.strip() or not body.value.strip():
+        raise bad_request("category and value are required")
+    mm = _mm(request)
+    await mm.upsert_preference(
+        user_id=user_id,
+        category=body.category,
+        value=body.value,
+        confidence=body.confidence or "low",
+        source_kind="manual"
+    )
+    return {"status": "ok"}
+
+
+@router.patch("/preferences/{pref_id}")
+async def update_preference(pref_id: str, body: PreferenceUpdate, request: Request,
+                            authorization: Optional[str] = Header(default=None)):
+    user_id = await _require_user(authorization)
+    mm = _mm(request)
+    existing = await mm._store.get_preference_by_id(user_id, pref_id)
+    if not existing:
+        raise not_found("Preference not found")
+
+    new_category = body.category if body.category is not None else existing.category
+    new_value = body.value if body.value is not None else existing.value
+
+    if not new_category.strip() or not new_value.strip():
+        raise bad_request("category and value cannot be empty")
+
+    ok = await mm.update_preference(pref_id, user_id, new_category, new_value)
+    if not ok:
+        raise not_found("Preference not found or not modified")
+    return {"status": "ok"}
 
 
 @router.delete("/preferences/{pref_id}", status_code=204)
@@ -189,10 +270,44 @@ async def get_summaries(request: Request, limit: int = 50,
             "ttl_setting": s.ttl_setting,
             "expires_at": s.expires_at.isoformat() if s.expires_at else None,
             "reference_count": s.reference_count,
+            "source_kind": s.source_kind,
+            "source_ref": s.source_ref,
             "created_at": s.created_at.isoformat() if s.created_at else None,
         }
         for s in summaries
     ]
+
+
+@router.patch("/summaries/{summary_id}/ttl")
+async def update_summary_ttl_setting(summary_id: str, body: SummaryUpdate, request: Request,
+                             authorization: Optional[str] = Header(default=None)):
+    user_id = await _require_user(authorization)
+    mm = _mm(request)
+    
+    if not body.ttl_setting:
+        raise bad_request("ttl_setting is required")
+        
+    from providers.memory.models import TTLOption
+    if not TTLOption.is_valid(body.ttl_setting):
+        raise bad_request(f"Invalid ttl_setting. Allowed: {TTLOption.ALL}")
+        
+    summary = await mm._store.get_summary_by_id(summary_id)
+    if not summary or summary.user_id != user_id:
+        raise not_found("Summary not found")
+        
+    from providers.memory.ttl_engine import calculate_expires_at
+    new_expires_at = calculate_expires_at(body.ttl_setting)
+    
+    # Update directly in sqlite_store
+    conn = mm._store._get_conn()
+    from core.utils import _dt_to_str
+    conn.execute(
+        "UPDATE conversation_summaries SET ttl_setting = ?, expires_at = ? WHERE id = ? AND user_id = ?",
+        (body.ttl_setting, _dt_to_str(new_expires_at), summary_id, user_id)
+    )
+    conn.commit()
+    
+    return {"status": "ok"}
 
 
 @router.delete("/summaries/{summary_id}", status_code=204)

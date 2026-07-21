@@ -16,6 +16,9 @@ Design (modeled on PentAGI's pkg/graphiti/client.go):
     never break the conversation loop or a daemon.
 
 Plan: docs/GRAPHITI_INTEGRATION_PLAN.md.
+
+NOTE (Phase M1): Graphiti is currently PAUSED to trim the memory architecture to 
+three core layers. The code remains in place but graphiti_enabled defaults to false.
 """
 
 from __future__ import annotations

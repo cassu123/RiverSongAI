@@ -243,6 +243,65 @@ class HomeAssistantClient:
         return all(results)
 
     # -------------------------------------------------------------------------
+    # WebSocket Event Subscription
+    # -------------------------------------------------------------------------
+    
+    async def start_listener(self) -> None:
+        """
+        Connect to HA websocket and listen for state_changed events.
+        Re-connects automatically on disconnect.
+        """
+        import websockets
+        import json
+        import asyncio
+        from core.home_events import get_home_bus
+        
+        ws_url = self._base.replace("http://", "ws://").replace("https://", "wss://") + "/websocket"
+        bus = get_home_bus()
+        msg_id = 1
+        
+        while True:
+            try:
+                async with websockets.connect(ws_url) as ws:
+                    auth_msg = await ws.recv()
+                    auth_data = json.loads(auth_msg)
+                    if auth_data.get("type") != "auth_required":
+                        logger.error("HA did not ask for auth.")
+                        return
+                    
+                    token = self._headers["Authorization"].replace("Bearer ", "")
+                    await ws.send(json.dumps({"type": "auth", "access_token": token}))
+                    auth_ok = await ws.recv()
+                    if json.loads(auth_ok).get("type") != "auth_ok":
+                        logger.error("HA WS auth failed.")
+                        return
+                        
+                    logger.info("HA WS connected. Subscribing to state_changed...")
+                    
+                    await ws.send(json.dumps({
+                        "id": msg_id,
+                        "type": "subscribe_events",
+                        "event_type": "state_changed"
+                    }))
+                    msg_id += 1
+                    
+                    async for message in ws:
+                        data = json.loads(message)
+                        if data.get("type") == "event":
+                            event = data.get("event", {})
+                            if event.get("event_type") == "state_changed":
+                                edata = event.get("data", {})
+                                eid = edata.get("entity_id")
+                                new_s = edata.get("new_state")
+                                old_s = edata.get("old_state")
+                                if eid and new_s:
+                                    # Fire without blocking
+                                    asyncio.create_task(bus.emit(eid, new_s, old_s or {}))
+            except Exception as e:
+                logger.error(f"HA WS disconnected: {e}. Reconnecting in 5s...")
+                await asyncio.sleep(5)
+
+    # -------------------------------------------------------------------------
     # Internal dispatch
     # -------------------------------------------------------------------------
 

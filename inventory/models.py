@@ -44,7 +44,7 @@ class AssetStatus(PyEnum):
     SERVICEABLE   = "Serviceable"
     UNSERVICEABLE = "Unserviceable"
     MISSING       = "Missing"
-    IN_USE        = "In-Use"
+    IN_USE        = "In-Use" # DEPRECATED
 
 
 class ItemCategory(PyEnum):

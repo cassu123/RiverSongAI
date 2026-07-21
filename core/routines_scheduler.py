@@ -66,8 +66,8 @@ async def _check_routines(app: FastAPI):
                 except Exception:
                     days = []
             if days:
-                today_str = now_local.strftime("%a")  # e.g., "Mon"
-                if not any(d.lower() == today_str.lower() for d in days):
+                today_str = now_local.strftime("%a").lower()  # e.g., "mon"
+                if not any(d.lower().startswith(today_str) for d in days):
                     continue
 
             # Check if it ran recently to avoid double-triggers in the same
@@ -137,7 +137,8 @@ async def _run_proactive_routine(app: FastAPI, user_id: str, routine: dict):
                 dedupe_key=f"routine_{routine['id']}_{datetime.now(zoneinfo.ZoneInfo('UTC')).strftime('%Y%m%d%H%M')}",
                 severity=routine.get("severity", "info"),
                 title=f"Routine: {routine['name']}",
-                body=final_text
+                message=final_text,
+                url="/routines"
             ))
 
         # Update last run time

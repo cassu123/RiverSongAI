@@ -464,6 +464,8 @@ export default function CulinaryPage({ setAction }) {
   const [grocery, setGrocery] = useState([])
   const [equipment, setEquipment] = useState([])
   const [banned, setBanned] = useState([])
+  const [newGroceryItem, setNewGroceryItem] = useState("")
+  const [mealPlan, setMealPlan] = useState([])
   const [proposals, setProposals] = useState([])
   const [activePrep, setActivePrep] = useState(null)
   
@@ -491,7 +493,14 @@ export default function CulinaryPage({ setAction }) {
     try {
       if (tab === 'library') setRecipes(await api.get('/recipes'))
       if (tab === 'stockroom') setStock(await api.get('/stockroom'))
-      if (tab === 'dinner') setProposals(await api.get('/dinner'))
+      if (tab === 'dinner') {
+        setProposals(await api.get('/dinner'));
+        const d = new Date();
+        const d2 = new Date(d);
+        d2.setDate(d.getDate() - d.getDay()); // Start of week (Sunday)
+        const start = d2.toISOString().split('T')[0];
+        setMealPlan(await api.get(`/meal-plan?start=${start}`));
+      }
       if (tab === 'prep') {
         try { setActivePrep(await api.get('/prep')) } catch { setActivePrep(null) }
       }
@@ -518,6 +527,12 @@ export default function CulinaryPage({ setAction }) {
         const msg = JSON.parse(event.data);
         if (['stockroom_updated', 'stockroom_deleted', 'stockroom_created'].includes(msg.event)) {
           if (activeTab === 'stockroom') fetchData('stockroom');
+        }
+        if (msg.event === 'grocery_updated') {
+          if (activeTab === 'grocery') fetchData('grocery');
+        }
+        if (msg.event === 'meal_plan_updated' || msg.event === 'dinner_updated') {
+          if (activeTab === 'dinner') fetchData('dinner');
         }
       } catch (e) {}
     };
@@ -656,40 +671,103 @@ export default function CulinaryPage({ setAction }) {
     </div>
   )
 
-  const renderDinner = () => (
-    <div className="rs-card-flow">
-       {proposals.length === 0 ? (
-         <div className="rs-card-meta" style={{ padding: 64, textAlign: 'center' }}>NO DINNER PROPOSALS ACTIVE.</div>
-       ) : proposals.map(p => (
-         <div key={p.id} className={`rs-card is-wide animate-page-in ${p.status === 'approved' ? 'is-elev' : ''}`} style={{ borderColor: p.status === 'approved' ? 'var(--primary)' : 'var(--md-outline)', animationDuration: '400ms' }}>
-            <div className="rs-card-inner">
-               <div className="rs-card-head">
-                  <span className="rs-card-label" style={{ color: p.status === 'approved' ? 'var(--primary)' : 'inherit', fontWeight: 900 }}>{p.status.toUpperCase()} PROPOSAL</span>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                     <span className="rs-pill" style={{ background: 'rgba(74,222,128,0.1)', color: '#4ade80' }}>{p.votes_yes.length} YES</span>
-                     <span className="rs-pill" style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171' }}>{p.votes_no.length} NO</span>
+  const renderDinner = () => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay()); // Sunday
+    
+    const week = [];
+    for (let i = 0; i < 7; i++) {
+       const cd = new Date(d);
+       cd.setDate(cd.getDate() + i);
+       const dateStr = cd.toISOString().split('T')[0];
+       const entry = mealPlan.find(m => m.plan_date.startsWith(dateStr));
+       week.push({ dayName: days[i], dateStr, entry });
+    }
+    
+    return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+       <div className="rs-card is-wide is-elev" style={{ border: '1px solid var(--primary)', background: 'color-mix(in srgb, var(--primary) 4%, var(--bg-base))' }}>
+          <div className="rs-card-inner">
+             <div className="rs-card-head">
+                <span className="rs-card-label" style={{ color: 'var(--primary)', fontWeight: 900 }}>THIS WEEK</span>
+                <button className="rs-pill" style={{ color: '#0071ce' }} onClick={async () => {
+                    await api.post('/meal-plan/shop-this-week');
+                    alert('Added missing ingredients to Procurement List!');
+                }}><span className="material-symbols-rounded">shopping_cart</span> SHOP THIS WEEK</button>
+                <button className="rs-pill" onClick={async () => {
+                    const entryIds = mealPlan.filter(e => e.status === 'planned' && e.recipe_id).map(e => e.id);
+                    if (entryIds.length === 0) return alert('No planned recipes this week.');
+                    const res = await api.post('/meal-plan/create-prep-session', { entry_ids: entryIds });
+                    if (res.status === 'ok') {
+                        fetchData('prep');
+                        setActiveTab('prep');
+                    }
+                }}><span className="material-symbols-rounded">kitchen</span> BATCH PREP</button>
+
+             </div>
+             
+             <div style={{ display: 'flex', gap: 12, marginTop: 24, overflowX: 'auto', paddingBottom: 16 }}>
+               {week.map(w => (
+                 <div key={w.dateStr} style={{ 
+                   flex: 1, minWidth: 120, 
+                   background: w.entry ? 'var(--md-surface-container-high)' : 'var(--md-surface-container)', 
+                   borderRadius: 16, padding: 16, border: '1px solid var(--md-outline-variant)' 
+                 }}>
+                   <div style={{ fontSize: '0.8rem', fontWeight: 800, opacity: 0.5, marginBottom: 8 }}>{w.dayName.toUpperCase()}</div>
+                   {w.entry ? (
+                     <>
+                       <div style={{ fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.3 }}>{w.entry.recipe_title || w.entry.label || 'Planned'}</div>
+                       <div style={{ fontSize: '0.7rem', color: w.entry.status === 'cooked' ? '#4ade80' : 'var(--primary)', marginTop: 8, fontWeight: 800 }}>{w.entry.status.toUpperCase()}</div>
+                     </>
+                   ) : (
+                     <div style={{ opacity: 0.3, fontSize: '0.8rem', fontStyle: 'italic' }}>Open</div>
+                   )}
+                 </div>
+               ))}
+             </div>
+          </div>
+       </div>
+       
+       {proposals.length > 0 && (
+         <div className="rs-card-head" style={{ marginTop: 16 }}>
+            <span className="rs-card-label" style={{ fontWeight: 900 }}>DINNER PROPOSALS</span>
+         </div>
+       )}
+       
+       <div className="rs-card-flow">
+          {proposals.map(p => (
+            <div key={p.id} className={`rs-card is-wide animate-page-in ${p.status === 'approved' ? 'is-elev' : ''}`} style={{ borderColor: p.status === 'approved' ? 'var(--primary)' : 'var(--md-outline)', animationDuration: '400ms' }}>
+               <div className="rs-card-inner">
+                  <div className="rs-card-head">
+                     <span className="rs-card-label" style={{ color: p.status === 'approved' ? 'var(--primary)' : 'inherit', fontWeight: 900 }}>{p.status.toUpperCase()} PROPOSAL</span>
+                     <div style={{ display: 'flex', gap: 8 }}>
+                        <span className="rs-pill" style={{ background: 'rgba(74,222,128,0.1)', color: '#4ade80' }}>{p.votes_yes.length} YES</span>
+                        <span className="rs-pill" style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171' }}>{p.votes_no.length} NO</span>
+                     </div>
+                  </div>
+                  <div className="rs-card-value" style={{ fontSize: '1.5rem', marginBottom: 20 }}>{p.recipe?.title}</div>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                     <button className="rs-btn-primary" style={{ flex: 1 }} onClick={async () => {
+                        await api.post(`/dinner/${p.id}/vote`, { vote: 'yes' });
+                        fetchData('dinner');
+                     }}>APPROVE</button>
+                     <button className="rs-pill" style={{ flex: 1, color: 'var(--md-error)' }} onClick={async () => {
+                        await api.post(`/dinner/${p.id}/vote`, { vote: 'no' });
+                        fetchData('dinner');
+                     }}>VETO</button>
+                     <button className="rs-pill" onClick={async () => {
+                        await api.delete(`/dinner/${p.id}`);
+                        fetchData('dinner');
+                     }}><span className="material-symbols-rounded">close</span></button>
                   </div>
                </div>
-               <div className="rs-card-value" style={{ fontSize: '1.5rem', marginBottom: 20 }}>{p.recipe?.title}</div>
-               <div style={{ display: 'flex', gap: 12 }}>
-                  <button className="rs-btn-primary" style={{ flex: 1 }} onClick={async () => {
-                     await api.post(`/dinner/${p.id}/vote`, { vote: 'yes' });
-                     fetchData('dinner');
-                  }}>APPROVE</button>
-                  <button className="rs-pill" style={{ flex: 1, color: 'var(--md-error)' }} onClick={async () => {
-                     await api.post(`/dinner/${p.id}/vote`, { vote: 'no' });
-                     fetchData('dinner');
-                  }}>VETO</button>
-                  <button className="rs-pill" onClick={async () => {
-                     await api.delete(`/dinner/${p.id}`);
-                     fetchData('dinner');
-                  }}><span className="material-symbols-rounded">close</span></button>
-               </div>
             </div>
-         </div>
-       ))}
+          ))}
+       </div>
     </div>
-  )
+    )
+  }
 
   const renderPrep = () => (
     <div className="rs-card-flow">
@@ -794,28 +872,7 @@ export default function CulinaryPage({ setAction }) {
           {activeTab === 'stockroom' && renderStockroom()}
           {activeTab === 'dinner' && renderDinner()}
           {activeTab === 'prep' && renderPrep()}
-          {activeTab === 'grocery' && (
-             <div className="rs-card-flow">
-               <div className="rs-card is-wide is-elev animate-page-in" style={{ border: '1px solid var(--md-error)', background: 'color-mix(in srgb, var(--md-error) 4%, var(--bg-base))', animationDuration: '400ms' }}>
-                  <div className="rs-card-inner">
-                    <div className="rs-card-head">
-                       <span className="rs-card-label" style={{ color: 'var(--md-error)', fontWeight: 900 }}>PROCUREMENT REQUIRED</span>
-                       <span className="material-symbols-rounded" style={{ color: 'var(--md-error)' }}>shopping_cart</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 24 }}>
-                       {grocery.length === 0 ? (
-                         <div className="rs-card-meta">All sectors fully provisioned.</div>
-                       ) : grocery.map((it, idx) => (
-                         <div key={idx} className="rs-pill" style={{ justifyContent: 'flex-start', background: 'rgba(0,0,0,0.2)' }}>
-                           <span style={{ flex: 1, fontWeight: 700 }}>{it.name}</span>
-                           <span className="rs-card-label" style={{ fontSize: '0.6rem', color: 'var(--md-error)' }}>CRITICAL</span>
-                         </div>
-                       ))}
-                    </div>
-                  </div>
-               </div>
-             </div>
-          )}
+          {activeTab === 'grocery' && renderGrocery()}
           {activeTab === 'equipment' && (
              <div className="rs-card-flow">
                {equipment.map((eq, i) => (

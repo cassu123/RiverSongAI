@@ -32,6 +32,8 @@ class ProactiveItem:
     severity: str = "info"         # info | warning | critical
     key: str = ""                  # dedupe key within kind (e.g. alert id, unit id)
     user_id: Optional[str] = None  # target one user; None → all admins
+    url: Optional[str] = None      # deep-link url
+    speak: bool = False            # R5: Whether to deliver via TTS
     ts: float = field(default_factory=time.time)
 
 class DeliveryRouter:
@@ -189,6 +191,38 @@ class DeliveryRouter:
     async def _deliver(self, ev: ProactiveItem) -> None:
         await self._deliver_ws(ev)
         await self._deliver_push(ev)
+        await self._deliver_tts(ev)
+
+    async def _deliver_tts(self, ev: ProactiveItem) -> None:
+        if not ev.speak and ev.severity != "critical":
+            return
+            
+        try:
+            from main import get_app
+            app = get_app()
+            if not app:
+                return
+            store = app.state.memory_manager._store
+            
+            # For Phase R5 seam: pick a target device (freshest activity for now)
+            # In future, uses user_presence table.
+            device = await store._fetch_one(
+                "SELECT id, room FROM devices WHERE user_id = ? AND json_extract(capabilities, '$.tts') = true ORDER BY last_seen DESC LIMIT 1",
+                (ev.user_id,)
+            )
+            
+            if not device:
+                # No TTS capable device found
+                return
+                
+            # Synthesize audio via warm TTS provider pool
+            # For now, this is a seam. Chat plan phase 1 provides TTS.
+            logger.info("R5 Seam: Sending TTS to device %s (room %s)", device["id"], device["room"])
+            
+            # If we had a live TTS socket for this device, we'd send it there
+            
+        except Exception as e:
+            logger.error("Failed TTS delivery: %s", e)
 
     async def _deliver_ws(self, ev: ProactiveItem) -> int:
         try:
@@ -233,7 +267,7 @@ class DeliveryRouter:
             title = ev.title or "River Song Alert"
             
             if ev.user_id:
-                await notify_user(store, ev.user_id, title=title, body=ev.message, priority="high" if ev.severity == "critical" else "normal")
+                await notify_user(store, ev.user_id, title=title, body=ev.message, priority="high" if ev.severity == "critical" else "normal", url=ev.url)
             else:
                 await notify_admins(store, title=title, body=ev.message, priority="high" if ev.severity == "critical" else "normal")
         except Exception as e:

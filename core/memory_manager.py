@@ -159,33 +159,44 @@ class MemoryManager:
     async def get_context_for_prompt(
             self, user_id: str, query_text: str) -> str:
         """
-        Retrieves relevant context using semantic search, augmented by MemGPT long-term recall.
+        Retrieves relevant context using semantic search, augmented by core SQLite results.
         """
         try:
+            mem_settings = await self._store.get_memory_settings(user_id)
+            
             # 1. Local Semantic results (ChromaDB)
             semantic_results = await self._vector_store.search(  # type: ignore
                 query_text,
-                n_results=8,
+                n_results=6,
                 where={"user_id": user_id}
             )
 
-            # 2. Archival Recall (MemGPT)
-            from providers.memory import memgpt_provider
-            memgpt_results = await memgpt_provider.recall(user_id, query_text)
-
-            # 3. Core SQLite results
+            # 2. Core SQLite results
             facts = await self._store.get_facts(user_id)
             prefs = await self._store.get_preferences(user_id)
+            
+            recent_summaries = []
+            if mem_settings.summaries_enabled:
+                recent_summaries = await self._store.get_recent_summaries(
+                    user_id,
+                    limit=self._settings.memory_max_summaries_in_context,
+                )
 
             parts: list[str] = []
+
+            # Extend TTL for semantic summary hits
+            if semantic_results and mem_settings.auto_extend:
+                for r in semantic_results:
+                    if r.get("metadata", {}).get("type") == "summary":
+                        summary_id = r["id"]
+                        summary = await self._store.get_summary_by_id(summary_id)
+                        if summary:
+                            new_expiry = extend_ttl(summary, mem_settings.default_ttl)
+                            await self._store.update_summary_ttl(summary.id, new_expiry)
 
             if semantic_results:
                 lines = [f"  - {r['text']}" for r in semantic_results]
                 parts.append("RELEVANT MEMORIES (Local):\n" + "\n".join(lines))
-
-            if memgpt_results:
-                lines = [f"  - {text}" for text in memgpt_results]
-                parts.append("LONG-TERM ARCHIVAL RECALL:\n" + "\n".join(lines))
 
             if facts:
                 lines = [f"  - {f.key}: {f.value}" for f in facts]
@@ -196,6 +207,25 @@ class MemoryManager:
             if prefs:
                 lines = [f"  - {p.category}: {p.value}" for p in prefs]
                 parts.append("USER PREFERENCES:\n" + "\n".join(lines))
+                
+            if recent_summaries:
+                lines = []
+                for s in recent_summaries:
+                    date_str = (
+                        s.created_at.strftime("%Y-%m-%d")
+                        if s.created_at
+                        else "unknown date"
+                    )
+                    lines.append(f"  [{date_str}] {s.summary}")
+                    
+                    if mem_settings.auto_extend:
+                        new_expiry = extend_ttl(s, mem_settings.default_ttl)
+                        await self._store.update_summary_ttl(s.id, new_expiry)
+
+                parts.append(
+                    "RECENT CONVERSATION SUMMARIES (most recent first):\n"
+                    + "\n".join(lines)
+                )
 
             if not parts:
                 return ""
@@ -211,6 +241,31 @@ class MemoryManager:
                 "Semantic search failed: %s. Falling back to SQLite only.", exc)
             return await self.build_context_block(user_id, query_text=None)
 
+    async def search_memories(self, user_id: str, query: str, limit: int = 5) -> list[dict]:
+        """Search across facts, preferences, and summaries using vector store."""
+        if not self._settings.semantic_memory_enabled or not self._vector_store:
+            return []
+            
+        results = await self._vector_store.search(query, n_results=limit, where={"user_id": user_id})
+        
+        matches = []
+        for res in results:
+            item_type = res["metadata"].get("type")
+            item_id = res["id"]
+            
+            # Fetch full from SQLite
+            if item_type == "fact":
+                f = await self._store.get_fact_by_id(user_id, item_id)
+                if f: matches.append({"id": f.id, "type": "fact", "text": f"{f.key}: {f.value}"})
+            elif item_type == "preference":
+                p = await self._store.get_preference_by_id(user_id, item_id)
+                if p: matches.append({"id": p.id, "type": "preference", "text": f"{p.category}: {p.value}"})
+            elif item_type == "summary":
+                s = await self._store.get_summary_by_id(item_id)
+                if s and s.user_id == user_id: 
+                    matches.append({"id": s.id, "type": "summary", "text": s.summary})
+        return matches
+
     # =========================================================================
     # Facts
     # =========================================================================
@@ -221,6 +276,8 @@ class MemoryManager:
         key: str,
         value: str,
         source: str = "explicit",
+        source_kind: str = "conversation",
+        source_ref: Optional[str] = None,
     ) -> None:
         """
         Store or update a user fact.
@@ -230,14 +287,20 @@ class MemoryManager:
             key:     Short slug (e.g., "name", "job", "pet_dog_name").
             value:   Plain text value.
             source:  "explicit" (user stated) or "inferred" (River Song concluded).
+            source_kind: "conversation" | "note" | "manual" | "distiller" | "habit_inference"
+            source_ref: Session ID, note path, etc.
         """
-        fact_id = str(uuid.uuid4())
+        existing = await self._store.get_fact_by_key(user_id, key.lower().strip())
+        fact_id = existing.id if existing else str(uuid.uuid4())
+        
         fact = Fact(
             id=fact_id,
             user_id=user_id,
             key=key.lower().strip(),
             value=value.strip(),
             source=source,
+            source_kind=source_kind,
+            source_ref=source_ref,
         )
         await self._store.upsert_fact(fact)
         logger.debug(
@@ -254,9 +317,21 @@ class MemoryManager:
             )
 
     async def delete_fact(self, fact_id: str, user_id: str) -> bool:
-        return await self._store.delete_fact(fact_id, user_id)
-        # Note: In a full implementation, we should also delete from Chroma.
-        # But instructions only specify upsert.
+        deleted = await self._store.delete_fact(fact_id, user_id)
+        if deleted and self._settings.semantic_memory_enabled and self._vector_store:
+            await self._vector_store.delete(fact_id)
+        return deleted
+
+    async def update_fact(self, fact_id: str, user_id: str, key: str, value: str) -> bool:
+        updated = await self._store.update_fact(fact_id, user_id, key, value)
+        if updated and self._settings.semantic_memory_enabled and self._vector_store:
+            fact_text = f"{key}: {value}"
+            await self._vector_store.upsert(
+                id=fact_id,
+                text=fact_text,
+                metadata={"type": "fact", "user_id": user_id}
+            )
+        return updated
 
     async def get_facts(self, user_id: str) -> list[Fact]:
         return await self._store.get_facts(user_id)
@@ -266,7 +341,10 @@ class MemoryManager:
     # =========================================================================
 
     async def delete_preference(self, pref_id: str, user_id: str) -> bool:
-        return await self._store.delete_preference(pref_id, user_id)
+        deleted = await self._store.delete_preference(pref_id, user_id)
+        if deleted and self._settings.semantic_memory_enabled and self._vector_store:
+            await self._vector_store.delete(pref_id)
+        return deleted
 
     async def upsert_preference(
         self,
@@ -274,6 +352,8 @@ class MemoryManager:
         category: str,
         value: str,
         confidence: str = "low",
+        source_kind: str = "conversation",
+        source_ref: Optional[str] = None,
     ) -> None:
         """
         Store or update an inferred user preference.
@@ -283,14 +363,20 @@ class MemoryManager:
             category:   Slug (e.g., "tone", "verbosity", "wake_time").
             value:      JSON-encoded string or plain text.
             confidence: "low" | "medium" | "high"
+            source_kind: "conversation" | "note" | "manual" | "distiller" | "habit_inference"
+            source_ref: Session ID, note path, etc.
         """
-        pref_id = str(uuid.uuid4())
+        existing = await self._store.get_preference_by_category_and_value(user_id, category.lower().strip(), value)
+        pref_id = existing.id if existing else str(uuid.uuid4())
+
         pref = Preference(
             id=pref_id,
             user_id=user_id,
             category=category.lower().strip(),
             value=value,
             confidence=confidence,
+            source_kind=source_kind,
+            source_ref=source_ref,
         )
         await self._store.upsert_preference(pref)
         logger.debug(
@@ -306,6 +392,17 @@ class MemoryManager:
                 metadata={"type": "preference", "user_id": user_id}
             )
 
+    async def update_preference(self, pref_id: str, user_id: str, category: str, value: str) -> bool:
+        updated = await self._store.update_preference(pref_id, user_id, category, value)
+        if updated and self._settings.semantic_memory_enabled and self._vector_store:
+            pref_text = f"Preference - {category}: {value}"
+            await self._vector_store.upsert(
+                id=pref_id,
+                text=pref_text,
+                metadata={"type": "preference", "user_id": user_id}
+            )
+        return updated
+
     async def get_preferences(self, user_id: str) -> list[Preference]:
         return await self._store.get_preferences(user_id)
 
@@ -320,11 +417,13 @@ class MemoryManager:
         user_id: str,
         pattern: str,
         confidence: str = "low",
+        kind: str = "habit",
+        payload: Optional[str] = None
     ) -> None:
         """
         Store an inferred preference for later human approval.
         """
-        await self._store.save_pending_habit(user_id, pattern, confidence)
+        await self._store.save_pending_habit(user_id, pattern, confidence, kind, payload)
         logger.debug("Pending habit recorded (user=%s).", user_id)
 
     # =========================================================================
@@ -332,13 +431,18 @@ class MemoryManager:
     # =========================================================================
 
     async def delete_summary(self, summary_id: str, user_id: str) -> bool:
-        return await self._store.delete_summary(summary_id, user_id)
+        deleted = await self._store.delete_summary(summary_id, user_id)
+        if deleted and self._settings.semantic_memory_enabled and self._vector_store:
+            await self._vector_store.delete(summary_id)
+        return deleted
 
     async def record_summary(
         self,
         user_id: str,
         summary_text: str,
         ttl_setting: Optional[str] = None,
+        source_kind: str = "conversation",
+        source_ref: Optional[str] = None,
     ) -> None:
         """
         Persist a conversation summary at session end.
@@ -348,6 +452,8 @@ class MemoryManager:
             summary_text: 2-3 sentence summary of the conversation.
             ttl_setting:  Override the user's default TTL for this summary.
                           None uses the user's current default_ttl setting.
+            source_kind: "conversation" | "note" | "manual" | "distiller" | "habit_inference"
+            source_ref: Session ID, note path, etc.
 
         Raises:
             ValueError: If ttl_setting is provided but not a valid TTLOption.
@@ -372,8 +478,20 @@ class MemoryManager:
             summary=summary_text.strip(),
             ttl_setting=effective_ttl,
             expires_at=expires_at,
+            source_kind=source_kind,
+            source_ref=source_ref,
         )
         await self._store.save_summary(summary)
+        
+        if self._settings.semantic_memory_enabled and self._vector_store:
+            await self._vector_store.upsert(
+                id=summary.id,
+                text=summary.summary,
+                metadata={
+                    "type": "summary",
+                    "user_id": user_id,
+                }
+            )
         logger.info(
             "Summary recorded (user=%s, ttl=%s, expires=%s).",
             user_id,
@@ -412,9 +530,12 @@ class MemoryManager:
         Returns:
             Number of rows deleted.
         """
-        deleted = await self._store.delete_expired_summaries(user_id)
-        if deleted:
+        deleted_ids = await self._store.delete_expired_summaries(user_id)
+        if deleted_ids:
+            if self._settings.semantic_memory_enabled and self._vector_store:
+                for d_id in deleted_ids:
+                    await self._vector_store.delete(d_id)
             logger.info(
-                "Cleaned up %d expired summary(s) for user=%s.", deleted, user_id
+                "Cleaned up %d expired summary(s) for user=%s.", len(deleted_ids), user_id
             )
-        return deleted
+        return len(deleted_ids)

@@ -132,3 +132,16 @@ class VectorStore:
         except Exception as exc:
             logger.warning("ChromaDB search failed: %s", exc)
             return []
+
+    async def delete(self, id: str) -> None:
+        """
+        Delete a vector by its id from ChromaDB.
+        """
+        if not self._enabled or self._collection is None:
+            return
+            
+        try:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, lambda: self._collection.delete(ids=[id]))
+        except Exception as exc:
+            logger.warning("ChromaDB delete failed for id %s: %s", id, exc)

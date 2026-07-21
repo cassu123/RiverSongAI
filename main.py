@@ -235,6 +235,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await sweep_messages(app)
     register_sweep("distiller", 3600, _distiller_sweep)
     
+    async def _ttl_sweep():
+        users = await app.state.store.get_all_users()
+        for user in users:
+            await app.state.memory_manager.cleanup_expired(str(user["id"]))
+    register_sweep("memory_ttl", 3600, _ttl_sweep)
+    
     register_sweep("weather", 900, weather_sweep_func)
     register_sweep("briefings", 900, brief_sweep_func)
     
@@ -244,6 +250,38 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from core.inventory_sweep import inventory_sweep_func
     register_sweep("inventory", 86400, inventory_sweep_func)
     
+    from core.kitchen_sweep import kitchen_sweep_func
+    register_sweep("kitchen", 3600, kitchen_sweep_func)
+
+    from providers.smart_home.sync import sync_ha_entities
+    async def ha_sync_sweep():
+        await sync_ha_entities()
+    register_sweep("ha_sync", 3600, ha_sync_sweep)
+    
+    # Run HA sync once on startup
+    asyncio.create_task(sync_ha_entities())
+    
+    # Start HA WebSocket Listener
+    if settings.home_assistant_url and settings.home_assistant_token:
+        from providers.smart_home.home_assistant import HomeAssistantClient
+        ha_ws_client = HomeAssistantClient(
+            base_url=settings.home_assistant_url,
+            token=settings.home_assistant_token
+        )
+        app.state.ha_ws_client = ha_ws_client
+        app.state.ha_ws_task = asyncio.create_task(ha_ws_client.start_listener())
+        
+        # Bridge events to frontend WS and ContextEngine
+        from core.home_events import get_home_bus
+        bus = get_home_bus()
+        
+        async def on_home_event(entity_id: str, new_state: dict, old_state: dict):
+            # 1. Update Context Engine
+            ctx = app.state.context_engine
+            await ctx.update_from_ha_sensor(entity_id, new_state.get("state", ""), new_state.get("attributes", {}))
+            
+        bus.subscribe(on_home_event)
+        
     await start_sweeps(app)
 
     # CHRONOS: Start vault watcher
@@ -255,7 +293,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # CHRONOS: Stop vault watcher
     from providers.vault.vault_provider import stop_vault_watcher
     stop_vault_watcher()
+    
+    if hasattr(app.state, "ha_ws_task"):
+        app.state.ha_ws_task.cancel()
 
+    logger.info("Application shutting down...")
+    
     # Stop any running fleet device simulators
     try:
         from core.fleet_simulator import stop_all as _stop_sims

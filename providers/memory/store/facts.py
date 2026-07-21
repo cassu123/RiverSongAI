@@ -47,11 +47,13 @@ class FactsStoreMixin:
         now = _now_str()
         conn.execute(
             """
-            INSERT INTO facts (id, user_id, key, value, source, created_at, updated_at)
-            VALUES (:id, :user_id, :key, :value, :source, :created_at, :updated_at)
+            INSERT INTO facts (id, user_id, key, value, source, source_kind, source_ref, created_at, updated_at)
+            VALUES (:id, :user_id, :key, :value, :source, :source_kind, :source_ref, :created_at, :updated_at)
             ON CONFLICT(user_id, key) DO UPDATE SET
                 value      = excluded.value,
                 source     = excluded.source,
+                source_kind = excluded.source_kind,
+                source_ref = excluded.source_ref,
                 updated_at = excluded.updated_at
             """,
             {
@@ -60,6 +62,8 @@ class FactsStoreMixin:
                 "key": fact.key,
                 "value": fact.value,
                 "source": fact.source,
+                "source_kind": fact.source_kind,
+                "source_ref": fact.source_ref,
                 "created_at": _dt_to_str(fact.created_at) or now,
                 "updated_at": now,
             },
@@ -82,11 +86,76 @@ class FactsStoreMixin:
                 key=r["key"],
                 value=r["value"],
                 source=r["source"],
+                source_kind=r["source_kind"],
+                source_ref=r["source_ref"],
                 created_at=_str_to_dt(r["created_at"]),  # type: ignore
                 updated_at=_str_to_dt(r["updated_at"]),  # type: ignore
             )
             for r in rows
         ]
+
+    async def get_fact_by_key(self, user_id: str, key: str) -> Optional[Fact]:
+        return await self._run(self._sync_get_fact_by_key, user_id, key)
+
+    def _sync_get_fact_by_key(self, user_id: str, key: str) -> Optional[Fact]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT * FROM facts WHERE user_id = ? AND key = ?",
+            (user_id, key.lower().strip()),
+        ).fetchone()
+        if not row:
+            return None
+        return Fact(
+            id=row["id"],
+            user_id=row["user_id"],
+            key=row["key"],
+            value=row["value"],
+            source=row["source"],
+            source_kind=row["source_kind"],
+            source_ref=row["source_ref"],
+            created_at=_str_to_dt(row["created_at"]),  # type: ignore
+            updated_at=_str_to_dt(row["updated_at"]),  # type: ignore
+        )
+
+    async def get_fact_by_id(self, user_id: str, fact_id: str) -> Optional[Fact]:
+        return await self._run(self._sync_get_fact_by_id, user_id, fact_id)
+
+    def _sync_get_fact_by_id(self, user_id: str, fact_id: str) -> Optional[Fact]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT * FROM facts WHERE user_id = ? AND id = ?",
+            (user_id, fact_id),
+        ).fetchone()
+        if not row:
+            return None
+        return Fact(
+            id=row["id"],
+            user_id=row["user_id"],
+            key=row["key"],
+            value=row["value"],
+            source=row["source"],
+            source_kind=row["source_kind"],
+            source_ref=row["source_ref"],
+            created_at=_str_to_dt(row["created_at"]),  # type: ignore
+            updated_at=_str_to_dt(row["updated_at"]),  # type: ignore
+        )
+
+    async def update_fact(self, fact_id: str, user_id: str, key: str, value: str) -> bool:
+        return await self._run(self._sync_update_fact, fact_id, user_id, key, value)
+        
+    def _sync_update_fact(self, fact_id: str, user_id: str, key: str, value: str) -> bool:
+        conn = self._get_conn()
+        now = _now_str()
+        res = conn.execute(
+            """
+            UPDATE facts 
+            SET key = ?, value = ?, updated_at = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (key.lower().strip(), value.strip(), now, fact_id, user_id)
+        )
+        conn.commit()
+        return res.rowcount > 0
 
     async def delete_fact(self, fact_id: str, user_id: str) -> bool:
         return await self._run(self._sync_delete_fact, fact_id, user_id)
@@ -115,10 +184,12 @@ class FactsStoreMixin:
         now = _now_str()
         conn.execute(
             """
-            INSERT INTO preferences (id, user_id, category, value, confidence, last_updated)
-            VALUES (:id, :user_id, :category, :value, :confidence, :last_updated)
+            INSERT INTO preferences (id, user_id, category, value, confidence, source_kind, source_ref, last_updated)
+            VALUES (:id, :user_id, :category, :value, :confidence, :source_kind, :source_ref, :last_updated)
             ON CONFLICT(user_id, category, value) DO UPDATE SET
                 confidence   = excluded.confidence,
+                source_kind  = excluded.source_kind,
+                source_ref   = excluded.source_ref,
                 last_updated = excluded.last_updated
             """,
             {
@@ -127,6 +198,8 @@ class FactsStoreMixin:
                 "category": pref.category,
                 "value": pref.value,
                 "confidence": pref.confidence,
+                "source_kind": pref.source_kind,
+                "source_ref": pref.source_ref,
                 "last_updated": _dt_to_str(pref.last_updated) or now,
             },
         )
@@ -148,6 +221,8 @@ class FactsStoreMixin:
                 category=r["category"],
                 value=r["value"],
                 confidence=r["confidence"],
+                source_kind=r["source_kind"],
+                source_ref=r["source_ref"],
                 last_updated=_str_to_dt(r["last_updated"]),  # type: ignore
             )
             for r in rows
@@ -158,15 +233,15 @@ class FactsStoreMixin:
     # -------------------------------------------------------------------------
 
     async def save_pending_habit(
-            self, user_id: str, pattern: str, confidence: str = "low") -> None:
-        await self._run(self._sync_save_pending_habit, user_id, pattern, confidence)
+            self, user_id: str, pattern: str, confidence: str = "low", kind: str = "habit", payload: Optional[str] = None) -> None:
+        await self._run(self._sync_save_pending_habit, user_id, pattern, confidence, kind, payload)
 
     def _sync_save_pending_habit(
-            self, user_id: str, pattern: str, confidence: str) -> None:
+            self, user_id: str, pattern: str, confidence: str, kind: str, payload: Optional[str]) -> None:
         conn = self._get_conn()
         conn.execute(
-            "INSERT INTO pending_habits (id, user_id, pattern, confidence, created_at) VALUES (?,?,?,?,?)",
-            (str(uuid.uuid4()), user_id, pattern, confidence, _now_str()),
+            "INSERT INTO pending_habits (id, user_id, pattern, confidence, kind, payload, created_at) VALUES (?,?,?,?,?,?,?)",
+            (str(uuid.uuid4()), user_id, pattern, confidence, kind, payload, _now_str()),
         )
         conn.commit()
 
@@ -188,6 +263,67 @@ class FactsStoreMixin:
         conn = self._get_conn()
         res = conn.execute(
             "DELETE FROM pending_habits WHERE id = ? AND user_id = ?", (habit_id, user_id))
+        conn.commit()
+        return res.rowcount > 0
+
+    async def get_preference_by_category_and_value(self, user_id: str, category: str, value: str) -> Optional[Preference]:
+        return await self._run(self._sync_get_preference_by_category_and_value, user_id, category, value)
+
+    def _sync_get_preference_by_category_and_value(self, user_id: str, category: str, value: str) -> Optional[Preference]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT * FROM preferences WHERE user_id = ? AND category = ? AND value = ?",
+            (user_id, category.lower().strip(), value),
+        ).fetchone()
+        if not row:
+            return None
+        return Preference(
+            id=row["id"],
+            user_id=row["user_id"],
+            category=row["category"],
+            value=row["value"],
+            confidence=row["confidence"],
+            source_kind=row["source_kind"],
+            source_ref=row["source_ref"],
+            last_updated=_str_to_dt(row["last_updated"]),  # type: ignore
+        )
+
+    async def get_preference_by_id(self, user_id: str, pref_id: str) -> Optional[Preference]:
+        return await self._run(self._sync_get_preference_by_id, user_id, pref_id)
+
+    def _sync_get_preference_by_id(self, user_id: str, pref_id: str) -> Optional[Preference]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT * FROM preferences WHERE user_id = ? AND id = ?",
+            (user_id, pref_id),
+        ).fetchone()
+        if not row:
+            return None
+        return Preference(
+            id=row["id"],
+            user_id=row["user_id"],
+            category=row["category"],
+            value=row["value"],
+            confidence=row["confidence"],
+            source_kind=row["source_kind"],
+            source_ref=row["source_ref"],
+            last_updated=_str_to_dt(row["last_updated"]),  # type: ignore
+        )
+
+    async def update_preference(self, pref_id: str, user_id: str, category: str, value: str) -> bool:
+        return await self._run(self._sync_update_preference, pref_id, user_id, category, value)
+
+    def _sync_update_preference(self, pref_id: str, user_id: str, category: str, value: str) -> bool:
+        conn = self._get_conn()
+        now = _now_str()
+        res = conn.execute(
+            """
+            UPDATE preferences 
+            SET category = ?, value = ?, last_updated = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (category.lower().strip(), value, now, pref_id, user_id)
+        )
         conn.commit()
         return res.rowcount > 0
 
@@ -232,10 +368,10 @@ class FactsStoreMixin:
             """
             INSERT INTO conversation_summaries
                 (id, user_id, summary, ttl_setting, expires_at,
-                 reference_count, last_referenced, created_at)
+                 reference_count, last_referenced, source_kind, source_ref, created_at)
             VALUES
                 (:id, :user_id, :summary, :ttl_setting, :expires_at,
-                 :reference_count, :last_referenced, :created_at)
+                 :reference_count, :last_referenced, :source_kind, :source_ref, :created_at)
             """,
             {
                 "id": summary.id,
@@ -245,10 +381,23 @@ class FactsStoreMixin:
                 "expires_at": expires_at,
                 "reference_count": summary.reference_count,
                 "last_referenced": _dt_to_str(summary.last_referenced),
+                "source_kind": summary.source_kind,
+                "source_ref": summary.source_ref,
                 "created_at": _dt_to_str(summary.created_at) or _now_str(),
             },
         )
         conn.commit()
+
+    async def get_summary_by_id(self, summary_id: str) -> Optional[ConversationSummary]:
+        return await self._run(self._sync_get_summary_by_id, summary_id)
+
+    def _sync_get_summary_by_id(self, summary_id: str) -> Optional[ConversationSummary]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT * FROM conversation_summaries WHERE id = ?",
+            (summary_id,)
+        ).fetchone()
+        return self._row_to_summary(row) if row else None
 
     async def get_recent_summaries(
         self,
@@ -313,17 +462,34 @@ class FactsStoreMixin:
         )
         conn.commit()
 
-    async def delete_expired_summaries(self, user_id: str) -> int:
+    async def delete_expired_summaries(self, user_id: str) -> list[str]:
         """
         Bulk-delete all expired summaries for a user.
-        Returns the number of rows deleted.
+        Returns the list of deleted summary IDs.
         """
         return await self._run(self._sync_delete_expired, user_id)
 
-    def _sync_delete_expired(self, user_id: str) -> int:
+    def _sync_delete_expired(self, user_id: str) -> list[str]:
         conn = self._get_conn()
         now = _now_str()
+        
+        # First, get the IDs of the rows that will be deleted
         cursor = conn.execute(
+            """
+            SELECT id FROM conversation_summaries
+            WHERE user_id = ?
+              AND expires_at IS NOT NULL
+              AND expires_at < ?
+            """,
+            (user_id, now),
+        )
+        deleted_ids = [row["id"] for row in cursor.fetchall()]
+        
+        if not deleted_ids:
+            return []
+            
+        # Then delete them
+        conn.execute(
             """
             DELETE FROM conversation_summaries
             WHERE user_id = ?
@@ -333,7 +499,7 @@ class FactsStoreMixin:
             (user_id, now),
         )
         conn.commit()
-        return cursor.rowcount
+        return deleted_ids
 
     @staticmethod
     def _row_to_summary(r: sqlite3.Row) -> ConversationSummary:
@@ -345,6 +511,8 @@ class FactsStoreMixin:
             expires_at=_str_to_dt(r["expires_at"]),
             reference_count=r["reference_count"],
             last_referenced=_str_to_dt(r["last_referenced"]),
+            source_kind=r["source_kind"],
+            source_ref=r["source_ref"],
             created_at=_str_to_dt(r["created_at"]),  # type: ignore
         )
 

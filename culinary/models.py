@@ -38,6 +38,14 @@ class MealType(PyEnum):
     DESSERT   = "Dessert"
     OTHER     = "Other"
 
+class ListSource(PyEnum):
+    MANUAL = "manual"
+    CHAT = "chat"
+    STOCKROOM_AUTO = "stockroom_auto"
+    PREP = "prep"
+    MEAL_PLAN = "meal_plan"
+    PARTS = "parts"
+
 
 class SourceType(PyEnum):
     PDF    = "pdf"
@@ -250,4 +258,34 @@ class DinnerProposal(Base):  # type: ignore
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
     household = relationship("Household", back_populates="dinner_proposals")
-    recipe    = relationship("Recipe")
+    recipe = relationship("Recipe")
+
+
+class ShoppingListItem(Base):  # type: ignore
+    __tablename__ = "cul_shopping_list"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    household_id: Mapped[str] = mapped_column(String, ForeignKey("cul_households.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    qty: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    unit: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    category: Mapped[str] = mapped_column(String, default="grocery", nullable=False)
+    source: Mapped[ListSource] = mapped_column(Enum(ListSource), default=ListSource.MANUAL, nullable=False)
+    source_ref: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    added_by: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    checked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+class MealPlanEntry(Base):  # type: ignore
+    __tablename__ = "cul_meal_plan"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    household_id: Mapped[str] = mapped_column(String, ForeignKey("cul_households.id"), nullable=False, index=True)
+    plan_date: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    slot: Mapped[MealType] = mapped_column(Enum(MealType), default=MealType.DINNER, nullable=False)
+    recipe_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("cul_recipes.id"), nullable=True)
+    label: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="planned", nullable=False)
+    created_by: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    
+    household = relationship("Household")
+    recipe = relationship("Recipe")

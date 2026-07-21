@@ -62,10 +62,30 @@ export default function HomeNodePage({ setAction }) {
     if (token) fetchAll() 
   }, [token, fetchAll])
 
-  // Auto-refresh every 30 seconds
+  // Live SSE stream
   useEffect(() => {
     if (!status?.reachable || !token) return
-    const id = setInterval(() => fetchAll(true), 30000)
+    const es = new EventSource(`/api/home/stream?token=${token}`)
+    es.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data)
+        if (msg.entity_id && msg.state) {
+          setDevices(prev => prev.map(d => {
+            if (d.entity_id === msg.entity_id) {
+              return { ...d, state: msg.state, attributes: msg.attributes || d.attributes }
+            }
+            return d
+          }))
+        }
+      } catch (err) {}
+    }
+    return () => es.close()
+  }, [status?.reachable, token])
+
+  // Fallback auto-refresh every 300 seconds (was 30s, but SSE covers live updates)
+  useEffect(() => {
+    if (!status?.reachable || !token) return
+    const id = setInterval(() => fetchAll(true), 300000)
     return () => clearInterval(id)
   }, [status?.reachable, token, fetchAll])
 

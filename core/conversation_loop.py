@@ -597,12 +597,12 @@ class ConversationLoop:
         except Exception as exc:
             logger.warning("Skill injection failed: %s", exc)
 
-    async def _rebuild_system_prompt(self) -> None:
+    async def _rebuild_system_prompt(self, query_text: Optional[str] = None) -> None:
         """Rebuild the system prompt with current memory context, then reset history."""
         memory_block = ""
         if self._memory and not self._flush_memory and not self._suppress_memory:
             try:
-                memory_block = await self._memory.build_context_block(self._user_id)
+                memory_block = await self._memory.build_context_block(self._user_id, query_text=query_text)
             except Exception as exc:
                 logger.warning(
                     "Memory context build failed (user=%s): %s",
@@ -796,11 +796,6 @@ class ConversationLoop:
             await on_event({"type": "idle"})
             return
 
-        # -----------------------------------------------------------------
-        # Step 0: Refresh memory context into system prompt for this turn
-        # -----------------------------------------------------------------
-        if self._memory:
-            await self._rebuild_system_prompt()
 
         # -----------------------------------------------------------------
         # Step 1: Transcribe audio bytes received from the browser
@@ -825,6 +820,12 @@ class ConversationLoop:
             await on_event({"type": "transcript", "text": ""})
             await on_event({"type": "idle"})
             return
+
+        # -----------------------------------------------------------------
+        # Step 1.5: Refresh memory context into system prompt for this turn
+        # -----------------------------------------------------------------
+        if self._memory:
+            await self._rebuild_system_prompt(query_text=transcript)
 
         await on_event({"type": "transcript", "text": transcript})
 
@@ -1043,7 +1044,7 @@ class ConversationLoop:
             f"If no new patterns are found, respond with 'NONE'.\n\n"
             f"User: {user_text}\n"
             f"River: {assistant_text}\n\n"
-            f"Response format: 'Pattern: <description>'"
+            f"Response format: 'Pattern: <description> | Confidence: <high/medium/low>'"
         )
 
         try:
@@ -1052,19 +1053,34 @@ class ConversationLoop:
 
             res = await self._llm.chat([{"role": "user", "content": prompt}])
             if "Pattern:" in res:
-                pattern = res.split("Pattern:")[1].strip()
+                parts = res.split("| Confidence:")
+                pattern = parts[0].replace("Pattern:", "").strip()
+                confidence = parts[1].strip().lower() if len(parts) > 1 else "low"
+                
                 if pattern and pattern.upper() != "NONE":
                     logger.info(
-                        "Inferred new habit for %s: %s",
+                        "Inferred new habit for %s: %s (confidence: %s)",
                         self._user_id,
-                        pattern)
-                    # FIX B10: Persist to pending table instead of active
-                    # preferences
-                    await self._memory.save_pending_habit(
-                        user_id=self._user_id,
-                        pattern=pattern,
-                        confidence="low"
-                    )
+                        pattern,
+                        confidence)
+                    
+                    if confidence == "high":
+                        await self._memory.upsert_preference(
+                            user_id=self._user_id,
+                            category="inferred_habit",
+                            value=pattern,
+                            confidence="high",
+                            source_kind="habit_inference",
+                            source_ref=self._session_id
+                        )
+                    else:
+                        await self._memory.save_pending_habit(
+                            user_id=self._user_id,
+                            pattern=pattern,
+                            confidence=confidence,
+                            kind="habit",
+                            payload=None
+                        )
         except Exception as exc:
             logger.debug("Habit inference skipped: %s", exc)
 
@@ -1098,10 +1114,11 @@ class ConversationLoop:
             await on_event({"type": "idle"})
             return
 
-        if self._memory:
-            await self._rebuild_system_prompt()
 
         await on_event({"type": "transcript", "text": text})
+
+        if self._memory:
+            await self._rebuild_system_prompt(query_text=text)
 
         try:
             await on_event({"type": "routing"})

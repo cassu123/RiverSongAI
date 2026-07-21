@@ -92,6 +92,8 @@ class Fact:
     key: str
     value: str
     source: str = "explicit"         # "explicit" | "inferred"
+    source_kind: str = "conversation"
+    source_ref: Optional[str] = None
     created_at: datetime = field(
         default_factory=lambda: datetime.now(
             tz=timezone.utc))
@@ -127,6 +129,8 @@ class Preference:
     category: str
     value: str                       # JSON string for complex values
     confidence: str = "low"          # "low" | "medium" | "high"
+    source_kind: str = "conversation"
+    source_ref: Optional[str] = None
     last_updated: datetime = field(
         default_factory=lambda: datetime.now(
             tz=timezone.utc))
@@ -161,6 +165,8 @@ class ConversationSummary:
     expires_at: Optional[datetime] = None
     reference_count: int = 0
     last_referenced: Optional[datetime] = None
+    source_kind: str = "conversation"
+    source_ref: Optional[str] = None
     created_at: datetime = field(
         default_factory=lambda: datetime.now(
             tz=timezone.utc))
