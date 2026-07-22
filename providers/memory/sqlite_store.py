@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import sqlite3
@@ -786,6 +787,19 @@ from providers.memory.store import (  # noqa: E402
 # SQLiteStore
 # =============================================================================
 
+logger = logging.getLogger(__name__)
+
+# Substrings of sqlite OperationalError messages that mean "this idempotent
+# migration was already applied" — expected on every startup after the first,
+# so they are logged at DEBUG rather than treated as failures. Anything else is
+# a real migration error and gets logged loudly at ERROR (audit god-file #1).
+_BENIGN_MIGRATION_ERRORS = (
+    "duplicate column name",  # ALTER TABLE ADD COLUMN already present
+    "already exists",         # CREATE TABLE/INDEX already present
+    "no such column",         # ALTER TABLE RENAME COLUMN already applied
+)
+
+
 class SQLiteStore(
     FactsStoreMixin,
     SettingsStoreMixin,
@@ -928,8 +942,21 @@ class SQLiteStore(
             try:
                 conn.execute(migration)
                 conn.commit()
-            except sqlite3.OperationalError:
-                pass
+            except sqlite3.OperationalError as exc:
+                msg = str(exc).lower()
+                if any(b in msg for b in _BENIGN_MIGRATION_ERRORS):
+                    # Idempotent re-run of an already-applied migration.
+                    logger.debug(
+                        "Skipping already-applied migration: %s (%s)",
+                        migration, exc,
+                    )
+                else:
+                    # A genuinely broken migration — surface it instead of
+                    # letting the schema drift silently into a wrong state.
+                    logger.error(
+                        "Migration FAILED and was skipped: %s -> %s",
+                        migration, exc,
+                    )
 
     def close(self) -> None:
         """Close the connection and shut down the thread pool."""
