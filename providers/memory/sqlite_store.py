@@ -830,6 +830,16 @@ class SQLiteStore(
             thread_name_prefix="sqlite",
         )
         self._conn: Optional[sqlite3.Connection] = None
+        # Dedicated single-thread writer for high-volume, fire-and-forget
+        # writes (vector telemetry, pulse snapshots). It has its own connection
+        # so a burst of telemetry can never occupy the shared read/write pool
+        # above and starve latency-sensitive memory/auth reads. Under WAL the
+        # two connections run concurrently (audit god-file #2).
+        self._write_executor = ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="sqlite-write",
+        )
+        self._write_conn: Optional[sqlite3.Connection] = None
 
     # -------------------------------------------------------------------------
     # Lifecycle
@@ -963,7 +973,11 @@ class SQLiteStore(
         if self._conn:
             self._conn.close()
             self._conn = None
+        if self._write_conn:
+            self._write_conn.close()
+            self._write_conn = None
         self._executor.shutdown(wait=False)
+        self._write_executor.shutdown(wait=False)
 
     # -------------------------------------------------------------------------
     # Internal helpers
@@ -986,6 +1000,33 @@ class SQLiteStore(
     async def _run(self, fn, *args):
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(self._executor, fn, *args)
+
+    def _get_write_conn(self) -> sqlite3.Connection:
+        """Separate connection for the isolated high-volume writer thread."""
+        if self._write_conn is None:
+            self._write_conn = sqlite3.connect(
+                self._db_path,
+                check_same_thread=False,
+                detect_types=sqlite3.PARSE_DECLTYPES,
+            )
+            self._write_conn.row_factory = sqlite3.Row
+            self._write_conn.execute("PRAGMA journal_mode=WAL")
+            self._write_conn.execute("PRAGMA busy_timeout=5000")
+        return self._write_conn
+
+    async def _run_write(self, fn, *args):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self._write_executor, fn, *args)
+
+    def _execute_write_isolated(self, sql: str, params: tuple) -> None:
+        conn = self._get_write_conn()
+        conn.execute(sql, params)
+        conn.commit()
+
+    async def execute_write_isolated_async(
+            self, sql: str, params: tuple) -> None:
+        """Write via the dedicated writer thread/connection (telemetry, pulse)."""
+        await self._run_write(self._execute_write_isolated, sql, params)
 
     # -------------------------------------------------------------------------
     # Vector fleet units
