@@ -31,16 +31,13 @@ class AnalyticsStoreMixin:
     # -------------------------------------------------------------------------
 
     async def save_pulse_snapshot(self, source: str, data: dict) -> None:
-        await self._run(self._sync_save_pulse_snapshot, source, data)
-
-    def _sync_save_pulse_snapshot(self, source: str, data: dict) -> None:
-        conn = self._get_conn()
+        # High-volume periodic snapshots run on the isolated writer so they
+        # cannot starve the shared pool used by memory/auth reads.
         now = datetime.now(tz=timezone.utc).timestamp()
-        conn.execute(
+        await self.execute_write_isolated_async(
             "INSERT INTO pulse_snapshots (source, data_json, ts) VALUES (?, ?, ?)",
-            (source, json.dumps(data), now)
+            (source, json.dumps(data), now),
         )
-        conn.commit()
 
     async def get_latest_pulse_snapshot(self, source: str) -> Optional[dict]:
         return await self._run(self._sync_get_latest_pulse_snapshot, source)

@@ -90,7 +90,10 @@ async def _distill_session(app: FastAPI, session: dict):
                 key = str(f.get("key", "")).strip()
                 value = str(f.get("value", "")).strip()
                 if key and value:
-                    await memory_manager.upsert_fact(user_id, key, value, source="inferred")
+                    await memory_manager.upsert_fact(
+                        user_id, key, value, source="inferred",
+                        source_kind="distiller", source_ref=session_id,
+                    )
         except Exception as exc:
             logger.warning("Fact extraction failed (user=%s, session=%s): %s", user_id, session_id, exc)
 
@@ -119,9 +122,30 @@ async def _distill_session(app: FastAPI, session: dict):
             for p in items:
                 cat = str(p.get("category", "")).strip()
                 value = str(p.get("value", "")).strip()
-                conf = str(p.get("confidence", "low")).strip()
-                if cat and value:
-                    await memory_manager.upsert_preference(user_id, cat, value, confidence=conf)
+                conf = str(p.get("confidence", "low")).strip().lower()
+                if not (cat and value):
+                    continue
+                # Confidence split (memory-hub-plan M4): high-confidence
+                # inferences auto-apply with provenance; low/medium queue as
+                # suggestions for human approval instead of applying silently.
+                if conf == "high":
+                    await memory_manager.upsert_preference(
+                        user_id, cat, value, confidence="high",
+                        source_kind="distiller", source_ref=session_id,
+                    )
+                else:
+                    await memory_manager.save_pending_habit(
+                        user_id,
+                        pattern=f"{cat}: {value}",
+                        confidence=conf if conf in ("low", "medium") else "low",
+                        kind="preference",
+                        payload=_json.dumps({
+                            "category": cat,
+                            "value": value,
+                            "source_kind": "distiller",
+                            "source_ref": session_id,
+                        }),
+                    )
         except Exception as exc:
             logger.warning("Preference extraction failed (user=%s, session=%s): %s", user_id, session_id, exc)
 
@@ -145,7 +169,10 @@ async def _distill_session(app: FastAPI, session: dict):
                 full += chunk
             summary = _clean(full).strip()
             if summary:
-                await memory_manager.record_summary(user_id, summary)
+                await memory_manager.record_summary(
+                    user_id, summary,
+                    source_kind="distiller", source_ref=session_id,
+                )
                 # Append to Chronos
                 try:
                     provider = VaultProvider(store=store)

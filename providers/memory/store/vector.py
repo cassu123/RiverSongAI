@@ -77,7 +77,9 @@ class VectorStoreMixin:
         cols = ", ".join(_safe_cols(fields.keys()))
         placeholders = ", ".join(["?"] * len(fields))
         sql = f"INSERT INTO vector_telemetry ({cols}) VALUES ({placeholders})"
-        await self.execute_write_async(sql, tuple(fields.values()))
+        # High-volume telemetry ingestion runs on the isolated writer so it
+        # cannot starve the shared pool used by memory/auth reads.
+        await self.execute_write_isolated_async(sql, tuple(fields.values()))
 
     async def insert_alert(self, fields: dict) -> None:
         cols = ", ".join(_safe_cols(fields.keys()))
