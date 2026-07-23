@@ -1,0 +1,83 @@
+/* =============================================================================
+   breakpoints.css — Responsive & multi-device foundation
+   -----------------------------------------------------------------------------
+   ONE canonical breakpoint scale for the whole app. Before this file, ~8 ad-hoc
+   breakpoints (380/480/520/600/767/768/1024/1200) were scattered across the CSS.
+   New and reworked screens use THESE values only; the shell already aligns to
+   --bp-md (768) and --bp-xl (1200).
+
+   Canonical scale (min-width, mobile-first):
+     xs   < 480    small phone
+     sm  >= 480    large phone
+     md  >= 768    tablet            (shell: drawer stays off-canvas below this)
+     lg  >= 1024   small laptop
+     xl  >= 1200   desktop           (shell: drawer becomes a permanent rail)
+
+   NOTE: CSS @media cannot read var()/custom properties. The tokens below exist
+   for JS (see src/hooks/useBreakpoint.js) and as the single source of truth for
+   the numbers you hard-code in @media. Keep the two in sync.
+
+   Philosophy: FLUID FIRST. Prefer clamp()/minmax()/auto-fit so layouts reflow
+   continuously as a window resizes — reach for a breakpoint only when the
+   layout must genuinely change shape (e.g. rail <-> drawer), not to hit sizes.
+   ============================================================================= */
+
+:root {
+  /* Breakpoint reference tokens (numbers, unitless-friendly for JS). */
+  --bp-xs:  380px;
+  --bp-sm:  480px;
+  --bp-md:  768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1200px;
+
+  /* Fluid spacing + sizing. */
+  --rs-gutter:      clamp(12px, 2.5vw, 24px);   /* responsive grid/section gap */
+  --rs-pad:         clamp(12px, 3vw, 24px);     /* responsive container padding */
+  --rs-touch-min:   44px;                       /* min touch target (WCAG/Apple) */
+  --rs-content-max: 72ch;                        /* readable line length cap      */
+  --rs-auto-min:    260px;                        /* default min card width (grid) */
+}
+
+/* --- Fluid reflow grid ------------------------------------------------------
+   The workhorse for "resizable window" layouts: columns pack in and drop out
+   automatically as width changes, with NO breakpoints. Set --rs-auto-min per
+   container to tune the smallest comfortable card width.
+   min(100%, ...) guards against horizontal overflow on very narrow phones.   */
+.rs-auto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--rs-auto-min)), 1fr));
+  gap: var(--rs-gutter);
+}
+
+/* --- Touch-target helper ---------------------------------------------------- */
+.rs-touch { min-inline-size: var(--rs-touch-min); min-block-size: var(--rs-touch-min); }
+
+/* --- Readable text column --------------------------------------------------- */
+.rs-readable { max-inline-size: var(--rs-content-max); }
+
+/* --- Visibility helpers (use sparingly; prefer fluid CSS) ------------------- */
+@media (max-width: 767px)  { .rs-hide-phone   { display: none !important; } }
+@media (min-width: 768px)  { .rs-only-phone   { display: none !important; } }
+
+/* --- Never let the page itself scroll sideways ------------------------------
+   Wide content (tables, code, diagrams) must scroll inside its OWN container,
+   not push the whole page. Pair with .rs-table-wrap in responsive.css.        */
+html, body { overflow-x: hidden; }
+
+/* --- Mobile performance: soften glass blur on phones ------------------------
+   backdrop-filter: blur(24px) is expensive per-frame and caused scroll stutter
+   on phones. Below md, step every glass surface down to the cheaper blur.
+   (Overrides the --glass-blur token from global.css within this media range.) */
+@media (max-width: 767px) {
+  :root { --glass-blur: var(--glass-blur-sm); }
+}
+
+/* --- Honor reduced-motion at the foundation level --------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
