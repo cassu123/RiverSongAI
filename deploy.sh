@@ -113,7 +113,7 @@ step "Evicting any orphan process holding :8000"
 # is still bound (happens when someone runs the app manually for testing).
 # Find the listening PID and ask the systemd cgroup which PID(s) the service
 # legitimately owns; kill anything else.
-PORT_PID="$(ss -ltnp 2>/dev/null | grep ':8000 ' | grep -oP 'pid=\K\d+' | head -1)"
+PORT_PID="$(ss -ltnp 2>/dev/null | grep ':8000 ' | grep -oP 'pid=\K\d+' | head -1 || true)"
 if [[ -n "$PORT_PID" ]]; then
     SVC_PIDS="$(systemctl show -p MainPID --value river-song 2>/dev/null || echo '')"
     if [[ "$PORT_PID" != "$SVC_PIDS" ]]; then
