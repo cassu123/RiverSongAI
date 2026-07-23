@@ -87,6 +87,11 @@
   text-transform: uppercase;
   font-weight: 800;
   opacity: 0.6;
+  /* Short telemetry labels must never shatter mid-word (WIND -> W·I·N·D) when a
+     container gets narrow — override the .rs-card break-word inheritance. They
+     wrap at spaces only; size the container so they fit. */
+  word-break: normal;
+  overflow-wrap: normal;
 }
 
 .rs-card-value {
