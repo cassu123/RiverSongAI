@@ -52,3 +52,43 @@ Standardized on a professional, tech-forward stack.
 - No nested cards (always use dividers or spacing).
 - No "Oops!" or "Exclamation!" in copy. Be professional.
 - No standard 'linear' transitions.
+
+## 8. Responsive & Multi-Device (phone · tablet · resizable desktop)
+This is a **web** front end used across a phone, a tablet, and a laptop with
+resizable windows. Every screen must hold up from ~360px to ultra-wide. Tokens
+and utilities live in `src/styles/breakpoints.css`; JS-side flags in
+`src/hooks/useBreakpoint.js`.
+
+- **Fluid first, breakpoints second.** Prefer `clamp()`, `minmax()`, and
+  `repeat(auto-fit, …)` so layouts reflow *continuously* as a window resizes.
+  Reach for a breakpoint only when the layout must change *shape*
+  (e.g. rail ⇄ drawer), never just to hit a size. Use `.rs-auto-grid` (set
+  `--rs-auto-min` per container) for card/bento grids instead of fixed columns.
+- **ONE breakpoint scale.** `xs 380 · sm 480 · md 768 · lg 1024 · xl 1200`.
+  Do not invent new values (we had 8 before). The shell already keys off `md`
+  and `xl`. (CSS `@media` can't read the tokens — mirror the numbers, and keep
+  `breakpoints.css` + `useBreakpoint.js` in sync.)
+- **The Three Zones adapt:**
+  - *Header (Zone 1):* stays fixed; on phones it holds the hamburger.
+  - *Nav:* off-canvas **drawer** + scrim below `xl`; becomes a permanent
+    **260px rail** at `xl`. **Known gap:** `md–xl` (tablet / resized laptop)
+    still gets the phone drawer — close this when we rework the shell (a rail at
+    `lg` is the likely answer).
+  - *Content (Zone 2):* single column on phone; `.rs-auto-grid` fills wider
+    viewports. Cap prose with `.rs-readable` (72ch).
+  - *Action bar (Zone 3):* full-width and thumb-reachable on phone.
+- **Touch targets ≥ 44px** for anything tappable (`.rs-touch`, or `min-height`).
+  Assume no hover on phone/tablet — never hide primary actions behind `:hover`;
+  gate hover-only affordances behind `@media (pointer: fine)`.
+- **Relax density on small screens.** The "Cockpit Dense" spec is a *desktop*
+  target; on phones, increase padding/gap and drop non-essential columns
+  (see the column-dropping pattern in `responsive.css`) rather than shrinking
+  text below ~14px.
+- **Respect the platform:** honor `env(safe-area-inset-*)` (notches / home
+  indicator — the shell does), size full-height sections with `100dvh`/`svh`
+  (not `vh`), and never let the page scroll sideways — wide tables/code scroll
+  inside their own `overflow-x:auto` wrapper (`.rs-table-wrap`).
+- **Performance = design on mobile.** `backdrop-filter: blur(24px)` stutters on
+  phones, so below `md` the glass blur steps down to `--glass-blur-sm`
+  automatically. Keep perpetual "breathing" loops off-screen-cheap; respect
+  `prefers-reduced-motion` (handled globally in `breakpoints.css`).
