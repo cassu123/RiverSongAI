@@ -39,7 +39,6 @@ export const NAV_GROUPS = [
       { key: 'memory',      label: 'Memory',      icon: 'memory' },
       { key: 'skills',      label: 'About You',   icon: 'skills' },
       { key: 'presets',     label: 'Presets',     icon: 'presets' },
-      { key: 'research',    label: 'Research',    icon: 'research' },
       { key: 'proactive',   label: 'Proactive',   icon: 'notifications' },
       { key: 'compare',     label: 'Compare',     icon: 'compare' },
       { key: 'routines',    label: 'Routines',    icon: 'routines' },
