@@ -35,25 +35,28 @@ export function InlineSettingsSection({
           userSelect: 'none',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
           {icon && (
             <span
               className="material-symbols-rounded"
-              style={{ fontSize: '1rem', opacity: 0.55 }}
+              style={{ fontSize: '1rem', opacity: 0.55, flexShrink: 0 }}
             >
               {icon}
             </span>
           )}
           <span
             className="rs-card-label"
-            style={{ fontSize: '0.62rem', letterSpacing: '0.12em' }}
+            style={{ fontSize: '0.62rem', letterSpacing: '0.12em', whiteSpace: 'nowrap', flexShrink: 0 }}
           >
             {title}
           </span>
           {subtitle && (
             <span
               className="rs-card-meta"
-              style={{ fontSize: '0.6rem', opacity: 0.5, marginLeft: 6 }}
+              style={{
+                fontSize: '0.6rem', opacity: 0.5, marginLeft: 6,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
+              }}
             >
               {subtitle}
             </span>

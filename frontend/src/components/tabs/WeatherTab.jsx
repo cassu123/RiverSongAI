@@ -344,9 +344,10 @@ function HeroCard({ current, today, location_name, unit }) {
         <span
           className="material-symbols-rounded"
           style={{
-            fontSize: '6.5rem',
+            fontSize: 'clamp(3.25rem, 15vw, 6.5rem)',
             color: 'var(--primary)',
             lineHeight: 0.9,
+            flexShrink: 0,
             filter: 'drop-shadow(0 4px 14px rgba(var(--primary-rgb,100,100,255),0.18))',
           }}
         >
@@ -354,8 +355,8 @@ function HeroCard({ current, today, location_name, unit }) {
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontSize: '5.5rem', fontWeight: 200, lineHeight: 1, letterSpacing: '-0.06em',
-            color: 'var(--md-on-surface)',
+            fontSize: 'clamp(3rem, 15vw, 5.5rem)', fontWeight: 200, lineHeight: 1, letterSpacing: '-0.06em',
+            color: 'var(--md-on-surface)', whiteSpace: 'nowrap',
           }}>
             {temp != null ? temp : '--'}{unit || '°'}
           </div>
@@ -395,7 +396,7 @@ function DetailCard({ label, value, sub, color, badge }) {
         )}
       </div>
       <div style={{
-        fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: '1.15rem', color: color || 'var(--md-on-surface)',
+        fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: '1.15rem', color: color || 'var(--md-on-surface)', whiteSpace: 'nowrap',
       }}>
         {value}
       </div>
@@ -434,7 +435,7 @@ function DetailsRow({ current, aqi }) {
     })
   }
   return (
-    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: 10 }}>
       {items.map((it, i) => <DetailCard key={i} {...it} />)}
     </div>
   )
