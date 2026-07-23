@@ -254,8 +254,8 @@ export default function ChronosPage({ setAction }) {
       {/* Left Rail: File Tree */}
       <div className="rs-card" style={{ display: 'flex', flexDirection: 'column', padding: 12 }}>
         <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
-          <button className={`rs-pill ${activeRoot === 'personal' ? 'is-active' : ''}`} style={{ flex: 1 }} onClick={() => setActiveRoot('personal')}>PERS</button>
-          <button className={`rs-pill ${activeRoot === 'household' ? 'is-active' : ''}`} style={{ flex: 1 }} onClick={() => setActiveRoot('household')}>HSE</button>
+          <button className={`rs-pill ${activeRoot === 'personal' ? 'is-active' : ''}`} style={{ flex: 1, whiteSpace: 'nowrap' }} onClick={() => setActiveRoot('personal')}>PERSONAL</button>
+          <button className={`rs-pill ${activeRoot === 'household' ? 'is-active' : ''}`} style={{ flex: 1, whiteSpace: 'nowrap' }} onClick={() => setActiveRoot('household')}>HOUSEHOLD</button>
           <button className="rs-pill" onClick={createNote} title="New Note">
             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>add</span>
           </button>
