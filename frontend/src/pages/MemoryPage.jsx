@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useBreakpoint } from '../hooks/useBreakpoint'
 
 /**
  * MemoryPage — Phase 3 Rewrite
@@ -9,6 +10,19 @@ import { useAuth } from '../context/AuthContext'
 
 export default function MemoryPage({ setAction }) {
   const { token } = useAuth()
+  const { isPhone } = useBreakpoint()
+  // Add-fact / add-pref forms are a single row on desktop; stack them into a
+  // column on phones so the inputs don't collapse to unusable circles.
+  const addFormStyle = {
+    background: 'var(--md-surface-container-high)', marginBottom: 24,
+    display: 'flex', gap: 12,
+    flexDirection: isPhone ? 'column' : 'row',
+    alignItems: isPhone ? 'stretch' : 'center',
+  }
+  const addInput = (grow) => ({
+    flex: isPhone ? '0 0 auto' : grow, padding: 8, fontSize: '0.8rem',
+    minWidth: 0, boxSizing: 'border-box',
+  })
   const [memories, setMemories] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
@@ -160,7 +174,7 @@ export default function MemoryPage({ setAction }) {
         <h1 className="rs-greeting">Memory Hub</h1>
         <div className="rs-greeting-sub">Inspect, edit, and control everything River Song knows about you.</div>
         
-        <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
           {['ALL', 'FACT', 'PREFERENCE', 'SUMMARY', 'SUGGESTION'].map(t => (
             <button 
               key={t}
@@ -175,25 +189,25 @@ export default function MemoryPage({ setAction }) {
       </div>
 
       {(activeTab === 'ALL' || activeTab === 'FACT') && (
-        <form onSubmit={handleCreateFact} className="rs-card is-wide animate-page-in" style={{ background: 'var(--md-surface-container-high)', marginBottom: 24, display: 'flex', gap: 12, alignItems: 'center' }}>
-          <span className="rs-card-label" style={{ flexShrink: 0, color: 'var(--primary)' }}>ADD FACT</span>
-          <input className="rs-card" placeholder="Key (e.g. name)" value={newFact.key} onChange={e => setNewFact({...newFact, key: e.target.value})} style={{ flex: 1, padding: 8, fontSize: '0.8rem' }} />
-          <input className="rs-card" placeholder="Value (e.g. Alice)" value={newFact.value} onChange={e => setNewFact({...newFact, value: e.target.value})} style={{ flex: 2, padding: 8, fontSize: '0.8rem' }} />
-          <button type="submit" className="rs-pill" style={{ background: 'var(--primary)', color: 'var(--bg)' }}>ADD</button>
+        <form onSubmit={handleCreateFact} className="rs-card is-wide animate-page-in" style={addFormStyle}>
+          <span className="rs-card-label" style={{ flexShrink: 0, color: 'var(--primary)', alignSelf: isPhone ? 'flex-start' : 'center' }}>ADD FACT</span>
+          <input className="rs-card" placeholder="Key (e.g. name)" value={newFact.key} onChange={e => setNewFact({...newFact, key: e.target.value})} style={addInput(1)} />
+          <input className="rs-card" placeholder="Value (e.g. Alice)" value={newFact.value} onChange={e => setNewFact({...newFact, value: e.target.value})} style={addInput(2)} />
+          <button type="submit" className="rs-pill" style={{ background: 'var(--primary)', color: 'var(--bg)', flexShrink: 0, whiteSpace: 'nowrap' }}>ADD</button>
         </form>
       )}
 
       {(activeTab === 'ALL' || activeTab === 'PREFERENCE') && (
-        <form onSubmit={handleCreatePref} className="rs-card is-wide animate-page-in" style={{ background: 'var(--md-surface-container-high)', marginBottom: 24, display: 'flex', gap: 12, alignItems: 'center' }}>
-          <span className="rs-card-label" style={{ flexShrink: 0, color: 'var(--rs-status-warning)' }}>ADD PREF</span>
-          <input className="rs-card" placeholder="Category" value={newPref.category} onChange={e => setNewPref({...newPref, category: e.target.value})} style={{ flex: 1, padding: 8, fontSize: '0.8rem' }} />
-          <input className="rs-card" placeholder="Value" value={newPref.value} onChange={e => setNewPref({...newPref, value: e.target.value})} style={{ flex: 2, padding: 8, fontSize: '0.8rem' }} />
-          <select className="rs-card" value={newPref.confidence} onChange={e => setNewPref({...newPref, confidence: e.target.value})} style={{ padding: 8, fontSize: '0.8rem' }}>
+        <form onSubmit={handleCreatePref} className="rs-card is-wide animate-page-in" style={addFormStyle}>
+          <span className="rs-card-label" style={{ flexShrink: 0, color: 'var(--rs-status-warning)', alignSelf: isPhone ? 'flex-start' : 'center' }}>ADD PREF</span>
+          <input className="rs-card" placeholder="Category" value={newPref.category} onChange={e => setNewPref({...newPref, category: e.target.value})} style={addInput(1)} />
+          <input className="rs-card" placeholder="Value" value={newPref.value} onChange={e => setNewPref({...newPref, value: e.target.value})} style={addInput(2)} />
+          <select className="rs-card" value={newPref.confidence} onChange={e => setNewPref({...newPref, confidence: e.target.value})} style={{ ...addInput('0 0 auto'), padding: 8 }}>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
           </select>
-          <button type="submit" className="rs-pill" style={{ background: 'var(--rs-status-warning)', color: 'var(--bg)' }}>ADD</button>
+          <button type="submit" className="rs-pill" style={{ background: 'var(--rs-status-warning)', color: 'var(--bg)', flexShrink: 0, whiteSpace: 'nowrap' }}>ADD</button>
         </form>
       )}
 

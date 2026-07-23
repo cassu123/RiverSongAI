@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuthHeaders, API_BASE } from '../utils/useApi.js'
 import FlagGatedPage from '../components/FlagGatedPage.jsx'
+import { useBreakpoint } from '../hooks/useBreakpoint'
 
 /**
  * DocumentsPage — Q2#6.
@@ -21,6 +22,7 @@ const KINDS = [
 
 export default function DocumentsPage({ setAction }) {
   const authHeaders = useAuthHeaders()
+  const { isPhone } = useBreakpoint()
   const [docs,        setDocs]        = useState([])
   const [activeId,    setActiveId]    = useState(null)
   const [activeDoc,   setActiveDoc]   = useState(null)
@@ -189,7 +191,7 @@ export default function DocumentsPage({ setAction }) {
   }
 
   return (
-    <div className="rs-foyer animate-fade-in" style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 280px) 1fr', gap: 16, alignItems: 'stretch' }}>
+    <div className="rs-foyer animate-fade-in" style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'minmax(220px, 280px) 1fr', gap: 16, alignItems: 'stretch' }}>
       {/* Left rail — document list */}
       <div className="rs-card" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto' }}>
         <div className="rs-card-label" style={{ marginBottom: 6 }}>DOCUMENTS · {docs.length}</div>
