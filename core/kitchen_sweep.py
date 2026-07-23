@@ -3,15 +3,12 @@ import logging
 import json
 from datetime import datetime, timezone, timedelta
 
-from database.core import engine
-from sqlalchemy.orm import sessionmaker
-
+from api.routes.culinary import _Session as SessionLocal
 from api.routes.culinary import _ws_manager, get_db, _get_household
 from culinary.models import Household, Recipe, StockroomItem, ShoppingListItem, MealPlanEntry
 from core.proactive import get_delivery_router, ProactiveItem
 
 logger = logging.getLogger(__name__)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 async def kitchen_sweep_func():
     db = SessionLocal()

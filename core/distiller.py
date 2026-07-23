@@ -4,8 +4,7 @@ import json as _json
 import re as _re
 from datetime import datetime, timezone
 from fastapi import FastAPI
-from providers.llm.registry import get_llm_provider
-from providers.memory.vault import VaultProvider
+from providers.vault.vault_provider import VaultProvider
 
 logger = logging.getLogger(__name__)
 
@@ -50,12 +49,12 @@ async def _distill_session(app: FastAPI, session: dict):
     )
     
     llm_settings = await store.get_llm_settings(user_id)
-    from providers.llm.registry import get_llm_provider
-    llm_class = get_llm_provider(llm_settings.provider)
-    if not llm_class:
-        logger.error(f"Cannot distill: provider {llm_settings.provider} not found")
+    from core.conversation_loop import _instantiate_llm
+    try:
+        llm = _instantiate_llm(llm_settings.provider, llm_settings.model)
+    except ValueError as e:
+        logger.error(f"Cannot distill: {e}")
         return
-    llm = llm_class(llm_settings.model)
     
     async def _extract_facts():
         extraction_prompt = (
