@@ -152,7 +152,7 @@ certifi>=2024.7.4                    # stale certificate bundle
 cryptography>=43.0.1                 # CVE-2024-26130
 h11>=0.16.0                          # CRITICAL: malformed chunked-encoding bypass
 Pillow>=12.2.0                       # HIGH: FITS decompression bomb + PSD out-of-bounds write
-tornado>=6.5.5                       # HIGH: cookie injection + multipart DoS
+tornado>=6.5.7                       # HIGH: cookie injection + multipart DoS
 nltk>=3.9.4                          # CRITICAL: zip-slip + path traversal + XSS (<=3.9.3)
 orjson>=3.11.6                       # HIGH: unbounded recursion DoS
 filelock>=3.20.3                     # MEDIUM: TOCTOU symlink race
