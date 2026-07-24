@@ -191,6 +191,11 @@
   justify-content: space-between;
   gap: 12px;
   padding: 0 4px;
+  /* When the 8 controls can't fit (phones/narrow windows), wrap to a second
+     row instead of overflowing and pushing mic/send off-screen. On wide
+     screens everything fits on one line, so this is a no-op. */
+  flex-wrap: wrap;
+  row-gap: 10px;
 }
 
 .rs-chat-input-left, .rs-chat-input-right {
@@ -198,6 +203,13 @@
   align-items: center;
   gap: 10px;
 }
+/* The right group (model · voice · mic · send) stays together, never shrinks,
+   and hugs the right edge — so when it wraps to its own line Send is still
+   full-size and bottom-right where you expect it. */
+.rs-chat-input-right { flex-shrink: 0; margin-inline-start: auto; }
+
+/* Pill labels never break mid-name (e.g. "DeepSeek Thinker Lite"). */
+.rs-speak-actions-label { white-space: nowrap; }
 
 /* Collapse pill text labels on narrow phones — keep icons only */
 @media (max-width: 480px) {
