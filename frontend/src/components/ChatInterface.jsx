@@ -2,7 +2,6 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import ConversationPanel   from './ConversationPanel.jsx'
 import { useAuth }         from '../context/AuthContext.jsx'
 import RateIndicator       from './RateIndicator.jsx'
-import PresetSelector      from './PresetSelector.jsx'
 import ModelPickerPopover  from './ModelPickerPopover.jsx'
 import { useConversation } from '../hooks/useConversation.js'
 import { API_BASE } from '../utils/useApi.js'
@@ -463,11 +462,6 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
                 </span>
               </span>
             </button>
-
-            <div style={{ borderTop: '1px solid var(--md-outline-variant)', marginTop: 6, paddingTop: 10, display: 'flex', alignItems: 'center', gap: 8, paddingInline: 8 }}>
-              <span className="rs-mpop-sub">Session presets</span>
-              <div style={{ marginInlineStart: 'auto' }}><PresetSelector /></div>
-            </div>
           </div>
         </>
       )}
