@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 
 function fmtCost(v) {
   if (v == null) return null;
@@ -47,6 +48,7 @@ export default function ModelPickerPopover({
   hasCloud = false
 }) {
   const [pickerView, setPickerView] = useState('home');
+  const { isPhone } = useBreakpoint();
 
   useEffect(() => {
     if (isOpen) {
@@ -56,6 +58,14 @@ export default function ModelPickerPopover({
 
   if (!isOpen) return null;
 
+  // The anchored popover (positioned by the model button's right edge) slides
+  // off-screen on phones because the button sits on the left. On phones, render
+  // it as a full-width bottom sheet that's always fully on-screen; keep the
+  // anchored popover on desktop.
+  const panelStyle = isPhone
+    ? { left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto' }
+    : { bottom: pos.bottom, right: pos.right, top: pos.top, left: pos.left };
+
   const closeModelPicker = () => {
     setPickerView('home');
     if (onClose) onClose();
@@ -64,7 +74,7 @@ export default function ModelPickerPopover({
   return (
     <>
       <div style={{ position: 'fixed', inset: 0, zIndex: 9990 }} onClick={closeModelPicker} />
-      <div className="rs-mpop" style={{ bottom: pos.bottom, right: pos.right, top: pos.top, left: pos.left }}>
+      <div className="rs-mpop" style={panelStyle}>
         {pickerView === 'home' && <>
           <MpopRow icon="auto_awesome" title="River Decides" sub="Auto-routes to the best model" active={selectedModel?.provider === 'auto'} onClick={() => { closeModelPicker(); onSelect('auto', 'auto'); }} />
           <MpopRow icon="memory" title="Local" sub={localModels.filter(m => m.available).length > 0 ? `${localModels.filter(m => m.available).length} ready · Ollama` : 'No models installed'} active={selectedModel?.provider === 'ollama'} chevron onClick={() => setPickerView('local')} />

@@ -29,6 +29,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
   const [showSystem,       setShowSystem]       = useState(false)
   const [modelPickerOpen,  setModelPickerOpen]  = useState(false)
   const [popoverPos,       setPopoverPos]       = useState({ bottom: 100, right: 20 })
+  const [toolsOpen,        setToolsOpen]        = useState(false)
 
   const [systemPrompt, setSystemPrompt] = useState('')
   const [forgetMemory, setForgetMemory] = useState(false)
@@ -132,11 +133,15 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
 
   const closeModelPicker = () => { setModelPickerOpen(false) }
   const openModelPicker = useCallback((e) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    setPopoverPos({
-      bottom: window.innerHeight - rect.top + 8,
-      right:  window.innerWidth  - rect.right,
-    })
+    // May be called from a button (anchored popover) or from the tools sheet
+    // (no event → the picker renders as a bottom sheet, position unused).
+    const rect = e?.currentTarget?.getBoundingClientRect?.()
+    if (rect) {
+      setPopoverPos({
+        bottom: window.innerHeight - rect.top + 8,
+        right:  window.innerWidth  - rect.right,
+      })
+    }
     setModelPickerOpen(true)
   }, [])
 
@@ -257,50 +262,13 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
       
       <div className="rs-chat-input-controls">
         <div className="rs-chat-input-left">
-          <label className="rs-btn-ghost rs-icon-btn" title="Attach Sector Data">
+          <button type="button" className="rs-btn-ghost rs-icon-btn" title="Tools & attachments" onClick={() => setToolsOpen(true)}>
             <span className="material-symbols-rounded">add</span>
-            <input type="file" style={{ display: 'none' }} onChange={async (e) => {
-                const file = e.target.files?.[0]
-                if (!file) return
-                const docId = `doc_${Date.now()}`
-                const fd = new FormData(); fd.append('file', file)
-                try {
-                  const res = await fetch(`${API_BASE}/api/rag/ingest?doc_id=${docId}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
-                  if (res.ok) { setActiveDocId(docId); setMessages(p => [...p, { role: 'system', text: `RESOURCE IDENTIFIED: ${file.name}` }]) }
-                } catch { setError('Ingestion failed.') }
-            }} />
-          </label>
-          
-          <button className={`rs-pill ${webSearch ? 'is-active' : ''}`} onClick={() => setWebSearch(!webSearch)}>
-            <span className="material-symbols-rounded">public</span>
-            <span className="rs-speak-actions-label">SCAN WEB</span>
-          </button>
-
-          <button className={`rs-pill ${deepResearch ? 'is-active' : ''}`} onClick={() => setDeepResearch(!deepResearch)} title="Deep Research">
-            <span className="material-symbols-rounded">travel_explore</span>
-            <span className="rs-speak-actions-label">RESEARCH</span>
           </button>
         </div>
 
         <div className="rs-chat-input-right">
-          <PresetSelector />
-          <button className="rs-pill" onClick={openModelPicker}>
-            <span className="material-symbols-rounded">
-              {selectedModel?.provider === 'auto' ? 'auto_awesome' : selectedModel?.provider === 'nvidia_nim' ? 'memory_alt' : selectedModel?.provider === 'ollama' ? 'memory' : 'cloud'}
-            </span>
-            <span className="rs-speak-actions-label">{selectedModelLabel}</span>
-          </button>
-
-          <button className="rs-pill" onClick={toggleVoiceMode} title="Voice Output Mode">
-             <span className="material-symbols-rounded">
-                 {voiceToggle === 'auto' ? 'volume_up' : voiceToggle === 'always' ? 'record_voice_over' : 'volume_off'}
-             </span>
-             <span className="rs-speak-actions-label">
-                 {voiceToggle === 'auto' ? 'AUTO' : voiceToggle === 'always' ? 'ALWAYS' : 'NEVER'}
-             </span>
-          </button>
-
-          <button className={`rs-pill ${isRecording ? 'is-active' : ''}`} onClick={() => isRecording ? stopRecording() : startRecording()} disabled={isThinking}>
+          <button className={`rs-pill ${isRecording ? 'is-active' : ''}`} onClick={() => isRecording ? stopRecording() : startRecording()} disabled={isThinking} title="Speak">
             <span className="material-symbols-rounded">{isRecording ? 'stop' : 'mic'}</span>
           </button>
 
@@ -316,7 +284,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
         </div>
       </div>
     </div>
-  ), [inputText, handleSend, abortGeneration, isRecording, startRecording, stopRecording, isThinking, viewingSession, webSearch, deepResearch, selectedModel, selectedModelLabel, token, openModelPicker, voiceToggle, toggleVoiceMode])
+  ), [inputText, handleSend, abortGeneration, isRecording, startRecording, stopRecording, isThinking, viewingSession])
 
   useEffect(() => {
     if (!embedded && setAction) {
@@ -432,6 +400,77 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
         hasNvidia={hasNvidia}
         hasCloud={hasCloud}
       />
+
+      {toolsOpen && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9990 }} onClick={() => setToolsOpen(false)} />
+          <div className="rs-mpop" style={{ position: 'fixed', left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto', maxWidth: 460, marginInline: 'auto', maxHeight: '70vh', overflowY: 'auto' }}>
+            <label className="rs-mpop-row">
+              <span className="material-symbols-rounded rs-mpop-icon">attach_file</span>
+              <span className="rs-mpop-body">
+                <span className="rs-mpop-title">Attach a file</span>
+                <span className="rs-mpop-sub">Add a document or image</span>
+              </span>
+              <input type="file" style={{ display: 'none' }} onChange={async (e) => {
+                const file = e.target.files?.[0]; if (!file) return
+                setToolsOpen(false)
+                const docId = `doc_${Date.now()}`
+                const fd = new FormData(); fd.append('file', file)
+                try {
+                  const res = await fetch(`${API_BASE}/api/rag/ingest?doc_id=${docId}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
+                  if (res.ok) { setActiveDocId(docId); setMessages(p => [...p, { role: 'system', text: `RESOURCE IDENTIFIED: ${file.name}` }]) }
+                } catch { setError('Ingestion failed.') }
+              }} />
+            </label>
+
+            <button className="rs-mpop-row" onClick={() => { setToolsOpen(false); openModelPicker() }}>
+              <span className="material-symbols-rounded rs-mpop-icon">
+                {selectedModel?.provider === 'auto' ? 'auto_awesome' : selectedModel?.provider === 'nvidia_nim' ? 'memory_alt' : selectedModel?.provider === 'ollama' ? 'memory' : 'cloud'}
+              </span>
+              <span className="rs-mpop-body">
+                <span className="rs-mpop-title">Model</span>
+                <span className="rs-mpop-sub">{selectedModelLabel}</span>
+              </span>
+              <span className="material-symbols-rounded rs-mpop-chevron">chevron_right</span>
+            </button>
+
+            <button className={`rs-mpop-row${webSearch ? ' is-active' : ''}`} onClick={() => setWebSearch(!webSearch)}>
+              <span className="material-symbols-rounded rs-mpop-icon">public</span>
+              <span className="rs-mpop-body">
+                <span className="rs-mpop-title">Scan the web</span>
+                <span className="rs-mpop-sub">{webSearch ? 'On — searching current sources' : 'Search current sources'}</span>
+              </span>
+              {webSearch && <span className="material-symbols-rounded rs-mpop-check">check</span>}
+            </button>
+
+            <button className={`rs-mpop-row${deepResearch ? ' is-active' : ''}`} onClick={() => setDeepResearch(!deepResearch)}>
+              <span className="material-symbols-rounded rs-mpop-icon">travel_explore</span>
+              <span className="rs-mpop-body">
+                <span className="rs-mpop-title">Deep research</span>
+                <span className="rs-mpop-sub">{deepResearch ? 'On — detailed report' : 'Get a detailed report'}</span>
+              </span>
+              {deepResearch && <span className="material-symbols-rounded rs-mpop-check">check</span>}
+            </button>
+
+            <button className="rs-mpop-row" onClick={toggleVoiceMode}>
+              <span className="material-symbols-rounded rs-mpop-icon">
+                {voiceToggle === 'auto' ? 'volume_up' : voiceToggle === 'always' ? 'record_voice_over' : 'volume_off'}
+              </span>
+              <span className="rs-mpop-body">
+                <span className="rs-mpop-title">Voice output</span>
+                <span className="rs-mpop-sub">
+                  {voiceToggle === 'auto' ? 'Auto — match how you asked' : voiceToggle === 'always' ? 'Always speak replies' : 'Never speak replies'}
+                </span>
+              </span>
+            </button>
+
+            <div style={{ borderTop: '1px solid var(--md-outline-variant)', marginTop: 6, paddingTop: 10, display: 'flex', alignItems: 'center', gap: 8, paddingInline: 8 }}>
+              <span className="rs-mpop-sub">Session presets</span>
+              <div style={{ marginInlineStart: 'auto' }}><PresetSelector /></div>
+            </div>
+          </div>
+        </>
+      )}
 
       {embedded && (
         <div style={{ marginTop: 'auto', paddingTop: 16 }}>
