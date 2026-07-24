@@ -173,7 +173,7 @@ mcp>=1.0.0
 # Voice ID (speaker recognition, local)
 # -----------------------------------------------------------------------------
 resemblyzer>=0.1.4
-zeroconf>=0.132.0               # mDNS discovery for vector fleet
+zeroconf>=0.150.0               # mDNS discovery for vector fleet
 croniter>=2.0.0                 # cron parsing for vector schedules
 
 # -----------------------------------------------------------------------------
