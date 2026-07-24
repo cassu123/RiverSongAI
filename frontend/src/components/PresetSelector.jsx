@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useBreakpoint } from '../hooks/useBreakpoint'
 
 /**
  * PresetSelector — Q2#9.
@@ -21,6 +22,7 @@ export default function PresetSelector({ onApply, onManage }) {
   const [presets,   setPresets]   = useState([])
   const [open,      setOpen]      = useState(false)
   const [applying,  setApplying]  = useState(null)
+  const { isPhone } = useBreakpoint()
 
   const authHeaders = useCallback(() => ({
     'Content-Type': 'application/json',
@@ -80,14 +82,15 @@ export default function PresetSelector({ onApply, onManage }) {
           <div
             className="rs-card"
             style={{
-              position: 'absolute',
-              bottom: 'calc(100% + 8px)',
-              right: 0,
               zIndex: 9999,
-              minWidth: 240,
               padding: 10,
               background: 'var(--md-surface-container-highest)',
               boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+              // On phones this anchored dropdown (right:0, 240px wide) overflows
+              // off the left edge — render it as a full-width bottom sheet.
+              ...(isPhone
+                ? { position: 'fixed', left: 12, right: 12, bottom: 12, minWidth: 0, maxHeight: '60vh', overflowY: 'auto' }
+                : { position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, minWidth: 240 }),
             }}
           >
             <div className="rs-card-label" style={{ marginBottom: 6 }}>SESSION PRESETS</div>
