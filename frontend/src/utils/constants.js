@@ -7,7 +7,7 @@
 
 export const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'admin_settings', 'remote_ollama', 'webhook_tokens', 'slae'])
 
-export const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings', 'chronos', 'briefing', 'documents', 'skills', 'presets', 'research', 'compare'])
+export const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings', 'chronos', 'briefing', 'documents', 'skills', 'presets', 'compare'])
 
 export const STATE_TABS = ['idle', 'listening', 'thinking', 'speaking']
 

@@ -48,7 +48,6 @@ const FleetPage               = lazy(() => import('./pages/FleetPage.jsx'))
 const DocumentsPage           = lazy(() => import('./pages/DocumentsPage.jsx'))
 const SkillsPage              = lazy(() => import('./pages/SkillsPage.jsx'))
 const PresetsPage             = lazy(() => import('./pages/PresetsPage.jsx'))
-const ResearchPage            = lazy(() => import('./pages/ResearchPage.jsx'))
 const ComparePage             = lazy(() => import('./pages/ComparePage.jsx'))
 const RemoteOllamaPage        = lazy(() => import('./pages/RemoteOllamaPage.jsx'))
 const WebhookTokensPage       = lazy(() => import('./pages/WebhookTokensPage.jsx'))
@@ -91,7 +90,6 @@ const PAGE_TO_PATH = {
   documents:        '/documents',
   skills:           '/skills',
   presets:          '/presets',
-  research:         '/research',
   compare:          '/compare',
   remote_ollama:    '/admin/remote-ollama',
   webhook_tokens:   '/admin/webhook-tokens',
@@ -473,7 +471,6 @@ export default function App() {
               {currentPage === 'documents'  && <DocumentsPage setAction={setPageAction} />}
               {currentPage === 'skills'     && <SkillsPage setAction={setPageAction} />}
               {currentPage === 'presets'    && <PresetsPage setAction={setPageAction} />}
-              {currentPage === 'research'   && <ResearchPage setAction={setPageAction} onNavigate={handleNavigate} />}
               {currentPage === 'compare'    && <ComparePage setAction={setPageAction} />}
               {currentPage === 'remote_ollama' && <RemoteOllamaPage setAction={setPageAction} />}
               {currentPage === 'webhook_tokens' && <WebhookTokensPage setAction={setPageAction} />}
