@@ -33,6 +33,7 @@ import FamilyGroupsSection from './settings/FamilyGroupsSection.jsx'
 import AdminVisibilitySection from './settings/AdminVisibilitySection.jsx'
 import AdminModelFamiliesSection from './settings/AdminModelFamiliesSection.jsx'
 import NotificationsSection from './settings/NotificationsSection.jsx'
+import ProactivePage from './ProactivePage.jsx'
 import TokenUsageSection from './settings/TokenUsageSection.jsx'
 import VoiceIDSection from './settings/VoiceIDSection.jsx'
 
@@ -917,6 +918,11 @@ export default function SettingsPage({
       {/* NOTIFICATIONS — user                                             */}
       {/* ================================================================ */}
       {showUser && <NotificationsSection token={token} />}
+
+      {/* ================================================================ */}
+      {/* PROACTIVE — quiet hours, push severity, muting, delivery log     */}
+      {/* ================================================================ */}
+      {showUser && <ProactivePage embedded />}
 
       {/* ================================================================ */}
       {/* PARENT — my children (parent only, user view)                   */}
