@@ -115,6 +115,23 @@ def _migrate_culinary_schema() -> None:
             conn.commit()
         except Exception:
             pass
+        # image_url + blacklisted_json shipped alongside rating (76609f8) but
+        # never got their own ALTER — older DBs 500 on any recipe SELECT
+        # ("no such column"). Backfill both here.
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE cul_recipes ADD COLUMN image_url TEXT"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE cul_recipes ADD COLUMN blacklisted_json TEXT NOT NULL DEFAULT '[]'"
+            ))
+            conn.commit()
+        except Exception:
+            pass
         try:
             conn.execute(sqlalchemy.text(
                 "ALTER TABLE cul_banned_ingredients ADD COLUMN substitute TEXT"
