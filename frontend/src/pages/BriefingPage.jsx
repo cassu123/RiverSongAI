@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import RsMarkdown from '../components/RsMarkdown.jsx'
 import { MusicDiscoveryCard } from '../components/widgets/MusicDiscoveryCard.jsx'
-import FeedTabsContainer from '../components/FeedTabsContainer.jsx'
 
 /**
  * BriefingPage — Daily Briefing
@@ -255,8 +254,20 @@ export default function BriefingPage({ onNavigate }) {
           </div>
         </div>
 
-        {/* Live Feed Tabs — News / Weather / Sports / Stocks */}
-        <FeedTabsContainer token={token} />
+        {/* Feeds — live on the dedicated Feeds page; link out instead of
+            embedding the full tab set (it lives in two places otherwise). */}
+        <div className="rs-card">
+          <div className="rs-card-head">
+            <span className="rs-card-label">LIVE FEEDS</span>
+          </div>
+          <div className="rs-card-meta" style={{ marginBottom: 12 }}>
+            News, weather, sports, markets and more — updated live.
+          </div>
+          <button className="rs-btn-primary" style={{ width: '100%' }} onClick={() => onNavigate('feeds')}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', marginRight: 6, verticalAlign: 'middle' }}>feed</span>
+            OPEN FEEDS
+          </button>
+        </div>
 
         {/* Music Discovery */}
         {musicPrefs?.music_provider === 'youtube_music' && (
