@@ -51,6 +51,7 @@ class MediaKind(str, PyEnum):
     PHOTO = "photo"
     VIDEO = "video"
     DOCUMENT = "document"
+    LINK_ARCHIVE = "link_archive"
 
 class MediaSource(str, PyEnum):
     USER_UPLOAD = "user_upload"

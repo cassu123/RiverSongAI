@@ -99,6 +99,574 @@ def _migrate(engine) -> None:
     """Add columns introduced after initial schema without dropping existing data."""
     import sqlalchemy
     with engine.connect() as conn:
+
+        try:
+            conn.execute(sqlalchemy.text("UPDATE vehicle_usage_readings SET unit = 'miles' WHERE unit = 'MILES'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicle_usage_readings SET unit = 'hours' WHERE unit = 'HOURS'"))
+            
+            conn.execute(sqlalchemy.text("UPDATE vehicle_usage_readings SET source = 'manual' WHERE source = 'MANUAL'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicle_usage_readings SET source = 'service_log' WHERE source = 'SERVICE_LOG'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicle_usage_readings SET source = 'estimated' WHERE source = 'ESTIMATED'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicle_usage_readings SET source = 'telemetry' WHERE source = 'TELEMETRY'"))
+            
+            conn.execute(sqlalchemy.text("UPDATE vehicle_service_check_results SET status = 'pass' WHERE status = 'PASS'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicle_service_check_results SET status = 'warn' WHERE status = 'WARN'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicle_service_check_results SET status = 'fail' WHERE status = 'FAIL'"))
+            
+            conn.execute(sqlalchemy.text("UPDATE vehicle_media SET kind = 'photo' WHERE kind = 'PHOTO'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicle_media SET kind = 'video' WHERE kind = 'VIDEO'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicle_media SET kind = 'document' WHERE kind = 'DOCUMENT'"))
+            
+            conn.execute(sqlalchemy.text("UPDATE vehicle_media SET source = 'user_upload' WHERE source = 'USER_UPLOAD'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicle_media SET source = 'system_generated' WHERE source = 'SYSTEM_GENERATED'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicle_media SET source = 'url' WHERE source = 'URL'"))
+            conn.commit()
+        except Exception:
+            pass
+
+
+        try:
+            conn.execute(sqlalchemy.text("UPDATE vehicles SET vehicle_type = 'auto' WHERE vehicle_type = 'AUTO'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicles SET vehicle_type = 'moto' WHERE vehicle_type = 'MOTO'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicles SET vehicle_type = 'truck' WHERE vehicle_type = 'TRUCK'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicles SET vehicle_type = 'atv' WHERE vehicle_type = 'ATV'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicles SET vehicle_type = 'mower' WHERE vehicle_type = 'MOWER'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicles SET vehicle_type = 'tractor' WHERE vehicle_type = 'TRACTOR'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicles SET vehicle_type = 'generator' WHERE vehicle_type = 'GENERATOR'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicles SET vehicle_type = 'other' WHERE vehicle_type = 'OTHER'"))
+            
+            conn.execute(sqlalchemy.text("UPDATE vehicle_check_points SET service_level = 'inspect' WHERE service_level = 'INSPECT'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicle_check_points SET service_level = 'service' WHERE service_level = 'SERVICE'"))
+            conn.execute(sqlalchemy.text("UPDATE vehicle_check_points SET service_level = 'replace' WHERE service_level = 'REPLACE'"))
+            conn.commit()
+        except Exception:
+            pass
+
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicles ADD COLUMN external_user_id VARCHAR NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicles ADD COLUMN year INTEGER"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicles ADD COLUMN make VARCHAR NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicles ADD COLUMN model VARCHAR NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicles ADD COLUMN trim VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicles ADD COLUMN nickname VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicles ADD COLUMN vehicle_type VARCHAR(9) NOT NULL DEFAULT 'auto'"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicles ADD COLUMN vin VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicles ADD COLUMN license_plate VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicles ADD COLUMN color VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicles ADD COLUMN notes TEXT"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_usage_readings ADD COLUMN vehicle_id CHAR(32) NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_usage_readings ADD COLUMN value FLOAT NOT NULL DEFAULT 0"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_usage_readings ADD COLUMN unit VARCHAR(5) NOT NULL DEFAULT 'miles'"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_usage_readings ADD COLUMN source VARCHAR(11) NOT NULL DEFAULT 'manual'"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN vehicle_id CHAR(32) NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN description VARCHAR NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN service_level VARCHAR(7) NOT NULL DEFAULT 'inspect'"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN interval_miles INTEGER"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN interval_days INTEGER"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN due_at_miles INTEGER"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN expected_spec VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN volume VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN min_value FLOAT"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN max_value FLOAT"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN unit VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN ft_lb FLOAT"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN nm FLOAT"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN last_service_odometer INTEGER"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_check_points ADD COLUMN last_service_date DATETIME"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_parts ADD COLUMN vehicle_id CHAR(32) NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_parts ADD COLUMN checkpoint_id CHAR(32) NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_parts ADD COLUMN part_name VARCHAR NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_parts ADD COLUMN oem_part_number VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_parts ADD COLUMN oem_specs VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_parts ADD COLUMN source VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_fluid_specs ADD COLUMN vehicle_id CHAR(32) NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_fluid_specs ADD COLUMN name VARCHAR NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_fluid_specs ADD COLUMN spec VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_fluid_specs ADD COLUMN volume VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_torque_specs ADD COLUMN vehicle_id CHAR(32) NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_torque_specs ADD COLUMN name VARCHAR NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_torque_specs ADD COLUMN ft_lb FLOAT"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_torque_specs ADD COLUMN nm FLOAT"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE maint_persons ADD COLUMN owner_user_id VARCHAR NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE maint_persons ADD COLUMN external_user_id VARCHAR NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE maint_persons ADD COLUMN email VARCHAR NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE maint_persons ADD COLUMN display_name VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_assignments ADD COLUMN vehicle_id CHAR(32) NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_assignments ADD COLUMN person_id CHAR(32) NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_logs ADD COLUMN vehicle_id CHAR(32) NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_logs ADD COLUMN performed_by_id CHAR(32)"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_logs ADD COLUMN service_type VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_logs ADD COLUMN odometer INTEGER"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_logs ADD COLUMN is_pro_service BOOLEAN NOT NULL DEFAULT 0"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_logs ADD COLUMN service_center VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_logs ADD COLUMN cost NUMERIC(10, 2)"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_logs ADD COLUMN notes TEXT"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_logs ADD COLUMN receipt_path VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_check_results ADD COLUMN log_id CHAR(32) NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_check_results ADD COLUMN check_point_id CHAR(32)"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_check_results ADD COLUMN description VARCHAR NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_check_results ADD COLUMN actual_value VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_check_results ADD COLUMN status VARCHAR(4)"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_service_check_results ADD COLUMN passed BOOLEAN NOT NULL DEFAULT 1"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_media ADD COLUMN vehicle_id CHAR(32) NOT NULL DEFAULT ''"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_media ADD COLUMN checkpoint_id CHAR(32)"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_media ADD COLUMN log_id CHAR(32)"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_media ADD COLUMN kind VARCHAR(8) NOT NULL DEFAULT 'photo'"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_media ADD COLUMN title VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_media ADD COLUMN source VARCHAR(16) NOT NULL DEFAULT 'user_upload'"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_media ADD COLUMN source_url VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_media ADD COLUMN file_path VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE vehicle_media ADD COLUMN thumb_path VARCHAR"
+            ))
+            conn.commit()
+        except Exception:
+            pass
         def _cols(table):
             return {row[1] for row in conn.execute(
                 sqlalchemy.text(f"PRAGMA table_info({table})"))}
