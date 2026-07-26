@@ -103,6 +103,38 @@ with _engine.begin() as conn:
         conn.execute(text("ALTER TABLE inventory_items ADD COLUMN label_printed_at DATETIME"))
     except Exception:
         pass
+    try:
+        conn.execute(text("ALTER TABLE inv_users ADD COLUMN timezone VARCHAR NOT NULL DEFAULT 'UTC'"))
+    except Exception:
+        pass
+    try:
+        conn.execute(text("ALTER TABLE inv_audits ADD COLUMN user_timezone VARCHAR NOT NULL DEFAULT 'UTC'"))
+    except Exception:
+        pass
+    try:
+        conn.execute(text("ALTER TABLE inventory_items ADD COLUMN is_insured BOOLEAN NOT NULL DEFAULT 0"))
+    except Exception:
+        pass
+    try:
+        conn.execute(text("ALTER TABLE inv_homes ADD COLUMN default_qr_standard VARCHAR NOT NULL DEFAULT 'qr'"))
+    except Exception:
+        pass
+    try:
+        conn.execute(text("ALTER TABLE inv_homes ADD COLUMN manifest_generated_at DATETIME"))
+    except Exception:
+        pass
+    try:
+        conn.execute(text("ALTER TABLE inventory_items ADD COLUMN qr_standard VARCHAR NOT NULL DEFAULT 'qr'"))
+    except Exception:
+        pass
+    try:
+        conn.execute(text("ALTER TABLE inventory_items ADD COLUMN qr_code_data TEXT"))
+    except Exception:
+        pass
+    try:
+        conn.execute(text("ALTER TABLE inventory_items ADD COLUMN asset_status VARCHAR NOT NULL DEFAULT 'Serviceable'"))
+    except Exception:
+        pass
 
 
 def get_db() -> Generator[Session, None, None]:
