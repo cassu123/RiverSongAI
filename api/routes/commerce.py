@@ -98,6 +98,40 @@ _engine = create_engine(
 _Session = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
 Base.metadata.create_all(_engine)
 
+def _migrate_commerce_schema(engine):
+    import sqlalchemy
+    with engine.begin() as conn:
+        for table_name in Base.metadata.tables.keys():
+            try:
+                existing_cols = {row[1] for row in conn.execute(sqlalchemy.text(f"PRAGMA table_info({table_name})"))}
+            except Exception:
+                continue
+            if not existing_cols:
+                continue
+            for col in Base.metadata.tables[table_name].columns:
+                if col.name not in existing_cols:
+                    # simplistic fallback for missing columns
+                    col_type = col.type.compile(engine.dialect)
+                    stmt = f"ALTER TABLE {table_name} ADD COLUMN {col.name} {col_type}"
+                    # Only supply a NOT NULL DEFAULT for plain scalar types.
+                    # Enum columns are persisted by NAME (no values_callable), so
+                    # a guessed '' default is an invalid member and would 500 on
+                    # read — add those nullable instead (existing rows read back
+                    # as None; ORM inserts always supply a valid value).
+                    if not col.nullable and not isinstance(col.type, sqlalchemy.Enum):
+                        if isinstance(col.type, sqlalchemy.Boolean):
+                            stmt += " DEFAULT 0"
+                        elif isinstance(col.type, (sqlalchemy.Integer, sqlalchemy.Float, sqlalchemy.Numeric)):
+                            stmt += " DEFAULT 0"
+                        else:
+                            stmt += " DEFAULT ''"
+                    try:
+                        conn.execute(sqlalchemy.text(stmt))
+                    except Exception:
+                        pass
+
+_migrate_commerce_schema(_engine)
+
 
 def get_db() -> Generator[Session, None, None]:
     db = _Session()

@@ -189,6 +189,13 @@ def _migrate_culinary_schema() -> None:
             conn.commit()
         except Exception:
             pass
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE cul_stockroom ADD COLUMN min_quantity FLOAT NOT NULL DEFAULT 0.25"
+            ))
+            conn.commit()
+        except Exception:
+            pass
 
 
 _migrate_culinary_schema()
@@ -727,7 +734,7 @@ async def _sync_recipe_to_vault(
         content = _recipe_to_markdown(r)
         # Prefer household root when the user has one; otherwise fall back to
         # personal.
-        owner_id = _resolve_module_owner(uid, "vault")
+        owner_id = _resolve_module_owner(uid, "culinary")
         root = VROOT_HOUSEHOLD if owner_id.startswith(
             "family:") else VROOT_PERSONAL
         new_path = _recipe_vault_path_for(r, root=root)
@@ -755,7 +762,7 @@ async def _sync_recipe_to_vault(
 async def _delete_recipe_from_vault(uid: str, r: Recipe) -> None:
     try:
         provider = VaultProvider(store=None)
-        owner_id = _resolve_module_owner(uid, "vault")
+        owner_id = _resolve_module_owner(uid, "culinary")
         root = VROOT_HOUSEHOLD if owner_id.startswith(
             "family:") else VROOT_PERSONAL
         path = _recipe_vault_path_for(r, root=root)
