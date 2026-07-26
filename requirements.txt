@@ -119,7 +119,7 @@ opentelemetry-api>=1.29.0
 opentelemetry-sdk>=1.29.0
 opentelemetry-instrumentation>=0.63b1
 opentelemetry-instrumentation-fastapi>=0.63b1
-opentelemetry-instrumentation-asgi>=0.63b1
+opentelemetry-instrumentation-asgi>=0.65b0
 # unstructured and pymemgpt have strict Python <3.13 limits. Skipping for 3.14.
 # unstructured[all-docs]==0.14.0
 # pymemgpt==0.5.6
