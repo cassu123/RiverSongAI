@@ -16,7 +16,6 @@ import { useAuth } from '../context/AuthContext'
 import { API_BASE, Section, Toggle } from './settings/shared.jsx'
 import NimSection from './settings/NimSection.jsx'
 import ModelSection from './settings/ModelSection.jsx'
-import FeedsSection from './settings/FeedsSection.jsx'
 import BriefingSection from './settings/BriefingSection.jsx'
 import PersonaSection from './settings/PersonaSection.jsx'
 import DaemonControlSection from './settings/DaemonControlSection.jsx'
@@ -757,16 +756,9 @@ export default function SettingsPage({
         />
       )}
 
-      {/* ================================================================ */}
-      {/* FEEDS — user                                                     */}
-      {/* ================================================================ */}
-      {showUser && feedPrefs !== null && (
-        <FeedsSection
-          feedPrefs={feedPrefs}
-          setFeedPrefs={setFeedPrefs}
-          saveFeedPrefs={saveFeedPrefs}
-        />
-      )}
+      {/* Feed preferences (weather, sports, stocks, space, earth, happenings)
+          now live inline on the Feeds page — each tab owns its own settings,
+          and the "manage tabs" gear controls which optional tabs show. */}
 
       {/* ================================================================ */}
       {/* CLOUD FALLBACK — admin only (activated by admin)                 */}
