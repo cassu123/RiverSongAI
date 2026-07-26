@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 const CATEGORIES = [
-  'FURNITURE', 'ELECTRONICS', 'APPLIANCES', 'TOOLS',
-  'CLOTHING', 'VEHICLES', 'SPORTING_GOODS', 'ART',
-  'JEWELRY', 'DOCUMENT', 'OTHER'
+  'Furniture', 'Electronics', 'Appliance', 'Tool',
+  'Clothing', 'Vehicle', 'Sporting Goods', 'Collectible',
+  'Jewelry', 'Document', 'Other'
 ];
 
 export default function AssetDetailModal({ item, homeId, onClose, token, onUpdate }) {

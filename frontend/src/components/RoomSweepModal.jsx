@@ -14,7 +14,7 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
   
   const [formData, setFormData] = useState({
     name: '',
-    category: 'OTHER',
+    category: 'Other',
     manufacturer: '',
     description: ''
   });
@@ -42,7 +42,7 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
         const data = await res.json();
         setFormData({
           name: data.name || '',
-          category: data.category?.toUpperCase() || 'OTHER',
+          category: data.category || 'Other',
           manufacturer: data.manufacturer || '',
           description: data.description || ''
         });
@@ -173,17 +173,17 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
                  <div className="rs-form-group">
                    <label>Category</label>
                    <select className="rs-input" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                      <option value="FURNITURE">Furniture</option>
-                      <option value="ELECTRONICS">Electronics</option>
-                      <option value="APPLIANCES">Appliances</option>
-                      <option value="TOOLS">Tools</option>
-                      <option value="CLOTHING">Clothing</option>
-                      <option value="VEHICLES">Vehicles</option>
-                      <option value="SPORTING_GOODS">Sporting Goods</option>
-                      <option value="ART">Art & Collectibles</option>
-                      <option value="JEWELRY">Jewelry</option>
-                      <option value="DOCUMENT">Document</option>
-                      <option value="OTHER">Other</option>
+                      <option value="Furniture">Furniture</option>
+                      <option value="Electronics">Electronics</option>
+                      <option value="Appliance">Appliances</option>
+                      <option value="Tool">Tools</option>
+                      <option value="Clothing">Clothing</option>
+                      <option value="Vehicle">Vehicles</option>
+                      <option value="Sporting Goods">Sporting Goods</option>
+                      <option value="Collectible">Art & Collectibles</option>
+                      <option value="Jewelry">Jewelry</option>
+                      <option value="Document">Document</option>
+                      <option value="Other">Other</option>
                    </select>
                  </div>
                  <div className="rs-form-group">
