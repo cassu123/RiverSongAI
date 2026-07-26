@@ -22,7 +22,7 @@
     "@react-three/postprocessing": "^3.0.4",
     "@uiw/react-codemirror": "^4.25.11",
     "@zxing/browser": "^0.2.0",
-    "@zxing/library": "^0.22.0",
+    "@zxing/library": "^0.23.0",
     "cronstrue": "^3.24.0",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
