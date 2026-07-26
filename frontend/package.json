@@ -20,7 +20,7 @@
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@react-three/postprocessing": "^3.0.4",
-    "@uiw/react-codemirror": "^4.25.10",
+    "@uiw/react-codemirror": "^4.25.11",
     "@zxing/browser": "^0.2.0",
     "@zxing/library": "^0.22.0",
     "cronstrue": "^3.14.0",
