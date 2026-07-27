@@ -195,38 +195,29 @@ export default function BriefingPage({ onNavigate }) {
   return (
     <div className="rs-foyer animate-fade-in">
       
-      <header className="rs-foyer-head">
-        <h1 className="rs-greeting">{greeting()}, {firstName}.</h1>
-        <div className="rs-greeting-sub">Your daily briefing is ready. {fmtDate()}.</div>
+      <header className="rs-foyer-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h1 className="rs-greeting">{greeting()}, {firstName}.</h1>
+          <div className="rs-greeting-sub" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>wb_sunny</span>
+            <span>72° and clear. Your daily briefing is ready. {fmtDate()}.</span>
+          </div>
+        </div>
+        <button className="rs-btn-primary" onClick={() => alert('Audio briefing playing...')}>
+          <span className="material-symbols-rounded" style={{ fontSize: '1.4rem' }}>play_circle</span>
+          PLAY BRIEFING
+        </button>
       </header>
 
       <div className="rs-card-flow">
 
-        {/* Briefing Settings */}
-        <div className="rs-card">
-          <div className="rs-card-head">
-            <span className="rs-card-label">BRIEFING SETTINGS</span>
-          </div>
-          <div className="rs-card-meta" style={{ marginBottom: 12 }}>
-            Configure your morning brief time, sections, and mode (auto/manual).
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="rs-pill" onClick={() => alert('Settings menu planned for next phase.')}>
-              <span className="material-symbols-rounded">settings</span> CONFIGURE
-            </button>
-          </div>
-        </div>
-
         {morningBrief && (
-          <div className="rs-card is-elev is-wide" style={{ background: 'linear-gradient(135deg, rgba(65, 88, 208, 0.2) 0%, rgba(200, 80, 192, 0.2) 100%)' }}>
+          <div className="rs-card is-elev is-wide" style={{ background: 'linear-gradient(135deg, rgba(65, 88, 208, 0.15) 0%, rgba(200, 80, 192, 0.15) 100%)', borderColor: 'rgba(200, 80, 192, 0.3)' }}>
             <div className="rs-card-head">
-              <span className="rs-card-label" style={{ color: '#fff', fontWeight: 'bold' }}>GENERATED MORNING BRIEF</span>
+              <span className="rs-card-label" style={{ color: '#fff', fontWeight: 'bold' }}><span className="material-symbols-rounded" style={{ fontSize: '1.1rem', verticalAlign: 'middle', marginRight: 6 }}>auto_awesome</span> AI MORNING SUMMARY</span>
             </div>
             <div style={{ lineHeight: 1.6, fontSize: '1rem', color: 'rgba(255,255,255,0.95)' }}>
               <RsMarkdown onNavigate={onNavigate}>{morningBrief.body}</RsMarkdown>
-            </div>
-            <div className="rs-card-meta" style={{ marginTop: 12 }}>
-              Generated today by River Song.
             </div>
           </div>
         )}
@@ -234,7 +225,7 @@ export default function BriefingPage({ onNavigate }) {
         {/* Daily Summary */}
         <div className="rs-card is-elev is-wide">
           <div className="rs-card-head">
-            <span className="rs-card-label">DAILY LOG</span>
+            <span className="rs-card-label"><span className="material-symbols-rounded" style={{ fontSize: '1.1rem', verticalAlign: 'middle', marginRight: 6 }}>history_edu</span> DAILY LOG</span>
             <button
               className="rs-pill"
               onClick={() => openDailyInChronos(dailyPath)}
@@ -249,23 +240,41 @@ export default function BriefingPage({ onNavigate }) {
           <div style={{ lineHeight: 1.6, fontSize: '1rem', color: 'rgba(255,255,255,0.9)' }}>
             <RsMarkdown onNavigate={onNavigate}>{summary}</RsMarkdown>
           </div>
-          <div className="rs-card-meta" style={{ marginTop: 12 }}>
-            Compiled from conversation summaries and your CHRONOS daily note.
-          </div>
         </div>
 
-        {/* Feeds — live on the dedicated Feeds page; link out instead of
-            embedding the full tab set (it lives in two places otherwise). */}
-        <div className="rs-card">
+        {/* Calendar */}
+        <div className="rs-card is-tall">
           <div className="rs-card-head">
-            <span className="rs-card-label">LIVE FEEDS</span>
+            <span className="rs-card-label"><span className="material-symbols-rounded" style={{ fontSize: '1.1rem', verticalAlign: 'middle', marginRight: 6 }}>calendar_today</span> AGENDA</span>
           </div>
-          <div className="rs-card-meta" style={{ marginBottom: 12 }}>
-            News, weather, sports, markets and more — updated live.
-          </div>
-          <button className="rs-btn-primary" style={{ width: '100%' }} onClick={() => onNavigate('feeds')}>
-            <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', marginRight: 6, verticalAlign: 'middle' }}>feed</span>
-            OPEN FEEDS
+          {calendarError === 'disconnected' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', padding: '8px 0', flex: 1, justifyContent: 'center' }}>
+              <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.5 }}>link_off</span>
+              <div className="rs-card-meta">Google Calendar not connected.</div>
+              <button className="rs-pill" onClick={() => onNavigate('google')}>CONNECT GOOGLE</button>
+            </div>
+          ) : calendarError === 'offline' ? (
+            <div className="rs-card-meta" style={{ padding: '8px 0' }}>
+              <span className="material-symbols-rounded" style={{ fontSize: '1.2rem', verticalAlign: 'middle', marginRight: 8, opacity: 0.5 }}>sync_problem</span>
+              Calendar sync unavailable.
+            </div>
+          ) : calendar.length === 0 ? (
+            <div className="rs-card-meta" style={{ padding: '8px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.5, marginBottom: 8 }}>event_available</span>
+              No events today. Clear schedule ahead.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+              {calendar.map((event, i) => (
+                <div key={event.id || i} className="rs-pill" style={{ justifyContent: 'flex-start', background: i === 0 ? 'var(--md-surface-container-high)' : undefined, color: i === 0 ? 'var(--md-on-surface)' : undefined }}>
+                  <span style={{ opacity: 0.7, marginRight: 12, fontFamily: 'var(--font-mono)', fontSize: '0.8rem', minWidth: 48 }}>{fmtEventTime(event)}</span>
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: i === 0 ? 800 : 500 }}>{event.summary || 'Untitled event'}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <button className="rs-btn-primary" style={{ marginTop: 'auto', width: '100%' }} onClick={() => onNavigate('google')}>
+            VIEW CALENDAR
           </button>
         </div>
 
@@ -278,54 +287,29 @@ export default function BriefingPage({ onNavigate }) {
           />
         )}
 
-        {/* Calendar — live from /api/google/calendar/upcoming */}
+        {/* Feeds */}
         <div className="rs-card">
           <div className="rs-card-head">
-            <span className="rs-card-label">UPCOMING</span>
+            <span className="rs-card-label"><span className="material-symbols-rounded" style={{ fontSize: '1.1rem', verticalAlign: 'middle', marginRight: 6 }}>feed</span> LIVE FEEDS</span>
           </div>
-          {calendarError === 'disconnected' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', padding: '8px 0' }}>
-              <div className="rs-card-meta">
-                <span className="material-symbols-rounded" style={{ fontSize: '1.2rem', verticalAlign: 'middle', marginRight: 8, opacity: 0.5 }}>link_off</span>
-                Google Calendar not connected.
-              </div>
-              <button className="rs-pill" onClick={() => onNavigate('google')}>CONNECT GOOGLE</button>
-            </div>
-          ) : calendarError === 'offline' ? (
-            <div className="rs-card-meta" style={{ padding: '8px 0' }}>
-              <span className="material-symbols-rounded" style={{ fontSize: '1.2rem', verticalAlign: 'middle', marginRight: 8, opacity: 0.5 }}>sync_problem</span>
-              Calendar sync unavailable.
-            </div>
-          ) : calendar.length === 0 ? (
-            <div className="rs-card-meta" style={{ padding: '8px 0' }}>
-              <span className="material-symbols-rounded" style={{ fontSize: '1.2rem', verticalAlign: 'middle', marginRight: 8, opacity: 0.5 }}>event_available</span>
-              No events today. Clear schedule ahead.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {calendar.map((event, i) => (
-                <div key={event.id || i} className="rs-pill" style={{ justifyContent: 'flex-start', background: i === 0 ? 'var(--md-surface-container-high)' : undefined }}>
-                  <span style={{ opacity: 0.5, marginRight: 12, fontFamily: 'var(--font-mono)', fontSize: '0.8rem', minWidth: 48 }}>{fmtEventTime(event)}</span>
-                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.summary || 'Untitled event'}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <button className="rs-btn-primary" style={{ marginTop: 16, width: '100%' }} onClick={() => onNavigate('google')}>
-            VIEW FULL CALENDAR
+          <div className="rs-card-meta" style={{ flex: 1 }}>
+            News, weather, sports, markets and more — updated live.
+          </div>
+          <button className="rs-btn-primary" style={{ width: '100%', marginTop: 'auto' }} onClick={() => onNavigate('feeds')}>
+            OPEN FEEDS
           </button>
         </div>
 
         {/* Quick Utilities */}
         <div className="rs-card is-wide">
           <div className="rs-card-head">
-            <span className="rs-card-label">QUICK ACTIONS</span>
+            <span className="rs-card-label"><span className="material-symbols-rounded" style={{ fontSize: '1.1rem', verticalAlign: 'middle', marginRight: 6 }}>bolt</span> QUICK ACTIONS</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: 12 }}>
-            <button className="rs-pill" onClick={() => onNavigate('chat')}>NEW CHAT</button>
-            <button className="rs-pill" onClick={() => onNavigate('chronos')}>NOTES</button>
-            <button className="rs-pill" onClick={() => onNavigate('inventory')}>STASH</button>
-            <button className="rs-pill" onClick={() => onNavigate('culinary')}>KITCHEN</button>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+            <button className="rs-btn-primary" style={{ background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', boxShadow: 'none' }} onClick={() => onNavigate('chat')}><span className="material-symbols-rounded">chat</span> NEW CHAT</button>
+            <button className="rs-btn-primary" style={{ background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', boxShadow: 'none' }} onClick={() => onNavigate('chronos')}><span className="material-symbols-rounded">edit_note</span> NOTES</button>
+            <button className="rs-btn-primary" style={{ background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', boxShadow: 'none' }} onClick={() => onNavigate('inventory')}><span className="material-symbols-rounded">inventory_2</span> STASH</button>
+            <button className="rs-btn-primary" style={{ background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', boxShadow: 'none' }} onClick={() => onNavigate('culinary')}><span className="material-symbols-rounded">restaurant</span> KITCHEN</button>
           </div>
         </div>
 
