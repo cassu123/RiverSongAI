@@ -10,12 +10,12 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
   const isNew = !item || item._isNew;
   
   const [formData, setFormData] = useState(isNew ? {
-    name: '', category: 'OTHER', quantity: 1, location: '',
+    name: '', category: 'Other', quantity: 1, location: '',
     manufacturer: '', model_number: '', serial_number: '',
     purchase_price: '', purchase_date: '', replacement_cost: '',
     warranty_expiry_date: '', is_insured: false, description: ''
   } : {
-    name: item.name || '', category: item.category || 'OTHER', quantity: item.quantity || 1, location: item.location || '',
+    name: item.name || '', category: item.category || 'Other', quantity: item.quantity || 1, location: item.location || '',
     manufacturer: item.manufacturer || '', model_number: item.model_number || '', serial_number: item.serial_number || '',
     purchase_price: item.purchase_price || '', purchase_date: item.purchase_date || '', replacement_cost: item.replacement_cost || '',
     warranty_expiry_date: item.warranty_expiry_date || '', is_insured: item.is_insured || false, description: item.description || ''

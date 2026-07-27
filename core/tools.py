@@ -1418,7 +1418,7 @@ async def _exec_set_timer(args: dict, user_id: str) -> str:
         await asyncio.sleep(duration)
         from api.routes.culinary import _ws_manager
         from core.family import resolve_module_owner
-        uid = await resolve_module_owner(user_id, "culinary")
+        uid = resolve_module_owner(user_id, "culinary")
         # In culinary, household ID is usually needed for broadcast. Wait, _ws_manager broadcasts to household_id.
         # So we need to get household_id.
         from sqlalchemy.orm import Session
@@ -1448,7 +1448,7 @@ async def _resolve_vehicle(query: str, user_id: str):
     from sqlalchemy.orm import sessionmaker
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
-    owner_id = await resolve_module_owner(user_id, "maintenance")
+    owner_id = resolve_module_owner(user_id, "maintenance")
     try:
         vehicles = get_vehicles(db, owner_id)
         if not vehicles:
@@ -1476,7 +1476,7 @@ async def _exec_get_vehicle_status(args: dict, user_id: str) -> str:
     db = SessionLocal()
     try:
         from core.family import resolve_module_owner
-        owner_id = await resolve_module_owner(user_id, "maintenance")
+        owner_id = resolve_module_owner(user_id, "maintenance")
         tl = get_maintenance_timeline(str(vid), None, None, db, owner_id)
         return str(tl)
     except Exception as e:

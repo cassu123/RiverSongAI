@@ -476,7 +476,7 @@ class HouseholdUpdate(BaseModel):
 
 class RecipeCreate(BaseModel):
     title: str
-    meal_type: str = "Other"
+    meal_type: MealType = MealType.OTHER
     primary_protein: Optional[str] = None
     servings: int = 4
     image_url: Optional[str] = None
@@ -487,7 +487,7 @@ class RecipeCreate(BaseModel):
 
 class RecipeUpdate(BaseModel):
     title: Optional[str] = None
-    meal_type: Optional[str] = None
+    meal_type: Optional[MealType] = None
     primary_protein: Optional[str] = None
     servings: Optional[int] = None
     image_url: Optional[str] = None
@@ -1239,8 +1239,7 @@ async def create_recipe(
                     body.title}' already exists.")
 
     blacklisted = _flag_blacklist(db, hh.id, body.ingredients)
-    meal = MealType(body.meal_type) if body.meal_type in [
-        m.value for m in MealType] else MealType.OTHER
+    meal = body.meal_type
     r = Recipe(
         household_id=hh.id,
         title=body.title,
@@ -1290,8 +1289,7 @@ async def update_recipe(
     if body.title is not None:
         r.title = body.title
     if body.meal_type is not None:
-        r.meal_type = MealType(body.meal_type) if body.meal_type in [
-            m.value for m in MealType] else MealType.OTHER
+        r.meal_type = body.meal_type
     if body.primary_protein is not None:
         r.primary_protein = body.primary_protein
     if body.servings is not None:
