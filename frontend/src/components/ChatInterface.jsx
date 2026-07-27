@@ -245,8 +245,14 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
       })
   }, [token])
 
+  useEffect(() => {
+    const handleChipClick = (e) => setInputText(e.detail)
+    window.addEventListener('rs-chip-click', handleChipClick)
+    return () => window.removeEventListener('rs-chip-click', handleChipClick)
+  }, [])
+
   const ActionSlot = useMemo(() => (
-    <div className="rs-chat-input-container">
+    <div className="rs-chat-input-container" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(16px)', borderRadius: '24px', padding: '6px 12px', border: '1px solid rgba(255,255,255,0.08)' }}>
       <textarea
         ref={inputRef}
         rows={1}
@@ -258,7 +264,6 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
         disabled={isThinking || !!viewingSession}
       />
-      
       <div className="rs-chat-input-controls">
         <div className="rs-chat-input-left">
           <button type="button" className="rs-btn-ghost rs-icon-btn" title="Tools & attachments" onClick={() => setToolsOpen(true)}>

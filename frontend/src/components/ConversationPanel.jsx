@@ -49,8 +49,33 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
             <line x1="9" y1="16" x2="18" y2="16" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
           </svg>
         </div>
-        <p className="chat-empty-text">Start a conversation</p>
         <p className="chat-empty-sub">Type below or press the mic to speak</p>
+
+        <div style={{
+          display: 'flex', gap: 12, marginTop: 32, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 500
+        }}>
+          {['Review my agenda', 'Run a maintenance check', 'Add milk to grocery list'].map((chip, idx) => (
+            <button key={idx} style={{
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '20px', padding: '10px 16px', fontSize: '0.85rem', color: 'var(--md-on-surface-variant)',
+              cursor: 'pointer', transition: 'all 0.2s', backdropFilter: 'blur(10px)',
+              animation: `slideUpFade 0.4s ease-out ${idx * 0.1 + 0.2}s both`
+            }} onClick={() => {
+              const e = new CustomEvent('rs-chip-click', { detail: chip });
+              window.dispatchEvent(e);
+            }} onMouseOver={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+              e.currentTarget.style.color = 'var(--primary)';
+              e.currentTarget.style.borderColor = 'var(--primary)';
+            }} onMouseOut={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+              e.currentTarget.style.color = 'var(--md-on-surface-variant)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+            }}>
+              {chip}
+            </button>
+          ))}
+        </div>
       </div>
     )
   }

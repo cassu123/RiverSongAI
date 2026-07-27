@@ -458,18 +458,20 @@ function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
         <mesh material={vortexMat}>
           <icosahedronGeometry args={[1.45, 32]} />
         </mesh>
-      <mesh>
-        <icosahedronGeometry args={[0.95, 2]} />
-        <meshBasicMaterial color={0x1a0e06} transparent opacity={0.55} />
-      </mesh>
-      <points ref={silhouetteRef}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[cur, 3]} count={count} />
-        </bufferGeometry>
-        <pointsMaterial size={0.024} transparent opacity={0.85}
-          blending={THREE.AdditiveBlending} depthWrite={false} sizeAttenuation />
-      </points>
-      
+        <mesh>
+          <icosahedronGeometry args={[0.95, 2]} />
+          <meshBasicMaterial color={0x1a0e06} transparent opacity={0.55} />
+        </mesh>
+        <mesh>
+          <icosahedronGeometry args={[1.7, 3]} />
+          <meshBasicMaterial color={palData.silhouette} transparent opacity={0.3} wireframe wireframeLinewidth={1} blending={THREE.AdditiveBlending} depthWrite={false} />
+        </mesh>
+        <points ref={silhouetteRef}>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" args={[cur, 3]} count={count} />
+          </bufferGeometry>
+          <pointsMaterial size={0.024} transparent opacity={0.85} blending={THREE.AdditiveBlending} depthWrite={false} sizeAttenuation color={palData.accent} />
+        </points>
       {ringSpecs.map((spec, i) => (
         <mesh 
           key={i} 
