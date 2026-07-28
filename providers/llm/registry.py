@@ -14,6 +14,8 @@
 #   LLMRegistry.get(provider, model) -- ModelEntry or None
 #   LLMRegistry.list_local()         -- all Ollama models
 #   LLMRegistry.list_cloud()         -- all cloud models
+#   LLMRegistry.list_free()          -- all zero-cost models
+#   LLMRegistry.is_free(prov, model) -- True when the model costs nothing
 #   LLMRegistry.providers()          -- unique provider names
 #
 # Dependencies:
@@ -683,6 +685,27 @@ _CATALOG: List[ModelEntry] = [
         notes="Mistral Large 2 via NVIDIA NIM. Fast European model, free tier.",
         priority=155,
     ),
+
+    # -------------------------------------------------------------------------
+    # GLM 5.1 via NIM — Z.ai's agentic model, strong tool/function calling
+    # -------------------------------------------------------------------------
+    # Verify the exact model id against build.nvidia.com/models before relying
+    # on this in production -- NVIDIA's catalog adds and deprecates ids over
+    # time, and a stale id surfaces as a 404 from the NIM endpoint.
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="zhipuai/glm-5.1",
+        display_name="GLM 5.1 (NIM)",
+        context_window=200000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes=(
+            "Z.ai GLM 5.1 via NVIDIA NIM — agentic coding, OpenAI-format "
+            "function calling, 200K context. Free tier."
+        ),
+        priority=156,
+    ),
 ]
 
 
@@ -747,3 +770,35 @@ class LLMRegistry:
     def all_models(cls) -> List[ModelEntry]:
         """Full catalog sorted by priority."""
         return sorted(_CATALOG, key=lambda e: e.priority)
+
+    @classmethod
+    def is_free(cls, provider: str, model_id: str) -> bool:
+        """
+        True when running this model costs nothing per token.
+
+        Covers two cases:
+          - Local models (Ollama) -- no per-token billing at all.
+          - Cloud models on a free tier (NVIDIA NIM), where both cost fields
+            are explicitly 0.0.
+
+        Unknown (provider, model_id) pairs are treated as NOT free unless the
+        provider is local. A model missing from the catalog is more likely a
+        new paid entry than a new free one, and guessing wrong here means
+        silently spending money -- so the fallback errs toward "costs money".
+        """
+        entry = cls.get(provider, model_id)
+        if entry is None:
+            return provider == "ollama"
+        if not entry.is_cloud:
+            return True
+        return (entry.cost_per_1k_input_usd or 0.0) == 0.0 and (
+            entry.cost_per_1k_output_usd or 0.0
+        ) == 0.0
+
+    @classmethod
+    def list_free(cls) -> List[ModelEntry]:
+        """Every zero-cost model (local + free-tier cloud), sorted by priority."""
+        return sorted(
+            [e for e in _CATALOG if cls.is_free(e.provider, e.model_id)],
+            key=lambda e: e.priority,
+        )
