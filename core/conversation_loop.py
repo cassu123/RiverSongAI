@@ -162,12 +162,18 @@ def _build_llm_provider(
     fallback_model: Optional[str] = None,
     message_text: Optional[str] = None,
     admin_config: Optional[dict] = None,
+    free_only: bool = False,
 ) -> tuple[LLMProvider, Optional[str]]:
     """
     Instantiate the LLM provider.
 
     When provider_override is "auto" and model_intent_router_enabled is true,
     the model intent router classifies message_text and picks the best provider.
+
+    free_only constrains that automatic pick to models that cost nothing per
+    token. It is set per-user by an admin (users.free_models_only) and only
+    affects "auto" routing -- an explicit model choice is still honoured, since
+    the user picked it deliberately.
 
     Returns:
         (provider_instance, router_label) — router_label is a UI display string
@@ -177,6 +183,7 @@ def _build_llm_provider(
     key = provider_override or settings.llm_provider
     router_label: Optional[str] = None
 
+    from providers.llm.registry import LLMRegistry
     from api.routes.models_settings import _get_enabled_providers
     enabled_providers = _get_enabled_providers(admin_config)
 
@@ -191,13 +198,15 @@ def _build_llm_provider(
         if settings.model_intent_router_enabled and message_text:
             from providers.llm.model_intent_router import route as router_route
             try:
-                decision = router_route(message_text, enabled_providers)
+                decision = router_route(
+                    message_text, enabled_providers, free_only=free_only)
                 key = decision.provider
                 model_override = decision.model_id
                 router_label = decision.display_label
                 logger.info(
-                    "Intent router: '%s' → %s/%s (score=%d)",
+                    "Intent router: '%s' → %s/%s (score=%d, free_only=%s)",
                     decision.intent, key, model_override, decision.confidence,
+                    free_only,
                 )
             except Exception as exc:
                 logger.error(
@@ -215,7 +224,18 @@ def _build_llm_provider(
 
     primary = _instantiate_llm(key, model_override)
 
-    # Explicit per-user cloud fallback (admin-configured) takes priority.
+    # Explicit per-user cloud fallback (admin-configured) takes priority --
+    # unless this user is restricted to free models, in which case a paid
+    # fallback would quietly bill them the moment the primary errored. Drop it
+    # and let the local safety net below handle the failure instead.
+    if fallback_provider and free_only and not LLMRegistry.is_free(
+            fallback_provider, fallback_model or ""):
+        logger.info(
+            "Free-only user: skipping paid fallback %s/%s.",
+            fallback_provider, fallback_model,
+        )
+        fallback_provider = None
+
     if fallback_provider:
         try:
             secondary = _instantiate_llm(fallback_provider, fallback_model)
@@ -358,6 +378,9 @@ class ConversationLoop:
         # Admin global LLM toggles, cached at initialize() so the per-message
         # "auto" router (River decides) can respect them without a DB hit.
         self._admin_config: dict = {}
+        # Defaults to False so a store lookup failure can never silently
+        # restrict a user who was not restricted by an admin.
+        self._free_models_only: bool = False
         self._history: List[dict] = []
         self._initialized: bool = False
         self._turn_transcript: str = ""
@@ -384,6 +407,28 @@ class ConversationLoop:
         if task is not None and not task.done():
             task.cancel()
             self._generation_task = None
+
+    async def _load_free_models_only(self) -> bool:
+        """
+        Read this user's admin-set free_models_only flag.
+
+        Returns False when the store is unavailable or the user row is missing.
+        Failing open matters here: the flag restricts which models a user gets,
+        so a transient store error should not silently downgrade someone who
+        was never restricted. An admin who wants the restriction enforced will
+        see it applied on the next successful lookup.
+        """
+        if not self._memory or not hasattr(self._memory, "_store"):
+            return False
+        try:
+            user = await self._memory._store.get_user_by_id(self._user_id)
+        except Exception as exc:
+            logger.warning(
+                "Could not read free_models_only for user %s: %s",
+                self._user_id, exc,
+            )
+            return False
+        return bool(user.get("free_models_only")) if user else False
 
     def _spawn_background(self, coro, label: str) -> "asyncio.Task":
         """
@@ -435,6 +480,12 @@ class ConversationLoop:
                     "Failed to fetch admin config for LLM routing: %s", e)
         self._admin_config = admin_config
 
+        # Per-user admin restriction: when set, "Let River Decide" may only
+        # pick models that cost nothing. Read once at init rather than per
+        # message -- an admin toggling it takes effect on the user's next
+        # session, which is the same latency as the other user flags.
+        self._free_models_only = await self._load_free_models_only()
+
         try:
             llm_provider_override = self._llm_provider_override
             llm_model_override = self._llm_model_override
@@ -443,6 +494,8 @@ class ConversationLoop:
             fallback_model = self._fallback_model
             stt_model_override = self._stt_model_override
 
+            free_only = self._free_models_only
+
             def _build_llm():
                 llm, _router_label = _build_llm_provider(
                     provider_override=llm_provider_override,
@@ -450,6 +503,7 @@ class ConversationLoop:
                     fallback_provider=fallback_provider,
                     fallback_model=fallback_model,
                     admin_config=admin_config,
+                    free_only=free_only,
                 )
                 return llm
 
@@ -1040,6 +1094,7 @@ class ConversationLoop:
                 fallback_model=self._fallback_model,
                 message_text=text,
                 admin_config=self._admin_config,
+                free_only=self._free_models_only,
             )
         try:
             llm, label = await loop.run_in_executor(None, _build)

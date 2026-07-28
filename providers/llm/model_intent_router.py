@@ -20,16 +20,22 @@ Intent taxonomy:
 Routing logic:
   1. Score each intent by counting matched keyword patterns in the message.
   2. Winning intent needs score >= MIN_CONFIDENCE_HITS (default 2).
-  3. Before dispatching, walk the provider preference list until one is available.
-  4. Returns a RouterDecision dataclass with enough metadata for the UI chip.
+  3. Ties are broken by _TIE_BREAK_ORDER, never by dict insertion order.
+  4. Long messages with no keyword signal escalate to "reasoning" instead of
+     falling through to "general" and its smallest local model.
+  5. When free_only is set, models that cost money are stripped from the
+     preference chain before dispatch.
+  6. Before dispatching, walk the provider preference list until one is available.
+  7. Returns a RouterDecision dataclass with enough metadata for the UI chip.
 """
 
 from __future__ import annotations
 
+import datetime
 import logging
 import re
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +43,55 @@ logger = logging.getLogger(__name__)
 # Minimum pattern hits required to commit to an intent (below this → general)
 # ---------------------------------------------------------------------------
 MIN_CONFIDENCE_HITS = 2
+
+# ---------------------------------------------------------------------------
+# Messages at or above this length carry enough material that the smallest
+# local models handle them badly, even when no intent keyword fires. A pasted
+# log, document, or stack trace is the usual case: lots of text, no verbs the
+# patterns below recognise.
+# ---------------------------------------------------------------------------
+LONG_INPUT_CHARS = 1500
+
+# ---------------------------------------------------------------------------
+# Deterministic tie-break order, most specific first.
+#
+# Scores tie more often than you would expect. "why is the thermostat so
+# expensive to run" scores home_control=2 (thermostat) and reasoning=2 (why);
+# before this existed, the winner was whichever intent happened to be declared
+# first in _INTENT_PATTERNS -- home_control -- so an explanation request went
+# to llama3.2:1b.
+#
+# Ranking reasoning above home_control fixes that without hurting real device
+# commands: those carry action verbs worth 3, so they win outright rather than
+# tying.
+# ---------------------------------------------------------------------------
+_TIE_BREAK_ORDER: Tuple[str, ...] = (
+    "code",
+    "commerce",
+    "creative",
+    "research",
+    "reasoning",
+    "home_control",
+    "quick_lookup",
+)
+
+# ---------------------------------------------------------------------------
+# "Recent year" signal for the research intent, built at import time.
+#
+# This was a hardcoded 2024|2025|2026, which silently stopped matching the
+# current year the moment the calendar rolled past it. Spanning last year
+# through next year keeps "what happened in <year>" reading as research
+# without another dated literal to remember to update.
+# ---------------------------------------------------------------------------
+def _recent_years_pattern(span: int = 1) -> str:
+    """Alternation of the years within `span` of today, e.g. '2025|2026|2027'."""
+    this_year = datetime.date.today().year
+    return "|".join(
+        str(y) for y in range(this_year - span, this_year + span + 1)
+    )
+
+
+_RECENT_YEARS = _recent_years_pattern()
 
 # ---------------------------------------------------------------------------
 # Intent patterns — ordered from most specific to least
@@ -47,11 +102,19 @@ _INTENT_PATTERNS: dict[str, List[Tuple[str, int]]] = {
     "home_control": [
         (r"\b(turn on|turn off|switch on|switch off)\b", 3),
         (r"\b(lights?|lamp|bulb)\b", 2),
-        (r"\b(thermostat|temperature|heating|cooling|ac|air con)\b", 2),
+        # "temperature" deliberately lives in quick_lookup only. Bare
+        # "what's the temperature" is a weather question far more often than a
+        # thermostat command, and having it in both intents guaranteed a tie
+        # on one of the phrases a house assistant hears most. The set/adjust
+        # pattern below still catches "set the temperature to 20".
+        (r"\b(thermostat|heating|cooling|air con)\b", 2),
         (r"\b(lock|unlock|door|garage|gate)\b", 2),
         (r"\b(fan|blinds?|curtain|shutter)\b", 2),
+        # `temp\w*` rather than `temp`: the old \btemp\b never matched
+        # "temperature" at all, so "set the temperature to 20" scored nothing
+        # here and fell through to quick_lookup.
         (
-            r"\b(set|adjust|change|dim|brighten)\b.{0,20}\b(light|temp|volume)\b",
+            r"\b(set|adjust|change|dim|brighten)\b.{0,20}\b(light|temp\w*|volume|thermostat)\b",
             2),
         (r"\b(home assistant|smart home|device)\b", 1),
     ],
@@ -99,7 +162,7 @@ _INTENT_PATTERNS: dict[str, List[Tuple[str, int]]] = {
     "research": [
         (r"\b(search|look up|find out|research)\b", 2),
         (r"\b(who is|what is|when did|where is|how does)\b", 1),
-        (r"\b(latest|recent|current|news|update|2024|2025|2026)\b", 2),
+        (rf"\b(latest|recent|current|news|update|{_RECENT_YEARS})\b", 2),
         (r"\b(article|source|reference|study|report)\b", 1),
         (r"\b(wikipedia|google|internet|online)\b", 1),
     ],
@@ -132,6 +195,7 @@ _INTENT_ROUTES: dict[str, List[Tuple[str, str]]] = {
         ("nvidia_nim", "nvidia/llama-3.1-nemotron-ultra-253b-v1"),
         ("nvidia_nim", "nvidia/llama-3.3-nemotron-super-49b-v1"),
         ("nvidia_nim", "deepseek-ai/deepseek-r1"),
+        ("nvidia_nim", "zhipuai/glm-5.1"),
         ("anthropic", "claude-sonnet-4-6"),
         ("ollama", "deepseek-r1:14b"),
     ],
@@ -144,6 +208,10 @@ _INTENT_ROUTES: dict[str, List[Tuple[str, str]]] = {
     "code": [
         ("ollama", "qwen2.5-coder:7b"),
         ("ollama", "qwen2.5-coder:14b"),
+        # GLM 5.1 is free on NIM and built for agentic coding + tool use, so
+        # it sits ahead of the paid options: a free-only user still gets a
+        # capable model here rather than dropping to the local default.
+        ("nvidia_nim", "zhipuai/glm-5.1"),
         ("anthropic", "claude-sonnet-4-6"),
         ("nvidia_nim", "meta/llama-3.1-70b-instruct"),
     ],
@@ -188,7 +256,14 @@ def classify_intent(message: str) -> Tuple[str, int]:
     """
     Score the message against all intent patterns.
     Returns (intent_name, confidence_score).
-    Falls back to "general" when no intent clears MIN_CONFIDENCE_HITS.
+
+    Ties are resolved by _TIE_BREAK_ORDER rather than by whichever intent
+    happens to be declared first in _INTENT_PATTERNS, so the same message
+    always classifies the same way regardless of dict ordering.
+
+    Falls back to "general" when no intent clears MIN_CONFIDENCE_HITS -- except
+    for long messages, which escalate to "reasoning" instead. A 2,000-character
+    paste with no trigger words is not a job for the smallest local model.
     """
     scores: dict[str, int] = {intent: 0 for intent in _COMPILED}
     for intent, patterns in _COMPILED.items():
@@ -196,16 +271,29 @@ def classify_intent(message: str) -> Tuple[str, int]:
             if pattern.search(message):
                 scores[intent] += weight
 
-    best_intent = max(scores, key=lambda k: scores[k])
+    def _rank(intent: str) -> int:
+        try:
+            return _TIE_BREAK_ORDER.index(intent)
+        except ValueError:      # intent added to patterns but not to the order
+            return len(_TIE_BREAK_ORDER)
+
+    # Highest score wins; equal scores fall back to tie-break rank.
+    best_intent = min(scores, key=lambda k: (-scores[k], _rank(k)))
     best_score = scores[best_intent]
 
     if best_score < MIN_CONFIDENCE_HITS:
+        if len(message) >= LONG_INPUT_CHARS:
+            return "reasoning", best_score
         return "general", best_score
 
     return best_intent, best_score
 
 
-def route(message: str, enabled_providers: dict[str, bool]) -> RouterDecision:
+def route(
+    message: str,
+    enabled_providers: dict[str, bool],
+    free_only: bool = False,
+) -> RouterDecision:
     """
     Classify message intent and pick the first available provider/model.
 
@@ -214,16 +302,33 @@ def route(message: str, enabled_providers: dict[str, bool]) -> RouterDecision:
         enabled_providers: Dict from _get_enabled_providers() — keys are
             provider strings, values are True when enabled + keyed.
             "ollama" is always True (local, no key needed).
+        free_only: When True, models that cost money per token are removed
+            from the preference chain before dispatch. Set per-user by an
+            admin via the free_models_only flag. The final Ollama fallback is
+            always local, so a free-only user can never be left without a
+            model even if every entry in the chain is paid.
 
     Returns:
         RouterDecision with the best available provider + model.
     """
+    from providers.llm.registry import LLMRegistry
+
     intent, confidence = classify_intent(message)
     preference_chain = _INTENT_ROUTES.get(intent, _INTENT_ROUTES["general"])
 
+    if free_only:
+        filtered = [
+            (p, m) for p, m in preference_chain if LLMRegistry.is_free(p, m)
+        ]
+        if not filtered:
+            logger.info(
+                "Free-only routing: every model in the '%s' chain costs money, "
+                "falling through to the local default.", intent,
+            )
+        preference_chain = filtered
+
     for provider, model_id in preference_chain:
         if enabled_providers.get(provider, False):
-            from providers.llm.registry import LLMRegistry
             entry = LLMRegistry.get(provider, model_id)
             display_name = entry.display_name if entry else model_id.split(
                 "/")[-1]
