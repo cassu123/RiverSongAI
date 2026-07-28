@@ -101,8 +101,15 @@ def _build_stt_provider(model_size: Optional[str] = None) -> STTProvider:
     if key == "whisper_local":
         from providers.stt.whisper_local import WhisperLocalSTT
         return WhisperLocalSTT(model_size=model_size)
+    if key == "parakeet":
+        from providers.stt.parakeet import ParakeetSTT
+        # model_size is a Whisper concept ("base", "small", ...) and has no
+        # Parakeet equivalent, so the override is ignored here rather than
+        # being passed through as a model name it would not understand.
+        return ParakeetSTT()
     raise ValueError(
-        f"Unsupported STT_PROVIDER '{key}'. Supported values: whisper_local"
+        f"Unsupported STT_PROVIDER '{key}'. "
+        f"Supported values: whisper_local | parakeet"
     )
 
 
