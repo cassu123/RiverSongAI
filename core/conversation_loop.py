@@ -415,6 +415,43 @@ class ConversationLoop:
             task.cancel()
             self._generation_task = None
 
+    async def _apply_speaker_identity(self, audio_bytes: bytes) -> None:
+        """
+        Switch this turn to the recognised speaker, when there is one.
+
+        Only takes effect when voice_id_auto_identify is on. Anything short
+        of a confident match leaves _user_id alone: an unrecognised speaker
+        continues as whoever the session says they are, which is the safe
+        direction. Attaching Alice's conversation to Bob's memory is a much
+        worse failure than not personalising a turn.
+
+        Rebinding here rather than at connect time is deliberate -- on a
+        shared hub the speaker can change between turns.
+        """
+        if not getattr(self._settings, "voice_id_auto_identify", False):
+            return
+        if not audio_bytes:
+            return
+
+        try:
+            from core.identity import identify_speaker
+            speaker = await identify_speaker(
+                audio_bytes, session_user_id=self._user_id)
+        except Exception as exc:
+            logger.warning("Speaker identification failed: %s", exc)
+            return
+
+        if speaker and speaker != self._user_id:
+            logger.info(
+                "Speaker changed for this turn: %s -> %s",
+                self._user_id, speaker,
+            )
+            self._user_id = speaker
+            # Memory and settings are keyed by user, so the prompt has to be
+            # rebuilt against the new person rather than carrying the
+            # previous speaker's context into their turn.
+            self._free_models_only = await self._load_free_models_only()
+
     async def _load_free_models_only(self) -> bool:
         """
         Read this user's admin-set free_models_only flag.
@@ -879,10 +916,13 @@ class ConversationLoop:
             await on_event({"type": "idle"})
             return
 
-        # Voice-ID auto-identification block was here. It only fired in kiosk
-        # sessions to override an anonymous user with the speaker's identity.
-        # Removed alongside the kiosk archive. The VoiceIDProvider and its
-        # /api/voice-id/* routes remain for future device-pairing use.
+        # Who just spoke? Shared devices -- a Vortex hub on a kitchen counter
+        # -- carry one session for the whole household, so the logged-in user
+        # is a weak signal at best. core.identity resolves across every
+        # available source (voice now, face later) and returns None rather
+        # than guessing, which keeps one person's turn out of another's
+        # memory.
+        await self._apply_speaker_identity(audio_bytes)
 
         if not transcript.strip():
             logger.info("Empty transcript -- skipping LLM call.")

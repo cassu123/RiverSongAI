@@ -1414,6 +1414,28 @@ class Settings(BaseSettings):
         default=0.75,
         description="Cosine similarity threshold for Voice ID (0.0-1.0).",
     )
+    voice_id_auto_identify: bool = Field(
+        default=False,
+        description=(
+            "Let River re-identify the speaker on every voice turn and switch "
+            "to that user's memory and settings. This is what makes a shared "
+            "device -- a Vortex hub on the kitchen counter -- work for a whole "
+            "household instead of one login. Off by default: it only helps "
+            "once household members have enrolled voice prints, and an "
+            "unenrolled house sees no benefit. An unrecognised speaker always "
+            "falls back to the session user rather than being guessed at."
+        ),
+    )
+    voice_id_min_margin: float = Field(
+        default=0.05,
+        description=(
+            "How far ahead of the runner-up a voice match must score to be "
+            "trusted. Household members often sound alike and can both clear "
+            "voice_id_threshold; the margin is what tells them apart. Raise it "
+            "if River confuses two people, lower it if she fails to recognise "
+            "someone who is enrolled."
+        ),
+    )
     voice_id_min_audio_seconds: float = Field(
         default=1.0,
         description="Minimum audio duration for Voice ID processing.",
