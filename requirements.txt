@@ -193,4 +193,4 @@ graphiti-core>=0.3
 # Warden Daemon (Vision)
 # -----------------------------------------------------------------------------
 ultralytics>=8.0.0
-opencv-python>=4.8.0
+opencv-python>=5.0.0.93
