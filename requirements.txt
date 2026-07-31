@@ -161,7 +161,7 @@ Pygments>=2.20.0                     # LOW: ReDoS in GUID regex
 slowapi==0.1.9
 
 # Filesystem watcher (CHRONOS vault re-indexing)
-watchdog>=4.0.0
+watchdog>=6.0.0
 
 # -----------------------------------------------------------------------------
 # MCP server (Model Context Protocol — exposes tools to external clients)
