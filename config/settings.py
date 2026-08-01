@@ -752,6 +752,28 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
+    # River Vortex (room hubs)
+    # -------------------------------------------------------------------------
+    vortex_confirm_pin: str = Field(
+        default="",
+        description=(
+            "Fallback second factor for medium-risk actions confirmed on a "
+            "Vortex touchscreen, used only when the owner has no TOTP secret "
+            "enrolled. Entered on the screen, never spoken. Leave unset to "
+            "require TOTP — with neither, medium-risk actions are refused."
+        ),
+    )
+    vortex_face_backend: str = Field(
+        default="",
+        description=(
+            "Dotted path to a face-matching callable, e.g. "
+            "'mypackage.faces.match'. Receives (image_bytes, owner_user_id) "
+            "and returns {'user_id', 'confidence'}. Unset means this server "
+            "reports 'cannot identify' rather than guessing at a match."
+        ),
+    )
+
+    # -------------------------------------------------------------------------
     # Push Notifications
     # -------------------------------------------------------------------------
     push_notifications_enabled: bool = Field(

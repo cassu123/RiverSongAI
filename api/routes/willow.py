@@ -13,6 +13,8 @@
 from __future__ import annotations
 
 import base64
+import hashlib
+import hmac
 import json
 import logging
 
@@ -23,6 +25,21 @@ from core.conversation_loop import ConversationLoop
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["willow"])
+
+
+def _token_matches(presented: object, expected: str) -> bool:
+    """
+    Constant-time token comparison.
+
+    Both sides are hashed first so compare_digest always sees equal-length
+    inputs and the length of the presented token leaks nothing.
+    """
+    if not isinstance(presented, str) or not presented:
+        return False
+    return hmac.compare_digest(
+        hashlib.sha256(presented.encode("utf-8")).digest(),
+        hashlib.sha256(expected.encode("utf-8")).digest(),
+    )
 
 
 async def _authenticate(websocket: WebSocket,
@@ -36,13 +53,13 @@ async def _authenticate(websocket: WebSocket,
       3. First text frame `{"type": "auth", "token": "...", "user_id": "..."}`
     """
     qs_token = websocket.query_params.get("token")
-    if qs_token and qs_token == expected:
+    if qs_token and _token_matches(qs_token, expected):
         return True, websocket.query_params.get("user_id", "default")
 
     subprotocols = websocket.headers.get("sec-websocket-protocol", "")
     if subprotocols:
         for proto in (p.strip() for p in subprotocols.split(",")):
-            if proto == expected:
+            if _token_matches(proto, expected):
                 return True, "default"
 
     # Final fallback: expect an auth frame within the first 5 seconds.
@@ -57,7 +74,8 @@ async def _authenticate(websocket: WebSocket,
         payload = json.loads(first["text"])
     except Exception:
         return False, ""
-    if payload.get("type") != "auth" or payload.get("token") != expected:
+    if payload.get("type") != "auth" or not _token_matches(
+            payload.get("token"), expected):
         return False, ""
     return True, str(payload.get("user_id") or "default")
 

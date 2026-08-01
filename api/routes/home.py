@@ -71,42 +71,70 @@ async def get_status(authorization: Optional[str] = Header(default=None)):
         logger.warning("HA ping failed: %s", e)
         return {"configured": True, "reachable": False}
 
-@router.get("/devices")
-async def get_devices(authorization: Optional[str] = Header(default=None)):
-    await _require_user(authorization)
+def _shape_device(state: dict) -> dict:
+    """Reduce one raw HA state object to the shape clients render from."""
+    domain = state["entity_id"].split(".")[0]
+    attrs = state.get("attributes", {})
+    device_info = {
+        "entity_id": state["entity_id"],
+        "domain": domain,
+        "state": state["state"],
+        "name": attrs.get("friendly_name", state["entity_id"]),
+        "brightness": attrs.get("brightness"),
+        "temperature": attrs.get("temperature"),
+        "current_temp": attrs.get("current_temperature"),
+    }
+    if domain in ("sensor", "binary_sensor"):
+        device_info["unit"] = attrs.get("unit_of_measurement")
+        device_info["device_class"] = attrs.get("device_class")
+    if domain == "media_player":
+        device_info["media_title"] = attrs.get("media_title")
+        device_info["app_name"] = attrs.get("app_name")
+        device_info["volume_level"] = attrs.get("volume_level")
+    return device_info
+
+
+async def collect_devices() -> list:
+    """
+    Fetch and shape the household's controllable entities.
+
+    Shared by GET /api/home/devices and the River Vortex replica, so a unit's
+    device grid and the web UI render from byte-identical data and neither
+    needs Home Assistant credentials of its own (Vortex invariant 3).
+    """
     if not _is_configured():
         return []
     try:
         client = _get_client()
         all_states = await client.get_all_states()
         await client.close()
-        devices = []
-        for s in all_states:
-            domain = s["entity_id"].split(".")[0]
-            if domain not in VISIBLE_DOMAINS:
-                continue
-            attrs = s.get("attributes", {})
-            device_info = {
-                "entity_id": s["entity_id"],
-                "domain": domain,
-                "state": s["state"],
-                "name": attrs.get("friendly_name", s["entity_id"]),
-                "brightness": attrs.get("brightness"),
-                "temperature": attrs.get("temperature"),
-                "current_temp": attrs.get("current_temperature"),
-            }
-            if domain in ("sensor", "binary_sensor"):
-                device_info["unit"] = attrs.get("unit_of_measurement")
-                device_info["device_class"] = attrs.get("device_class")
-            if domain == "media_player":
-                device_info["media_title"] = attrs.get("media_title")
-                device_info["app_name"] = attrs.get("app_name")
-                device_info["volume_level"] = attrs.get("volume_level")
-            devices.append(device_info)
-        return devices
+        return [
+            _shape_device(s) for s in all_states
+            if s["entity_id"].split(".")[0] in VISIBLE_DOMAINS
+        ]
     except Exception as e:
-        logger.error("HA get_devices failed: %s", e)
+        logger.error("HA collect_devices failed: %s", e)
         return []
+
+
+async def collect_raw_states() -> list:
+    """Raw HA states, for callers that need domains outside VISIBLE_DOMAINS."""
+    if not _is_configured():
+        return []
+    try:
+        client = _get_client()
+        states = await client.get_all_states()
+        await client.close()
+        return states
+    except Exception as e:
+        logger.error("HA collect_raw_states failed: %s", e)
+        return []
+
+
+@router.get("/devices")
+async def get_devices(authorization: Optional[str] = Header(default=None)):
+    await _require_user(authorization)
+    return await collect_devices()
 
 
 class ActionBody(BaseModel):

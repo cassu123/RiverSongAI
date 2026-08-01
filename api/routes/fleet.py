@@ -43,6 +43,12 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from core.auth import require_role
+from core.vortex_security import (
+    hash_unit_token,
+    is_hashed,
+    mint_unit_token,
+    verify_unit_token,
+)
 from providers.memory.sqlite_store import SQLiteStore
 
 logger = logging.getLogger(__name__)
@@ -101,6 +107,30 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+async def _hash_legacy_tokens(store: SQLiteStore) -> None:
+    """
+    One-shot migration: replace any plaintext unit_token with its hash.
+
+    Devices are unaffected — they keep their copy of the plaintext token and
+    still authenticate with it. Only the at-rest representation changes, so a
+    leaked database no longer yields a working credential for any unit.
+    """
+    rows = await store.execute_read_async(
+        "SELECT program, unit_id, unit_token FROM fleet_units", ()
+    )
+    migrated = 0
+    for row in rows:
+        stored = row.get("unit_token") or ""
+        if stored and not is_hashed(stored):
+            await store.execute_write_async(
+                "UPDATE fleet_units SET unit_token=? WHERE program=? AND unit_id=?",
+                (hash_unit_token(stored), row["program"], row["unit_id"]),
+            )
+            migrated += 1
+    if migrated:
+        logger.info("Fleet: hashed %d plaintext unit token(s) at rest.", migrated)
+
+
 async def _ensure_schema(store: SQLiteStore) -> None:
     global _schema_ready
     if _schema_ready:
@@ -108,6 +138,7 @@ async def _ensure_schema(store: SQLiteStore) -> None:
     for statement in _SCHEMA.split(";"):
         if statement.strip():
             await store.execute_write_async(statement, ())
+    await _hash_legacy_tokens(store)
     _schema_ready = True
 
 
@@ -117,7 +148,9 @@ async def _verify_unit(store: SQLiteStore, program: str, unit_id: str,
         "SELECT * FROM fleet_units WHERE program=? AND unit_id=?",
         (program, unit_id),
     )
-    if not unit or not token or token != unit["unit_token"]:
+    # verify_unit_token hashes both sides before comparing, so the comparison
+    # is constant-time and an unknown unit_id costs the same as a bad token.
+    if not unit or not verify_unit_token(token, unit.get("unit_token")):
         raise HTTPException(status_code=401, detail="Invalid unit credentials")
     return unit
 
@@ -177,11 +210,12 @@ def build_fleet_router(program: str) -> APIRouter:
         store = SQLiteStore()
         await _ensure_schema(store)
         unit_id = uuid.uuid4().hex[:12]
-        unit_token = uuid.uuid4().hex + uuid.uuid4().hex
+        # The plaintext token is returned once, here, and never stored.
+        unit_token = mint_unit_token()
         await store.execute_write_async(
             "INSERT INTO fleet_units (program, unit_id, name, unit_token, registered_at) "
             "VALUES (?, ?, ?, ?, ?)",
-            (program, unit_id, body.name, unit_token, _now()),
+            (program, unit_id, body.name, hash_unit_token(unit_token), _now()),
         )
         logger.info("Fleet %s: claimed unit %s (%s)", program, unit_id, body.name)
         return {"unit_id": unit_id, "unit_token": unit_token}
@@ -295,10 +329,10 @@ def build_fleet_router(program: str) -> APIRouter:
         )
         if not unit:
             raise HTTPException(status_code=404, detail="Unit not found")
-        new_token = uuid.uuid4().hex + uuid.uuid4().hex
+        new_token = mint_unit_token()
         await store.execute_write_async(
             "UPDATE fleet_units SET unit_token=? WHERE program=? AND unit_id=?",
-            (new_token, program, unit_id),
+            (hash_unit_token(new_token), program, unit_id),
         )
         return {"unit_id": unit_id, "unit_token": new_token}
 
@@ -322,13 +356,13 @@ def build_fleet_router(program: str) -> APIRouter:
         store = SQLiteStore()
         await _ensure_schema(store)
         unit_id = "sim-" + uuid.uuid4().hex[:8]
-        unit_token = uuid.uuid4().hex + uuid.uuid4().hex
+        unit_token = mint_unit_token()
         name = (body.name or "").strip() or f"Sim {program.capitalize()} {unit_id[-4:]}"
         await store.execute_write_async(
             "INSERT INTO fleet_units "
             "(program, unit_id, name, unit_token, metadata, online, registered_at, last_seen) "
             "VALUES (?, ?, ?, ?, ?, 1, ?, ?)",
-            (program, unit_id, name, unit_token,
+            (program, unit_id, name, hash_unit_token(unit_token),
              json.dumps({"simulated": True}), _now(), _now()),
         )
         from core.fleet_simulator import start_sim

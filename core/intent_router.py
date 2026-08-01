@@ -45,10 +45,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import re
+from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
+from typing import Any, Callable, Coroutine, Dict, Iterator, List, Optional, Tuple
 
 from config.settings import get_settings
 
@@ -79,6 +81,233 @@ class Intent:
     phrases: List[str] = field(default_factory=list)
     keywords: List[str] = field(default_factory=list)
     handler: Optional[HandlerFn] = None
+
+
+# =============================================================================
+# Request origin
+# =============================================================================
+#
+# Where a request physically came from changes what it is allowed to do. A
+# River Vortex unit is a thin client on a kitchen counter: it relays, it never
+# decides. Handlers read the origin from a context variable rather than a
+# widened signature, so every existing `(transcript, user_id)` handler keeps
+# working and any code path — voice, a tapped surface button, a device grid
+# toggle — can declare its origin the same way.
+
+ORIGIN_USER = "user"
+ORIGIN_VORTEX_UNIT = "vortex_unit"
+
+
+@dataclass(frozen=True)
+class RequestOrigin:
+    """
+    Provenance of a request reaching the router.
+
+    Attributes:
+        kind: ORIGIN_USER for an authenticated session (web, app, server-side
+            automation) or ORIGIN_VORTEX_UNIT for anything relayed by a hub.
+        unit_id: The relaying unit, when kind is ORIGIN_VORTEX_UNIT.
+        room: The unit's room, used to target responses (music, surfaces).
+        has_display: Whether the unit can render a confirmation prompt. A
+            screenless unit cannot collect a second factor, since invariant 5
+            forbids a spoken one.
+    """
+    kind: str = ORIGIN_USER
+    unit_id: Optional[str] = None
+    room: Optional[str] = None
+    has_display: bool = True
+
+    @property
+    def is_unit(self) -> bool:
+        return self.kind == ORIGIN_VORTEX_UNIT
+
+
+_DEFAULT_ORIGIN = RequestOrigin()
+_CURRENT_ORIGIN: ContextVar[RequestOrigin] = ContextVar(
+    "river_request_origin", default=_DEFAULT_ORIGIN
+)
+
+
+def current_origin() -> RequestOrigin:
+    """Return the origin of the request being handled on this task."""
+    return _CURRENT_ORIGIN.get()
+
+
+@contextlib.contextmanager
+def origin_scope(origin: Optional[RequestOrigin]) -> Iterator[RequestOrigin]:
+    """
+    Bind a request origin for the duration of a block.
+
+    Usage:
+        with origin_scope(RequestOrigin(kind=ORIGIN_VORTEX_UNIT, unit_id=uid)):
+            await router.route(transcript, user_id)
+    """
+    effective = origin or _DEFAULT_ORIGIN
+    token = _CURRENT_ORIGIN.set(effective)
+    try:
+        yield effective
+    finally:
+        _CURRENT_ORIGIN.reset(token)
+
+
+# =============================================================================
+# Permission model for device actions
+# =============================================================================
+#
+# Invariant 2 of the River Vortex brief: locks, garage doors and alarm disarm
+# are hard-denied to units. Not gated behind a confirmation — refused, because
+# the request came from a unit. A Pi stolen from a kitchen must not be able to
+# open a door, however convincing the voice or the face in front of it is.
+
+# Whole HA domains a unit may never operate.
+UNIT_DENIED_DOMAINS = frozenset({"lock", "alarm_control_panel"})
+
+# Actions denied on any entity that looks like a garage door, whatever its
+# domain. Garage doors are `cover.*` in Home Assistant and share that domain
+# with blinds and curtains, so the entity has to be inspected by name.
+#
+# Matching runs against a normalised haystack (see _normalise_target): entity
+# ids use underscores and dots as separators, and `\bgarage\b` does not match
+# inside "cover.garage_door" because `_` is a word character. Getting that
+# wrong turns a hard deny into a confirmation prompt, which is exactly the
+# failure this is here to prevent.
+_GARAGE_PATTERN = re.compile(r"\bgarage\b|\bgate\b|\bcarport\b", re.IGNORECASE)
+
+
+def _normalise_target(entity_id: Optional[str], device_name: str) -> str:
+    """Flatten an entity id and device name into a space-separated haystack."""
+    raw = f"{entity_id or ''} {device_name or ''}"
+    return re.sub(r"[._\-]+", " ", raw).lower()
+
+
+# Entities that are risky enough to want a second factor, but not a flat
+# refusal: anything that opens the house up or heats something.
+_MEDIUM_RISK_DOMAINS = frozenset({"cover", "water_heater", "valve"})
+_MEDIUM_RISK_PATTERN = re.compile(
+    r"\boven\b|\bhob\b|\bstove\b|\bcooker\b|\bheater\b|\bboiler\b|\bfurnace\b"
+    r"|\bpump\b|\bsauna\b|\bhot\s*tub\b|\bfront\s*door\b",
+    re.IGNORECASE,
+)
+
+DECISION_ALLOW = "allow"
+DECISION_DENY = "deny"
+DECISION_CONFIRM = "confirm"
+
+
+@dataclass(frozen=True)
+class PermissionDecision:
+    """
+    The router's verdict on one device action.
+
+    Attributes:
+        decision: DECISION_ALLOW, DECISION_DENY or DECISION_CONFIRM.
+        reason: Machine-readable reason code, for logs and telemetry.
+        message: Spoken/displayable explanation. Never blames the user.
+    """
+    decision: str
+    reason: str = ""
+    message: str = ""
+
+    @property
+    def allowed(self) -> bool:
+        return self.decision == DECISION_ALLOW
+
+    @property
+    def denied(self) -> bool:
+        return self.decision == DECISION_DENY
+
+    @property
+    def needs_confirmation(self) -> bool:
+        return self.decision == DECISION_CONFIRM
+
+
+def evaluate_device_request(
+    *,
+    action: str,
+    entity_id: Optional[str] = None,
+    device_name: str = "",
+    origin: Optional[RequestOrigin] = None,
+) -> PermissionDecision:
+    """
+    Decide whether a device action may proceed, given where it came from.
+
+    This is the single choke point for the Vortex hard deny. Voice commands,
+    tapped surface buttons and device-grid toggles all pass through here, so a
+    confirm card on a wall panel is a prompt and never an authorisation.
+
+    Args:
+        action: Parsed action name, e.g. "unlock", "turn_on", "set_brightness".
+        entity_id: Home Assistant entity ID when one has been resolved.
+        device_name: Free-text device name, used when no entity is resolved yet.
+        origin: Request provenance. Defaults to the ambient context origin.
+
+    Returns:
+        PermissionDecision. Callers must not execute on DENY, and must mint a
+        pending confirmation on CONFIRM.
+    """
+    origin = origin or current_origin()
+    action = (action or "").lower()
+    haystack = _normalise_target(entity_id, device_name)
+    domain = (entity_id or "").split(".")[0].lower() if entity_id else ""
+
+    # Non-unit requests keep their existing behaviour untouched.
+    if not origin.is_unit:
+        return PermissionDecision(DECISION_ALLOW)
+
+    is_garage = bool(_GARAGE_PATTERN.search(haystack))
+    is_lock_domain = domain in UNIT_DENIED_DOMAINS
+    mentions_alarm = "alarm" in haystack
+    # Without a resolved entity, fall back to the verb: "unlock the front door"
+    # must be refused before the registry lookup, not after it.
+    looks_like_lock = action in ("lock", "unlock") or mentions_alarm
+    is_disarm = action in ("disarm", "alarm_disarm") or (
+        mentions_alarm and action in ("turn_off", "unlock", "open")
+    )
+
+    if is_lock_domain or looks_like_lock or is_garage or is_disarm:
+        what = (
+            "the garage" if is_garage
+            else "the alarm" if is_disarm or mentions_alarm
+            else "door locks"
+        )
+        logger.warning(
+            "Vortex hard deny: unit %s requested action '%s' on '%s' "
+            "(domain=%s, garage=%s). Locks, garage doors and alarm disarm are "
+            "refused at the router for unit-originated requests.",
+            origin.unit_id, action, (entity_id or device_name or "?"),
+            domain or "?", is_garage,
+        )
+        return PermissionDecision(
+            DECISION_DENY,
+            reason="vortex_hard_deny",
+            message=(
+                f"I can't operate {what} from a room hub. "
+                "You'll need to do that from your phone or the web app."
+            ),
+        )
+
+    if domain in _MEDIUM_RISK_DOMAINS or _MEDIUM_RISK_PATTERN.search(haystack):
+        if not origin.has_display:
+            logger.info(
+                "Vortex deny: unit %s has no display and cannot collect a "
+                "second factor for '%s' on '%s'.",
+                origin.unit_id, action, entity_id or device_name,
+            )
+            return PermissionDecision(
+                DECISION_DENY,
+                reason="second_factor_impossible",
+                message=(
+                    "That one needs confirming on a screen, and this speaker "
+                    "doesn't have one."
+                ),
+            )
+        return PermissionDecision(
+            DECISION_CONFIRM,
+            reason="medium_risk",
+            message="That needs confirming on the screen first.",
+        )
+
+    return PermissionDecision(DECISION_ALLOW)
 
 
 # =============================================================================
@@ -199,6 +428,12 @@ async def _handle_smart_home(transcript: str, user_id: str) -> str:
                 "Try naming the device, like 'turn off the kitchen lights'."
             )
 
+        # Hard deny before resolution: "unlock the front door" is refused on
+        # the verb, so a unit never even learns which entity would have moved.
+        early = evaluate_device_request(action=action, device_name=device_name)
+        if early.denied:
+            return early.message
+
         registry = get_device_registry()
         resolved = await registry.resolve(device_name)
 
@@ -230,6 +465,25 @@ async def _handle_smart_home(transcript: str, user_id: str) -> str:
             domain = entity_list[0].split(".")[0]
             action = "set_temperature" if domain == "climate" else "set_brightness"
 
+        # Re-check now that the entity is known. Resolution can turn a benign
+        # phrase into a lock ("open the side door" → lock.side_door), so the
+        # decision is taken again against the real entity.
+        for entity in (resolved if isinstance(resolved, list) else [resolved]):
+            decision = evaluate_device_request(
+                action=action, entity_id=entity, device_name=device_name)
+            if decision.denied:
+                return decision.message
+            if decision.needs_confirmation:
+                return await _request_unit_confirmation(
+                    user_id=user_id,
+                    action=action,
+                    entity_ids=(resolved if isinstance(resolved, list)
+                                else [resolved]),
+                    device_name=device_name,
+                    value=value,
+                    message=decision.message,
+                )
+
         async with build_ha_client() as client:
             if isinstance(resolved, list):
                 ok = await client.execute_action_on_many(resolved, action, value)
@@ -256,6 +510,72 @@ async def _handle_smart_home(transcript: str, user_id: str) -> str:
     except Exception as exc:
         logger.error("Smart home handler failed: %s", exc)
         return "Sorry, I had trouble controlling that device right now."
+
+
+async def _request_unit_confirmation(
+    *,
+    user_id: str,
+    action: str,
+    entity_ids: List[str],
+    device_name: str,
+    value: Optional[int],
+    message: str,
+) -> str:
+    """
+    Park a medium-risk action behind a second factor entered on the unit.
+
+    Mints a pending confirmation holding everything needed to run the action
+    later, then pushes a `confirm` surface to the unit that heard the request.
+    Nothing is executed here — the action runs only if
+    `core.vortex_actions.resolve_confirmation` is later handed a valid factor
+    against this challenge id.
+    """
+    from core.vortex_security import confirmations
+
+    origin = current_origin()
+    label = action.replace("_", " ")
+    description = f"{label} the {device_name}".strip()
+
+    pending = await confirmations.create(
+        user_id=user_id,
+        unit_id=origin.unit_id,
+        action="home_action",
+        description=description,
+        payload={
+            "entity_ids": list(entity_ids),
+            "action": action,
+            "value": value,
+            "device_name": device_name,
+        },
+    )
+
+    try:
+        from core.vortex_surfaces import get_surface_publisher
+
+        await get_surface_publisher().publish(
+            {
+                "id": f"confirm:{pending.challenge_id}",
+                "kind": "confirm",
+                "priority": "high",
+                "title": f"Confirm: {description}",
+                "body": "Enter your code on this screen to continue.",
+                "icon": "🔒",
+                "ttl_seconds": 120,
+                "speech": message,
+                "challenge_id": pending.challenge_id,
+                "actions": [
+                    {"label": "Confirm", "intent": f"confirm:{pending.challenge_id}",
+                     "style": "primary"},
+                    {"label": "Cancel", "intent": f"cancel:{pending.challenge_id}",
+                     "style": "secondary"},
+                ],
+            },
+            unit_ids=[origin.unit_id] if origin.unit_id else None,
+        )
+    except Exception as exc:  # pragma: no cover - surface push is best effort
+        logger.error("Could not push confirmation surface: %s", exc)
+
+    return message
 
 
 def _build_confirmation(action: str, device_name: str,
@@ -422,7 +742,13 @@ async def _handle_gmail(transcript: str, user_id: str) -> str:
 
 
 async def _handle_youtube_music(transcript: str, user_id: str) -> str:
-    """Search YouTube Music and play the first result."""
+    """
+    Search YouTube Music and play the first result.
+
+    A request relayed by a River Vortex unit is resolved to a stream URL and
+    handed to that unit, so music asked for in the kitchen comes out of the
+    kitchen. Everything else keeps playing on this box as before.
+    """
     try:
         from providers.google.youtube_music import build_youtube_music_provider
 
@@ -434,6 +760,14 @@ async def _handle_youtube_music(transcript: str, user_id: str) -> str:
                 break
         else:
             query = transcript
+
+        if current_origin().is_unit:
+            from core.vortex_media import handle_play_request
+
+            spoken = await handle_play_request(
+                transcript=transcript, user_id=user_id, query=query)
+            if spoken is not None:
+                return spoken
 
         provider = build_youtube_music_provider()
         return await provider.play_first_result(query)
@@ -1182,7 +1516,8 @@ class IntentRouter:
         )
 
     async def route(
-        self, transcript: str, user_id: str
+        self, transcript: str, user_id: str,
+        origin: Optional[RequestOrigin] = None,
     ) -> Tuple[str, str]:
         """
         Score a transcript against all intents and dispatch to the winner.
@@ -1190,6 +1525,10 @@ class IntentRouter:
         Args:
             transcript: Raw transcription string from the STT provider.
             user_id: Used by Google provider handlers for OAuth token lookup.
+                Always resolved by this server — never accepted from a device.
+            origin: Where the request came from. A River Vortex unit gets the
+                restricted permission set described in evaluate_device_request;
+                omitting this keeps the default full-trust user origin.
 
         Returns:
             Tuple of (intent_name, spoken_response).
@@ -1203,17 +1542,20 @@ class IntentRouter:
         best_intent, best_score = self._score(transcript)
 
         logger.info(
-            "Intent routing: transcript='%s...', winner='%s', score=%.2f, threshold=%.2f.",
+            "Intent routing: transcript='%s...', winner='%s', score=%.2f, "
+            "threshold=%.2f, origin=%s.",
             transcript[:60],
             best_intent.name,
             best_score,
             self._threshold,
+            (origin or current_origin()).kind,
         )
 
         if best_intent.handler is None:
             return "conversation", ""
 
-        spoken = await best_intent.handler(transcript, user_id)
+        with origin_scope(origin or current_origin()):
+            spoken = await best_intent.handler(transcript, user_id)
         return best_intent.name, spoken
 
     # -------------------------------------------------------------------------

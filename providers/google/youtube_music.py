@@ -44,6 +44,21 @@ _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="ytmusic")
 _YTDLP_FORMAT = "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio"
 
 
+def _duration_seconds(track: Dict[str, Any]) -> Optional[int]:
+    """Normalize ytmusicapi's duration fields to whole seconds."""
+    seconds = track.get("duration_seconds")
+    if isinstance(seconds, int):
+        return seconds
+    text = track.get("duration") or ""
+    parts = [p for p in str(text).split(":") if p.strip().isdigit()]
+    if not parts:
+        return None
+    total = 0
+    for part in parts:
+        total = total * 60 + int(part)
+    return total
+
+
 class YouTubeMusicProvider:
     """
     YouTube Music search and playback provider.
@@ -203,6 +218,89 @@ class YouTubeMusicProvider:
 
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(_executor, self._download_and_play, url)
+
+    async def resolve_stream_url(self, video_id: str) -> Optional[str]:
+        """
+        Extract a direct audio stream URL for a video id without playing it.
+
+        River Vortex units play their own audio — asking for music in the
+        kitchen should come out of the kitchen, not out of whatever this
+        server is plugged into. The unit needs nothing from us but a URL.
+
+        Args:
+            video_id: YouTube video ID.
+
+        Returns:
+            A direct stream URL, or None if yt-dlp could not resolve one.
+            URLs are time-limited by YouTube; resolve close to playback.
+        """
+        def _resolve() -> Optional[str]:
+            result = subprocess.run(
+                [
+                    "yt-dlp",
+                    "--format", _YTDLP_FORMAT,
+                    "--get-url",
+                    "--no-playlist",
+                    "--quiet",
+                    f"https://www.youtube.com/watch?v={video_id}",
+                ],
+                capture_output=True, timeout=30, shell=False,
+            )
+            if result.returncode != 0:
+                logger.error(
+                    "yt-dlp URL resolution failed (exit %d): %s",
+                    result.returncode,
+                    result.stderr.decode("utf-8", errors="replace").strip()[:300],
+                )
+                return None
+            url = result.stdout.decode("utf-8", errors="replace").strip()
+            return url.splitlines()[0] if url else None
+
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(_executor, _resolve)
+
+    async def resolve_first_result(
+        self, query: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Search for a query and return a playable descriptor, playing nothing.
+
+        The resolve half of what used to be play_first_result. Callers that
+        want audio on this box still use play_first_result; callers targeting
+        a Vortex unit use this and hand the payload to the unit.
+
+        Returns:
+            {url, title, artist, album, artwork_url, duration_seconds,
+             video_id}, or None when nothing matched or no stream resolved.
+        """
+        results = await self.search(query, filter_type="songs", limit=1)
+        if not results:
+            return None
+
+        first = results[0]
+        video_id = first.get("videoId")
+        if not video_id:
+            return None
+
+        url = await self.resolve_stream_url(video_id)
+        if not url:
+            return None
+
+        artists = [a.get("name", "") for a in first.get("artists", [])
+                   if a.get("name")]
+        thumbnails = first.get("thumbnails") or []
+        artwork = thumbnails[-1].get("url", "") if thumbnails else ""
+        album = (first.get("album") or {})
+
+        return {
+            "url": url,
+            "video_id": video_id,
+            "title": first.get("title", "Unknown title"),
+            "artist": ", ".join(artists),
+            "album": album.get("name", "") if isinstance(album, dict) else "",
+            "artwork_url": artwork,
+            "duration_seconds": _duration_seconds(first),
+        }
 
     async def play_first_result(self, query: str) -> str:
         """
