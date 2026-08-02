@@ -106,10 +106,14 @@ class UsersStoreMixin:
         return await self._run(self._sync_get_all_users)
 
     def _sync_get_all_users(self) -> list[dict]:
+        # This selected `name` and `is_active`, neither of which is a column
+        # on `users` — the display name is `display_name`, and the inverse of
+        # `is_active` is stored as `is_suspended`. Every call raised
+        # OperationalError, which is why the memory TTL sweep never ran.
         conn = self._get_conn()
         cursor = conn.execute(
             """
-            SELECT id, email, name, role, is_active, is_approved,
+            SELECT id, email, display_name, role, is_suspended, is_approved,
                    force_password_change, created_at
             FROM users
             """
@@ -120,7 +124,7 @@ class UsersStoreMixin:
                 "email": row[1],
                 "name": row[2],
                 "role": row[3],
-                "is_active": bool(row[4]),
+                "is_active": not bool(row[4]),
                 "is_approved": bool(row[5]),
                 "force_password_change": bool(row[6]),
                 "created_at": row[7]

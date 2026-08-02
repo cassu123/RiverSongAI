@@ -25,6 +25,7 @@ from typing import Optional
 import httpx
 
 from core.auth import create_access_token, decode_token, create_totp_challenge_token, decode_challenge_token
+from core.csrf import clear_csrf_cookie, set_csrf_cookie
 from core.errors import bad_request, conflict, forbidden, not_found, unauthorized
 from config.settings import get_settings
 from core.limiter import limiter
@@ -33,11 +34,37 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
+def _issue_session(response: Response, token: str) -> None:
+    """Attach the session cookie and its matching CSRF token to a response.
+
+    Every place that hands out an access token goes through here, so the two
+    cookies can never drift apart — a session cookie without a CSRF cookie
+    would authenticate fine and then fail every write.
+
+    The access token is still returned in the JSON body as well. The frontend
+    reads it from there today; the cookie is what the migration off
+    localStorage lands on.
+    """
+    settings = get_settings()
+    secure = settings.environment == "production"
+    max_age = settings.jwt_expire_minutes * 60
+    response.set_cookie(
+        "access_token",
+        token,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        max_age=max_age,
+        path="/",
+    )
+    set_csrf_cookie(response, secure=secure, max_age=max_age)
+
 
 def _extract_token(request: Request, authorization: Optional[str]) -> Optional[str]:
     if authorization and authorization.startswith("Bearer "):
         return authorization.removeprefix("Bearer ").strip()
     return request.cookies.get("access_token")
+
 
 async def _get_auth_payload(request: Request, authorization: Optional[str]) -> dict:
     token = _extract_token(request, authorization)
@@ -47,6 +74,7 @@ async def _get_auth_payload(request: Request, authorization: Optional[str]) -> d
     if not payload:
         raise unauthorized("Invalid or expired token.")
     return payload
+
 
 class SignupBody(BaseModel):
     email: EmailStr
@@ -124,7 +152,7 @@ async def setup(request: Request, response: Response, body: SetupBody):
             '').replace(
             '\r',
             ''))
-    response.set_cookie("access_token", token, httponly=True, secure=get_settings().environment == "production", samesite="lax", max_age=get_settings().jwt_expire_minutes * 60)
+    _issue_session(response, token)
     return {"token": token, "user": {"id": user_id, "email": body.email.lower(
     ), "display_name": body.display_name, "role": "admin", "is_approved": True}}
 
@@ -171,7 +199,7 @@ async def signup(request: Request, body: SignupBody):
 
 @router.post("/login")
 @limiter.limit(get_settings().rate_limit_auth_login)
-async def login(request: Request, body: LoginBody):
+async def login(request: Request, response: Response, body: LoginBody):
     store = _get_store(request)
     user = await store.get_user_by_email(body.email.lower())
 
@@ -211,6 +239,7 @@ async def login(request: Request, body: LoginBody):
             '').replace(
             '\r',
             ''))
+    _issue_session(response, token)
     return {
         "token": token,
         "user": {
@@ -246,7 +275,7 @@ class TotpDisableBody(BaseModel):
 
 @router.post("/login/totp")
 @limiter.limit(get_settings().rate_limit_auth_login)
-async def login_totp(request: Request, body: TotpLoginBody):
+async def login_totp(request: Request, response: Response, body: TotpLoginBody):
     """
     Step 2 of 2FA login. Takes the challenge_token from /login plus either
     a current 6-digit TOTP code or one of the user's recovery codes.
@@ -271,12 +300,19 @@ async def login_totp(request: Request, body: TotpLoginBody):
     # NOT silently issue an access token — that would be a 2FA bypass.
     if totp.get("enabled") is False:
         # User disabled 2FA between step 1 and step 2 — treat as plain login.
+        # The challenge token is only issued after a verified password, so
+        # this is not a downgrade: the first factor was already proven.
         token = create_access_token(
             user_id=user["id"],
             email=user["email"],
             role=user["role"])
-        response.set_cookie("access_token", token, httponly=True, secure=get_settings().environment == "production", samesite="lax", max_age=get_settings().jwt_expire_minutes * 60)
-    return {"token": token, "user": _user_login_payload(user)}
+        _issue_session(response, token)
+        return {
+            "token": token,
+            "user": _user_login_payload(user),
+            "used_recovery_code": False,
+        }
+
     if totp.get("enabled") is not True:
         # Anything other than True/False means the state record is malformed.
         raise unauthorized("2FA state unavailable; contact an administrator.")
@@ -303,7 +339,7 @@ async def login_totp(request: Request, body: TotpLoginBody):
         user["email"].replace('\n', '').replace('\r', ''),
         used_recovery,
     )
-    response.set_cookie("access_token", token, httponly=True, secure=get_settings().environment == "production", samesite="lax", max_age=get_settings().jwt_expire_minutes * 60)
+    _issue_session(response, token)
     return {"token": token, "user": _user_login_payload(
         user), "used_recovery_code": used_recovery}
 
@@ -440,7 +476,8 @@ async def twofa_disable(body: TotpDisableBody, request: Request,
 @router.post("/logout", status_code=204)
 async def logout(request: Request, response: Response,
                  authorization: Optional[str] = Header(default=None)):
-    response.delete_cookie("access_token")
+    response.delete_cookie("access_token", path="/")
+    clear_csrf_cookie(response)
     token = _extract_token(request, authorization)
     if not token:
         return
@@ -458,6 +495,30 @@ async def logout(request: Request, response: Response,
         await store.revoke_token(jti, payload["sub"], expires_at)
 
     return
+
+
+@router.get("/csrf")
+async def csrf(request: Request, response: Response,
+               authorization: Optional[str] = Header(default=None)):
+    """Re-issue the CSRF cookie for a session that already exists.
+
+    The two cookies are set together and share a lifetime, so under normal
+    use this is never needed. It matters on the edges: a client that cleared
+    site data mid-session, or a native webview that dropped the non-httpOnly
+    cookie while keeping the httpOnly one, would otherwise hold a valid
+    session that fails every write with no way back short of logging out.
+
+    Authentication is required — an unauthenticated caller cannot mint a
+    token to pair with a session it does not have.
+    """
+    await _get_auth_payload(request, authorization)
+    settings = get_settings()
+    token = set_csrf_cookie(
+        response,
+        secure=settings.environment == "production",
+        max_age=settings.jwt_expire_minutes * 60,
+    )
+    return {"csrf_token": token}
 
 
 @router.get("/me")
@@ -651,7 +712,7 @@ async def google_authorize():
 
 
 @router.post("/google/callback")
-async def google_callback(request: Request, body: GoogleCallbackBody):
+async def google_callback(request: Request, response: Response, body: GoogleCallbackBody):
     """Exchange auth code for tokens, resolve the user, return a JWT."""
     client = _load_google_client()
     store = _get_store(request)
@@ -744,6 +805,7 @@ async def google_callback(request: Request, body: GoogleCallbackBody):
         logger.warning(
             "Failed to sync Google tokens to service storage: %s", exc)
 
+    _issue_session(response, token)
     return {
         "token": token,
         "user": {"id": user["id"], "email": user["email"], "display_name": user["display_name"], "role": user["role"], "is_approved": user["is_approved"]},

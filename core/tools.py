@@ -623,14 +623,14 @@ async def _exec_alias_device(args: dict, user_id: str) -> str:
     store = app.state.memory_manager._store
     try:
         import json
-        rows = await store._fetch_all("SELECT aliases FROM ha_entities WHERE entity_id = ?", (entity_id,))
+        rows = await store.execute_read_async("SELECT aliases FROM ha_entities WHERE entity_id = ?", (entity_id,))
         if not rows:
             return f"Entity {entity_id} not found in the registry."
             
         current_aliases = json.loads(rows[0]["aliases"])
         if alias not in current_aliases:
             current_aliases.append(alias)
-            await store._execute(
+            await store.execute_write_async(
                 "UPDATE ha_entities SET aliases = ? WHERE entity_id = ?",
                 (json.dumps(current_aliases), entity_id)
             )

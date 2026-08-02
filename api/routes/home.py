@@ -210,7 +210,7 @@ async def patch_entity(
         
     params.append(entity_id)
     set_clause = ", ".join(updates)
-    await store._execute(f"UPDATE ha_entities SET {set_clause} WHERE entity_id = ?", tuple(params))
+    await store.execute_write_async(f"UPDATE ha_entities SET {set_clause} WHERE entity_id = ?", tuple(params))
     return {"ok": True}
 
 @router.get("/rooms")

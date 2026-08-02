@@ -37,8 +37,12 @@ async def weather_sweep_func() -> None:
     from providers.feeds.weather import fetch_nws_alerts
     engine = get_initiative_engine()
     s = get_settings()
-    if getattr(s, "initiative_weather_alerts", True) and s.latitude and s.longitude:
-        alerts = await fetch_nws_alerts(s.latitude, s.longitude)
+    # location_lat / location_lon are the real setting names. This read
+    # `s.latitude` / `s.longitude`, which do not exist on Settings, so the
+    # sweep raised AttributeError on every run instead of quietly skipping
+    # when no location is configured.
+    if getattr(s, "initiative_weather_alerts", True) and s.location_lat and s.location_lon:
+        alerts = await fetch_nws_alerts(s.location_lat, s.location_lon)
         for a in alerts or []:
             event_name = a.get("event") or "Weather alert"
             severity = "critical" if any(

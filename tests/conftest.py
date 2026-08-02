@@ -64,3 +64,41 @@ def _cleanup_test_data() -> None:
         print(f"\n[conftest] test data kept at {_TEST_DATA_DIR}")
         return
     shutil.rmtree(_TEST_DATA_DIR, ignore_errors=True)
+
+
+# =============================================================================
+# App state, without the lifespan.
+# =============================================================================
+#
+# Tests that touch the store need `app.state.memory_manager`. The obvious way
+# to get it — `with TestClient(app):` — is a trap here. `app` and its store
+# are module-level singletons shared by every test file, and leaving that
+# context runs the shutdown handler, which closes the store's thread pool. The
+# pool never reopens, so every later file fails with "cannot schedule new
+# futures after shutdown" for reasons that have nothing to do with what it is
+# testing.
+#
+# So build only the piece that is needed, once, and never tear it down. The
+# rest of the lifespan — sweeps, the vault watcher, the Home Assistant client
+# — is deliberately not started: no test wants those running underneath it.
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture(scope="session")
+def app_store():
+    """The SQLiteStore behind `app.state.memory_manager`, initialised if the
+    lifespan has not run. Returns the store itself, which is what callers
+    actually want."""
+    import asyncio
+
+    from main import app
+    from core.memory_manager import MemoryManager
+    from providers.memory.sqlite_store import SQLiteStore
+
+    if not hasattr(app.state, "memory_manager"):
+        manager = MemoryManager(SQLiteStore(os.environ["DB_PATH"]))
+        asyncio.run(manager.initialize())
+        app.state.memory_manager = manager
+
+    return app.state.memory_manager._store

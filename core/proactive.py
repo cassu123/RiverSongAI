@@ -57,7 +57,7 @@ class DeliveryRouter:
                     channels = ["ws", "push"]
                     
                 if store and ev.user_id:
-                    await store._execute(
+                    await store.execute_write_async(
                         "INSERT INTO proactive_log (user_id, kind, dedupe_key, severity, title, body, delivered, reason, channels, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         (ev.user_id, ev.kind, ev.key, ev.severity, ev.title, ev.message, 1 if ok else 0, reason, json.dumps(channels), datetime.now(timezone.utc).isoformat())
                     )
@@ -103,7 +103,7 @@ class DeliveryRouter:
         if user_id and store:
             try:
                 # check proactive prefs first
-                prefs = await store._fetch_one("SELECT quiet_start, quiet_end FROM proactive_prefs WHERE user_id = ?", (user_id,))
+                prefs = await store.execute_read_one_async("SELECT quiet_start, quiet_end FROM proactive_prefs WHERE user_id = ?", (user_id,))
                 if prefs:
                     if prefs["quiet_start"] is not None:
                         start = prefs["quiet_start"]
@@ -145,7 +145,7 @@ class DeliveryRouter:
         if ev.user_id and store:
             # check min severity and muted kinds
             try:
-                prefs = await store._fetch_one("SELECT min_push_severity, kinds_muted FROM proactive_prefs WHERE user_id = ?", (ev.user_id,))
+                prefs = await store.execute_read_one_async("SELECT min_push_severity, kinds_muted FROM proactive_prefs WHERE user_id = ?", (ev.user_id,))
                 if prefs:
                     kinds_muted = []
                     if prefs["kinds_muted"]:
@@ -170,7 +170,7 @@ class DeliveryRouter:
             # check recent logs for cooldown
             cutoff = (datetime.now(timezone.utc).timestamp() - cooldown)
             try:
-                last_sent = await store._fetch_one(
+                last_sent = await store.execute_read_one_async(
                     "SELECT created_at FROM proactive_log WHERE user_id = ? AND kind = ? AND dedupe_key = ? AND delivered = 1 ORDER BY created_at DESC LIMIT 1",
                     (ev.user_id, ev.kind, ev.key or ev.title)
                 )
@@ -206,7 +206,7 @@ class DeliveryRouter:
             
             # For Phase R5 seam: pick a target device (freshest activity for now)
             # In future, uses user_presence table.
-            device = await store._fetch_one(
+            device = await store.execute_read_one_async(
                 "SELECT id, room FROM devices WHERE user_id = ? AND json_extract(capabilities, '$.tts') = true ORDER BY last_seen DESC LIMIT 1",
                 (ev.user_id,)
             )

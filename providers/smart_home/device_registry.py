@@ -134,7 +134,7 @@ class DeviceRegistry:
                 # Check exact name or alias match
                 # Also check compound area + domain e.g. "kitchen lights"
                 # For simplicity, we just fetch all non-hidden and try matching in python
-                entities = await store._fetch_all("SELECT entity_id, domain, name, area, aliases FROM ha_entities WHERE hidden = 0")
+                entities = await store.execute_read_async("SELECT entity_id, domain, name, area, aliases FROM ha_entities WHERE hidden = 0")
                 
                 # 1. Exact name match or alias
                 for e in entities:

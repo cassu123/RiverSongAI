@@ -60,7 +60,7 @@ async def sync_ha_entities() -> int:
             device_class = ent.get("device_class")
             
             # Use SQLite UPSERT
-            await store._execute("""
+            await store.execute_write_async("""
                 INSERT INTO ha_entities (entity_id, domain, name, area, device_class, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT(entity_id) DO UPDATE SET

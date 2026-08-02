@@ -143,6 +143,20 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
+    # CSRF
+    # -------------------------------------------------------------------------
+    csrf_protection_enabled: bool = Field(
+        default=True,
+        description=(
+            "Require X-CSRF-Token on state-changing requests that authenticate "
+            "with the session cookie. Bearer-header requests are unaffected. "
+            "Turning this off leaves only SameSite=lax protecting every route "
+            "behind require_role — an escape hatch for debugging, not a setting "
+            "to run with."
+        ),
+    )
+
+    # -------------------------------------------------------------------------
     # Network / Proxy
     # -------------------------------------------------------------------------
     stt_provider: str = Field(

@@ -125,6 +125,15 @@ class Vehicle(Base):  # type: ignore
     service_logs = relationship("ServiceLog",        back_populates="vehicle", cascade="all, delete-orphan")
     assignments  = relationship("VehicleAssignment", back_populates="vehicle", cascade="all, delete-orphan")
     usage_readings = relationship("UsageReading", back_populates="vehicle", cascade="all, delete-orphan")
+    # Legacy — kept for DB compat, not surfaced in UI.
+    # These sat on UsageReading, which has no relationship to the spec tables:
+    # their FKs point at `vehicles.id` and their `back_populates="vehicle"`
+    # resolves to VehicleFluidSpec.vehicle -> Vehicle. SQLAlchemy could not
+    # build a join for them, so configuring the mappers raised
+    # NoForeignKeysError and every query in this module failed.
+    fluid_specs  = relationship("VehicleFluidSpec",  back_populates="vehicle", cascade="all, delete-orphan")
+    torque_specs = relationship("VehicleTorqueSpec", back_populates="vehicle", cascade="all, delete-orphan")
+    parts        = relationship("VehiclePart",       back_populates="vehicle", cascade="all, delete-orphan")
 
 
 class UsageReading(Base):  # type: ignore
@@ -137,10 +146,6 @@ class UsageReading(Base):  # type: ignore
     recorded_at: Mapped[datetime] = mapped_column(DateTime, default=_now, nullable=False)
 
     vehicle = relationship("Vehicle", back_populates="usage_readings")
-    # Legacy — kept for DB compat, not surfaced in UI
-    fluid_specs  = relationship("VehicleFluidSpec",  back_populates="vehicle", cascade="all, delete-orphan")
-    torque_specs = relationship("VehicleTorqueSpec", back_populates="vehicle", cascade="all, delete-orphan")
-    parts        = relationship("VehiclePart",       back_populates="vehicle", cascade="all, delete-orphan")
 
 
 # ---------------------------------------------------------------------------

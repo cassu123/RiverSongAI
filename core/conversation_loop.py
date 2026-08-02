@@ -610,7 +610,7 @@ class ConversationLoop:
             today_str = now.strftime("%Y-%m-%d")
             dedupe = f"brief_{today_str}"
             
-            pending = await store._fetch_one(
+            pending = await store.execute_read_one_async(
                 "SELECT id, body FROM proactive_log WHERE user_id = ? AND dedupe_key = ? AND delivered = 0",
                 (self._user_id, dedupe)
             )
@@ -623,7 +623,7 @@ class ConversationLoop:
                 return
 
             # Mark as delivered
-            await store._execute("UPDATE proactive_log SET delivered = 1 WHERE id = ?", (pending["id"],))
+            await store.execute_write_async("UPDATE proactive_log SET delivered = 1 WHERE id = ?", (pending["id"],))
 
             # Dispatch events
             await on_event({"type": "proactive_briefing_start", "text": response})
