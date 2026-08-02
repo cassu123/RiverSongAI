@@ -43,6 +43,24 @@ from datetime import datetime, timezone
 from fractions import Fraction
 from typing import Any, Dict, Generator, List, Optional
 from api.services.recipe_parser import *
+# `import *` skips leading-underscore names, so every helper below was
+# undefined at runtime — creating a recipe, scaling one, or reading one back
+# all raised NameError. Imported explicitly.
+from api.services.recipe_parser import (
+    _IMPERIAL_TO_METRIC,
+    _METRIC_TO_IMPERIAL,
+    _detect_protein,
+    _extract_json,
+    _extract_jsonld_recipes,
+    _extract_microdata_recipes,
+    _extract_nextdata_recipes,
+    _extract_og_image,
+    _format_qty,
+    _is_bot_challenge,
+    _parse_qty,
+    _parse_yield,
+    _safe_json,
+)
 
 import httpx
 from fastapi import (

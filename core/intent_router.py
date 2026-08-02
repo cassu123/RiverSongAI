@@ -45,10 +45,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import re
+from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
+from typing import Any, Callable, Coroutine, Dict, Iterator, List, Optional, Tuple
 
 from config.settings import get_settings
 
@@ -79,6 +81,252 @@ class Intent:
     phrases: List[str] = field(default_factory=list)
     keywords: List[str] = field(default_factory=list)
     handler: Optional[HandlerFn] = None
+
+
+# =============================================================================
+# Request origin
+# =============================================================================
+#
+# Where a request physically came from changes what it is allowed to do. A
+# River Vortex unit is a thin client on a kitchen counter: it relays, it never
+# decides. Handlers read the origin from a context variable rather than a
+# widened signature, so every existing `(transcript, user_id)` handler keeps
+# working and any code path — voice, a tapped surface button, a device grid
+# toggle — can declare its origin the same way.
+
+ORIGIN_USER = "user"
+ORIGIN_VORTEX_UNIT = "vortex_unit"
+
+
+@dataclass(frozen=True)
+class RequestOrigin:
+    """
+    Provenance of a request reaching the router.
+
+    Attributes:
+        kind: ORIGIN_USER for an authenticated session (web, app, server-side
+            automation) or ORIGIN_VORTEX_UNIT for anything relayed by a hub.
+        unit_id: The relaying unit, when kind is ORIGIN_VORTEX_UNIT.
+        room: The unit's room, used to target responses (music, surfaces).
+        has_display: Whether the unit can render a confirmation prompt. A
+            screenless unit cannot collect a second factor, since invariant 5
+            forbids a spoken one.
+    """
+    kind: str = ORIGIN_USER
+    unit_id: Optional[str] = None
+    room: Optional[str] = None
+    has_display: bool = True
+
+    @property
+    def is_unit(self) -> bool:
+        return self.kind == ORIGIN_VORTEX_UNIT
+
+
+_DEFAULT_ORIGIN = RequestOrigin()
+_CURRENT_ORIGIN: ContextVar[RequestOrigin] = ContextVar(
+    "river_request_origin", default=_DEFAULT_ORIGIN
+)
+
+
+def current_origin() -> RequestOrigin:
+    """Return the origin of the request being handled on this task."""
+    return _CURRENT_ORIGIN.get()
+
+
+@contextlib.contextmanager
+def origin_scope(origin: Optional[RequestOrigin]) -> Iterator[RequestOrigin]:
+    """
+    Bind a request origin for the duration of a block.
+
+    Usage:
+        with origin_scope(RequestOrigin(kind=ORIGIN_VORTEX_UNIT, unit_id=uid)):
+            await router.route(transcript, user_id)
+    """
+    effective = origin or _DEFAULT_ORIGIN
+    token = _CURRENT_ORIGIN.set(effective)
+    try:
+        yield effective
+    finally:
+        _CURRENT_ORIGIN.reset(token)
+
+
+# =============================================================================
+# Permission model for device actions
+# =============================================================================
+#
+# Invariant 2 of the River Vortex brief: locks, garage doors and alarm disarm
+# are hard-denied to units. Not gated behind a confirmation — refused, because
+# the request came from a unit. A Pi stolen from a kitchen must not be able to
+# open a door, however convincing the voice or the face in front of it is.
+
+# Whole HA domains a unit may never operate.
+UNIT_DENIED_DOMAINS = frozenset({"lock", "alarm_control_panel"})
+
+# Actions denied on any entity that looks like a garage door, whatever its
+# domain. Garage doors are `cover.*` in Home Assistant and share that domain
+# with blinds and curtains, so the entity has to be inspected by name.
+#
+# Matched against the *compacted* haystack — every non-alphanumeric character
+# stripped — rather than with word boundaries. Word boundaries do not survive
+# real entity ids: `\bgarage\b` misses "cover.garage_door" because `_` is a
+# word character, and misses "cover.GarageDoor" because there is no separator
+# at all. Both of those are a hard deny silently downgraded to a confirmation
+# prompt, which is precisely the failure this exists to prevent.
+#
+# Substring matching errs toward denying. That is the correct direction here:
+# refusing to toggle something merely named like a gate is an inconvenience,
+# and opening a real one from a stolen Pi is not. "gateway" is excluded
+# because a network gateway is a plausible switch and is not a way into the
+# house.
+_GARAGE_PATTERN = re.compile(r"garage|carport|gate(?!way)", re.IGNORECASE)
+
+
+def _normalise_target(entity_id: Optional[str], device_name: str) -> str:
+    """Flatten an entity id and device name into a space-separated haystack."""
+    raw = f"{entity_id or ''} {device_name or ''}"
+    return re.sub(r"[._\-]+", " ", raw).lower()
+
+
+def _compact_target(entity_id: Optional[str], device_name: str) -> str:
+    """
+    Strip an entity id and device name to letters and digits only.
+
+    "cover.garage_door", "cover.garage-door" and "cover.GarageDoor" all
+    collapse to the same haystack, so a naming convention cannot decide
+    whether a safety rule applies.
+    """
+    return re.sub(r"[^a-z0-9]+", "", f"{entity_id or ''}{device_name or ''}".lower())
+
+
+# Entities that are risky enough to want a second factor, but not a flat
+# refusal: anything that opens the house up or heats something.
+_MEDIUM_RISK_DOMAINS = frozenset({"cover", "water_heater", "valve"})
+_MEDIUM_RISK_PATTERN = re.compile(
+    r"\boven\b|\bhob\b|\bstove\b|\bcooker\b|\bheater\b|\bboiler\b|\bfurnace\b"
+    r"|\bpump\b|\bsauna\b|\bhot\s*tub\b|\bfront\s*door\b",
+    re.IGNORECASE,
+)
+
+DECISION_ALLOW = "allow"
+DECISION_DENY = "deny"
+DECISION_CONFIRM = "confirm"
+
+
+@dataclass(frozen=True)
+class PermissionDecision:
+    """
+    The router's verdict on one device action.
+
+    Attributes:
+        decision: DECISION_ALLOW, DECISION_DENY or DECISION_CONFIRM.
+        reason: Machine-readable reason code, for logs and telemetry.
+        message: Spoken/displayable explanation. Never blames the user.
+    """
+    decision: str
+    reason: str = ""
+    message: str = ""
+
+    @property
+    def allowed(self) -> bool:
+        return self.decision == DECISION_ALLOW
+
+    @property
+    def denied(self) -> bool:
+        return self.decision == DECISION_DENY
+
+    @property
+    def needs_confirmation(self) -> bool:
+        return self.decision == DECISION_CONFIRM
+
+
+def evaluate_device_request(
+    *,
+    action: str,
+    entity_id: Optional[str] = None,
+    device_name: str = "",
+    origin: Optional[RequestOrigin] = None,
+) -> PermissionDecision:
+    """
+    Decide whether a device action may proceed, given where it came from.
+
+    This is the single choke point for the Vortex hard deny. Voice commands,
+    tapped surface buttons and device-grid toggles all pass through here, so a
+    confirm card on a wall panel is a prompt and never an authorisation.
+
+    Args:
+        action: Parsed action name, e.g. "unlock", "turn_on", "set_brightness".
+        entity_id: Home Assistant entity ID when one has been resolved.
+        device_name: Free-text device name, used when no entity is resolved yet.
+        origin: Request provenance. Defaults to the ambient context origin.
+
+    Returns:
+        PermissionDecision. Callers must not execute on DENY, and must mint a
+        pending confirmation on CONFIRM.
+    """
+    origin = origin or current_origin()
+    action = (action or "").lower()
+    haystack = _normalise_target(entity_id, device_name)
+    compact = _compact_target(entity_id, device_name)
+    domain = (entity_id or "").split(".")[0].lower() if entity_id else ""
+
+    # Non-unit requests keep their existing behaviour untouched.
+    if not origin.is_unit:
+        return PermissionDecision(DECISION_ALLOW)
+
+    is_garage = bool(_GARAGE_PATTERN.search(compact))
+    is_lock_domain = domain in UNIT_DENIED_DOMAINS
+    mentions_alarm = "alarm" in compact
+    # Without a resolved entity, fall back to the verb: "unlock the front door"
+    # must be refused before the registry lookup, not after it.
+    looks_like_lock = action in ("lock", "unlock") or mentions_alarm
+    is_disarm = action in ("disarm", "alarm_disarm") or (
+        mentions_alarm and action in ("turn_off", "unlock", "open")
+    )
+
+    if is_lock_domain or looks_like_lock or is_garage or is_disarm:
+        what = (
+            "the garage" if is_garage
+            else "the alarm" if is_disarm or mentions_alarm
+            else "door locks"
+        )
+        logger.warning(
+            "Vortex hard deny: unit %s requested action '%s' on '%s' "
+            "(domain=%s, garage=%s). Locks, garage doors and alarm disarm are "
+            "refused at the router for unit-originated requests.",
+            origin.unit_id, action, (entity_id or device_name or "?"),
+            domain or "?", is_garage,
+        )
+        return PermissionDecision(
+            DECISION_DENY,
+            reason="vortex_hard_deny",
+            message=(
+                f"I can't operate {what} from a room hub. "
+                "You'll need to do that from your phone or the web app."
+            ),
+        )
+
+    if domain in _MEDIUM_RISK_DOMAINS or _MEDIUM_RISK_PATTERN.search(haystack):
+        if not origin.has_display:
+            logger.info(
+                "Vortex deny: unit %s has no display and cannot collect a "
+                "second factor for '%s' on '%s'.",
+                origin.unit_id, action, entity_id or device_name,
+            )
+            return PermissionDecision(
+                DECISION_DENY,
+                reason="second_factor_impossible",
+                message=(
+                    "That one needs confirming on a screen, and this speaker "
+                    "doesn't have one."
+                ),
+            )
+        return PermissionDecision(
+            DECISION_CONFIRM,
+            reason="medium_risk",
+            message="That needs confirming on the screen first.",
+        )
+
+    return PermissionDecision(DECISION_ALLOW)
 
 
 # =============================================================================
@@ -199,6 +447,12 @@ async def _handle_smart_home(transcript: str, user_id: str) -> str:
                 "Try naming the device, like 'turn off the kitchen lights'."
             )
 
+        # Hard deny before resolution: "unlock the front door" is refused on
+        # the verb, so a unit never even learns which entity would have moved.
+        early = evaluate_device_request(action=action, device_name=device_name)
+        if early.denied:
+            return early.message
+
         registry = get_device_registry()
         resolved = await registry.resolve(device_name)
 
@@ -230,6 +484,25 @@ async def _handle_smart_home(transcript: str, user_id: str) -> str:
             domain = entity_list[0].split(".")[0]
             action = "set_temperature" if domain == "climate" else "set_brightness"
 
+        # Re-check now that the entity is known. Resolution can turn a benign
+        # phrase into a lock ("open the side door" → lock.side_door), so the
+        # decision is taken again against the real entity.
+        for entity in (resolved if isinstance(resolved, list) else [resolved]):
+            decision = evaluate_device_request(
+                action=action, entity_id=entity, device_name=device_name)
+            if decision.denied:
+                return decision.message
+            if decision.needs_confirmation:
+                return await _request_unit_confirmation(
+                    user_id=user_id,
+                    action=action,
+                    entity_ids=(resolved if isinstance(resolved, list)
+                                else [resolved]),
+                    device_name=device_name,
+                    value=value,
+                    message=decision.message,
+                )
+
         async with build_ha_client() as client:
             if isinstance(resolved, list):
                 ok = await client.execute_action_on_many(resolved, action, value)
@@ -256,6 +529,72 @@ async def _handle_smart_home(transcript: str, user_id: str) -> str:
     except Exception as exc:
         logger.error("Smart home handler failed: %s", exc)
         return "Sorry, I had trouble controlling that device right now."
+
+
+async def _request_unit_confirmation(
+    *,
+    user_id: str,
+    action: str,
+    entity_ids: List[str],
+    device_name: str,
+    value: Optional[int],
+    message: str,
+) -> str:
+    """
+    Park a medium-risk action behind a second factor entered on the unit.
+
+    Mints a pending confirmation holding everything needed to run the action
+    later, then pushes a `confirm` surface to the unit that heard the request.
+    Nothing is executed here — the action runs only if
+    `core.vortex_actions.resolve_confirmation` is later handed a valid factor
+    against this challenge id.
+    """
+    from core.vortex_security import confirmations
+
+    origin = current_origin()
+    label = action.replace("_", " ")
+    description = f"{label} the {device_name}".strip()
+
+    pending = await confirmations.create(
+        user_id=user_id,
+        unit_id=origin.unit_id,
+        action="home_action",
+        description=description,
+        payload={
+            "entity_ids": list(entity_ids),
+            "action": action,
+            "value": value,
+            "device_name": device_name,
+        },
+    )
+
+    try:
+        from core.vortex_surfaces import get_surface_publisher
+
+        await get_surface_publisher().publish(
+            {
+                "id": f"confirm:{pending.challenge_id}",
+                "kind": "confirm",
+                "priority": "high",
+                "title": f"Confirm: {description}",
+                "body": "Enter your code on this screen to continue.",
+                "icon": "🔒",
+                "ttl_seconds": 120,
+                "speech": message,
+                "challenge_id": pending.challenge_id,
+                "actions": [
+                    {"label": "Confirm", "intent": f"confirm:{pending.challenge_id}",
+                     "style": "primary"},
+                    {"label": "Cancel", "intent": f"cancel:{pending.challenge_id}",
+                     "style": "secondary"},
+                ],
+            },
+            unit_ids=[origin.unit_id] if origin.unit_id else None,
+        )
+    except Exception as exc:  # pragma: no cover - surface push is best effort
+        logger.error("Could not push confirmation surface: %s", exc)
+
+    return message
 
 
 def _build_confirmation(action: str, device_name: str,
@@ -421,8 +760,217 @@ async def _handle_gmail(transcript: str, user_id: str) -> str:
         return "Sorry, I had trouble accessing your email right now."
 
 
+# =============================================================================
+# Casting and intercom
+# =============================================================================
+
+# "cast <what> to <where>", "put <what> on the <where>"
+_CAST_PATTERN = re.compile(
+    r"^(?:cast|put|show|stream)\s+(?P<what>.+?)\s+(?:to|on|onto)\s+"
+    r"(?:the\s+)?(?P<where>[\w\s]+?)\s*$",
+    re.IGNORECASE,
+)
+_STOP_CAST_PATTERN = re.compile(
+    r"\bstop\s+(?:the\s+)?cast(?:ing)?(?:\s+(?:to|on)\s+(?:the\s+)?"
+    r"(?P<where>[\w\s]+?))?\s*$",
+    re.IGNORECASE,
+)
+
+# "call the kitchen", "intercom the bedroom", "video call the living room"
+_CALL_PATTERN = re.compile(
+    r"^(?:(?P<video>video\s+)?call|intercom|ring|talk to)\s+"
+    r"(?:the\s+)?(?P<where>[\w\s]+?)\s*$",
+    re.IGNORECASE,
+)
+
+
+async def _handle_cast(transcript: str, user_id: str) -> str:
+    """Cast something to a TV, speaker or hub."""
+    lowered = (transcript or "").strip()
+
+    stop = _STOP_CAST_PATTERN.search(lowered)
+    if stop:
+        from core.vortex_cast import resolve_target, stop as stop_cast
+
+        where = (stop.group("where") or "").strip()
+        if not where:
+            return "Which screen should I stop?"
+        target = await resolve_target(where, user_id)
+        if target is None:
+            return f"I couldn't find anything called the {where}."
+        result = await stop_cast(user_id=user_id, target=target)
+        return result.get("message") or "Done."
+
+    match = _CAST_PATTERN.match(lowered)
+    if not match:
+        return ""
+
+    from core.vortex_cast import cast_from_voice
+
+    _, spoken = await cast_from_voice(
+        user_id=user_id,
+        query=match.group("what").strip(),
+        target_name=match.group("where").strip(),
+    )
+    return spoken
+
+
+async def _handle_intercom(transcript: str, user_id: str) -> str:
+    """
+    Start an intercom or video call to another room.
+
+    Only meaningful from a unit — "call the kitchen" from a browser has no
+    near end to connect. Returns "" otherwise so the LLM handles it, which
+    also keeps "call Mum" out of the room intercom.
+    """
+    origin = current_origin()
+    if not origin.is_unit or not origin.unit_id:
+        return ""
+
+    match = _CALL_PATTERN.match((transcript or "").strip())
+    if not match:
+        return ""
+
+    where = match.group("where").strip()
+    mode = "video" if match.group("video") else "audio"
+
+    from core.vortex_calls import (
+        get_call_registry, ice_servers, negotiate_mode, participant_id,
+    )
+    from core.vortex_units import list_profiles, normalise_room
+
+    caller = participant_id(unit_id=origin.unit_id)
+    wanted = normalise_room(where)
+    callee = None
+    for profile in await list_profiles(user_id):
+        if normalise_room(profile.get("room", "")) == wanted:
+            callee = participant_id(unit_id=profile["unit_id"])
+            break
+    if callee is None:
+        return f"I don't have a hub in the {where}."
+    if callee == caller:
+        return "That's this room."
+
+    resolved_mode, note = await negotiate_mode(mode, caller, callee)
+    call, error = await get_call_registry().start(
+        caller=caller, callee=callee, owner_user_id=user_id,
+        mode=resolved_mode, ice_servers=ice_servers(),
+    )
+    if call is None:
+        return error
+
+    try:
+        from api.routes.vortex import _ring_surface
+        await _ring_surface(callee, caller, call.id, resolved_mode)
+    except Exception as exc:
+        logger.debug("Could not raise the ringing card: %s", exc)
+
+    spoken = f"Calling the {where}."
+    return f"{spoken} {note}" if note else spoken
+
+
+# =============================================================================
+# Cooking sessions
+# =============================================================================
+
+# Order matters: "how long left" must be tested before "how much", and
+# "next" before anything that merely contains it.
+_COOKING_PATTERNS: List[tuple] = [
+    ("how_long", r"how (?:long|much time)(?:\s+(?:is|has|do i have))?\s*"
+                 r"(?:left|to go|remaining)|how long on the timer"),
+    ("timer", r"\b(?:set|start)\s+(?:a\s+)?timer\s*(?:for\s+)?(.*)"),
+    ("how_much", r"how (?:much|many)\s+(.*?)(?:\s+do i need|\s+is it|\?|$)"),
+    ("next", r"\bnext step\b|\bnext\b|\bcontinue\b|\bgo on\b|\bwhat's next\b"),
+    ("back", r"\b(?:previous|last) step\b|\bgo back\b|\bback a step\b"),
+    ("repeat", r"\brepeat\b|\bsay that again\b|\bread that again\b"
+               r"|\bwhat(?:'s| is) the step\b|\bwhere (?:are|was) we\b"),
+]
+
+# "10 minutes", "an hour and a half", "90 seconds"
+_SPOKEN_DURATION = re.compile(
+    r"(\d+(?:\.\d+)?)\s*(second|seconds|sec|secs|minute|minutes|min|mins"
+    r"|hour|hours|hr|hrs)",
+    re.IGNORECASE,
+)
+_DURATION_UNITS = {
+    "second": 1, "seconds": 1, "sec": 1, "secs": 1,
+    "minute": 60, "minutes": 60, "min": 60, "mins": 60,
+    "hour": 3600, "hours": 3600, "hr": 3600, "hrs": 3600,
+}
+
+
+def parse_spoken_duration(text: str) -> int:
+    """
+    Total seconds from a spoken duration, summing every part it names.
+
+    "an hour and a half" is not handled — it has no digits — and returns 0,
+    which the caller turns into "how long should I set it for?" rather than
+    guessing at a number someone is going to cook by.
+    """
+    total = 0
+    for amount, unit in _SPOKEN_DURATION.findall(text or ""):
+        try:
+            total += int(float(amount) * _DURATION_UNITS[unit.lower()])
+        except (ValueError, KeyError):
+            continue
+    return total
+
+
+def parse_cooking_command(transcript: str) -> Optional[Tuple[str, str]]:
+    """
+    Map a transcript to a (command, argument) pair, or None.
+
+    Returns None for anything that is not a cooking command, so the caller can
+    fall through to the LLM instead of answering a question nobody asked.
+    """
+    lowered = (transcript or "").lower().strip()
+    for command, pattern in _COOKING_PATTERNS:
+        match = re.search(pattern, lowered)
+        if not match:
+            continue
+        argument = ""
+        if match.groups():
+            argument = (match.group(1) or "").strip()
+        if command == "timer":
+            return command, str(parse_spoken_duration(argument or lowered))
+        return command, argument
+    return None
+
+
+async def _handle_cooking(transcript: str, user_id: str) -> str:
+    """
+    Handle a cooking command while a session is active.
+
+    Returns "" when there is no active session or the transcript is not
+    actually a cooking command — an empty response tells the caller to use the
+    LLM path, so "how much do I owe you" does not get answered out of a
+    recipe.
+    """
+    parsed = parse_cooking_command(transcript)
+    if parsed is None:
+        return ""
+
+    command, argument = parsed
+    try:
+        from api.routes.culinary_sessions import voice_command
+
+        spoken = await voice_command(user_id, command, argument)
+    except Exception as exc:
+        logger.error("Cooking intent failed: %s", exc)
+        return ""
+
+    # None means nobody is cooking; hand the transcript back to the LLM.
+    return spoken or ""
+
+
 async def _handle_youtube_music(transcript: str, user_id: str) -> str:
-    """Search YouTube Music and play the first result."""
+    """
+    Search YouTube Music and play the first result.
+
+    A request relayed by a River Vortex unit is resolved to a stream URL and
+    handed to that unit, so music asked for in the kitchen comes out of the
+    kitchen. Everything else keeps playing on this box as before.
+    """
     try:
         from providers.google.youtube_music import build_youtube_music_provider
 
@@ -434,6 +982,14 @@ async def _handle_youtube_music(transcript: str, user_id: str) -> str:
                 break
         else:
             query = transcript
+
+        if current_origin().is_unit:
+            from core.vortex_media import handle_play_request
+
+            spoken = await handle_play_request(
+                transcript=transcript, user_id=user_id, query=query)
+            if spoken is not None:
+                return spoken
 
         provider = build_youtube_music_provider()
         return await provider.play_first_result(query)
@@ -722,6 +1278,62 @@ async def _handle_conversation(transcript: str, user_id: str) -> str:
 # =============================================================================
 
 INTENT_REGISTRY: List[Intent] = [
+    # Cooking goes first: while a session is live, "next" means the next step
+    # and nothing else. The handler returns "" when nobody is cooking, which
+    # hands the transcript straight back to the LLM — so these phrases cost
+    # nothing the rest of the time.
+    Intent(
+        name="cooking",
+        phrases=[
+            "next step",
+            "previous step",
+            "go back a step",
+            "last step",
+            "repeat that",
+            "say that again",
+            "read that again",
+            "what's the step",
+            "what is the step",
+            "how much",
+            "how many",
+            "set a timer",
+            "start a timer",
+            "how long left",
+            "how long is left",
+            "how much time",
+            "how long on the timer",
+        ],
+        keywords=[],
+        handler=_handle_cooking,
+    ),
+    # Intercom before casting: "call the living room" and "cast to the living
+    # room" both name a room, and only one of them is a call.
+    Intent(
+        name="intercom",
+        phrases=[
+            "call the",
+            "video call the",
+            "intercom the",
+            "intercom",
+            "ring the",
+            "talk to the",
+        ],
+        keywords=[],
+        handler=_handle_intercom,
+    ),
+    Intent(
+        name="cast",
+        phrases=[
+            "cast ",
+            "stop casting",
+            "stop the cast",
+            "put it on the",
+            "show it on the",
+            "stream it to",
+        ],
+        keywords=[],
+        handler=_handle_cast,
+    ),
     Intent(
         name="kova_chores",
         phrases=[
@@ -1182,7 +1794,8 @@ class IntentRouter:
         )
 
     async def route(
-        self, transcript: str, user_id: str
+        self, transcript: str, user_id: str,
+        origin: Optional[RequestOrigin] = None,
     ) -> Tuple[str, str]:
         """
         Score a transcript against all intents and dispatch to the winner.
@@ -1190,6 +1803,10 @@ class IntentRouter:
         Args:
             transcript: Raw transcription string from the STT provider.
             user_id: Used by Google provider handlers for OAuth token lookup.
+                Always resolved by this server — never accepted from a device.
+            origin: Where the request came from. A River Vortex unit gets the
+                restricted permission set described in evaluate_device_request;
+                omitting this keeps the default full-trust user origin.
 
         Returns:
             Tuple of (intent_name, spoken_response).
@@ -1203,17 +1820,20 @@ class IntentRouter:
         best_intent, best_score = self._score(transcript)
 
         logger.info(
-            "Intent routing: transcript='%s...', winner='%s', score=%.2f, threshold=%.2f.",
+            "Intent routing: transcript='%s...', winner='%s', score=%.2f, "
+            "threshold=%.2f, origin=%s.",
             transcript[:60],
             best_intent.name,
             best_score,
             self._threshold,
+            (origin or current_origin()).kind,
         )
 
         if best_intent.handler is None:
             return "conversation", ""
 
-        spoken = await best_intent.handler(transcript, user_id)
+        with origin_scope(origin or current_origin()):
+            spoken = await best_intent.handler(transcript, user_id)
         return best_intent.name, spoken
 
     # -------------------------------------------------------------------------

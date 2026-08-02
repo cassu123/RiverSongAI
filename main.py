@@ -257,6 +257,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     async def ha_sync_sweep():
         await sync_ha_entities()
     register_sweep("ha_sync", 3600, ha_sync_sweep)
+
+    # River Vortex camera snapshots are retained for 24 hours and then
+    # deleted. These are cameras in bedrooms — retention is enforced by
+    # actually removing the files, not by letting their links expire.
+    from core.vortex_vision import purge_expired_snapshots
+    register_sweep("vortex_snapshots", 3600, purge_expired_snapshots)
     
     # Run HA sync once on startup
     asyncio.create_task(sync_ha_entities())
@@ -449,8 +455,8 @@ def create_app() -> FastAPI:
         killswitch_router, home_router, conversation_router, settings_router,
         admin_router, routines_router, inventory_router, commerce_router,
         vehicles_router, feeds_router, reading_router, features_router,
-        parent_router, analytics_router, culinary_router, location_router, google_router,
-        vision_router, vault_router, pulse_router, voice_id_router, willow_router, n8n_webhooks, shopify_webhooks_router, shopify_auth_router, image_router, push_router, fleet_routers, initiative_router,
+        parent_router, analytics_router, culinary_router, culinary_sessions_router, location_router, google_router,
+        vision_router, vault_router, pulse_router, voice_id_router, face_id_router, willow_router, n8n_webhooks, shopify_webhooks_router, shopify_auth_router, image_router, push_router, fleet_routers, vortex_router, initiative_router,
         legal_router, rag_router, daemons_router, context_router, rover_router,
         usage_router, integrations_router, vector_fleet_router,
         documents_router,
@@ -486,12 +492,14 @@ def create_app() -> FastAPI:
     app.include_router(parent_router)
     app.include_router(analytics_router)
     app.include_router(culinary_router)
+    app.include_router(culinary_sessions_router)
     app.include_router(location_router)
     app.include_router(google_router)
     app.include_router(vision_router)
     app.include_router(vault_router)
     app.include_router(pulse_router)
     app.include_router(voice_id_router)
+    app.include_router(face_id_router)
     app.include_router(willow_router)
     app.include_router(shopify_webhooks_router)
     app.include_router(shopify_auth_router)
@@ -514,6 +522,9 @@ def create_app() -> FastAPI:
     app.include_router(documents_router)
     for _fleet_router in fleet_routers:
         app.include_router(_fleet_router)
+    # Mounted after the generic fleet routers so both share the /api/vortex
+    # prefix without either shadowing the other's paths.
+    app.include_router(vortex_router)
     app.include_router(initiative_router)
     app.include_router(proactive_router)
     app.include_router(sweeps_router)

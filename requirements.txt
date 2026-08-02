@@ -108,18 +108,21 @@ python-amazon-sp-api==2.1.8          # Amazon Selling Partner API
 # -----------------------------------------------------------------------------
 chromadb==1.5.9                      # Local vector database for semantic memory
 pybind11==3.0.4                     # C++ bindings required by chroma-hnswlib
-# chromadb pulls in opentelemetry + protobuf. Pin them here to avoid the Python
-# 3.14 crash: protobuf 4.x C extension raises TypeError (not ImportError) on
-# Python 3.14, causing a boot-time crash. Protobuf 5.x fixes this natively.
+# chromadb pulls in opentelemetry + protobuf. The pin that does the work is
+# protobuf: 4.x raises TypeError (not ImportError) from its C extension on
+# Python 3.14, crashing at boot. 5.x fixes that natively.
 protobuf>=5.29.0,<6.0
-opentelemetry-proto>=1.29.0
-opentelemetry-exporter-otlp-proto-grpc>=1.29.0
-opentelemetry-exporter-otlp-proto-common>=1.44.0
-opentelemetry-api>=1.29.0
-opentelemetry-sdk>=1.29.0
-opentelemetry-instrumentation>=0.63b1
-opentelemetry-instrumentation-fastapi>=0.63b1
-opentelemetry-instrumentation-asgi>=0.65b0
+# The opentelemetry floors that used to sit here are gone on purpose. Nothing
+# in this codebase imports opentelemetry — it arrives only as a chromadb (and
+# now mistralai) transitive dependency, and the packages pin each other with
+# `==` internally. Pinning individual members of that family from outside made
+# them un-resolvable the moment one drifted: a bump of
+# opentelemetry-exporter-otlp-proto-common to >=1.44.0 forced the exporter to
+# 1.44 while other floors demanded otherwise, and mistralai 2.x needs
+# semantic-conventions <0.61 against an instrumentation floor of >=0.63b1.
+# Together those made `pip install -r requirements.txt` impossible.
+# The protobuf cap above still constrains the family to versions that accept
+# protobuf 5.x, which is the only property that was ever actually required.
 # unstructured and pymemgpt have strict Python <3.13 limits. Skipping for 3.14.
 # unstructured[all-docs]==0.14.0
 # pymemgpt==0.5.6
@@ -166,7 +169,11 @@ watchdog>=6.0.0
 # -----------------------------------------------------------------------------
 # MCP server (Model Context Protocol — exposes tools to external clients)
 # -----------------------------------------------------------------------------
-mcp>=1.0.0
+# Capped below 2.0: mcp 2.0 removed the @server.list_tools() and
+# @server.call_tool() decorators that mcp_server.py is built on, so an
+# unpinned floor turned every CI run red the day 2.0 shipped. Lifting this cap
+# means porting mcp_server.py to the 2.x handler API first.
+mcp>=1.0.0,<2.0.0
 # open-interpreter==0.4.3  # excluded: pins starlette<0.38 which conflicts with fastapi>=0.130
 
 # -----------------------------------------------------------------------------

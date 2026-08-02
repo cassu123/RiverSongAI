@@ -289,3 +289,74 @@ class MealPlanEntry(Base):  # type: ignore
     
     household = relationship("Household")
     recipe = relationship("Recipe")
+
+
+class CookingSession(Base):  # type: ignore
+    """
+    A recipe being cooked right now.
+
+    `cook_now` returns steps and forgets them, so nothing tracked "we are on
+    step 3". A session is household-scoped rather than per-device so the
+    kitchen Vortex, a phone and the browser all show the same step, and it is
+    persisted so a Pi rebooting mid-recipe does not lose your place.
+
+    Steps and ingredients are **materialised** at start rather than derived on
+    every read. Scaling is cheap but equipment translation is an LLM call, and
+    re-deriving would re-run it on every "next". Materialising also means a
+    recipe edited by someone else mid-cook does not change the instructions
+    under the person following them.
+    """
+    __tablename__ = "cul_cooking_sessions"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    household_id: Mapped[str] = mapped_column(String, ForeignKey("cul_households.id"), nullable=False, index=True)
+    # Nullable so deleting a recipe does not delete the history of cooking it.
+    recipe_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("cul_recipes.id"), nullable=True)
+
+    recipe_title: Mapped[str] = mapped_column(String, nullable=False, default="")
+    servings_target: Mapped[int] = mapped_column(Integer, default=4, nullable=False)
+    scale_factor: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    equipment: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    steps_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    ingredients_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+
+    current_step: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+
+    started_by: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    household = relationship("Household")
+    recipe = relationship("Recipe")
+    timers = relationship("CookingTimer", back_populates="session",
+                          cascade="all, delete-orphan")
+
+
+class CookingTimer(Base):  # type: ignore
+    """
+    A named timer bound to a step of a cooking session.
+
+    Stores the wall-clock deadline, never a countdown. A countdown has to be
+    decremented by something that is still running, so it loses time across a
+    reboot and lies about how long is left. A deadline is simply true whenever
+    it is next read.
+    """
+    __tablename__ = "cul_cooking_timers"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id: Mapped[str] = mapped_column(String, ForeignKey("cul_cooking_sessions.id"), nullable=False, index=True)
+
+    label: Mapped[str] = mapped_column(String, nullable=False, default="Timer")
+    step_index: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    duration_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    ends_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    # running | fired | cancelled
+    status: Mapped[str] = mapped_column(String, default="running", nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    fired_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    session = relationship("CookingSession", back_populates="timers")

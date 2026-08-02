@@ -41,6 +41,9 @@ from .vexa import router as vexa_router
 from .kova import router as kova_router
 from .documents import router as documents_router
 from .fleet import fleet_routers
+from .vortex import router as vortex_router
+from .culinary_sessions import router as culinary_sessions_router
+from .face_id import router as face_id_router
 from .initiative import router as initiative_router
 from .skills import router as skills_router
 from .session_presets import router as session_presets_router
@@ -97,6 +100,9 @@ __all__ = [
     "kova_router",
     "documents_router",
     "fleet_routers",
+    "vortex_router",
+    "culinary_sessions_router",
+    "face_id_router",
     "initiative_router",
     "skills_router",
     "session_presets_router",

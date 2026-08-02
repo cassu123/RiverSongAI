@@ -25,7 +25,14 @@ from __future__ import annotations
 import logging
 from typing import AsyncGenerator, List
 
-from mistralai import Mistral
+try:
+    # mistralai 2.x moved the client into a subpackage. The client API itself
+    # is unchanged — Mistral(api_key=...) and chat.stream_async() both survive
+    # — so importing from either location is all that is needed to support 1.x
+    # and 2.x from one file.
+    from mistralai.client import Mistral
+except ImportError:  # mistralai < 2.0
+    from mistralai import Mistral
 
 from config.settings import get_settings
 from providers.base import LLMProvider
