@@ -447,7 +447,13 @@ async def vortex_websocket(websocket: WebSocket) -> None:
     # A unit that just connected has an empty screen and a stale local copy.
     if owner:
         asyncio.create_task(get_replica_service().push_to_unit(unit_id, owner))
-    asyncio.create_task(get_surface_publisher().replay(unit_id))
+        # Surface state is in-memory, so a restart loses the current recipe
+        # step while the session itself is still in the database. Rebuild it
+        # before replaying, or walking into the kitchen after a restart shows
+        # nothing until somebody says "next".
+        asyncio.create_task(_restore_and_replay(unit_id, owner))
+    else:
+        asyncio.create_task(get_surface_publisher().replay(unit_id))
 
     try:
         while True:
@@ -471,6 +477,16 @@ async def vortex_websocket(websocket: WebSocket) -> None:
         logger.info("Vortex WS error for %s: %s", unit_id, exc)
     finally:
         await hub.unregister(unit_id, websocket)
+
+
+async def _restore_and_replay(unit_id: str, owner: str) -> None:
+    """Rebuild any live cooking card, then replay the unit's full card set."""
+    try:
+        from api.routes.culinary_sessions import restore_kitchen_surface
+        await restore_kitchen_surface(owner)
+    except Exception as exc:
+        logger.debug("Cooking surface restore skipped for %s: %s", unit_id, exc)
+    await get_surface_publisher().replay(unit_id)
 
 
 async def _authenticate_socket(websocket: WebSocket,

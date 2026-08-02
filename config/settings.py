@@ -772,6 +772,14 @@ class Settings(BaseSettings):
             "reports 'cannot identify' rather than guessing at a match."
         ),
     )
+    vortex_face_detector_model: str = Field(
+        default="",
+        description=(
+            "Path to a YuNet face-detection ONNX model. Only needed on "
+            "OpenCV 5.x, which dropped the Haar cascades that 4.x bundles. "
+            "Without it on 5.x, face detection reports itself unavailable."
+        ),
+    )
 
     # -------------------------------------------------------------------------
     # Push Notifications

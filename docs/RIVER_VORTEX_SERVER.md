@@ -194,12 +194,64 @@ invariant 2 stands regardless of how confidently a face is matched.
 
 ---
 
+---
+
+## Cooking sessions
+
+`cook_now` scales a recipe, hands back a step list and forgets it. A session is
+what remembers, and it is household-scoped rather than per-device so the
+kitchen Vortex, a phone and the browser are on the same step.
+
+```
+POST   /api/culinary/sessions                  {recipe_id, target_servings, equipment?}
+GET    /api/culinary/sessions/current
+GET    /api/culinary/sessions/{id}
+POST   /api/culinary/sessions/{id}/step        {action: next|back|goto|repeat, index?}
+POST   /api/culinary/sessions/{id}/timer       {seconds, label?, step_index?}
+DELETE /api/culinary/sessions/{id}/timer/{tid}
+POST   /api/culinary/sessions/{id}/end
+```
+
+`core/cooking_sessions.py` holds the logic; `api/routes/culinary_sessions.py`
+is the HTTP surface and `core/intent_router` routes the voice commands. All
+three share one code path, so "next" over the microphone and "Next" tapped on
+a wall panel are the same operation.
+
+**Each step carries** its index, the total, the instruction, the ingredients
+for *that step only*, and any timer the step's text implies. The canonical
+field is **`instruction`**; `text` is emitted alongside it as the device's
+tolerated alias, because a mismatch there leaves River silent on every step of
+a recipe.
+
+**Steps are materialised at start**, not derived per read. Scaling is cheap but
+equipment translation is an LLM call, and re-deriving would re-run it on every
+"next". It also means a recipe edited by someone else mid-cook does not change
+the instructions under the person following them.
+
+**Timers store a wall-clock deadline, never a countdown.** A countdown needs
+something running to decrement it, so it loses exactly the time a reboot takes
+— which is when you most want it to be right. A deadline is simply true
+whenever it is next read.
+
+**Every change is broadcast three ways**: the culinary WebSocket, the Vortex
+WebSocket, and a `normal`-priority surface card on the kitchen unit. A timer
+going off raises a `high` card — worth interrupting for, but a kitchen timer is
+not a smoke alarm. Ending a session withdraws both.
+
+Voice, while a session is active: `next`, `back`, `repeat`, "how much
+`<ingredient>`", "set a timer for N", "how long left". With no session, the
+handler returns nothing and the transcript goes to the LLM — so "how much do I
+owe you" is not answered out of an ingredient list.
+
+---
+
 ## Not yet built
 
-- **Task 3 — cooking sessions.** `cook_now` still returns steps and forgets.
-  `publish_cooking_step` is ready for a session to drive it; the session model,
-  its timers and the step endpoints are not written.
 - **Task 3c — casting.** `core/fleet_simulator.py` accepts `cast`/`stop_cast`
   and tracks a `cast_target`; neither side implements it.
 - **Task 8b — video calls.** The audio intercom is not yet extended to video,
   and no signalling path exists.
+- **Face matching.** Detection works (OpenCV 4.x cascades, or YuNet on 5.x with
+  `VORTEX_FACE_DETECTOR_MODEL` set). Identity needs a backend at
+  `VORTEX_FACE_BACKEND`; without one this server reports that it cannot
+  identify rather than returning a match it did not make.

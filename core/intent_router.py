@@ -166,18 +166,36 @@ UNIT_DENIED_DOMAINS = frozenset({"lock", "alarm_control_panel"})
 # domain. Garage doors are `cover.*` in Home Assistant and share that domain
 # with blinds and curtains, so the entity has to be inspected by name.
 #
-# Matching runs against a normalised haystack (see _normalise_target): entity
-# ids use underscores and dots as separators, and `\bgarage\b` does not match
-# inside "cover.garage_door" because `_` is a word character. Getting that
-# wrong turns a hard deny into a confirmation prompt, which is exactly the
-# failure this is here to prevent.
-_GARAGE_PATTERN = re.compile(r"\bgarage\b|\bgate\b|\bcarport\b", re.IGNORECASE)
+# Matched against the *compacted* haystack — every non-alphanumeric character
+# stripped — rather than with word boundaries. Word boundaries do not survive
+# real entity ids: `\bgarage\b` misses "cover.garage_door" because `_` is a
+# word character, and misses "cover.GarageDoor" because there is no separator
+# at all. Both of those are a hard deny silently downgraded to a confirmation
+# prompt, which is precisely the failure this exists to prevent.
+#
+# Substring matching errs toward denying. That is the correct direction here:
+# refusing to toggle something merely named like a gate is an inconvenience,
+# and opening a real one from a stolen Pi is not. "gateway" is excluded
+# because a network gateway is a plausible switch and is not a way into the
+# house.
+_GARAGE_PATTERN = re.compile(r"garage|carport|gate(?!way)", re.IGNORECASE)
 
 
 def _normalise_target(entity_id: Optional[str], device_name: str) -> str:
     """Flatten an entity id and device name into a space-separated haystack."""
     raw = f"{entity_id or ''} {device_name or ''}"
     return re.sub(r"[._\-]+", " ", raw).lower()
+
+
+def _compact_target(entity_id: Optional[str], device_name: str) -> str:
+    """
+    Strip an entity id and device name to letters and digits only.
+
+    "cover.garage_door", "cover.garage-door" and "cover.GarageDoor" all
+    collapse to the same haystack, so a naming convention cannot decide
+    whether a safety rule applies.
+    """
+    return re.sub(r"[^a-z0-9]+", "", f"{entity_id or ''}{device_name or ''}".lower())
 
 
 # Entities that are risky enough to want a second factor, but not a flat
@@ -248,15 +266,16 @@ def evaluate_device_request(
     origin = origin or current_origin()
     action = (action or "").lower()
     haystack = _normalise_target(entity_id, device_name)
+    compact = _compact_target(entity_id, device_name)
     domain = (entity_id or "").split(".")[0].lower() if entity_id else ""
 
     # Non-unit requests keep their existing behaviour untouched.
     if not origin.is_unit:
         return PermissionDecision(DECISION_ALLOW)
 
-    is_garage = bool(_GARAGE_PATTERN.search(haystack))
+    is_garage = bool(_GARAGE_PATTERN.search(compact))
     is_lock_domain = domain in UNIT_DENIED_DOMAINS
-    mentions_alarm = "alarm" in haystack
+    mentions_alarm = "alarm" in compact
     # Without a resolved entity, fall back to the verb: "unlock the front door"
     # must be refused before the registry lookup, not after it.
     looks_like_lock = action in ("lock", "unlock") or mentions_alarm
@@ -741,6 +760,100 @@ async def _handle_gmail(transcript: str, user_id: str) -> str:
         return "Sorry, I had trouble accessing your email right now."
 
 
+# =============================================================================
+# Cooking sessions
+# =============================================================================
+
+# Order matters: "how long left" must be tested before "how much", and
+# "next" before anything that merely contains it.
+_COOKING_PATTERNS: List[tuple] = [
+    ("how_long", r"how (?:long|much time)(?:\s+(?:is|has|do i have))?\s*"
+                 r"(?:left|to go|remaining)|how long on the timer"),
+    ("timer", r"\b(?:set|start)\s+(?:a\s+)?timer\s*(?:for\s+)?(.*)"),
+    ("how_much", r"how (?:much|many)\s+(.*?)(?:\s+do i need|\s+is it|\?|$)"),
+    ("next", r"\bnext step\b|\bnext\b|\bcontinue\b|\bgo on\b|\bwhat's next\b"),
+    ("back", r"\b(?:previous|last) step\b|\bgo back\b|\bback a step\b"),
+    ("repeat", r"\brepeat\b|\bsay that again\b|\bread that again\b"
+               r"|\bwhat(?:'s| is) the step\b|\bwhere (?:are|was) we\b"),
+]
+
+# "10 minutes", "an hour and a half", "90 seconds"
+_SPOKEN_DURATION = re.compile(
+    r"(\d+(?:\.\d+)?)\s*(second|seconds|sec|secs|minute|minutes|min|mins"
+    r"|hour|hours|hr|hrs)",
+    re.IGNORECASE,
+)
+_DURATION_UNITS = {
+    "second": 1, "seconds": 1, "sec": 1, "secs": 1,
+    "minute": 60, "minutes": 60, "min": 60, "mins": 60,
+    "hour": 3600, "hours": 3600, "hr": 3600, "hrs": 3600,
+}
+
+
+def parse_spoken_duration(text: str) -> int:
+    """
+    Total seconds from a spoken duration, summing every part it names.
+
+    "an hour and a half" is not handled — it has no digits — and returns 0,
+    which the caller turns into "how long should I set it for?" rather than
+    guessing at a number someone is going to cook by.
+    """
+    total = 0
+    for amount, unit in _SPOKEN_DURATION.findall(text or ""):
+        try:
+            total += int(float(amount) * _DURATION_UNITS[unit.lower()])
+        except (ValueError, KeyError):
+            continue
+    return total
+
+
+def parse_cooking_command(transcript: str) -> Optional[Tuple[str, str]]:
+    """
+    Map a transcript to a (command, argument) pair, or None.
+
+    Returns None for anything that is not a cooking command, so the caller can
+    fall through to the LLM instead of answering a question nobody asked.
+    """
+    lowered = (transcript or "").lower().strip()
+    for command, pattern in _COOKING_PATTERNS:
+        match = re.search(pattern, lowered)
+        if not match:
+            continue
+        argument = ""
+        if match.groups():
+            argument = (match.group(1) or "").strip()
+        if command == "timer":
+            return command, str(parse_spoken_duration(argument or lowered))
+        return command, argument
+    return None
+
+
+async def _handle_cooking(transcript: str, user_id: str) -> str:
+    """
+    Handle a cooking command while a session is active.
+
+    Returns "" when there is no active session or the transcript is not
+    actually a cooking command — an empty response tells the caller to use the
+    LLM path, so "how much do I owe you" does not get answered out of a
+    recipe.
+    """
+    parsed = parse_cooking_command(transcript)
+    if parsed is None:
+        return ""
+
+    command, argument = parsed
+    try:
+        from api.routes.culinary_sessions import voice_command
+
+        spoken = await voice_command(user_id, command, argument)
+    except Exception as exc:
+        logger.error("Cooking intent failed: %s", exc)
+        return ""
+
+    # None means nobody is cooking; hand the transcript back to the LLM.
+    return spoken or ""
+
+
 async def _handle_youtube_music(transcript: str, user_id: str) -> str:
     """
     Search YouTube Music and play the first result.
@@ -1056,6 +1169,34 @@ async def _handle_conversation(transcript: str, user_id: str) -> str:
 # =============================================================================
 
 INTENT_REGISTRY: List[Intent] = [
+    # Cooking goes first: while a session is live, "next" means the next step
+    # and nothing else. The handler returns "" when nobody is cooking, which
+    # hands the transcript straight back to the LLM — so these phrases cost
+    # nothing the rest of the time.
+    Intent(
+        name="cooking",
+        phrases=[
+            "next step",
+            "previous step",
+            "go back a step",
+            "last step",
+            "repeat that",
+            "say that again",
+            "read that again",
+            "what's the step",
+            "what is the step",
+            "how much",
+            "how many",
+            "set a timer",
+            "start a timer",
+            "how long left",
+            "how long is left",
+            "how much time",
+            "how long on the timer",
+        ],
+        keywords=[],
+        handler=_handle_cooking,
+    ),
     Intent(
         name="kova_chores",
         phrases=[

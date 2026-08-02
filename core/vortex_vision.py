@@ -194,34 +194,131 @@ class FaceRecognitionUnavailable(RuntimeError):
     """No recognition backend is configured for this deployment."""
 
 
+def _haar_detector(cv2: Any):
+    """
+    OpenCV 4.x frontal-face cascade, using the XML bundled with the wheel.
+
+    Zero configuration, which is the whole reason to prefer it. Removed in
+    OpenCV 5.0 — `cv2.CascadeClassifier` does not exist there — so this
+    returns None on 5.x and the YuNet path takes over.
+    """
+    classifier = getattr(cv2, "CascadeClassifier", None)
+    data = getattr(cv2, "data", None)
+    if classifier is None or data is None:
+        return None
+    path = os.path.join(getattr(data, "haarcascades", ""),
+                        "haarcascade_frontalface_default.xml")
+    if not os.path.exists(path):
+        return None
+    cascade = classifier(path)
+    if cascade.empty():
+        return None
+
+    def _detect(frame: Any) -> int:
+        faces = cascade.detectMultiScale(frame, scaleFactor=1.1,
+                                         minNeighbors=5, minSize=(60, 60))
+        return len(faces)
+
+    return _detect
+
+
+def _yunet_detector(cv2: Any):
+    """
+    OpenCV 5.x YuNet detector.
+
+    OpenCV 5 dropped Haar cascades in favour of this, but unlike the cascades
+    it ships no model with the wheel — set `vortex_face_detector_model` to a
+    `face_detection_yunet_*.onnx` to enable it. Without one, detection is
+    genuinely unavailable and this server says so rather than pretending it
+    looked and saw nobody.
+    """
+    create = getattr(cv2, "FaceDetectorYN_create", None)
+    if create is None:
+        return None
+
+    from config.settings import get_settings
+
+    model = (getattr(get_settings(), "vortex_face_detector_model", "") or "").strip()
+    if not model or not os.path.exists(model):
+        return None
+
+    detector = create(model, "", (320, 320))
+
+    def _detect(frame: Any) -> int:
+        height, width = frame.shape[:2]
+        detector.setInputSize((width, height))
+        _, faces = detector.detect(frame)
+        return 0 if faces is None else len(faces)
+
+    return _detect
+
+
+# Resolved once: building a classifier per frame would dominate the cost of
+# looking at one. None means "no detector on this build".
+_detector_cache: Any = ...
+
+
+def _resolve_detector():
+    global _detector_cache
+    if _detector_cache is not ...:
+        return _detector_cache
+
+    _detector_cache = None
+    try:
+        import cv2
+    except ImportError:
+        logger.info("Vortex face detection unavailable: OpenCV is not installed.")
+        return None
+
+    for name, build in (("haar", _haar_detector), ("yunet", _yunet_detector)):
+        try:
+            detector = build(cv2)
+        except Exception as exc:
+            logger.debug("Face detector '%s' unavailable: %s", name, exc)
+            continue
+        if detector is not None:
+            logger.info("Vortex face detection using the %s detector "
+                        "(OpenCV %s).", name, cv2.__version__)
+            _detector_cache = (detector, name == "haar")
+            return _detector_cache
+
+    logger.info(
+        "Vortex face detection unavailable: OpenCV %s has no usable detector. "
+        "On 5.x, set VORTEX_FACE_DETECTOR_MODEL to a YuNet .onnx.",
+        cv2.__version__,
+    )
+    return None
+
+
 async def _detect_faces(image: bytes) -> int:
     """
-    Count faces in an image using OpenCV's bundled frontal-face cascade.
+    Count faces in an image.
 
     Detection only — this says a person is in frame, not who they are. That is
     enough for the `presence` purpose and is a precondition for the rest.
-    Returns -1 when OpenCV is unavailable, so callers can tell "no faces" from
-    "could not look".
+
+    Returns -1 when no detector is available on this build, so callers can
+    tell "nobody in frame" from "could not look". Those are very different
+    answers and collapsing them would let a missing dependency read as an
+    empty room.
     """
     def _run() -> int:
+        resolved = _resolve_detector()
+        if resolved is None:
+            return -1
+        detect, greyscale = resolved
         try:
             import cv2
             import numpy as np
-        except ImportError:
-            return -1
-        try:
+
             buffer = np.frombuffer(image, dtype=np.uint8)
-            frame = cv2.imdecode(buffer, cv2.IMREAD_GRAYSCALE)
+            frame = cv2.imdecode(
+                buffer,
+                cv2.IMREAD_GRAYSCALE if greyscale else cv2.IMREAD_COLOR,
+            )
             if frame is None:
                 return -1
-            cascade_path = os.path.join(
-                cv2.data.haarcascades, "haarcascade_frontalface_default.xml")
-            cascade = cv2.CascadeClassifier(cascade_path)
-            if cascade.empty():
-                return -1
-            faces = cascade.detectMultiScale(frame, scaleFactor=1.1,
-                                             minNeighbors=5, minSize=(60, 60))
-            return len(faces)
+            return detect(frame)
         except Exception as exc:
             logger.debug("Face detection failed: %s", exc)
             return -1

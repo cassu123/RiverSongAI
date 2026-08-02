@@ -42,6 +42,7 @@ from .kova import router as kova_router
 from .documents import router as documents_router
 from .fleet import fleet_routers
 from .vortex import router as vortex_router
+from .culinary_sessions import router as culinary_sessions_router
 from .initiative import router as initiative_router
 from .skills import router as skills_router
 from .session_presets import router as session_presets_router
@@ -99,6 +100,7 @@ __all__ = [
     "documents_router",
     "fleet_routers",
     "vortex_router",
+    "culinary_sessions_router",
     "initiative_router",
     "skills_router",
     "session_presets_router",

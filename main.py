@@ -455,7 +455,7 @@ def create_app() -> FastAPI:
         killswitch_router, home_router, conversation_router, settings_router,
         admin_router, routines_router, inventory_router, commerce_router,
         vehicles_router, feeds_router, reading_router, features_router,
-        parent_router, analytics_router, culinary_router, location_router, google_router,
+        parent_router, analytics_router, culinary_router, culinary_sessions_router, location_router, google_router,
         vision_router, vault_router, pulse_router, voice_id_router, willow_router, n8n_webhooks, shopify_webhooks_router, shopify_auth_router, image_router, push_router, fleet_routers, vortex_router, initiative_router,
         legal_router, rag_router, daemons_router, context_router, rover_router,
         usage_router, integrations_router, vector_fleet_router,
@@ -492,6 +492,7 @@ def create_app() -> FastAPI:
     app.include_router(parent_router)
     app.include_router(analytics_router)
     app.include_router(culinary_router)
+    app.include_router(culinary_sessions_router)
     app.include_router(location_router)
     app.include_router(google_router)
     app.include_router(vision_router)

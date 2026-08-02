@@ -114,13 +114,16 @@ def test_unit_cannot_unlock_a_door():
     unit = RequestOrigin(kind=ORIGIN_VORTEX_UNIT, unit_id="vx-test",
                          room="kitchen")
 
-    # Separators matter: `\bgarage\b` does not match inside "garage_door"
-    # unless the haystack is normalised first, and getting that wrong
-    # downgrades a hard deny to a confirmation prompt.
+    # Naming conventions must not decide whether a safety rule applies. Word
+    # boundaries miss "garage_door" (`_` is a word character) and miss
+    # "GarageDoor" (no separator at all); either miss silently downgrades a
+    # hard deny to a confirmation prompt.
     for action, entity in (("unlock", "lock.front_door"),
                            ("lock", "lock.back_door"),
                            ("open", "cover.garage_door"),
                            ("close", "cover.garage-door"),
+                           ("open", "cover.GarageDoor"),
+                           ("open", "cover.garagedoor"),
                            ("open", "cover.side_gate"),
                            ("turn_on", "switch.garage_opener"),
                            ("disarm", "alarm_control_panel.house"),
@@ -129,6 +132,11 @@ def test_unit_cannot_unlock_a_door():
                                            origin=unit)
         assert decision.denied, f"{action} {entity} should be hard-denied"
         assert decision.reason == "vortex_hard_deny"
+
+    # ...but a network gateway is not a way into the house.
+    assert evaluate_device_request(action="turn_on",
+                                   entity_id="switch.network_gateway",
+                                   origin=unit).allowed
 
     # The same requests from a user session are untouched.
     assert evaluate_device_request(action="unlock",
@@ -617,6 +625,58 @@ def test_unconsented_camera_purpose_is_a_distinct_refusal(user_headers):
                           "frames": [frame]},
                     headers={"X-Unit-Token": token})
     assert r.status_code == 400
+
+
+def test_missing_detector_is_not_an_empty_room(monkeypatch):
+    """
+    "Could not look" and "nobody there" must not collapse into each other.
+
+    OpenCV 4.x bundles the Haar cascade this uses; 5.0 removed it and ships
+    no model, so on a 5.x install detection is genuinely unavailable. The
+    answer then is `unavailable`, never a confident "no one is here".
+    """
+    import core.vortex_vision as vision
+
+    monkeypatch.setattr(vision, "_resolve_detector", lambda: None)
+
+    async def _run(purpose):
+        return await vision.identify_from_frames(
+            unit_id="u", owner_user_id="o", purpose=purpose,
+            frames=[base64.b64encode(b"\xff\xd8\xff" + b"0" * 64).decode()],
+        )
+
+    result = asyncio.run(_run("presence"))
+    assert result["status"] == "unavailable"
+    assert result["reason"] == "no_detector"
+    assert "occupied" not in result
+
+    result = asyncio.run(_run("face_recognition"))
+    assert result["status"] == "unavailable"
+
+
+def test_identification_without_a_backend_says_so(monkeypatch):
+    """A face seen but not placed is 'cannot identify', not 'not you'."""
+    import core.vortex_vision as vision
+
+    monkeypatch.setattr(vision, "_resolve_detector",
+                        lambda: (lambda frame: 1, True))
+
+    async def _detect(image):
+        return 1
+
+    monkeypatch.setattr(vision, "_detect_faces", _detect)
+
+    async def _run():
+        return await vision.identify_from_frames(
+            unit_id="u", owner_user_id="o", purpose="face_recognition",
+            frames=[base64.b64encode(b"\xff\xd8\xff" + b"0" * 64).decode()],
+        )
+
+    result = asyncio.run(_run())
+    assert result["status"] == "unavailable"
+    assert result["reason"] == "no_recognition_backend"
+    # Crucially not a no_match — nothing was compared against anything.
+    assert "user_id" not in result
 
 
 def test_snapshot_links_are_signed_and_expiring():
