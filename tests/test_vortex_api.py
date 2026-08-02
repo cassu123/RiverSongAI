@@ -101,7 +101,11 @@ def test_token_comparison_is_constant_time():
     token = mint_unit_token()
     stored = hash_unit_token(token)
     assert verify_unit_token(token, stored)
-    assert not verify_unit_token(token[:-1] + "0", stored)
+    # Flip the last character rather than forcing it to "0" — a token ending
+    # in "0" would otherwise be "corrupted" into itself one run in sixteen.
+    wrong = token[:-1] + ("1" if token[-1] == "0" else "0")
+    assert wrong != token
+    assert not verify_unit_token(wrong, stored)
     assert not verify_unit_token("", stored)
     assert not verify_unit_token(token, None)
     # A legacy plaintext row still validates, so a rolling upgrade works.
