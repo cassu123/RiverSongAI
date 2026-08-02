@@ -245,13 +245,144 @@ owe you" is not answered out of an ingredient list.
 
 ---
 
+## Casting
+
+```
+GET    /api/vortex/cast/targets    X-Unit-Token
+POST   /api/vortex/cast            {target, url | query, content_type, title}
+POST   /api/vortex/cast/stop       {target}
+```
+
+There is no official Google Cast REST API. The practical route is
+`pychromecast`, and **Home Assistant already runs it** — every Chromecast,
+Android TV, Sonos and AirPlay target in the house is already a `media_player`
+entity there, already discovered, already authenticated. So casting resolves a
+target and calls `media_player.play_media` through `/api/home`. Nothing runs on
+the Pi, and no Cast protocol is reimplemented here.
+
+Resolution prefers a `media_player` over a hub whenever both match, even when
+the hub matched more exactly: someone who named their living room hub "living
+room" and says "cast this to the living room" means the screen. A query that
+matches two screens resolves to neither rather than guessing.
+
+Casting *through* a unit queues a `cast` fleet command rather than pushing over
+the WebSocket — casting is slow and offline-tolerant, which is what the
+`/commands` poll is for. The payload is:
+
+```jsonc
+{"command": "cast",
+ "params": {"target": "living room", "url": "...", "content_type": "video",
+            "title": "...", "artwork_url": "..."}}
+```
+
+`core/fleet_simulator.py` already accepts that command; **no real unit
+implements it yet.** YouTube *video* casting specifically is reverse-engineered
+and fragile, and is deliberately not attempted.
+
+Voice: "cast Blue Planet to the living room TV", "stop casting to the bedroom".
+
+---
+
+## Intercom and video calls
+
+```
+GET    /api/vortex/calls/targets   rooms and people this caller can reach
+POST   /api/vortex/calls           {to, mode}      ring
+POST   /api/vortex/calls/answer    {call_id}
+POST   /api/vortex/calls/end       {call_id}
+POST   /api/vortex/calls/signal    {call_id, type, payload}
+WS     /api/vortex/calls/ws?token= the phone app's signalling channel
+```
+
+**This server does signalling and nothing else.** Audio and video go directly
+between the two endpoints — on a home LAN that is a couple of hops over the
+switch, and none of it passes through here. SDP and ICE are forwarded verbatim;
+the session description is never parsed or stored.
+
+A call has two participants and either can be a hub or a person:
+
+```
+unit:<unit_id>   a Vortex hub, signalling over /api/vortex/ws
+user:<user_id>   the phone app or a browser, over /api/vortex/calls/ws
+```
+
+Both are addressed the same way, so **kitchen-to-bedroom, phone-to-kitchen and
+kitchen-to-phone are one code path**. A user may have several devices connected
+at once — phone, tablet, browser tab. All of them ring and the first to answer
+takes the call; closing one tab does not hang up on anybody.
+
+**ICE.** Two devices on the same LAN connect on host candidates and need
+nothing configured, which is why `vortex_ice_servers` is empty by default. A
+phone on mobile data needs STUN and usually TURN — put them there as a JSON
+array. Nothing is defaulted to a public STUN server, because that would quietly
+send every household's IP to a third party to solve a problem most of these
+calls do not have.
+
+**Consent.** A video call to a unit whose owner has not enabled the
+`video_calls` camera purpose connects as *audio*, with a note saying why. The
+call still happens; it just does not carry video. Asking the unit anyway would
+be routing around a refusal. Audio intercom needs no camera at all.
+
+A ringing call raises a `critical` surface on the callee with Answer and
+Decline — one of the few things that earns a takeover, because it is
+time-limited and someone is waiting. Tapping either goes through the same
+registry as the app, so however someone picks up, one code path decides whether
+they may.
+
+Voice, from a unit: "call the kitchen", "video call the living room".
+
+---
+
+## Face match
+
+Enrolment lives in a user's own account, next to voice match, and the two APIs
+are deliberately the same shape:
+
+```
+GET    /api/face-id/status    can this run at all, and why not
+POST   /api/face-id/enroll    one image, adds a sample
+GET    /api/face-id/me        enrolment status
+DELETE /api/face-id/me        remove every print
+POST   /api/face-id/identify  admin only, for debugging
+```
+
+Detection is YuNet, recognition is SFace, both through OpenCV. Neither model
+ships with the wheel, so fetch them once:
+
+```
+python scripts/fetch_face_models.py
+```
+
+Prints live under `data/face_prints/<user_id>/` as a 112×112 aligned crop plus
+its 128-float embedding — not the frame it came from. Nothing leaves the
+machine. Deleting an enrolment removes the directory.
+
+**Failure modes are kept distinct**, because they lead a person to very
+different conclusions about their own house:
+
+| Outcome | Means |
+|---|---|
+| `unavailable` / `no_detector` | Could not look — no OpenCV, or no model |
+| `unavailable` / `no_recognition_backend` | Saw a face, has nothing to compare it to |
+| `no_match` / `no_face_in_frame` | Looked, nobody in shot |
+| `no_match` / `below_threshold` | Looked, saw someone, not a household member |
+
+A missing model is never reported as "that isn't you".
+
+The provider decides the match against SFace's calibrated cosine threshold
+(0.363) and the Vortex hook honours that decision rather than re-thresholding a
+score whose scale it does not know. `VORTEX_FACE_BACKEND` defaults to this
+provider and can be pointed elsewhere.
+
+**It is a second factor, never an authorisation.** Invariant 2 does not consult
+it: however confident the match, a unit still cannot open a lock, a garage door
+or an alarm.
+
+---
+
 ## Not yet built
 
-- **Task 3c — casting.** `core/fleet_simulator.py` accepts `cast`/`stop_cast`
-  and tracks a `cast_target`; neither side implements it.
-- **Task 8b — video calls.** The audio intercom is not yet extended to video,
-  and no signalling path exists.
-- **Face matching.** Detection works (OpenCV 4.x cascades, or YuNet on 5.x with
-  `VORTEX_FACE_DETECTOR_MODEL` set). Identity needs a backend at
-  `VORTEX_FACE_BACKEND`; without one this server reports that it cannot
-  identify rather than returning a match it did not make.
+- **The device-side cast handler.** The command payload and the queueing are
+  done here; `river-vortex` needs a handler for `cast` / `stop_cast`.
+- **Call media on the device.** Signalling is complete on this side; the units
+  need the WebRTC peer connection to match it.

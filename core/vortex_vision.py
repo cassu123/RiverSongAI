@@ -237,9 +237,16 @@ def _yunet_detector(cv2: Any):
         return None
 
     from config.settings import get_settings
+    from providers.face_id.face_id_provider import DEFAULT_DETECTOR_MODEL
 
-    model = (getattr(get_settings(), "vortex_face_detector_model", "") or "").strip()
-    if not model or not os.path.exists(model):
+    settings = get_settings()
+    model = (getattr(settings, "vortex_face_detector_model", "") or "").strip()
+    if not model:
+        # Same model face enrolment uses, so fetching it once turns on both.
+        model = (getattr(settings, "face_id_detector_model", "") or "").strip()
+    if not model:
+        model = DEFAULT_DETECTOR_MODEL
+    if not os.path.exists(model):
         return None
 
     detector = create(model, "", (320, 320))
@@ -353,10 +360,24 @@ async def _match_face(image: bytes, owner_user_id: str) -> Optional[Dict[str, An
 
     import importlib
 
-    backend = getattr(importlib.import_module(module_name), attribute)
-    result = backend(image, owner_user_id)
-    if asyncio.iscoroutine(result):
-        result = await result
+    try:
+        backend = getattr(importlib.import_module(module_name), attribute)
+    except (ImportError, AttributeError) as exc:
+        raise FaceRecognitionUnavailable(
+            f"Face backend '{dotted}' could not be loaded: {exc}")
+
+    try:
+        result = backend(image, owner_user_id)
+        if asyncio.iscoroutine(result):
+            result = await result
+    except Exception as exc:
+        # A backend that cannot run — no models fetched, no OpenCV — is the
+        # "cannot identify" case, not a backend fault. Reporting it as an
+        # error would surface to the person at the screen as something being
+        # broken, when the honest answer is that nobody taught it their face.
+        if type(exc).__name__ == "FaceModelsUnavailable":
+            raise FaceRecognitionUnavailable(str(exc))
+        raise
     return result
 
 

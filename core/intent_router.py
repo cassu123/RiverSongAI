@@ -761,6 +761,115 @@ async def _handle_gmail(transcript: str, user_id: str) -> str:
 
 
 # =============================================================================
+# Casting and intercom
+# =============================================================================
+
+# "cast <what> to <where>", "put <what> on the <where>"
+_CAST_PATTERN = re.compile(
+    r"^(?:cast|put|show|stream)\s+(?P<what>.+?)\s+(?:to|on|onto)\s+"
+    r"(?:the\s+)?(?P<where>[\w\s]+?)\s*$",
+    re.IGNORECASE,
+)
+_STOP_CAST_PATTERN = re.compile(
+    r"\bstop\s+(?:the\s+)?cast(?:ing)?(?:\s+(?:to|on)\s+(?:the\s+)?"
+    r"(?P<where>[\w\s]+?))?\s*$",
+    re.IGNORECASE,
+)
+
+# "call the kitchen", "intercom the bedroom", "video call the living room"
+_CALL_PATTERN = re.compile(
+    r"^(?:(?P<video>video\s+)?call|intercom|ring|talk to)\s+"
+    r"(?:the\s+)?(?P<where>[\w\s]+?)\s*$",
+    re.IGNORECASE,
+)
+
+
+async def _handle_cast(transcript: str, user_id: str) -> str:
+    """Cast something to a TV, speaker or hub."""
+    lowered = (transcript or "").strip()
+
+    stop = _STOP_CAST_PATTERN.search(lowered)
+    if stop:
+        from core.vortex_cast import resolve_target, stop as stop_cast
+
+        where = (stop.group("where") or "").strip()
+        if not where:
+            return "Which screen should I stop?"
+        target = await resolve_target(where, user_id)
+        if target is None:
+            return f"I couldn't find anything called the {where}."
+        result = await stop_cast(user_id=user_id, target=target)
+        return result.get("message") or "Done."
+
+    match = _CAST_PATTERN.match(lowered)
+    if not match:
+        return ""
+
+    from core.vortex_cast import cast_from_voice
+
+    _, spoken = await cast_from_voice(
+        user_id=user_id,
+        query=match.group("what").strip(),
+        target_name=match.group("where").strip(),
+    )
+    return spoken
+
+
+async def _handle_intercom(transcript: str, user_id: str) -> str:
+    """
+    Start an intercom or video call to another room.
+
+    Only meaningful from a unit — "call the kitchen" from a browser has no
+    near end to connect. Returns "" otherwise so the LLM handles it, which
+    also keeps "call Mum" out of the room intercom.
+    """
+    origin = current_origin()
+    if not origin.is_unit or not origin.unit_id:
+        return ""
+
+    match = _CALL_PATTERN.match((transcript or "").strip())
+    if not match:
+        return ""
+
+    where = match.group("where").strip()
+    mode = "video" if match.group("video") else "audio"
+
+    from core.vortex_calls import (
+        get_call_registry, ice_servers, negotiate_mode, participant_id,
+    )
+    from core.vortex_units import list_profiles, normalise_room
+
+    caller = participant_id(unit_id=origin.unit_id)
+    wanted = normalise_room(where)
+    callee = None
+    for profile in await list_profiles(user_id):
+        if normalise_room(profile.get("room", "")) == wanted:
+            callee = participant_id(unit_id=profile["unit_id"])
+            break
+    if callee is None:
+        return f"I don't have a hub in the {where}."
+    if callee == caller:
+        return "That's this room."
+
+    resolved_mode, note = await negotiate_mode(mode, caller, callee)
+    call, error = await get_call_registry().start(
+        caller=caller, callee=callee, owner_user_id=user_id,
+        mode=resolved_mode, ice_servers=ice_servers(),
+    )
+    if call is None:
+        return error
+
+    try:
+        from api.routes.vortex import _ring_surface
+        await _ring_surface(callee, caller, call.id, resolved_mode)
+    except Exception as exc:
+        logger.debug("Could not raise the ringing card: %s", exc)
+
+    spoken = f"Calling the {where}."
+    return f"{spoken} {note}" if note else spoken
+
+
+# =============================================================================
 # Cooking sessions
 # =============================================================================
 
@@ -1196,6 +1305,34 @@ INTENT_REGISTRY: List[Intent] = [
         ],
         keywords=[],
         handler=_handle_cooking,
+    ),
+    # Intercom before casting: "call the living room" and "cast to the living
+    # room" both name a room, and only one of them is a call.
+    Intent(
+        name="intercom",
+        phrases=[
+            "call the",
+            "video call the",
+            "intercom the",
+            "intercom",
+            "ring the",
+            "talk to the",
+        ],
+        keywords=[],
+        handler=_handle_intercom,
+    ),
+    Intent(
+        name="cast",
+        phrases=[
+            "cast ",
+            "stop casting",
+            "stop the cast",
+            "put it on the",
+            "show it on the",
+            "stream it to",
+        ],
+        keywords=[],
+        handler=_handle_cast,
     ),
     Intent(
         name="kova_chores",

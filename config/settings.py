@@ -764,12 +764,13 @@ class Settings(BaseSettings):
         ),
     )
     vortex_face_backend: str = Field(
-        default="",
+        default="providers.face_id.face_id_provider.match",
         description=(
-            "Dotted path to a face-matching callable, e.g. "
-            "'mypackage.faces.match'. Receives (image_bytes, owner_user_id) "
-            "and returns {'user_id', 'confidence'}. Unset means this server "
-            "reports 'cannot identify' rather than guessing at a match."
+            "Dotted path to the face-matching callable used by Vortex units. "
+            "Defaults to the built-in provider backing /api/face-id, so face "
+            "match works from a user's account with no extra wiring. Receives "
+            "(image_bytes, owner_user_id) and returns {'user_id', "
+            "'confidence'} or None. Set to '' to disable matching entirely."
         ),
     )
     vortex_face_detector_model: str = Field(
@@ -777,7 +778,51 @@ class Settings(BaseSettings):
         description=(
             "Path to a YuNet face-detection ONNX model. Only needed on "
             "OpenCV 5.x, which dropped the Haar cascades that 4.x bundles. "
-            "Without it on 5.x, face detection reports itself unavailable."
+            "Defaults to the model fetch_face_models.py downloads."
+        ),
+    )
+
+    vortex_ice_servers: str = Field(
+        default="",
+        description=(
+            "JSON array of WebRTC ICE servers handed to both ends of an "
+            "intercom or video call, e.g. "
+            '[{"urls": "stun:stun.example.org:3478"}]. Empty is correct for '
+            "two devices on the same LAN — they connect on host candidates "
+            "alone. A phone on mobile data needs a TURN server here. Nothing "
+            "is defaulted to a public STUN server, because that would quietly "
+            "send every household's IP to a third party."
+        ),
+    )
+
+    # -------------------------------------------------------------------------
+    # Face match (enrolment lives beside voice match, in a user's account)
+    # -------------------------------------------------------------------------
+    face_id_enabled: bool = Field(
+        default=True,
+        description="Offer face enrolment on the account page.",
+    )
+    face_id_threshold: float = Field(
+        default=0.363,
+        description=(
+            "Cosine similarity above which two faces are the same person. "
+            "0.363 is SFace's published operating point; raising it trades a "
+            "locked-out household member for a marginal gain against someone "
+            "who already has to be stood in the room."
+        ),
+    )
+    face_id_detector_model: str = Field(
+        default="",
+        description=(
+            "YuNet ONNX path. Empty uses data/models/face/, where "
+            "scripts/fetch_face_models.py puts it."
+        ),
+    )
+    face_id_recognizer_model: str = Field(
+        default="",
+        description=(
+            "SFace ONNX path. Empty uses data/models/face/, where "
+            "scripts/fetch_face_models.py puts it."
         ),
     )
 

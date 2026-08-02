@@ -219,6 +219,9 @@ async def run_surface_action(*, surface_id: str, intent: str, unit_id: str,
         await _withdraw(intent.split(".", 2)[2] or surface_id, unit_id)
         return _ok("Dismissed.")
 
+    if intent.startswith("call.answer.") or intent.startswith("call.decline."):
+        return await _handle_call_button(intent, surface_id, unit_id)
+
     parsed = _parse_entity_intent(intent)
     if parsed is not None:
         entity_id, action, name = parsed
@@ -240,6 +243,36 @@ async def run_surface_action(*, surface_id: str, intent: str, unit_id: str,
     except Exception as exc:
         logger.error("Surface action routing failed for '%s': %s", intent, exc)
         return _error("I couldn't carry that out.")
+
+
+async def _handle_call_button(intent: str, surface_id: str,
+                              unit_id: str) -> Dict[str, Any]:
+    """
+    Answer or decline from the ringing card on a wall panel.
+
+    Routed through the same registry as a tapped answer in the app or a
+    `call_answer` frame over the socket, so however someone picks up, one code
+    path decides whether they may.
+    """
+    from core.vortex_calls import get_call_registry, participant_id
+
+    action, _, call_id = intent.partition("call.")[2].partition(".")
+    registry = get_call_registry()
+    address = participant_id(unit_id=unit_id)
+
+    if action == "answer":
+        call, error = await registry.answer(call_id, address)
+        if call is None:
+            await _withdraw(surface_id, unit_id)
+            return _denied(error, "call_unavailable")
+        await _withdraw(surface_id, unit_id)
+        return _ok("Connecting.", call_id=call_id)
+
+    call = registry.get(call_id)
+    if call is not None:
+        await registry.end(call_id, reason="declined", by=address)
+    await _withdraw(surface_id, unit_id)
+    return _ok("Declined.")
 
 
 def _parse_entity_intent(intent: str) -> Optional[tuple]:

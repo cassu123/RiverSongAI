@@ -477,6 +477,14 @@ async def vortex_websocket(websocket: WebSocket) -> None:
         logger.info("Vortex WS error for %s: %s", unit_id, exc)
     finally:
         await hub.unregister(unit_id, websocket)
+        # A unit that drops off WiFi mid-call leaves the other end holding a
+        # camera light on. End it rather than leaving a half-open call.
+        try:
+            from core.vortex_calls import get_call_registry, participant_id
+            await get_call_registry().end_all_for(
+                participant_id(unit_id=unit_id), reason="peer_gone")
+        except Exception as exc:
+            logger.debug("Call teardown for %s failed: %s", unit_id, exc)
 
 
 async def _restore_and_replay(unit_id: str, owner: str) -> None:
@@ -573,11 +581,61 @@ async def _handle_unit_frame(unit_id: str, owner: str, frame: Dict[str, Any],
         await upsert_profile(unit_id, camera=frame.get("camera") or {})
         return
 
+    if kind.startswith("call_"):
+        await _handle_unit_call_frame(unit_id, kind, frame, websocket)
+        return
+
     if kind == "ping":
         await websocket.send_json({"type": "pong", "t": time.time()})
         return
 
     logger.debug("Vortex unit %s sent unhandled frame type '%s'.", unit_id, kind)
+
+
+async def _handle_unit_call_frame(unit_id: str, kind: str,
+                                  frame: Dict[str, Any],
+                                  websocket: WebSocket) -> None:
+    """
+    Call signalling from a unit, over the socket it already holds.
+
+    The same registry and the same frames the phone app uses — a unit and a
+    phone are two addresses of the same kind, so kitchen-to-bedroom and
+    phone-to-kitchen are one code path.
+    """
+    from core.vortex_calls import get_call_registry, participant_id
+
+    registry = get_call_registry()
+    address = participant_id(unit_id=unit_id)
+    call_id = str(frame.get("call_id") or "")
+
+    if kind == "call_answer":
+        call, error = await registry.answer(call_id, address)
+        if call is None:
+            await websocket.send_json({"type": "call_error",
+                                       "call_id": call_id, "message": error})
+        else:
+            await _withdraw_call_surface(address, call_id)
+        return
+
+    if kind in ("call_end", "call_decline"):
+        call = registry.get(call_id)
+        if call is not None:
+            await registry.end(
+                call_id,
+                reason="declined" if kind == "call_decline" else "hung_up",
+                by=address)
+            await _withdraw_call_surface(call.caller, call_id)
+            await _withdraw_call_surface(call.callee, call_id)
+        return
+
+    if kind in ("call_offer", "call_answer_sdp", "call_ice"):
+        ok, error = await registry.relay(call_id, address, frame)
+        if not ok:
+            await websocket.send_json({"type": "call_error",
+                                       "call_id": call_id, "message": error})
+        return
+
+    logger.debug("Unit %s sent unhandled call frame '%s'.", unit_id, kind)
 
 
 async def _handle_occupancy(unit_id: str, owner: str,
@@ -1071,6 +1129,472 @@ async def media_control(body: MediaControlBody,
 
     return await control_playback(user_id=owner, requesting_unit=body.unit_id,
                                   action=body.action, value=body.value)
+
+
+# ---------------------------------------------------------------------------
+# Task 3c — casting
+# ---------------------------------------------------------------------------
+
+class CastBody(BaseModel):
+    unit_id: str
+    target: str            # room, entity id, or friendly name
+    url: Optional[str] = None
+    query: Optional[str] = None   # resolve this instead of passing a url
+    content_type: str = "video"
+    title: str = ""
+    artwork_url: str = ""
+
+
+class CastStopBody(BaseModel):
+    unit_id: str
+    target: str
+
+
+@router.get("/cast/targets")
+async def cast_targets(unit_id: str = Query(...),
+                       x_unit_token: Optional[str] = Header(default=None)):
+    """Everything in the house something can be cast to."""
+    context = await _require_unit(unit_id, x_unit_token)
+    owner = _require_owner(context)
+
+    from core.vortex_cast import list_targets
+
+    return {"targets": await list_targets(owner)}
+
+
+@router.post("/cast")
+async def start_cast(body: CastBody,
+                     x_unit_token: Optional[str] = Header(default=None)):
+    """
+    Cast a stream to a TV, speaker or hub.
+
+    Casting goes to a Home Assistant `media_player` — HA already runs
+    pychromecast and already has every target in the house discovered, so this
+    resolves a target and calls `media_player.play_media` rather than
+    reimplementing the Cast protocol on a Pi.
+    """
+    context = await _require_unit(body.unit_id, x_unit_token)
+    owner = _require_owner(context)
+
+    from core.vortex_cast import cast, resolve_target
+
+    target = await resolve_target(body.target, owner)
+    if target is None:
+        raise HTTPException(status_code=404,
+                            detail=f"No cast target matching '{body.target}'.")
+
+    url, title, artwork = body.url, body.title, body.artwork_url
+    if not url:
+        if not body.query:
+            raise HTTPException(status_code=400,
+                                detail="Supply either a url or a query.")
+        from core.vortex_media import resolve_track
+
+        track = await resolve_track(body.query)
+        if not track:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Nothing found matching '{body.query}'.")
+        url = track["url"]
+        title = title or track.get("title", "")
+        artwork = artwork or track.get("artwork_url", "")
+
+    result = await cast(user_id=owner, target=target, url=url,
+                        content_type=body.content_type, title=title,
+                        artwork_url=artwork)
+    if result["status"] == "denied":
+        raise HTTPException(status_code=403, detail=result["message"])
+    if result["status"] == "error":
+        raise HTTPException(status_code=502, detail=result["message"])
+    return result
+
+
+@router.post("/cast/stop")
+async def stop_cast(body: CastStopBody,
+                    x_unit_token: Optional[str] = Header(default=None)):
+    context = await _require_unit(body.unit_id, x_unit_token)
+    owner = _require_owner(context)
+
+    from core.vortex_cast import resolve_target, stop
+
+    target = await resolve_target(body.target, owner)
+    if target is None:
+        raise HTTPException(status_code=404,
+                            detail=f"No cast target matching '{body.target}'.")
+
+    result = await stop(user_id=owner, target=target)
+    if result["status"] == "error":
+        raise HTTPException(status_code=502, detail=result["message"])
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Task 8b — intercom and video calls
+# ---------------------------------------------------------------------------
+#
+# This server does signalling only. Audio and video go directly between the
+# two endpoints — on a home LAN that is a couple of hops over the switch, and
+# none of it passes through here.
+
+class CallStartBody(BaseModel):
+    # Exactly one of these identifies the caller. A unit supplies unit_id with
+    # its token; the phone app authenticates as a user and supplies neither.
+    unit_id: Optional[str] = None
+    # Who to ring: a room name, a unit id, or "user:<id>" for the phone app.
+    to: str
+    mode: str = Field(default="audio", pattern="^(audio|video)$")
+
+
+class CallSignalBody(BaseModel):
+    unit_id: Optional[str] = None
+    call_id: str
+    # "call_offer" | "call_answer_sdp" | "call_ice"
+    type: str
+    payload: Dict[str, Any] = Field(default_factory=dict)
+
+
+class CallActionBody(BaseModel):
+    unit_id: Optional[str] = None
+    call_id: str
+
+
+async def _caller_address(unit_id: Optional[str], token: Optional[str],
+                          authorization: Optional[str]) -> tuple:
+    """
+    Resolve who is calling, and which household they are in.
+
+    A unit authenticates with its token and is addressed as `unit:<id>`; the
+    phone app authenticates as a user and is addressed as `user:<id>`. Both
+    resolve their household here — neither gets to claim one.
+    """
+    from core.vortex_calls import participant_id
+
+    if unit_id:
+        context = await _require_unit(unit_id, token)
+        owner = _require_owner(context)
+        return participant_id(unit_id=unit_id), owner
+
+    user_id = await _require_user(authorization)
+    return participant_id(user_id=user_id), user_id
+
+
+async def _resolve_callee(to: str, owner_user_id: str) -> Optional[str]:
+    """
+    Turn "the kitchen" or "user:abc" into a participant address.
+
+    Only reaches units in this household and users who own units in it: a call
+    is never a route into someone else's house.
+    """
+    from core.vortex_calls import participant_id, split_participant
+    from core.vortex_units import list_profiles, normalise_room
+
+    kind, value = split_participant(to)
+    if kind == "user" and value:
+        return participant_id(user_id=value)
+
+    profiles = await list_profiles(owner_user_id)
+    if kind == "unit" and value:
+        return (participant_id(unit_id=value)
+                if any(p["unit_id"] == value for p in profiles) else None)
+
+    wanted = normalise_room(to)
+    for profile in profiles:
+        if profile["unit_id"] == to.strip():
+            return participant_id(unit_id=profile["unit_id"])
+
+    in_room = [p for p in profiles
+               if normalise_room(p.get("room", "")) == wanted]
+    if not in_room:
+        return None
+
+    # A room can hold more than one unit — a display on the wall and a
+    # screenless speaker on a shelf. Ring one that is actually connected, and
+    # prefer the one with a screen so the caller can be seen.
+    hub = get_vortex_hub()
+    in_room.sort(key=lambda p: (not hub.is_connected(p["unit_id"]),
+                                not p.get("has_display", True)))
+    return participant_id(unit_id=in_room[0]["unit_id"])
+
+
+@router.get("/calls/targets")
+async def call_targets(unit_id: Optional[str] = Query(default=None),
+                       x_unit_token: Optional[str] = Header(default=None),
+                       authorization: Optional[str] = Header(default=None)):
+    """Rooms and people this caller can reach."""
+    _, owner = await _caller_address(unit_id, x_unit_token, authorization)
+
+    from core.vortex_calls import participant_id
+    from core.vortex_calls_ws import is_connected
+    from core.vortex_units import list_profiles
+
+    hub = get_vortex_hub()
+    rooms = [
+        {"kind": "unit", "address": participant_id(unit_id=p["unit_id"]),
+         "name": p.get("room") or p["unit_id"],
+         "has_display": bool(p.get("has_display", True)),
+         "video": bool((p.get("camera") or {}).get("purposes", {})
+                       .get("video_calls")),
+         "online": hub.is_connected(p["unit_id"])}
+        for p in await list_profiles(owner)
+    ]
+    people = [{"kind": "user", "address": participant_id(user_id=owner),
+               "name": "My devices", "online": is_connected(owner)}]
+    return {"targets": rooms + people}
+
+
+@router.post("/calls")
+async def start_call(body: CallStartBody,
+                     x_unit_token: Optional[str] = Header(default=None),
+                     authorization: Optional[str] = Header(default=None)):
+    """
+    Ring another room, or a phone.
+
+    A video call to a unit whose owner has not enabled the `video_calls`
+    camera purpose connects as audio, with a note saying why. That is how a
+    consent boundary should behave: the call still happens, it just does not
+    carry video. Asking the unit anyway would be routing around a refusal.
+    """
+    caller, owner = await _caller_address(body.unit_id, x_unit_token,
+                                          authorization)
+    callee = await _resolve_callee(body.to, owner)
+    if callee is None:
+        raise HTTPException(status_code=404,
+                            detail=f"I couldn't find '{body.to}'.")
+
+    from core.vortex_calls import get_call_registry, ice_servers, negotiate_mode
+
+    mode, note = await negotiate_mode(body.mode, caller, callee)
+    call, error = await get_call_registry().start(
+        caller=caller, callee=callee, owner_user_id=owner, mode=mode,
+        ice_servers=ice_servers(),
+    )
+    if call is None:
+        raise HTTPException(status_code=409, detail=error)
+
+    # Ring the callee's screen too, so a wall panel shows who is calling.
+    await _ring_surface(callee, caller, call.id, mode)
+
+    payload = call.to_wire(viewer=caller)
+    payload["ice_servers"] = ice_servers()
+    if note:
+        payload["note"] = note
+    return payload
+
+
+async def _ring_surface(callee: str, caller: str, call_id: str,
+                        mode: str) -> None:
+    """
+    Put an incoming call on the callee's screen.
+
+    `critical` — a ringing intercom is exactly the takeover case: it is
+    time-limited, someone is waiting, and a card that sits politely below the
+    clock is a call nobody answers.
+    """
+    from core.vortex_calls import split_participant
+    from core.vortex_surfaces import get_surface_publisher
+    from core.vortex_units import get_profile
+
+    kind, value = split_participant(callee)
+    if kind != "unit":
+        return
+
+    caller_kind, caller_value = split_participant(caller)
+    if caller_kind == "unit":
+        profile = await get_profile(caller_value) or {}
+        who = profile.get("room") or "another room"
+    else:
+        who = "a phone"
+
+    try:
+        await get_surface_publisher().publish(
+            {
+                "id": f"call:{call_id}",
+                "kind": "confirm",
+                "priority": "critical",
+                "title": f"Incoming {mode} call",
+                "body": f"From {who}.",
+                "icon": "📞",
+                "ttl_seconds": 60,
+                "speech": f"Call from {who}.",
+                "source": "intercom",
+                "actions": [
+                    {"label": "Answer", "intent": f"call.answer.{call_id}",
+                     "style": "primary"},
+                    {"label": "Decline", "intent": f"call.decline.{call_id}",
+                     "style": "secondary"},
+                ],
+            },
+            unit_ids=[value],
+        )
+    except Exception as exc:
+        logger.debug("Could not raise the call surface: %s", exc)
+
+
+@router.post("/calls/answer")
+async def answer_call(body: CallActionBody,
+                      x_unit_token: Optional[str] = Header(default=None),
+                      authorization: Optional[str] = Header(default=None)):
+    address, _ = await _caller_address(body.unit_id, x_unit_token, authorization)
+
+    from core.vortex_calls import get_call_registry
+
+    call, error = await get_call_registry().answer(body.call_id, address)
+    if call is None:
+        raise HTTPException(status_code=409, detail=error)
+    await _withdraw_call_surface(address, body.call_id)
+    return call.to_wire(viewer=address)
+
+
+@router.post("/calls/end")
+async def end_call(body: CallActionBody,
+                   x_unit_token: Optional[str] = Header(default=None),
+                   authorization: Optional[str] = Header(default=None)):
+    address, _ = await _caller_address(body.unit_id, x_unit_token, authorization)
+
+    from core.vortex_calls import get_call_registry
+
+    registry = get_call_registry()
+    call = registry.get(body.call_id)
+    if call is None or not call.involves(address):
+        raise HTTPException(status_code=404, detail="No such call.")
+
+    reason = "declined" if call.state == "ringing" else "hung_up"
+    await registry.end(body.call_id, reason=reason, by=address)
+    await _withdraw_call_surface(call.caller, body.call_id)
+    await _withdraw_call_surface(call.callee, body.call_id)
+    return {"status": "ok", "call_id": body.call_id, "reason": reason}
+
+
+@router.post("/calls/signal")
+async def signal_call(body: CallSignalBody,
+                      x_unit_token: Optional[str] = Header(default=None),
+                      authorization: Optional[str] = Header(default=None)):
+    """
+    Relay one WebRTC frame to the other end.
+
+    The offer, the answer and the ICE candidates are between the two peers.
+    This checks that the sender is in the call and forwards the payload
+    verbatim — it does not parse or store the session description.
+    """
+    address, _ = await _caller_address(body.unit_id, x_unit_token, authorization)
+
+    from core.vortex_calls import get_call_registry
+
+    ok, error = await get_call_registry().relay(
+        body.call_id, address, {"type": body.type, **body.payload})
+    if not ok:
+        raise HTTPException(status_code=409, detail=error)
+    return {"status": "ok"}
+
+
+async def _withdraw_call_surface(address: str, call_id: str) -> None:
+    from core.vortex_calls import split_participant
+
+    kind, value = split_participant(address)
+    if kind != "unit":
+        return
+    try:
+        await get_surface_publisher().withdraw(f"call:{call_id}", [value])
+    except Exception:
+        pass
+
+
+@router.websocket("/calls/ws")
+async def calls_websocket(websocket: WebSocket) -> None:
+    """
+    The phone app's signalling channel.
+
+    Units signal over `/api/vortex/ws`, which they already hold. This is the
+    equivalent for the app and the browser, so the registry can address a
+    phone exactly as it addresses a hub.
+
+    A user may have several open at once — phone, tablet, a browser tab. They
+    all ring and the first to answer takes the call, which is what an intercom
+    should do.
+    """
+    token = websocket.query_params.get("token", "")
+    payload = await decode_token(token) if token else None
+    if not payload:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    user_id = str(payload.get("sub") or "")
+    if not user_id:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    from core.vortex_calls import get_call_registry, ice_servers, participant_id
+    from core.vortex_calls_ws import register, unregister
+
+    await websocket.accept()
+    await register(user_id, websocket)
+
+    address = participant_id(user_id=user_id)
+    registry = get_call_registry()
+
+    await websocket.send_json({"type": "ready", "address": address,
+                               "ice_servers": ice_servers()})
+
+    # Anything that arrived while this device was still connecting.
+    for frame in await registry.drain_pending(address):
+        await websocket.send_json(frame)
+
+    try:
+        while True:
+            message = await websocket.receive()
+            if message.get("type") == "websocket.disconnect":
+                break
+            text = message.get("text")
+            if not text:
+                continue
+            try:
+                frame = json.loads(text)
+            except ValueError:
+                continue
+            await _handle_call_frame(address, frame, websocket, registry)
+    except WebSocketDisconnect:
+        pass
+    except Exception as exc:
+        logger.info("Call WS error for %s: %s", user_id, exc)
+    finally:
+        last = await unregister(user_id, websocket)
+        # Only hang up when the user's last device goes away — closing one of
+        # three tabs should not drop the call.
+        if last:
+            await registry.end_all_for(address, reason="peer_gone")
+
+
+async def _handle_call_frame(address: str, frame: Dict[str, Any],
+                             websocket: WebSocket, registry: Any) -> None:
+    """Dispatch one frame from the phone app."""
+    kind = str(frame.get("type") or "")
+    call_id = str(frame.get("call_id") or "")
+
+    if kind == "call_answer":
+        call, error = await registry.answer(call_id, address)
+        if call is None:
+            await websocket.send_json({"type": "call_error", "call_id": call_id,
+                                       "message": error})
+        return
+
+    if kind in ("call_end", "call_decline"):
+        call = registry.get(call_id)
+        if call is not None:
+            await registry.end(
+                call_id,
+                reason="declined" if kind == "call_decline" else "hung_up",
+                by=address)
+        return
+
+    if kind in ("call_offer", "call_answer_sdp", "call_ice"):
+        ok, error = await registry.relay(call_id, address, frame)
+        if not ok:
+            await websocket.send_json({"type": "call_error", "call_id": call_id,
+                                       "message": error})
+        return
+
+    if kind == "ping":
+        await websocket.send_json({"type": "pong", "t": time.time()})
 
 
 # ---------------------------------------------------------------------------
