@@ -35,7 +35,7 @@
     "react-router-dom": "^7.15.1",
     "recharts": "^3.8.1",
     "remark-gfm": "^4.0.0",
-    "three": "^0.184.0"
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.0",
