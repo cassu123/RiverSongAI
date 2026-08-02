@@ -177,8 +177,18 @@ watchdog>=6.0.0
 # -----------------------------------------------------------------------------
 # Capped below 2.0: mcp 2.0 removed the @server.list_tools() and
 # @server.call_tool() decorators that mcp_server.py is built on, so an
-# unpinned floor turned every CI run red the day 2.0 shipped. Lifting this cap
-# means porting mcp_server.py to the 2.x handler API first.
+# unpinned floor turned every CI run red the day 2.0 shipped.
+#
+# Lifting the cap is a port, not a bump. In 2.x `mcp.server.Server` is
+# handler-registration only (add_request_handler); the decorator API moved to
+# `mcp.server.MCPServer`, and the transports change with it —
+# stdio_server()/SseServerTransport become run_stdio_async()/run_sse_async()
+# or streamable_http_app. The awkward part is not the decorators: it is the
+# per-request Bearer binding in run_sse(), which exists to stop concurrent SSE
+# clients sharing a token (audit SEC-004). MCPServer's own SSE runner does not
+# do that, so the auth path has to be rebuilt around it deliberately and
+# exercised with a real MCP client — not ported on faith.
+# See docs/audits/DEPENDENCY_ADVISORIES.md.
 mcp>=1.0.0,<2.0.0
 # open-interpreter==0.4.3  # excluded: pins starlette<0.38 which conflicts with fastapi>=0.130
 

@@ -87,6 +87,38 @@ point the advisory becomes live and the v8 migration stops being optional.
 
 ---
 
+## Deferred: `mcp` capped below 2.0
+
+Not a security advisory — a compatibility pin, recorded here because it is the
+other reason a dependency is held back and the reasoning should live in one
+place.
+
+`mcp>=1.0.0` was unpinned. mcp 2.0 removed `@server.list_tools()` and
+`@server.call_tool()`, which `mcp_server.py` is built on, so every backend CI
+run went red at import the day 2.0 shipped. Capped at `<2.0.0`.
+
+**Lifting it is a port, not a bump:**
+
+| 1.x | 2.x |
+|---|---|
+| `mcp.server.Server` + decorators | `mcp.server.MCPServer` (decorators live here now) |
+| `mcp.server.Server` | still exists, but handler-registration only (`add_request_handler`) |
+| `stdio_server()` context manager | `MCPServer.run_stdio_async()` |
+| `SseServerTransport` | `MCPServer.run_sse_async()` / `streamable_http_app` |
+
+The decorators are the easy half. The real work is `run_sse()`: it binds the
+Bearer token per request into a `ContextVar` specifically so two concurrent SSE
+clients cannot share credentials — the fix for audit SEC-004. `MCPServer`'s own
+SSE runner does not do that, so the auth path has to be rebuilt around it and
+then exercised with a real MCP client. That is not something to port on faith,
+which is why the cap is still here.
+
+**Nothing external forces this either way.** `mistralai` does declare
+`mcp<2.0`, but only under its `agents` extra, which this project does not
+install — so the cap is ours to lift whenever the port is done properly.
+
+---
+
 ## Running the sweep
 
 ```bash
