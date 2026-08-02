@@ -69,6 +69,24 @@ export default function UsersPage() {
     }
   }
 
+  const toggleFreeModelsOnly = async (targetUser) => {
+    try {
+      const res = await fetch(`/api/admin/users/${targetUser.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ free_models_only: !targetUser.free_models_only })
+      })
+      if (res.ok) {
+        setUsers(users.map(u => u.id === targetUser.id ? { ...u, free_models_only: !u.free_models_only } : u))
+      }
+    } catch (err) {
+      console.error('Failed to update free models only', err)
+    }
+  }
+
   const updateRole = async (targetUser, newRole) => {
     try {
       const res = await fetch(`/api/admin/users/${targetUser.id}`, {
@@ -249,6 +267,22 @@ export default function UsersPage() {
                     style={{ minWidth: 60, justifyContent: 'center' }}
                   >
                     {u.is_suspended ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="rs-card-label" style={{ opacity: 0.8 }}>
+                    FREE MODELS ONLY
+                    <span style={{ display: 'block', fontSize: '0.7rem', opacity: 0.6, textTransform: 'none', letterSpacing: 0 }}>
+                      Restricts "Let River Decide" to local + free-tier models
+                    </span>
+                  </span>
+                  <button
+                    className={`rs-pill ${u.free_models_only ? 'is-active' : ''}`}
+                    onClick={() => toggleFreeModelsOnly(u)}
+                    style={{ minWidth: 60, justifyContent: 'center' }}
+                  >
+                    {u.free_models_only ? 'ON' : 'OFF'}
                   </button>
                 </div>
 

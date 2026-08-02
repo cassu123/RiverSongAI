@@ -48,6 +48,9 @@ class UpdateUserBody(BaseModel):
     is_approved: Optional[bool] = None
     force_password_change: Optional[bool] = None
     is_suspended: Optional[bool] = None
+    # When True, this user's "Let River Decide" routing may only select models
+    # that cost nothing per token -- local Ollama and free-tier cloud.
+    free_models_only: Optional[bool] = None
 
 
 class AdminChangePasswordBody(BaseModel):
@@ -93,15 +96,16 @@ async def update_user(
     if not target:
         raise not_found("User not found.")
 
-    await store.update_user(user_id, role=body.role, is_approved=body.is_approved, force_password_change=body.force_password_change, is_suspended=body.is_suspended)
+    await store.update_user(user_id, role=body.role, is_approved=body.is_approved, force_password_change=body.force_password_change, is_suspended=body.is_suspended, free_models_only=body.free_models_only)
     logger.info(
-        "Admin %s updated user %s: role=%s approved=%s force_password_change=%s is_suspended=%s",
+        "Admin %s updated user %s: role=%s approved=%s force_password_change=%s is_suspended=%s free_models_only=%s",
         payload["sub"],
         user_id,
         body.role,
         body.is_approved,
         body.force_password_change,
-        body.is_suspended)
+        body.is_suspended,
+        body.free_models_only)
 
     updated = await store.get_user_by_id(user_id)
     return updated

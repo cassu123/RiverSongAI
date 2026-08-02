@@ -102,6 +102,11 @@ class RAGProvider:
         Retrieves relevant document chunks for a given query.
 
         n_results defaults to the RAG_TOP_K setting when not given.
+
+        When reranking is enabled, this pulls a larger shortlist from the
+        vector store and has a cross-encoder pick the best n_results from it.
+        With reranking off, fetch_k returns n_results unchanged and the
+        behaviour is identical to a plain vector search.
         """
         if n_results is None:
             from config.settings import get_settings
@@ -112,11 +117,15 @@ class RAGProvider:
         elif "source_type" not in where:
             where["source_type"] = "document"
 
-        return await self._vector_store.search(
+        from providers.rag import reranker
+
+        candidates = await self._vector_store.search(
             query_text=query_text,
-            n_results=n_results,
+            n_results=reranker.fetch_k(n_results),
             where=where
         )
+
+        return await reranker.rerank(query_text, candidates, n_results)
 
     def format_context(self, search_results: List[Dict[str, Any]]) -> str:
         """

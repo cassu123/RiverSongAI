@@ -134,7 +134,7 @@ class UsersStoreMixin:
     def _sync_get_user_by_id(self, user_id: str) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT id, email, display_name, role, is_approved, created_at, password_hash, theme, palette, environment, universe, mood, force_password_change FROM users WHERE id=?",
+            "SELECT id, email, display_name, role, is_approved, created_at, password_hash, theme, palette, environment, universe, mood, force_password_change, free_models_only FROM users WHERE id=?",
             (user_id,),
         ).fetchone()
         if row is None:
@@ -153,6 +153,7 @@ class UsersStoreMixin:
             "universe": row[10] or "dune",
             "mood": row[11] or "caladan",
             "force_password_change": bool(row[12]),
+            "free_models_only": bool(row[13]),
         }
 
     async def update_user_theme(self, user_id: str, theme: str) -> None:
@@ -241,7 +242,7 @@ class UsersStoreMixin:
     def _sync_list_users(self) -> list:
         conn = self._get_conn()
         rows = conn.execute(
-            "SELECT id, email, display_name, role, is_approved, force_password_change, is_suspended, tokens_valid_after, created_at FROM users ORDER BY created_at ASC"
+            "SELECT id, email, display_name, role, is_approved, force_password_change, is_suspended, tokens_valid_after, free_models_only, created_at FROM users ORDER BY created_at ASC"
         ).fetchall()
         return [
             {
@@ -253,16 +254,20 @@ class UsersStoreMixin:
                 "force_password_change": bool(r[5]),
                 "is_suspended": bool(r[6]),
                 "tokens_valid_after": r[7],
-                "created_at": r[8]
+                "free_models_only": bool(r[8]),
+                "created_at": r[9]
             } for r in rows
         ]
 
     async def update_user(self, user_id: str, role: Optional[str] = None, is_approved: Optional[bool]
-                          = None, force_password_change: Optional[bool] = None, is_suspended: Optional[bool] = None) -> bool:
-        return await self._run(self._sync_update_user, user_id, role, is_approved, force_password_change, is_suspended)
+                          = None, force_password_change: Optional[bool] = None, is_suspended: Optional[bool] = None,
+                          free_models_only: Optional[bool] = None) -> bool:
+        return await self._run(self._sync_update_user, user_id, role, is_approved, force_password_change, is_suspended,
+                               free_models_only)
 
     def _sync_update_user(self, user_id: str, role: Optional[str], is_approved: Optional[bool],
-                          force_password_change: Optional[bool], is_suspended: Optional[bool]) -> bool:
+                          force_password_change: Optional[bool], is_suspended: Optional[bool],
+                          free_models_only: Optional[bool] = None) -> bool:
         conn = self._get_conn()
         now = _now_str()
         parts, vals = [], []
@@ -281,6 +286,9 @@ class UsersStoreMixin:
         if is_suspended is not None:
             parts.append("is_suspended = ?")
             vals.append(int(is_suspended))  # type: ignore
+        if free_models_only is not None:
+            parts.append("free_models_only = ?")
+            vals.append(int(free_models_only))  # type: ignore
         if not parts:
             return False
         parts.append("updated_at = ?")

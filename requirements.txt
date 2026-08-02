@@ -45,7 +45,7 @@ ollama==0.6.1                   # Ollama client — local LLM (primary)
 anthropic>=0.105.2,<1.0.0               # Claude API cloud LLM
 google-genai==1.16.0            # Google Gemini cloud LLM
 openai==1.82.0                  # OpenAI cloud LLM
-mistralai==1.7.0                # Mistral AI cloud LLM
+mistralai==2.8.0                # Mistral AI cloud LLM
 boto3==1.38.0                   # Amazon Bedrock (and AWS SDK)
 
 
@@ -114,7 +114,7 @@ pybind11==3.0.4                     # C++ bindings required by chroma-hnswlib
 protobuf>=5.29.0,<6.0
 opentelemetry-proto>=1.29.0
 opentelemetry-exporter-otlp-proto-grpc>=1.29.0
-opentelemetry-exporter-otlp-proto-common>=1.29.0
+opentelemetry-exporter-otlp-proto-common>=1.44.0
 opentelemetry-api>=1.29.0
 opentelemetry-sdk>=1.29.0
 opentelemetry-instrumentation>=0.63b1
@@ -161,7 +161,7 @@ Pygments>=2.20.0                     # LOW: ReDoS in GUID regex
 slowapi==0.1.9
 
 # Filesystem watcher (CHRONOS vault re-indexing)
-watchdog>=4.0.0
+watchdog>=6.0.0
 
 # -----------------------------------------------------------------------------
 # MCP server (Model Context Protocol — exposes tools to external clients)
@@ -197,4 +197,4 @@ graphiti-core>=0.3
 # Warden Daemon (Vision)
 # -----------------------------------------------------------------------------
 ultralytics>=8.0.0
-opencv-python>=4.8.0
+opencv-python>=5.0.0.93

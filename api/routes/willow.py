@@ -113,7 +113,13 @@ async def willow_websocket(websocket: WebSocket) -> None:
         elif evt["type"] == "response_complete":
             await websocket.send_json({"text": evt["text"], "type": "response"})
         elif evt["type"] == "audio":
-            await websocket.send_json({"audio": evt["data"], "type": "audio"})
+            # Forward the codec too. Piper/Kokoro emit wav and ElevenLabs
+            # emits mp3; without this the device has to guess how to decode.
+            await websocket.send_json({
+                "audio": evt["data"],
+                "type": "audio",
+                "format": evt.get("format", "wav"),
+            })
 
     try:
         while True:
