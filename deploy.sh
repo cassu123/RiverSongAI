@@ -2,8 +2,20 @@
 # deploy.sh — pull latest changes from GitHub and restart River Song AI
 #
 # Usage:
-#   ./deploy.sh            full deploy (pull, install, build, restart)
-#   ./deploy.sh --backup   backup databases + .env only (no deploy, no restart)
+#   ./deploy.sh              full deploy (backup, pull, install, test, build, restart)
+#   ./deploy.sh --backup     backup databases + .env only (no deploy, no restart)
+#   ./deploy.sh --skip-tests deploy without the test gate — emergencies only
+#
+# THE TEST GATE
+# The nightly 3am deploy runs unattended, so a bad commit used to reach
+# production and stay there until someone noticed in the morning. The suite now
+# runs after dependencies are installed and before anything is built or
+# restarted. If it fails, the service is never restarted and the previous build
+# keeps serving.
+#
+# The suite writes to a throwaway directory, never to the live databases —
+# tests/conftest.py redirects DB_PATH and every *_DB_URL. That isolation is
+# what makes it safe to run here at all; do not remove it.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,10 +26,12 @@ step() { echo ""; echo "[$(ts)] ==> $*"; }
 trap 'echo ""; echo "[$(ts)] !! Deploy failed at: ${BASH_COMMAND}" >&2' ERR
 
 # ---------------------------------------------------------------------------
-# Backup mode — used by the emergency-backup endpoint (api/routes/health.py).
-# Must never pull code or restart the service.
+# Backup — used by `--backup` (the emergency-backup endpoint in
+# api/routes/health.py calls that) and once at the start of every full deploy.
+# A function rather than a re-invocation of this script: no subprocess, and no
+# assumption that the file is still called deploy.sh.
 # ---------------------------------------------------------------------------
-if [[ "${1:-}" == "--backup" ]]; then
+do_backup() {
     BACKUP_DIR="${RS_BACKUP_DIR:-/mnt/data/river-song/backups}"
     mkdir -p "$BACKUP_DIR" 2>/dev/null || BACKUP_DIR="$SCRIPT_DIR/backups"
     mkdir -p "$BACKUP_DIR"
@@ -32,8 +46,25 @@ if [[ "${1:-}" == "--backup" ]]; then
     # Keep the 14 most recent backups
     ls -1t "$BACKUP_DIR"/river-song-*.tar.gz 2>/dev/null | tail -n +15 | xargs -r rm -f
     step "Backup complete: $ARCHIVE"
+}
+
+# Backup mode must never pull code or restart the service.
+if [[ "${1:-}" == "--backup" ]]; then
+    do_backup
     exit 0
 fi
+
+SKIP_TESTS=0
+if [[ "${1:-}" == "--skip-tests" ]]; then
+    SKIP_TESTS=1
+    echo "[$(ts)] !! --skip-tests: deploying without the test gate."
+fi
+
+# Back up before touching anything. Cheap, and the one moment it matters is
+# the one where the deploy goes wrong.
+do_backup
+
+PREV_COMMIT="$(git rev-parse HEAD)"
 
 step "Pulling latest from GitHub"
 # `npm install` (below) can rewrite frontend/package-lock.json on disk, leaving
@@ -61,6 +92,55 @@ if [[ "$NEW_HASH" != "$OLD_HASH" ]]; then
     echo "$NEW_HASH" > "$REQ_HASH_FILE"
 else
     echo "    (requirements.txt unchanged — skipping pip install)"
+fi
+
+# ---------------------------------------------------------------------------
+# The gate. Everything above this line is reversible or harmless; everything
+# below it changes what users are served.
+# ---------------------------------------------------------------------------
+if [[ "$SKIP_TESTS" -eq 1 ]]; then
+    step "Skipping the test suite (--skip-tests)"
+else
+    step "Running the test suite"
+    # Both the ERR trap and `set -e` are off for this one command: a red suite
+    # is an expected outcome this block reports properly, not a crash, and the
+    # generic "Deploy failed at: pytest -q" would bury the real message.
+    trap - ERR
+    set +e
+    pytest -q
+    TEST_STATUS=$?
+    set -e
+    trap 'echo ""; echo "[$(ts)] !! Deploy failed at: ${BASH_COMMAND}" >&2' ERR
+
+    if [[ "$TEST_STATUS" -ne 0 ]]; then
+        NEW_COMMIT="$(git rev-parse HEAD)"
+        cat >&2 <<EOF
+
+[$(ts)] !! TESTS FAILED — deploy aborted.
+
+    The service was NOT restarted. The previous build is still serving, so
+    production is unaffected right now.
+
+    The working tree HAS been updated ($PREV_COMMIT -> $NEW_COMMIT) and the
+    virtualenv may have new dependencies. That matters if the box reboots
+    before this is sorted: systemd would start the service on untested code.
+
+    To put the tree back where the running service came from:
+
+        git reset --hard $PREV_COMMIT
+        pip install -r requirements.txt
+
+    To see what failed:
+
+        source venv/bin/activate && pytest
+
+    To deploy anyway, knowing the suite is red:
+
+        ./deploy.sh --skip-tests
+
+EOF
+        exit 1
+    fi
 fi
 
 step "Ensuring TOKEN_ENCRYPTION_KEY in .env"

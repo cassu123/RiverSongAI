@@ -526,3 +526,41 @@ class OpsStoreMixin:
             "DELETE FROM remote_ollama_rigs WHERE id=?", (rig_id,))
         conn.commit()
         return cur.rowcount > 0
+
+    # -------------------------------------------------------------------------
+    # Background sweep state
+    # -------------------------------------------------------------------------
+    #
+    # The scheduler in core/sweeps.py records the outcome of every run here so
+    # /api/admin/sweeps can show whether a sweep last succeeded, when, and with
+    # what error. Both call sites used to reach for `store._execute` and
+    # `store._fetch_all`, neither of which exists on this class — so recording
+    # raised AttributeError on the success path *and* on the error path, which
+    # killed the loop task after a single pass.
+
+    async def record_sweep_run(
+        self, name: str, *, last_run_at: str, last_error: Optional[str] = None
+    ) -> None:
+        await self._run(self._sync_record_sweep_run, name, last_run_at, last_error)
+
+    def _sync_record_sweep_run(
+        self, name: str, last_run_at: str, last_error: Optional[str]
+    ) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            "INSERT INTO sweeps_state (name, last_run_at, last_error) VALUES (?,?,?) "
+            "ON CONFLICT(name) DO UPDATE SET "
+            "last_run_at=excluded.last_run_at, last_error=excluded.last_error",
+            (name, last_run_at, last_error),
+        )
+        conn.commit()
+
+    async def get_sweep_states(self) -> List[dict]:
+        return await self._run(self._sync_get_sweep_states)
+
+    def _sync_get_sweep_states(self) -> List[dict]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT name, last_run_at, last_error FROM sweeps_state"
+        ).fetchall()
+        return [dict(row) for row in rows]

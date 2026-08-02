@@ -294,8 +294,9 @@ async def _translate_steps(steps: List[str], equipment: str) -> List[str]:
     on the hob beats an error where the instructions should be.
     """
     try:
-        from api.routes.culinary import (
-            _EQUIPMENT_TRANSLATE_PROMPT, _call_ollama, _extract_json,
+        from api.services.recipe_parser import _extract_json
+        from providers.culinary.llm import (
+            _EQUIPMENT_TRANSLATE_PROMPT, _call_ollama,
         )
 
         raw = await _call_ollama(_EQUIPMENT_TRANSLATE_PROMPT.format(

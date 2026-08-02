@@ -236,7 +236,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     register_sweep("distiller", 3600, _distiller_sweep)
     
     async def _ttl_sweep():
-        users = await app.state.store.get_all_users()
+        users = await app.state.memory_manager._store.get_all_users()
         for user in users:
             await app.state.memory_manager.cleanup_expired(str(user["id"]))
     register_sweep("memory_ttl", 3600, _ttl_sweep)
@@ -244,11 +244,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     register_sweep("weather", 900, weather_sweep_func)
     register_sweep("briefings", 900, brief_sweep_func)
     
+    # register_sweep calls func() with no arguments. Both of these take `app`,
+    # so registering them bare raised TypeError on every run.
     from core.garage import garage_sweep_func
-    register_sweep("garage", 86400, garage_sweep_func)
-    
+
+    async def _garage_sweep():
+        await garage_sweep_func(app)
+    register_sweep("garage", 86400, _garage_sweep)
+
     from core.inventory_sweep import inventory_sweep_func
-    register_sweep("inventory", 86400, inventory_sweep_func)
+
+    async def _inventory_sweep():
+        await inventory_sweep_func(app)
+    register_sweep("inventory", 86400, _inventory_sweep)
     
     from core.kitchen_sweep import kitchen_sweep_func
     register_sweep("kitchen", 3600, kitchen_sweep_func)
@@ -370,6 +378,21 @@ def create_app() -> FastAPI:
     if settings.allowed_hosts != ["*"]:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 
+    # CSRF for the cookie session. Registered before CORSMiddleware so that
+    # CORS ends up wrapping it: a 403 from here still gets its CORS headers,
+    # and a browser reports the real status instead of an opaque CORS error.
+    # Requests carrying `Authorization: Bearer` pass straight through, so this
+    # is inert for header-authenticated callers. See core/csrf.py.
+    from core.csrf import CSRFMiddleware
+
+    app.add_middleware(CSRFMiddleware, enabled=settings.csrf_protection_enabled)
+    if not settings.csrf_protection_enabled:
+        logger.warning(
+            "CSRF_PROTECTION_ENABLED=False — cookie-authenticated state-changing "
+            "requests are unprotected. Only SameSite=lax stands between a "
+            "third-party page and any route behind require_role."
+        )
+
     # Forward real client IP from Cloudflare's CF-Connecting-IP header.
     # Pure ASGI callable — no BaseHTTPMiddleware, no body buffering, zero head-of-line blocking.
     import ipaddress
@@ -420,7 +443,7 @@ def create_app() -> FastAPI:
         allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Kiosk-Token"],
+        allow_headers=["Authorization", "Content-Type", "X-Kiosk-Token", "X-CSRF-Token"],
     )
 
     app.add_middleware(_CloudflareIPMiddleware)

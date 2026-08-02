@@ -26,7 +26,7 @@ async def generate_morning_brief(user_id: str, memory_manager) -> str:
             
     # Proactive items missed
     store = memory_manager._store
-    overnight = await store._fetch_all(
+    overnight = await store.execute_read_async(
         "SELECT * FROM proactive_log WHERE user_id = ? AND delivered = 0 ORDER BY created_at ASC",
         (user_id,)
     )
@@ -44,15 +44,23 @@ async def brief_sweep_func():
         return
         
     store = app.state.memory_manager._store
-    users = await store._fetch_all("SELECT id, timezone FROM users")
-    
+    # `users` has no timezone column and never has, so this query used to
+    # raise OperationalError and the briefing sweep never produced anything.
+    # There is no per-user timezone in the schema to read instead, so the
+    # system default is what "7 AM local" means here. If per-user timezones
+    # are ever added, this is the one place that needs to change.
+    from config.settings import get_settings
+
+    tz_str = get_settings().default_timezone or "UTC"
+    try:
+        tz = zoneinfo.ZoneInfo(tz_str)
+    except Exception:
+        tz = timezone.utc
+
+    users = await store.execute_read_async("SELECT id FROM users")
+
     for row in users:
         uid = row["id"]
-        tz_str = row.get("timezone") or "UTC"
-        try:
-            tz = zoneinfo.ZoneInfo(tz_str)
-        except Exception:
-            tz = timezone.utc
             
         now_local = datetime.now(tz)
         
@@ -62,7 +70,7 @@ async def brief_sweep_func():
             today_str = now_local.strftime("%Y-%m-%d")
             dedupe = f"brief_{today_str}"
             
-            existing = await store._fetch_one(
+            existing = await store.execute_read_one_async(
                 "SELECT id FROM proactive_log WHERE user_id = ? AND dedupe_key = ?",
                 (uid, dedupe)
             )
