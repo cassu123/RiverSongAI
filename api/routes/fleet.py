@@ -39,7 +39,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from core.auth import require_role
@@ -53,7 +53,7 @@ from providers.memory.sqlite_store import SQLiteStore
 
 logger = logging.getLogger(__name__)
 
-FLEET_PROGRAMS = ("horizon", "kova", "sentinel", "vortex", "vexa")
+FLEET_PROGRAMS = ("horizon", "kova", "sentinel", "vortex", "vexa", "willow")
 
 _MAX_TELEMETRY_BATCH = 50
 _ACK_STATUSES = {"acknowledged", "rejected", "completed", "failed"}
@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS fleet_units (
     name           TEXT NOT NULL DEFAULT '',
     unit_token     TEXT NOT NULL,
     metadata       TEXT NOT NULL DEFAULT '{}',
+    owner_user_id  TEXT NOT NULL DEFAULT '',
     online         INTEGER NOT NULL DEFAULT 0,
     registered_at  TEXT,
     last_seen      TEXT,
@@ -131,6 +132,25 @@ async def _hash_legacy_tokens(store: SQLiteStore) -> None:
         logger.info("Fleet: hashed %d plaintext unit token(s) at rest.", migrated)
 
 
+async def _ensure_owner_column(store: SQLiteStore) -> None:
+    """
+    Add fleet_units.owner_user_id to databases created before it existed.
+
+    A column rather than a metadata key: the device `register` call replaces
+    metadata wholesale, so an owner stored there would be wiped the first time
+    a unit came back online.
+    """
+    try:
+        await store.execute_write_async(
+            "ALTER TABLE fleet_units ADD COLUMN owner_user_id TEXT NOT NULL DEFAULT ''",
+            (),
+        )
+        logger.info("Fleet: added owner_user_id to fleet_units.")
+    except Exception:
+        # Already present. SQLite has no ADD COLUMN IF NOT EXISTS.
+        pass
+
+
 async def _ensure_schema(store: SQLiteStore) -> None:
     global _schema_ready
     if _schema_ready:
@@ -138,8 +158,24 @@ async def _ensure_schema(store: SQLiteStore) -> None:
     for statement in _SCHEMA.split(";"):
         if statement.strip():
             await store.execute_write_async(statement, ())
+    await _ensure_owner_column(store)
     await _hash_legacy_tokens(store)
     _schema_ready = True
+
+
+async def unit_owner(store: SQLiteStore, program: str, unit_id: str) -> str:
+    """
+    The user a fleet unit acts on behalf of, or "" when it has no owner.
+
+    This is the only way a unit-authenticated request acquires an identity.
+    A device never states who it is; it states which unit it is, and this
+    answers the rest.
+    """
+    row = await store.execute_read_one_async(
+        "SELECT owner_user_id FROM fleet_units WHERE program=? AND unit_id=?",
+        (program, unit_id),
+    )
+    return (row or {}).get("owner_user_id") or ""
 
 
 async def _verify_unit(store: SQLiteStore, program: str, unit_id: str,
@@ -206,18 +242,23 @@ def build_fleet_router(program: str) -> APIRouter:
     # ---- Admin surface ----
 
     @router.post("/units/claim", dependencies=[Depends(require_role("admin"))])
-    async def claim_unit(body: ClaimBody):
+    async def claim_unit(body: ClaimBody, request: Request):
         store = SQLiteStore()
         await _ensure_schema(store)
         unit_id = uuid.uuid4().hex[:12]
         # The plaintext token is returned once, here, and never stored.
         unit_token = mint_unit_token()
+        # The admin doing the claiming becomes the unit's owner. That is how a
+        # device later acquires an identity without ever asserting one.
+        owner = str((getattr(request.state, "user", None) or {}).get("sub") or "")
         await store.execute_write_async(
-            "INSERT INTO fleet_units (program, unit_id, name, unit_token, registered_at) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (program, unit_id, body.name, hash_unit_token(unit_token), _now()),
+            "INSERT INTO fleet_units "
+            "(program, unit_id, name, unit_token, owner_user_id, registered_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (program, unit_id, body.name, hash_unit_token(unit_token), owner, _now()),
         )
-        logger.info("Fleet %s: claimed unit %s (%s)", program, unit_id, body.name)
+        logger.info("Fleet %s: claimed unit %s (%s) for user %s",
+                    program, unit_id, body.name, owner or "unassigned")
         return {"unit_id": unit_id, "unit_token": unit_token}
 
     @router.get("/units", dependencies=[Depends(require_role("admin"))])

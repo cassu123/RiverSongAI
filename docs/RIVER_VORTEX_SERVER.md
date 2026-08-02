@@ -380,6 +380,70 @@ or an alarm.
 
 ---
 
+## Streamed utterances
+
+A unit sends one utterance as several `audio_chunk` frames and sets `final` on
+the last. Non-final frames are buffered per unit and joined onto the final one
+before transcription.
+
+This matters more than it sounds. Before it, only the final frame survived, so
+an utterance had to fit in a single 128 KB frame — 4.1 seconds at 16 kHz mono
+s16le. Anything longer was dropped with a log line and the room got silence.
+*"Set a timer for ten minutes"* fit. *"Put milk and eggs on the shopping list
+and start the oven timer"* did not.
+
+Two different caps, deliberately:
+
+| Cap | Value | What it bounds |
+|---|---|---|
+| `MAX_AUDIO_CHUNK_BYTES` | 128 KB | one frame — a sane wire size |
+| `MAX_UTTERANCE_BYTES` | 32 s | the accumulated total, per unit |
+
+The total is what stops a unit that never sends `final` from growing the
+buffer forever. It sits just above the device's own 30-second recording limit,
+so a long-but-legitimate command is never what trips it. An utterance that
+does pass the cap is dropped **whole** — half a command acted on is worse than
+one that visibly failed — and the orb says so rather than going quiet.
+
+The buffer is cleared on every `final` and on disconnect, so a half-spoken
+command can never prepend itself to the next one. Chunks are raw PCM by
+protocol; a WAV header on any of them is unwrapped before joining, because
+`RIFF…RIFF…` decodes as only the first chunk and the rest would go quietly
+missing.
+
+---
+
+## Willow (`/api/willow/ws`)
+
+Kept for the ESP32-S3 Box hardware it was written for, but moved to
+**per-device tokens**. It used to accept one shared `WILLOW_DEVICE_TOKEN`
+across every device, which means any device can impersonate any other and one
+leak re-keys the house — exactly the credential model the Vortex work replaced.
+
+Now: `willow` is a fleet program, so each box is claimed by an admin and gets
+its own token, hashed at rest and compared with `hmac.compare_digest` on the
+same path the Vortex socket uses.
+
+```
+POST /api/willow/units/claim  {"name": "Kitchen Box"}  → {unit_id, unit_token}
+WS   /api/willow/ws?unit_id=…&token=…
+     or first frame {"type":"auth","unit_id":…,"token":…} within 5s
+```
+
+The `Sec-WebSocket-Protocol` auth form is gone — it can carry only one opaque
+value, which is the shared-secret shape being removed.
+
+**Identity is no longer self-asserted.** The socket used to take `user_id`
+straight off the query string, so a device could act as anybody. The owner is
+now the admin who claimed the unit, recorded in `fleet_units.owner_user_id`,
+and a `user_id` in the auth frame is ignored. A unit with no owner is refused
+rather than defaulted to some fallback account.
+
+**Migration:** boxes configured with the old shared token are refused until
+they are claimed and given their own. That break is the point of the change.
+
+---
+
 ## Not yet built
 
 - **The device-side cast handler.** The command payload and the queueing are

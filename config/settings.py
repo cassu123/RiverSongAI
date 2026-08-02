@@ -1079,12 +1079,10 @@ class Settings(BaseSettings):
         default="change_me_in_production",
         description="Shared secret for daemon-to-app authentication.",
     )
-    willow_device_token: str = Field(
-        default="",
-        description="Shared secret required by every Willow hardware device "
-                    "to authenticate against /api/willow/ws. Empty disables "
-                    "the endpoint entirely.",
-    )
+    # willow_device_token was removed. /api/willow/ws now authenticates each
+    # device with its own token from `fleet_units`, claimed via
+    # POST /api/willow/units/claim — one shared secret across every device
+    # meant any device could impersonate any other.
     code_interpreter_enabled: bool = Field(
         default=False,
         description="Hard kill switch for the code_interpreter LLM tool. "

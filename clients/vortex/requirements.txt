@@ -1,9 +1,0 @@
-# River Vortex hub client — installed ON the device, not on the server.
-websockets>=12.0
-sounddevice>=0.4.6
-numpy>=1.24
-
-# Wake word. Optional: without it the client falls back to press-Enter-to-talk,
-# which is useful for bring-up and testing. openWakeWord is free and open,
-# and matches what the River Song server already expects.
-openwakeword>=0.6.0

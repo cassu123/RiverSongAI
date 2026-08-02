@@ -91,8 +91,14 @@ PAIRING_TTL_MINUTES = 10
 # How long a unit has to send its auth frame before the socket is dropped.
 WS_AUTH_TIMEOUT_SECONDS = 5.0
 
-# Audio a unit may send in one chunk. 16kHz mono s16le is 32KB/s, so this is
-# roughly four seconds — well past any single wake-word-gated utterance chunk.
+# Audio a unit may send in one *frame*. 16kHz mono s16le is 32KB/s, so this is
+# roughly four seconds of speech per frame — generous for a stream.
+#
+# This is a frame size, not an utterance size. A longer utterance arrives as
+# several frames with `final` set on the last; core.vortex_voice buffers them
+# and bounds the total separately (MAX_UTTERANCE_BYTES). Treating this cap as
+# the limit on a whole utterance is what used to truncate anything past ~4
+# seconds.
 MAX_AUDIO_CHUNK_BYTES = 128 * 1024
 
 # Snapshot retention. These are cameras in bedrooms: a motion snapshot exists
@@ -485,6 +491,13 @@ async def vortex_websocket(websocket: WebSocket) -> None:
                 participant_id(unit_id=unit_id), reason="peer_gone")
         except Exception as exc:
             logger.debug("Call teardown for %s failed: %s", unit_id, exc)
+        # Drop any half-spoken utterance. The rest of that sentence is not
+        # arriving, and it must not become the opening of the next one.
+        try:
+            from core.vortex_voice import clear_utterance
+            await clear_utterance(unit_id)
+        except Exception as exc:
+            logger.debug("Utterance cleanup for %s failed: %s", unit_id, exc)
 
 
 async def _restore_and_replay(unit_id: str, owner: str) -> None:
