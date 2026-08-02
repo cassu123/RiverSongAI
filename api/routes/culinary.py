@@ -29,8 +29,41 @@ WS         /api/culinary/ws
 """
 
 from __future__ import annotations
-from providers.vault.vault_provider import VaultProvider, VROOT_HOUSEHOLD, VROOT_PERSONAL
 from core.family import resolve_module_owner as _resolve_module_owner
+
+# Business logic lives in providers/culinary/; this file is the HTTP layer.
+# Imported under the original names so the route handlers below — and
+# api/routes/culinary_sessions.py, which imports several of these — did not
+# need editing as part of the move.
+from providers.culinary.barcode import _lookup_barcode
+from providers.culinary.ingredients import (
+    _DEFAULT_BLACKLIST,
+    _DEFAULT_SUBSTITUTIONS,
+    _aggregate_ingredients,
+    _collect_parsed,
+    _flag_blacklist,
+)
+from providers.culinary.llm import (
+    _EQUIPMENT_TRANSLATE_PROMPT,
+    _RECIPE_SCHEMA_PROMPT,
+    _SUBSTITUTE_RECOMMEND_PROMPT,
+    _call_ollama,
+    _call_ollama_vision,
+    _identify_equipment,
+)
+from providers.culinary.serializers import (
+    _banned_out,
+    _equipment_out,
+    _household_out,
+    _proposal_out,
+    _recipe_out,
+    _session_out,
+    _stock_out,
+)
+from providers.culinary.vault_sync import (
+    _delete_recipe_from_vault,
+    _sync_recipe_to_vault,
+)
 
 import base64
 import html
@@ -223,28 +256,6 @@ _migrate_culinary_schema()
 # Hardcoded Defaults (to be migrated)
 # ---------------------------------------------------------------------------
 
-_DEFAULT_BLACKLIST = {
-    "bell pepper", "bell peppers",
-    "pearl onion", "pearl onions",
-    "quinoa",
-    "radish", "radishes",
-    "zucchini",
-    "mushroom", "mushrooms",
-}
-
-_DEFAULT_SUBSTITUTIONS = {
-    "bell pepper": "poblano pepper",
-    "bell peppers": "poblano peppers",
-    "pearl onion": "shallot",
-    "pearl onions": "shallots",
-    "quinoa": "brown rice",
-    "radish": "turnip",
-    "radishes": "turnips",
-    "zucchini": "yellow squash",
-    "mushroom": "eggplant",
-    "mushrooms": "eggplant",
-}
-
 
 def _seed_banned_ingredients() -> None:
     """One-time migration: seed existing households with the old hardcoded blacklist."""
@@ -308,133 +319,10 @@ def _get_household(db: Session, owner_id: str) -> Household:
 # Ingredient blacklist
 # ---------------------------------------------------------------------------
 
-def _flag_blacklist(db: Session, household_id: str,
-                    ingredients: list[dict]) -> list[dict]:
-    banned = db.query(BannedIngredient).filter_by(
-        household_id=household_id).all()
-    banned_map = {b.name.lower(): b.substitute for b in banned}
-
-    flagged = []
-    for ing in ingredients:
-        name_lower = ing.get("name", "").lower().strip()
-        if name_lower in banned_map:
-            flagged.append({
-                "name": ing["name"],
-                "substitute": banned_map[name_lower],
-            })
-    return flagged
-
 
 # ---------------------------------------------------------------------------
 # Ollama helpers
 # ---------------------------------------------------------------------------
-
-OLLAMA_BASE = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.environ.get("CULINARY_LLM_MODEL", "qwen2.5:14b")
-OLLAMA_VISION_MODEL = os.environ.get("CULINARY_VISION_MODEL", "gemma3:12b")
-
-_RECIPE_SCHEMA_PROMPT = """
-You are a recipe parser. Extract ALL recipes found in the text below.
-Return ONLY a valid JSON array — even if there is just one recipe. No markdown, no prose.
-Each element must follow this exact schema:
-
-[
-  {
-    "title": "string",
-    "meal_type": "Breakfast|Lunch|Dinner|Snack|Dessert|Other",
-    "primary_protein": "string or null",
-    "servings": integer,
-    "ingredients": [{"name": "string", "qty": "string", "unit": "string"}],
-    "steps": ["string"],
-    "equipment_needed": ["string"]
-  }
-]
-
-Recipe text:
-"""
-
-_EQUIPMENT_TRANSLATE_PROMPT = """
-You are a cooking assistant. Rewrite these recipe steps to use {equipment} instead of the
-original cooking method. Adjust times and temperatures appropriately.
-Return ONLY a JSON array of strings — one string per step. No markdown, no explanation.
-
-Original steps:
-{steps}
-"""
-
-_KNOWN_EQUIPMENT_TYPES = [
-    "air_fryer", "instant_pot", "dutch_oven", "sous_vide",
-    "slow_cooker", "stand_mixer", "wok", "grill",
-]
-
-_EQUIPMENT_IDENTIFY_PROMPT = """
-You are a kitchen appliance classifier. Given a brand and model, identify which categories apply.
-
-Valid categories: air_fryer, instant_pot, dutch_oven, sous_vide, slow_cooker, stand_mixer, wok, grill
-
-Rules:
-- A device can match multiple categories (e.g. Instant Pot Duo is both instant_pot and slow_cooker)
-- Only include categories the device genuinely supports
-- "label" should be a short, clean product name
-
-Return ONLY valid JSON (no markdown, no explanation):
-{{"label": "Brand Model Name", "types": ["type1", "type2"]}}
-
-Brand: {make}
-Model: {model}
-"""
-
-_SUBSTITUTE_RECOMMEND_PROMPT = """
-You are a culinary expert. Recommend 3-5 approved substitutes for the ingredient: {ingredient}.
-For each substitute, provide a short reason why it works well.
-Return ONLY a JSON array of objects. No markdown, no prose.
-Each element must follow this exact schema:
-[
-  {{"name": "string", "reason": "string"}}
-]
-"""
-
-
-async def _call_ollama(prompt: str) -> str:
-    async with httpx.AsyncClient(timeout=180) as client:
-        resp = await client.post(
-            f"{OLLAMA_BASE}/api/generate",
-            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-        )
-        resp.raise_for_status()
-        return resp.json().get("response", "")
-
-
-async def _call_ollama_vision(prompt: str, image_b64: str) -> str:
-    async with httpx.AsyncClient(timeout=180) as client:
-        resp = await client.post(
-            f"{OLLAMA_BASE}/api/generate",
-            json={
-                "model": OLLAMA_VISION_MODEL,
-                "prompt": prompt,
-                "images": [image_b64],
-                "stream": False},
-        )
-        resp.raise_for_status()
-        return resp.json().get("response", "")
-
-
-async def _identify_equipment(make: str, model: str) -> dict:
-    """Ask Ollama to classify a kitchen device; returns {label, types}."""
-    prompt = _EQUIPMENT_IDENTIFY_PROMPT.format(make=make, model=model)
-    try:
-        raw = await _call_ollama(prompt)
-        data = _extract_json(raw)
-        if isinstance(data, dict):
-            types = [
-                t for t in data.get(
-                    "types",
-                    []) if t in _KNOWN_EQUIPMENT_TYPES]
-            label = data.get("label") or f"{make} {model}".strip()
-            return {"label": label, "types": types}
-    except Exception:
-        pass
-    return {"label": f"{make} {model}".strip(), "types": []}
 
 
 def _chunk_text(text: str, size: int = 20000) -> List[str]:
@@ -443,37 +331,9 @@ def _chunk_text(text: str, size: int = 20000) -> List[str]:
             for i in range(0, len(text), size)] if text else []
 
 
-def _collect_parsed(raw: str) -> List[dict]:
-    try:
-        result = _extract_json(raw)
-    except Exception:
-        return []
-    if isinstance(result, dict):
-        result = [result]
-    return [r for r in result if isinstance(
-        r, dict)] if isinstance(result, list) else []
-
-
-
 # ---------------------------------------------------------------------------
 # Open Food Facts helpers
 # ---------------------------------------------------------------------------
-
-async def _lookup_barcode(upc: str) -> Optional[dict]:
-    url = f"https://world.openfoodfacts.org/api/v0/product/{upc}.json"
-    async with httpx.AsyncClient(timeout=10) as client:
-        try:
-            resp = await client.get(url)
-            data = resp.json()
-            if data.get("status") == 1:
-                product = data.get("product", {})
-                return {
-                    "name": product.get("product_name") or product.get("product_name_en") or upc,
-                    "brand": product.get("brands", ""),
-                }
-        except Exception:
-            pass
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -609,273 +469,10 @@ class VoteRequest(BaseModel):
 # Serializers
 # ---------------------------------------------------------------------------
 
-def _household_out(hh: Household) -> dict:
-    return {
-        "id": hh.id,
-        "name": hh.name,
-        "owner_id": hh.owner_id,
-        "equipment": {
-            "air_fryer": hh.has_air_fryer,
-            "instant_pot": hh.has_instant_pot,
-            "dutch_oven": hh.has_dutch_oven,
-            "sous_vide": hh.has_sous_vide,
-            "slow_cooker": hh.has_slow_cooker,
-            "stand_mixer": hh.has_stand_mixer,
-            "wok": hh.has_wok,
-            "grill": hh.has_grill,
-        },
-        "created_at": hh.created_at.isoformat() if hh.created_at else None,
-        "updated_at": hh.updated_at.isoformat() if hh.updated_at else None,
-    }
-
-
-def _recipe_out(r: Recipe) -> dict:
-    return {
-        "id": r.id,
-        "household_id": r.household_id,
-        "title": r.title,
-        "meal_type": r.meal_type.value if r.meal_type else "Other",
-        "primary_protein": r.primary_protein,
-        "servings": r.servings,
-        "image_url": r.image_url,
-        "source_url": r.source_url,
-        "source_type": r.source_type.value if r.source_type else "manual",
-        "rating": r.rating,
-        "ingredients": _safe_json(r.ingredients_json, []),
-        "steps": _safe_json(r.steps_json, []),
-        "equipment_needed": _safe_json(r.equipment_needed_json, []),
-        "blacklisted": _safe_json(r.blacklisted_json, []),
-        "created_at": r.created_at.isoformat() if r.created_at else None,
-        "updated_at": r.updated_at.isoformat() if r.updated_at else None,
-    }
-
 
 # ---------------------------------------------------------------------------
 # CHRONOS vault sync — every recipe becomes a markdown note.
 # ---------------------------------------------------------------------------
-
-def _safe_filename(title: str) -> str:
-    """Strip path separators and clamp length so the title makes a safe filename."""
-    cleaned = re.sub(r'[\\/]+', '-', title or "Untitled Recipe").strip()
-    cleaned = re.sub(r'[\x00-\x1f]', '', cleaned)
-    cleaned = cleaned.strip('. ')
-    if not cleaned:
-        cleaned = "Untitled Recipe"
-    return cleaned[:100]
-
-
-def _recipe_vault_path_for(r: Recipe, root: str = VROOT_HOUSEHOLD) -> str:
-    return f"{root}/Recipes/{_safe_filename(r.title)}.md"
-
-
-def _recipe_to_markdown(r: Recipe) -> str:
-    """Serialize a Recipe to markdown with YAML frontmatter."""
-    ingredients = _safe_json(r.ingredients_json, [])
-    steps = _safe_json(r.steps_json, [])
-    equipment = _safe_json(r.equipment_needed_json, [])
-
-    def _yaml_str(v) -> str:
-        if v is None:
-            return '""'
-        s = str(v).replace('"', '\\"')
-        return f'"{s}"'
-
-    frontmatter = [
-        "---",
-        "kind: recipe",
-        f"recipe_id: {_yaml_str(r.id)}",
-        f"title: {_yaml_str(r.title)}",
-        f"meal_type: {
-            _yaml_str(
-                r.meal_type.value if r.meal_type else 'Other')}",
-        f"primary_protein: {_yaml_str(r.primary_protein or '')}",
-        f"servings: {r.servings or 0}",
-        f"rating: {r.rating if r.rating is not None else 'null'}",
-        f"source_url: {_yaml_str(r.source_url or '')}",
-        "---",
-        "",
-        f"# {r.title}",
-        "",
-    ]
-    body: list[str] = list(frontmatter)
-    if r.image_url:
-        body.append(f"![cover]({r.image_url})")
-        body.append("")
-    body.append("## Ingredients")
-    body.append("")
-    if ingredients:
-        for ing in ingredients:
-            if isinstance(ing, dict):
-                qty = ing.get("quantity") or ing.get("amount") or ""
-                unit = ing.get("unit", "")
-                name = ing.get("name") or ing.get("item") or ""
-                line = " ".join(
-                    p for p in [
-                        str(qty).strip(),
-                        unit.strip(),
-                        name.strip()] if p)
-                body.append(f"- {line}")
-            else:
-                body.append(f"- {ing}")
-    else:
-        body.append("_(none listed)_")
-    body.append("")
-    body.append("## Steps")
-    body.append("")
-    if steps:
-        for i, step in enumerate(steps, 1):
-            text = step if isinstance(
-                step, str) else (
-                step.get("text") or step.get("instruction") or str(step))
-            body.append(f"{i}. {text}")
-    else:
-        body.append("_(no steps recorded)_")
-    body.append("")
-    if equipment:
-        body.append("## Equipment")
-        body.append("")
-        for eq in equipment:
-            label = eq if isinstance(eq, str) else (eq.get("name") or str(eq))
-            body.append(f"- {label}")
-        body.append("")
-    return "\n".join(body)
-
-
-async def _sync_recipe_to_vault(
-        uid: str, r: Recipe, old_title: Optional[str] = None) -> None:
-    """
-    Write the recipe to the user's vault as a markdown note. Best-effort:
-    a vault failure must never break the recipe save itself.
-    """
-    try:
-        provider = VaultProvider(store=None)
-        content = _recipe_to_markdown(r)
-        # Prefer household root when the user has one; otherwise fall back to
-        # personal.
-        owner_id = _resolve_module_owner(uid, "culinary")
-        root = VROOT_HOUSEHOLD if owner_id.startswith(
-            "family:") else VROOT_PERSONAL
-        new_path = _recipe_vault_path_for(r, root=root)
-        # If the title changed, retire the old file by renaming
-        # (delete-on-fail).
-        if old_title and _safe_filename(old_title) != _safe_filename(r.title):
-            old_path = f"{root}/Recipes/{_safe_filename(old_title)}.md"
-            try:
-                await provider.rename_note(uid, old_path, new_path)
-            except (FileNotFoundError, ValueError):
-                pass
-            except Exception as exc:
-                logger.debug("Recipe note rename skipped: %s", exc)
-        await provider.write_note(uid, new_path, content)
-    except Exception as exc:
-        logger.debug(
-            "Recipe vault sync skipped (recipe=%s): %s",
-            getattr(
-                r,
-                "id",
-                "?"),
-            exc)
-
-
-async def _delete_recipe_from_vault(uid: str, r: Recipe) -> None:
-    try:
-        provider = VaultProvider(store=None)
-        owner_id = _resolve_module_owner(uid, "culinary")
-        root = VROOT_HOUSEHOLD if owner_id.startswith(
-            "family:") else VROOT_PERSONAL
-        path = _recipe_vault_path_for(r, root=root)
-        await provider.delete_note(uid, path)
-    except Exception as exc:
-        logger.debug(
-            "Recipe vault delete skipped (recipe=%s): %s",
-            getattr(
-                r,
-                "id",
-                "?"),
-            exc)
-
-
-def _proposal_out(p: DinnerProposal) -> dict:
-    return {
-        "id": p.id,
-        "household_id": p.household_id,
-        "recipe_id": p.recipe_id,
-        "recipe": _recipe_out(p.recipe) if p.recipe else None,
-        "proposed_by": p.proposed_by,
-        "votes_yes": _safe_json(p.votes_yes, []),
-        "votes_no": _safe_json(p.votes_no, []),
-        "status": p.status,
-        "created_at": p.created_at.isoformat() if p.created_at else None,
-    }
-
-
-def _stock_out(s: StockroomItem) -> dict:
-    return {
-        "id": s.id,
-        "household_id": s.household_id,
-        "name": s.name,
-        "barcode": s.barcode,
-        "brand": s.brand,
-        "state": s.state.value if s.state else "Good",
-        "quantity": getattr(s, "quantity", 1.0),
-        "min_quantity": getattr(s, "min_quantity", 0.25),
-        "created_at": s.created_at.isoformat() if s.created_at else None,
-        "updated_at": s.updated_at.isoformat() if s.updated_at else None,
-    }
-
-
-def _equipment_out(eq: KitchenEquipment) -> dict:
-    raw_caps = eq.capabilities_json
-    if raw_caps:
-        try:
-            capabilities = json.loads(raw_caps)
-        except Exception:
-            capabilities = [eq.equipment_type] if eq.equipment_type else []
-    else:
-        capabilities = [eq.equipment_type] if eq.equipment_type else []
-    return {
-        "id": eq.id,
-        "equipment_type": eq.equipment_type,
-        "label": eq.label,
-        "make": eq.make,
-        "model": eq.model,
-        "capabilities": capabilities,
-    }
-
-
-def _banned_out(bi: BannedIngredient) -> dict:
-    return {
-        "id": bi.id,
-        "household_id": bi.household_id,
-        "name": bi.name,
-        "substitute": bi.substitute,
-        "created_at": bi.created_at.isoformat() if bi.created_at else None,
-        "updated_at": bi.updated_at.isoformat() if bi.updated_at else None,
-    }
-
-
-def _session_out(ps: PrepSession) -> dict:
-    return {
-        "id": ps.id,
-        "household_id": ps.household_id,
-        "label": ps.label,
-        "is_active": ps.is_active,
-        "target_containers": ps.target_containers,
-        "container_oz": ps.container_oz,
-        "recipes": [
-            {
-                "entry_id": pr.id,
-                "recipe_id": pr.recipe_id,
-                "session_id": pr.session_id,
-                "recipe_title": pr.recipe.title if pr.recipe else "",
-                "servings_target": pr.servings_target,
-                "scaled_ingredients": json.loads(pr.scaled_ingredients_json) if pr.scaled_ingredients_json else None,
-            }
-            for pr in ps.recipes
-        ],
-        "created_at": ps.created_at.isoformat() if ps.created_at else None,
-        "completed_at": ps.completed_at.isoformat() if ps.completed_at else None,
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -2730,42 +2327,6 @@ async def delete_meal_plan(entry_id: str, request: Request, db: Session = Depend
         await _ws_manager.broadcast(hh.id, "meal_plan_updated", {})
     return {"status": "ok"}
 
-def _aggregate_ingredients(db: Session, hh_id: str, recipes_data: List[dict]):
-    good_stock = {
-        s.name.lower().strip()
-        for s in db.query(StockroomItem).filter_by(household_id=hh_id).all()
-        if s.state == StockState.GOOD
-    }
-    
-    aggregated: Dict[str, dict] = {}
-    for data in recipes_data:
-        ingredients_json = data.get("ingredients_json", "[]")
-        try:
-            ingredients = json.loads(ingredients_json)
-        except (json.JSONDecodeError, TypeError):
-            continue
-        for ing in ingredients:
-            name = ing.get("name", "")
-            if not name:
-                continue
-            name_key = name.lower().strip()
-            if name_key in good_stock:
-                continue
-            if name_key in aggregated:
-                try:
-                    aggregated[name_key]["qty"] = _format_qty(
-                        _parse_qty(str(aggregated[name_key]["qty"]))
-                        + _parse_qty(str(ing.get("qty", 0)))
-                    )
-                except (ValueError, TypeError):
-                    pass
-            else:
-                aggregated[name_key] = {
-                    "name": name,
-                    "qty": ing.get("qty", ""),
-                    "unit": ing.get("unit", ""),
-                }
-    return list(aggregated.values())
 
 @router.post("/meal-plan/shop-this-week")
 async def shop_this_week(request: Request, db: Session = Depends(get_db)):
