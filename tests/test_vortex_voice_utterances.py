@@ -1,7 +1,8 @@
 """
 tests/test_vortex_voice_utterances.py
 
-Streamed utterances, and per-device auth on the Willow socket.
+Streamed utterances, the removal of the in-repo Vortex client, and the
+retirement of the Willow endpoint.
 
 The utterance tests exist because the previous behaviour was silent: a command
 longer than one frame was dropped with a log line and the room got nothing
@@ -265,7 +266,7 @@ def test_b_the_in_repo_vortex_client_is_gone():
 
 
 # ---------------------------------------------------------------------------
-# C — Willow authenticates per device
+# C — Willow is retired; the identity work it prompted is kept
 # ---------------------------------------------------------------------------
 
 _ids = itertools.count(random.randint(1, 1_000_000))
@@ -273,107 +274,68 @@ _ids = itertools.count(random.randint(1, 1_000_000))
 
 @pytest.fixture(scope="module")
 def admin_headers():
-    token = create_access_token("willow-admin", "wa@test.local", "admin")
+    token = create_access_token("fleet-admin", "fa@test.local", "admin")
     return {"Authorization": f"Bearer {token}"}
 
 
-def _claim(admin_headers):
-    r = client.post("/api/willow/units/claim",
-                    json={"name": f"Box {next(_ids)}"}, headers=admin_headers)
-    assert r.status_code == 200, r.text
-    return r.json()["unit_id"], r.json()["unit_token"]
+def test_c_the_willow_route_is_gone():
+    """
+    No ESP32 hardware exists and none is planned, so the endpoint, its fleet
+    program and its shared device token are all removed rather than left
+    mounted with no owner.
+    """
+    from main import app
+
+    paths = [getattr(r, "path", "") for r in app.routes]
+    assert not [p for p in paths if p.startswith("/api/willow")]
+
+    from api.routes.fleet import FLEET_PROGRAMS
+    assert "willow" not in FLEET_PROGRAMS
+
+    with pytest.raises(ImportError):
+        __import__("api.routes.willow")
 
 
-def test_c_shared_device_token_is_gone():
+def test_c_the_shared_device_token_is_gone():
     """One secret across every device meant any device could be any other."""
     from config.settings import get_settings
 
     assert not hasattr(get_settings(), "willow_device_token")
 
 
-def test_c_willow_units_can_be_claimed(admin_headers):
-    unit_id, token = _claim(admin_headers)
-    assert unit_id and len(token) == 64
+def test_c_claiming_a_unit_records_its_owner(admin_headers):
+    """
+    Kept from the Willow work and worth having regardless: a unit acquires an
+    identity from whoever claimed it, so it never has to assert one.
+    """
+    r = client.post("/api/kova/units/claim",
+                    json={"name": f"Bot {next(_ids)}"}, headers=admin_headers)
+    assert r.status_code == 200, r.text
+    unit_id, token = r.json()["unit_id"], r.json()["unit_token"]
 
-    # Claiming records the owner, which is how the device gets an identity
-    # without ever asserting one.
     async def _owner():
         from api.routes.fleet import unit_owner
         from providers.memory.sqlite_store import SQLiteStore
-        return await unit_owner(SQLiteStore(), "willow", unit_id)
+        return await unit_owner(SQLiteStore(), "kova", unit_id)
 
-    assert asyncio.run(_owner()) == "willow-admin"
+    assert asyncio.run(_owner()) == "fleet-admin"
 
-
-def test_c_token_is_hashed_at_rest(admin_headers):
-    unit_id, token = _claim(admin_headers)
-
-    async def _stored():
-        from providers.memory.sqlite_store import SQLiteStore
-        row = await SQLiteStore().execute_read_one_async(
-            "SELECT unit_token FROM fleet_units WHERE program='willow' AND unit_id=?",
-            (unit_id,),
-        )
-        return row["unit_token"]
-
-    stored = asyncio.run(_stored())
-    assert stored != token and stored.startswith("sha256:")
+    # The column is a column, not a metadata key: `register` replaces metadata
+    # wholesale, so an owner stored there would be wiped on first reconnect.
+    assert client.post("/api/kova/register",
+                       json={"unit_id": unit_id, "metadata": {"fw": "2.0"}},
+                       headers={"X-Unit-Token": token}).status_code == 200
+    assert asyncio.run(_owner()) == "fleet-admin"
 
 
-def test_c_unknown_unit_is_refused_before_the_handshake():
-    with pytest.raises(Exception):
-        with client.websocket_connect("/api/willow/ws?unit_id=no-such-unit"):
-            pass
-
-
-def test_c_a_wrong_token_is_refused(admin_headers):
-    unit_id, _ = _claim(admin_headers)
-    with client.websocket_connect(f"/api/willow/ws?unit_id={unit_id}") as ws:
-        ws.send_json({"type": "auth", "unit_id": unit_id, "token": "wrong"})
-        with pytest.raises(Exception):
-            ws.receive_json()
-
-
-def test_c_identity_is_not_accepted_from_the_device(admin_headers):
-    """
-    A device stating a user_id must not become that user. The owner is
-    resolved from the unit record and the claim is ignored.
-    """
-    unit_id, token = _claim(admin_headers)
-
-    with client.websocket_connect(f"/api/willow/ws?unit_id={unit_id}") as ws:
-        ws.send_json({"type": "auth", "unit_id": unit_id, "token": token,
-                      "user_id": "somebody-else"})
-        hello = ws.receive_json()
-        assert hello["type"] == "auth_ok"
-        assert hello["unit_id"] == unit_id
-        # No user_id echoed back, and nothing the device said was honoured.
-        assert hello.get("user_id") != "somebody-else"
-
-
-def test_c_an_unowned_unit_cannot_connect():
-    """
-    Acting as a fallback account would be guessing whose memory to use, so a
-    unit with no owner is refused instead.
-    """
-    async def _make_orphan():
-        from api.routes.fleet import _ensure_schema, _now
-        from core.vortex_security import hash_unit_token, mint_unit_token
+def test_c_an_unclaimed_unit_has_no_owner():
+    """Absence is reported as absence, not as some fallback account."""
+    async def _owner():
+        from api.routes.fleet import _ensure_schema, unit_owner
         from providers.memory.sqlite_store import SQLiteStore
 
         store = SQLiteStore()
         await _ensure_schema(store)
-        unit_id = f"orphan-{next(_ids)}"
-        token = mint_unit_token()
-        await store.execute_write_async(
-            "INSERT INTO fleet_units (program, unit_id, name, unit_token, "
-            "owner_user_id, registered_at) VALUES ('willow', ?, 'Orphan', ?, '', ?)",
-            (unit_id, hash_unit_token(token), _now()),
-        )
-        return unit_id, token
+        return await unit_owner(store, "kova", f"never-claimed-{next(_ids)}")
 
-    unit_id, token = asyncio.run(_make_orphan())
-    with client.websocket_connect(
-            f"/api/willow/ws?unit_id={unit_id}&token={token}") as ws:
-        with pytest.raises(Exception):
-            ws.receive_json()
+    assert asyncio.run(_owner()) == ""

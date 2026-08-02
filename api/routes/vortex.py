@@ -395,9 +395,9 @@ async def vortex_websocket(websocket: WebSocket) -> None:
     """
     One authenticated bidirectional channel per unit.
 
-    Auth follows willow's shape — refuse before accept() where we can, require
-    an auth frame first — but not its credential model: every unit has its own
-    token, and the user id is resolved here rather than asserted by the client.
+    Refuse before accept() where we can, then require an auth frame. Every
+    unit has its own token, hashed at rest, and the user id is resolved here
+    rather than asserted by the client.
 
     Polling cannot carry presence. River highlighting a card *while she talks
     about it* needs sub-second latency, and the orb's amplitude stream needs

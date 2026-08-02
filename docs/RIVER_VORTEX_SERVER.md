@@ -413,34 +413,25 @@ missing.
 
 ---
 
-## Willow (`/api/willow/ws`)
+## Willow — retired
 
-Kept for the ESP32-S3 Box hardware it was written for, but moved to
-**per-device tokens**. It used to accept one shared `WILLOW_DEVICE_TOKEN`
-across every device, which means any device can impersonate any other and one
-leak re-keys the house — exactly the credential model the Vortex work replaced.
+`/api/willow/ws` is gone: the route, the `willow` fleet program, its claim
+endpoint, the `willow_router` registration and the shared
+`WILLOW_DEVICE_TOKEN` setting. No ESP32-S3 Box hardware exists and none is
+planned, and a shared device token mounted with no owner is worse than no
+endpoint — one secret across every device means any device can impersonate any
+other, and a single leak re-keys the house.
 
-Now: `willow` is a fleet program, so each box is claimed by an admin and gets
-its own token, hashed at rest and compared with `hmac.compare_digest` on the
-same path the Vortex socket uses.
+Two things from that work are kept, because they are worth having on their own:
 
-```
-POST /api/willow/units/claim  {"name": "Kitchen Box"}  → {unit_id, unit_token}
-WS   /api/willow/ws?unit_id=…&token=…
-     or first frame {"type":"auth","unit_id":…,"token":…} within 5s
-```
-
-The `Sec-WebSocket-Protocol` auth form is gone — it can carry only one opaque
-value, which is the shared-secret shape being removed.
-
-**Identity is no longer self-asserted.** The socket used to take `user_id`
-straight off the query string, so a device could act as anybody. The owner is
-now the admin who claimed the unit, recorded in `fleet_units.owner_user_id`,
-and a `user_id` in the auth frame is ignored. A unit with no owner is refused
-rather than defaulted to some fallback account.
-
-**Migration:** boxes configured with the old shared token are refused until
-they are claimed and given their own. That break is the point of the change.
+- **`fleet_units.owner_user_id`.** A unit acquires an identity from whoever
+  claimed it, so it never has to assert one. A column rather than a metadata
+  key: the device `register` call replaces metadata wholesale, so an owner
+  stored there would be wiped the first time a unit came back online.
+- **`unit_owner()`** in `api/routes/fleet.py` — the single place a
+  unit-authenticated request turns into a user. It returns `""` for an
+  unclaimed unit rather than a fallback account, because acting as some
+  default would be guessing whose memory and settings to use.
 
 ---
 

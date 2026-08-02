@@ -53,7 +53,7 @@ from providers.memory.sqlite_store import SQLiteStore
 
 logger = logging.getLogger(__name__)
 
-FLEET_PROGRAMS = ("horizon", "kova", "sentinel", "vortex", "vexa", "willow")
+FLEET_PROGRAMS = ("horizon", "kova", "sentinel", "vortex", "vexa")
 
 _MAX_TELEMETRY_BATCH = 50
 _ACK_STATUSES = {"acknowledged", "rejected", "completed", "failed"}
