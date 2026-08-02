@@ -10,6 +10,7 @@ and that a voice command and an HTTP call do the same thing.
 """
 
 import asyncio
+import random
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -463,7 +464,29 @@ def test_cooking_intent_defers_to_the_llm_when_not_cooking():
 # Vortex integration
 # ---------------------------------------------------------------------------
 
-def test_step_changes_reach_the_kitchen_screen(headers, recipe_id):
+
+@pytest.fixture(scope="module")
+def kitchen_unit(headers):
+    """
+    A paired Vortex unit in the kitchen, so a cooking card has somewhere to go.
+
+    Explicit rather than inherited: these two tests used to pass only because
+    another test file had left a kitchen unit in a shared database. With the
+    suite isolated they need their own, and a card that reaches no unit is
+    correct behaviour rather than a bug to assert around.
+    """
+    code = f"{random.randint(10_000_000, 99_999_999)}"
+    r = client.post("/api/vortex/pair/request",
+                    json={"code": code, "metadata": {"has_display": True}})
+    assert r.status_code == 200, r.text
+    r = client.post("/api/vortex/pair/approve",
+                    json={"code": code, "name": "Kitchen", "room": "kitchen"},
+                    headers=headers)
+    assert r.status_code == 200, r.text
+    return r.json()["unit_id"]
+
+
+def test_step_changes_reach_the_kitchen_screen(headers, recipe_id, kitchen_unit):
     """A step that only reached one of the three screens is the bug this fixes."""
     from core.vortex_surfaces import get_surface_publisher
 
@@ -480,7 +503,7 @@ def test_step_changes_reach_the_kitchen_screen(headers, recipe_id):
     assert card.speech and "Step 2" in card.speech
 
 
-def test_ending_a_session_takes_the_card_down(headers, recipe_id):
+def test_ending_a_session_takes_the_card_down(headers, recipe_id, kitchen_unit):
     """A card left to expire is a card that stayed up after it stopped mattering."""
     from core.vortex_surfaces import get_surface_publisher
 
