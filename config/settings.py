@@ -147,11 +147,31 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     stt_provider: str = Field(
         default="whisper_local",
-        description="STT provider key. Supported: whisper_local",
+        description="STT provider key. Supported: whisper_local | parakeet",
     )
     whisper_model_size: str = Field(
         default="base",
         description="Whisper model size: tiny | base | small | medium | large",
+    )
+    parakeet_model: str = Field(
+        default="nvidia/parakeet-tdt-0.6b-v3",
+        description=(
+            "NeMo ASR model id, used when stt_provider='parakeet'. Parakeet "
+            "TDT 0.6B beats Whisper large-v3 on English at a quarter the size "
+            "and is fast on CPU. Covers English and major European languages "
+            "only -- stay on whisper_local if you need the other ~90. "
+            "Requires `pip install nemo_toolkit[asr]`."
+        ),
+    )
+    parakeet_device: str = Field(
+        default="cpu",
+        description=(
+            "Where to run Parakeet: 'cpu' | 'cuda' | 'auto' (or an explicit "
+            "device like 'cuda:1'). Defaults to 'cpu' deliberately -- keeping "
+            "transcription off the GPU leaves that VRAM for the LLM, which "
+            "is the tighter constraint on a small card. Switch to 'auto' "
+            "once the GPU has headroom."
+        ),
     )
     audio_input_device: Optional[int] = Field(
         default=None,
@@ -643,6 +663,47 @@ class Settings(BaseSettings):
     rag_top_k: int = Field(
         default=5,
         description="Number of chunks retrieved per RAG query.",
+    )
+    rag_rerank_enabled: bool = Field(
+        default=False,
+        description=(
+            "Re-score RAG results with a cross-encoder before handing them to "
+            "the LLM. Vector search compares embeddings computed without ever "
+            "seeing the query; a cross-encoder reads the query and the chunk "
+            "together, so it is much better at ranking -- at the cost of "
+            "running a second model. Requires `pip install sentence-transformers`. "
+            "Off by default: with it off, retrieval behaves exactly as before."
+        ),
+    )
+    rag_rerank_model: str = Field(
+        default="BAAI/bge-reranker-base",
+        description=(
+            "HuggingFace cross-encoder used for reranking. "
+            "'BAAI/bge-reranker-base' is the light default (~280M params, "
+            "comfortable on CPU). 'BAAI/bge-reranker-v2-m3' is stronger and "
+            "multilingual but noticeably heavier -- a good swap after a "
+            "hardware upgrade. Downloaded lazily on first use."
+        ),
+    )
+    rag_rerank_device: str = Field(
+        default="cpu",
+        description=(
+            "Where to run the reranker: 'cpu' | 'cuda' | 'auto' (or an "
+            "explicit device like 'cuda:1'). Defaults to 'cpu' deliberately: "
+            "on a small GPU the LLM needs every megabyte of VRAM, and the "
+            "reranker is fast enough on CPU. Switch to 'auto' once the GPU "
+            "has headroom."
+        ),
+    )
+    rag_fetch_k: int = Field(
+        default=25,
+        description=(
+            "How many chunks to pull from the vector store before reranking, "
+            "narrowed to rag_top_k afterwards. Ignored when reranking is off. "
+            "A bigger shortlist gives the reranker more to work with and is "
+            "where most of the remaining quality lives -- raise it when you "
+            "have the hardware to chew through it."
+        ),
     )
     rag_extractor: str = Field(
         default="unstructured",
@@ -1352,6 +1413,28 @@ class Settings(BaseSettings):
     voice_id_threshold: float = Field(
         default=0.75,
         description="Cosine similarity threshold for Voice ID (0.0-1.0).",
+    )
+    voice_id_auto_identify: bool = Field(
+        default=False,
+        description=(
+            "Let River re-identify the speaker on every voice turn and switch "
+            "to that user's memory and settings. This is what makes a shared "
+            "device -- a Vortex hub on the kitchen counter -- work for a whole "
+            "household instead of one login. Off by default: it only helps "
+            "once household members have enrolled voice prints, and an "
+            "unenrolled house sees no benefit. An unrecognised speaker always "
+            "falls back to the session user rather than being guessed at."
+        ),
+    )
+    voice_id_min_margin: float = Field(
+        default=0.05,
+        description=(
+            "How far ahead of the runner-up a voice match must score to be "
+            "trusted. Household members often sound alike and can both clear "
+            "voice_id_threshold; the margin is what tells them apart. Raise it "
+            "if River confuses two people, lower it if she fails to recognise "
+            "someone who is enrolled."
+        ),
     )
     voice_id_min_audio_seconds: float = Field(
         default=1.0,

@@ -4,7 +4,16 @@ import { useConversation } from '../hooks/useConversation.js'
 import AudioVisualizer from '../components/AudioVisualizer.jsx'
 import RsMarkdown from '../components/RsMarkdown.jsx'
 
-const RiverSong = lazy(() => import('../components/RiverSong.jsx'))
+// The avatar renders a VRM character and falls back to the orb on its own if
+// no model is installed, so this is safe to point at either component.
+// Set VITE_RIVER_USE_AVATAR=false to force the orb even with a model present.
+const useAvatar = import.meta.env?.VITE_RIVER_USE_AVATAR !== 'false'
+
+const RiverSong = lazy(() =>
+  useAvatar
+    ? import('../components/RiverAvatar.jsx')
+    : import('../components/RiverSong.jsx'),
+)
 
 export default function ConversationPage({ setAction }) {
   const { token, user } = useAuth()

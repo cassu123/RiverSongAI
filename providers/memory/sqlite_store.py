@@ -194,6 +194,7 @@ CREATE TABLE IF NOT EXISTS users (
     force_password_change INTEGER NOT NULL DEFAULT 0,
     is_suspended  INTEGER NOT NULL DEFAULT 0,
     tokens_valid_after TEXT,
+    free_models_only INTEGER NOT NULL DEFAULT 0,
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL
 );
@@ -864,6 +865,7 @@ class SQLiteStore(
             "ALTER TABLE users ADD COLUMN force_password_change INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE users ADD COLUMN is_suspended INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE users ADD COLUMN tokens_valid_after TEXT",
+            "ALTER TABLE users ADD COLUMN free_models_only INTEGER NOT NULL DEFAULT 0",
             # Q1#5 — TOTP 2FA. Per-user opt-in; default off so existing logins
             # are untouched.
             "ALTER TABLE users ADD COLUMN totp_secret TEXT NOT NULL DEFAULT ''",

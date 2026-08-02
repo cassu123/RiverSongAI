@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Header, Request
 from pydantic import BaseModel
 from core.auth import decode_token
+from core.identity import ENROLLMENT_PHRASES, MIN_ENROLLMENT_SAMPLES
 from core.limiter import limiter
 from config.settings import get_settings
 from providers.voice_id.voice_id_provider import VoiceIDProvider
@@ -28,6 +29,16 @@ class VoiceStatusResponse(BaseModel):
     sample_count: int = 0
     enrolled_at: Optional[str] = None
     last_updated: Optional[str] = None
+
+
+class EnrollmentScriptResponse(BaseModel):
+    """The phrases to read, and how far through the user already is."""
+    phrases: list[str]
+    total: int
+    completed: int
+    remaining: list[str]
+    min_samples: int
+    complete: bool
 
 
 class EnrollResponse(BaseModel):
@@ -74,6 +85,29 @@ async def enroll(
         raise HTTPException(status_code=400, detail="Audio too short")
     result = await _get_provider().enroll_sample(user_id, wav_bytes)
     return result
+
+
+@router.get("/enrollment-script", response_model=EnrollmentScriptResponse)
+async def get_enrollment_script(user_id: str = Depends(_require_user)):
+    """
+    The Voice Match setup script, plus this user's progress through it.
+
+    The UI walks the user through `remaining` one phrase at a time, POSTing
+    each recording to /enroll. Progress is derived from the sample count the
+    provider already tracks, so a half-finished enrollment resumes where it
+    left off instead of starting over.
+    """
+    status = await _get_provider().get_status(user_id)
+    completed = int(status.get("sample_count", 0) or 0)
+
+    return EnrollmentScriptResponse(
+        phrases=ENROLLMENT_PHRASES,
+        total=len(ENROLLMENT_PHRASES),
+        completed=completed,
+        remaining=ENROLLMENT_PHRASES[completed:],
+        min_samples=MIN_ENROLLMENT_SAMPLES,
+        complete=completed >= MIN_ENROLLMENT_SAMPLES,
+    )
 
 
 @router.get("/me", response_model=VoiceStatusResponse)
