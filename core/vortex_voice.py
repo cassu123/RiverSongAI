@@ -26,8 +26,11 @@ moment the WAV is produced.
 from __future__ import annotations
 
 import base64
+import io
 import logging
-from typing import Any, Dict, Optional
+import wave
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 from core.vortex_security import LoopLock
 
@@ -44,6 +47,123 @@ _loop_lock = LoopLock()
 # to own a conversation.
 _tts_provider: Optional[Any] = None
 _tts_lock = LoopLock()
+
+# ---------------------------------------------------------------------------
+# Utterance accumulation
+# ---------------------------------------------------------------------------
+#
+# A unit streams one utterance as several `audio_chunk` frames and marks the
+# last of them `final`. Anything before the final chunk has to be kept, or the
+# whole utterance has to fit in a single frame — which capped speech at about
+# four seconds and silently dropped everything longer. "Set a timer for ten
+# minutes" fit. "Put milk and eggs on the shopping list and start the oven
+# timer" did not.
+#
+# The bound that matters is the total, not the frame: a unit that never sends
+# `final` must not be able to grow this without limit. The device records at
+# most 30 seconds, which at 16 kHz mono s16le is 960,000 bytes; the cap sits
+# just above that so a normal long command is never the thing that trips it.
+
+AUDIO_BYTES_PER_SECOND = 16_000 * 2  # 16 kHz, mono, s16le
+MAX_UTTERANCE_SECONDS = 32
+MAX_UTTERANCE_BYTES = AUDIO_BYTES_PER_SECOND * MAX_UTTERANCE_SECONDS
+
+
+@dataclass
+class _Utterance:
+    """Audio accumulated for one unit since its last final chunk."""
+    chunks: List[bytes] = field(default_factory=list)
+    total: int = 0
+    # Set when the cap is passed. The utterance is then dropped *whole* rather
+    # than transcribed from whatever fitted — half a command acted on is worse
+    # than a command that visibly failed.
+    overflowed: bool = False
+
+
+_utterances: Dict[str, _Utterance] = {}
+_utterance_lock = LoopLock()
+
+
+def _pcm_of(chunk: bytes) -> bytes:
+    """
+    Return the raw PCM inside a chunk, unwrapping a WAV container if present.
+
+    Chunks are raw 16 kHz mono s16le by protocol, but a unit that wraps each
+    one in a WAV header would otherwise produce `RIFF…RIFF…` on concatenation,
+    which decodes as only the first chunk — the audio would go quietly missing
+    rather than fail. Unwrapping here makes the join valid either way.
+    """
+    if not chunk.startswith(b"RIFF"):
+        return chunk
+    try:
+        with wave.open(io.BytesIO(chunk), "rb") as handle:
+            return handle.readframes(handle.getnframes())
+    except Exception:
+        # Not a WAV this can parse. Passing it through keeps a single-chunk
+        # utterance working, which is the case that matters.
+        return chunk
+
+
+async def _accumulate(unit_id: str, audio: bytes) -> bool:
+    """
+    Hold a non-final chunk. Returns False once the utterance is over the cap.
+    """
+    async with _utterance_lock:
+        pending = _utterances.setdefault(unit_id, _Utterance())
+        if pending.overflowed:
+            return False
+        if pending.total + len(audio) > MAX_UTTERANCE_BYTES:
+            pending.overflowed = True
+            pending.chunks.clear()  # Release the audio; only the marker matters.
+            logger.warning(
+                "Vortex unit %s exceeded the %ds utterance limit; dropping it.",
+                unit_id, MAX_UTTERANCE_SECONDS,
+            )
+            return False
+        pending.chunks.append(audio)
+        pending.total += len(audio)
+        return True
+
+
+async def _take_utterance(unit_id: str, final_chunk: bytes) -> Optional[bytes]:
+    """
+    Join the buffered chunks with the final one and reset the buffer.
+
+    Returns None when the utterance overflowed and should be discarded. The
+    buffer is cleared either way, so a half-spoken command can never prepend
+    itself to the next one.
+    """
+    async with _utterance_lock:
+        pending = _utterances.pop(unit_id, None)
+
+    if pending is None or not pending.chunks:
+        if pending is not None and pending.overflowed:
+            return None
+        # Single-frame utterance: hand it over untouched so a WAV container
+        # keeps its header and its own sample rate.
+        return final_chunk
+
+    if pending.overflowed:
+        return None
+
+    joined = b"".join(_pcm_of(c) for c in pending.chunks) + _pcm_of(final_chunk)
+    logger.info(
+        "Vortex unit %s utterance assembled: %d chunk(s), %d bytes (~%.1fs).",
+        unit_id, len(pending.chunks) + 1, len(joined),
+        len(joined) / AUDIO_BYTES_PER_SECOND,
+    )
+    return joined
+
+
+async def clear_utterance(unit_id: str) -> None:
+    """
+    Drop whatever a unit had part-spoken.
+
+    Called when its socket closes: the rest of that sentence is never arriving,
+    and it must not become the opening of the next one.
+    """
+    async with _utterance_lock:
+        _utterances.pop(unit_id, None)
 
 
 async def _get_loop(unit_id: str, user_id: str) -> Any:
@@ -75,8 +195,10 @@ async def handle_unit_utterance(*, unit_id: str, user_id: str, audio: bytes,
         user_id: The unit's owner, resolved from the pairing record. Never
             taken from the device.
         audio: 16kHz mono s16le PCM, or a WAV container.
-        final: False for a mid-utterance chunk. Only the final chunk runs a
-            turn; partial chunks just keep the orb in its listening state.
+        final: False for a mid-utterance chunk. Non-final chunks are buffered
+            and joined onto the final one, so an utterance is bounded by the
+            device's own recording limit rather than by the size of a single
+            frame.
 
     Nothing is returned — responses go out over the unit's WebSocket as
     presence, audio and amplitude frames.
@@ -87,7 +209,21 @@ async def handle_unit_utterance(*, unit_id: str, user_id: str, audio: bytes,
     hub = get_vortex_hub()
 
     if not final:
+        if not await _accumulate(unit_id, audio):
+            await hub.presence(unit_id, "error",
+                               caption="That was longer than I can listen for")
+            return
         await hub.presence(unit_id, "listening")
+        return
+
+    audio = await _take_utterance(unit_id, audio)
+    if audio is None:
+        # Over the cap. Already logged; tell the room rather than going quiet.
+        await hub.presence(unit_id, "error",
+                           caption="That was longer than I can listen for")
+        return
+    if not audio:
+        await hub.presence(unit_id, "idle")
         return
 
     from core.vortex_actions import origin_for_unit

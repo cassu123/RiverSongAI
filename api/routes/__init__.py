@@ -31,7 +31,6 @@ from .rover import router as rover_router
 from .vault import router as vault_router
 from .pulse import router as pulse_router
 from .voice_id import router as voice_id_router
-from .willow import router as willow_router
 from . import n8n_webhooks
 from .legal import router as legal_router
 from .usage import router as usage_router
@@ -90,7 +89,6 @@ __all__ = [
     "vault_router",
     "pulse_router",
     "voice_id_router",
-    "willow_router",
     "n8n_webhooks",
     "legal_router",
     "usage_router",

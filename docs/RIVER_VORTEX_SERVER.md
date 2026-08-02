@@ -380,6 +380,61 @@ or an alarm.
 
 ---
 
+## Streamed utterances
+
+A unit sends one utterance as several `audio_chunk` frames and sets `final` on
+the last. Non-final frames are buffered per unit and joined onto the final one
+before transcription.
+
+This matters more than it sounds. Before it, only the final frame survived, so
+an utterance had to fit in a single 128 KB frame — 4.1 seconds at 16 kHz mono
+s16le. Anything longer was dropped with a log line and the room got silence.
+*"Set a timer for ten minutes"* fit. *"Put milk and eggs on the shopping list
+and start the oven timer"* did not.
+
+Two different caps, deliberately:
+
+| Cap | Value | What it bounds |
+|---|---|---|
+| `MAX_AUDIO_CHUNK_BYTES` | 128 KB | one frame — a sane wire size |
+| `MAX_UTTERANCE_BYTES` | 32 s | the accumulated total, per unit |
+
+The total is what stops a unit that never sends `final` from growing the
+buffer forever. It sits just above the device's own 30-second recording limit,
+so a long-but-legitimate command is never what trips it. An utterance that
+does pass the cap is dropped **whole** — half a command acted on is worse than
+one that visibly failed — and the orb says so rather than going quiet.
+
+The buffer is cleared on every `final` and on disconnect, so a half-spoken
+command can never prepend itself to the next one. Chunks are raw PCM by
+protocol; a WAV header on any of them is unwrapped before joining, because
+`RIFF…RIFF…` decodes as only the first chunk and the rest would go quietly
+missing.
+
+---
+
+## Willow — retired
+
+`/api/willow/ws` is gone: the route, the `willow` fleet program, its claim
+endpoint, the `willow_router` registration and the shared
+`WILLOW_DEVICE_TOKEN` setting. No ESP32-S3 Box hardware exists and none is
+planned, and a shared device token mounted with no owner is worse than no
+endpoint — one secret across every device means any device can impersonate any
+other, and a single leak re-keys the house.
+
+Two things from that work are kept, because they are worth having on their own:
+
+- **`fleet_units.owner_user_id`.** A unit acquires an identity from whoever
+  claimed it, so it never has to assert one. A column rather than a metadata
+  key: the device `register` call replaces metadata wholesale, so an owner
+  stored there would be wiped the first time a unit came back online.
+- **`unit_owner()`** in `api/routes/fleet.py` — the single place a
+  unit-authenticated request turns into a user. It returns `""` for an
+  unclaimed unit rather than a fallback account, because acting as some
+  default would be guessing whose memory and settings to use.
+
+---
+
 ## Not yet built
 
 - **The device-side cast handler.** The command payload and the queueing are
