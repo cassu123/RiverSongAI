@@ -166,7 +166,11 @@ watchdog>=4.0.0
 # -----------------------------------------------------------------------------
 # MCP server (Model Context Protocol — exposes tools to external clients)
 # -----------------------------------------------------------------------------
-mcp>=1.0.0
+# Capped below 2.0: mcp 2.0 removed the @server.list_tools() and
+# @server.call_tool() decorators that mcp_server.py is built on, so an
+# unpinned floor turned every CI run red the day 2.0 shipped. Lifting this cap
+# means porting mcp_server.py to the 2.x handler API first.
+mcp>=1.0.0,<2.0.0
 # open-interpreter==0.4.3  # excluded: pins starlette<0.38 which conflicts with fastapi>=0.130
 
 # -----------------------------------------------------------------------------
