@@ -6,12 +6,18 @@
    bloom bleeding outward. No mechanical structure — the armoured-iris version
    this replaces was the wrong creature entirely.
 
-   How the "liquid" is faked, since it is not obvious:
-     Three oversized conic-gradient veils sit inside a circular clip. Each is
-     heavily blurred, rotates at a different speed, and two of the three rotate
-     BACKWARDS. Counter-rotation is the whole trick — same-direction layers
-     read as a pinwheel spinning, opposing layers fold through each other and
-     read as fluid. `mix-blend-mode: screen` keeps them additive like light.
+   How the plasma is faked, since it is not obvious:
+     The body is a LIT gradient — white-hot centre, out through the accent, to
+     a darker mid band and a glowing rim. Over that mid band sit two layers of
+     concentric rings (repeating-radial-gradient) warped by an SVG turbulence
+     displacement filter. A warped ring curls into a filament; that is the
+     whole trick. Conic gradients cannot do this — they are radial by
+     construction, so displacing them yields a starburst, not plasma. The rings
+     counter-rotate so the filaments fold through each other rather than
+     spinning as one rigid pinwheel.
+
+     The filaments MUST live in the darker mid band: `screen` over an already
+     bright area is a no-op and they simply vanish.
 
    Everything scales off the element's own box, so one component serves the
    20px header dot and the 400px stage. No fixed pixel sizes below.
@@ -22,6 +28,8 @@
   --rs-bulb-level: 0;          /* 0..1, written by PresenceBulb.jsx */
   --rs-bulb-speed: 1;          /* per-state multiplier */
   --rs-bulb-hue: var(--primary);
+  /* The hot inner stop. Derived so any skin gets a matching highlight. */
+  --rs-bulb-hue2: color-mix(in srgb, var(--primary) 55%, white);
   --rs-bulb-deep: var(--md-primary-container, #004a77);
 
   /* Amplitude, shaped. The raw level is linear; easing it keeps quiet speech
@@ -66,7 +74,7 @@ button.rs-bulb {
     color-mix(in srgb, var(--rs-bulb-hue) 55%, transparent) 0%,
     color-mix(in srgb, var(--rs-bulb-hue) 22%, transparent) 32%,
     transparent 68%);
-  opacity: calc(0.18 + var(--rs-bulb-flux) * 0.40);
+  opacity: calc(0.40 + var(--rs-bulb-flux) * 0.55);
   filter: blur(calc(var(--rs-bulb-size) * 0.06));
   z-index: 0;
   transition: opacity 120ms linear;
@@ -81,83 +89,52 @@ button.rs-bulb {
   border-radius: 50%;
   overflow: hidden;
   z-index: 1;
+  /* Lit, not dark: the sphere is the light source. The darker band at 46-68%
+     is deliberate headroom for the filaments to read against. */
   background:
-    radial-gradient(circle at 50% 50%,
-      color-mix(in srgb, var(--rs-bulb-deep) 30%, #05070c) 0%,
-      #04060a 72%,
-      #020407 100%);
-  /* Inner shadow reads as glass thickness at the edge. */
-  box-shadow:
-    inset 0 0 calc(var(--rs-bulb-size) * 0.14)
-      color-mix(in srgb, var(--bg-base, #050505) 85%, transparent);
+    radial-gradient(circle at 50% 47%,
+      #ffffff 0%,
+      var(--rs-bulb-hue2) calc(5% + var(--rs-bulb-flux) * 5%),
+      var(--rs-bulb-hue) calc(17% + var(--rs-bulb-flux) * 6%),
+      color-mix(in srgb, var(--rs-bulb-hue) 42%, #120804) 46%,
+      color-mix(in srgb, var(--rs-bulb-hue) 18%, #07050a) 68%,
+      color-mix(in srgb, var(--rs-bulb-hue) 34%, #0a0710) 88%);
+  filter: saturate(calc(1 + var(--rs-bulb-flux) * 0.45));
 }
 
-/* --- Inner veils -----------------------------------------------------------
-   Each veil is a thin, OFF-CENTRE bright annulus. Rotating an off-centre ring
-   sweeps it through the sphere as an arc, and a little blur turns that arc
-   into a ribbon — which is what the references actually show. The first
-   attempt used blurred conic wedges: those merge into a flat wash and expose
-   the gradient's centre as a visible pinch, because a conic has a singularity
-   and a ribbon does not.                                                     */
+/* --- Plasma filaments ------------------------------------------------------
+   Concentric rings warped by #rs-bulb-turbulence (injected once by
+   PresenceBulb.jsx). Masked to the body's darker mid band — see header. */
 
-.rs-bulb-veil {
+.rs-bulb-fil {
   position: absolute;
-  inset: -6%;
+  inset: -14%;
   border-radius: 50%;
   mix-blend-mode: screen;
   will-change: transform;
-  /* Fade at the very centre and at the rim so ribbons read as suspended
-     inside the glass rather than painted on its inside face. */
-  -webkit-mask-image: radial-gradient(circle at 50% 50%,
-    transparent 3%, #000 22%, #000 62%, transparent 88%);
-  mask-image: radial-gradient(circle at 50% 50%,
-    transparent 3%, #000 22%, #000 62%, transparent 88%);
-}
-
-.rs-bulb-veil--a {
-  background:
-    radial-gradient(circle at 66% 34%,
-      transparent 26%,
-      color-mix(in srgb, var(--rs-bulb-hue) 92%, white 18%) 33%,
-      transparent 41%),
-    radial-gradient(circle at 30% 62%,
-      transparent 34%,
-      color-mix(in srgb, var(--rs-bulb-hue) 70%, transparent) 40%,
-      transparent 47%);
-  filter: blur(calc(var(--rs-bulb-size) * 0.018));
+  filter: url(#rs-bulb-turbulence);
   opacity: calc(0.55 + var(--rs-bulb-flux) * 0.45);
-  animation: rs-bulb-spin calc(16s / var(--rs-bulb-speed)) linear infinite;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%,
+    transparent 14%, #000 30%, #000 72%, transparent 92%);
+  mask-image: radial-gradient(circle at 50% 50%,
+    transparent 14%, #000 30%, #000 72%, transparent 92%);
 }
 
-.rs-bulb-veil--b {
-  background:
-    radial-gradient(circle at 38% 30%,
-      transparent 30%,
-      color-mix(in srgb, var(--md-tertiary, #b0a0c8) 80%, transparent) 36%,
-      transparent 44%),
-    radial-gradient(circle at 70% 70%,
-      transparent 22%,
-      color-mix(in srgb, var(--rs-bulb-hue) 85%, white 10%) 28%,
-      transparent 35%);
-  filter: blur(calc(var(--rs-bulb-size) * 0.026));
-  opacity: calc(0.45 + var(--rs-bulb-flux) * 0.45);
+.rs-bulb-fil--a {
+  background: repeating-radial-gradient(circle at 50% 50%,
+    transparent 0 5.5%,
+    color-mix(in srgb, var(--rs-bulb-hue2) 96%, white 55%) 5.5% 6.3%,
+    transparent 6.3% 12%);
+  animation: rs-bulb-spin calc(30s / var(--rs-bulb-speed)) linear infinite;
+}
+
+.rs-bulb-fil--b {
+  background: repeating-radial-gradient(circle at 44% 56%,
+    transparent 0 8%,
+    #fff 8% 8.7%,
+    transparent 8.7% 17%);
   /* Reverse — see the header note. */
-  animation: rs-bulb-spin-rev calc(11s / var(--rs-bulb-speed)) linear infinite;
-}
-
-.rs-bulb-veil--c {
-  background:
-    radial-gradient(circle at 50% 26%,
-      transparent 18%,
-      color-mix(in srgb, var(--rs-bulb-hue) 100%, white 30%) 24%,
-      transparent 31%),
-    radial-gradient(circle at 26% 50%,
-      transparent 40%,
-      color-mix(in srgb, var(--rs-bulb-hue) 60%, transparent) 45%,
-      transparent 52%);
-  filter: blur(calc(var(--rs-bulb-size) * 0.012));
-  opacity: calc(0.40 + var(--rs-bulb-flux) * 0.55);
-  animation: rs-bulb-spin-rev calc(23s / var(--rs-bulb-speed)) linear infinite;
+  animation: rs-bulb-spin-rev calc(19s / var(--rs-bulb-speed)) linear infinite;
 }
 
 @keyframes rs-bulb-spin     { to { transform: rotate(360deg); } }
@@ -166,15 +143,16 @@ button.rs-bulb {
 /* Hot centre. Small, and the first thing to respond to voice. */
 .rs-bulb-core {
   position: absolute;
-  inset: 38%;
+  inset: 33%;
   border-radius: 50%;
   background: radial-gradient(circle at 50% 50%,
     color-mix(in srgb, var(--md-on-surface, #fff) 85%, var(--rs-bulb-hue)) 0%,
     color-mix(in srgb, var(--rs-bulb-hue) 75%, transparent) 38%,
     transparent 72%);
-  filter: blur(calc(var(--rs-bulb-size) * 0.03));
-  opacity: calc(0.20 + var(--rs-bulb-flux) * 0.65);
-  transform: scale(calc(0.8 + var(--rs-bulb-flux) * 0.5));
+  z-index: 3;
+  filter: blur(calc(var(--rs-bulb-size) * 0.04));
+  opacity: calc(0.55 + var(--rs-bulb-flux) * 0.45);
+  transform: scale(calc(0.85 + var(--rs-bulb-flux) * 0.40));
   transition: opacity 90ms linear, transform 90ms linear;
   mix-blend-mode: screen;
 }
@@ -186,7 +164,7 @@ button.rs-bulb {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  z-index: 2;
+  z-index: 4;
   pointer-events: none;
   background: radial-gradient(circle at 50% 50%,
     transparent 70%,
@@ -204,7 +182,7 @@ button.rs-bulb {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  z-index: 3;
+  z-index: 5;
   pointer-events: none;
   background:
     radial-gradient(ellipse 42% 30% at 32% 24%,
@@ -228,6 +206,7 @@ button.rs-bulb {
 .rs-bulb.is-error {
   --rs-bulb-speed: 0.5;
   --rs-bulb-hue: var(--md-error, #ffb4ab);
+  --rs-bulb-hue2: color-mix(in srgb, var(--md-error, #ffb4ab) 55%, white);
   --rs-bulb-deep: var(--md-error-container, #93000a);
 }
 
@@ -248,20 +227,19 @@ button.rs-bulb {
 }
 
 /* --- Small sizes -----------------------------------------------------------
-   Below roughly 48px the veils and sheen are sub-pixel noise and just cost
-   paint time. The header dot keeps the bloom, body and rim only.            */
+   At header size the filaments are sub-pixel noise, and an animated
+   feTurbulence is far too expensive to run for something 26px across on every
+   page. The dot keeps the lit body, core, bloom and rim only.               */
 
-.rs-bulb.is-compact .rs-bulb-veil--b,
-.rs-bulb.is-compact .rs-bulb-veil--c,
+.rs-bulb.is-compact .rs-bulb-fil,
 .rs-bulb.is-compact .rs-bulb-sheen { display: none; }
-.rs-bulb.is-compact .rs-bulb-veil--a { filter: blur(2px); }
 
 /* --- Reduced motion --------------------------------------------------------
    Hold a still, lit bulb rather than removing the avatar.                    */
 
 @media (prefers-reduced-motion: reduce) {
   .rs-bulb,
-  .rs-bulb-veil,
+  .rs-bulb-fil,
   .rs-bulb.is-attention .rs-bulb-bloom { animation: none; }
   .rs-bulb-core { transition: none; }
 }

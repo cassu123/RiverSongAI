@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 
 /**
- * PresenceBulb — River, rendered as liquid light inside glass.
+ * PresenceBulb — River, rendered as a luminous plasma sphere.
  *
  * ONE avatar for the whole app. It is size-agnostic: everything inside scales
  * off the element's own box, so the same component is the 20px dot in the
@@ -9,9 +9,9 @@ import React, { useEffect, useRef, useState } from 'react'
  * previously the header rendered a flat CSS circle and the Speaking page
  * rendered a separate three.js scene, so River had two unrelated faces.
  *
- * Pure CSS/SVG on purpose. The look wanted here (volumetric glass, blurred
- * inner veils, bloom) is what compositing is good at, and it costs no WebGL
- * context, no shader compile and no 268 kB of three.js on a phone.
+ * Pure CSS/SVG on purpose. A lit gradient, a turbulence-warped filament pass
+ * and bloom are what compositing is good at, and it costs no WebGL context, no
+ * shader compile and no 268 kB of three.js on a phone.
  *
  * Two inputs:
  *   state  idle | listening | thinking | speaking | error
@@ -23,6 +23,42 @@ import React, { useEffect, useRef, useState } from 'react'
  */
 
 const STATES = ['idle', 'listening', 'thinking', 'speaking', 'error']
+
+const FILTER_ID = 'rs-bulb-turbulence'
+
+/**
+ * The filaments are concentric rings pushed around by an SVG turbulence
+ * displacement filter, so that filter has to exist in the document — exactly
+ * once, however many bulbs are mounted. Duplicate SVG filter IDs are invalid
+ * and browsers silently resolve every reference to whichever came first, so
+ * rendering it per-instance would be a bug waiting to surprise someone.
+ *
+ * Injected imperatively rather than rendered by React: it is shared chrome
+ * with no owner, and this way it survives any bulb unmounting.
+ */
+function ensureFilterDefs() {
+  if (typeof document === 'undefined') return
+  if (document.getElementById(FILTER_ID)) return
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.setAttribute('aria-hidden', 'true')
+  svg.setAttribute('width', '0')
+  svg.setAttribute('height', '0')
+  svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden'
+  svg.innerHTML = `
+    <filter id="${FILTER_ID}" x="-30%" y="-30%" width="160%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.011 0.019"
+                    numOctaves="4" seed="7" result="noise">
+        <animate attributeName="baseFrequency" dur="24s" repeatCount="indefinite"
+                 values="0.011 0.019; 0.021 0.010; 0.011 0.019" />
+      </feTurbulence>
+      <!-- Keep this gentle. A large scale shreds the rings into noise instead
+           of curling them, and the filaments disappear entirely. -->
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="14"
+                         xChannelSelector="R" yChannelSelector="G" />
+    </filter>`
+  document.body.appendChild(svg)
+}
 
 export default function PresenceBulb({
   state: stateProp,
@@ -39,6 +75,8 @@ export default function PresenceBulb({
   const [busLevel, setBusLevel] = useState(0)
   const [attention, setAttention] = useState(false)
   const attentionTimer = useRef(null)
+
+  useEffect(ensureFilterDefs, [])
 
   useEffect(() => {
     if (!listens) return
@@ -101,11 +139,10 @@ export default function PresenceBulb({
     <>
       <span className="rs-bulb-bloom"  aria-hidden="true" />
       <span className="rs-bulb-body"   aria-hidden="true">
-        <span className="rs-bulb-veil rs-bulb-veil--a" />
-        <span className="rs-bulb-veil rs-bulb-veil--b" />
-        <span className="rs-bulb-veil rs-bulb-veil--c" />
-        <span className="rs-bulb-core" />
+        <span className="rs-bulb-fil rs-bulb-fil--a" />
+        <span className="rs-bulb-fil rs-bulb-fil--b" />
       </span>
+      <span className="rs-bulb-core"   aria-hidden="true" />
       <span className="rs-bulb-rim"    aria-hidden="true" />
       <span className="rs-bulb-sheen"  aria-hidden="true" />
     </>
