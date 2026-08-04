@@ -102,10 +102,12 @@ export default function NewsTab({ token, active }) {
                   className="material-symbols-rounded"
                   style={{ fontSize: '0.85rem', color: 'var(--md-on-surface-variant)', opacity: 0.7 }}
                 >
-                  {meta.icon}
+                  {meta?.icon || 'rss_feed'}
                 </span>
                 <span className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.6 }}>
-                  {meta.label.toUpperCase()}
+                  {/* A category arriving without a label took the whole Feeds
+                      page down with a render fault; fall back to its key. */}
+                  {(meta?.label || cat).toUpperCase()}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -123,7 +125,7 @@ export default function NewsTab({ token, active }) {
                       }}
                       style={{ fontSize: '0.62rem' }}
                     >
-                      {src.name.toUpperCase()}
+                      {(src.name || src.url || '').toUpperCase()}
                     </button>
                   )
                 })}
@@ -166,19 +168,15 @@ export default function NewsTab({ token, active }) {
       ) : (
         <>
           {cats.length > 1 && (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
+            <div className="rs-feeds-chips">
               {cats.map(c => (
-                <span
-                  key={c}
-                  className="rs-pill"
-                  style={{ fontSize: '0.58rem', padding: '3px 10px', pointerEvents: 'none', opacity: 0.7 }}
-                >
-                  {c.toUpperCase()}
-                </span>
+                /* Was .rs-pill, which is the control grammar — these are
+                   labels and were being read as tappable filters. */
+                <span key={c} className="rs-feeds-chip">{c.toUpperCase()}</span>
               ))}
             </div>
           )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="rs-feed-list">
             {articles.map((a, i) => (
               <ArticleCard key={a.url || i} article={a} />
             ))}
@@ -190,72 +188,30 @@ export default function NewsTab({ token, active }) {
 }
 
 function ArticleCard({ article: a }) {
+  const time = a.published_at
+    ? new Date(a.published_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    : ''
   return (
-    <div
-      onClick={() => window.open(a.url, '_blank')}
-      style={{
-        display: 'flex',
-        gap: 16,
-        padding: '14px 0',
-        borderBottom: '1px solid var(--md-outline-variant)',
-        cursor: 'pointer',
-      }}
-    >
+    <article className="rs-feed-item" onClick={() => window.open(a.url, '_blank', 'noopener')}>
       {a.image_url && (
         <img
           src={a.image_url}
           alt=""
-          style={{
-            width: 80,
-            height: 64,
-            objectFit: 'cover',
-            borderRadius: 6,
-            flexShrink: 0,
-            background: 'var(--md-surface-container-highest)',
-          }}
+          loading="lazy"
+          className="rs-feed-thumb"
           onError={e => { e.target.style.display = 'none' }}
         />
       )}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-          <span className="rs-card-label" style={{ fontSize: '0.56rem', color: 'var(--primary)', opacity: 0.9 }}>
-            {a.source?.toUpperCase()}
-          </span>
-          {a.category && (
-            <span className="rs-card-label" style={{ fontSize: '0.52rem', opacity: 0.4 }}>
-              {a.category.toUpperCase()}
-            </span>
-          )}
+      <div className="rs-feed-main">
+        <div className="rs-feed-meta">
+          <span className="rs-feed-source">{a.source?.toUpperCase()}</span>
+          {a.category && <span className="rs-feed-category">{a.category.toUpperCase()}</span>}
+          {time && <span className="rs-feed-time">{time}</span>}
         </div>
-        <div style={{
-          fontWeight: 650,
-          fontSize: '0.9rem',
-          lineHeight: 1.3,
-          marginBottom: 4,
-          color: 'var(--md-on-surface)',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}>
-          {a.title}
-        </div>
-        {a.summary && (
-          <div className="rs-card-meta" style={{
-            fontSize: '0.78rem',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}>
-            {a.summary}
-          </div>
-        )}
-        <div className="rs-card-label" style={{ fontSize: '0.52rem', opacity: 0.35, marginTop: 6 }}>
-          {a.published_at ? new Date(a.published_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-        </div>
+        <h3 className="rs-feed-title">{a.title}</h3>
+        {a.summary && <p className="rs-feed-summary">{a.summary}</p>}
       </div>
-    </div>
+    </article>
   )
 }
 

@@ -1,9 +1,9 @@
 import asyncio
 import logging
-import zoneinfo
-from datetime import datetime, timezone
+from datetime import datetime
 
 from config.settings import get_settings
+from core.timeutil import local_tz
 
 logger = logging.getLogger(__name__)
 
@@ -48,14 +48,8 @@ async def brief_sweep_func():
     # raise OperationalError and the briefing sweep never produced anything.
     # There is no per-user timezone in the schema to read instead, so the
     # system default is what "7 AM local" means here. If per-user timezones
-    # are ever added, this is the one place that needs to change.
-    from config.settings import get_settings
-
-    tz_str = get_settings().default_timezone or "UTC"
-    try:
-        tz = zoneinfo.ZoneInfo(tz_str)
-    except Exception:
-        tz = timezone.utc
+    # are ever added, core.timeutil is the one place that needs to change.
+    tz = local_tz()
 
     users = await store.execute_read_async("SELECT id FROM users")
 

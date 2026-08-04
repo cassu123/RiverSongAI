@@ -9,13 +9,60 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+import logging
+import os
+from datetime import datetime, timezone
 from typing import Optional
 
 from providers.memory.store._util import (
     _now_str,
     _safe_cols,
 )
+
+logger = logging.getLogger(__name__)
+
+# Every column of vector_units EXCEPT unit_token. That column is the device's
+# authentication credential — /register compares it against the X-Unit-Token
+# header — and `SELECT *` was handing it to every caller of the units list,
+# which reaches operator and viewer roles through GET /api/vector/units and the
+# fleet SSE stream. The generic fleet router already lists its columns
+# explicitly for the same reason (api/routes/fleet.py). Nothing needs the token
+# from a list: the claim response returns it once, which is where the UI shows
+# it, and get_vector_unit() below still selects everything for /register.
+_UNIT_LIST_COLS = (
+    "unit_id, name, platform, firmware_version, timezone, last_seen, last_ip, "
+    "connectivity_tier, registered_at, claimed_at, hardware, safety_floors, "
+    "home_position, operating_mode, session_state, active_faults, notes"
+)
+
+# How recently a unit must have been heard from to count as online.
+# Vector units push /status and /telemetry while running; anything older than
+# this is a unit that stopped reporting, not a unit that is up.
+VECTOR_ONLINE_WINDOW_S = int(os.getenv("VECTOR_ONLINE_WINDOW_SECONDS", "120"))
+
+
+def _is_online(last_seen: Optional[str], window_s: int = VECTOR_ONLINE_WINDOW_S) -> bool:
+    """
+    Derive liveness from last_seen rather than trusting the stored `online`
+    flag.
+
+    That flag is set to 1 by /register, /status and /telemetry and is never set
+    back to 0 anywhere in the Vector program — there is no heartbeat timeout and
+    no offline sweep — so a mower that reported once read as "online" forever,
+    including after it was powered down. (The generic fleet does clear it, in
+    core/fleet_simulator.py; Vector has no equivalent.) core/tools.py already
+    derives liveness from last_seen this way.
+    """
+    if not last_seen:
+        return False
+    try:
+        ts = datetime.fromisoformat(str(last_seen).replace("Z", "+00:00"))
+    except ValueError:
+        logger.debug("Unparseable last_seen %r; treating unit as offline", last_seen)
+        return False
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - ts).total_seconds() <= window_s
 
 
 class VectorStoreMixin:
@@ -26,7 +73,11 @@ class VectorStoreMixin:
     """
     # Simplified general access wrappers
     async def get_vector_units(self) -> list[dict]:
-        return await self.execute_read_async("SELECT * FROM vector_units")
+        rows = await self.execute_read_async(
+            f"SELECT {_UNIT_LIST_COLS} FROM vector_units")
+        for r in rows:
+            r["online"] = _is_online(r.get("last_seen"))
+        return rows
 
     async def get_vector_unit(self, unit_id: str) -> Optional[dict]:
         return await self.execute_read_one_async("SELECT * FROM vector_units WHERE unit_id=?", (unit_id,))

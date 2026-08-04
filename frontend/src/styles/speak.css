@@ -1,0 +1,191 @@
+/* =============================================================================
+   speak.css — Conversation ("Speaking") stage
+   -----------------------------------------------------------------------------
+   These class names were referenced by ConversationPage.jsx, RiverSong.jsx and
+   RiverAvatar.jsx but defined nowhere in the project. With no sized ancestor,
+   the WebGL canvas fell back to the HTML default of 300x150 px, which is why
+   the orb sat in a squat letterbox with its ground plane cropped inside it,
+   at the same size regardless of the device.
+   ============================================================================= */
+
+/* The Shell wraps every page in .rs-foyer, which clips (overflow: clip) and
+   caps its width at 1100px. That clip is what cut the bulb's bloom into a
+   rectangle: the stage's negative margins made it *measure* full width, but
+   the foyer still only painted its own box, so the orb ended flat at the
+   foyer's edges and the lit area read as a panel.
+
+   The Speaking screen is the one page that has to escape that wrapper, so it
+   opts out by presence rather than by a prop the Shell would have to thread. */
+.rs-content > .rs-foyer:has(.rs-speak-stage) {
+  overflow: visible;
+  max-inline-size: none;
+  padding-block-end: 0;
+}
+
+/* App.jsx wraps every page in .page-enter, so the stage is a grandchild of the
+   foyer, not a child — a `>` here silently matches nothing. That wrapper is a
+   flex column that also has to stop constraining the stage's width. */
+.rs-content > .rs-foyer > .page-enter:has(.rs-speak-stage) {
+  inline-size: 100%;
+  max-inline-size: none;
+  overflow: visible;
+}
+
+.rs-speak-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Full-bleed. The content zone pads every page like a document
+     (--rs-content-pad-i / -b), which is right for cards and wrong here: the
+     Speaking screen is an immersive stage over the photographic backdrop, and
+     an inset stage shows its own edges as a block sitting on top of it.
+     Cancelling the padding lets it meet the screen. */
+  margin-inline: calc(var(--rs-content-pad-i) * -1);
+  margin-block: calc(var(--rs-content-pad-b) * -1);
+  inline-size: auto;
+  min-block-size: calc(100% + var(--rs-content-pad-b) * 2);
+  overflow: hidden;
+}
+
+/* --- Status readout -------------------------------------------------------- */
+
+.rs-speak-status {
+  position: relative;
+  z-index: 3;
+  padding-block-start: clamp(16px, 4svh, 40px);
+  text-align: center;
+  pointer-events: none;
+}
+
+.rs-status-dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 12px currentColor;
+  animation: rs-speak-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes rs-speak-breathe {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
+/* --- Orb ------------------------------------------------------------------
+   The orb is the subject of this screen, so it takes the room that is left
+   after the status readout, and never less than a comfortable square.       */
+
+.rs-speak-orb {
+  position: relative;
+  z-index: 2;
+  flex: 1 1 auto;
+  inline-size: 100%;
+  min-block-size: min(62svh, 560px);
+  display: grid;
+  place-items: center;
+}
+
+.river-song-wrapper {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  /* Without this the r3f <Canvas> has no box to measure and collapses to the
+     300x150 canvas default. */
+  contain: layout size;
+}
+
+.river-song-wrapper canvas {
+  inline-size: 100% !important;
+  block-size: 100% !important;
+  display: block;
+  touch-action: none;
+}
+
+.river-song-wrapper--compact { position: relative; aspect-ratio: 1; }
+
+.rs-speak-orb-fallback {
+  inline-size: min(60vw, 260px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%,
+    color-mix(in srgb, var(--primary) 35%, transparent) 0%,
+    transparent 68%);
+  animation: rs-speak-breathe 2s ease-in-out infinite;
+}
+
+/* Scanline + vignette overlays sit on top of the canvas, never intercepting
+   pointer events meant for the orb. */
+.river-song-scanlines,
+.river-song-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.river-song-scanlines {
+  background: repeating-linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--md-on-surface) 4%, transparent) 0 1px,
+    transparent 1px 3px
+  );
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+}
+
+.river-song-vignette {
+  background: radial-gradient(ellipse at 50% 50%,
+    transparent 45%,
+    color-mix(in srgb, var(--bg-base) 70%, transparent) 100%);
+}
+
+/* --- Visualizer ------------------------------------------------------------ */
+
+.rs-speak-visualizer {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: clamp(8px, 3svh, 28px);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* --- Transcript ------------------------------------------------------------
+   Previously this panel rendered its glass background unconditionally, so an
+   idle screen showed an empty grey pill floating above the orb. It is now
+   only laid out when it actually has something to say (`.is-live`).         */
+
+.rs-speak-transcript-float { display: none; }
+
+.rs-speak-transcript-float.is-live {
+  display: flex;
+  animation: rs-speak-rise 260ms var(--rs-motion-curve) both;
+}
+
+@keyframes rs-speak-rise {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.rs-speak-error {
+  position: relative;
+  z-index: 3;
+  padding-block: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-status-dot,
+  .rs-speak-orb-fallback { animation: none; }
+}
+
+/* --- Bulb on the Speaking stage -------------------------------------------
+   The bulb sizes off its own box, so the stage only has to say how big.    */
+
+.rs-speak-bulb {
+  --rs-bulb-size: min(72vw, 46svh, 420px);
+  position: relative;
+  z-index: 2;
+}

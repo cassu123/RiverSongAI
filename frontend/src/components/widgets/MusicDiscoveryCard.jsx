@@ -1,12 +1,23 @@
 import React from 'react'
 
-export function MusicDiscoveryCard({ tracks = [], isLoading, onPlay }) {
+function Head() {
+  return (
+    <div className="rs-card-head">
+      <span className="rs-card-label">
+        <span className="material-symbols-rounded rs-card-label-icon">graphic_eq</span>
+        Trending music
+      </span>
+    </div>
+  )
+}
+
+export function MusicDiscoveryCard({
+  tracks = [], isLoading, error, onRetry, onPlay,
+}) {
   if (isLoading) {
     return (
-      <div className="rs-card is-wide animate-pulse">
-        <div className="rs-card-head">
-          <span className="rs-card-label">TRENDING MUSIC</span>
-        </div>
+      <div className="rs-card rs-span-2 animate-pulse">
+        <Head />
         <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
           {[1, 2, 3, 4].map(i => (
             <div key={i} style={{ flex: '0 0 140px' }}>
@@ -20,24 +31,37 @@ export function MusicDiscoveryCard({ tracks = [], isLoading, onPlay }) {
     )
   }
 
+  // An outage and an empty chart are different problems: one is worth a retry,
+  // the other is not. The old card showed the same dead sentence for both.
+  if (error) {
+    return (
+      <div className="rs-card rs-span-2">
+        <Head />
+        <div className="rs-card-state">
+          <span className="material-symbols-rounded rs-card-state-icon">music_off</span>
+          <p className="rs-card-state-msg">{error}</p>
+          {onRetry && <button className="rs-pill" onClick={onRetry}>Retry</button>}
+        </div>
+      </div>
+    )
+  }
+
   if (tracks.length === 0) {
     return (
-      <div className="rs-card is-wide">
-        <div className="rs-card-head">
-          <span className="rs-card-label">TRENDING MUSIC</span>
+      <div className="rs-card rs-span-2">
+        <Head />
+        <div className="rs-card-state">
+          <span className="material-symbols-rounded rs-card-state-icon">music_note</span>
+          <p className="rs-card-state-msg">No trending tracks right now.</p>
         </div>
-        <p className="rs-card-meta">Trending music is currently unavailable.</p>
       </div>
     )
   }
 
   return (
-    <div className="rs-card is-wide animate-fade-in">
-      <div className="rs-card-head">
-        <span className="rs-card-label">TRENDING MUSIC</span>
-        <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.5 }}>trending_up</span>
-      </div>
-      
+    <div className="rs-card rs-span-2 animate-fade-in">
+      <Head />
+
       <div style={{ 
         display: 'flex', 
         gap: 20, 

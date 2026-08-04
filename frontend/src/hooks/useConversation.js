@@ -142,6 +142,17 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     }
   }, [convState])
 
+  // Amplitude on its own event. PresenceOrb has always documented
+  // `rs-presence {state, level}` but only the state was ever dispatched, so
+  // every avatar outside this page was deaf to the voice and could not pulse.
+  // Kept separate from the state effect so a 60fps level never re-runs it.
+  useEffect(() => {
+    if (convState !== 'listening' && convState !== 'speaking') return
+    window.dispatchEvent(new CustomEvent('rs-presence', {
+      detail: { state: convState, level: audioLevel },
+    }))
+  }, [audioLevel, convState])
+
   const bargeIn = useCallback(() => {
     if (convState === 'speaking' || convState === 'thinking') {
       audioPlayer.interrupt()

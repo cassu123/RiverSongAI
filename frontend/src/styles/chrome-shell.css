@@ -334,6 +334,125 @@
   .rs-card.is-wide { grid-column: span 2; }
 }
 
+/* ── Tablet / resized-laptop nav rail (768px – 1199px) ──────────────────────
+   Previously everything below 1200px got the phone treatment: an off-canvas
+   overlay drawer behind a hamburger. A tablet, and a laptop window that was
+   not close to maximized, therefore rendered as a stretched-out phone — the
+   "known gap" called out in DESIGN.md §8.
+
+   This is the missing middle size class. Following the standard adaptive
+   ladder (compact → drawer, medium → rail, expanded → permanent drawer), the
+   nav becomes a persistent icon-plus-label rail: always visible, no scrim, no
+   hamburger, and it costs 88px instead of 260px. The markup is unchanged —
+   the same Drawer component simply lays out differently.                     */
+@media (min-width: 768px) and (max-width: 1199px) {
+  :root { --rs-rail-w: 88px; }
+
+  .rs-shell,
+  .rs-shell.has-sidebar {
+    grid-template-columns: var(--rs-rail-w) 1fr;
+    grid-template-areas:
+      "drawer header"
+      "drawer main"
+      "drawer action";
+  }
+
+  .rs-shell > .rs-drawer,
+  .rs-drawer {
+    grid-area: drawer;
+    position: static;
+    inline-size: 100%;
+    /* .is-open toggles this on phones; in rail mode it must never slide out. */
+    transform: none !important;
+    padding: 12px 6px max(12px, env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--bg-base) 70%, transparent);
+    border-inline-end: 1px solid var(--md-outline-variant);
+    z-index: 150;
+    align-items: center;
+  }
+
+  /* Chrome that only makes sense for the overlay drawer.
+     NOTE: every drawer-internal rule below is scoped under `.rs-drawer` on
+     purpose. chrome-drawer.css is imported AFTER this file, so a bare
+     `.rs-drawer-item {...}` here loses the cascade to the equal-specificity
+     rule there and the rail silently stays in its phone layout. */
+  .rs-hamburger,
+  .rs-drawer-scrim,
+  .rs-drawer .rs-drawer-close,
+  .rs-drawer .rs-drawer-section-label,
+  .rs-drawer .rs-drawer-title > span:not(.rs-mark),
+  .rs-drawer .rs-drawer-profile-body { display: none !important; }
+
+  .rs-drawer .rs-drawer-head {
+    justify-content: center;
+    margin-block-end: 18px;
+  }
+
+  .rs-drawer .rs-drawer-section { margin-block-end: 10px; }
+
+  /* One icon-over-label column, whatever the section called for at phone size. */
+  .rs-drawer .rs-drawer-grid { grid-template-columns: 1fr; gap: 2px; }
+
+  .rs-drawer .rs-drawer-item,
+  .rs-drawer .rs-drawer-cell,
+  .rs-drawer .rs-drawer-profile {
+    flex-direction: column;
+    gap: 4px;
+    padding: 9px 2px;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    /* Comfortably above the 44px touch minimum. */
+    min-block-size: 58px;
+  }
+
+  .rs-drawer .rs-drawer-item > span:not(.rs-icon),
+  .rs-drawer .rs-drawer-cell .rs-card-label {
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    /* The "More" section borrows .rs-card-label, which uppercases. Left alone
+       the rail mixes "Briefing" with "ABOUT YOU" in one column. */
+    text-transform: none;
+    line-height: 1.15;
+    opacity: 0.85;
+    /* A rail label gets one line; truncate rather than shatter the word. */
+    inline-size: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .rs-drawer .rs-drawer-cell .rs-card-inner { padding: 0 !important; }
+
+  .rs-drawer .rs-drawer-item .rs-icon,
+  .rs-drawer .rs-drawer-cell .rs-icon { font-size: 22px; }
+
+  /* Active state reads as a pill behind the icon, not a full-width bar. */
+  .rs-drawer .rs-drawer-item.is-active,
+  .rs-drawer .rs-drawer-cell.is-active { border-radius: 14px; }
+
+  .rs-drawer .rs-drawer-footer { margin-block-start: auto; }
+  .rs-drawer .rs-drawer-avatar { margin-inline: auto; }
+
+  /* The admin switch has no room for its label; keep the control, shrink the
+     text, and let the title attribute carry the meaning. */
+  .rs-drawer .rs-drawer-toggle {
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px 2px;
+    min-block-size: 52px;
+  }
+  .rs-drawer .rs-drawer-toggle > span:first-child {
+    font-size: 0.54rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  .rs-chat-sidebar { display: none; }
+}
+
 /* Desktop (≥ 1200px) */
 @media (min-width: 1200px) {
   :root {

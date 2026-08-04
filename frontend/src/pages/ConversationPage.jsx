@@ -3,17 +3,19 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useConversation } from '../hooks/useConversation.js'
 import AudioVisualizer from '../components/AudioVisualizer.jsx'
 import RsMarkdown from '../components/RsMarkdown.jsx'
+import PresenceBulb from '../components/PresenceBulb.jsx'
 
-// The avatar renders a VRM character and falls back to the orb on its own if
-// no model is installed, so this is safe to point at either component.
-// Set VITE_RIVER_USE_AVATAR=false to force the orb even with a model present.
-const useAvatar = import.meta.env?.VITE_RIVER_USE_AVATAR !== 'false'
+// The VRM character path is intact and unchanged — set VITE_RIVER_USE_AVATAR=true
+// (with a model at public/models/river.vrm) to render it.
+//
+// It is now opt-IN rather than opt-out. It used to default to on, which meant
+// every visit to this page downloaded three.js (~268 kB gzipped, the largest
+// chunk in the build), spun up a WebGL context and compiled shaders — and then
+// fell straight back to the orb, because no VRM is shipped. The bulb is CSS and
+// costs none of that.
+const useAvatar = import.meta.env?.VITE_RIVER_USE_AVATAR === 'true'
 
-const RiverSong = lazy(() =>
-  useAvatar
-    ? import('../components/RiverAvatar.jsx')
-    : import('../components/RiverSong.jsx'),
-)
+const RiverAvatar = lazy(() => import('../components/RiverAvatar.jsx'))
 
 export default function ConversationPage({ setAction }) {
   const { token, user } = useAuth()
@@ -111,19 +113,22 @@ export default function ConversationPage({ setAction }) {
     )
   }, [setAction, isActive, convState, muted, handleToggleMute, handleStartListening, resetSession])
 
+  // Drives whether the transcript panel is laid out at all.
+  const hasTranscript = messages.length > 0 || !!streamingContent || convState === 'listening'
+
   return (
     <div className="rs-speak-stage">
       <div className="rs-speak-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#38bdf8' }} />
-          <span style={{ fontWeight: 600, letterSpacing: '0.15em', fontSize: '1.2rem', color: isActive ? 'var(--fg)' : '#38bdf8' }}>
+          <span className="rs-status-dot" style={{ background: isActive ? 'var(--md-tertiary, #4ade80)' : 'var(--primary)' }} />
+          <span style={{ fontWeight: 600, letterSpacing: '0.15em', fontSize: '1.2rem', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
             {convState === 'idle' ? 'SYSTEM AUTONOMOUS' : convState.toUpperCase()}
           </span>
         </div>
         {convState === 'idle' && (
           <div style={{
             marginTop: 12, fontSize: '0.75rem', fontFamily: 'var(--font-mono)', 
-            color: '#38bdf8', opacity: 0.7, textAlign: 'center', minHeight: 80,
+            color: 'var(--primary)', opacity: 0.7, textAlign: 'center', minHeight: 80,
             pointerEvents: 'none'
           }}>
             {sysLogs.map((log, i) => (
@@ -134,9 +139,17 @@ export default function ConversationPage({ setAction }) {
       </div>
 
       <div className="rs-speak-orb">
-        <Suspense fallback={<div className="rs-speak-orb-fallback" />}>
-          <RiverSong state={convState} audioLevel={visualLvl} />
-        </Suspense>
+        {useAvatar ? (
+          <Suspense fallback={<div className="rs-speak-orb-fallback" />}>
+            <RiverAvatar state={convState} audioLevel={visualLvl} />
+          </Suspense>
+        ) : (
+          <PresenceBulb
+            state={convState}
+            level={visualLvl}
+            className="rs-speak-bulb"
+          />
+        )}
         {convState === 'speaking' && (
           <div className="rs-speak-visualizer">
             <AudioVisualizer audioLevel={visualLvl} />
@@ -150,38 +163,42 @@ export default function ConversationPage({ setAction }) {
         </div>
       )}
 
-      {/* Holographic grid overlay */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        background: 'linear-gradient(rgba(56, 189, 248, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(56, 189, 248, 0.03) 1px, transparent 1px)',
-        backgroundSize: '40px 40px', zIndex: 1
-      }} />
+      {/* The holographic grid overlay lived here. Removed: it painted 40px
+          graph paper across a photographic backdrop, and because the stage is
+          inset by the content zone's padding, the grid's own boundary drew a
+          rectangle that read as a panel floating over the Stage. */}
 
-      {/* Floating Transcript Overlay */}
-      <div className="rs-speak-transcript-float" style={{
-        position: 'absolute', bottom: 120, left: '50%', transform: 'translateX(-50%)',
-        width: '80%', maxWidth: 600, maxHeight: 150, overflowY: 'auto',
-        background: 'rgba(10, 20, 35, 0.6)', backdropFilter: 'blur(12px)',
-        borderRadius: 16, padding: '16px 20px', color: 'var(--fg)',
-        border: '1px solid rgba(56, 189, 248, 0.2)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-        display: 'flex', flexDirection: 'column', gap: 8, zIndex: 2
-      }}>
+      {/* Floating transcript. Only mounted when there is something to show —
+          it used to paint its glass panel unconditionally, leaving an empty
+          grey pill hovering over the orb on an idle screen. */}
+      <div
+        className={`rs-speak-transcript-float ${hasTranscript ? 'is-live' : ''}`}
+        style={{
+          position: 'absolute', bottom: 120, left: '50%', transform: 'translateX(-50%)',
+          width: '80%', maxWidth: 600, maxHeight: 150, overflowY: 'auto',
+          background: 'color-mix(in srgb, var(--bg-base) 72%, transparent)',
+          backdropFilter: 'blur(12px)',
+          borderRadius: 16, padding: '16px 20px', color: 'var(--fg)',
+          border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          flexDirection: 'column', gap: 8, zIndex: 2
+        }}>
         {messages.slice(-2).map((m, i) => (
           <div key={i} style={{ 
             fontSize: '0.95rem', 
             opacity: m.role === 'assistant' ? 1 : 0.7,
-            color: m.role === 'assistant' ? '#38bdf8' : 'inherit'
+            color: m.role === 'assistant' ? 'var(--primary)' : 'inherit'
           }}>
             <strong>{m.role === 'user' ? 'YOU' : 'RIVER'}:</strong> {m.text}
           </div>
         ))}
         {streamingContent && (
-          <div style={{ fontSize: '0.95rem', color: '#38bdf8' }}>
+          <div style={{ fontSize: '0.95rem', color: 'var(--primary)' }}>
             <strong>RIVER:</strong> {streamingContent}
           </div>
         )}
         {messages.length === 0 && !streamingContent && convState === 'listening' && (
-          <div style={{ fontSize: '0.9rem', opacity: 0.5, textAlign: 'center', color: '#38bdf8' }}>Intercepting audio stream...</div>
+          <div style={{ fontSize: '0.9rem', opacity: 0.5, textAlign: 'center', color: 'var(--primary)' }}>Intercepting audio stream...</div>
         )}
       </div>
     </div>

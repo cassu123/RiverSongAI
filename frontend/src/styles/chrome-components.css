@@ -26,7 +26,11 @@
               box-shadow var(--rs-motion-fast) var(--rs-motion-curve);
   overflow: hidden;
   min-width: 0;
-  word-break: break-word;
+  /* `word-break: break-word` shatters ordinary words at any character once a
+     container gets tight, which is how button labels rendered as "NOTE/S" and
+     "KITCH/EN". `overflow-wrap` only breaks a word that genuinely cannot fit
+     on a line of its own, which is the behavior actually wanted here. */
+  overflow-wrap: break-word;
 }
 
 .rs-card::before {
