@@ -141,7 +141,7 @@ const VORTEX_FRAG = `
     base += uPulse * uAccent * 0.22;
 
     float alpha = fres * 0.78 + flow * 0.10 + 0.06;
-    alpha = clamp(alpha, 0.08, 0.85);
+    alpha = clamp(alpha, 0.02, 0.24);
     gl_FragColor = vec4(base, alpha);
   }
 `;
@@ -173,6 +173,111 @@ const RING_FRAG = `
     float alpha = max(bodyAlpha, markAlpha);
     vec3 col = mix(uGlyph * 0.72, uAccent * 1.25, mark);
     gl_FragColor = vec4(col, clamp(alpha, 0.0, 0.96));
+  }
+`;
+
+// ─ Vortex core ──────────────────────────────────────────────────────────────
+// The centrepiece. The previous orb put its swirl on the *surface* of a sphere
+// and then covered it with a wireframe, so the whole thing read as a lattice
+// ball rather than something with energy inside it. This is a camera-facing
+// disc drawn additively behind the shell: logarithmic spiral arms winding into
+// a hot centre, so you see through the shell gaps into an actual core.
+//
+// Two arm sets counter-rotate. A single set reads as a pinwheel — a rigid
+// shape spinning — where opposing sets read as turbulence.
+const CORE_FRAG = `
+  varying vec2 vUv;
+  uniform float uTime, uAudio, uPulse, uSpeed;
+  uniform vec3  uWarm, uAccent, uDeep;
+
+  void main(){
+    vec2 p = vUv * 2.0 - 1.0;
+    float r = length(p);
+    if (r > 1.0) discard;
+
+    float a = atan(p.y, p.x);
+    float t = uTime * uSpeed;
+
+    // log(r) is what makes the arms wind rather than radiate straight out.
+    float arm1 = sin(a * 3.0 + log(r + 0.06) * 7.0 - t * 1.7);
+    arm1 = smoothstep(-0.15, 1.0, arm1);
+    float arm2 = sin(a * 5.0 - log(r + 0.05) * 5.0 + t * 1.1);
+    arm2 = smoothstep(0.20, 1.0, arm2);
+    float swirl = max(arm1, arm2 * 0.62);
+
+    // Radial falloff, plus a small very-hot centre.
+    float body = pow(1.0 - clamp(r, 0.0, 1.0), 2.6);
+    float hot  = pow(1.0 - clamp(r * 2.0, 0.0, 1.0), 6.0);
+
+    // uAudio is the fluctuation: the core breathes with the voice.
+    float energy = swirl * body * (0.62 + uAudio * 1.20) + hot * (0.70 + uPulse * 0.7);
+
+    vec3 col = mix(uDeep, uWarm, clamp(energy, 0.0, 1.0));
+    col = mix(col, uAccent, clamp(hot * 1.35 + energy * 0.30, 0.0, 1.0));
+
+    // Held well below 1.0: bloom multiplies whatever lands here, and a core
+    // that clips to white erases the arms it exists to show.
+    float alpha = clamp(energy * 0.80 + hot * 0.60, 0.0, 0.92) * smoothstep(1.0, 0.30, r);
+    gl_FragColor = vec4(col * (0.85 + uAudio * 0.5), alpha);
+  }
+`;
+
+// ─ Segmented shell ──────────────────────────────────────────────────────────
+// Replaces the flat wireframe icosahedron. Plates are dark and the seams
+// between them glow, so the shell reads as armour with light escaping between
+// segments — and the core stays visible through the gaps.
+const SHELL_FRAG = `
+  varying vec3 vNormal; varying vec3 vWorldPos; varying vec3 vViewPos;
+  uniform float uTime, uAudio, uSpeed;
+  uniform vec3  uSilhouette, uAccent, uCamPos;
+
+  float hash11(float n){ return fract(sin(n) * 43758.5453); }
+
+  void main(){
+    vec3 n = normalize(vNormal);
+
+    // Aperture, not a globe. Latitude/longitude produced exactly the gridded
+    // wireframe ball this was meant to replace, because a lat/lon lattice IS a
+    // wireframe globe. Working in VIEW space instead gives concentric rings of
+    // plates around the view axis — an iris — which is the reference's build.
+    vec2  q    = vViewPos.xy;
+    float rad  = length(q) / 1.70;                 // 0 at centre, 1 at the rim
+    float ang  = atan(q.y, q.x) / 6.28318530718;   // -0.5 .. 0.5
+
+    // Open centre: the vortex is seen THROUGH the shell, not beside it.
+    float aperture = 0.30 + uAudio * 0.05;
+    if (rad < aperture) discard;
+
+    // Rings get denser toward the rim; sectors are offset per ring so plates
+    // stagger like real armour instead of lining up into continuous spokes.
+    float ringF  = (rad - aperture) / (1.0 - aperture);
+    float ring   = floor(ringF * 5.0);
+    float sectors = 12.0 + ring * 4.0;
+    float spin   = uTime * uSpeed * (0.02 + hash11(ring) * 0.03)
+                 * (mod(ring, 2.0) < 1.0 ? 1.0 : -1.0);   // counter-rotating
+    float sectF  = fract(ang * sectors + spin + hash11(ring * 7.0));
+
+    float gapR = smoothstep(0.0, 0.10, fract(ringF * 5.0))
+               * smoothstep(1.0, 0.90, fract(ringF * 5.0));
+    float gapS = smoothstep(0.0, 0.07, sectF) * smoothstep(1.0, 0.93, sectF);
+    float plate = gapR * gapS;
+    float seam  = 1.0 - plate;
+
+    vec3 viewDir = normalize(uCamPos - vWorldPos);
+    float fres = pow(1.0 - max(dot(n, viewDir), 0.0), 2.2);
+
+    // Plate faces: near-black metal with a rim light. Seams: emissive.
+    vec3 plateCol = uSilhouette * 0.05 + uSilhouette * fres * 0.34;
+    vec3 seamCol  = uAccent * (0.80 + uAudio * 1.15);
+    vec3 col = mix(seamCol, plateCol, plate);
+
+    // Brighten the inner lip so the aperture reads as a rim around the core.
+    float lip = smoothstep(aperture + 0.10, aperture, rad);
+    col += uAccent * lip * (0.55 + uAudio * 0.8);
+
+    float alpha = mix(0.50 + uAudio * 0.18, 0.86, plate);
+    alpha = max(alpha, lip * 0.9);
+    gl_FragColor = vec4(col, alpha * 0.94);
   }
 `;
 
@@ -245,6 +350,7 @@ function useCurrentPalette() {
 
 const _tmpWarm = new THREE.Color(), _tmpDeep = new THREE.Color();
 const _tmpAccent = new THREE.Color(), _tmpGlyph = new THREE.Color(), _tmpSil = new THREE.Color();
+const _tmpQuat = new THREE.Quaternion();
 
 // ─ Inner orb mesh group — runs inside Canvas ───────────────────────────────
 function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
@@ -252,6 +358,7 @@ function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
   const vortexMatRef = useRef()
   const ringRefs = useRef([])
   const silhouetteRef = useRef()
+  const coreRef = useRef()
   const dotsRef = useRef()
   const trackRef = useRef()
   const lightRef = useRef()
@@ -287,6 +394,52 @@ function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
       uStyleSeed: { value: 1.0 },
       uMorph:     { value: 0 },
       uError:     { value: 0 },
+    },
+  }), [])
+
+  const coreMat = useMemo(() => new THREE.ShaderMaterial({
+    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: CORE_FRAG,
+    transparent: true,
+    depthWrite: false,
+    // Additive is what makes it read as emitted light rather than a painted
+    // disc sitting inside the shell.
+    blending: THREE.AdditiveBlending,
+    uniforms: {
+      uTime:   { value: 0 },
+      uAudio:  { value: 0 },
+      uPulse:  { value: 0 },
+      uSpeed:  { value: 1.0 },
+      uWarm:   { value: new THREE.Color(palData.warm) },
+      uAccent: { value: new THREE.Color(palData.accent) },
+      uDeep:   { value: new THREE.Color(palData.deep) },
+    },
+  }), [])
+
+  const shellMat = useMemo(() => new THREE.ShaderMaterial({
+    fragmentShader: SHELL_FRAG,
+    vertexShader: `
+      varying vec3 vNormal; varying vec3 vWorldPos; varying vec3 vViewPos;
+      void main(){
+        vNormal = normalize(normalMatrix * normal);
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vWorldPos = wp.xyz;
+        // View space: x/y are screen-parallel, which is what makes the plate
+        // rings concentric to the camera rather than to the model's poles.
+        vViewPos = (viewMatrix * wp).xyz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }
+    `,
+    transparent: true, side: THREE.FrontSide, depthWrite: false,
+    // Normal blending on purpose — see SHELL_FRAG.
+    blending: THREE.NormalBlending,
+    uniforms: {
+      uTime:        { value: 0 },
+      uAudio:       { value: 0 },
+      uSpeed:       { value: 1.0 },
+      uSilhouette:  { value: new THREE.Color(palData.silhouette) },
+      uAccent:      { value: new THREE.Color(palData.accent) },
+      uCamPos:      { value: new THREE.Vector3(0, 0, 6) },
     },
   }), [])
 
@@ -368,11 +521,39 @@ function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
     vortexMat.uniforms.uAudio.value = audioSim.current;
     vortexMat.uniforms.uSpeed.value = tint.speed;
 
+    // --- Vortex core ------------------------------------------------------
+    // Billboard to the camera so the spiral is always read face-on. Done in
+    // world space, then the group's own rotation is cancelled out, otherwise
+    // the parent's sway would tilt the disc back edge-on.
+    if (coreRef.current && groupRef.current) {
+      coreRef.current.quaternion
+        .copy(camera.quaternion)
+        .premultiply(_tmpQuat.copy(groupRef.current.quaternion).invert());
+      // A touch of scale-breathing keeps it from feeling like a static decal.
+      const s = 1.0 + audioSim.current * 0.16;
+      coreRef.current.scale.setScalar(s);
+    }
+    coreMat.uniforms.uTime.value = t;
+    coreMat.uniforms.uAudio.value = audioSim.current;
+    coreMat.uniforms.uSpeed.value = tint.speed;
+    coreMat.uniforms.uWarm.value.lerp(_tmpWarm, 0.06);
+    coreMat.uniforms.uAccent.value.lerp(_tmpAccent, 0.06);
+    coreMat.uniforms.uDeep.value.lerp(_tmpDeep, 0.06);
+
+    // --- Segmented shell --------------------------------------------------
+    shellMat.uniforms.uTime.value = t;
+    shellMat.uniforms.uAudio.value = audioSim.current;
+    shellMat.uniforms.uSpeed.value = tint.speed;
+    shellMat.uniforms.uCamPos.value.copy(camera.position);
+    shellMat.uniforms.uSilhouette.value.lerp(_tmpSil, 0.06);
+    shellMat.uniforms.uAccent.value.lerp(_tmpAccent, 0.06);
+
     let pulse = 0;
     if (currentOrbState === 'idle')          pulse = Math.sin(t * 1.3) * 0.04;
     else if (currentOrbState === 'thinking') pulse = Math.sin(t * 3.5) * 0.12;
     else if (currentOrbState === 'error')    pulse = Math.sin(t * 14) * 0.05;
     vortexMat.uniforms.uPulse.value = pulse;
+    coreMat.uniforms.uPulse.value = pulse;
 
     if (silhouetteRef.current) {
       silhouetteRef.current.material.color.lerp(_tmpSil, 0.06);
@@ -449,28 +630,39 @@ function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
   return (
     <>
       <pointLight ref={lightRef} position={[0, 0, 0]} intensity={2.5} distance={10} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.5, 0]}>
-        <planeGeometry args={[20, 20]} />
-        <meshStandardMaterial color={0x020202} roughness={0.15} metalness={0.9} transparent opacity={0.6} />
-      </mesh>
+      {/* The prototype's reflective floor drew a hard horizontal band across
+          the stage once the canvas filled the screen. The orb floats now. */}
       
       <group ref={groupRef}>
-        <mesh material={vortexMat}>
-          <icosahedronGeometry args={[1.45, 32]} />
+        {/* Legacy surface-swirl sphere. It used to BE the orb; now it is a
+            faint inner haze behind the aperture, because at full strength it
+            painted every armour plate the same mid-gold. */}
+        <mesh material={vortexMat} renderOrder={0} scale={0.62}>
+          <icosahedronGeometry args={[1.45, 12]} />
         </mesh>
+        {/* Vortex core — billboarded to the camera each frame so the spiral is
+            always seen face-on rather than edge-on. Drawn before the shell so
+            the shell's seams sit in front of it. */}
+        <mesh ref={coreRef} material={coreMat} renderOrder={-1}>
+          <circleGeometry args={[0.66, 96]} />
+        </mesh>
+
+        {/* Occluder: keeps the core from showing through the back of the shell,
+            which otherwise doubles the brightness and flattens the depth. */}
         <mesh>
           <icosahedronGeometry args={[0.95, 2]} />
-          <meshBasicMaterial color={0x1a0e06} transparent opacity={0.55} />
+          <meshBasicMaterial color={palData.deep} transparent opacity={0.30} depthWrite={false} />
         </mesh>
-        <mesh>
-          <icosahedronGeometry args={[1.7, 3]} />
-          <meshBasicMaterial color={palData.silhouette} transparent opacity={0.3} wireframe wireframeLinewidth={1} blending={THREE.AdditiveBlending} depthWrite={false} />
+
+        {/* Segmented armour shell. */}
+        <mesh material={shellMat} renderOrder={1}>
+          <icosahedronGeometry args={[1.7, 24]} />
         </mesh>
         <points ref={silhouetteRef}>
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" args={[cur, 3]} count={count} />
           </bufferGeometry>
-          <pointsMaterial size={0.024} transparent opacity={0.85} blending={THREE.AdditiveBlending} depthWrite={false} sizeAttenuation color={palData.accent} />
+          <pointsMaterial size={0.012} transparent opacity={0.0} blending={THREE.AdditiveBlending} depthWrite={false} sizeAttenuation color={palData.accent} />
         </points>
       {ringSpecs.map((spec, i) => (
         <mesh 
@@ -489,15 +681,17 @@ function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
               void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
             `}
             fragmentShader={RING_FRAG}
+            /* These were hardcoded to the Dune amber, so the rings stayed
+               orange on every other skin while the rest of the orb retinted. */
             uniforms={useMemo(() => ({
               uTime:      { value: 0 },
-              uGlyph:     { value: new THREE.Color(0x8a5a28) },
-              uAccent:    { value: new THREE.Color(0xffd28a) },
+              uGlyph:     { value: new THREE.Color(palData.glyph) },
+              uAccent:    { value: new THREE.Color(palData.accent) },
               uIntensity: { value: spec.intensity },
               uOffset:    { value: i * 1.7 },
-              uStyleSeed: { value: 1.0 },
+              uStyleSeed: { value: palData.glyphStyleSeed },
               uDensity:   { value: spec.density },
-            }), [spec.intensity, spec.density, i])}
+            }), [spec.intensity, spec.density, i, palData])}
           />
         </mesh>
       ))}
@@ -511,7 +705,9 @@ function OrbCore({ state, audioLevel, lipSyncOpen, palette }) {
 
       <mesh ref={trackRef} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[2.55, 0.004, 4, 256]} />
-        <meshBasicMaterial color={0xd4a040} transparent opacity={0.15} />
+        {/* Was hardcoded amber; the frame loop retints this ref anyway, so the
+            literal only ever showed as a wrong-coloured first frame. */}
+        <meshBasicMaterial color={palData.warm} transparent opacity={0.15} />
       </mesh>
     </group>
     </>
@@ -541,9 +737,9 @@ export default function RiverSong({ state, audioLevel = 0, lipSyncOpen = 0, comp
         <OrbCore state={state} audioLevel={audioLevel} lipSyncOpen={lipSyncOpen} palette={palette} />
         <EffectComposer disableNormalPass>
           <Bloom
-            luminanceThreshold={0.2}
+            luminanceThreshold={0.45}
             luminanceSmoothing={0.9}
-            intensity={1.5}
+            intensity={0.85}
             mipmapBlur
           />
         </EffectComposer>

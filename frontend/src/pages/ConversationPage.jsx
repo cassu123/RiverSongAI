@@ -111,19 +111,22 @@ export default function ConversationPage({ setAction }) {
     )
   }, [setAction, isActive, convState, muted, handleToggleMute, handleStartListening, resetSession])
 
+  // Drives whether the transcript panel is laid out at all.
+  const hasTranscript = messages.length > 0 || !!streamingContent || convState === 'listening'
+
   return (
     <div className="rs-speak-stage">
       <div className="rs-speak-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#38bdf8' }} />
-          <span style={{ fontWeight: 600, letterSpacing: '0.15em', fontSize: '1.2rem', color: isActive ? 'var(--fg)' : '#38bdf8' }}>
+          <span className="rs-status-dot" style={{ background: isActive ? 'var(--md-tertiary, #4ade80)' : 'var(--primary)' }} />
+          <span style={{ fontWeight: 600, letterSpacing: '0.15em', fontSize: '1.2rem', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
             {convState === 'idle' ? 'SYSTEM AUTONOMOUS' : convState.toUpperCase()}
           </span>
         </div>
         {convState === 'idle' && (
           <div style={{
             marginTop: 12, fontSize: '0.75rem', fontFamily: 'var(--font-mono)', 
-            color: '#38bdf8', opacity: 0.7, textAlign: 'center', minHeight: 80,
+            color: 'var(--primary)', opacity: 0.7, textAlign: 'center', minHeight: 80,
             pointerEvents: 'none'
           }}>
             {sysLogs.map((log, i) => (
@@ -153,35 +156,41 @@ export default function ConversationPage({ setAction }) {
       {/* Holographic grid overlay */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',
-        background: 'linear-gradient(rgba(56, 189, 248, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(56, 189, 248, 0.03) 1px, transparent 1px)',
+        background: 'linear-gradient(color-mix(in srgb, var(--primary) 6%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--primary) 6%, transparent) 1px, transparent 1px)',
         backgroundSize: '40px 40px', zIndex: 1
       }} />
 
-      {/* Floating Transcript Overlay */}
-      <div className="rs-speak-transcript-float" style={{
-        position: 'absolute', bottom: 120, left: '50%', transform: 'translateX(-50%)',
-        width: '80%', maxWidth: 600, maxHeight: 150, overflowY: 'auto',
-        background: 'rgba(10, 20, 35, 0.6)', backdropFilter: 'blur(12px)',
-        borderRadius: 16, padding: '16px 20px', color: 'var(--fg)',
-        border: '1px solid rgba(56, 189, 248, 0.2)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-        display: 'flex', flexDirection: 'column', gap: 8, zIndex: 2
-      }}>
+      {/* Floating transcript. Only mounted when there is something to show —
+          it used to paint its glass panel unconditionally, leaving an empty
+          grey pill hovering over the orb on an idle screen. */}
+      <div
+        className={`rs-speak-transcript-float ${hasTranscript ? 'is-live' : ''}`}
+        style={{
+          position: 'absolute', bottom: 120, left: '50%', transform: 'translateX(-50%)',
+          width: '80%', maxWidth: 600, maxHeight: 150, overflowY: 'auto',
+          background: 'color-mix(in srgb, var(--bg-base) 72%, transparent)',
+          backdropFilter: 'blur(12px)',
+          borderRadius: 16, padding: '16px 20px', color: 'var(--fg)',
+          border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          flexDirection: 'column', gap: 8, zIndex: 2
+        }}>
         {messages.slice(-2).map((m, i) => (
           <div key={i} style={{ 
             fontSize: '0.95rem', 
             opacity: m.role === 'assistant' ? 1 : 0.7,
-            color: m.role === 'assistant' ? '#38bdf8' : 'inherit'
+            color: m.role === 'assistant' ? 'var(--primary)' : 'inherit'
           }}>
             <strong>{m.role === 'user' ? 'YOU' : 'RIVER'}:</strong> {m.text}
           </div>
         ))}
         {streamingContent && (
-          <div style={{ fontSize: '0.95rem', color: '#38bdf8' }}>
+          <div style={{ fontSize: '0.95rem', color: 'var(--primary)' }}>
             <strong>RIVER:</strong> {streamingContent}
           </div>
         )}
         {messages.length === 0 && !streamingContent && convState === 'listening' && (
-          <div style={{ fontSize: '0.9rem', opacity: 0.5, textAlign: 'center', color: '#38bdf8' }}>Intercepting audio stream...</div>
+          <div style={{ fontSize: '0.9rem', opacity: 0.5, textAlign: 'center', color: 'var(--primary)' }}>Intercepting audio stream...</div>
         )}
       </div>
     </div>
