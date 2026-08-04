@@ -8,14 +8,43 @@
    at the same size regardless of the device.
    ============================================================================= */
 
+/* The Shell wraps every page in .rs-foyer, which clips (overflow: clip) and
+   caps its width at 1100px. That clip is what cut the bulb's bloom into a
+   rectangle: the stage's negative margins made it *measure* full width, but
+   the foyer still only painted its own box, so the orb ended flat at the
+   foyer's edges and the lit area read as a panel.
+
+   The Speaking screen is the one page that has to escape that wrapper, so it
+   opts out by presence rather than by a prop the Shell would have to thread. */
+.rs-content > .rs-foyer:has(.rs-speak-stage) {
+  overflow: visible;
+  max-inline-size: none;
+  padding-block-end: 0;
+}
+
+/* App.jsx wraps every page in .page-enter, so the stage is a grandchild of the
+   foyer, not a child — a `>` here silently matches nothing. That wrapper is a
+   flex column that also has to stop constraining the stage's width. */
+.rs-content > .rs-foyer > .page-enter:has(.rs-speak-stage) {
+  inline-size: 100%;
+  max-inline-size: none;
+  overflow: visible;
+}
+
 .rs-speak-stage {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Fill the shell's content zone; svh avoids the mobile URL-bar jump. */
-  min-block-size: 100%;
-  inline-size: 100%;
+  /* Full-bleed. The content zone pads every page like a document
+     (--rs-content-pad-i / -b), which is right for cards and wrong here: the
+     Speaking screen is an immersive stage over the photographic backdrop, and
+     an inset stage shows its own edges as a block sitting on top of it.
+     Cancelling the padding lets it meet the screen. */
+  margin-inline: calc(var(--rs-content-pad-i) * -1);
+  margin-block: calc(var(--rs-content-pad-b) * -1);
+  inline-size: auto;
+  min-block-size: calc(100% + var(--rs-content-pad-b) * 2);
   overflow: hidden;
 }
 

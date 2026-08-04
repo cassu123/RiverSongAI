@@ -163,12 +163,10 @@ export default function ConversationPage({ setAction }) {
         </div>
       )}
 
-      {/* Holographic grid overlay */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        background: 'linear-gradient(color-mix(in srgb, var(--primary) 6%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--primary) 6%, transparent) 1px, transparent 1px)',
-        backgroundSize: '40px 40px', zIndex: 1
-      }} />
+      {/* The holographic grid overlay lived here. Removed: it painted 40px
+          graph paper across a photographic backdrop, and because the stage is
+          inset by the content zone's padding, the grid's own boundary drew a
+          rectangle that read as a panel floating over the Stage. */}
 
       {/* Floating transcript. Only mounted when there is something to show —
           it used to paint its glass panel unconditionally, leaving an empty
