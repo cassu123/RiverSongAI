@@ -18,6 +18,7 @@ import './styles/briefing.css'
 import './styles/speak.css'
 import './styles/bulb.css'
 import './styles/feeds.css'
+import './styles/fleet.css'
 import './styles/white-pages.css'
 import './styles/responsive.css'
 

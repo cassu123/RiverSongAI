@@ -53,26 +53,36 @@ export default function FleetHub() {
         <div className="rs-greeting-sub">River's physical programs. Open one to claim units, stream live telemetry, and issue commands.</div>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16, marginTop: 20 }}>
+      <div className="rs-fleet-grid">
         {PROGRAMS.map(p => {
           const c = counts[p.key] || { total: 0, online: 0 }
+          const live = c.online > 0
           return (
-            <Link key={p.key} to={p.to} className="rs-card is-tappable" style={{ padding: 20, textDecoration: 'none', display: 'block' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <span className="material-symbols-rounded" style={{ fontSize: '1.8rem', color: p.accent }}>{p.icon}</span>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '1rem' }}>{p.title}</div>
-                  <div className="rs-card-meta" style={{ fontSize: '0.72rem' }}>{p.sub}</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%',
-                  background: c.online ? 'var(--rs-status-nominal,#36d399)' : 'var(--md-outline,#555)',
-                  boxShadow: c.online ? '0 0 8px var(--rs-status-nominal,#36d399)' : 'none' }} />
-                <span style={{ fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums' }}>
-                  <strong>{c.online}</strong> online <span style={{ opacity: 0.5 }}>/ {c.total} total</span>
+            <Link
+              key={p.key}
+              to={p.to}
+              className="rs-fleet-card"
+              /* Per-program accent stays — it colour-codes the six programs —
+                 but it now tints a chip instead of floating as a raw coloured
+                 glyph, so six different hues read as a system. */
+              style={{ '--rs-fleet-accent': p.accent }}
+            >
+              <span className="rs-fleet-icon" aria-hidden="true">
+                <span className="material-symbols-rounded">{p.icon}</span>
+              </span>
+
+              <span className="rs-fleet-body">
+                <span className="rs-fleet-title">{p.title}</span>
+                <span className="rs-fleet-sub">{p.sub}</span>
+              </span>
+
+              <span className={`rs-fleet-status ${live ? 'is-live' : ''}`}>
+                <span className="rs-fleet-dot" aria-hidden="true" />
+                <span className="rs-fleet-count">
+                  <strong>{c.online}</strong><span className="rs-fleet-total">/{c.total}</span>
                 </span>
-              </div>
+                <span className="rs-fleet-word">{c.err ? 'offline' : 'online'}</span>
+              </span>
             </Link>
           )
         })}
