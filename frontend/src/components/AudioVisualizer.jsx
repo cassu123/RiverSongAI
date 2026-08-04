@@ -1,12 +1,12 @@
 // =============================================================================
 // src/components/AudioVisualizer.jsx
 //
-// Circular audio bar visualizer layered behind the RiverSong figure.
+// Circular audio bar visualizer layered behind the presence bulb.
 //
 // Renders 32 radial bars arranged in a circle. Bar heights respond to the
 // audioLevel prop (0-1) with a small noise oscillation added so it never
 // looks completely static. Mounted as an absolutely positioned canvas
-// on top of the same 300x300 cell as RiverSong.
+// on top of the same cell as the bulb.
 //
 // Props:
 //   audioLevel {number} Current mic amplitude 0-1

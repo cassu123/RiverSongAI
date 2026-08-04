@@ -1,7 +1,7 @@
 // =============================================================================
 // frontend/src/components/RiverAvatar.jsx
 //
-// 3D VRM avatar for River Song — a drop-in replacement for <RiverSong />.
+// 3D VRM avatar for River Song — a drop-in replacement for <PresenceBulb />.
 //
 // Takes the same props the orb does (state, audioLevel, lipSyncOpen, compact),
 // so anywhere the orb renders, this can render instead.
@@ -30,7 +30,9 @@ const AVATAR_URL =
   import.meta.env?.VITE_RIVER_AVATAR_URL || '/models/river.vrm'
 
 // Conversation states, collapsed to the four the avatar actually performs.
-// Mirrors STATE_MAP in RiverSong.jsx so both stay in step.
+// Vocabulary is fixed by the Vortex wire protocol (see
+// prototypes/presence-orb.html and core/vortex_hub.py); PresenceBulb
+// keys off the same set.
 const STATE_MAP = {
   idle: 'idle',
   connecting: 'thinking',
