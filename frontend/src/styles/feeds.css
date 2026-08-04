@@ -241,3 +241,105 @@
 .rs-feeds-head .rs-greeting {
   text-shadow: 0 2px 20px color-mix(in srgb, var(--bg-base) 70%, transparent);
 }
+
+/* =============================================================================
+   Weather tab
+   -----------------------------------------------------------------------------
+   Six panels here (hero, details, hourly, daily, sun, radar) were each a
+   .rs-card nested inside the page's own .rs-card, so the double-bezel
+   treatment landed twice on every one and the tab read as a pile of boxes with
+   a lot of dead air between them. They are now flat panels: one surface, one
+   hairline, no second shell.
+   ============================================================================= */
+
+.rs-wx {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rs-wx-panel {
+  padding: clamp(14px, 3vw, 18px);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--md-surface-container-high) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--md-outline-variant) 40%, transparent);
+  min-width: 0;
+}
+
+.rs-wx-panel.is-flush { padding: 0; overflow: hidden; }
+
+.rs-wx-panel.is-hero {
+  padding: clamp(18px, 4vw, 26px);
+  background:
+    linear-gradient(155deg,
+      color-mix(in srgb, var(--primary) 12%, var(--md-surface-container-high)) 0%,
+      color-mix(in srgb, var(--md-surface-container) 85%, transparent) 100%);
+}
+
+.rs-wx-panel.is-detail {
+  padding: 12px 14px;
+  flex: 1;
+  /* These sit four-across; the shared panel radius looks oversized at that
+     width. */
+  border-radius: 12px;
+}
+
+.rs-wx-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 13px 16px 11px;
+  border-block-end: 1px solid color-mix(in srgb, var(--md-outline-variant) 45%, transparent);
+}
+
+.rs-wx-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--md-on-surface);
+}
+
+.rs-wx-attrib {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  color: var(--md-on-surface-variant);
+  opacity: 0.5;
+}
+
+/* --- Radar -----------------------------------------------------------------
+   Taller than the old fixed 320px — a radar you cannot read the shape of is
+   just a dark rectangle — but capped so it never eats the whole screen.     */
+
+.rs-wx-radar {
+  position: relative;
+  block-size: clamp(280px, 46svh, 460px);
+}
+
+.rs-wx-map { inline-size: 100%; block-size: 100%; background: #0b0f14; }
+
+/* Lift only the basemap. Filtering the whole tile pane would wash out the
+   precipitation echo along with the land. */
+.rs-wx-basemap {
+  filter: brightness(1.75) saturate(1.15) contrast(0.95);
+}
+
+/* The echo sits on top and stays untouched, so rain reads against the land. */
+.rs-wx-echo { mix-blend-mode: screen; }
+
+/* Leaflet ships its own control chrome; keep it out of the way. */
+.rs-wx-radar .leaflet-container { background: #0b0f14; outline: none; }
+
+/* --- Wide viewports --------------------------------------------------------
+   The stack is a single tall column on desktop with the radar stranded at the
+   bottom. Pair the shorter panels once there is room for two.              */
+
+@container (min-width: 780px) {
+  .rs-wx { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  .rs-wx > .rs-tabset,
+  .rs-wx > .rs-wx-panel.is-hero,
+  .rs-wx > .rs-wx-panel.is-flush { grid-column: 1 / -1; }
+  .rs-wx > div:has(> .rs-wx-panel.is-detail) { grid-column: 1 / -1; }
+}

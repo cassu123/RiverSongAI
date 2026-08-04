@@ -222,7 +222,7 @@ export default function WeatherTab({ token, active }) {
   const locationLabel = settings?.location_query?.split(',').slice(0, 2).join(',') || location_name || 'no location set'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="rs-wx">
       <InlineSettingsSection
         title="WEATHER SETTINGS"
         icon="tune"
@@ -332,14 +332,7 @@ function HeroCard({ current, today, location_name, unit }) {
   const hi = today?.temp_max != null ? Math.round(today.temp_max) : null
   const lo = today?.temp_min != null ? Math.round(today.temp_min) : null
   return (
-    <div
-      className="rs-card"
-      style={{
-        padding: '28px 28px 24px',
-        background: 'linear-gradient(160deg, var(--md-surface-container-high) 0%, var(--md-surface-container) 100%)',
-        borderRadius: 16,
-      }}
-    >
+    <div className="rs-wx-panel is-hero">
       <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
         <span
           className="material-symbols-rounded"
@@ -386,7 +379,7 @@ function HeroCard({ current, today, location_name, unit }) {
 
 function DetailCard({ label, value, sub, color, badge }) {
   return (
-    <div className="rs-card" style={{ padding: '14px 16px', flex: 1, minWidth: 0 }}>
+    <div className="rs-wx-panel is-detail">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div className="rs-card-label" style={{ fontSize: '0.52rem', opacity: 0.5, marginBottom: 4 }}>{label}</div>
         {badge && (
@@ -471,7 +464,7 @@ function HourlyStrip({ hourly, unit }) {
   }).filter(Boolean).join(' ')
 
   return (
-    <div className="rs-card" style={{ padding: '16px 16px 14px' }}>
+    <div className="rs-wx-panel">
       <div className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.55, marginBottom: 12 }}>NEXT 24 HOURS</div>
       <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: 4 }}>
         <div style={{ width: W, position: 'relative' }}>
@@ -588,7 +581,7 @@ function DailyForecast({ daily, unit }) {
   const weekRange = (weekMax - weekMin) || 1
 
   return (
-    <div className="rs-card" style={{ padding: '16px' }}>
+    <div className="rs-wx-panel">
       <div className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.55, marginBottom: 12 }}>7-DAY FORECAST</div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {daily.map((d, i) => {
@@ -601,7 +594,9 @@ function DailyForecast({ daily, unit }) {
               padding: '12px 0',
               borderBottom: isLast ? 'none' : '1px solid var(--md-outline-variant)',
             }}>
-              <span style={{ fontWeight: 800, fontSize: '0.78rem' }}>
+              {/* Day labels are short and must never split — "TODAY" was
+                  breaking to "TODA / Y" once the column tightened. */}
+              <span style={{ fontWeight: 800, fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
                 {i === 0 ? 'TODAY' : fmtDay(d.date)}
               </span>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem', color: 'var(--primary)', textAlign: 'center' }}>
@@ -659,7 +654,7 @@ function SunCard({ sunrise, sunset }) {
   const arcPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`
 
   return (
-    <div className="rs-card" style={{ padding: '16px' }}>
+    <div className="rs-wx-panel">
       <div className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.55, marginBottom: 12 }}>SUN</div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap' }}>
         <div style={{ textAlign: 'center', minWidth: 60 }}>
@@ -696,16 +691,12 @@ function SunCard({ sunrise, sunset }) {
 
 function RadarCard({ lat, lon, radarTs }) {
   return (
-    <div className="rs-card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{
-        padding: '14px 16px 10px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: '1px solid var(--md-outline-variant)',
-      }}>
-        <span className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.55 }}>LIVE RADAR</span>
-        <span className="rs-card-meta" style={{ fontSize: '0.58rem', opacity: 0.45 }}>RainViewer</span>
+    <div className="rs-wx-panel is-flush">
+      <div className="rs-wx-panel-head">
+        <span className="rs-wx-label">Live radar</span>
+        <span className="rs-wx-attrib">RainViewer &middot; CARTO &middot; OpenStreetMap</span>
       </div>
-      <div style={{ height: 320, position: 'relative' }}>
+      <div className="rs-wx-radar">
         <RadarMap lat={lat} lon={lon} radarTs={radarTs} />
       </div>
     </div>
@@ -726,7 +717,13 @@ function RadarMap({ lat, lon, radarTs }) {
         center: [lat, lon], zoom: 8,
         zoomControl: false, attributionControl: false,
       })
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        // CARTO dark_all is the darkest tileset they publish; over an already
+        // dark panel the map read as a black rectangle. Lifted in CSS
+        // (.rs-wx-basemap) rather than swapped for a lighter tileset, so the
+        // radar echo keeps its contrast against the land.
+        className: 'rs-wx-basemap',
+      }).addTo(map)
       instanceRef.current = map
     })
     return () => {
@@ -747,14 +744,14 @@ function RadarMap({ lat, lon, radarTs }) {
       if (radarLayerRef.current) instanceRef.current.removeLayer(radarLayerRef.current)
       radarLayerRef.current = L.tileLayer(
         `https://tilecache.rainviewer.com${radarTs}/256/{z}/{x}/{y}/2/1_1.png`,
-        { opacity: 0.6 },
+        { opacity: 0.8, className: 'rs-wx-echo' },
       )
       radarLayerRef.current.addTo(instanceRef.current)
     })
     return () => { disposed = true }
   }, [radarTs])
 
-  return <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
+  return <div ref={mapRef} className="rs-wx-map" />
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
