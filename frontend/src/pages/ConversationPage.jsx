@@ -3,17 +3,19 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useConversation } from '../hooks/useConversation.js'
 import AudioVisualizer from '../components/AudioVisualizer.jsx'
 import RsMarkdown from '../components/RsMarkdown.jsx'
+import PresenceBulb from '../components/PresenceBulb.jsx'
 
-// The avatar renders a VRM character and falls back to the orb on its own if
-// no model is installed, so this is safe to point at either component.
-// Set VITE_RIVER_USE_AVATAR=false to force the orb even with a model present.
-const useAvatar = import.meta.env?.VITE_RIVER_USE_AVATAR !== 'false'
+// The VRM character path is intact and unchanged — set VITE_RIVER_USE_AVATAR=true
+// (with a model at public/models/river.vrm) to render it.
+//
+// It is now opt-IN rather than opt-out. It used to default to on, which meant
+// every visit to this page downloaded three.js (~268 kB gzipped, the largest
+// chunk in the build), spun up a WebGL context and compiled shaders — and then
+// fell straight back to the orb, because no VRM is shipped. The bulb is CSS and
+// costs none of that.
+const useAvatar = import.meta.env?.VITE_RIVER_USE_AVATAR === 'true'
 
-const RiverSong = lazy(() =>
-  useAvatar
-    ? import('../components/RiverAvatar.jsx')
-    : import('../components/RiverSong.jsx'),
-)
+const RiverAvatar = lazy(() => import('../components/RiverAvatar.jsx'))
 
 export default function ConversationPage({ setAction }) {
   const { token, user } = useAuth()
@@ -137,9 +139,17 @@ export default function ConversationPage({ setAction }) {
       </div>
 
       <div className="rs-speak-orb">
-        <Suspense fallback={<div className="rs-speak-orb-fallback" />}>
-          <RiverSong state={convState} audioLevel={visualLvl} />
-        </Suspense>
+        {useAvatar ? (
+          <Suspense fallback={<div className="rs-speak-orb-fallback" />}>
+            <RiverAvatar state={convState} audioLevel={visualLvl} />
+          </Suspense>
+        ) : (
+          <PresenceBulb
+            state={convState}
+            level={visualLvl}
+            className="rs-speak-bulb"
+          />
+        )}
         {convState === 'speaking' && (
           <div className="rs-speak-visualizer">
             <AudioVisualizer audioLevel={visualLvl} />

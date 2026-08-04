@@ -1,0 +1,267 @@
+/* =============================================================================
+   bulb.css — PresenceBulb: liquid light inside glass
+   -----------------------------------------------------------------------------
+   Built to the supplied references: a dark field, a translucent sphere with a
+   bright specular rim, soft smoky filaments curling INSIDE it, and atmospheric
+   bloom bleeding outward. No mechanical structure — the armoured-iris version
+   this replaces was the wrong creature entirely.
+
+   How the "liquid" is faked, since it is not obvious:
+     Three oversized conic-gradient veils sit inside a circular clip. Each is
+     heavily blurred, rotates at a different speed, and two of the three rotate
+     BACKWARDS. Counter-rotation is the whole trick — same-direction layers
+     read as a pinwheel spinning, opposing layers fold through each other and
+     read as fluid. `mix-blend-mode: screen` keeps them additive like light.
+
+   Everything scales off the element's own box, so one component serves the
+   20px header dot and the 400px stage. No fixed pixel sizes below.
+   ============================================================================= */
+
+.rs-bulb {
+  --rs-bulb-size: 100%;
+  --rs-bulb-level: 0;          /* 0..1, written by PresenceBulb.jsx */
+  --rs-bulb-speed: 1;          /* per-state multiplier */
+  --rs-bulb-hue: var(--primary);
+  --rs-bulb-deep: var(--md-primary-container, #004a77);
+
+  /* Amplitude, shaped. The raw level is linear; easing it keeps quiet speech
+     from looking dead and loud speech from pinning at maximum. */
+  --rs-bulb-flux: calc(var(--rs-bulb-level) * 0.85 + 0.15);
+
+  position: relative;
+  display: inline-block;
+  inline-size: var(--rs-bulb-size);
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  isolation: isolate;
+  /* Idle breathing. Scale only — animating filters here costs a repaint of
+     every layer inside on every frame. */
+  animation: rs-bulb-breathe calc(5.5s / var(--rs-bulb-speed)) ease-in-out infinite;
+}
+
+/* Interactive variant is a <button>; strip the chrome. */
+button.rs-bulb {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes rs-bulb-breathe {
+  0%, 100% { transform: scale(calc(0.97 + var(--rs-bulb-flux) * 0.05)); }
+  50%      { transform: scale(calc(1.02 + var(--rs-bulb-flux) * 0.07)); }
+}
+
+/* --- Atmospheric bloom -----------------------------------------------------
+   Sits behind everything and bleeds past the sphere, which is what sells the
+   orb as a light source rather than a sticker.                              */
+
+.rs-bulb-bloom {
+  position: absolute;
+  inset: -35%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%,
+    color-mix(in srgb, var(--rs-bulb-hue) 55%, transparent) 0%,
+    color-mix(in srgb, var(--rs-bulb-hue) 22%, transparent) 32%,
+    transparent 68%);
+  opacity: calc(0.18 + var(--rs-bulb-flux) * 0.40);
+  filter: blur(calc(var(--rs-bulb-size) * 0.06));
+  z-index: 0;
+  transition: opacity 120ms linear;
+}
+
+/* --- Glass body ------------------------------------------------------------
+   Clips the veils to a sphere and carries the dark glass tint.              */
+
+.rs-bulb-body {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  z-index: 1;
+  background:
+    radial-gradient(circle at 50% 50%,
+      color-mix(in srgb, var(--rs-bulb-deep) 30%, #05070c) 0%,
+      #04060a 72%,
+      #020407 100%);
+  /* Inner shadow reads as glass thickness at the edge. */
+  box-shadow:
+    inset 0 0 calc(var(--rs-bulb-size) * 0.14)
+      color-mix(in srgb, var(--bg-base, #050505) 85%, transparent);
+}
+
+/* --- Inner veils -----------------------------------------------------------
+   Each veil is a thin, OFF-CENTRE bright annulus. Rotating an off-centre ring
+   sweeps it through the sphere as an arc, and a little blur turns that arc
+   into a ribbon — which is what the references actually show. The first
+   attempt used blurred conic wedges: those merge into a flat wash and expose
+   the gradient's centre as a visible pinch, because a conic has a singularity
+   and a ribbon does not.                                                     */
+
+.rs-bulb-veil {
+  position: absolute;
+  inset: -6%;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  will-change: transform;
+  /* Fade at the very centre and at the rim so ribbons read as suspended
+     inside the glass rather than painted on its inside face. */
+  -webkit-mask-image: radial-gradient(circle at 50% 50%,
+    transparent 3%, #000 22%, #000 62%, transparent 88%);
+  mask-image: radial-gradient(circle at 50% 50%,
+    transparent 3%, #000 22%, #000 62%, transparent 88%);
+}
+
+.rs-bulb-veil--a {
+  background:
+    radial-gradient(circle at 66% 34%,
+      transparent 26%,
+      color-mix(in srgb, var(--rs-bulb-hue) 92%, white 18%) 33%,
+      transparent 41%),
+    radial-gradient(circle at 30% 62%,
+      transparent 34%,
+      color-mix(in srgb, var(--rs-bulb-hue) 70%, transparent) 40%,
+      transparent 47%);
+  filter: blur(calc(var(--rs-bulb-size) * 0.018));
+  opacity: calc(0.55 + var(--rs-bulb-flux) * 0.45);
+  animation: rs-bulb-spin calc(16s / var(--rs-bulb-speed)) linear infinite;
+}
+
+.rs-bulb-veil--b {
+  background:
+    radial-gradient(circle at 38% 30%,
+      transparent 30%,
+      color-mix(in srgb, var(--md-tertiary, #b0a0c8) 80%, transparent) 36%,
+      transparent 44%),
+    radial-gradient(circle at 70% 70%,
+      transparent 22%,
+      color-mix(in srgb, var(--rs-bulb-hue) 85%, white 10%) 28%,
+      transparent 35%);
+  filter: blur(calc(var(--rs-bulb-size) * 0.026));
+  opacity: calc(0.45 + var(--rs-bulb-flux) * 0.45);
+  /* Reverse — see the header note. */
+  animation: rs-bulb-spin-rev calc(11s / var(--rs-bulb-speed)) linear infinite;
+}
+
+.rs-bulb-veil--c {
+  background:
+    radial-gradient(circle at 50% 26%,
+      transparent 18%,
+      color-mix(in srgb, var(--rs-bulb-hue) 100%, white 30%) 24%,
+      transparent 31%),
+    radial-gradient(circle at 26% 50%,
+      transparent 40%,
+      color-mix(in srgb, var(--rs-bulb-hue) 60%, transparent) 45%,
+      transparent 52%);
+  filter: blur(calc(var(--rs-bulb-size) * 0.012));
+  opacity: calc(0.40 + var(--rs-bulb-flux) * 0.55);
+  animation: rs-bulb-spin-rev calc(23s / var(--rs-bulb-speed)) linear infinite;
+}
+
+@keyframes rs-bulb-spin     { to { transform: rotate(360deg); } }
+@keyframes rs-bulb-spin-rev { to { transform: rotate(-360deg); } }
+
+/* Hot centre. Small, and the first thing to respond to voice. */
+.rs-bulb-core {
+  position: absolute;
+  inset: 38%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%,
+    color-mix(in srgb, var(--md-on-surface, #fff) 85%, var(--rs-bulb-hue)) 0%,
+    color-mix(in srgb, var(--rs-bulb-hue) 75%, transparent) 38%,
+    transparent 72%);
+  filter: blur(calc(var(--rs-bulb-size) * 0.03));
+  opacity: calc(0.20 + var(--rs-bulb-flux) * 0.65);
+  transform: scale(calc(0.8 + var(--rs-bulb-flux) * 0.5));
+  transition: opacity 90ms linear, transform 90ms linear;
+  mix-blend-mode: screen;
+}
+
+/* --- Specular rim ----------------------------------------------------------
+   The bright edge that makes it read as a glass sphere and not a flat disc. */
+
+.rs-bulb-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%,
+    transparent 70%,
+    color-mix(in srgb, var(--rs-bulb-hue) 30%, transparent) 86%,
+    color-mix(in srgb, var(--rs-bulb-hue) 85%, white 40%) 95%,
+    color-mix(in srgb, var(--rs-bulb-hue) 60%, white 20%) 99%,
+    transparent 100%);
+  opacity: calc(0.80 + var(--rs-bulb-flux) * 0.20);
+  /* A touch of outward bleed so the edge glows rather than ending abruptly. */
+  filter: blur(calc(var(--rs-bulb-size) * 0.004));
+}
+
+/* Off-axis glass highlight — upper-left, as in the references. */
+.rs-bulb-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 42% 30% at 32% 24%,
+      color-mix(in srgb, white 42%, transparent) 0%,
+      transparent 70%),
+    radial-gradient(ellipse 20% 12% at 70% 78%,
+      color-mix(in srgb, var(--rs-bulb-hue) 40%, transparent) 0%,
+      transparent 70%);
+  opacity: 0.30;
+}
+
+/* --- States ----------------------------------------------------------------
+   Speed and hue shift only; the geometry never changes, so transitions
+   between states never jump.                                                */
+
+.rs-bulb.is-idle       { --rs-bulb-speed: 0.7; }
+.rs-bulb.is-listening  { --rs-bulb-speed: 1.5; }
+.rs-bulb.is-thinking   { --rs-bulb-speed: 2.4; }
+.rs-bulb.is-speaking   { --rs-bulb-speed: 1.8; }
+
+.rs-bulb.is-error {
+  --rs-bulb-speed: 0.5;
+  --rs-bulb-hue: var(--md-error, #ffb4ab);
+  --rs-bulb-deep: var(--md-error-container, #93000a);
+}
+
+/* A proactive nudge: brief attention flare, no layout change. */
+.rs-bulb.is-attention .rs-bulb-bloom {
+  animation: rs-bulb-flare 2.4s ease-out;
+}
+@keyframes rs-bulb-flare {
+  0%   { opacity: 1; transform: scale(1.18); }
+  100% { opacity: inherit; transform: scale(1); }
+}
+
+.rs-bulb.is-interactive:hover  { filter: brightness(1.15); }
+.rs-bulb.is-interactive:active { transform: scale(0.94); }
+.rs-bulb.is-interactive:focus-visible {
+  outline: 2px solid var(--rs-bulb-hue);
+  outline-offset: 4px;
+}
+
+/* --- Small sizes -----------------------------------------------------------
+   Below roughly 48px the veils and sheen are sub-pixel noise and just cost
+   paint time. The header dot keeps the bloom, body and rim only.            */
+
+.rs-bulb.is-compact .rs-bulb-veil--b,
+.rs-bulb.is-compact .rs-bulb-veil--c,
+.rs-bulb.is-compact .rs-bulb-sheen { display: none; }
+.rs-bulb.is-compact .rs-bulb-veil--a { filter: blur(2px); }
+
+/* --- Reduced motion --------------------------------------------------------
+   Hold a still, lit bulb rather than removing the avatar.                    */
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-bulb,
+  .rs-bulb-veil,
+  .rs-bulb.is-attention .rs-bulb-bloom { animation: none; }
+  .rs-bulb-core { transition: none; }
+}

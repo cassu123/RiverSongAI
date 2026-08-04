@@ -16,6 +16,7 @@ import './styles/chrome-components.css'
 import './styles/chrome-drawer.css'
 import './styles/briefing.css'
 import './styles/speak.css'
+import './styles/bulb.css'
 import './styles/white-pages.css'
 import './styles/responsive.css'
 

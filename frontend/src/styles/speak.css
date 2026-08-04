@@ -151,3 +151,12 @@
   .rs-status-dot,
   .rs-speak-orb-fallback { animation: none; }
 }
+
+/* --- Bulb on the Speaking stage -------------------------------------------
+   The bulb sizes off its own box, so the stage only has to say how big.    */
+
+.rs-speak-bulb {
+  --rs-bulb-size: min(72vw, 46svh, 420px);
+  position: relative;
+  z-index: 2;
+}
