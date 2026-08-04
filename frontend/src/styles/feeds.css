@@ -1,0 +1,243 @@
+/* =============================================================================
+   feeds.css — Global Intelligence (Feeds)
+   -----------------------------------------------------------------------------
+   The screen had four things working against it, all visible at once:
+
+     1. Boxes inside boxes. The page card held a tab bar, which held a settings
+        card, which held chip rows and article rows — each with its own bezel
+        and radius. Every panel read as a separate object floating on the
+        wallpaper. Settings are now a divider-delimited section
+        (see TabSettingsPanel.jsx), and the surfaces below carry no second
+        border of their own.
+     2. Nothing was readable. The card is translucent and sits over the
+        photographic Stage, so grey monospace at opacity 0.5 vanished into the
+        sand. Body copy moves to the UI face at a workable weight; monospace is
+        kept for the things it is for — timestamps, tickers, counts.
+     3. Chips overflowed their container.
+     4. Dead vertical space: fixed 20px gaps between sparse rows.
+   ============================================================================= */
+
+.rs-feeds {
+  overflow: hidden;
+  padding: 0;
+  /* Opaque enough that body text holds against any Stage wallpaper. The rest
+     of the glass grammar (bezel, blur, radius) still comes from .rs-card. */
+  background: color-mix(in srgb, var(--md-surface-container-low) 92%, transparent);
+}
+
+/* --- Tab bar --------------------------------------------------------------- */
+
+.rs-feeds-tabbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px clamp(12px, 3vw, 18px);
+  border-block-end: 1px solid color-mix(in srgb, var(--md-outline-variant) 55%, transparent);
+  background: color-mix(in srgb, var(--md-surface-container) 55%, transparent);
+}
+
+.rs-feeds-tabs {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Tabs run off the edge on a phone; let them scroll rather than wrap into a
+     second row that shifts the whole body down. */
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.rs-feeds-tabs::-webkit-scrollbar { display: none; }
+.rs-feeds-tabs > .rs-pill { flex-shrink: 0; scroll-snap-align: start; }
+
+.rs-feeds-manage { position: relative; flex-shrink: 0; }
+
+.rs-feeds-manage-pop {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-end: 0;
+  z-index: 100;
+  margin-block-start: 8px;
+  min-inline-size: 220px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  /* A popover must be opaque; at 220px wide over a photograph, translucency
+     makes its own contents unreadable. */
+  background: var(--md-surface-container-high);
+  border: 1px solid var(--md-outline-variant);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38);
+}
+
+/* --- Body ------------------------------------------------------------------ */
+
+.rs-feeds-body {
+  padding: clamp(14px, 3vw, 22px) clamp(14px, 3vw, 22px) clamp(20px, 4vw, 28px);
+}
+
+/* --- Inline settings section ----------------------------------------------
+   Replaces the nested card. A rule above and below, no bezel, no radius —
+   it reads as part of the tab rather than a panel dropped on top of it.     */
+
+.rs-tabset {
+  margin-block-end: 18px;
+  border-block-end: 1px solid color-mix(in srgb, var(--md-outline-variant) 45%, transparent);
+}
+
+.rs-tabset-head {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  inline-size: 100%;
+  padding-block: 10px;
+  padding-block-end: 12px;
+  cursor: pointer;
+  min-block-size: var(--rs-touch-min, 44px);
+  color: var(--md-on-surface);
+}
+.rs-tabset-head:hover { color: var(--primary); }
+.rs-tabset-head:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.rs-tabset-body {
+  padding-block: 4px 18px;
+}
+
+/* --- Category chips --------------------------------------------------------
+   These are labels, not controls. Sized down and given their own row that
+   scrolls, so a long set can never push past the card edge.                 */
+
+.rs-feeds-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-block-end: 16px;
+  min-width: 0;
+}
+
+.rs-feeds-chip {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 3px 9px;
+  border-radius: var(--md-shape-full);
+  background: color-mix(in srgb, var(--md-on-surface) 8%, transparent);
+  color: var(--md-on-surface-variant);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* --- Article rows ---------------------------------------------------------- */
+
+.rs-feed-list { display: flex; flex-direction: column; }
+
+.rs-feed-item {
+  display: flex;
+  gap: 14px;
+  padding-block: 13px;
+  border-block-start: 1px solid color-mix(in srgb, var(--md-outline-variant) 40%, transparent);
+  cursor: pointer;
+  min-width: 0;
+  transition: background var(--rs-motion-fast, 180ms) ease;
+}
+.rs-feed-list > .rs-feed-item:first-child { border-block-start: none; }
+.rs-feed-item:hover { background: color-mix(in srgb, var(--md-on-surface) 5%, transparent); }
+
+.rs-feed-thumb {
+  inline-size: 76px;
+  block-size: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: var(--md-surface-container-highest);
+}
+
+.rs-feed-main { flex: 1; min-width: 0; }
+
+.rs-feed-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-block-end: 4px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  min-width: 0;
+}
+.rs-feed-source   { color: var(--primary); flex-shrink: 0; }
+.rs-feed-category { opacity: 0.45; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rs-feed-time     { margin-inline-start: auto; opacity: 0.4; flex-shrink: 0; }
+
+.rs-feed-title {
+  font-size: 0.92rem;
+  font-weight: 650;
+  line-height: 1.32;
+  color: var(--md-on-surface);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rs-feed-summary {
+  /* Was .rs-card-meta: JetBrains Mono at opacity 0.5, which is what made the
+     summaries illegible over the wallpaper. Prose gets the UI face. */
+  margin-block-start: 3px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--md-on-surface-variant);
+  opacity: 0.85;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* --- Wide viewports --------------------------------------------------------
+   One long column of articles wastes a desktop; pack them once there is room.
+   Container-relative so the nav rail's width is accounted for.              */
+
+.rs-feeds-body { container-type: inline-size; }
+
+@container (min-width: 720px) {
+  .rs-feed-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    column-gap: 22px;
+  }
+  .rs-feed-list > .rs-feed-item:nth-child(-n+2) { border-block-start: none; }
+}
+
+/* --- Page header -----------------------------------------------------------
+   .rs-greeting-sub is uppercase monospace in the accent colour. That is a
+   telemetry treatment, and as a three-line sentence over a bright wallpaper it
+   was close to unreadable. Scoped to this page so the Briefing hero, which
+   uses the same class for a short line, is untouched. */
+
+.rs-feeds-head { margin-block-end: 20px; padding-block-start: 12px; }
+
+.rs-feeds-head .rs-greeting-sub {
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.92rem;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.5;
+  color: var(--md-on-surface);
+  opacity: 0.72;
+  max-inline-size: 56ch;
+  /* Sits over a photograph; a soft shade keeps it readable on light frames. */
+  text-shadow: 0 1px 12px color-mix(in srgb, var(--bg-base) 85%, transparent);
+}
+
+.rs-feeds-head .rs-greeting {
+  text-shadow: 0 2px 20px color-mix(in srgb, var(--bg-base) 70%, transparent);
+}

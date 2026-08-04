@@ -9,7 +9,7 @@ import EarthTab   from './tabs/EarthTab.jsx'
 import HappeningsTab from './tabs/HappeningsTab.jsx'
 import {
   useFeedPrefs, FeedTabsManager, OPTIONAL_TABS,
-  WeatherSettings, StocksSettings, SpaceSettings, EarthSettings, HappeningsSettings,
+  SpaceSettings, EarthSettings, HappeningsSettings,
 } from './tabs/FeedTabSettings.jsx'
 
 const TABS = [
@@ -89,32 +89,32 @@ export default function FeedTabsContainer({ token, defaultTab = 'news' }) {
     return () => document.removeEventListener('mousedown', handler)
   }, [manageOpen])
 
-  const settingsForActive = {
-    weather:    <WeatherSettings    prefs={prefs} savePrefs={savePrefs} />,
-    stocks:     <StocksSettings     prefs={prefs} savePrefs={savePrefs} />,
+  // Weather and Stocks render their own settings section inside the tab body
+  // (WeatherTab.jsx / StocksTab.jsx). Rendering the container's copy as well
+  // stacked two panels: two identical "WEATHER SETTINGS" for weather, and a
+  // "WATCHLIST" above a "MARKETS SETTINGS" for stocks. The remaining tabs have
+  // no settings of their own, so the container still supplies theirs.
+  const TABS_WITH_OWN_SETTINGS = new Set(['weather', 'stocks'])
+
+  const settingsForActive = TABS_WITH_OWN_SETTINGS.has(active) ? null : {
     space:      <SpaceSettings      prefs={prefs} savePrefs={savePrefs} />,
     earth:      <EarthSettings      prefs={prefs} savePrefs={savePrefs} />,
     happenings: <HappeningsSettings prefs={prefs} savePrefs={savePrefs} />,
   }[active] || null
 
   return (
-    <div className="rs-card is-wide" style={{ overflow: 'hidden' }}>
+    <div className="rs-card is-wide rs-feeds">
 
       {/* Tab bar */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '14px 20px',
-        borderBottom: '1px solid var(--md-outline-variant)',
-      }}>
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', flex: 1 }}>
+      <div className="rs-feeds-tabbar">
+        <div className="rs-feeds-tabs">
           {visibleTabs.map(tab => (
             <button
               key={tab.key}
               className={`rs-pill ${active === tab.key ? 'is-active' : ''}`}
               onClick={() => switchTab(tab.key)}
-              style={{ flexShrink: 0 }}
+              aria-current={active === tab.key ? 'page' : undefined}
+              title={tab.label}
             >
               <span className="material-symbols-rounded">{tab.icon}</span>
               <span className="rs-speak-actions-label">{tab.label}</span>
@@ -123,24 +123,16 @@ export default function FeedTabsContainer({ token, defaultTab = 'news' }) {
         </div>
 
         {/* Manage which optional tabs are shown */}
-        <div style={{ position: 'relative', flexShrink: 0 }} ref={manageRef}>
+        <div className="rs-feeds-manage" ref={manageRef}>
           <button
             className={`rs-pill ${manageOpen ? 'is-active' : ''}`}
             onClick={() => setManageOpen(o => !o)}
             title="Manage tabs"
-            style={{ flexShrink: 0 }}
           >
             <span className="material-symbols-rounded">tune</span>
           </button>
           {manageOpen && (
-            <div style={{
-              position: 'absolute', top: '100%', right: 0, zIndex: 100, marginTop: 8,
-              background: 'var(--md-surface-container)',
-              border: '1px solid var(--md-outline-variant)',
-              borderRadius: 12, padding: '16px 18px',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
-              minWidth: 220,
-            }}>
+            <div className="rs-feeds-manage-pop">
               <FeedTabsManager prefs={prefs} savePrefs={savePrefs} />
             </div>
           )}
@@ -148,7 +140,7 @@ export default function FeedTabsContainer({ token, defaultTab = 'news' }) {
       </div>
 
       {/* Tab content */}
-      <div style={{ padding: '20px 24px 28px' }}>
+      <div className="rs-feeds-body">
         {settingsForActive}
         {active === 'news'    && <NewsTab    token={token} active={active === 'news'} />}
         {active === 'weather' && <WeatherTab token={token} active={active === 'weather'} />}
