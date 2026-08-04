@@ -54,6 +54,7 @@ from .slae import router as slae_router
 from .chat_sessions import router as chat_sessions_router
 from .proactive import router as proactive_router
 from .sweeps import router as sweeps_router
+from .briefing import router as briefing_router
 
 __all__ = [
     "health_router",
@@ -112,4 +113,5 @@ __all__ = [
     "chat_sessions_router",
     "proactive_router",
     "sweeps_router",
+    "briefing_router",
 ]

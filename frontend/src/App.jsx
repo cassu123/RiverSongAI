@@ -14,6 +14,7 @@ import './styles/chrome-shell.css'
 import './styles/chrome-stage.css'
 import './styles/chrome-components.css'
 import './styles/chrome-drawer.css'
+import './styles/briefing.css'
 import './styles/white-pages.css'
 import './styles/responsive.css'
 

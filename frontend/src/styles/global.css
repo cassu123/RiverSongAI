@@ -13,6 +13,42 @@
 @config "../../tailwind.config.js";
 
 /* ============================================================
+   Icon containment
+   ------------------------------------------------------------
+   The Material Symbols class is defined by the Google-hosted stylesheet in
+   index.html, not by us. Until that sheet arrives — a slow phone connection,
+   or a River Song box on a LAN with no internet, which is a supported way to
+   run this — every <span class="material-symbols-rounded">priority_high</span>
+   renders as its literal ligature text at body size. That does not merely look
+   wrong: long names like "radio_button_unchecked" take a whole text column and
+   shove real content out of its row, so lists collapse into shredded columns.
+
+   Pinning the box to a 1em square keeps an unresolved icon at exactly the size
+   the glyph will occupy, so layout is identical before and after the font
+   lands, and a blocked font degrades to a small blank rather than a broken
+   page. Self-hosting the font is the complete fix for offline installs; this
+   is the guard that makes its absence harmless.
+   ============================================================ */
+
+.material-symbols-rounded,
+.material-symbols-outlined,
+.material-symbols-sharp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1em;
+  block-size: 1em;
+  flex: 0 0 auto;
+  overflow: hidden;
+  line-height: 1;
+  /* Ligature names are lowercase words with underscores; never let one wrap. */
+  white-space: nowrap;
+  /* Keeps the glyph optically centered in its 1em box across weights. */
+  font-variant-ligatures: common-ligatures discretionary-ligatures;
+  user-select: none;
+}
+
+/* ============================================================
    M3 Color Roles — Dark Scheme
    ============================================================ */
 
