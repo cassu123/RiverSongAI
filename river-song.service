@@ -1,0 +1,17 @@
+[Unit]
+Description=River Song AI
+After=network.target
+
+[Service]
+Type=simple
+User=riversong
+WorkingDirectory=/home/riversong/RiverSongAI
+ExecStart=/home/riversong/RiverSongAI/venv/bin/python main.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+EnvironmentFile=/home/riversong/RiverSongAI/.env
+
+[Install]
+WantedBy=multi-user.target

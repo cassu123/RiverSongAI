@@ -1,0 +1,39 @@
+SERVICE: Instagram Graph API (Meta Developer Platform)
+WHAT IT DOES: Lets River Song pull your Instagram Business or Creator account followers, impressions, reach, and post engagement metrics.
+HOW TO GET IT:
+  1. Your Instagram account MUST be a Business or Creator account, not a personal account.
+     To convert: Instagram app -> Settings -> Account -> Switch to Professional Account.
+  2. Your Instagram account MUST be linked to a Facebook Page you manage.
+     Instagram app -> Settings -> Account -> Linked Accounts -> Facebook.
+     Or from Facebook: Settings -> Instagram -> Connect Account.
+  3. Go to developers.facebook.com and sign in with your Facebook account.
+  4. Click "My Apps" -> "Create App". Choose "Business" as the use case.
+  5. Fill in the app name (e.g. "River Song Analytics") and your email.
+  6. In the app dashboard, click "Add Product" and add "Instagram Graph API".
+  7. In the app settings under "Basic", copy the App ID and App Secret.
+     These go in INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET.
+  8. Set the OAuth redirect URI to: http://localhost:8000/callback/instagram
+  9. In Graph API Explorer (developers.facebook.com/tools/explorer), generate a User Access
+     Token with these permissions: instagram_basic, instagram_manage_insights, pages_read_engagement.
+  10. Exchange the short-lived token for a long-lived token using:
+      GET https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token
+          &client_id={INSTAGRAM_APP_ID}&client_secret={INSTAGRAM_APP_SECRET}
+          &fb_exchange_token={short_lived_token}
+      Copy the result. This goes in INSTAGRAM_ACCESS_TOKEN.
+  11. Get your Instagram User ID:
+      GET https://graph.facebook.com/me/accounts?access_token={INSTAGRAM_ACCESS_TOKEN}
+      Find the Page connected to your Instagram. Then:
+      GET https://graph.facebook.com/{page_id}?fields=instagram_business_account&access_token={token}
+      The id returned goes in INSTAGRAM_USER_ID.
+  Link: https://developers.facebook.com/docs/instagram-api
+VARIABLE NAME: INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET, INSTAGRAM_ACCESS_TOKEN, INSTAGRAM_USER_ID
+WHERE TO PUT IT: .env
+NOTES:
+  - Long-lived tokens are valid for 60 days. River Song will need a token refresh flow once
+    the login integration is built. Meta provides a refresh endpoint before expiry.
+  - The app will be in "Development mode" initially, which limits it to users listed as
+    Developers or Testers in the app. For personal use this is fine -- just add yourself.
+  - Insights (impressions, reach) are only available for the past 30 days maximum.
+  - "Revenue" is not directly available from the Instagram API. River Song will show
+    engagement metrics only unless linked to a Meta Business Suite monetization account.
+  - App review (for going to Live mode) is not required if you are only analyzing your own account.

@@ -1,0 +1,37 @@
+SERVICE: Facebook Graph API — Pages Insights (Meta Developer Platform)
+WHAT IT DOES: Lets River Song pull your Facebook Page likes, post reach, engagements, and page-level revenue/ad metrics from the Facebook Pages API.
+HOW TO GET IT:
+  1. You must manage a Facebook Page (not just a personal profile). If you do not have one,
+     go to facebook.com/pages/create and create a Business or Brand page.
+  2. Go to developers.facebook.com and sign in.
+  3. Click "My Apps" -> "Create App". Choose "Business" as the type.
+  4. Add the product "Facebook Login" and "Pages API" from the dashboard.
+  5. Under "Basic" settings, copy the App ID and App Secret.
+     These go in FACEBOOK_APP_ID and FACEBOOK_APP_SECRET.
+  6. Set the OAuth redirect URI to: http://localhost:8000/callback/facebook
+  7. In Graph API Explorer (developers.facebook.com/tools/explorer), generate a User Access
+     Token with these permissions: pages_show_list, pages_read_engagement, pages_read_user_content,
+     read_insights.
+  8. Exchange for a long-lived User token (valid 60 days):
+      GET https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token
+          &client_id={FACEBOOK_APP_ID}&client_secret={FACEBOOK_APP_SECRET}
+          &fb_exchange_token={short_lived_token}
+  9. Get a permanent Page Access Token:
+      GET https://graph.facebook.com/me/accounts?access_token={long_lived_user_token}
+      Find your page in the response. Copy its "access_token" (Page tokens do not expire).
+      This goes in FACEBOOK_ACCESS_TOKEN.
+  10. From the same /me/accounts response, copy your page "id".
+      This goes in FACEBOOK_PAGE_ID.
+  Link: https://developers.facebook.com/docs/pages-api
+VARIABLE NAME: FACEBOOK_APP_ID, FACEBOOK_APP_SECRET, FACEBOOK_ACCESS_TOKEN, FACEBOOK_PAGE_ID
+WHERE TO PUT IT: .env
+NOTES:
+  - Page Access Tokens are permanent (do not expire) as long as the user who generated them
+    maintains admin access to the page and does not revoke the app.
+  - Insights data (reach, impressions, engagement) is available at page level and post level.
+    River Song currently pulls page-level metrics for the dashboard.
+  - Revenue data is only available if you have Facebook Stars, Fan Subscriptions, or run ads
+    through Meta Ads Manager. If you do not use these features, revenue will show as 0.
+  - This setup covers Facebook Pages. Facebook personal profiles cannot be accessed via API.
+  - If you set up Instagram (instagram_analytics.txt), you can reuse the same Meta Developer
+    App -- add both Instagram Graph API and Pages API to the same app.

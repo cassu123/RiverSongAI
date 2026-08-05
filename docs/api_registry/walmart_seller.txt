@@ -1,0 +1,26 @@
+SERVICE: Walmart Marketplace Seller API
+WHAT IT DOES: Lets River Song check your Walmart seller inventory for low-stock items and pull new orders by voice.
+HOW TO GET IT:
+  1. You must be an approved Walmart Marketplace seller. Apply at marketplace.walmart.com if you are not.
+  2. Once approved, sign in to the Walmart Seller Center at seller.walmart.com.
+  3. Go to Settings -> API Access -> Add Developer Account.
+     This takes you to developer.walmart.com.
+  4. Create a new app. Set the type to "Seller". Name it anything (e.g. "River Song").
+  5. After creating the app, go to Keys -> View API Keys.
+  6. Copy the Client ID and Client Secret.
+     These go in WALMART_CLIENT_ID and WALMART_CLIENT_SECRET.
+  Link: https://developer.walmart.com/
+VARIABLE NAME: WALMART_CLIENT_ID, WALMART_CLIENT_SECRET, WALMART_LOW_STOCK_THRESHOLD
+WHERE TO PUT IT: .env
+NOTES:
+  - Walmart uses standard OAuth2 client credentials (no refresh token needed).
+    River Song fetches a new access token automatically when the current one expires (~15 min).
+  - Access tokens are cached in memory for their lifetime. River Song never stores them to disk.
+  - WALMART_LOW_STOCK_THRESHOLD defaults to 5. Items at or below this quantity trigger the alert.
+  - River Song queries Walmart inventory in pages of 50 items, paginating automatically.
+  - Order statuses available for query: Created, Acknowledged, Shipped, Delivered, Cancelled.
+    River Song defaults to "Created" (new unacknowledged orders) for order queries.
+  - The Walmart Marketplace API is REST with JSON responses. No third-party SDK is required --
+    River Song uses httpx directly.
+  - If your Walmart account is not yet approved, these credentials will not work.
+    Walmart approval is separate from having a seller.walmart.com account.

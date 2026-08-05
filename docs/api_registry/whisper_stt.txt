@@ -1,0 +1,25 @@
+SERVICE: Whisper STT (Speech-to-Text)
+WHAT IT DOES: Converts your spoken voice into text so River Song can understand what you said. Runs entirely on your machine -- no internet required after setup.
+HOW TO GET IT:
+  1. Install the Python package: pip install openai-whisper
+     (This is already listed in requirements.txt -- run pip install -r requirements.txt to install everything at once.)
+  2. The model downloads automatically the first time River Song starts. You do not need to download anything manually.
+  3. Set WHISPER_MODEL_SIZE in .env to the model size you want.
+     Options (smallest to largest): tiny, base, small, medium, large
+  4. If your microphone is not the system default, find its index by running:
+       python -c "import sounddevice as sd; print(sd.query_devices())"
+     Set AUDIO_INPUT_DEVICE in .env to the number shown for your microphone.
+  Link: https://github.com/openai/whisper
+VARIABLE NAME: WHISPER_MODEL_SIZE, AUDIO_INPUT_DEVICE
+WHERE TO PUT IT: .env
+NOTES:
+  - Model sizes and approximate RAM usage:
+      tiny   ~75 MB  -- fast, less accurate, good for testing
+      base   ~150 MB -- fast, decent accuracy, recommended starting point
+      small  ~500 MB -- good accuracy, reasonable speed
+      medium ~1.5 GB -- high accuracy, slower on CPU
+      large  ~3 GB   -- best accuracy, requires a GPU or significant patience on CPU
+  - The model file is downloaded to ~/.cache/whisper/ on first use and reused after that. It is not stored in this repo.
+  - Leave AUDIO_INPUT_DEVICE blank to use your system default microphone.
+  - STT_PROVIDER=whisper_local must be set in .env (it is the default).
+  - Whisper runs on CPU by default. If you have an NVIDIA GPU with CUDA installed, it will use it automatically, which is significantly faster.

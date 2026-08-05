@@ -1,0 +1,215 @@
+/* ============================================================
+   River Song AI — Material You 3 (Dark) Design System
+   Seed color: #0B6CF5 (River Song Blue)
+   Theme: Dark · Scheme: Dynamic Tonal Palette
+   Refined for Spatial UI / Liquid Glass.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=Ibarra+Real+Nova:wght@400;600&family=JetBrains+Mono:wght@400;700&family=Lexend:wght@300;400;600&family=Outfit:wght@300;400;600&family=Inter:wght@400;700;900&display=swap');
+
+/* Tailwind v4: single import + load the existing v3-style JS config for the
+   Material You theme tokens via the @config compatibility directive. */
+@import "tailwindcss";
+@config "../../tailwind.config.js";
+
+/* ============================================================
+   Icon containment
+   ------------------------------------------------------------
+   The Material Symbols class is defined by the Google-hosted stylesheet in
+   index.html, not by us. Until that sheet arrives — a slow phone connection,
+   or a River Song box on a LAN with no internet, which is a supported way to
+   run this — every <span class="material-symbols-rounded">priority_high</span>
+   renders as its literal ligature text at body size. That does not merely look
+   wrong: long names like "radio_button_unchecked" take a whole text column and
+   shove real content out of its row, so lists collapse into shredded columns.
+
+   Pinning the box to a 1em square keeps an unresolved icon at exactly the size
+   the glyph will occupy, so layout is identical before and after the font
+   lands, and a blocked font degrades to a small blank rather than a broken
+   page. Self-hosting the font is the complete fix for offline installs; this
+   is the guard that makes its absence harmless.
+   ============================================================ */
+
+.material-symbols-rounded,
+.material-symbols-outlined,
+.material-symbols-sharp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1em;
+  block-size: 1em;
+  flex: 0 0 auto;
+  overflow: hidden;
+  line-height: 1;
+  /* Ligature names are lowercase words with underscores; never let one wrap. */
+  white-space: nowrap;
+  /* Keeps the glyph optically centered in its 1em box across weights. */
+  font-variant-ligatures: common-ligatures discretionary-ligatures;
+  user-select: none;
+}
+
+/* ============================================================
+   M3 Color Roles — Dark Scheme
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+  /* Primary tonal palette */
+  --md-primary:                #96CBFF;
+  --md-on-primary:             #003354;
+  --md-primary-container:      #004A77;
+  --md-on-primary-container:   #CAE6FF;
+
+  /* Secondary tonal palette */
+  --md-secondary:              #B6C9D9;
+  --md-on-secondary:           #213242;
+  --md-secondary-container:    #384959;
+  --md-on-secondary-container: #D2E5F5;
+
+  /* Tertiary tonal palette (accent) */
+  --md-tertiary:               #D9BBFF;
+  --md-on-tertiary:            #3E1F77;
+  --md-tertiary-container:     #55368F;
+  --md-on-tertiary-container:  #EEDCFF;
+
+  /* Error */
+  --md-error:                  #FFB4AB;
+  --md-on-error:               #690005;
+  --md-error-container:        #93000A;
+  --md-on-error-container:     #FFDAD6;
+
+  /* Surface & background */
+  --md-background:             var(--bg-base, #0F1316);
+  --md-on-background:          var(--fg, #DEE4E9);
+  --md-surface:                color-mix(in srgb, var(--bg-base, #0F1316) 70%, transparent);
+  --md-on-surface:             var(--fg, #DEE4E9);
+  --md-surface-variant:        color-mix(in srgb, var(--bg-base, #0F1316) 50%, transparent);
+  --md-on-surface-variant:     color-mix(in srgb, var(--fg, #BFC8CE) 80%, transparent);
+
+  /* Surface container hierarchy */
+  --md-surface-container-lowest:  color-mix(in srgb, var(--bg-base, #0F1316) 55%, transparent);
+  --md-surface-container-low:     color-mix(in srgb, var(--bg-base, #0F1316) 65%, transparent);
+  --md-surface-container:         color-mix(in srgb, var(--bg-base, #0F1316) 75%, transparent);
+  --md-surface-container-high:    color-mix(in srgb, var(--bg-base, #0F1316) 85%, transparent);
+  --md-surface-container-highest: color-mix(in srgb, var(--bg-base, #0F1316) 92%, transparent);
+
+  /* Outline */
+  --md-outline:         #899398;
+  --md-outline-variant: #40484E;
+
+  /* Shape tokens */
+  --md-shape-full: 999px;
+  --md-shape-xl:   20px;
+  --md-shape-lg:   14px;
+  --md-shape-sm:   8px;
+
+  /* Chrome Blur */
+  --glass-blur: blur(24px);
+  --glass-blur-sm: blur(10px);
+
+  /* Motion Curves */
+  --rs-motion-fast: 180ms;
+  --rs-motion-mid:  350ms;
+  --rs-motion-slow: 750ms;
+  --rs-motion-curve: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Semantic Status Colors */
+  --rs-status-nominal:  #4ade80;
+  --rs-status-warning:  #facc15;
+  --rs-status-critical: #ff8b8b;
+}
+
+/* ============================================================
+   LEGACY VARIABLE COMPATIBILITY ALIASES
+   Maps older component-level tokens to the current MD3 system.
+   ============================================================ */
+
+body {
+  /* Text aliases */
+  --text-dim:    var(--md-on-surface-variant);
+  --text-muted:  color-mix(in srgb, var(--md-on-surface-variant) 55%, transparent);
+
+  /* Background aliases */
+  --bg:          var(--bg-base);
+  --bg-card:     var(--md-surface-container-low);
+  --bg-card-sel: var(--md-surface-container-high);
+  --bg-panel:    var(--md-surface-container);
+
+  /* Border aliases */
+  --border-bright: var(--md-outline-variant);
+
+  /* Glow aliases */
+  --glow-sm:   0 0 10px color-mix(in srgb, var(--primary, #deb651) 35%, transparent);
+  --glow-teal: 0 0 8px rgba(0, 200, 220, 0.45);
+
+  /* Color aliases */
+  --secondary: var(--md-secondary);
+
+  /* Border alias */
+  --border: var(--md-outline-variant);
+}
+
+/* ============================================================
+   BASE ELEMENT RESET
+   ============================================================ */
+
+body {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg-base);
+  color: var(--fg);
+  overflow: hidden;
+  height: 100dvh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+p {
+  max-width: 65ch;
+  line-height: 1.6;
+}
+
+.rs-root {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg-base);
+}
+
+/* ============================================================
+   ANIMATION: GLOBAL FADE & PAGE TRANSITIONS
+   ============================================================ */
+
+.animate-fade-in {
+  animation: rs-fade-in var(--rs-motion-mid) var(--rs-motion-curve) both;
+}
+
+@keyframes rs-fade-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-page-in {
+  animation: rs-page-in var(--rs-motion-slow) var(--rs-motion-curve) both;
+}
+
+@keyframes rs-page-in {
+  from { opacity: 0; transform: scale(1.02) translateY(20px); filter: blur(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+}
+
+.animate-slide-up {
+  animation: rs-slide-up var(--rs-motion-mid) var(--rs-motion-curve) both;
+}
+
+@keyframes rs-slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

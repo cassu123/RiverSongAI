@@ -1,0 +1,27 @@
+SERVICE: Ollama LLM (Language Model)
+WHAT IT DOES: Runs the language model that powers River Song's conversation and reasoning. Runs entirely on your machine -- no internet required and no API costs after setup.
+HOW TO GET IT:
+  1. Go to ollama.com and click "Download". Install it for your operating system (macOS, Linux, or Windows).
+  2. After installing, Ollama runs as a background service automatically. Verify it is running by opening a terminal and typing: ollama list
+  3. Pull the model you want to use. The default is llama3.1:8b:
+       ollama pull llama3.1:8b
+     Other options:
+       ollama pull llama3.2:3b      (faster, less capable, good for low-RAM machines)
+       ollama pull mistral:7b       (good alternative to llama)
+       ollama pull gemma2:9b        (Google's model, strong at reasoning)
+  4. Set LLM_MODEL in .env to the exact tag you pulled (e.g. llama3.1:8b).
+  5. Set OLLAMA_BASE_URL in .env to http://localhost:11434 (this is the default and usually correct).
+  6. Edit RIVER_SONG_SYSTEM_PROMPT in .env if you want to customize River Song's personality.
+  Link: https://ollama.com/download
+VARIABLE NAME: LLM_PROVIDER, OLLAMA_BASE_URL, LLM_MODEL, RIVER_SONG_SYSTEM_PROMPT, LLM_MAX_TOKENS, LLM_TEMPERATURE
+WHERE TO PUT IT: .env
+NOTES:
+  - Model RAM requirements (approximate):
+      3b models  -- 4 GB RAM minimum
+      7b-8b models -- 8 GB RAM recommended
+      13b models -- 16 GB RAM recommended
+  - If Ollama is not running, River Song will log a connection error on startup and all LLM calls will fail. Restart Ollama with: ollama serve
+  - LLM_TEMPERATURE controls how creative responses are. 0.0 = same answer every time, 0.7 = natural variation (default), 1.5+ = unpredictable.
+  - LLM_MAX_TOKENS caps how long each response can be. Default is 512, which is roughly 2-3 paragraphs.
+  - LLM_PROVIDER=ollama must be set in .env (it is the default). The provider system is designed to swap in OpenAI or Anthropic later by changing one line.
+  - Model files are stored in ~/.ollama/models/ (Linux/Mac) or %USERPROFILE%\.ollama\models\ (Windows). They are not in this repo.

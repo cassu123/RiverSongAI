@@ -1,0 +1,17 @@
+SERVICE: News API (NewsAPI.org)
+WHAT IT DOES: Gives River Song top news headlines by category (business, tech, sports, etc.) and lets you search for news on any topic.
+HOW TO GET IT:
+  1. Go to newsapi.org/register.
+  2. Fill in your name, email, and a password. Click "Submit".
+  3. Check your email and confirm your account.
+  4. After logging in, your API key is shown on the main dashboard page.
+  5. Paste the key as the value for NEWS_API_KEY in your .env file.
+  Link: https://newsapi.org/register
+VARIABLE NAME: NEWS_API_KEY
+WHERE TO PUT IT: .env
+NOTES:
+  - The free Developer tier allows 100 requests per day.
+  - Free tier only: articles older than 1 month are not returned, and the /everything endpoint (topic search) is limited. The /top-headlines endpoint (categories) works fully on the free tier.
+  - Free accounts are marked "Developer" and may return a "developerMode" flag in some responses. River Song handles this automatically.
+  - Supported categories: business, entertainment, general, health, science, sports, technology.
+  - If NEWS_API_KEY is empty, news intent calls will return an error message in speech. All other features still work.

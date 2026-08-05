@@ -1,0 +1,37 @@
+SERVICE: Shopify Admin API (Custom App)
+WHAT IT DOES: Lets River Song pull your Shopify store orders, revenue, sessions, and conversion rate from your store's admin data.
+HOW TO GET IT:
+  1. Log in to your Shopify admin at yourstorename.myshopify.com/admin.
+  2. Go to Settings -> Apps and sales channels -> Develop apps.
+  3. Click "Allow custom app development" if prompted, then "Create an app".
+  4. Name the app "River Song" and click "Create app".
+  5. Click "Configure Admin API scopes" and enable these read permissions:
+       read_orders
+       read_analytics
+       read_reports
+       read_customers (optional, for customer count)
+  6. Click "Install app", then "Install".
+  7. On the next screen, copy the "Admin API access token" shown.
+     IMPORTANT: This token is only shown once. Copy it immediately.
+     This goes in SHOPIFY_ACCESS_TOKEN.
+  8. Your store URL goes in SHOPIFY_STORE_URL.
+     Format: yourstorename.myshopify.com (no https://, no trailing slash)
+  Link: https://shopify.dev/docs/api/admin-rest
+VARIABLE NAME: SHOPIFY_ACCESS_TOKEN, SHOPIFY_STORE_URL
+WHERE TO PUT IT: .env
+NOTES:
+  - Custom app tokens do not expire. They remain valid until you uninstall the app or
+    rotate the token manually in the Shopify admin.
+  - The Admin API uses a simple Bearer token -- no OAuth flow, no refresh needed.
+    This makes Shopify the simplest of all the analytics integrations to set up.
+  - Shopify's Analytics API returns aggregate reports (sessions, conversion, revenue).
+    Order-level data comes from the Orders API and is more granular.
+  - River Song uses the Admin REST API (not GraphQL). Both are supported by Shopify
+    but the REST API is simpler for read-only dashboard use.
+  - Rate limits: Shopify allows 40 API calls/second per store on the standard plan.
+    River Song's on-demand dashboard calls are well within this limit.
+  - If you have multiple Shopify stores, you need a separate custom app and access token
+    for each store. Set up separate .env variables (e.g. SHOPIFY_ACCESS_TOKEN_2) and
+    extend the analytics integration to support multiple stores when building the login flow.
+  - Session and conversion data via the API reflects the same numbers shown in your
+    Shopify Analytics dashboard under "Acquisition" and "Behavior".

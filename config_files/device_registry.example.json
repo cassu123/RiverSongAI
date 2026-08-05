@@ -1,0 +1,70 @@
+{
+  "_comment": "Copy this file to device_registry.json and replace example entity IDs with your actual Home Assistant entity IDs. Find entity IDs in HA: Settings -> Devices & Services -> Entities.",
+
+  "devices": {
+    "living room lights":    "light.living_room",
+    "living room light":     "light.living_room",
+    "living room":           "light.living_room",
+    "kitchen lights":        "light.kitchen",
+    "kitchen light":         "light.kitchen",
+    "kitchen":               "light.kitchen",
+    "bedroom lights":        "light.bedroom",
+    "bedroom light":         "light.bedroom",
+    "bedroom":               "light.bedroom",
+    "office lights":         "light.office",
+    "office light":          "light.office",
+    "office":                "light.office",
+    "bathroom lights":       "light.bathroom",
+    "bathroom":              "light.bathroom",
+    "porch light":           "light.porch",
+    "front porch light":     "light.porch",
+    "garage light":          "light.garage",
+    "ceiling fan":           "fan.living_room_fan",
+    "bedroom fan":           "fan.bedroom_fan",
+    "office fan":            "fan.office_fan",
+    "front door lock":       "lock.front_door",
+    "front door":            "lock.front_door",
+    "back door lock":        "lock.back_door",
+    "back door":             "lock.back_door",
+    "garage door":           "cover.garage_door",
+    "living room blinds":    "cover.living_room_blinds",
+    "bedroom blinds":        "cover.bedroom_blinds",
+    "thermostat":            "climate.home",
+    "home thermostat":       "climate.home",
+    "tv":                    "media_player.living_room_tv",
+    "living room tv":        "media_player.living_room_tv",
+    "bedroom tv":            "media_player.bedroom_tv"
+  },
+
+  "groups": {
+    "all lights": [
+      "light.living_room",
+      "light.kitchen",
+      "light.bedroom",
+      "light.office",
+      "light.bathroom"
+    ],
+    "downstairs lights": [
+      "light.living_room",
+      "light.kitchen"
+    ],
+    "upstairs lights": [
+      "light.bedroom",
+      "light.office",
+      "light.bathroom"
+    ],
+    "all fans": [
+      "fan.living_room_fan",
+      "fan.bedroom_fan",
+      "fan.office_fan"
+    ],
+    "all locks": [
+      "lock.front_door",
+      "lock.back_door"
+    ],
+    "all blinds": [
+      "cover.living_room_blinds",
+      "cover.bedroom_blinds"
+    ]
+  }
+}

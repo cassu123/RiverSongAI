@@ -1,0 +1,214 @@
+# =============================================================================
+# RiverSongAI -- .gitignore
+# Covers: Python backend, React/Vite frontend, AI models, credentials, OS/IDE
+# =============================================================================
+
+# Local deploy state
+.venv_requirements.sha256
+
+
+# -----------------------------------------------------------------------------
+# Environment and secrets -- NEVER commit these
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+.flaskenv
+instance/
+
+# Databases
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+# OAuth credentials and tokens
+*client_secrets.json
+config_files/google_client_secrets.json
+config_files/google_config.json
+data/google_tokens/
+token.json
+token.pickle
+*.oauth2.credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# API keys and service account files
+*service_account*.json
+*credentials*.json
+*secrets*.json
+
+# Device registry (user-specific entity IDs -- commit only the .example version)
+config_files/device_registry.json
+
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.Python/
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+eggs/
+/lib/
+/lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+MANIFEST
+
+# Testing and coverage
+.coverage
+.pytest_cache/
+htmlcov/
+.nox/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+
+# Type checkers
+.mypy_cache/
+.dmypy.json
+.pyright/
+
+# Databases
+*.sqlite
+*.sqlite3
+*.db
+
+
+# -----------------------------------------------------------------------------
+# AI model files -- large binaries, never commit
+# -----------------------------------------------------------------------------
+# Whisper / PyTorch
+*.pt
+*.pth
+*.safetensors
+
+# Piper TTS voice models
+*.onnx
+*.onnx.json
+
+# Generic model weights
+*.bin
+*.gguf
+*.ggml
+
+# Hugging Face cache (if downloaded locally)
+.cache/huggingface/
+
+
+# -----------------------------------------------------------------------------
+# Node.js / Frontend
+# -----------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# Vite build output and cache
+frontend/dist/
+frontend/.vite/
+
+
+# -----------------------------------------------------------------------------
+# Logs and runtime state
+# -----------------------------------------------------------------------------
+*.log
+logs/
+
+# Kill switch state file (runtime, not source)
+logs/kill_switch_state.txt
+
+
+# Data directories (OAuth tokens, user data, downloaded content)
+# -----------------------------------------------------------------------------
+data/*
+!data/.gitkeep
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+
+# -----------------------------------------------------------------------------
+# Inventory System -- user-generated files, never commit
+# -----------------------------------------------------------------------------
+inventory_files/          # uploaded receipts, warranty docs, item photos
+inventory/reports/        # generated PDF reports and label sheets
+
+
+# -----------------------------------------------------------------------------
+# OS artifacts
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+
+# -----------------------------------------------------------------------------
+# IDE and editor
+# -----------------------------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.sublime-workspace
+*.sublime-project
+.project
+.settings/
+.classpath
+
+
+# -----------------------------------------------------------------------------
+# Virtual environments
+# -----------------------------------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.direnv/
+.pip-modules/
+
+
+# -----------------------------------------------------------------------------
+# Misc project artifacts
+# -----------------------------------------------------------------------------
+output.txt
+project_tree.txt
+
+# Conversation transcript files (Claude Code session logs)
+*.jsonl
+
+# Ignore NOTES folder
+NOTES/
+
+# Ignore Claude config
+CLAUDE.md
+
+# Voice biometric data — local only, never sync
+data/voice_prints/
+
+# Session turnover logs
+passover/
+passoff/
+.venv-test/
+backups/

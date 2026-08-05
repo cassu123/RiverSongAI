@@ -1,0 +1,23 @@
+SERVICE: Piper TTS (Text-to-Speech)
+WHAT IT DOES: Converts River Song's text responses into spoken audio using a local voice model. Runs entirely on your machine -- no internet required after setup.
+HOW TO GET IT:
+  1. Go to the Piper releases page on GitHub and download the binary for your system (Linux x86_64, arm64, etc.).
+     Link: https://github.com/rhasspy/piper/releases
+  2. Extract the downloaded archive. Move the piper binary to a permanent location (e.g. /usr/local/bin/piper).
+  3. Make the binary executable: chmod +x /usr/local/bin/piper
+  4. Set PIPER_EXECUTABLE_PATH in .env to the full path of the binary (e.g. /usr/local/bin/piper).
+  5. Download a voice model from the Hugging Face model page. Pick a voice in the language and quality level you want.
+     - Recommended starting voice: en_US-lessac-medium (good balance of quality and speed).
+     - Download both the .onnx file and the matching .onnx.json config file. Keep them in the same folder.
+     Link: https://huggingface.co/rhasspy/piper-voices
+  6. Set PIPER_MODEL_PATH in .env to the full path of the .onnx file (e.g. /home/user/.local/share/piper/en_US-lessac-medium.onnx).
+  7. Test it: echo "Hello" | piper --model /path/to/model.onnx --output_file test.wav && aplay test.wav
+  Link: https://github.com/rhasspy/piper/releases
+VARIABLE NAME: PIPER_EXECUTABLE_PATH, PIPER_MODEL_PATH
+WHERE TO PUT IT: .env
+NOTES:
+  - The .onnx and .onnx.json files must be in the same directory. Piper looks for the .json automatically based on the .onnx path.
+  - Both model files are gitignored (*.onnx, *.onnx.json). They are large binaries and must be downloaded separately on each machine.
+  - Quality levels: low (fastest, smallest), medium (recommended), high (best quality, slowest). Start with medium.
+  - If PIPER_MODEL_PATH is empty or the file is missing, TTS will fail silently. River Song will still process speech and return text to the frontend, but no audio will play.
+  - TTS_PROVIDER=piper must be set in .env (it is the default).

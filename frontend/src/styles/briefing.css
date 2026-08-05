@@ -1,0 +1,421 @@
+/* =============================================================================
+   briefing.css — Daily Briefing screen
+   -----------------------------------------------------------------------------
+   Layout goals, in response to what the phone screenshots showed:
+
+   1. DENSITY. Every card used to be full-bleed with one line of content, so a
+      five-card briefing took three full scrolls. The grid below packs cards by
+      available width (auto-fit), and card padding is tighter than the global
+      `.rs-card` default.
+   2. LEGIBILITY OVER THE STAGE. The photographic backdrop was bleeding through
+      the glass and swallowing body text. Cards here carry an opaque scrim so
+      contrast holds regardless of the wallpaper behind them.
+   3. TEXT THAT ISN'T MONOSPACE. Prose in JetBrains Mono wrapped badly and read
+      as telemetry. Mono is reserved for times and counts.
+   4. QUIET CTAs. Full-width filled buttons on every card out-shouted the
+      content they belonged to; secondary navigation is now a text affordance.
+   ============================================================================= */
+
+.rs-briefing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-gutter);
+}
+
+/* --- Hero ----------------------------------------------------------------- */
+
+.rs-briefing-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: clamp(12px, 3vw, 24px);
+}
+
+.rs-briefing-hero-text { min-width: 0; flex: 1 1 min(100%, 22rem); }
+
+.rs-briefing .rs-greeting {
+  margin: 0;
+  /* Scales continuously instead of snapping between breakpoints. */
+  font-size: clamp(1.75rem, 6vw, 3rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.rs-briefing-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-block-start: 12px;
+}
+
+.rs-briefing-weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: var(--md-on-surface);
+}
+.rs-briefing-weather .material-symbols-rounded {
+  font-size: 1.35rem;
+  color: var(--primary);
+}
+.rs-briefing-weather strong {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+}
+.rs-briefing-weather-desc { opacity: 0.8; }
+.rs-briefing-weather-range {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  opacity: 0.6;
+  padding-inline-start: 8px;
+  border-inline-start: 1px solid var(--md-outline-variant);
+}
+.rs-briefing-weather.is-muted { opacity: 0.55; }
+.rs-briefing-weather.is-muted .material-symbols-rounded { color: currentColor; }
+
+.rs-briefing-weather.is-action {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  min-height: var(--rs-touch-min);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rs-briefing-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.rs-briefing-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.rs-briefing-play { min-height: var(--rs-touch-min); white-space: nowrap; }
+.rs-briefing-play:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.rs-briefing-play[aria-pressed="true"] {
+  background: var(--md-surface-container-highest);
+  color: var(--md-on-surface);
+  box-shadow: none;
+}
+
+/* --- Error banner --------------------------------------------------------- */
+
+.rs-briefing-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--md-shape-full);
+  background: color-mix(in srgb, var(--md-error) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--md-error) 35%, transparent);
+  color: var(--md-on-surface);
+  font-size: 0.88rem;
+}
+.rs-briefing-banner > span:nth-child(2) { flex: 1; min-width: 0; }
+
+/* --- Grid ------------------------------------------------------------------
+   Fluid: columns pack in as width allows, with no breakpoint of its own. The
+   `rs-span-2` cards take two tracks once there are at least two to take.     */
+
+.rs-briefing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: var(--rs-gutter);
+  /* Cards stretch to their row height rather than sitting at natural height.
+     With `align-items: start` a short card beside a tall one left a hole of
+     bare wallpaper under it, which is precisely the "choppy" the bento is
+     meant to avoid. Stretching costs nothing: every card is a flex column
+     whose action row is pinned with `margin-block-start: auto` and whose empty
+     state already centers on `flex: 1`. */
+  align-items: stretch;
+  /* Bento 2.0 (DESIGN.md §5): let a later short card backfill an earlier hole
+     instead of leaving the track empty. */
+  grid-auto-flow: row dense;
+  /* Cards size against THIS box, not the viewport — see the span rule below. */
+  container-type: inline-size;
+}
+
+/* A `grid-column: span 2` item forces auto-fit to materialise two tracks even
+   when only one fits, and the surplus collapses into a ~46px sliver with a card
+   crushed inside it. Guard the span on the space actually available.
+
+   This must be a container query, not a media query: from 768px up the nav rail
+   takes 88px and page padding takes more, so the viewport width is not what the
+   grid gets. At 834px the grid is 646px wide — one column — and a viewport rule
+   confidently spanned two. */
+@container (min-width: 680px) {
+  .rs-briefing-grid > .rs-span-2 { grid-column: span 2; }
+}
+
+.rs-briefing-grid > .rs-card {
+  display: flex;
+  flex-direction: column;
+  /* Tighter than the global card default — this screen is a dashboard, not a
+     reading surface, and the default clamp() left one line floating in space. */
+  padding: clamp(16px, 3cqi, 22px);
+  /* Opaque enough that the Stage wallpaper cannot wash out body copy. */
+  background: color-mix(in srgb, var(--md-surface-container-low) 88%, transparent);
+}
+
+/* --- Card grammar --------------------------------------------------------- */
+
+.rs-briefing-grid .rs-card-head { margin-block-end: 14px; }
+
+.rs-briefing-grid .rs-card-label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  opacity: 0.75;
+  /* Never let a short section label fragment. */
+  white-space: nowrap;
+}
+.rs-card-label-icon { font-size: 1.05rem; opacity: 0.9; }
+.rs-card-label[data-tone="alert"] { color: var(--md-error); opacity: 0.95; }
+
+.rs-count-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: var(--md-shape-full);
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+  color: var(--primary);
+  flex: 0 0 auto;
+}
+
+/* Secondary navigation: a text affordance, not a second filled button. */
+.rs-card-action {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  margin-block-start: auto;
+  padding-block-start: 14px;
+  min-height: var(--rs-touch-min);
+  cursor: pointer;
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.rs-card-action .material-symbols-rounded {
+  font-size: 1.1rem;
+  transition: transform var(--rs-motion-fast) var(--rs-motion-curve);
+}
+.rs-card-action:hover .material-symbols-rounded { transform: translateX(3px); }
+
+/* --- Empty / error state -------------------------------------------------- */
+
+.rs-card-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 22px 8px;
+  flex: 1;
+}
+.rs-card-state-icon { font-size: 1.9rem; opacity: 0.35; }
+.rs-card-state-msg {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  /* Readable weight — the old .rs-card-meta sat at opacity 0.5 in monospace
+     over a photograph, which is what made these messages vanish. */
+  opacity: 0.72;
+  max-inline-size: 34ch;
+}
+
+/* --- Skeletons ------------------------------------------------------------ */
+
+.rs-skeleton { display: flex; flex-direction: column; gap: 10px; padding-block: 6px; }
+.rs-skeleton-line {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--md-on-surface) 8%, transparent) 25%,
+    color-mix(in srgb, var(--md-on-surface) 14%, transparent) 37%,
+    color-mix(in srgb, var(--md-on-surface) 8%, transparent) 63%
+  );
+  background-size: 400% 100%;
+  animation: rs-shimmer 1.4s ease-in-out infinite;
+}
+.rs-skeleton-line:nth-child(2) { width: 82%; }
+.rs-skeleton-line:nth-child(3) { width: 64%; }
+
+@keyframes rs-shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* --- Lists (agenda · reminders · updates · headlines) --------------------- */
+
+.rs-agenda-list,
+.rs-reminder-list,
+.rs-update-list,
+.rs-headline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dividers rather than nested cards — the design system bans cards-in-cards,
+   and the old pill-per-event made every row look independently clickable. */
+.rs-agenda-item,
+.rs-reminder-item,
+.rs-update-item,
+.rs-headline-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding-block: 11px;
+  border-block-start: 1px solid color-mix(in srgb, var(--md-outline-variant) 45%, transparent);
+  min-width: 0;
+}
+.rs-agenda-list > li:first-child,
+.rs-reminder-list > li:first-child,
+.rs-update-list > li:first-child,
+.rs-headline-list > li:first-child { border-block-start: none; }
+
+.rs-agenda-time {
+  flex: 0 0 auto;
+  min-inline-size: 4.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  opacity: 0.65;
+  white-space: nowrap;
+}
+.rs-agenda-title { flex: 1; min-width: 0; font-size: 0.92rem; }
+.rs-agenda-item.is-next .rs-agenda-title { font-weight: 700; }
+.rs-agenda-item.is-next .rs-agenda-time { color: var(--primary); opacity: 1; }
+
+.rs-reminder-item { align-items: center; }
+.rs-reminder-dot { font-size: 1.05rem; opacity: 0.4; flex: 0 0 auto; }
+.rs-reminder-title { flex: 1; min-width: 0; font-size: 0.92rem; }
+.rs-reminder-due {
+  flex: 0 0 auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+.rs-reminder-due.is-overdue { color: var(--md-error); opacity: 1; font-weight: 700; }
+
+.rs-update-item { align-items: flex-start; }
+.rs-update-icon { font-size: 1.15rem; flex: 0 0 auto; opacity: 0.8; }
+.rs-update-item.is-critical .rs-update-icon { color: var(--md-error); }
+.rs-update-item.is-warning  .rs-update-icon { color: var(--primary); }
+.rs-update-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.rs-update-title { font-size: 0.92rem; font-weight: 700; }
+.rs-update-text { font-size: 0.84rem; opacity: 0.7; line-height: 1.45; }
+
+.rs-headline-link {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.rs-headline-title { font-size: 0.9rem; line-height: 1.4; }
+.rs-headline-link:hover .rs-headline-title { text-decoration: underline; }
+.rs-headline-source {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+/* --- Daily-log prose ------------------------------------------------------ */
+
+.rs-briefing-prose {
+  font-size: 0.94rem;
+  line-height: 1.6;
+  max-inline-size: var(--rs-content-max);
+}
+.rs-briefing-prose :is(h1, h2, h3) {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-block: 14px 6px;
+  opacity: 0.85;
+}
+.rs-briefing-prose :first-child { margin-block-start: 0; }
+.rs-briefing-prose p { margin-block: 0 10px; }
+
+/* --- Quick actions --------------------------------------------------------
+   The old grid was `minmax(130px, 1fr)` around a horizontal icon+label button.
+   At 130px the label had ~38px of room left after padding, gap and icon, so
+   "NOTES" and "KITCHEN" split across lines mid-word. Wider tracks, a vertical
+   stack, and an explicit no-break on the label each independently prevent it. */
+
+.rs-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 10px;
+}
+
+.rs-quick-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 10px;
+  min-height: 84px;
+  border-radius: 18px;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--md-surface-container-high) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--md-outline-variant) 50%, transparent);
+  color: var(--md-on-surface);
+  text-align: center;
+  transition: background var(--rs-motion-fast) var(--rs-motion-curve),
+              border-color var(--rs-motion-fast) var(--rs-motion-curve),
+              transform var(--rs-motion-fast) var(--rs-motion-curve);
+}
+.rs-quick-btn .material-symbols-rounded { font-size: 1.5rem; color: var(--primary); }
+.rs-quick-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  /* Belt and braces: this label must never fragment. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-inline-size: 100%;
+}
+.rs-quick-btn:hover {
+  background: color-mix(in srgb, var(--md-surface-container-highest) 85%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.rs-quick-btn:active { transform: scale(0.97); }
+
+/* --- Reduced motion ------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .rs-skeleton-line { animation: none; }
+}

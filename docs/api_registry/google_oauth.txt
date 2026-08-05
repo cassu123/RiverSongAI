@@ -1,0 +1,29 @@
+SERVICE: Google OAuth
+WHAT IT DOES: Lets River Song access your Gmail, Google Calendar, Google Drive, Google Maps, and YouTube Music by logging in with your Google account one time.
+HOW TO GET IT:
+  1. Go to console.cloud.google.com and sign in with your Google account.
+  2. Click "Select a project" at the top, then click "New Project". Name it anything (e.g. "river-song-ai") and click "Create".
+  3. In the left sidebar, go to APIs & Services -> Library.
+  4. Search for and enable each of these APIs one at a time:
+       - Gmail API
+       - Google Calendar API
+       - Google Drive API
+       - Maps JavaScript API
+       - YouTube Data API v3
+  5. In the left sidebar, go to APIs & Services -> Credentials.
+  6. Click "+ Create Credentials" -> "OAuth client ID".
+  7. If prompted, click "Configure Consent Screen". Choose "External", fill in the app name and your email, and save.
+  8. Back on the Create OAuth client ID screen, set Application type to "Desktop app". Name it anything and click "Create".
+  9. Click "Download JSON" on the confirmation screen. Save the file as google_client_secrets.json.
+  10. Place that file at: config_files/google_client_secrets.json (this path is already in .gitignore).
+  11. For Google Maps, go back to Credentials, click "+ Create Credentials" -> "API key". Copy that key.
+  Link: https://console.cloud.google.com/apis/credentials
+VARIABLE NAME: GOOGLE_CLIENT_SECRETS_PATH, GOOGLE_TOKEN_STORAGE_PATH, GOOGLE_MAPS_API_KEY, DEFAULT_USER_ID
+WHERE TO PUT IT: .env
+NOTES:
+  - The OAuth token is saved automatically after your first login. It is stored in the directory set by GOOGLE_TOKEN_STORAGE_PATH (default: data/google_tokens). That folder is gitignored.
+  - You only run the login flow once. After that, the token refreshes itself automatically.
+  - If you see a "This app isn't verified" warning during login, click "Advanced" -> "Go to [app name] (unsafe)". This is expected for personal desktop apps.
+  - GOOGLE_TOKEN_STORAGE_PATH default is data/google_tokens -- this directory is created automatically on first login.
+  - DEFAULT_USER_ID matches the user_id you use when running the OAuth flow. Leave it as primary_user unless you have multiple users.
+  - The Maps API key is separate from the OAuth client and does not require a login flow.

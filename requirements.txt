@@ -1,0 +1,219 @@
+# =============================================================================
+# River Song AI — Python Dependencies
+# =============================================================================
+# Install:  pip install -r requirements.txt
+# Requires: Python 3.11+
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# Web framework
+# -----------------------------------------------------------------------------
+fastapi>=0.136.3
+uvicorn[standard]==0.44.0       # ASGI server; [standard] pulls websockets + uvloop
+websockets==14.0                # for Home Assistant WS events
+starlette>=0.50.0               # WebSocket state management; >=0.50.0 clears CVE range headers DoS (<=0.49.0)
+python-multipart==0.0.31        # Form data parsing for FastAPI
+pypdf==6.14.2                   # PDF text extraction for vehicle manual uploads (11 CVEs fixed since 6.12.0)
+pymupdf==1.27.2.3               # Culinary: PDF ingestion + image ripping
+beautifulsoup4==4.14.3          # Culinary: URL recipe scraping
+
+
+# -----------------------------------------------------------------------------
+# Configuration
+# -----------------------------------------------------------------------------
+pydantic[email]==2.13.2         # [email] extra adds validation for auth routes
+pydantic-settings==2.14.2       # BaseSettings for .env loading
+python-dotenv==1.2.2            # .env file support
+
+
+# -----------------------------------------------------------------------------
+# STT — Faster-Whisper (CTranslate2 backend)
+# Audio capture happens in the browser; server receives WAV bytes over WebSocket
+# -----------------------------------------------------------------------------
+faster-whisper>=1.0.3
+torch>=2.12.0                    # security floor: multiple CVEs in older versions
+numpy>=2.1.0                    # 2.x required for Python 3.13+
+scipy>=1.18.0                   # Resampling browser audio to 16 kHz for Whisper
+soundfile==0.13.1               # WAV decode (bytes -> numpy array)
+
+
+# -----------------------------------------------------------------------------
+# LLM — Ollama (local primary) + cloud providers (optional, key required)
+# -----------------------------------------------------------------------------
+ollama==0.6.1                   # Ollama client — local LLM (primary)
+anthropic>=0.105.2,<1.0.0               # Claude API cloud LLM
+google-genai==1.16.0            # Google Gemini cloud LLM
+openai==2.50.0                  # OpenAI cloud LLM
+mistralai==2.8.0                # Mistral AI cloud LLM
+boto3==1.38.0                   # Amazon Bedrock (and AWS SDK)
+
+
+# -----------------------------------------------------------------------------
+# TTS — Multi-engine (Piper + Kokoro + ElevenLabs)
+# Note: elevenlabs SDK not needed — provider calls REST API directly via httpx
+# -----------------------------------------------------------------------------
+apprise==1.8.0
+pywebpush>=2.3.0                # Web Push notifications (push.py route)
+
+# Wake word — "Hey River" (openWakeWord)
+# Install manually for now as PyPI versioning is messy for Python 3.14
+# openwakeword==0.6.0
+speexdsp==0.1.1                 # required for openwakeword audio processing
+# The app fails gracefully if not installed — wake word simply won't trigger.
+
+# Piper TTS (local binary, zero Python deps):
+#   Binary: /usr/local/bin/piper  (pre-installed on server)
+#   Models: python scripts/download_voices.py [voice_id ...]
+#
+# Kokoro TTS (Python, CPU-native, 82M params, 28 English voices):
+#   Requires Python 3.10–3.12 (incompatible with 3.13+)
+#   Install manually: pip install kokoro==0.9.4
+#   The app handles missing kokoro gracefully — Piper voices still work.
+
+
+# -----------------------------------------------------------------------------
+# Auth
+# -----------------------------------------------------------------------------
+bcrypt==5.0.0                   # Password hashing for kill switch
+PyJWT==2.13.0                   # JWT token generation and verification (PYSEC-2026-175/177/178/179: bump >=2.13.0)
+
+
+# -----------------------------------------------------------------------------
+# Google Services
+# -----------------------------------------------------------------------------
+google-api-python-client==2.194.0   # Calendar, Gmail, Drive REST clients
+google-auth==2.49.2                  # Google OAuth 2.0 core library
+google-auth-oauthlib==1.3.1          # InstalledAppFlow for desktop OAuth
+google-auth-httplib2==0.3.1          # httplib2 transport for google-auth
+googlemaps==4.10.0                   # Google Maps Platform Python client
+
+
+# -----------------------------------------------------------------------------
+# YouTube Music
+# -----------------------------------------------------------------------------
+ytmusicapi==1.11.5                   # Unofficial YouTube Music API client
+yt-dlp==2026.7.4                    # Audio stream extraction for playback
+sounddevice==0.5.5                   # Audio playback for YouTube Music provider
+
+
+# -----------------------------------------------------------------------------
+# Commerce
+# -----------------------------------------------------------------------------
+python-amazon-sp-api==2.1.8          # Amazon Selling Partner API
+
+
+# -----------------------------------------------------------------------------
+# Memory / Vector Store
+# -----------------------------------------------------------------------------
+# PYSEC-2026-311 (= GHSA-f4j7-r4q5-qw2c) is open against every chromadb
+# >=1.0.0 with no fixed release. It is not reachable here: the client is
+# PersistentClient, embedded and on-disk, so the vulnerable HTTP endpoint does
+# not exist in this process. providers/memory/vector_store.py documents that
+# constraint at the call site — do not switch to HttpClient without a patched
+# release. Pinned rather than floated so a bump cannot quietly change that.
+chromadb==1.5.9                      # Local vector database for semantic memory
+pybind11==3.0.4                     # C++ bindings required by chroma-hnswlib
+# chromadb pulls in opentelemetry + protobuf. The pin that does the work is
+# protobuf: 4.x raises TypeError (not ImportError) from its C extension on
+# Python 3.14, crashing at boot. 5.x fixes that natively.
+protobuf>=5.29.0,<6.0
+# The opentelemetry floors that used to sit here are gone on purpose. Nothing
+# in this codebase imports opentelemetry — it arrives only as a chromadb (and
+# now mistralai) transitive dependency, and the packages pin each other with
+# `==` internally. Pinning individual members of that family from outside made
+# them un-resolvable the moment one drifted: a bump of
+# opentelemetry-exporter-otlp-proto-common to >=1.44.0 forced the exporter to
+# 1.44 while other floors demanded otherwise, and mistralai 2.x needs
+# semantic-conventions <0.61 against an instrumentation floor of >=0.63b1.
+# Together those made `pip install -r requirements.txt` impossible.
+# The protobuf cap above still constrains the family to versions that accept
+# protobuf 5.x, which is the only property that was ever actually required.
+# unstructured and pymemgpt have strict Python <3.13 limits. Skipping for 3.14.
+# unstructured[all-docs]==0.14.0
+# pymemgpt==0.5.6
+
+# -----------------------------------------------------------------------------
+# Inventory System
+# -----------------------------------------------------------------------------
+sqlalchemy==2.0.49                   # ORM for inventory.db (SQLite)
+qrcode[pil]==8.2                     # QR code PNG generation
+python-barcode[images]==0.16.1       # Code-128 barcode PNG generation
+reportlab==4.4.1                     # PDF label/report generation
+
+
+# -----------------------------------------------------------------------------
+# Utilities
+# -----------------------------------------------------------------------------
+httpx==0.28.1                        # Async HTTP client
+feedparser==6.0.12                   # RSS/Atom feed parsing
+pydub>=0.25.1                        # MP3 decode for lip-sync
+pymavlink>=2.4.41                    # MAVLink telemetry for ArduRover
+
+
+# -----------------------------------------------------------------------------
+# Security floors — explicit safe minimums for transitive dependencies
+# -----------------------------------------------------------------------------
+setuptools>=78.1.1                   # CVE-2025-47273 path traversal
+requests>=2.33.0                     # CVE-2024-35195 + CVE-2025-23159 temp-file reuse
+urllib3>=2.7.0                       # CVE-2024-37891 + decompression bomb chain (several CVEs)
+certifi>=2024.7.4                    # stale certificate bundle
+cryptography>=43.0.1                 # CVE-2024-26130
+h11>=0.16.0                          # CRITICAL: malformed chunked-encoding bypass
+Pillow>=12.2.0                       # HIGH: FITS decompression bomb + PSD out-of-bounds write
+tornado>=6.5.7                       # HIGH: cookie injection + multipart DoS
+nltk>=3.9.4                          # CRITICAL: zip-slip + path traversal + XSS (<=3.9.3)
+orjson>=3.11.6                       # HIGH: unbounded recursion DoS
+filelock>=3.20.3                     # MEDIUM: TOCTOU symlink race
+fonttools>=4.60.2                    # MEDIUM: arbitrary file write + XML injection
+Pygments>=2.20.0                     # LOW: ReDoS in GUID regex
+slowapi==0.1.9
+
+# Filesystem watcher (CHRONOS vault re-indexing)
+watchdog>=6.0.0
+
+# -----------------------------------------------------------------------------
+# MCP server (Model Context Protocol — exposes tools to external clients)
+# -----------------------------------------------------------------------------
+# Capped below 2.0: mcp 2.0 removed the @server.list_tools() and
+# @server.call_tool() decorators that mcp_server.py is built on, so an
+# unpinned floor turned every CI run red the day 2.0 shipped.
+#
+# Lifting the cap is a port, not a bump. In 2.x `mcp.server.Server` is
+# handler-registration only (add_request_handler); the decorator API moved to
+# `mcp.server.MCPServer`, and the transports change with it —
+# stdio_server()/SseServerTransport become run_stdio_async()/run_sse_async()
+# or streamable_http_app. The awkward part is not the decorators: it is the
+# per-request Bearer binding in run_sse(), which exists to stop concurrent SSE
+# clients sharing a token (audit SEC-004). MCPServer's own SSE runner does not
+# do that, so the auth path has to be rebuilt around it deliberately and
+# exercised with a real MCP client — not ported on faith.
+# See docs/audits/DEPENDENCY_ADVISORIES.md.
+mcp>=1.0.0,<2.0.0
+# open-interpreter==0.4.3  # excluded: pins starlette<0.38 which conflicts with fastapi>=0.130
+
+# -----------------------------------------------------------------------------
+# Voice ID (speaker recognition, local)
+# -----------------------------------------------------------------------------
+resemblyzer>=0.1.4
+zeroconf>=0.150.0               # mDNS discovery for vector fleet
+croniter>=2.0.0                 # cron parsing for vector schedules
+
+# -----------------------------------------------------------------------------
+# Observability — Langfuse LLM tracing (docs/LANGFUSE_INTEGRATION_PLAN.md)
+# -----------------------------------------------------------------------------
+# Self-hosted Langfuse SDK. No-ops when LANGFUSE_ENABLED=false.
+langfuse>=2.0,<3.0
+
+# -----------------------------------------------------------------------------
+# Observability — Graphiti knowledge graph (docs/GRAPHITI_INTEGRATION_PLAN.md)
+# -----------------------------------------------------------------------------
+# Option B (library mode). graphiti-core needs a running Neo4j; it no-ops
+# at the provider level when GRAPHITI_ENABLED=false.
+graphiti-core>=0.3
+
+# -----------------------------------------------------------------------------
+# Warden Daemon (Vision)
+# -----------------------------------------------------------------------------
+ultralytics>=8.0.0
+opencv-python>=5.0.0.93

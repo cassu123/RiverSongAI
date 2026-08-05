@@ -1,0 +1,36 @@
+SERVICE: eBay Developer Program — Sell Analytics API
+WHAT IT DOES: Lets River Song pull your eBay seller orders, revenue, active listing views, and watchers from your eBay seller account.
+HOW TO GET IT:
+  1. Go to developer.ebay.com and sign in with your eBay account (the one you sell from).
+  2. Click "Get a User Token" -> "Create Application Keys".
+  3. Select "Production" (not Sandbox). Fill in the app name (e.g. "River Song").
+  4. Copy the App ID (also called Client ID) and Cert ID (also called Client Secret).
+     These go in EBAY_CLIENT_ID and EBAY_CLIENT_SECRET.
+  5. In the app's "User Tokens" section, click "Get a Token from eBay via Your Application".
+  6. This takes you through an OAuth consent flow. Sign in with your eBay seller account
+     and grant the requested permissions (Read orders, Read listings).
+  7. After authorization, copy the access token and refresh token shown.
+     The refresh token (valid 18 months) goes in EBAY_REFRESH_TOKEN.
+     River Song will use this to get new access tokens automatically.
+  8. Set EBAY_MARKETPLACE_ID to the site you sell on:
+     US: EBAY_US
+     UK: EBAY_GB
+     Germany: EBAY_DE
+     Australia: EBAY_AU
+     Canada: EBAY_CA
+  Link: https://developer.ebay.com/develop/get-started
+VARIABLE NAME: EBAY_CLIENT_ID, EBAY_CLIENT_SECRET, EBAY_REFRESH_TOKEN, EBAY_MARKETPLACE_ID
+WHERE TO PUT IT: .env
+NOTES:
+  - eBay's OAuth refresh tokens are valid for 18 months from last use.
+    River Song will refresh the access token automatically on each API call.
+  - The Sell Analytics API provides traffic, sales, and conversion metrics for your listings.
+    Older or sold-out listings may not appear in recent analytics.
+  - "Listing views" means page views on your active listings. "Watchers" is the number of
+    users watching an active listing for price drops.
+  - Revenue figures come from completed orders and include item price + shipping charged.
+    eBay fees are not subtracted -- those require the Finances API (a separate endpoint).
+  - eBay requires Production keys (not Sandbox) to access real seller data. Sandbox keys
+    only work with fake test accounts.
+  - If you are registered as an eBay managed payments seller (most sellers as of 2021+),
+    payout data is available through the Finances API using the same OAuth credentials.
