@@ -205,9 +205,12 @@ project_tree.txt
 # were committed by hand and had to be deleted again; UI captures belong in an
 # issue or a PR comment, not in the tree. Scoped to the root so the Android
 # launcher icons and PWA assets under frontend/ are unaffected.
-/screenshot*.png
-/screenshot*.jpg
-/Screenshot*.png
+# Bracket the first letter rather than listing each spelling: gitignore
+# matching is case-sensitive, and macOS/Windows both capitalise these by
+# default ("Screenshot 2026-08-05 at ...").
+/[Ss]creenshot*.png
+/[Ss]creenshot*.jpg
+/[Ss]creenshot*.jpeg
 
 # Conversation transcript files (Claude Code session logs)
 *.jsonl
