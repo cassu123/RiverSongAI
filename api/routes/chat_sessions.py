@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from typing import List, Dict, Any
 from pydantic import BaseModel
 
@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from core.auth import decode_token
 
-async def _require_user(authorization: Optional[str] = Depends(lambda request: request.headers.get("Authorization"))) -> str:
+async def _require_user(authorization: Optional[str] = Header(default=None)) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
     payload = await decode_token(authorization.removeprefix("Bearer "))

@@ -7,9 +7,16 @@ so the dispatcher and any external callers are unchanged.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
+import sqlite3
+from datetime import datetime, timezone
+
+from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
+
+_background_tasks: set = set()
 
 
 async def _exec_create_routine(args: dict, user_id: str) -> str:
@@ -134,10 +141,10 @@ async def _exec_delete_routine(args: dict, user_id: str) -> str:
 
 async def _exec_run_routine_now(args: dict, user_id: str) -> str:
     db_path = get_settings().db_path
+    rid = args.get("routine_id")
     def _sync_work():
         conn = sqlite3.connect(db_path)
         try:
-            rid = args.get("routine_id")
             row = conn.execute("SELECT name, prompt, type, severity FROM routines WHERE id = ? AND user_id = ?", (rid, user_id)).fetchone()
             if not row:
                 return "Routine not found."
@@ -154,7 +161,10 @@ async def _exec_run_routine_now(args: dict, user_id: str) -> str:
     
     # Actually run it
     from core.routines_scheduler import _run_simple_routine
-    # Need to trigger it via background task so it doesn't block
-    asyncio.create_task(_run_simple_routine(user_id, rid, name, prompt, severity))
+    # Need to trigger it via background task so it doesn't block. Hold a
+    # strong reference so the task is not garbage-collected mid-flight.
+    task = asyncio.create_task(_run_simple_routine(user_id, rid, name, prompt, severity))
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
     return f"Triggered routine '{name}' in the background."
 

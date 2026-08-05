@@ -56,7 +56,9 @@ async def _check_routines(app: FastAPI):
         now_local = now_utc.astimezone(user_tz)
 
         # Schedule check (e.g. "08:00")
-        if r["trigger"] == "time" and r["time"] == now_local.strftime("%H:%M"):
+        # The tool writers persist "schedule" for HH:MM triggers
+        # (core/tools_routines.py); accept the legacy "time" value too.
+        if r["trigger"] in ("schedule", "time") and r["time"] == now_local.strftime("%H:%M"):
             # Check days (empty = every day)
             days = r.get("days") or []
             if isinstance(days, str):

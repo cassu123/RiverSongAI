@@ -700,9 +700,11 @@ def get_home_labels(
     home = db.query(InvHome).filter(InvHome.id == _uid(home_id)).first()
     if not home:
         raise not_found("Home not found")
-        
+
     try:
-        get_homes_for_user(db, str(user.id))
+        # Raises PermissionDeniedError unless the user owns or collaborates
+        # on this specific home.
+        set_active_home(db, str(user.id), home_id)
     except PermissionDeniedError:
         raise forbidden("Not permitted")
         

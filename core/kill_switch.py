@@ -71,18 +71,27 @@ def _read_kill_switch_state() -> bool:
                     KILL_SWITCH_STATE_FILE,
                 )
                 return False
+            # A safety control fails closed: unknown content means the
+            # switch state cannot be established, so treat it as engaged.
+            logger.critical(
+                "Kill switch state file '%s' holds unrecognised content %r. "
+                "Failing closed.",
+                KILL_SWITCH_STATE_FILE, state[:64],
+            )
+            return True
     except FileNotFoundError:
         logger.info(
             "Kill switch state file '%s' not found. Assuming reset state.",
             KILL_SWITCH_STATE_FILE,
         )
         _write_kill_switch_state('GLOBAL KILL RESET')
+        return False
     except Exception as e:
         logger.error(
-            "Error reading kill switch state file '%s': %s",
+            "Error reading kill switch state file '%s': %s. Failing closed.",
             KILL_SWITCH_STATE_FILE, e,
         )
-    return False
+        return True
 
 
 def _write_kill_switch_state(state: str):

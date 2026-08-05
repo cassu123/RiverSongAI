@@ -162,8 +162,8 @@ async def system_health() -> dict:
     """
     Returns CPU/GPU/RAM/disk metrics pulled from Glances.
     """
-    glances_url = get_settings().glances_url or "http://localhost:61208/api/3"  # type: ignore
-    async with httpx.AsyncClient() as client:
+    glances_url = get_settings().glances_url
+    async with httpx.AsyncClient(timeout=5.0) as client:
         try:
             # Pull core metrics from Glances
             resp = await client.get(f"{glances_url}/all")

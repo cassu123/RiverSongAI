@@ -28,22 +28,23 @@ async def kitchen_sweep_func():
             staples_low = db.query(StockroomItem).filter(
                 StockroomItem.household_id == hh.id,
                 StockroomItem.min_quantity > 0,
-                StockroomItem.status.in_(["Low", "Out"])
+                StockroomItem.state == StockState.LOW
             ).all()
-            
+
             if staples_low:
                 names = [s.name for s in staples_low]
                 # Emit proactive item
                 router = get_delivery_router()
                 if router:
-                    for uid in [hh.created_by]: # simplistic
+                    for uid in [hh.owner_id]: # simplistic
                         if uid:
                             await router.route(
                                 ProactiveItem(
+                                    kind="custom",
+                                    key="culinary:low_stock",
                                     user_id=uid,
-                                    module="culinary",
-                                    content=f"Shopping day awareness: You are low/out of {len(names)} staples ({', '.join(names[:3])}{'...' if len(names)>3 else ''}).",
-                                    priority=1
+                                    title="Low on staples",
+                                    message=f"Shopping day awareness: You are low/out of {len(names)} staples ({', '.join(names[:3])}{'...' if len(names)>3 else ''}).",
                                 )
                             )
                             
@@ -62,16 +63,16 @@ async def kitchen_sweep_func():
                     rec = random.choice(recipes)
                     router = get_delivery_router()
                     if router:
-                        for uid in [hh.created_by]:
+                        for uid in [hh.owner_id]:
                             if uid:
                                 await router.route(
                                     ProactiveItem(
+                                        kind="custom",
+                                        key=f"culinary:dinner_proposal:{rec.id}",
                                         user_id=uid,
-                                        module="culinary",
-                                        content=f"Dinner Proposal: How about {rec.name} tonight?",
-                                        priority=1,
-                                        actionable=True,
-                                        action_payload=json.dumps({"type": "dinner_proposal", "recipe_id": rec.id})
+                                        title="Dinner proposal",
+                                        message=f"Dinner Proposal: How about {rec.title} tonight?",
+                                        url=f"/culinary?recipe={rec.id}",
                                     )
                                 )
     except Exception as e:

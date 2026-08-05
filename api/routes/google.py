@@ -9,7 +9,11 @@ from __future__ import annotations
 
 import logging
 import asyncio
+import uuid
+from datetime import datetime, timedelta, timezone
+
 import httpx
+import jwt
 from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request, Query
@@ -38,6 +42,36 @@ async def _require_user(authorization: Optional[str]) -> str:
     return payload["sub"]
 
 
+# The OAuth `state` parameter round-trips through the user's browser and
+# Google, so it must not be trusted as a bare user id. Sign it instead:
+# only a state minted for an authenticated user resolves back to that user.
+_OAUTH_STATE_PURPOSE = "google_oauth_state"
+
+
+def _mint_oauth_state(user_id: str) -> str:
+    settings = get_settings()
+    payload = {
+        "sub": user_id,
+        "purpose": _OAUTH_STATE_PURPOSE,
+        "jti": uuid.uuid4().hex,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=10),
+    }
+    return jwt.encode(payload, settings.jwt_secret_key,
+                      algorithm=settings.jwt_algorithm)
+
+
+def _resolve_oauth_state(state: str) -> Optional[str]:
+    settings = get_settings()
+    try:
+        payload = jwt.decode(state, settings.jwt_secret_key,
+                             algorithms=[settings.jwt_algorithm])
+    except jwt.PyJWTError:
+        return None
+    if payload.get("purpose") != _OAUTH_STATE_PURPOSE:
+        return None
+    return payload.get("sub")
+
+
 def _get_google_auth() -> GoogleAuth:
     settings = get_settings()
     return GoogleAuth(
@@ -61,9 +95,9 @@ async def get_auth_url(
     """
     user_id = await _require_user(authorization)
     auth = _get_google_auth()
-    # We use state to pass the user_id securely through the flow
+    # We use a signed state to pass the user_id securely through the flow
     auth_url = auth.get_authorization_url(
-        redirect_uri=redirect_uri, state=user_id)
+        redirect_uri=redirect_uri, state=_mint_oauth_state(user_id))
     return {"auth_url": auth_url}
 
 
@@ -71,13 +105,15 @@ async def get_auth_url(
 async def auth_callback(
     request: Request,
     code: str = Query(...),
-    state: str = Query(...),  # state contains our user_id
+    state: str = Query(...),  # signed state minted by /auth/url
 ):
     """
     Exchange the authorization code for tokens and save them.
     Also links the Google identity to the user account if not already linked.
     """
-    user_id = state
+    user_id = _resolve_oauth_state(state)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Invalid or expired state.")
     auth = _get_google_auth()
     # Reconstruct the redirect_uri from the current URL (strip query params).
     # Google does not echo redirect_uri back; it must match what was
@@ -115,8 +151,8 @@ async def auth_callback(
             "Google auth callback failed for user %s: %s",
             user_id,
             exc)
-        # On error, we might want to redirect with an error param
-        return RedirectResponse(url=f"/google?error={exc}")
+        # Fixed error code only — exception text can reflect provider detail
+        return RedirectResponse(url="/google?error=auth_failed")
 
 
 @router.get("/status")
@@ -312,10 +348,30 @@ async def get_music_home():
                             detail="Unable to fetch music charts.")
 
 
+# Keep strong references so background playback tasks are neither garbage
+# collected mid-flight nor allowed to drop their exceptions silently.
+_playback_tasks: set = set()
+
+
+def _track_playback_task(task: "asyncio.Task") -> None:
+    _playback_tasks.add(task)
+
+    def _done(t: "asyncio.Task") -> None:
+        _playback_tasks.discard(t)
+        if not t.cancelled() and t.exception():
+            logger.error("Music playback failed: %s", t.exception())
+
+    task.add_done_callback(_done)
+
+
 @router.post("/music/play/{video_id}")
-async def music_play(video_id: str):
+async def music_play(
+    video_id: str,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_user(authorization)
     from providers.google.youtube_music import YouTubeMusicProvider
     provider = YouTubeMusicProvider()
     # Playback in the background so we can respond immediately
-    asyncio.create_task(provider.play_video_id(video_id))
+    _track_playback_task(asyncio.create_task(provider.play_video_id(video_id)))
     return {"ok": True}
