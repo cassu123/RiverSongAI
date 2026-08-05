@@ -544,3 +544,4 @@ class UsersStoreMixin:
             "INSERT OR REPLACE INTO child_features (child_id, enabled_features) VALUES (?,?)",
             (child_id, json.dumps(features)),
         )
+        conn.commit()

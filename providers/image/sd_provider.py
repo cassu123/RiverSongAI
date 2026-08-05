@@ -21,87 +21,96 @@ class SDProvider:
         from config.settings import get_settings
         self.settings = get_settings()
         self._process: Optional[subprocess.Popen] = None
+        self._lifecycle_lock = asyncio.Lock()
+        self._active_requests = 0
 
     async def _ensure_running(self) -> bool:
         """Check if SD is running; if not, start it on-demand."""
-        # Even if not on_demand, verify connectivity
-        async with httpx.AsyncClient() as client:
-            try:
-                resp = await client.get(f"{self.settings.sd_api_url}/sdapi/v1/options", timeout=1.5)
-                if resp.status_code == 200:
-                    return True
-            except (httpx.RequestError, httpx.HTTPStatusError):
-                pass
-
-        if not self.settings.sd_on_demand:
-            logger.error(
-                "Stable Diffusion API not reachable at %s",
-                self.settings.sd_api_url)
-            return False
-
-        import os
-        exec_path = self.settings.sd_executable_path
-        if not exec_path or not os.path.exists(exec_path):
-            raise RuntimeError(
-                f"Stable Diffusion executable not found at '{exec_path}'. Set SD_EXECUTABLE_PATH in .env to your A1111/Forge executable.")
-
-        logger.info("Starting Stable Diffusion on-demand to save VRAM...")
-
-        # Attempt to unload Ollama LLM to free VRAM for SD
-        try:
+        async with self._lifecycle_lock:
+            # Even if not on_demand, verify connectivity
             async with httpx.AsyncClient() as client:
-                await client.post(
-                    f"{self.settings.ollama_base_url}/api/generate",
-                    json={"model": self.settings.llm_model, "keep_alive": 0},
-                    timeout=2.0
-                )
-        except Exception as exc:
-            logger.debug("Could not unload Ollama before SD start: %s", exc)
-
-        # Start the SD process
-        port = self.settings.sd_api_url.split(":")[-1].strip("/")
-        cmd = [
-            exec_path,
-            "--api",
-            "--nowebui",
-            "--listen",
-            "--port", port,
-            "--skip-torch-cuda-test",  # Some environments need this
-            "--precision", "full",    # for 1050 Ti stability if needed
-            "--no-half"               # for 1050 Ti stability if needed
-        ]
-
-        self._process = subprocess.Popen(
-            cmd,
-            cwd=self.settings.sd_working_dir or None,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-
-        # Poll until API is ready; never leave the child process running if
-        # startup is interrupted (e.g. task cancelled).
-        try:
-            start_time = time.time()
-            while time.time() - start_time < 60:  # 60 seconds timeout
                 try:
-                    async with httpx.AsyncClient() as client:
-                        resp = await client.get(f"{self.settings.sd_api_url}/sdapi/v1/options", timeout=1.0)
-                        if resp.status_code == 200:
-                            logger.info("Stable Diffusion process is ready.")
-                            return True
-                except (httpx.HTTPError, OSError):
-                    pass  # not up yet — keep polling
-                await asyncio.sleep(3)
-        except BaseException:
-            await self._cleanup()
-            raise
+                    resp = await client.get(f"{self.settings.sd_api_url}/sdapi/v1/options", timeout=1.5)
+                    if resp.status_code == 200:
+                        return True
+                except (httpx.RequestError, httpx.HTTPStatusError):
+                    pass
 
-        await self._cleanup()  # Kill the process if it timed out
-        raise RuntimeError(
-            "Stable Diffusion failed to start within 60 seconds.")
+            if not self.settings.sd_on_demand:
+                logger.error(
+                    "Stable Diffusion API not reachable at %s",
+                    self.settings.sd_api_url)
+                return False
+
+            import os
+            exec_path = self.settings.sd_executable_path
+            if not exec_path or not os.path.exists(exec_path):
+                raise RuntimeError(
+                    f"Stable Diffusion executable not found at '{exec_path}'. Set SD_EXECUTABLE_PATH in .env to your A1111/Forge executable.")
+
+            logger.info("Starting Stable Diffusion on-demand to save VRAM...")
+
+            # Attempt to unload Ollama LLM to free VRAM for SD
+            try:
+                async with httpx.AsyncClient() as client:
+                    await client.post(
+                        f"{self.settings.ollama_base_url}/api/generate",
+                        json={"model": self.settings.llm_model, "keep_alive": 0},
+                        timeout=2.0
+                    )
+            except Exception as exc:
+                logger.debug("Could not unload Ollama before SD start: %s", exc)
+
+            # Start the SD process
+            port = self.settings.sd_api_url.split(":")[-1].strip("/")
+            cmd = [
+                exec_path,
+                "--api",
+                "--nowebui",
+                "--listen",
+                "--port", port,
+                "--skip-torch-cuda-test",  # Some environments need this
+                "--precision", "full",    # for 1050 Ti stability if needed
+                "--no-half"               # for 1050 Ti stability if needed
+            ]
+
+            self._process = subprocess.Popen(
+                cmd,
+                cwd=self.settings.sd_working_dir or None,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+
+            # Poll until API is ready; never leave the child process running if
+            # startup is interrupted (e.g. task cancelled).
+            try:
+                start_time = time.time()
+                while time.time() - start_time < 60:  # 60 seconds timeout
+                    try:
+                        async with httpx.AsyncClient() as client:
+                            resp = await client.get(f"{self.settings.sd_api_url}/sdapi/v1/options", timeout=1.0)
+                            if resp.status_code == 200:
+                                logger.info("Stable Diffusion process is ready.")
+                                return True
+                    except (httpx.HTTPError, OSError):
+                        pass  # not up yet — keep polling
+                    await asyncio.sleep(3)
+            except BaseException:
+                await self._cleanup_unlocked()
+                raise
+
+            await self._cleanup_unlocked()  # Kill the process if it timed out
+            raise RuntimeError(
+                "Stable Diffusion failed to start within 60 seconds.")
 
     async def _cleanup(self):
         """Kill the SD process to free VRAM immediately after use."""
+        async with self._lifecycle_lock:
+            await self._cleanup_unlocked()
+
+    async def _cleanup_unlocked(self):
+        if self._active_requests > 0:
+            return
         if self.settings.sd_on_demand and self._process:
             logger.info("Shutting down Stable Diffusion to reclaim VRAM...")
             self._process.terminate()
@@ -130,6 +139,7 @@ class SDProvider:
         if not await self._ensure_running():
             raise RuntimeError("Stable Diffusion provider is not available.")
 
+        self._active_requests += 1
         try:
             logger.info("Requesting image generation: '%s'", prompt[:50])
             async with httpx.AsyncClient() as client:
@@ -158,4 +168,5 @@ class SDProvider:
                 img_b64 = result["images"][0]
                 return base64.b64decode(img_b64)
         finally:
+            self._active_requests -= 1
             await self._cleanup()

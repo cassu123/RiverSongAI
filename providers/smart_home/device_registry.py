@@ -190,9 +190,9 @@ class DeviceRegistry:
         """
         return list(self._devices.keys()) + list(self._groups.keys())
 
-    def is_group(self, name: str) -> bool:
+    async def is_group(self, name: str) -> bool:
         """Return True if the name resolves to a group (multiple entities)."""
-        result = self.resolve(name)
+        result = await self.resolve(name)
         return isinstance(result, list)
 
 

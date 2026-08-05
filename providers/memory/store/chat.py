@@ -9,7 +9,8 @@ class ChatStoreMixin:
     async def get_chat_sessions(self, user_id: str, scope: Optional[str] = None) -> List[Dict[str, Any]]:
         def _get() -> List[Dict[str, Any]]:
             conn = self._get_conn()
-            conn.row_factory = dict_factory
+            cur = conn.cursor()
+            cur.row_factory = dict_factory
             if scope:
                 query = """
                     SELECT s.id, s.title, s.updated_at, COUNT(m.id) as message_count
@@ -30,7 +31,7 @@ class ChatStoreMixin:
                     ORDER BY s.updated_at DESC
                 """
                 params = (user_id,)
-            c = conn.execute(query, params)
+            c = cur.execute(query, params)
             return [dict(row) for row in c.fetchall()]
         return await self._run(_get)
 
@@ -54,13 +55,14 @@ class ChatStoreMixin:
     async def get_chat_messages(self, user_id: str, session_id: str) -> List[Dict[str, Any]]:
         def _get() -> List[Dict[str, Any]]:
             conn = self._get_conn()
-            conn.row_factory = dict_factory
+            cur = conn.cursor()
+            cur.row_factory = dict_factory
             # Verify ownership
-            c = conn.execute("SELECT id FROM chat_sessions WHERE id = ? AND user_id = ?", (session_id, user_id))
+            c = cur.execute("SELECT id FROM chat_sessions WHERE id = ? AND user_id = ?", (session_id, user_id))
             if not c.fetchone():
                 return []
             
-            c = conn.execute(
+            c = cur.execute(
                 """
                 SELECT id, role, content, meta, created_at
                 FROM chat_messages
@@ -75,8 +77,9 @@ class ChatStoreMixin:
     async def get_chat_session(self, user_id: str, session_id: str) -> Optional[Dict[str, Any]]:
         def _get() -> Optional[Dict[str, Any]]:
             conn = self._get_conn()
-            conn.row_factory = dict_factory
-            c = conn.execute("SELECT * FROM chat_sessions WHERE id = ? AND user_id = ?", (session_id, user_id))
+            cur = conn.cursor()
+            cur.row_factory = dict_factory
+            c = cur.execute("SELECT * FROM chat_sessions WHERE id = ? AND user_id = ?", (session_id, user_id))
             row = c.fetchone()
             return dict(row) if row else None
         return await self._run(_get)
@@ -124,8 +127,9 @@ class ChatStoreMixin:
     async def get_undistilled_sessions(self, idle_minutes: int = 30) -> List[Dict[str, Any]]:
         def _get() -> List[Dict[str, Any]]:
             conn = self._get_conn()
-            conn.row_factory = dict_factory
-            c = conn.execute(
+            cur = conn.cursor()
+            cur.row_factory = dict_factory
+            c = cur.execute(
                 """
                 SELECT * FROM chat_sessions 
                 WHERE distilled_at IS NULL 

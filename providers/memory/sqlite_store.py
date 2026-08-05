@@ -899,12 +899,6 @@ class SQLiteStore(
             "ALTER TABLE routines ADD COLUMN webhook_url TEXT",
             "ALTER TABLE routines ADD COLUMN last_output TEXT",
             "INSERT OR IGNORE INTO admin_config (key, value) VALUES ('__global__', '{}')",
-            # FIX B11: Remove (user_id, category) uniqueness to allow
-            # multi-value preferences
-            "CREATE TABLE IF NOT EXISTS preferences_new (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, category TEXT NOT NULL, value TEXT NOT NULL, confidence TEXT NOT NULL DEFAULT 'low', last_updated TEXT NOT NULL, UNIQUE(user_id, category, value))",
-            "INSERT OR IGNORE INTO preferences_new SELECT id, user_id, category, value, confidence, last_updated FROM preferences",
-            "DROP TABLE preferences",
-            "ALTER TABLE preferences_new RENAME TO preferences",
             "CREATE TABLE IF NOT EXISTS vault_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, owner_kind TEXT NOT NULL, owner_id TEXT NOT NULL, virtual_path TEXT NOT NULL UNIQUE, title TEXT, size INTEGER, mtime REAL, indexed_at REAL)",
             "CREATE TABLE IF NOT EXISTS vault_links (id INTEGER PRIMARY KEY AUTOINCREMENT, src_note_id INTEGER NOT NULL, target_title TEXT NOT NULL, FOREIGN KEY(src_note_id) REFERENCES vault_notes(id) ON DELETE CASCADE)",
             "CREATE TABLE IF NOT EXISTS vault_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, action TEXT NOT NULL, virtual_path TEXT NOT NULL, ts REAL NOT NULL)",
@@ -969,6 +963,39 @@ class SQLiteStore(
                         "Migration FAILED and was skipped: %s -> %s",
                         migration, exc,
                     )
+
+        self._migrate_preferences_unique(conn)
+
+    def _migrate_preferences_unique(self, conn) -> None:
+        """Rebuild `preferences` only while the legacy UNIQUE(user_id, category) exists."""
+        sql = conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='preferences'"
+        ).fetchone()
+        if not sql or "UNIQUE(user_id, category, value)" in sql[0]:
+            return  # already migrated
+        conn.executescript(
+            """
+            BEGIN;
+            CREATE TABLE preferences_new (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                category TEXT NOT NULL,
+                value TEXT NOT NULL,
+                confidence TEXT NOT NULL DEFAULT 'low',
+                source_kind TEXT NOT NULL DEFAULT 'conversation',
+                source_ref TEXT,
+                last_updated TEXT NOT NULL,
+                UNIQUE(user_id, category, value)
+            );
+            INSERT OR IGNORE INTO preferences_new
+                SELECT id, user_id, category, value, confidence,
+                       source_kind, source_ref, last_updated
+                FROM preferences;
+            DROP TABLE preferences;
+            ALTER TABLE preferences_new RENAME TO preferences;
+            COMMIT;
+            """
+        )
 
     def close(self) -> None:
         """Close the connection and shut down the thread pool."""

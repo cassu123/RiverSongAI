@@ -118,9 +118,8 @@ class GoogleAuth:
         if state:
             params["state"] = state
 
-        auth_url = f"{
-            flow.client_config['auth_uri']}?{
-            urllib.parse.urlencode(params)}"
+        auth_uri = flow.client_config['auth_uri']
+        auth_url = f"{auth_uri}?{urllib.parse.urlencode(params)}"
         return auth_url
 
     def fetch_token_from_code(self, user_id: str, code: str,

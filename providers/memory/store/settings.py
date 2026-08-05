@@ -155,7 +155,7 @@ class SettingsStoreMixin:
         return UserPreferences(
             user_id=row["user_id"],
             music_provider=row["music_provider"],
-            voice_toggle=row.get("voice_toggle", "auto") if "voice_toggle" in row.keys() else "auto",
+            voice_toggle=row["voice_toggle"] if "voice_toggle" in row.keys() else "auto",
         )
 
     async def save_user_preferences(self, prefs: UserPreferences) -> None:
