@@ -1,0 +1,221 @@
+/* ============================================================
+   River Song AI — Three-Axis Spatial System
+   ────────────────────────────────────────────────────────────
+   Design System: Spatial Edition v2.0
+   Enforces Double-Bezel architecture and Plus Jakarta precision.
+   ============================================================ */
+
+:root {
+  /* Default Spatial Tokens */
+  --font-base:    'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  
+  --rs-motion-curve: cubic-bezier(0.25, 1, 0.5, 1); /* Smoother, more apple-like spring */
+  --glass-blur: blur(32px); /* Stronger diffusion for a more premium glass feel */
+}
+
+/* ============================================================
+   AXIS 1 — UNIVERSE (Typographic Aura)
+   ============================================================ */
+
+[data-universe="dune"]      { 
+  --font-mood: "Ibarra Real Nova", serif; 
+  --type-tracking: -0.02em;
+}
+[data-universe="halo"]      { 
+  --font-mood: var(--font-base); 
+  --type-tracking: -0.03em;
+}
+[data-universe="mv"]        { 
+  --font-mood: var(--font-base); 
+  --type-tracking: 0.02em;
+}
+[data-universe="nightcity"] { 
+  --font-mood: var(--font-mono); 
+  --type-tracking: 0.01em;
+}
+
+
+/* ============================================================
+   AXIS 2 — ENVIRONMENT (Material & Density)
+   ============================================================ */
+
+/* Common Environment Rules */
+body {
+  --card-radius: 2rem;
+  --inner-radius: calc(2rem - 0.5rem);
+  --glass-opacity: 0.45;
+}
+
+/* Ethereal Archedtypes (Garden, Atreides, Spires) */
+body[data-env="atreides"], body[data-env="garden"], body[data-env="spires"] {
+  --layout-gap: 32px;
+  --card-border-alpha: 0.12;
+  --inner-refraction: rgba(255, 255, 255, 0.15);
+  --glass-opacity: 0.35;
+}
+
+/* Tactical Archetypes (Harkonnen, UNSC, Pacifica) */
+body[data-env="harkonnen"], body[data-env="unsc"], body[data-env="pacifica"] {
+  --layout-gap: 16px;
+  --card-border-alpha: 0.25;
+  --inner-refraction: rgba(255, 255, 255, 0.08);
+  --glass-opacity: 0.55;
+  --card-radius: 1rem;
+  --inner-radius: 0.5rem;
+}
+
+/* Specific Backdrop Textures */
+body[data-env="atreides"] { --card-texture: radial-gradient(circle at top right, rgba(255,255,255,0.08), transparent 70%); }
+body[data-env="harkonnen"] { --card-texture: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.15) 100%); }
+body[data-env="unsc"] { --card-texture: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%); }
+
+/* ============================================================
+   AXIS 3 — MOOD (Color Calibration)
+   ============================================================ */
+
+/* Standardized Color Mapping — full mood palette below */
+
+/* ── DUNE / ATREIDES ──────────────────────────────────────────── */
+[data-mood="caladan"] {
+  --primary: #deb651;
+  --bg-base: #1a1209;
+  --fg: #f4e6c8;
+  --line: rgba(222,182,81,0.12);
+}
+[data-mood="spice-hall"] {
+  --primary: #e8a830;
+  --bg-base: #1e1206;
+  --fg: #f5e2b8;
+  --line: rgba(232,168,48,0.12);
+}
+
+/* ── DUNE / HARKONNEN ─────────────────────────────────────────── */
+[data-mood="giedi"] {
+  --primary: #c0c0c8;
+  --bg-base: #080808;
+  --fg: #d0d0d8;
+  --line: rgba(192,192,200,0.1);
+}
+[data-mood="bloodlight"] {
+  --primary: #cc2222;
+  --bg-base: #060404;
+  --fg: #d4c8c8;
+  --line: rgba(200,32,32,0.15);
+}
+
+/* ── DUNE / ARRAKIS ───────────────────────────────────────────── */
+[data-mood="deep-desert"] {
+  --primary: #e07820;
+  --bg-base: #180c04;
+  --fg: #f0d8b0;
+  --line: rgba(224,120,32,0.12);
+}
+[data-mood="wormsign"] {
+  --primary: #d06010;
+  --bg-base: #140a04;
+  --fg: #e8c898;
+  --line: rgba(208,96,16,0.14);
+}
+
+/* ── HALO / FORERUNNER ────────────────────────────────────────── */
+[data-mood="hard-light"] {
+  --primary: #5ab4f5;
+  --bg-base: #06121e;
+  --fg: #c8e0f0;
+  --line: rgba(90,180,245,0.12);
+}
+[data-mood="ceramic-veil"] {
+  --primary: #90ccee;
+  --bg-base: #081828;
+  --fg: #d4eaf8;
+  --line: rgba(144,204,238,0.10);
+}
+
+/* ── HALO / UNSC ──────────────────────────────────────────────── */
+[data-mood="combat-steel"] {
+  --primary: #f08c32;
+  --bg-base: #0c1116;
+  --fg: #cdd6df;
+  --line: rgba(240,140,50,0.15);
+}
+[data-mood="night-vision"] {
+  --primary: #22cc44;
+  --bg-base: #040c06;
+  --fg: #b8d4bc;
+  --line: rgba(34,204,68,0.12);
+}
+
+/* ── MONUMENT VALLEY 1 / SPIRES ───────────────────────────────── */
+[data-mood="sacred"] {
+  --primary: #d8904a;
+  --bg-base: #1a0e18;
+  --fg: #f0d8cc;
+  --line: rgba(216,144,74,0.12);
+}
+[data-mood="daybreak-temple"] {
+  --primary: #f5803a;
+  --bg-base: #1c0e0a;
+  --fg: #f8dcc8;
+  --line: rgba(245,128,58,0.12);
+}
+[data-mood="twilight-spires"] {
+  --primary: #9070d0;
+  --bg-base: #14101e;
+  --fg: #dcd0f0;
+  --line: rgba(144,112,208,0.12);
+}
+
+/* ── MONUMENT VALLEY 2 / GARDEN ───────────────────────────────── */
+[data-mood="pastel-day"] {
+  --primary: #e87090;
+  --bg-base: #1e0e14;
+  --fg: #f8d4e0;
+  --line: rgba(232,112,144,0.12);
+}
+[data-mood="dusk-pavilion"] {
+  --primary: #c05878;
+  --bg-base: #180c10;
+  --fg: #f0c8d4;
+  --line: rgba(192,88,120,0.12);
+}
+
+/* ── NIGHT CITY / CORPO ───────────────────────────────────────── */
+[data-mood="chrome"] {
+  --primary: #e040c0;
+  --bg-base: #080516;
+  --fg: #e8c8e8;
+  --line: rgba(224,64,192,0.12);
+}
+[data-mood="executive"] {
+  --primary: #20d4f0;
+  --bg-base: #050814;
+  --fg: #c8e8f8;
+  --line: rgba(32,212,240,0.12);
+}
+
+/* ── NIGHT CITY / PACIFICA ────────────────────────────────────── */
+[data-mood="glitch-street"] {
+  --primary: #f030a0;
+  --bg-base: #060410;
+  --fg: #e0c0e0;
+  --line: rgba(240,48,160,0.12);
+}
+[data-mood="smoke"] {
+  --primary: #a060c0;
+  --bg-base: #08060e;
+  --fg: #ccc0d8;
+  --line: rgba(160,96,192,0.10);
+}
+
+/* ============================================================
+   APPLICATION
+   ============================================================ */
+
+body {
+  font-family: var(--font-base);
+  background: var(--bg-base);
+  color: var(--fg);
+  transition: background 1.0s var(--rs-motion-curve), color 1.0s var(--rs-motion-curve);
+}

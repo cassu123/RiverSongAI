@@ -1,0 +1,703 @@
+/* =============================================================================
+   chrome-components.css — Shared futuristic grammar (rs-card, rs-pill, etc.)
+   -----------------------------------------------------------------------------
+   Hardened Spatial v2.0 Architecture.
+   ============================================================================= */
+
+/* --- Glass card (Double-Bezel Architecture) ------------------------------ */
+.rs-card {
+  container-type: inline-size;
+  position: relative;
+  background: color-mix(in srgb, var(--md-surface-container-low) 45%, transparent);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  /* Double-Bezel Implementation via CSS */
+  border: 1px solid rgba(255, 255, 255, 0.12); /* Whisper border */
+  border-radius: calc(2rem - 4px); /* Inner radius */
+  padding: clamp(20px, 5cqi, 32px);
+  box-shadow: 
+    0 0 0 4px rgba(5, 5, 5, 0.6), /* Dark outer shell */
+    0 0 0 5px rgba(255, 255, 255, 0.05), /* Outer shell edge */
+    0 8px 32px -12px rgba(0,0,0,0.5), /* Drop shadow */
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08); /* Inner refraction bezel */
+  transition: background var(--rs-motion-fast) var(--rs-motion-curve),
+              border-color var(--rs-motion-fast) var(--rs-motion-curve),
+              transform var(--rs-motion-fast) var(--rs-motion-curve),
+              box-shadow var(--rs-motion-fast) var(--rs-motion-curve);
+  overflow: hidden;
+  min-width: 0;
+  /* `word-break: break-word` shatters ordinary words at any character once a
+     container gets tight, which is how button labels rendered as "NOTE/S" and
+     "KITCH/EN". `overflow-wrap` only breaks a word that genuinely cannot fit
+     on a line of its own, which is the behavior actually wanted here. */
+  overflow-wrap: break-word;
+}
+
+.rs-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--card-texture);
+  pointer-events: none;
+  opacity: 0.2;
+}
+
+.rs-card-inner {
+  /* Impeccable Rule: No cards-inside-cards. Use clean semantic separation instead. */
+  padding-block: 20px;
+  border-block-start: 1px solid color-mix(in srgb, var(--md-outline-variant) 40%, transparent);
+}
+
+.rs-card-inner:first-of-type {
+  border-block-start: none;
+}
+
+.rs-card.is-elev {
+  background: color-mix(in srgb, var(--md-surface-container-high) 65%, transparent);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 0 0 4px rgba(5, 5, 5, 0.8),
+    0 0 0 5px rgba(255, 255, 255, 0.08),
+    0 16px 64px -16px rgba(0,0,0,0.6),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+}
+
+.rs-card.is-tappable { cursor: pointer; }
+.rs-card.is-tappable:active { transform: scale(0.985); }
+@media (pointer: fine) {
+  .rs-card.is-tappable:hover {
+    background: color-mix(in srgb, var(--md-surface-container-high) 50%, transparent);
+    border-color: var(--primary);
+  }
+}
+
+/* --- Card Grammar -------------------------------------------------------- */
+.rs-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-block-end: 24px;
+}
+
+.rs-card-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', monospace; /* Changed to JetBrains Mono */
+  color: var(--md-on-surface-variant);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 800;
+  opacity: 0.6;
+  /* Short telemetry labels must never shatter mid-word (WIND -> W·I·N·D) when a
+     container gets narrow — override the .rs-card break-word inheritance. They
+     wrap at spaces only; size the container so they fit. */
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.rs-card-value {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 800;
+  color: var(--fg);
+  line-height: 1.1;
+  overflow-wrap: break-word;
+  min-width: 0;
+  letter-spacing: -0.03em;
+}
+
+.rs-card-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--md-on-surface-variant);
+  margin-block-start: 12px;
+  overflow-wrap: break-word;
+  opacity: 0.5;
+}
+
+/* --- Status & Alerts ----------------------------------------------------- */
+.rs-status-strip {
+  padding: 8px 16px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--md-on-surface-variant);
+  background: color-mix(in srgb, var(--bg-base) 40%, transparent);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  backdrop-filter: var(--glass-blur-sm);
+}
+
+.rs-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+  animation: rs-breathing 3s infinite var(--rs-motion-curve);
+}
+
+@keyframes rs-breathing {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); box-shadow: 0 0 15px currentColor; }
+}
+
+/* --- Chat & Input (Spatial Command Architecture) ------------------------- */
+.rs-chat-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: color-mix(in srgb, var(--md-surface-container-low) 45%, transparent);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 2rem; /* Double-bezel outer radius */
+  padding: 16px 20px;
+  box-shadow: 0 20px 48px -12px rgba(0,0,0,0.6),
+              inset 0 1px 0 0 rgba(255,255,255,0.08);
+}
+
+.rs-chat-textarea {
+  all: unset;
+  width: 100%;
+  min-height: 48px;
+  max-height: 200px;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--fg);
+  background: color-mix(in srgb, var(--bg-base) 15%, transparent);
+  padding: 12px 16px;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255,255,255,0.04);
+  resize: none;
+  overflow-y: auto;
+  transition: border-color var(--rs-motion-fast);
+}
+
+.rs-chat-textarea:focus {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.rs-chat-textarea::placeholder {
+  color: var(--md-on-surface-variant);
+  opacity: 0.5;
+}
+
+.rs-chat-input-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+  /* When the 8 controls can't fit (phones/narrow windows), wrap to a second
+     row instead of overflowing and pushing mic/send off-screen. On wide
+     screens everything fits on one line, so this is a no-op. */
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
+.rs-chat-input-left, .rs-chat-input-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* The right group (model · voice · mic · send) stays together, never shrinks,
+   and hugs the right edge — so when it wraps to its own line Send is still
+   full-size and bottom-right where you expect it. */
+.rs-chat-input-right { flex-shrink: 0; margin-inline-start: auto; }
+
+/* Pill labels never break mid-name (e.g. "DeepSeek Thinker Lite"). */
+.rs-speak-actions-label { white-space: nowrap; }
+
+/* Collapse pill text labels on narrow phones — keep icons only */
+@media (max-width: 480px) {
+  .rs-speak-actions-label { display: none; }
+  .rs-chat-input-left { gap: 6px; }
+  .rs-chat-input-right { gap: 6px; }
+}
+
+/* --- Interactive Elements ------------------------------------------------ */
+.rs-pill {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: var(--md-shape-full);
+  background: color-mix(in srgb, var(--md-on-surface-variant) 8%, transparent);
+  color: var(--md-on-surface-variant);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all var(--rs-motion-fast) var(--rs-motion-curve);
+  border: 1px solid transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15); /* 3D Lip */
+}
+
+.rs-pill.is-active {
+  background: var(--primary);
+  color: var(--bg-base);
+  box-shadow: 0 4px 12px -4px var(--primary);
+}
+
+.rs-pill:hover:not(.is-active) {
+  background: color-mix(in srgb, var(--md-on-surface-variant) 15%, transparent);
+  transform: translateY(-1px);
+}
+
+.rs-pill:active { 
+  transform: scale(0.96); 
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2); 
+}
+
+.rs-btn-primary {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 28px;
+  background: var(--primary);
+  color: var(--bg-base);
+  border-radius: var(--md-shape-full);
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--rs-motion-fast) var(--rs-motion-curve);
+  box-shadow: 0 8px 24px -8px var(--primary);
+}
+
+.rs-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px -8px var(--primary); }
+.rs-btn-primary:active { 
+  transform: translateY(0) scale(0.96); 
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2); 
+}
+
+.rs-icon-btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--md-on-surface-variant) 8%, transparent);
+  color: var(--md-on-surface-variant);
+  transition: all var(--rs-motion-fast) var(--rs-motion-curve);
+}
+
+.rs-icon-btn:hover { background: var(--md-surface-container-highest); transform: scale(1.05); }
+.rs-icon-btn:active { transform: scale(0.92); }
+
+.rs-send-btn {
+  width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  box-shadow: 0 8px 20px -6px var(--primary);
+}
+
+/* =============================================================================
+   Dashboard / Foyer Layout Classes
+   ============================================================================= */
+@keyframes slideUpFade {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.rs-dashboard-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rs-card-gap);
+  margin-block-start: 32px;
+  width: 100%;
+}
+
+.rs-dashboard-flow > .rs-card {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-width: min(100%, 300px);
+  transition: opacity var(--rs-motion-mid) var(--rs-motion-curve),
+              transform var(--rs-motion-mid) var(--rs-motion-curve),
+              background var(--rs-motion-fast) var(--rs-motion-curve),
+              border-color var(--rs-motion-fast) var(--rs-motion-curve);
+}
+
+.rs-dashboard-flow > .rs-card.is-wide {
+  flex-basis: 100%;
+}
+
+@media (min-width: 768px) {
+  .rs-dashboard-flow > .rs-card.is-small {
+    flex-basis: calc(50% - var(--rs-card-gap) / 2);
+  }
+  .rs-dashboard-flow > .rs-card.is-wide {
+    flex-basis: 100%;
+  }
+}
+
+/* Card expansion and receding states */
+.rs-dashboard-flow > .rs-card.is-receding {
+  opacity: 0.25;
+  transform: scale(0.97);
+  pointer-events: none;
+  filter: blur(2px);
+}
+
+.rs-dashboard-flow > .rs-card.is-expanded {
+  flex-basis: 100% !important;
+  max-width: 100% !important;
+  background: color-mix(in srgb, var(--md-surface-container-high) 85%, transparent);
+  border-color: var(--primary);
+  box-shadow: 0 24px 64px -8px rgba(0, 0, 0, 0.7);
+  transform: scale(1.01);
+  z-index: 50;
+}
+
+/* Telemetry Card Internals */
+.rs-telemetry-container {
+  display: flex;
+  align-items: center;
+  gap: clamp(24px, 4vw, 48px);
+  flex-wrap: wrap;
+}
+
+.rs-telemetry-visual {
+  flex: 1;
+  min-width: 240px;
+}
+
+.rs-telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(16px, 3vw, 32px);
+}
+
+/* Widget wrappers */
+.rs-widget-pulse-wrapper {
+  height: auto;
+  margin-block: 12px;
+}
+
+.rs-widget-health-wrapper {
+  padding-block: 8px;
+}
+
+/* Active Archives grid */
+.rs-archives-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.rs-archive-item {
+  border-inline-start: 1px solid var(--md-outline-variant);
+  padding-inline-start: 20px;
+}
+
+.rs-archive-message {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-block-start: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Status strip bottom placement */
+.rs-dashboard-status-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-block-start: 48px;
+  width: 100%;
+}
+
+.rs-status-divider {
+  opacity: 0.2;
+}
+
+.rs-status-time {
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+}
+
+.rs-card-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 60;
+}
+
+.rs-empty-state {
+  text-align: center;
+  padding-block: 32px;
+  color: var(--md-on-surface-variant);
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+/* ── Model picker popover (rs-mpop) ─────────────────────────────────────────
+   Compact floating card anchored above the action bar, near the model button.
+   Uses z-index 9991 to sit above the shell (z-index 10) and action bar (100).
+   No backdrop-filter on the card itself to avoid containing-block conflicts
+   with the animated Stage; instead uses a rich opaque-glass mix.
+   ─────────────────────────────────────────────────────────────────────────── */
+.rs-mpop {
+  position: fixed;
+  width: min(300px, calc(100vw - 36px));
+  max-height: 60vh;
+  overflow-y: auto;
+  z-index: 9991;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--bg-base) 78%, rgba(255,255,255,0.14));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 2px 0 rgba(255,255,255,0.08) inset,
+    0 16px 48px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(0,0,0,0.3);
+  padding: 6px;
+  animation: rs-mpop-in 160ms var(--rs-motion-curve) both;
+}
+@keyframes rs-mpop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.rs-mpop-row {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 11px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--fg);
+  transition: background 120ms ease;
+}
+.rs-mpop-row:hover { background: rgba(255,255,255,0.08); }
+.rs-mpop-row.is-active {
+  background: color-mix(in srgb, var(--primary) 18%, rgba(255,255,255,0.04));
+  color: var(--primary);
+}
+.rs-mpop-row.is-dimmed { opacity: 0.35; pointer-events: none; }
+
+.rs-mpop-icon {
+  font-size: 18px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.rs-mpop-row.is-active .rs-mpop-icon { opacity: 1; color: var(--primary); }
+
+.rs-mpop-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.rs-mpop-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.rs-mpop-sub {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rs-mpop-badge {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--primary);
+  color: var(--bg-base);
+}
+.rs-mpop-check {
+  font-size: 18px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.rs-mpop-chevron {
+  font-size: 18px;
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+.rs-mpop-back {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.45);
+  margin-block-end: 4px;
+  transition: background 120ms ease, color 120ms ease;
+}
+.rs-mpop-back:hover {
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.8);
+}
+.rs-mpop-back .material-symbols-rounded { font-size: 0.95rem; }
+
+.rs-mpop-empty {
+  padding: 20px 12px;
+  text-align: center;
+  font-size: 0.78rem;
+  opacity: 0.4;
+  margin: 0;
+}
+
+
+
+
+/* ============================================================
+   Toggle Switch (M3 Style)
+   ============================================================ */
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 0;
+}
+
+.toggle-label {
+  font-size: 0.9rem;
+  color: var(--text);
+  flex: 1;
+}
+
+.toggle-switch {
+  width: 46px;
+  height: 24px;
+  border-radius: 12px;
+  border: 1px solid var(--border-bright);
+  background: rgba(5,12,22,0.8);
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  transition: background 0.25s, border-color 0.25s;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toggle-switch--on {
+  background: rgba(0,255,204,0.15);
+  border-color: var(--secondary);
+  box-shadow: var(--glow-teal);
+}
+
+.toggle-knob {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: transform 0.25s, background 0.25s;
+  pointer-events: none;
+}
+
+.toggle-switch--on .toggle-knob {
+  transform: translateX(22px);
+  background: var(--secondary);
+}
+
+.toggle-value {
+  font-family: var(--font-display);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  width: 30px;
+  color: var(--text-dim);
+}
+
+.toggle-switch--on + .toggle-value { color: var(--secondary); }
+.select-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+}
+
+.select-label {
+  font-size: 0.9rem;
+  color: var(--text);
+  flex: 1;
+}
+
+.settings-select {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  background: var(--bg-card);
+  color: var(--primary);
+  border: 1px solid var(--border-bright);
+  border-radius: 2px;
+  padding: 6px 12px;
+  appearance: none;
+  cursor: pointer;
+  min-width: 140px;
+}
+
+.settings-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--glow-sm);
+}
+
+.settings-hint {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+  padding: 4px 0;
+  border-left: 2px solid var(--border-bright);
+  padding-left: 12px;
+  max-width: 640px;
+}
+
+.settings-input {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 8px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 180ms;
+  min-width: 0;
+}
+
+.settings-input:focus {
+  border-color: var(--md-primary);
+  box-shadow: 0 0 0 1px var(--md-primary);
+}
+
+.settings-input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

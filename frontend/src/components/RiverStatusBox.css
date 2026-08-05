@@ -1,0 +1,150 @@
+/* ============================================================
+   RiverStatusBox — Glass Round Grammar
+   ------------------------------------------------------------
+   The breathing heart of the AI. Blends into the card.
+   ============================================================ */
+
+.rsb {
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  border: none;
+  overflow: hidden;
+}
+
+/* ---- Body Indicator ---- */
+.rsb-body {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  position: relative;
+}
+
+/* Idle ring — geometric orbit */
+.rsb-idle-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--rsb-color) 30%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: rsb-orbit 12s linear infinite;
+}
+
+.rsb-idle-ring-inner {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px dashed color-mix(in srgb, var(--rsb-color) 60%, transparent);
+  animation: rsb-orbit 6s linear infinite reverse;
+}
+
+@keyframes rsb-orbit {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Thinking dots — ethereal cluster */
+.rsb-think-dots {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rsb-think-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  animation: rsb-ghost 1.2s ease-in-out infinite;
+}
+
+@keyframes rsb-ghost {
+  0%, 100% { transform: scale(0.8); opacity: 0.3; filter: blur(2px); }
+  50%      { transform: scale(1.4); opacity: 0.9; filter: blur(0px); }
+}
+
+/* Speaking waveform — fluid columns */
+.rsb-wave {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 48px;
+}
+
+.rsb-wave-bar {
+  width: 3px;
+  border-radius: 4px;
+  background: var(--rsb-color);
+  box-shadow: 0 0 12px var(--rsb-color);
+  animation: rsb-wave-fluid 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes rsb-wave-fluid {
+  from { height: 6px;  opacity: 0.4; }
+  to   { height: 48px; opacity: 1;   }
+}
+
+/* Listening rings — expansive sonar */
+.rsb-listen-rings {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+
+.rsb-listen-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid var(--rsb-color);
+  animation: rsb-sonar 1.8s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+  opacity: 0;
+}
+
+@keyframes rsb-sonar {
+  0%   { transform: scale(0.1); opacity: 1; }
+  100% { transform: scale(2);   opacity: 0; }
+}
+
+/* ---- Text Zone ---- */
+.rsb-text-zone {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8px 16px;
+}
+
+.rsb-hint {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: var(--md-on-surface-variant);
+  opacity: 0.6;
+  text-transform: uppercase;
+}
+
+.rsb-stream {
+  font-size: 0.95rem;
+  color: var(--fg);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.rsb-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: var(--rsb-color);
+  margin-left: 4px;
+  vertical-align: middle;
+  animation: rsb-blink 0.8s step-end infinite;
+}
+
+@keyframes rsb-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}

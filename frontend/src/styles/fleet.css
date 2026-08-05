@@ -1,0 +1,148 @@
+/* =============================================================================
+   fleet.css — Embodiment Fleet hub
+   -----------------------------------------------------------------------------
+   Six program cards, each carrying a title, a one-line description and a count.
+   As .rs-card they got the full double-bezel glass treatment plus a 20px pad,
+   which made each one a tall panel holding three short lines — most of the card
+   was empty desert showing through, and the description line (.rs-card-meta:
+   monospace at opacity 0.5) washed out against it.
+
+   These are navigation rows, not documents. Sized to their content, opaque
+   enough to read, and laid out as a single row per program so the count sits on
+   the same baseline as the name.
+   ============================================================================= */
+
+.rs-fleet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 10px;
+  margin-block-start: 20px;
+}
+
+.rs-fleet-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  text-decoration: none;
+  color: var(--md-on-surface);
+  min-width: 0;
+  /* Opaque enough to hold text against any Stage wallpaper — these sit over a
+     photograph on every skin. */
+  background: color-mix(in srgb, var(--md-surface-container-high) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--md-outline-variant) 45%, transparent);
+  transition: background var(--rs-motion-fast, 180ms) var(--rs-motion-curve, ease),
+              border-color var(--rs-motion-fast, 180ms) var(--rs-motion-curve, ease),
+              transform var(--rs-motion-fast, 180ms) var(--rs-motion-curve, ease);
+}
+
+.rs-fleet-card:hover {
+  background: color-mix(in srgb, var(--md-surface-container-highest) 88%, transparent);
+  border-color: color-mix(in srgb, var(--rs-fleet-accent, var(--primary)) 55%, transparent);
+}
+.rs-fleet-card:active { transform: scale(0.99); }
+.rs-fleet-card:focus-visible {
+  outline: 2px solid var(--rs-fleet-accent, var(--primary));
+  outline-offset: 2px;
+}
+
+/* --- Icon chip -------------------------------------------------------------
+   The accent tints a chip rather than colouring a bare glyph. Six unrelated
+   hues floating on a photograph read as random; six tinted chips read as a
+   colour-coded set. */
+
+.rs-fleet-icon {
+  flex: 0 0 auto;
+  inline-size: 40px;
+  block-size: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: var(--rs-fleet-accent, var(--primary));
+  background: color-mix(in srgb, var(--rs-fleet-accent, var(--primary)) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--rs-fleet-accent, var(--primary)) 30%, transparent);
+}
+.rs-fleet-icon .material-symbols-rounded { font-size: 1.35rem; }
+
+/* --- Text ------------------------------------------------------------------ */
+
+.rs-fleet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.rs-fleet-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rs-fleet-sub {
+  /* Was .rs-card-meta — monospace at opacity 0.5, which is what made these
+     descriptions vanish into the wallpaper. */
+  font-size: 0.78rem;
+  color: var(--md-on-surface-variant);
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Status ----------------------------------------------------------------
+   Count and state on one line at the end of the row, so scanning six programs
+   is a single vertical read rather than six separate blocks.               */
+
+.rs-fleet-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: var(--md-on-surface-variant);
+}
+
+.rs-fleet-dot {
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--md-outline, #555);
+  flex: 0 0 auto;
+}
+.rs-fleet-status.is-live .rs-fleet-dot {
+  background: var(--rs-status-nominal, #36d399);
+  box-shadow: 0 0 8px var(--rs-status-nominal, #36d399);
+  animation: rs-fleet-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes rs-fleet-pulse {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+
+.rs-fleet-count strong { color: var(--md-on-surface); font-weight: 700; }
+.rs-fleet-status.is-live .rs-fleet-count strong { color: var(--rs-status-nominal, #36d399); }
+.rs-fleet-total { opacity: 0.45; }
+
+.rs-fleet-word {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+/* A program with nothing claimed yet is not an error; mute it rather than
+   dressing it up as a live row. */
+.rs-fleet-status:not(.is-live) { opacity: 0.62; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-fleet-status.is-live .rs-fleet-dot { animation: none; }
+}
