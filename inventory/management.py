@@ -1,0 +1,816 @@
+"""
+inventory/management.py
+
+Business-logic layer for the inventory system.  All database writes go through
+here so that API routes stay thin.
+
+Functions
+---------
+create_home              -- create a new home for a user
+get_homes_for_user       -- list homes owned or collaborated on
+create_item              -- add an item to a home (generates EIN + QR code)
+update_item              -- patch any fields on an item
+delete_item              -- remove an item
+get_items_for_home       -- list all items in a home
+get_item                 -- fetch a single item by id or EIN
+fast_scan_item           -- look up by EIN and return item details
+issue_item               -- assign custody of an item to a collaborator
+return_item              -- release custody back to unassigned
+manage_collaborators     -- add / remove / update-role collaborators
+edit_home                -- rename a home or change its QR standard
+process_receipt          -- attach a receipt image and extract price/date
+generate_insurance_manifest -- produce a PDF report of serviceable items
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import uuid as _uuid_mod
+from datetime import datetime, timezone
+from decimal import Decimal
+from typing import Optional
+
+from sqlalchemy import and_
+from sqlalchemy.exc import NoResultFound
+from sqlalchemy.orm import Session
+
+from .auth import (
+    HomeNotFoundError,
+    PermissionDeniedError,
+    set_active_home,
+)
+from .file_utils import (
+    INVENTORY_FILES_BASE_DIR,
+    extract_data_from_receipt,
+    save_file_for_home,
+)
+from .models import (
+    AssetStatus,
+    AuditScan,
+    AuditStatus,
+    CollaboratorRole,
+    InventoryAudit,
+    InventoryItem,
+    ItemAttachment,
+    InvHome,
+    InvUser,
+    ItemCategory,
+    QRCodeStandard,
+    collaborators_table,
+)
+from .qr_utils import (
+    generate_barcode_png_b64,
+    generate_ein,
+    generate_label_data,
+    generate_qr_png_b64,
+)
+
+logger = logging.getLogger(__name__)
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _uid(s) -> _uuid_mod.UUID:
+    """Convert str/UUID to uuid.UUID for Uuid(as_uuid=True) column comparisons."""
+    if isinstance(s, _uuid_mod.UUID):
+        return s
+    return _uuid_mod.UUID(str(s))
+
+
+# ---------------------------------------------------------------------------
+# User bootstrap
+# ---------------------------------------------------------------------------
+
+def get_or_create_inv_user(db: Session, external_user_id: str, email: str, display_name: str = "") -> InvUser:
+    """Ensure an InvUser row exists for the given River Song user."""
+    user = db.query(InvUser).filter(InvUser.external_user_id == external_user_id).first()
+    if user:
+        return user
+    user = InvUser(
+        external_user_id=external_user_id,
+        email=email,
+        display_name=display_name or email,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+# ---------------------------------------------------------------------------
+# Homes
+# ---------------------------------------------------------------------------
+
+def create_home(db: Session, owner: InvUser, name: str, description: str = "", qr_standard: QRCodeStandard = QRCodeStandard.QR) -> InvHome:
+    home = InvHome(
+        name=name,
+        description=description,
+        owner_id=owner.id,
+        default_qr_standard=qr_standard,
+    )
+    db.add(home)
+    db.commit()
+    db.refresh(home)
+    logger.info("Home created: %s (owner=%s)", home.id, owner.id)
+    return home
+
+
+def get_homes_for_user(db: Session, user: InvUser) -> list[InvHome]:
+    owned       = db.query(InvHome).filter(InvHome.owner_id == user.id).all()
+    collaborated = user.homes_collaborating
+    seen = {h.id for h in owned}
+    return owned + [h for h in collaborated if h.id not in seen]
+
+
+def edit_home(
+    db: Session,
+    owner_user_id: str,
+    home_id: str,
+    new_name: Optional[str] = None,
+    new_description: Optional[str] = None,
+    new_qr_standard: Optional[QRCodeStandard] = None,
+) -> InvHome:
+    home = set_active_home(db, owner_user_id, home_id)
+    if str(home.owner_id) != owner_user_id:
+        raise PermissionDeniedError(f"Only the home owner can edit home details.")
+    if new_name        is not None: home.name            = new_name
+    if new_description is not None: home.description     = new_description
+    if new_qr_standard is not None: home.default_qr_standard = new_qr_standard
+    db.commit()
+    db.refresh(home)
+    return home
+
+
+# ---------------------------------------------------------------------------
+# Items
+# ---------------------------------------------------------------------------
+
+def _attach_qr(db: Session, item: InventoryItem) -> None:
+    """Generate and persist QR / barcode data for an item."""
+    payload = generate_label_data(item)
+    if item.qr_standard == QRCodeStandard.CODE128:
+        item.qr_code_data = generate_barcode_png_b64(payload)
+    elif item.qr_standard == QRCodeStandard.EIN:
+        item.qr_code_data = None  # plain EIN label, no image
+    else:
+        item.qr_code_data = generate_qr_png_b64(payload)
+    db.commit()
+
+
+def create_item(
+    db: Session,
+    user_id: str,
+    home_id: str,
+    name: str,
+    category: ItemCategory = ItemCategory.OTHER,
+    description: str = "",
+    quantity: int = 1,
+    location: str = "",
+    manufacturer: str = "",
+    model_number: str = "",
+    serial_number: str = "",
+    purchase_price: Optional[float] = None,
+    purchase_date=None,
+    replacement_cost: Optional[float] = None,
+    warranty_expiry_date=None,
+    is_insured: bool = False,
+    qr_standard: Optional[QRCodeStandard] = None,
+) -> InventoryItem:
+    home = set_active_home(db, user_id, home_id)
+
+    # Generate a unique EIN (retry on collision, though astronomically unlikely)
+    for _ in range(5):
+        ein = generate_ein()
+        if not db.query(InventoryItem).filter(InventoryItem.ein == ein).first():
+            break
+
+    item = InventoryItem(
+        ein=ein,
+        home_id=home.id,
+        name=name,
+        category=category,
+        description=description,
+        quantity=quantity,
+        location=location,
+        manufacturer=manufacturer,
+        model_number=model_number,
+        serial_number=serial_number,
+        purchase_price=Decimal(str(purchase_price)) if purchase_price is not None else None,
+        purchase_date=purchase_date,
+        replacement_cost=Decimal(str(replacement_cost)) if replacement_cost is not None else None,
+        warranty_expiry_date=warranty_expiry_date,
+        is_insured=is_insured,
+        qr_standard=qr_standard or home.default_qr_standard,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    _attach_qr(db, item)
+    db.refresh(item)
+    logger.info("Item created: %s / EIN=%s", item.id, item.ein)
+    return item
+
+
+def update_item(db: Session, user_id: str, item_id: str, **fields) -> InventoryItem:
+    item = _get_item_or_raise(db, item_id)
+    set_active_home(db, user_id, str(item.home_id))
+
+    numeric_fields = {"purchase_price", "replacement_cost"}
+    for key, val in fields.items():
+        if val is None:
+            continue
+        if key in numeric_fields and val is not None:
+            val = Decimal(str(val))
+        setattr(item, key, val)
+
+    # Regenerate QR if name, serial, or standard changed
+    if any(k in fields for k in ("name", "serial_number", "qr_standard")):
+        _attach_qr(db, item)
+
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def delete_item(db: Session, user_id: str, item_id: str) -> None:
+    item = _get_item_or_raise(db, item_id)
+    set_active_home(db, user_id, str(item.home_id))
+    db.delete(item)
+    db.commit()
+
+
+def get_items_for_home(db: Session, user_id: str, home_id: str) -> list[InventoryItem]:
+    set_active_home(db, user_id, home_id)
+    return db.query(InventoryItem).filter(InventoryItem.home_id == _uid(home_id)).order_by(InventoryItem.name).all()
+
+
+def get_item(db: Session, user_id: str, item_id: str) -> InventoryItem:
+    item = _get_item_or_raise(db, item_id)
+    set_active_home(db, user_id, str(item.home_id))
+    return item
+
+
+def fast_scan_item(db: Session, user_id: str, ein: str) -> InventoryItem:
+    """Look up an item by EIN (as scanned from a QR code or barcode)."""
+    item = db.query(InventoryItem).filter(InventoryItem.ein == ein).first()
+    if not item:
+        raise NoResultFound(f"No item found with EIN '{ein}'.")
+    set_active_home(db, user_id, str(item.home_id))
+    return item
+
+
+def reassign_items_to_home(db: Session, user_id: str, source_home_id: str, target_home_id: str, item_ids: Optional[list[str]] = None) -> int:
+    """Move items from source home to target home. If item_ids is None, moves all items."""
+    set_active_home(db, user_id, source_home_id)
+    set_active_home(db, user_id, target_home_id)
+    
+    query = db.query(InventoryItem).filter(InventoryItem.home_id == _uid(source_home_id))
+    if item_ids is not None:
+        if not item_ids:
+            return 0
+        uids = [_uid(i) for i in item_ids]
+        query = query.filter(InventoryItem.id.in_(uids))
+        
+    items = query.all()
+    count = len(items)
+    
+    target_uid = _uid(target_home_id)
+    for item in items:
+        item.home_id = target_uid
+        # NOTE: In a real system, attachments might need to be moved on disk if paths include home_id.
+        # Currently, attachments stored_path is f"home_{home.id}/attachments/...".
+        # For simplicity, we just update DB. A robust implementation would os.rename paths.
+        
+    db.commit()
+    return count
+
+
+# ---------------------------------------------------------------------------
+# Custody (Deprecated/Removed)
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Collaborators
+# ---------------------------------------------------------------------------
+
+def manage_collaborators(
+    db: Session,
+    owner_user_id: str,
+    home_id: str,
+    collaborator_user_id: str,
+    action: str,
+    role: CollaboratorRole = CollaboratorRole.VIEWER,
+) -> InvHome:
+    home = db.query(InvHome).filter(InvHome.id == _uid(home_id)).first()
+    if not home:
+        raise HomeNotFoundError(f"Home '{home_id}' not found.")
+    if str(home.owner_id) != owner_user_id:
+        raise PermissionDeniedError("Only the home owner can manage collaborators.")
+
+    collab = db.query(InvUser).filter(InvUser.id == _uid(collaborator_user_id)).first()
+    if not collab:
+        raise NoResultFound(f"User '{collaborator_user_id}' not found.")
+
+    if action == "add":
+        if collaborator_user_id == owner_user_id:
+            raise ValueError("Cannot add the owner as a collaborator.")
+        existing = db.execute(
+            collaborators_table.select().where(
+                and_(
+                    collaborators_table.c.user_id == _uid(collaborator_user_id),
+                    collaborators_table.c.home_id == _uid(home_id),
+                )
+            )
+        ).first()
+        if existing:
+            raise ValueError(f"'{collab.email}' is already a collaborator.")
+        db.execute(collaborators_table.insert().values(
+            user_id=_uid(collaborator_user_id), home_id=_uid(home_id), role=role, created_at=_now()
+        ))
+
+    elif action == "remove":
+        result = db.execute(collaborators_table.delete().where(
+            and_(
+                collaborators_table.c.user_id == _uid(collaborator_user_id),
+                collaborators_table.c.home_id == _uid(home_id),
+            )
+        ))
+        if result.rowcount == 0:  # type: ignore
+            raise NoResultFound(f"'{collab.email}' is not a collaborator of this home.")
+
+    elif action == "update_role":
+        result = db.execute(collaborators_table.update().where(
+            and_(
+                collaborators_table.c.user_id == _uid(collaborator_user_id),
+                collaborators_table.c.home_id == _uid(home_id),
+            )
+        ).values(role=role))
+        if result.rowcount == 0:  # type: ignore
+            raise NoResultFound(f"'{collab.email}' is not a collaborator of this home.")
+
+    else:
+        raise ValueError(f"Invalid action '{action}'. Use 'add', 'remove', or 'update_role'.")
+
+    db.commit()
+    db.refresh(home)
+    return home
+
+
+# ---------------------------------------------------------------------------
+# Receipt processing
+# ---------------------------------------------------------------------------
+
+def process_receipt(
+    db: Session,
+    user_id: str,
+    item_id: str,
+    receipt_data: bytes,
+    receipt_filename: str,
+    manual_price: Optional[float] = None,
+    manual_date=None,
+) -> InventoryItem:
+    item = _get_item_or_raise(db, item_id)
+    set_active_home(db, user_id, str(item.home_id))
+
+    rel_path = save_file_for_home(str(item.home_id), "receipts", receipt_data, receipt_filename)
+    item.receipt_image_path = rel_path
+
+    full_path = os.path.join(INVENTORY_FILES_BASE_DIR, rel_path)
+    # Path traversal guard
+    if not os.path.abspath(full_path).startswith(os.path.abspath(INVENTORY_FILES_BASE_DIR)):
+        raise ValueError("Invalid file path.")
+    extracted_price, extracted_date = extract_data_from_receipt(full_path)
+
+    item.purchase_price = (
+        Decimal(str(manual_price)) if manual_price is not None
+        else (Decimal(str(extracted_price)) if extracted_price is not None else item.purchase_price)
+    )
+    item.purchase_date = manual_date or extracted_date or item.purchase_date
+
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+# ---------------------------------------------------------------------------
+# Insurance PDF manifest
+# ---------------------------------------------------------------------------
+
+def generate_insurance_manifest(db: Session, user_id: str, home_id: str) -> dict:
+    """
+    Generate a PDF and CSV dossier listing all serviceable items and their replacement costs.
+    Returns a dict with paths to the generated files: {"pdf": path, "csv": path}.
+    Requires reportlab: pip install reportlab
+    """
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, Image
+    except ImportError:
+        raise RuntimeError("reportlab is required for PDF generation. Run: pip install reportlab")
+
+    import csv
+
+    home  = set_active_home(db, user_id, home_id)
+    items = (
+        db.query(InventoryItem)
+        .filter(
+            InventoryItem.home_id    == home_id,
+            InventoryItem.asset_status == AssetStatus.SERVICEABLE,
+        )
+        .order_by(InventoryItem.category, InventoryItem.name)
+        .all()
+    )
+
+    total = sum(
+        (i.replacement_cost or Decimal("0")) * i.quantity for i in items
+    )
+
+    out_dir = os.path.join(INVENTORY_FILES_BASE_DIR, f"home_{home_id}", "reports")
+    os.makedirs(out_dir, exist_ok=True)
+    ts       = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    pdf_path = os.path.join(out_dir, f"insurance_manifest_{ts}.pdf")
+    csv_path = os.path.join(out_dir, f"insurance_manifest_{ts}.csv")
+
+    styles = getSampleStyleSheet()
+    story  = [
+        Paragraph(f"Insurance Manifest — {home.name}", styles["h1"]),
+        Paragraph(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", styles["Normal"]),
+        Spacer(1, 0.25 * inch),
+    ]
+
+    headers = ["Photo", "EIN", "Name", "Category", "Qty", "Location", "Serial No.", "Purchase Price", "Replacement Cost", "Docs", "Total"]
+    rows    = [headers]
+    
+    # Also prepare CSV
+    csv_headers = ["EIN", "Name", "Category", "Qty", "Location", "Serial No.", "Purchase Price", "Replacement Cost", "Receipt Presence", "Warranty Presence", "Total"]
+    csv_rows = [csv_headers]
+
+    for i in items:
+        rc    = i.replacement_cost or Decimal("0")
+        pp    = i.purchase_price or Decimal("0")
+        total_item = rc * i.quantity
+        
+        docs = []
+        if i.receipt_image_path: docs.append("R")
+        if i.warranty_url or i.warranty_expiry_date: docs.append("W")
+        doc_str = ",".join(docs)
+        
+        # Check for photo
+        photo_obj = ""
+        primary_attachment = next((a for a in i.attachments if a.is_primary), None)
+        if not primary_attachment and i.attachments:
+            primary_attachment = i.attachments[0]
+            
+        if primary_attachment:
+            full_img_path = os.path.join(INVENTORY_FILES_BASE_DIR, primary_attachment.stored_path)
+            if os.path.exists(full_img_path):
+                try:
+                    photo_obj = Image(full_img_path, width=0.5*inch, height=0.5*inch)
+                except Exception:
+                    photo_obj = "Image Error"
+
+        rows.append([
+            photo_obj,
+            i.ein,
+            i.name,
+            i.category.value if i.category else "",
+            str(i.quantity),
+            i.location or "",
+            i.serial_number or "",
+            f"${pp:.2f}",
+            f"${rc:.2f}",
+            doc_str,
+            f"${total_item:.2f}",
+        ])
+        
+        csv_rows.append([
+            i.ein,
+            i.name,
+            i.category.value if i.category else "",
+            str(i.quantity),
+            i.location or "",
+            i.serial_number or "",
+            f"{pp:.2f}",
+            f"{rc:.2f}",
+            "Yes" if i.receipt_image_path else "No",
+            "Yes" if (i.warranty_url or i.warranty_expiry_date) else "No",
+            f"{total_item:.2f}",
+        ])
+
+    tbl = Table(rows, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",   (0, 0), (-1, 0),  colors.HexColor("#2b2b2b")),
+        ("TEXTCOLOR",    (0, 0), (-1, 0),  colors.whitesmoke),
+        ("FONTNAME",     (0, 0), (-1, 0),  "Helvetica-Bold"),
+        ("FONTSIZE",     (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING",(0, 0), (-1, 0),  8),
+        ("BACKGROUND",   (0, 1), (-1, -1), colors.HexColor("#f5f5f5")),
+        ("ROWBACKGROUNDS",(0,1), (-1,-1),  [colors.white, colors.HexColor("#f0f0f0")]),
+        ("GRID",         (0, 0), (-1, -1), 0.5, colors.grey),
+        ("ALIGN",        (4, 0), (4, -1),  "CENTER"),
+        ("ALIGN",        (7, 0), (10, -1),  "RIGHT"),
+        ("VALIGN",       (0, 0), (-1, -1),  "MIDDLE"),
+    ]))
+    story.append(tbl)
+    story.append(Spacer(1, 0.25 * inch))
+    story.append(Paragraph(f"<b>Total Estimated Replacement Value (Serviceable): ${total:.2f}</b>", styles["h3"]))
+
+    SimpleDocTemplate(pdf_path, pagesize=letter).build(story)
+    
+    with open(csv_path, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerows(csv_rows)
+        
+    # Snapshot marker
+    home.manifest_generated_at = datetime.now(timezone.utc)
+    db.commit()
+    
+    logger.info("Insurance manifest written: %s (and CSV %s)", pdf_path, csv_path)
+    return {"pdf": pdf_path, "csv": csv_path}
+
+
+# ---------------------------------------------------------------------------
+# Audits
+# ---------------------------------------------------------------------------
+
+def get_active_audit(db: Session, user_id: str, home_id: str) -> Optional[InventoryAudit]:
+    """Return the in-progress audit for a home, if one exists."""
+    set_active_home(db, user_id, home_id)
+    return (
+        db.query(InventoryAudit)
+        .filter(
+            InventoryAudit.home_id == _uid(home_id),
+            InventoryAudit.status  == AuditStatus.IN_PROGRESS,
+        )
+        .first()
+    )
+
+
+def start_audit(db: Session, user_id: str, home_id: str) -> InventoryAudit:
+    """Start a new audit session. Raises ValueError if one is already in progress."""
+    home = set_active_home(db, user_id, home_id)
+    existing = get_active_audit(db, user_id, home_id)
+    if existing:
+        raise ValueError("An audit is already in progress for this home.")
+
+    inv_user = db.query(InvUser).filter(InvUser.id == _uid(user_id)).first()
+    if not inv_user:
+        raise ValueError("User not found.")
+    total = db.query(InventoryItem).filter(InventoryItem.home_id == home.id).count()
+
+    audit = InventoryAudit(
+        home_id=home.id,
+        created_by_id=inv_user.id,
+        total_items=total,
+        user_timezone=inv_user.timezone or "UTC",
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(audit)
+    return audit
+
+
+def record_scan(db: Session, user_id: str, audit_id: str, ein: str) -> dict:
+    """Record a scanned EIN against an active audit. Returns updated audit state."""
+    audit = db.query(InventoryAudit).filter(InventoryAudit.id == _uid(audit_id)).first()
+    if not audit:
+        raise NoResultFound("Audit not found.")
+    if audit.status != AuditStatus.IN_PROGRESS:
+        raise ValueError("This audit is already completed.")
+    set_active_home(db, user_id, str(audit.home_id))
+
+    item = db.query(InventoryItem).filter(
+        InventoryItem.ein == ein,
+        InventoryItem.home_id == audit.home_id,
+    ).first()
+    if not item:
+        raise NoResultFound(f"No item with EIN '{ein}' found in this home.")
+
+    # Prevent duplicate scans in same session
+    already = db.query(AuditScan).filter(
+        AuditScan.audit_id == audit.id,
+        AuditScan.item_id  == item.id,
+    ).first()
+    if already:
+        return _audit_state(db, audit)
+
+    scan = AuditScan(audit_id=audit.id, item_id=item.id, ein=ein)
+    db.add(scan)
+    audit.scanned_count = db.query(AuditScan).filter(AuditScan.audit_id == audit.id).count() + 1
+    db.commit()
+    db.refresh(audit)
+    return _audit_state(db, audit)
+
+
+def complete_audit(db: Session, user_id: str, audit_id: str, notes: str = "") -> InventoryAudit:
+    """Mark an audit as completed and attach notes."""
+    audit = db.query(InventoryAudit).filter(InventoryAudit.id == _uid(audit_id)).first()
+    if not audit:
+        raise NoResultFound("Audit not found.")
+    set_active_home(db, user_id, str(audit.home_id))
+    audit.status       = AuditStatus.COMPLETED
+    audit.notes        = notes[:500] if notes else None
+    audit.completed_at = _now()
+    db.commit()
+    db.refresh(audit)
+    return audit
+
+
+def get_audit_history(db: Session, user_id: str, home_id: str) -> list[InventoryAudit]:
+    """Return all completed audits for a home, newest first."""
+    set_active_home(db, user_id, home_id)
+    return (
+        db.query(InventoryAudit)
+        .filter(
+            InventoryAudit.home_id == _uid(home_id),
+            InventoryAudit.status  == AuditStatus.COMPLETED,
+        )
+        .order_by(InventoryAudit.completed_at.desc())
+        .all()
+    )
+
+
+def _audit_state(db: Session, audit: InventoryAudit) -> dict:
+    """Build the live audit state dict including scanned and missing item lists."""
+    all_items   = db.query(InventoryItem).filter(InventoryItem.home_id == audit.home_id).all()
+    scanned_ids = {s.item_id for s in db.query(AuditScan).filter(AuditScan.audit_id == audit.id).all()}
+    scanned  = [i for i in all_items if i.id in scanned_ids]
+    missing  = [i for i in all_items if i.id not in scanned_ids]
+    return {
+        "audit_id":      str(audit.id),
+        "status":        audit.status.value,
+        "total_items":   audit.total_items,
+        "scanned_count": len(scanned),
+        "scanned":       [{"id": str(i.id), "ein": i.ein, "name": i.name, "location": i.location} for i in scanned],
+        "missing":       [{"id": str(i.id), "ein": i.ein, "name": i.name, "location": i.location} for i in missing],
+        "started_at":    audit.started_at.isoformat() if audit.started_at else None,
+        "user_timezone": audit.user_timezone,
+    }
+
+
+def generate_audit_discrepancy_report(db: Session, user_id: str, audit_id: str, mark_missing: bool = False) -> str:
+    """
+    Generate a PDF report of unscanned items for an audit.
+    Optionally updates the status of those items to MISSING.
+    """
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, Image
+    except ImportError:
+        raise RuntimeError("reportlab is required for PDF generation. Run: pip install reportlab")
+
+    audit = db.query(InventoryAudit).filter(InventoryAudit.id == _uid(audit_id)).first()
+    if not audit:
+        raise NoResultFound("Audit not found.")
+    home = set_active_home(db, user_id, str(audit.home_id))
+    
+    all_items = db.query(InventoryItem).filter(InventoryItem.home_id == home.id).all()
+    scanned_ids = {s.item_id for s in db.query(AuditScan).filter(AuditScan.audit_id == audit.id).all()}
+    missing = [i for i in all_items if i.id not in scanned_ids]
+
+    if mark_missing:
+        for i in missing:
+            i.asset_status = AssetStatus.MISSING
+        db.commit()
+
+    out_dir = os.path.join(INVENTORY_FILES_BASE_DIR, f"home_{home.id}", "reports")
+    os.makedirs(out_dir, exist_ok=True)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    pdf_path = os.path.join(out_dir, f"discrepancy_report_{audit.id}_{ts}.pdf")
+
+    styles = getSampleStyleSheet()
+    story = [
+        Paragraph(f"Audit Discrepancy Report — {home.name}", styles["h1"]),
+        Paragraph(f"Audit Date: {audit.started_at.strftime('%Y-%m-%d') if audit.started_at else 'Unknown'} | Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", styles["Normal"]),
+        Spacer(1, 0.25 * inch),
+        Paragraph(f"<b>Unscanned Items: {len(missing)}</b>", styles["h3"]),
+        Spacer(1, 0.1 * inch),
+    ]
+
+    headers = ["Photo", "EIN", "Name", "Location", "Replacement Cost", "Docs"]
+    rows = [headers]
+
+    for i in missing:
+        rc = i.replacement_cost or Decimal("0")
+        
+        docs = []
+        if i.receipt_image_path: docs.append("R")
+        if i.warranty_url or i.warranty_expiry_date: docs.append("W")
+        doc_str = ",".join(docs)
+        
+        photo_obj = ""
+        primary_attachment = next((a for a in i.attachments if a.is_primary), None)
+        if not primary_attachment and i.attachments:
+            primary_attachment = i.attachments[0]
+            
+        if primary_attachment:
+            full_img_path = os.path.join(INVENTORY_FILES_BASE_DIR, primary_attachment.stored_path)
+            if os.path.exists(full_img_path):
+                try:
+                    photo_obj = Image(full_img_path, width=0.5*inch, height=0.5*inch)
+                except Exception:
+                    photo_obj = "Image Error"
+
+        rows.append([
+            photo_obj,
+            i.ein,
+            i.name,
+            i.location or "",
+            f"${rc:.2f}",
+            doc_str,
+        ])
+
+    tbl = Table(rows, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",   (0, 0), (-1, 0),  colors.HexColor("#7f1d1d")),
+        ("TEXTCOLOR",    (0, 0), (-1, 0),  colors.whitesmoke),
+        ("FONTNAME",     (0, 0), (-1, 0),  "Helvetica-Bold"),
+        ("FONTSIZE",     (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING",(0, 0), (-1, 0),  8),
+        ("BACKGROUND",   (0, 1), (-1, -1), colors.HexColor("#fef2f2")),
+        ("ROWBACKGROUNDS",(0,1), (-1,-1),  [colors.white, colors.HexColor("#fee2e2")]),
+        ("GRID",         (0, 0), (-1, -1), 0.5, colors.grey),
+        ("ALIGN",        (4, 0), (4, -1),  "RIGHT"),
+        ("VALIGN",       (0, 0), (-1, -1),  "MIDDLE"),
+    ]))
+    story.append(tbl)
+
+    SimpleDocTemplate(pdf_path, pagesize=letter).build(story)
+    logger.info("Discrepancy report written: %s", pdf_path)
+    return pdf_path
+
+
+# ---------------------------------------------------------------------------
+# Attachments
+# ---------------------------------------------------------------------------
+
+def add_attachment(
+    db: Session,
+    user_id: str,
+    item_id: str,
+    data: bytes,
+    original_filename: str,
+    mime_type: str = "",
+) -> ItemAttachment:
+    """Save a file to disk and register it as an attachment on an item."""
+    item = _get_item_or_raise(db, item_id)
+    set_active_home(db, user_id, str(item.home_id))
+
+    rel_path = save_file_for_home(str(item.home_id), "attachments", data, original_filename)
+    attachment = ItemAttachment(
+        item_id=item.id,
+        original_filename=original_filename,
+        stored_path=rel_path,
+        file_size=len(data),
+        mime_type=mime_type or None,
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+    return attachment
+
+
+def get_attachments(db: Session, user_id: str, item_id: str) -> list[ItemAttachment]:
+    """Return all attachments for an item."""
+    item = _get_item_or_raise(db, item_id)
+    set_active_home(db, user_id, str(item.home_id))
+    return db.query(ItemAttachment).filter(ItemAttachment.item_id == item.id).order_by(ItemAttachment.created_at).all()
+
+
+def delete_attachment(db: Session, user_id: str, attachment_id: str) -> None:
+    """Delete an attachment record and its file from disk."""
+    attachment = db.query(ItemAttachment).filter(ItemAttachment.id == _uid(attachment_id)).first()
+    if not attachment:
+        raise NoResultFound(f"Attachment '{attachment_id}' not found.")
+    set_active_home(db, user_id, str(attachment.item.home_id))
+
+    full_path = os.path.realpath(os.path.join(INVENTORY_FILES_BASE_DIR, attachment.stored_path))
+    base = os.path.realpath(INVENTORY_FILES_BASE_DIR)
+    if not full_path.startswith(base + os.sep):
+        raise ValueError("Invalid attachment path.")
+    if os.path.exists(full_path):
+        os.remove(full_path)
+
+    db.delete(attachment)
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Internal
+# ---------------------------------------------------------------------------
+
+def _get_item_or_raise(db: Session, item_id: str) -> InventoryItem:
+    item = db.query(InventoryItem).filter(InventoryItem.id == _uid(item_id)).first()
+    if not item:
+        raise NoResultFound(f"Item '{item_id}' not found.")
+    return item
