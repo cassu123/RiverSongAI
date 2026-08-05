@@ -106,7 +106,8 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
             console.error('[useWebSocket] Rejected non-object message')
             return
           }
-          if ('__proto__' in data || 'constructor' in data || 'prototype' in data) {
+          const dangerous = ['__proto__', 'constructor', 'prototype']
+          if (dangerous.some(k => Object.prototype.hasOwnProperty.call(data, k))) {
             console.error('[useWebSocket] Rejected message with dangerous keys')
             return
           }

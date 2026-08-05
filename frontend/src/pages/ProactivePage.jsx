@@ -17,17 +17,13 @@ export default function ProactivePage({ embedded = false }) {
   
   const refresh = async () => {
     try {
-      const [logRes, prefsRes] = await Promise.all([
+      const [logData, prefsData] = await Promise.all([
         apiFetch('/api/proactive/log'),
         apiFetch('/api/proactive/prefs')
       ])
-      if (logRes.ok) {
-        const data = await logRes.json()
-        setLog(data.log)
-      }
-      if (prefsRes.ok) {
-        const data = await prefsRes.json()
-        setPrefs(data.prefs)
+      setLog(logData?.log ?? [])
+      if (prefsData?.prefs) {
+        setPrefs({ quiet_start: null, quiet_end: null, min_push_severity: 'info', kinds_muted: [], ...prefsData.prefs })
       }
     } catch (e) {
       console.error("Failed to load proactive data", e)
@@ -45,7 +41,7 @@ export default function ProactivePage({ embedded = false }) {
     try {
       await apiFetch('/api/proactive/prefs', {
         method: 'PATCH',
-        body: JSON.stringify(prefs)
+        body: prefs
       })
     } catch (e) {
       console.error(e)
@@ -56,7 +52,7 @@ export default function ProactivePage({ embedded = false }) {
   
   const toggleMutedKind = (kind) => {
     setPrefs(p => {
-      const kinds = [...p.kinds_muted]
+      const kinds = [...(p.kinds_muted || [])]
       if (kinds.includes(kind)) {
         return { ...p, kinds_muted: kinds.filter(k => k !== kind) }
       } else {
@@ -97,9 +93,9 @@ export default function ProactivePage({ embedded = false }) {
       {["weather_alert", "device_alert", "routine", "maint_due", "custom"].map(kind => (
         <button
           key={kind}
-          className={prefs.kinds_muted.includes(kind) ? "rs-pill rs-pill-active" : "rs-pill"}
+          className={(prefs.kinds_muted || []).includes(kind) ? "rs-pill rs-pill-active" : "rs-pill"}
           onClick={() => toggleMutedKind(kind)}
-          style={prefs.kinds_muted.includes(kind) ? { background: '#ff4444', color: '#fff', border: 'none' } : {}}
+          style={(prefs.kinds_muted || []).includes(kind) ? { background: '#ff4444', color: '#fff', border: 'none' } : {}}
         >
           {kind}
         </button>

@@ -423,11 +423,12 @@ export default function CommercePage({ setAction }) {
     if (!file) return;
     const fd = new FormData();
     fd.append('file', file);
-    await apiFetch(`/api/commerce/products/${productId}/image`, token, {
+    const res = await fetch(`/api/commerce/products/${productId}/image`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: fd,
     });
+    if (!res.ok) throw new Error('Image upload failed.');
   };
 
   const handleAdd = async (payload, imageFile) => {
