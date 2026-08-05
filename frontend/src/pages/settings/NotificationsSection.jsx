@@ -31,11 +31,15 @@ export default function NotificationsSection({ token }) {
       return
     }
 
-    navigator.serviceWorker.ready.then(reg => {
-      reg.pushManager.getSubscription().then(sub => {
-        setStatus(sub ? 'subscribed' : 'idle')
+    let active = true
+    navigator.serviceWorker.getRegistration()
+      .then(reg => (reg ? reg.pushManager.getSubscription() : null))
+      .then(sub => { if (active) setStatus(sub ? 'subscribed' : 'idle') })
+      .catch(err => {
+        console.error('[Push] Subscription lookup failed:', err)
+        if (active) setStatus('idle')
       })
-    })
+    return () => { active = false }
   }, [])
 
   const handleToggle = async (val) => {

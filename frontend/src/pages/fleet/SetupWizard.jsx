@@ -87,6 +87,22 @@ export default function SetupWizard() {
   })
 
   useEffect(() => {
+    const parseSection = (value, fallback) => {
+      if (!value) return fallback
+      let parsed = value
+      if (typeof value === 'string') {
+        try { parsed = JSON.parse(value) } catch { return fallback }
+      }
+      if (typeof parsed !== 'object') return fallback
+      const merged = { ...fallback }
+      for (const [k, v] of Object.entries(parsed)) {
+        merged[k] = (v && typeof v === 'object' && !Array.isArray(v))
+          ? { ...(fallback[k] || {}), ...v }
+          : v
+      }
+      return merged
+    }
+
     fetch(`/api/vector/units/${id}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -100,9 +116,9 @@ export default function SetupWizard() {
         name: unit.name || prev.name,
         platform: unit.platform || prev.platform,
         timezone: unit.timezone || prev.timezone,
-        hardware: unit.hardware ? (typeof unit.hardware === 'string' ? JSON.parse(unit.hardware) : unit.hardware) : prev.hardware,
-        safety_floors: unit.safety_floors ? (typeof unit.safety_floors === 'string' ? JSON.parse(unit.safety_floors) : unit.safety_floors) : prev.safety_floors,
-        home_position: unit.home_position ? (typeof unit.home_position === 'string' ? JSON.parse(unit.home_position) : unit.home_position) : prev.home_position
+        hardware: parseSection(unit.hardware, prev.hardware),
+        safety_floors: parseSection(unit.safety_floors, prev.safety_floors),
+        home_position: parseSection(unit.home_position, prev.home_position)
       }))
       setLoading(false)
     })

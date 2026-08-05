@@ -446,7 +446,8 @@ function useApi(token) {
     get: (p) => fetch(`/api/culinary${p}`, { headers: headers() }).then(_handle),
     post: (p, b) => fetch(`/api/culinary${p}`, { method: 'POST', headers: headers(), body: JSON.stringify(b) }).then(_handle),
     patch: (p, b) => fetch(`/api/culinary${p}`, { method: 'PATCH', headers: headers(), body: JSON.stringify(b) }).then(_handle),
-    delete: (p) => fetch(`/api/culinary${p}`, { method: 'DELETE', headers: headers() }),
+    put: (p, b) => fetch(`/api/culinary${p}`, { method: 'PUT', headers: headers(), body: JSON.stringify(b) }).then(_handle),
+    delete: (p) => fetch(`/api/culinary${p}`, { method: 'DELETE', headers: headers() }).then(_handle),
   }), [headers])
 }
 
@@ -461,10 +462,8 @@ export default function CulinaryPage({ setAction }) {
   const [scannerMode, setScannerMode] = useState(null)
   const [recipes, setRecipes] = useState([])
   const [stock, setStock] = useState([])
-  const [grocery, setGrocery] = useState([])
   const [equipment, setEquipment] = useState([])
   const [banned, setBanned] = useState([])
-  const [newGroceryItem, setNewGroceryItem] = useState("")
   const [mealPlan, setMealPlan] = useState([])
   const [proposals, setProposals] = useState([])
   const [activePrep, setActivePrep] = useState(null)
@@ -504,9 +503,6 @@ export default function CulinaryPage({ setAction }) {
       if (tab === 'prep') {
         try { setActivePrep(await api.get('/prep')) } catch { setActivePrep(null) }
       }
-      if (tab === 'grocery') {
-        try { setGrocery(await api.get('/grocery')) } catch { setGrocery([]) }
-      }
       if (tab === 'equipment') setEquipment(await api.get('/household/equipment'))
       if (tab === 'banned') setBanned(await api.get('/household/banned'))
     } catch (err) {
@@ -527,9 +523,6 @@ export default function CulinaryPage({ setAction }) {
         const msg = JSON.parse(event.data);
         if (['stockroom_updated', 'stockroom_deleted', 'stockroom_created'].includes(msg.event)) {
           if (activeTab === 'stockroom') fetchData('stockroom');
-        }
-        if (msg.event === 'grocery_updated') {
-          if (activeTab === 'grocery') fetchData('grocery');
         }
         if (msg.event === 'meal_plan_updated' || msg.event === 'dinner_updated') {
           if (activeTab === 'dinner') fetchData('dinner');
@@ -559,7 +552,6 @@ export default function CulinaryPage({ setAction }) {
             { key: 'dinner', icon: 'dinner_dining', label: 'DINNER' },
             { key: 'stockroom', icon: 'warehouse', label: 'STOCK' },
             { key: 'prep', icon: 'set_meal', label: 'PREP' },
-            { key: 'grocery', icon: 'shopping_cart', label: 'LIST' },
             { key: 'equipment', icon: 'kitchen', label: 'HARDWARE' },
             { key: 'banned', icon: 'block', label: 'BANNED' }
           ].map(t => (
@@ -872,7 +864,6 @@ export default function CulinaryPage({ setAction }) {
           {activeTab === 'stockroom' && renderStockroom()}
           {activeTab === 'dinner' && renderDinner()}
           {activeTab === 'prep' && renderPrep()}
-          {activeTab === 'grocery' && renderGrocery()}
           {activeTab === 'equipment' && (
              <div className="rs-card-flow">
                {equipment.map((eq, i) => (
