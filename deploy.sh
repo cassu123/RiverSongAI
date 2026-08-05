@@ -89,6 +89,13 @@ step "Pulling latest from GitHub"
 # local churn that blocks the next fast-forward pull. It's a generated file —
 # discard any such local changes so the pull always succeeds.
 git checkout -- frontend/package-lock.json 2>/dev/null || true
+# Same story for .npm_package.sha256, with one extra wrinkle: it used to be
+# committed, and the pull that removes it from the index would refuse to run
+# while the on-disk copy differs from HEAD — which it always does here, because
+# the hash is computed after npm install has rewritten package-lock.json. Reset
+# it so that pull can delete it. Once it is gone from the index this is a no-op
+# (the file is untracked and ignored), so the line is safe to keep forever.
+git checkout -- .npm_package.sha256 2>/dev/null || true
 git pull --ff-only origin main
 
 step "Activating virtualenv"
