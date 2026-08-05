@@ -231,22 +231,26 @@ from core.home_events import get_home_bus
 @router.get("/stream")
 async def stream_home_events(token: Optional[str] = None):
     # Quick auth check using token param since EventSource doesn't easily send Headers
-    if token:
-        try:
-            decode_token(token)
-        except Exception:
-            raise HTTPException(status_code=401, detail="Invalid token")
-    else:
+    if not token:
         raise HTTPException(status_code=401, detail="Missing token")
+    payload = await decode_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
     if not _is_configured():
         raise HTTPException(status_code=400, detail="HA not configured")
 
     async def event_generator():
-        queue = asyncio.Queue()
+        # Bounded so a stalled client cannot grow the queue without limit.
+        queue: asyncio.Queue = asyncio.Queue(maxsize=100)
 
         async def _on_event(entity_id: str, new_state: dict, old_state: dict):
-            await queue.put({"entity_id": entity_id, "state": new_state})
+            try:
+                queue.put_nowait({"entity_id": entity_id, "state": new_state})
+            except asyncio.QueueFull:
+                logger.warning(
+                    "Home event stream queue full; dropping event for %s",
+                    entity_id)
             
         bus = get_home_bus()
         bus.subscribe(_on_event)

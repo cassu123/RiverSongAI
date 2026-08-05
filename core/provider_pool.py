@@ -29,17 +29,22 @@ class ProviderPool:
         # Only rebuild if the model size changes
         # Whisper model size is the main config
         target_size = model_size or settings.stt_provider # using stt_provider as proxy
+        loop = asyncio.get_running_loop()
         async with self._lock:
             if self.stt is None or self.stt_model_size != target_size:
                 from core.conversation_loop import _build_stt_provider
-                self.stt = _build_stt_provider(model_size=model_size)
+                # Model load takes seconds — keep it off the event loop.
+                self.stt = await loop.run_in_executor(
+                    None, lambda: _build_stt_provider(model_size=model_size))
                 self.stt_model_size = target_size
             return self.stt
 
     async def get_tts(self, voice_id: Optional[str] = None):
+        loop = asyncio.get_running_loop()
         async with self._lock:
             if self.tts is None or self.tts_voice_id != voice_id:
                 from core.conversation_loop import _build_tts_provider
-                self.tts = _build_tts_provider(voice_id_override=voice_id)
+                self.tts = await loop.run_in_executor(
+                    None, lambda: _build_tts_provider(voice_id_override=voice_id))
                 self.tts_voice_id = voice_id
             return self.tts

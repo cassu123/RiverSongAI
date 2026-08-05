@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from typing import Any, List, Dict, Callable
+from typing import Any, List, Dict, Callable, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -17,15 +17,15 @@ async def run_agent_loop(
     user_id: str,
     session_id: str = "",
     tool_system_prompt: str = "",
-    tool_context: Dict[str, Any] = None
-) -> str:
+    tool_context: Optional[Dict[str, Any]] = None
+) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Runs the multi-step tool execution loop.
     Returns the final buffered text if the LLM provided it, so the caller can emit it.
     If no tools were run and the LLM doesn't buffer, returns an empty string.
     """
     if not hasattr(llm, "chat_with_tools"):
-        return ""
+        return "", []
 
     receipts = []
     

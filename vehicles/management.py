@@ -36,6 +36,7 @@ import json
 import logging
 import os
 import sqlite3
+from contextlib import closing
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
@@ -1113,12 +1114,11 @@ def lookup_app_user_by_email(email: str) -> Optional[dict]:
     Returns dict with id, email, display_name or None.
     """
     try:
-        conn = sqlite3.connect(_MAIN_DB_PATH)
-        row = conn.execute(
-            "SELECT id, email, display_name, is_approved FROM users WHERE email=? COLLATE NOCASE",
-            (email,),
-        ).fetchone()
-        conn.close()
+        with closing(sqlite3.connect(_MAIN_DB_PATH)) as conn:
+            row = conn.execute(
+                "SELECT id, email, display_name, is_approved FROM users WHERE email=? COLLATE NOCASE",
+                (email,),
+            ).fetchone()
         if row is None:
             return None
         return {"id": row[0], "email": row[1], "display_name": row[2], "is_approved": bool(row[3])}

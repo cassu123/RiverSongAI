@@ -149,6 +149,10 @@ _Session = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
 Base.metadata.create_all(_engine)
 
 
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 def _migrate_culinary_schema() -> None:
     import sqlalchemy
     with _engine.connect() as conn:
@@ -2451,9 +2455,8 @@ async def create_prep_from_plan(body: MealPlanPrepRequest, request: Request, db:
         pr = PrepSessionRecipe(
             session_id=session.id,
             recipe_id=recipe.id,
-            target_servings=target_servings,
+            servings_target=target_servings,
             scaled_ingredients_json=json.dumps(scaled),
-            scaling_factor=factor
         )
         db.add(pr)
         

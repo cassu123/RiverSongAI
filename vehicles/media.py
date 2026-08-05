@@ -49,25 +49,33 @@ async def process_upload(file: UploadFile, kind: str) -> Tuple[Optional[str], Op
             f.write(content)
             
         try:
+            # ffmpeg blocks for seconds to minutes — run it off the event
+            # loop so other requests keep being served, and bound it so a
+            # malformed video cannot hang the worker forever.
+            def _run_ffmpeg(cmd, check=False):
+                return subprocess.run(
+                    cmd, check=check, capture_output=True, timeout=300)
+
             # check ffmpeg
-            res = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True)
+            res = await asyncio.to_thread(
+                _run_ffmpeg, ["ffmpeg", "-version"])
             if res.returncode == 0:
                 # scale to 720p H.264
-                subprocess.run([
+                await asyncio.to_thread(_run_ffmpeg, [
                     "ffmpeg", "-i", raw_path,
                     "-vf", "scale=-2:720",
                     "-c:v", "libx264", "-preset", "fast", "-crf", "28",
                     "-c:a", "aac", "-b:a", "128k",
                     "-y", out_path
-                ], check=True, capture_output=True)
-                
+                ], True)
+
                 # generate thumb
-                subprocess.run([
+                await asyncio.to_thread(_run_ffmpeg, [
                     "ffmpeg", "-i", out_path,
                     "-vframes", "1", "-vf", "scale=320:-2",
                     "-q:v", "5",
                     "-y", thumb_path
-                ], check=True, capture_output=True)
+                ], True)
                 
                 os.remove(raw_path)
                 return out_path, thumb_path
