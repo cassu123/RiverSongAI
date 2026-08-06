@@ -486,10 +486,11 @@
 
 .rs-greeting {
   font-size: var(--rs-fs-h1);
-  line-height: 1.05;
+  line-height: 1.25;
   letter-spacing: -0.04em;
   font-weight: 400;
   margin: 0;
+  margin-block-end: 8px;
   color: var(--md-on-surface);
   text-wrap: balance;
   font-family: var(--font-mood, var(--font-base));
@@ -508,7 +509,7 @@
   letter-spacing: 0.08em;
   line-height: 1.6;
   text-transform: uppercase;
-  margin-block-start: 10px;
+  margin-block-start: 16px;
   max-inline-size: 62ch;
   text-wrap: balance;
   text-shadow: 0 1px 10px color-mix(in srgb, var(--bg-base) 88%, transparent);
