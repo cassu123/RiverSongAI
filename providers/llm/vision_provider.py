@@ -26,7 +26,7 @@ class VisionProvider:
 
     def __init__(self):
         self._settings = get_settings()
-        self._client = ollama.AsyncClient(host=self._settings.ollama_base_url)
+        self._client = ollama.AsyncClient(host=self._settings.ollama_base_url)  # type: ignore
         self._model = self._settings.vision_model
         self._enabled = self._settings.vision_enabled
 

@@ -451,7 +451,7 @@ async def session_end(body: SessionEndBody,
     )
     samples = (stats or {}).get("samples") or 0
     summary = None
-    if samples:
+    if samples and stats:
         summary = json.dumps({
             "samples": samples,
             "max_speed_mph": stats["max_speed_mph"],

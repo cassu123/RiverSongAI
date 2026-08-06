@@ -18,7 +18,8 @@ from providers.memory.store._util import (
 )
 
 
-class IntegrationsStoreMixin:
+from ._util import StoreProtocol
+class IntegrationsStoreMixin(StoreProtocol):
     """Per-user OAuth integrations, OAuth nonces and global integrations config.
 
     Mixin for SQLiteStore: relies on self._run / self._get_conn from the

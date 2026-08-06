@@ -44,7 +44,7 @@ from providers.stt.audio import TARGET_SAMPLE_RATE, decode_to_16k_mono
 logger = logging.getLogger(__name__)
 
 
-def _resolve_device(configured: str) -> Optional[str]:
+def _resolve_device(configured: str) -> str:
     """
     Map the parakeet_device setting to a torch device string.
 

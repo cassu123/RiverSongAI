@@ -100,18 +100,19 @@ async def _run_proactive_routine(app: FastAPI, user_id: str, routine: dict):
     # Instead of direct sockets, we just run the agent and submit to DeliveryRouter
     output_parts = []
     receipts = []
-    async def capture(event: dict):
-        if event.get("type") == "response_chunk" and event.get("text"):
-            output_parts.append(event["text"])
-        elif event.get("type") == "response_complete" and event.get("text"):
-            if not output_parts:
+    async def capture(event: dict | bytes):
+        if isinstance(event, dict):
+            if event.get("type") == "response_chunk" and event.get("text"):
                 output_parts.append(event["text"])
-        elif event.get("type") == "tool_execution" and event.get("tool"):
-            # build a receipt
-            res = str(event.get("result", ""))
-            if len(res) > 200:
-                res = res[:197] + "..."
-            receipts.append(f"- **{event['tool']}**: {res}")
+            elif event.get("type") == "response_complete" and event.get("text"):
+                if not output_parts:
+                    output_parts.append(event["text"])
+            elif event.get("type") == "tool_execution" and event.get("tool"):
+                # build a receipt
+                res = str(event.get("result", ""))
+                if len(res) > 200:
+                    res = res[:197] + "..."
+                receipts.append(f"- **{event['tool']}**: {res}")
 
     try:
         from core.conversation_loop import ConversationLoop
@@ -136,7 +137,7 @@ async def _run_proactive_routine(app: FastAPI, user_id: str, routine: dict):
             await router.submit(ProactiveItem(
                 user_id=user_id,
                 kind="routine",
-                dedupe_key=f"routine_{routine['id']}_{datetime.now(zoneinfo.ZoneInfo('UTC')).strftime('%Y%m%d%H%M')}",
+                key=f"routine_{routine['id']}_{datetime.now(zoneinfo.ZoneInfo('UTC')).strftime('%Y%m%d%H%M')}",
                 severity=routine.get("severity", "info"),
                 title=f"Routine: {routine['name']}",
                 message=final_text,

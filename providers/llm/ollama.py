@@ -58,7 +58,7 @@ class OllamaLLM(LLMProvider):
             self._base_url,
         )
 
-        self._client = ollama_client.AsyncClient(host=self._base_url)
+        self._client = ollama_client.AsyncClient(host=self._base_url)  # type: ignore
 
     # -------------------------------------------------------------------------
     # Public interface (LLMProvider)
@@ -128,7 +128,7 @@ class OllamaLLM(LLMProvider):
                 if chunk:
                     yield chunk
 
-        except ollama_client.ResponseError as exc:
+        except ollama_client.ResponseError as exc:  # type: ignore
             raise RuntimeError(
                 f"Ollama returned an error for model '{self._model}': {exc}"
             ) from exc

@@ -21,7 +21,8 @@ from providers.memory.store._util import (
 )
 
 
-class SettingsStoreMixin:
+from ._util import StoreProtocol
+class SettingsStoreMixin(StoreProtocol):
     """Memory/LLM/user settings, feed and page preferences, admin config.
 
     Mixin for SQLiteStore: relies on self._run / self._get_conn from the

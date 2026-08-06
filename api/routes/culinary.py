@@ -2134,7 +2134,7 @@ class ShoppingItemUpdate(BaseModel):
     checked: Optional[bool] = None
 
 @router.get("/grocery")
-async def get_shopping_list(request: Request, db: Session = Depends(get_db)):
+async def get_grocery_list(request: Request, db: Session = Depends(get_db)):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     

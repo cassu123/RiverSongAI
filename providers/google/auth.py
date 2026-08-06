@@ -70,6 +70,7 @@ class GoogleAuth:
             str(self._secrets_path), self._scopes
         )
         creds = flow.run_local_server(port=0)
+        assert isinstance(creds, Credentials)
         self._save_credentials(token_path, creds)
         return creds
 

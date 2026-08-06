@@ -76,7 +76,7 @@ async def brief_sweep_func():
             await router.submit(ProactiveItem(
                 user_id=uid,
                 kind="brief",
-                dedupe_key=dedupe,
+                key=dedupe,
                 severity="info",
                 title="Morning Briefing",
                 message=brief_text,

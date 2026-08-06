@@ -57,7 +57,7 @@ class RemoteOllamaLLM(LLMProvider):
         if not self._base_url:
             raise ValueError("RemoteOllamaLLM requires a non-empty base_url.")
 
-        self._client = ollama_client.AsyncClient(host=self._base_url)
+        self._client = ollama_client.AsyncClient(host=self._base_url)  # type: ignore
         logger.info(
             "RemoteOllamaLLM initialized (rig=%s, base_url=%s, model=%s).",
             self._rig_label, self._base_url, self._model,

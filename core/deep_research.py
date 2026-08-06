@@ -294,7 +294,8 @@ async def fetch_and_extract(
         return {**source, "text": ""}
 
     if fetcher is None:
-        def fetcher(u): return _httpx_fetch(u, timeout=_DEFAULT_FETCH_TIMEOUT)  # noqa: E731
+        def _default_fetcher(u): return _httpx_fetch(u, timeout=_DEFAULT_FETCH_TIMEOUT)  # noqa: E731
+        fetcher = _default_fetcher
 
     content = await fetcher(url)
     if not content:

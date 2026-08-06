@@ -121,7 +121,7 @@ async def _section_weather(request: Request, user_id: str) -> Dict[str, Any]:
     current = (data or {}).get("current") or {}
     daily = (data or {}).get("daily") or {}
     code = current.get("weathercode")
-    icon, description = _WMO.get(code, ("thermostat", "current conditions"))
+    icon, description = _WMO.get(int(code) if code is not None else -1, ("thermostat", "current conditions"))
 
     temp = current.get("temperature_2m")
     unit = "F" if (data or {}).get("unit") == "fahrenheit" else "C"

@@ -60,6 +60,10 @@ try:
     from sp_api.base import Marketplaces, SellingApiException
     _SPAPI_AVAILABLE = True
 except ImportError:
+    Inventories: Any = None  # type: ignore
+    Orders: Any = None  # type: ignore
+    Marketplaces: Any = None  # type: ignore
+    SellingApiException: Any = Exception  # type: ignore
     _SPAPI_AVAILABLE = False
     logger.warning(
         "python-amazon-sp-api not installed. Run: pip install python-amazon-sp-api"
@@ -152,7 +156,7 @@ class AmazonProvider:
             max_workers=2, thread_name_prefix="amazon_sp"
         )
 
-    def _marketplace(self) -> "Marketplaces":
+    def _marketplace(self) -> Any:
         """Resolve marketplace ID string to the Marketplaces enum."""
         for m in Marketplaces:
             if m.marketplace_id == self._marketplace_id:

@@ -72,7 +72,8 @@ class VectorStore:
         """
         Embed text and upsert into the vector store.
         """
-        if not self._enabled or self._collection is None:
+        coll = self._collection
+        if not self._enabled or coll is None:
             return
 
         embedding = await self._embedding_provider.embed(text)
@@ -82,7 +83,7 @@ class VectorStore:
 
         try:
             loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, lambda: self._collection.upsert(
+            await loop.run_in_executor(None, lambda: coll.upsert(
                 ids=[id],
                 embeddings=[embedding],
                 metadatas=[metadata],
@@ -103,7 +104,8 @@ class VectorStore:
         Returns:
             List of {id, text, metadata, distance} sorted by relevance.
         """
-        if not self._enabled or self._collection is None:
+        coll = self._collection
+        if not self._enabled or coll is None:
             return []
 
         embedding = await self._embedding_provider.embed(query_text)
@@ -112,7 +114,7 @@ class VectorStore:
 
         try:
             loop = asyncio.get_running_loop()
-            results = await loop.run_in_executor(None, lambda: self._collection.query(
+            results = await loop.run_in_executor(None, lambda: coll.query(
                 query_embeddings=[embedding],
                 n_results=n_results,
                 where=where
@@ -137,11 +139,12 @@ class VectorStore:
         """
         Delete a vector by its id from ChromaDB.
         """
-        if not self._enabled or self._collection is None:
+        coll = self._collection
+        if not self._enabled or coll is None:
             return
             
         try:
             loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, lambda: self._collection.delete(ids=[id]))
+            await loop.run_in_executor(None, lambda: coll.delete(ids=[id]))
         except Exception as exc:
             logger.warning("ChromaDB delete failed for id %s: %s", id, exc)
