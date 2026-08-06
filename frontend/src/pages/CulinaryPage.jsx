@@ -702,7 +702,7 @@ export default function CulinaryPage({ setAction }) {
              <div style={{ display: 'flex', gap: 12, marginTop: 24, overflowX: 'auto', paddingBottom: 16 }}>
                {week.map(w => (
                  <div key={w.dateStr} style={{ 
-                   flex: 1, minWidth: 120, 
+                   flex: '0 0 auto', minWidth: 160, 
                    background: w.entry ? 'var(--md-surface-container-high)' : 'var(--md-surface-container)', 
                    borderRadius: 16, padding: 16, border: '1px solid var(--md-outline-variant)' 
                  }}>

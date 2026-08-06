@@ -22,18 +22,22 @@
 [data-universe="dune"]      { 
   --font-mood: "Ibarra Real Nova", serif; 
   --type-tracking: -0.02em;
+  --bg-image: url('/images/backgrounds/bg_dune.png');
 }
 [data-universe="halo"]      { 
   --font-mood: var(--font-base); 
   --type-tracking: -0.03em;
+  --bg-image: url('/images/backgrounds/bg_halo.png');
 }
 [data-universe="mv"]        { 
   --font-mood: var(--font-base); 
   --type-tracking: 0.02em;
+  --bg-image: url('/images/backgrounds/bg_mv.png');
 }
 [data-universe="nightcity"] { 
   --font-mood: var(--font-mono); 
   --type-tracking: 0.01em;
+  --bg-image: url('/images/backgrounds/bg_nightcity.png');
 }
 
 
@@ -215,7 +219,12 @@ body[data-env="unsc"] { --card-texture: linear-gradient(180deg, rgba(255,255,255
 
 body {
   font-family: var(--font-base);
-  background: var(--bg-base);
+  background-color: var(--bg-base);
+  background-image: linear-gradient(var(--bg-base), var(--bg-base)), var(--bg-image);
+  background-blend-mode: overlay;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   color: var(--fg);
-  transition: background 1.0s var(--rs-motion-curve), color 1.0s var(--rs-motion-curve);
+  transition: background-color 1.0s var(--rs-motion-curve), color 1.0s var(--rs-motion-curve);
 }
