@@ -179,7 +179,7 @@ async def identify_by_voice(
         from providers.voice_id.voice_id_provider import VoiceIDProvider
 
         if threshold is None:
-            threshold = getattr(get_settings(), "voice_id_threshold", 0.75)
+            threshold = float(getattr(get_settings(), "voice_id_threshold", 0.75) or 0.75)
 
         result = await _get_voice_provider(VoiceIDProvider).identify(
             wav_bytes, threshold=threshold)

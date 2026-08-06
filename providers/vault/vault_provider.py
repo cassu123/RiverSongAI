@@ -501,9 +501,10 @@ def start_vault_watcher(app):
     provider = VaultProvider(store=app.state.memory_manager._store)
     handler = VaultWatcher(provider, loop)
 
-    _observer = Observer()
-    _observer.schedule(handler, str(base_vault), recursive=True)
-    _observer.start()
+    obs = Observer()
+    obs.schedule(handler, str(base_vault), recursive=True)
+    obs.start()
+    _observer = obs
     logger.info("CHRONOS vault watcher started at %s", base_vault)
 
     # Initial indexing walk (A.2.2)

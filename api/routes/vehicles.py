@@ -1147,7 +1147,7 @@ If asking about parts, cite OEM and verified alternatives from the context above
         # We don't want history across queries for the one-off "ask" in the drawer, 
         # or maybe we do. The session_id caches it in DB. Let's just run text.
         queue: asyncio.Queue = asyncio.Queue()
-        async def on_event(evt: dict):
+        async def on_event(evt: dict | bytes):
             await queue.put(evt)
             
         task = asyncio.create_task(loop.run_text(body.question, on_event))
@@ -1531,7 +1531,7 @@ async def archive_guide(
             checkpoint_id=uuid.UUID(checkpoint_id) if checkpoint_id else None,
             kind=MediaKind.LINK_ARCHIVE,
             title=f"Guide: {q}",
-            source=MediaSource.WEB_ARCHIVE,
+            source=MediaSource.URL,
             file_path="https://www.youtube.com/watch?v=dQw4w9WgXcQ", # Mock URL
         )
         db.add(media)

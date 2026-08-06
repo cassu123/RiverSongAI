@@ -341,7 +341,7 @@ async def _exec_add_asset(args: dict, user_id: str) -> str:
             
             if not home:
                 if not homes:
-                    home = create_home(db, str(inv_user.id), "Primary Residence", "")
+                    home = create_home(db, inv_user, "Primary Residence", "")
                 else:
                     home = homes[0]
             
@@ -351,12 +351,15 @@ async def _exec_add_asset(args: dict, user_id: str) -> str:
             except ValueError:
                 cat = ItemCategory.OTHER
                 
-            item = create_item(db, str(inv_user.id), str(home.id), {
-                "name": args['name'],
-                "location": args.get('location'),
-                "category": cat,
-                "description": args.get('details', '')
-            })
+            item = create_item(
+                db=db, 
+                user_id=str(inv_user.id), 
+                home_id=str(home.id), 
+                name=args['name'],
+                location=args.get('location', ''),
+                category=cat,
+                description=args.get('details', '')
+            )
             return f"Added {item.name} to the inventory at {item.location} in {home.name}."
         finally:
             db.close()
@@ -631,14 +634,14 @@ async def _exec_alias_device(args: dict, user_id: str) -> str:
         return "Failed to save the new name."
 
 
-async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
+async def _exec_vehicle_maintenance(args: dict, context: dict) -> str:
     user_id = context.get("user_id")
     
     vehicle_id = context.get("vehicle_id")
     if not vehicle_id:
         vehicle_id = await _resolve_vehicle(args.get("vehicle", ""), user_id)
     if not vehicle_id:
-        return "No vehicle_id in context and could not resolve vehicle."
+        return {"error": "No vehicle_id in context and could not resolve vehicle."}
 
 
     def _sync_work():
@@ -743,7 +746,8 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
                 "matched_checkpoint": matched_cp.description if matched_cp else None,
                 "log_id": str(log.id)
             }
-            return result
+            import json
+            return json.dumps(result)
         finally:
             if close_db:
                 db.close()
@@ -787,8 +791,8 @@ def _get_db_for_tools(context):
     return db, False
 
 
-async def _exec_list_vehicles(args: dict, context: dict) -> dict:
-    user_id = context.get("user_id")
+async def _exec_list_vehicles(args: dict, context: dict) -> str:
+    user_id = context.get("user_id") or "primary_user"
     def _sync():
         db, close = _get_db_for_tools(context)
         try:
@@ -805,7 +809,8 @@ async def _exec_list_vehicles(args: dict, context: dict) -> dict:
                     "name": v.nickname or f"{v.year} {v.make} {v.model}",
                     "effective_odometer": tl.get("eff_odometer")
                 })
-            return {"vehicles": res}
+            import json
+            return json.dumps({"vehicles": res})
         finally:
             if close: db.close()
     return await asyncio.get_running_loop().run_in_executor(None, _sync)
@@ -1279,20 +1284,22 @@ async def _exec_set_timer(args: dict, user_id: str) -> str:
     asyncio.create_task(_timer_task())
     return f"Timer '{label}' set for {duration} seconds."
 
-async def _resolve_vehicle(query: str, user_id: str):
+async def _resolve_vehicle(query: str | None, user_id: str | None):
     from vehicles.management import get_vehicles
     from core.family import resolve_module_owner
     from database.core import engine
     from sqlalchemy.orm import sessionmaker
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
+    if not user_id:
+        user_id = "primary_user"
     owner_id = resolve_module_owner(user_id, "maintenance")
     try:
         vehicles = get_vehicles(db, owner_id)
         if not vehicles:
             return None
         # simple fuzzy match
-        query = query.lower()
+        query = (query or "").lower()
         for v in vehicles:
             if v.nickname and query in v.nickname.lower(): return v.id
             if v.make and query in v.make.lower(): return v.id

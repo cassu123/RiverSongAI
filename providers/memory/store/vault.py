@@ -14,7 +14,8 @@ from typing import Optional
 
 
 
-class VaultStoreMixin:
+from ._util import StoreProtocol
+class VaultStoreMixin(StoreProtocol):
     """CHRONOS vault notes, links, audit log and graph.
 
     Mixin for SQLiteStore: relies on self._run / self._get_conn from the

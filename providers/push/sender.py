@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 async def send_push(subscription_json: str, title: str, body: str,
-                    icon: str = "/favicon.ico", url: str = None) -> bool:
+                    icon: str = "/favicon.ico", url: str | None = None) -> bool:
     """
     Send a single push notification.
     Returns True on success, False if subscription is gone (caller should delete).

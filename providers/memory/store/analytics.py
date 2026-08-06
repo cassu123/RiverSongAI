@@ -19,7 +19,8 @@ from providers.memory.store._util import (
 )
 
 
-class AnalyticsStoreMixin:
+from ._util import StoreProtocol
+class AnalyticsStoreMixin(StoreProtocol):
     """Pulse snapshots, voice-ID events, analytics platforms/snapshots, push and FCM tokens.
 
     Mixin for SQLiteStore: relies on self._run / self._get_conn from the

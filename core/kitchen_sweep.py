@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 from api.routes.culinary import _Session as SessionLocal
 from api.routes.culinary import _ws_manager, get_db, _get_household
-from culinary.models import Household, Recipe, StockroomItem, ShoppingListItem, MealPlanEntry
+from culinary.models import Household, Recipe, StockroomItem, ShoppingListItem, MealPlanEntry, StockState
 from core.proactive import get_delivery_router, ProactiveItem
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ async def kitchen_sweep_func():
                 if router:
                     for uid in [hh.owner_id]: # simplistic
                         if uid:
-                            await router.route(
+                            await router.submit(
                                 ProactiveItem(
                                     kind="custom",
                                     key="culinary:low_stock",
@@ -65,7 +65,7 @@ async def kitchen_sweep_func():
                     if router:
                         for uid in [hh.owner_id]:
                             if uid:
-                                await router.route(
+                                await router.submit(
                                     ProactiveItem(
                                         kind="custom",
                                         key=f"culinary:dinner_proposal:{rec.id}",

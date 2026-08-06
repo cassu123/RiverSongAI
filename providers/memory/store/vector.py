@@ -65,7 +65,8 @@ def _is_online(last_seen: Optional[str], window_s: int = VECTOR_ONLINE_WINDOW_S)
     return (datetime.now(timezone.utc) - ts).total_seconds() <= window_s
 
 
-class VectorStoreMixin:
+from ._util import StoreProtocol
+class VectorStoreMixin(StoreProtocol):
     """Vector fleet units, telemetry, alerts, sessions, schedules and commands.
 
     Mixin for SQLiteStore: relies on self._run / self._get_conn from the

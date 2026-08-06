@@ -27,7 +27,8 @@ from providers.memory.store._util import (
 )
 
 
-class FactsStoreMixin:
+from ._util import StoreProtocol
+class FactsStoreMixin(StoreProtocol):
     """Facts, preferences, pending habits and conversation summaries.
 
     Mixin for SQLiteStore: relies on self._run / self._get_conn from the
