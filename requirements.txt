@@ -100,7 +100,7 @@ sounddevice==0.5.5                   # Audio playback for YouTube Music provider
 # -----------------------------------------------------------------------------
 # Commerce
 # -----------------------------------------------------------------------------
-python-amazon-sp-api==2.1.8          # Amazon Selling Partner API
+python-amazon-sp-api==2.1.20          # Amazon Selling Partner API
 
 
 # -----------------------------------------------------------------------------
