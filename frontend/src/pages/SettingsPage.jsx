@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext'
 import { API_BASE, Section, Toggle } from './settings/shared.jsx'
 import NimSection from './settings/NimSection.jsx'
 import MeteredProviderSection from './settings/MeteredProviderSection.jsx'
+import ProviderSwitchesSection from './settings/ProviderSwitchesSection.jsx'
 import ModelSection from './settings/ModelSection.jsx'
 import BriefingSection from './settings/BriefingSection.jsx'
 import PersonaSection from './settings/PersonaSection.jsx'
@@ -640,6 +641,12 @@ export default function SettingsPage({
           saveLlmRoutingFlags={saveLlmRoutingFlags}
         />
       )}
+
+      {/* ================================================================ */}
+      {/* PROVIDER ACCESS — admin. The uniform allow/deny matrix; the      */}
+      {/* per-provider panels below add spend detail for the paid ones.    */}
+      {/* ================================================================ */}
+      {showAdmin && <ProviderSwitchesSection token={token} />}
 
       {/* ================================================================ */}
       {/* METERED CLOUD PROVIDERS — admin                                  */}

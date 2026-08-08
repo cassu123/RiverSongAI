@@ -289,6 +289,15 @@ def classify_intent(message: str) -> Tuple[str, int]:
     return best_intent, best_score
 
 
+class NoModelAvailable(RuntimeError):
+    """Raised when every provider is disabled, so auto-routing has nothing.
+
+    A distinct type because the caller has to tell this apart from a provider
+    that failed mid-request: this one is a configuration state an admin can
+    fix, and the message says so rather than surfacing as a generic error.
+    """
+
+
 def route(
     message: str,
     enabled_providers: dict[str, bool],
@@ -341,17 +350,59 @@ def route(
                 display_label=f"{display_name} · {intent_label}",
             )
 
-    # Last resort — Ollama default model
-    settings_model = _get_default_ollama_model()
-    logger.warning(
-        "Intent router exhausted all preferences for '%s', using Ollama default.", intent
-    )
-    return RouterDecision(
-        provider="ollama",
-        model_id=settings_model,
-        intent=intent,
-        confidence=confidence,
-        display_label=f"Local · {intent.replace('_', ' ').title()}",
+    # Last resort.
+    #
+    # This used to return Ollama unconditionally, without consulting
+    # enabled_providers — so "River Decides" walked straight past a disabled
+    # local provider and kept using it. That made the local switch
+    # decorative for every auto-routed message, which is the one path most
+    # messages take. It is checked now.
+    if enabled_providers.get("ollama", False):
+        settings_model = _get_default_ollama_model()
+        logger.warning(
+            "Intent router exhausted all preferences for '%s', using Ollama default.",
+            intent,
+        )
+        return RouterDecision(
+            provider="ollama",
+            model_id=settings_model,
+            intent=intent,
+            confidence=confidence,
+            display_label=f"Local · {intent.replace('_', ' ').title()}",
+        )
+
+    # Ollama is off too. Take the cheapest model from whatever the admin has
+    # left enabled rather than failing the turn — but still honour free_only,
+    # which is a restriction on the user and not a preference to trade away.
+    candidates = [
+        e for e in LLMRegistry.all_models()
+        if enabled_providers.get(e.provider, False)
+        and (not free_only or LLMRegistry.is_free(e.provider, e.model_id))
+    ]
+    if candidates:
+        pick = min(
+            candidates,
+            key=lambda e: (
+                (e.cost_per_1k_input_usd or 0.0) + (e.cost_per_1k_output_usd or 0.0),
+                e.priority,
+            ),
+        )
+        logger.warning(
+            "Intent router: local provider disabled; falling back to %s/%s for '%s'.",
+            pick.provider, pick.model_id, intent,
+        )
+        return RouterDecision(
+            provider=pick.provider,
+            model_id=pick.model_id,
+            intent=intent,
+            confidence=confidence,
+            display_label=f"{pick.display_name} · {intent.replace('_', ' ').title()}",
+        )
+
+    raise NoModelAvailable(
+        "Every model provider is disabled"
+        + (" for free-only accounts" if free_only else "")
+        + ". Ask an administrator to enable at least one."
     )
 
 

@@ -707,6 +707,102 @@ _CATALOG: List[ModelEntry] = [
         priority=156,
     ),
 
+    # -------------------------------------------------------------------------
+    # More NIM catalog (priority 157-169) — all free tier
+    # -------------------------------------------------------------------------
+    # NVIDIA adds and deprecates model ids over time and a stale id surfaces
+    # as a 404 from the endpoint, not as a startup error. The auto-router now
+    # treats an unusable NIM model as a miss and moves down its chain rather
+    # than failing the turn, so a retired id here degrades instead of breaking.
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="meta/llama-3.3-70b-instruct",
+        display_name="Llama 3.3 70B (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Newer Llama than 3.1 70B — better instruction following. Free via NIM.",
+        priority=157,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="qwen/qwen2.5-coder-32b-instruct",
+        display_name="Qwen Coder 32B (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Free hosted coding model, larger than anything local here.",
+        priority=158,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="qwen/qwen2.5-72b-instruct",
+        display_name="Qwen 2.5 72B (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Free full-size Qwen — a no-cost alternative to paid qwen-plus.",
+        priority=159,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="deepseek-ai/deepseek-r1-distill-llama-70b",
+        display_name="DeepSeek R1 Distill 70B (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Faster distilled R1. Free via NIM.",
+        priority=160,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="microsoft/phi-4-multimodal-instruct",
+        display_name="Phi-4 Multimodal (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Small, fast, handles images. Free via NIM.",
+        priority=161,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="mistralai/mixtral-8x22b-instruct-v0.1",
+        display_name="Mixtral 8x22B (NIM)",
+        context_window=65536,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Large mixture-of-experts. Free via NIM.",
+        priority=162,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="google/gemma-2-27b-it",
+        display_name="Gemma 2 27B (NIM)",
+        context_window=8192,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Hosted Gemma — no VRAM cost, unlike the 27B local entry. Free via NIM.",
+        priority=163,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="nvidia/llama-3.1-nemotron-70b-instruct",
+        display_name="Nemotron 70B (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Middle Nemotron — between Super 49B and Ultra 253B. Free via NIM.",
+        priority=164,
+    ),
+
     # =========================================================================
     # DeepSeek first-party cloud (priority 170-179) — METERED
     # =========================================================================

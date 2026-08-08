@@ -88,13 +88,29 @@ def _get_ollama_installed_models() -> Set[str]:
 _ollama_cache: Set[str] = set()
 
 
+#: Hardware verdicts (from core.hardware_cookbook) that mean "this machine
+#: cannot run this model" — as opposed to merely running it slowly.
+_UNRUNNABLE_FITS = frozenset({"oom"})
+
+
 def _model_to_dict(m: ModelEntry,
-                   installed: Optional[Set[str]] = None) -> dict:
+                   installed: Optional[Set[str]] = None,
+                   fit_by_model: Optional[dict] = None) -> dict:
+    """One catalog row, annotated with whether it can actually be used.
+
+    `unavailable_reason` is the important field. A model can be absent from
+    the picker for three quite different reasons — not pulled, too big for
+    this box, or switched off by the admin — and collapsing them into a bare
+    `available: false` produces the "why can't I pick this?" that sent us
+    here. Each one now says which it is.
+    """
     available: bool
+    reason: Optional[str] = None
+
     if m.is_cloud:
-        available = True  # cloud availability is gated by API key, handled separately
+        available = True  # gated by key + admin switch, applied by the caller
     elif installed is None:
-        available = True  # unknown — assume available
+        available = True  # Ollama unreachable — assume available rather than empty the picker
     else:
         # Match exact name or base name without tag (e.g. "mistral:7b" matches
         # "mistral:7b" or "mistral")
@@ -103,6 +119,23 @@ def _model_to_dict(m: ModelEntry,
             n == m.model_id or n.split(":")[0] == model_base
             for n in installed
         )
+        if not available:
+            reason = "Not pulled — run: ollama pull " + m.model_id
+
+    # Hardware verdict, for local models only. A model that is installed but
+    # cannot fit in GPU or RAM is worse than missing: selecting it produces a
+    # load failure or swaps the machine to its knees, so it is reported
+    # unavailable with the reason spelled out rather than offered and left to
+    # fail at the first message.
+    fit = (fit_by_model or {}).get(m.model_id) if not m.is_cloud else None
+    if fit:
+        if fit.get("status") in _UNRUNNABLE_FITS:
+            available = False
+            reason = "Unavailable at this time — " + (fit.get("reason") or "too large for this machine.")
+        elif available and fit.get("status") == "ram_fallback":
+            # Runnable, just slow. Still selectable — the note is the warning.
+            reason = fit.get("reason")
+
     return {
         "provider": m.provider,
         "model_id": m.model_id,
@@ -115,23 +148,59 @@ def _model_to_dict(m: ModelEntry,
         "notes": m.notes,
         "priority": m.priority,
         "available": available,
+        "unavailable_reason": reason,
+        "fit_status": (fit or {}).get("status"),
     }
 
 
-# Providers whose models are hidden from non-admins unless the admin has
-# granted access. Each maps to the admin_config key holding that grant.
-#
+def _hardware_fit_map() -> dict:
+    """Model id -> {status, reason} for local models on this machine.
+
+    Best effort. Hardware probing shells out to nvidia-smi and reads
+    /proc, either of which can be absent or slow; a failure here must
+    degrade to "no verdict" rather than take down the model list.
+    """
+    try:
+        from core.hardware_cookbook import detect_hardware, score_models
+
+        return {
+            row["model_id"]: {"status": row.get("status"), "reason": row.get("reason")}
+            for row in score_models(detect_hardware())
+        }
+    except Exception as exc:
+        logger.debug("hardware fit probe unavailable: %s", exc)
+        return {}
+
+
 # nvidia_nim keeps its original standalone key so an existing deployment's
-# saved setting is not silently reset by this generalisation. New providers
-# live in the `provider_user_access` map.
+# saved setting is not silently reset by this generalisation. Everything else
+# lives in the `provider_user_access` map.
 _LEGACY_USER_ACCESS_KEYS = {"nvidia_nim": "nvidia_nim_user_access"}
 
-#: Providers that can be gated per-user, and whether access defaults to on.
-#: The metered providers default to on as well — they are already behind two
-#: locks (an enable flag and an API key, both off/empty by default), so a
-#: third one that an admin has to find would only make "I turned it on and
-#: nobody can see it" the common case.
-_USER_GATED_PROVIDERS = ("nvidia_nim", "deepseek", "qwen")
+#: Every provider is gateable, in the order the admin UI and the model picker
+#: present them. Local first, then the free cloud tier, then the metered ones
+#: cheapest-first.
+#:
+#: Being free buys a provider no exemption. An earlier version gated only the
+#: paid providers on the theory that a zero-cost model is harmless — but cost
+#: is not the only reason to close one off. A local model that thrashes a
+#: 4 GB card, or a hosted model whose answers are not wanted in this house,
+#: needs the same switch, and a toggle that silently does nothing for half
+#: the list is worse than no toggle at all.
+_USER_GATED_PROVIDERS = (
+    "ollama",
+    "nvidia_nim",
+    "qwen",
+    "deepseek",
+    "anthropic",
+    "openai",
+    "gemini",
+    "mistral_ai",
+    "bedrock",
+)
+
+#: Presentation order for providers, used by the admin toggles and the picker.
+PROVIDER_ORDER = _USER_GATED_PROVIDERS
 
 
 def get_provider_user_access(admin_config: Optional[dict] = None) -> dict:
@@ -146,31 +215,107 @@ def get_provider_user_access(admin_config: Optional[dict] = None) -> dict:
     return access
 
 
-def _get_enabled_providers(admin_config: Optional[dict] = None) -> dict:
+#: Where each provider's API key lives on Settings.
+_PROVIDER_KEY_ATTR = {
+    "nvidia_nim": "nvidia_api_key",
+    "qwen": "qwen_api_key",
+    "deepseek": "deepseek_api_key",
+    "anthropic": "anthropic_api_key",
+    "openai": "openai_api_key",
+    "gemini": "gemini_api_key",
+    "mistral_ai": "mistral_api_key",
+}
+
+#: The .env flag backing each provider's global switch, used as the default
+#: when an admin has never touched the toggle.
+_PROVIDER_ENV_FLAG = {
+    "nvidia_nim": "nvidia_nim_enabled",
+    "qwen": "qwen_enabled",
+    "deepseek": "deepseek_enabled",
+    "anthropic": "anthropic_enabled",
+    "openai": "openai_enabled",
+    "gemini": "gemini_enabled",
+    "mistral_ai": "mistral_ai_enabled",
+    "bedrock": "bedrock_enabled",
+}
+
+LOCAL_PROVIDERS = frozenset({"ollama"})
+
+
+def _has_credentials(provider: str, s) -> bool:
+    """Whether the deployment holds what this provider needs to answer at all.
+
+    Separate from the admin's switches on purpose: "off because nobody
+    configured a key" and "off because the admin said no" are different
+    states, and the UI has to be able to tell them apart, or every disabled
+    provider reads to the admin as a missing key they need to go find.
+    """
+    if provider in LOCAL_PROVIDERS:
+        return True          # local daemon; per-model availability handled below
+    if provider == "bedrock":
+        return bool(s.aws_access_key_id) and bool(s.aws_secret_access_key)
+    return bool(getattr(s, _PROVIDER_KEY_ATTR.get(provider, ""), ""))
+
+
+def get_provider_global_enabled(admin_config: Optional[dict] = None) -> dict:
+    """The admin's per-provider on/off switch, independent of credentials.
+
+    Reads `provider_enabled` first, then the older per-provider keys, then
+    the coarse local/cloud kill switches, then the .env flag. That chain
+    exists so an existing deployment's saved choices survive: none of the
+    older keys are dropped, they are just no longer the only way to say it.
+    """
     s = get_settings()
     admin_config = admin_config or {}
+    stored = admin_config.get("provider_enabled") or {}
 
     local_enabled = admin_config.get("local_llms_enabled_global", True)
     cloud_enabled = admin_config.get("cloud_llms_enabled_global", True)
-    nvidia_enabled = admin_config.get(
-        "nvidia_nim_enabled_global",
-        s.nvidia_nim_enabled)
-    deepseek_enabled = admin_config.get(
-        "deepseek_enabled_global", s.deepseek_enabled)
-    qwen_enabled = admin_config.get("qwen_enabled_global", s.qwen_enabled)
 
+    out = {}
+    for provider in _USER_GATED_PROVIDERS:
+        if provider in stored:
+            out[provider] = bool(stored[provider])
+            continue
+        legacy = admin_config.get(f"{provider}_enabled_global")
+        if legacy is not None:
+            out[provider] = bool(legacy)
+            continue
+        if provider in LOCAL_PROVIDERS:
+            out[provider] = bool(local_enabled)
+        else:
+            env_default = getattr(s, _PROVIDER_ENV_FLAG.get(provider, ""), False)
+            # The coarse cloud kill switch still wins when it is off.
+            out[provider] = bool(cloud_enabled) and bool(env_default)
+    return out
+
+
+def _cloud_unavailable_reason(provider: str, switches: dict) -> Optional[str]:
+    """Why a cloud provider cannot be used, or None when it can.
+
+    The admin's switch is reported ahead of the missing key: if they turned
+    it off, telling them to go find an API key sends them after the wrong
+    problem.
+    """
+    if not switches.get(provider, False):
+        return "Disabled by the administrator."
+    if not _has_credentials(provider, get_settings()):
+        return "Missing API key."
+    return None
+
+
+def _get_enabled_providers(admin_config: Optional[dict] = None) -> dict:
+    """Providers that can actually serve a request right now.
+
+    A provider is usable only when the admin's switch is on AND the
+    credentials exist. Both halves are required, which is why the two are
+    computed separately above.
+    """
+    s = get_settings()
+    switches = get_provider_global_enabled(admin_config)
     return {
-        "anthropic": cloud_enabled and s.anthropic_enabled and bool(s.anthropic_api_key),
-        "gemini": cloud_enabled and s.gemini_enabled and bool(s.gemini_api_key),
-        "openai": cloud_enabled and s.openai_enabled and bool(s.openai_api_key),
-        "mistral_ai": cloud_enabled and s.mistral_ai_enabled and bool(s.mistral_api_key),
-        "bedrock": cloud_enabled and s.bedrock_enabled and bool(s.aws_access_key_id) and bool(s.aws_secret_access_key),
-        "nvidia_nim": nvidia_enabled and bool(s.nvidia_api_key),
-        # Both metered providers sit behind the same cloud kill switch as the
-        # other paid ones, so "disable cloud LLMs" means all of them.
-        "deepseek": cloud_enabled and deepseek_enabled and bool(s.deepseek_api_key),
-        "qwen": cloud_enabled and qwen_enabled and bool(s.qwen_api_key),
-        "ollama": local_enabled,
+        provider: bool(switches.get(provider)) and _has_credentials(provider, s)
+        for provider in _USER_GATED_PROVIDERS
     }
 
 
@@ -223,33 +368,49 @@ async def list_models(
     hidden_llms: set[str] = set()
     family_overrides: dict = {}
     user_access: dict = get_provider_user_access()
+    switches: dict = get_provider_global_enabled()
     try:
         config = await request.app.state.memory_manager._store.get_admin_config()
         hidden_llms = set(config.get("hidden_llms", []))
         family_overrides = config.get("model_families", {}) or {}
         user_access = get_provider_user_access(config)
+        switches = get_provider_global_enabled(config)
 
         enabled = _get_enabled_providers(config)
     except Exception:
         pass
 
     # Non-admins cannot see a gated provider's models unless access is granted.
-    # Admins always retain access, so a household member cannot spend money on
-    # a provider the admin has not opened up, while the admin can still test it.
+    # Admins always retain access, so a household member cannot reach a
+    # provider the admin has closed, while the admin can still test it.
     if not is_admin:
-        from providers.llm.registry import LLMRegistry as _reg
         for provider, allowed in user_access.items():
             if not allowed:
                 hidden_llms = hidden_llms | {
-                    m.model_id for m in _reg.list_by_provider(provider)}
+                    m.model_id for m in LLMRegistry.list_by_provider(provider)}
+
+    fit_by_model = _hardware_fit_map()
 
     local_models = [
-        _model_to_dict(m, installed)
+        {
+            **_model_to_dict(m, installed, fit_by_model),
+            # A local provider switched off by the admin is unavailable for
+            # the same reason a keyless cloud one is, and must say so —
+            # "free" is not a reason to escape the switch.
+            **({} if enabled.get(m.provider, True) else {
+                "available": False,
+                "unavailable_reason": "Disabled by the administrator.",
+            }),
+        }
         for m in LLMRegistry.list_local()
         if m.model_id not in hidden_llms
     ]
     cloud_models = [
-        {**_model_to_dict(m), "available": enabled.get(m.provider, False)}
+        {
+            **_model_to_dict(m),
+            "available": enabled.get(m.provider, False),
+            "unavailable_reason": _cloud_unavailable_reason(m.provider, switches),
+        }
         for m in LLMRegistry.list_cloud()
         if m.model_id not in hidden_llms
     ]
@@ -259,6 +420,8 @@ async def list_models(
         "cloud": cloud_models,
         "enabled_providers": enabled,
         "provider_user_access": user_access,
+        "provider_enabled": switches,
+        "provider_order": list(PROVIDER_ORDER),
         "ollama_reachable": bool(installed) or True,
         "family_overrides": family_overrides,
     }
@@ -412,11 +575,13 @@ async def save_llm_settings(
             raise bad_request(
                 f"Model '{body.model_id}' is hidden by the administrator.")
 
-        if entry.is_cloud:
-            enabled = _get_enabled_providers(admin_config)
-            if not enabled.get(body.provider, False):
-                raise bad_request(f"Provider '{body.provider}' is disabled (admin toggle, "
-                                  f"{body.provider.upper()}_ENABLED, or missing API key).")
+        # Applies to local models too. A disabled Ollama used to be saveable
+        # because the check was behind `if entry.is_cloud`, which made the
+        # local switch decorative.
+        enabled = _get_enabled_providers(admin_config)
+        if not enabled.get(body.provider, False):
+            raise bad_request(f"Provider '{body.provider}' is disabled (admin toggle, "
+                              f"{body.provider.upper()}_ENABLED, or missing API key).")
 
         # Per-provider user access. Without this the gate is cosmetic: the
         # provider's models are merely absent from /api/models, and anyone who
@@ -740,6 +905,18 @@ async def set_active_voice(
     if not entry:
         raise not_found(f"Unknown voice ID: {body.voice_id}")
 
+    # The admin's voice toggle was enforced only when listing voices, so a
+    # hidden voice was merely absent from the picker — anyone who knew the id
+    # could still set it here. Same cosmetic gate the model toggles had.
+    try:
+        admin_config = await request.app.state.memory_manager._store.get_admin_config()
+        hidden_voices = set(admin_config.get("hidden_voices", []))
+    except Exception:
+        hidden_voices = set()
+    if body.voice_id in hidden_voices:
+        raise forbidden(
+            f"Voice '{entry.display_name}' has been disabled by the administrator.")
+
     # Piper voices need the .onnx file on disk
     if entry.engine == "piper":
         model_dir = os.path.dirname(
@@ -874,6 +1051,81 @@ async def set_provider_user_access(
         "User access for %s set to %s by admin %s.",
         body.provider,
         body.enabled,
+        user_id,
+    )
+    return {"ok": True, "provider": body.provider, "enabled": body.enabled}
+
+
+class ProviderEnabledBody(BaseModel):
+    provider: str
+    enabled: bool
+
+
+@router.get("/admin/provider-switches")
+async def get_provider_switches(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Every provider's two switches plus whether its credentials exist.
+
+    One call so the admin UI can render the whole matrix without guessing
+    which of "off" means "no key" and which means "I turned it off".
+    """
+    await _require_admin(authorization)
+    try:
+        config = await request.app.state.memory_manager._store.get_admin_config()
+    except Exception:
+        config = {}
+    s = get_settings()
+    switches = get_provider_global_enabled(config)
+    access = get_provider_user_access(config)
+    return {
+        "order": list(PROVIDER_ORDER),
+        "providers": [
+            {
+                "provider": p,
+                "enabled": switches.get(p, False),
+                "user_access": access.get(p, True),
+                "has_credentials": _has_credentials(p, s),
+                "is_local": p in LOCAL_PROVIDERS,
+                "usable": switches.get(p, False) and _has_credentials(p, s),
+            }
+            for p in PROVIDER_ORDER
+        ],
+    }
+
+
+@router.post("/admin/provider-switches")
+async def set_provider_switch(
+    request: Request,
+    body: ProviderEnabledBody,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Flip one provider's global switch. Applies to local providers too."""
+    user_id = await _require_admin(authorization)
+    if body.provider not in _USER_GATED_PROVIDERS:
+        raise bad_request(
+            f"Unknown provider '{body.provider}'. "
+            f"Expected one of: {', '.join(_USER_GATED_PROVIDERS)}."
+        )
+    try:
+        store = request.app.state.memory_manager._store
+        config = await store.get_admin_config()
+        switches = config.get("provider_enabled") or {}
+        switches[body.provider] = body.enabled
+        config["provider_enabled"] = switches
+        # Keep the coarse legacy keys in step so older readers agree.
+        if body.provider in LOCAL_PROVIDERS:
+            config["local_llms_enabled_global"] = body.enabled
+        legacy = f"{body.provider}_enabled_global"
+        config[legacy] = body.enabled
+        await store.set_admin_config(config)
+    except Exception as e:
+        logger.warning("Failed to persist provider switch: %s", e)
+    logger.info(
+        "Provider %s globally %s by admin %s.",
+        body.provider,
+        "enabled" if body.enabled else "disabled",
         user_id,
     )
     return {"ok": True, "provider": body.provider, "enabled": body.enabled}

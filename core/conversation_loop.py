@@ -210,6 +210,7 @@ def _build_llm_provider(
     router_label: Optional[str] = None
 
     from providers.llm.registry import LLMRegistry
+    from providers.llm.model_intent_router import NoModelAvailable
     from api.routes.models_settings import _get_enabled_providers
     enabled_providers = _get_enabled_providers(admin_config)
 
@@ -234,14 +235,21 @@ def _build_llm_provider(
                     decision.intent, key, model_override, decision.confidence,
                     free_only,
                 )
+            except NoModelAvailable:
+                # Not a routing failure — a configuration state. Falling back
+                # to settings.llm_provider here would land on the very
+                # provider the admin disabled, so let it surface.
+                raise
             except Exception as exc:
                 logger.error(
                     "Intent router failed, falling back to direct provider resolution: %s", exc)
                 key = fallback_provider or settings.llm_provider
                 model_override = fallback_model or settings.llm_model
         else:
-            # Router disabled or no message text yet — default to local.
-            key = "ollama"
+            # Router disabled or no message text yet — default to local, but
+            # only if local is actually switched on.
+            key = "ollama" if enabled_providers.get("ollama", False) else (
+                fallback_provider or settings.llm_provider)
             model_override = fallback_model or settings.llm_model
 
     if key != "auto" and key in enabled_providers and not enabled_providers[key]:
@@ -273,7 +281,11 @@ def _build_llm_provider(
     # River-decided cloud/NIM pick with no explicit fallback: guarantee a
     # local Ollama safety net so NVIDIA NIM (or any cloud) errors degrade
     # gracefully to a local model instead of failing the turn.
-    if auto_routed and key != "ollama":
+    # The switch is checked here too. Without it a disabled Ollama still
+    # answered every auto-routed turn whose primary happened to error — a
+    # blocked provider that quietly kept serving is worse than one that
+    # visibly fails.
+    if auto_routed and key != "ollama" and enabled_providers.get("ollama", False):
         try:
             local_safety = _instantiate_llm("ollama", _get_local_default_model())
             return FallbackLLMProvider(primary, local_safety), router_label
