@@ -197,7 +197,10 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     llm_provider: str = Field(
         default="ollama",
-        description="LLM provider key. Supported: ollama | anthropic | gemini | openai | mistral_ai | bedrock | nvidia_nim",
+        description=(
+            "LLM provider key. Supported: ollama | anthropic | gemini | openai | "
+            "mistral_ai | bedrock | nvidia_nim | deepseek | qwen"
+        ),
     )
     ollama_base_url: str = Field(
         default="http://localhost:11434",
@@ -290,6 +293,65 @@ class Settings(BaseSettings):
     nvidia_nim_enabled: bool = Field(
         default=False,
         description="Allow NVIDIA NIM as a selectable LLM provider (free tier: ~40 req/min).",
+    )
+
+    # -------------------------------------------------------------------------
+    # DeepSeek (first-party cloud API, OpenAI-compatible)
+    # -------------------------------------------------------------------------
+    # Distinct from the two DeepSeek routes that already exist: `ollama`
+    # deepseek-r1:* (local, free) and `nvidia_nim` deepseek-ai/deepseek-r1
+    # (free tier, rate limited). This one is metered and billed, which is why
+    # it is disabled by default and carries its own usage panel.
+    deepseek_api_key: str = Field(
+        default="",
+        description="DeepSeek API key. Get one at platform.deepseek.com (starts with sk-).",
+    )
+    deepseek_base_url: str = Field(
+        default="https://api.deepseek.com/v1",
+        description="Base URL for the DeepSeek API. OpenAI-compatible endpoint.",
+    )
+    deepseek_model: str = Field(
+        default="deepseek-chat",
+        description=(
+            "Default DeepSeek model ID. deepseek-chat is the general model; "
+            "deepseek-reasoner is the reasoning model and bills output tokens "
+            "for its thinking, so it costs more per reply than the price "
+            "difference alone suggests."
+        ),
+    )
+    deepseek_enabled: bool = Field(
+        default=False,
+        description="Allow DeepSeek as a selectable LLM provider. Paid per token.",
+    )
+
+    # -------------------------------------------------------------------------
+    # Qwen — Alibaba Cloud Model Studio / DashScope (OpenAI-compatible)
+    # -------------------------------------------------------------------------
+    # Distinct from the local `ollama` qwen2.5:* entries, which stay free.
+    qwen_api_key: str = Field(
+        default="",
+        description="Alibaba Cloud DashScope API key for Qwen. Get one at bailian.console.alibabacloud.com.",
+    )
+    qwen_base_url: str = Field(
+        default="https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+        description=(
+            "Base URL for Qwen via DashScope's OpenAI-compatible mode. The "
+            "default is the international endpoint; mainland China accounts "
+            "use https://dashscope.aliyuncs.com/compatible-mode/v1 instead, "
+            "and a key issued for one region will not authenticate against "
+            "the other."
+        ),
+    )
+    qwen_model: str = Field(
+        default="qwen-plus",
+        description=(
+            "Default Qwen model ID. qwen-turbo is cheapest, qwen-plus is the "
+            "balanced default, qwen-max is the most capable."
+        ),
+    )
+    qwen_enabled: bool = Field(
+        default=False,
+        description="Allow Qwen (DashScope) as a selectable LLM provider. Paid per token.",
     )
 
     river_song_system_prompt: str = Field(

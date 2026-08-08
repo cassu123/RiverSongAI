@@ -706,6 +706,188 @@ _CATALOG: List[ModelEntry] = [
         ),
         priority=156,
     ),
+
+    # -------------------------------------------------------------------------
+    # More NIM catalog (priority 157-169) — all free tier
+    # -------------------------------------------------------------------------
+    # NVIDIA adds and deprecates model ids over time and a stale id surfaces
+    # as a 404 from the endpoint, not as a startup error. The auto-router now
+    # treats an unusable NIM model as a miss and moves down its chain rather
+    # than failing the turn, so a retired id here degrades instead of breaking.
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="meta/llama-3.3-70b-instruct",
+        display_name="Llama 3.3 70B (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Newer Llama than 3.1 70B — better instruction following. Free via NIM.",
+        priority=157,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="qwen/qwen2.5-coder-32b-instruct",
+        display_name="Qwen Coder 32B (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Free hosted coding model, larger than anything local here.",
+        priority=158,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="qwen/qwen2.5-72b-instruct",
+        display_name="Qwen 2.5 72B (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Free full-size Qwen — a no-cost alternative to paid qwen-plus.",
+        priority=159,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="deepseek-ai/deepseek-r1-distill-llama-70b",
+        display_name="DeepSeek R1 Distill 70B (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Faster distilled R1. Free via NIM.",
+        priority=160,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="microsoft/phi-4-multimodal-instruct",
+        display_name="Phi-4 Multimodal (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Small, fast, handles images. Free via NIM.",
+        priority=161,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="mistralai/mixtral-8x22b-instruct-v0.1",
+        display_name="Mixtral 8x22B (NIM)",
+        context_window=65536,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Large mixture-of-experts. Free via NIM.",
+        priority=162,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="google/gemma-2-27b-it",
+        display_name="Gemma 2 27B (NIM)",
+        context_window=8192,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Hosted Gemma — no VRAM cost, unlike the 27B local entry. Free via NIM.",
+        priority=163,
+    ),
+    ModelEntry(
+        provider="nvidia_nim",
+        model_id="nvidia/llama-3.1-nemotron-70b-instruct",
+        display_name="Nemotron 70B (NIM)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.0,
+        cost_per_1k_output_usd=0.0,
+        notes="Middle Nemotron — between Super 49B and Ultra 253B. Free via NIM.",
+        priority=164,
+    ),
+
+    # =========================================================================
+    # DeepSeek first-party cloud (priority 170-179) — METERED
+    # =========================================================================
+    # DeepSeek is reachable three ways in this codebase and only this one is
+    # billed. Local ollama deepseek-r1:* and the NIM free tier both remain.
+    #
+    # Prices are USD per 1K tokens at standard (non-discount) rates. DeepSeek
+    # has repriced more than once and runs off-peak discounts, so treat these
+    # as the basis for an estimate, not an invoice. The figures the admin
+    # dashboard reports as spend are derived from these — if they drift from
+    # platform.deepseek.com/pricing, correct them here and in
+    # core/token_tracker.py's _COST_PER_M, which is the table that actually
+    # costs recorded usage.
+    ModelEntry(
+        provider="deepseek",
+        model_id="deepseek-chat",
+        display_name="DeepSeek Chat (cloud)",
+        context_window=64000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.00027,
+        cost_per_1k_output_usd=0.00110,
+        notes=(
+            "Full-size DeepSeek V3, metered. Far cheaper per token than the "
+            "Western frontier models; no rate ceiling like the NIM free tier."
+        ),
+        priority=170,
+    ),
+    ModelEntry(
+        provider="deepseek",
+        model_id="deepseek-reasoner",
+        display_name="DeepSeek Reasoner (cloud)",
+        context_window=64000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.00055,
+        cost_per_1k_output_usd=0.00219,
+        notes=(
+            "R1 reasoning model, metered. Bills its chain-of-thought as "
+            "output tokens, so a reply costs well above the headline rate "
+            "difference vs deepseek-chat."
+        ),
+        priority=171,
+    ),
+
+    # =========================================================================
+    # Qwen via Alibaba DashScope (priority 180-189) — METERED
+    # =========================================================================
+    # Local ollama qwen2.5:* entries stay free and unaffected. Same caveat as
+    # DeepSeek above: verify against Alibaba's pricing page before trusting
+    # the cost column, and keep _COST_PER_M in step.
+    ModelEntry(
+        provider="qwen",
+        model_id="qwen-turbo",
+        display_name="Qwen Turbo (cloud)",
+        context_window=1000000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.00005,
+        cost_per_1k_output_usd=0.00020,
+        notes="Cheapest hosted Qwen. Very large context, fast, good multilingual.",
+        priority=180,
+    ),
+    ModelEntry(
+        provider="qwen",
+        model_id="qwen-plus",
+        display_name="Qwen Plus (cloud)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.00040,
+        cost_per_1k_output_usd=0.00120,
+        notes="Balanced hosted Qwen — the sensible default of the three.",
+        priority=181,
+    ),
+    ModelEntry(
+        provider="qwen",
+        model_id="qwen-max",
+        display_name="Qwen Max (cloud)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.00160,
+        cost_per_1k_output_usd=0.00640,
+        notes=(
+            "Most capable Qwen. No local equivalent — qwen2.5:14b is a much "
+            "smaller model that happens to share the name."
+        ),
+        priority=182,
+    ),
 ]
 
 

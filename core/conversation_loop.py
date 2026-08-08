@@ -30,7 +30,11 @@ import asyncio
 import base64
 import logging
 import re
-from typing import Union, Any, Callable, Coroutine, List, Optional, AsyncGenerator, Dict
+from dataclasses import dataclass
+from typing import (
+    Union, Any, Callable, ClassVar, Coroutine, Dict, List, Optional,
+    AsyncGenerator,
+)
 
 from config.settings import get_settings
 from core.kill_switch import is_kill_switch_active
@@ -46,6 +50,31 @@ logger = logging.getLogger(__name__)
 # Typically sends JSON over a WebSocket connection.
 EventCallback = Callable[[Union[dict, bytes]],
                          Coroutine[Any, Any, None]]  # type: ignore
+
+
+@dataclass(frozen=True)
+class UserAccess:
+    """What this speaker is allowed to reach.
+
+    Both flags come from one `users` row, so they are loaded and reasoned
+    about together rather than as two lookups that can disagree about what a
+    failure means.
+    """
+
+    is_admin: bool = False
+    free_models_only: bool = False
+
+    #: No row for this identity — kiosk, webhook, or a unit-initiated turn.
+    #: Neither flag was ever set, so both take their unset value.
+    UNCONFIGURED: ClassVar["UserAccess"]
+
+    #: The lookup failed and we do not know who this is. Least privilege on
+    #: both axes until the next successful read.
+    UNKNOWN: ClassVar["UserAccess"]
+
+
+UserAccess.UNCONFIGURED = UserAccess(is_admin=False, free_models_only=False)
+UserAccess.UNKNOWN = UserAccess(is_admin=False, free_models_only=True)
 
 
 class FallbackLLMProvider(LLMProvider):
@@ -156,9 +185,28 @@ def _instantiate_llm(key: str, model: Optional[str]) -> LLMProvider:
                 "NVIDIA NIM is disabled. Set NVIDIA_API_KEY in .env or enable it in Settings.")
         from providers.llm.nvidia_nim import NvidiaNimLLM
         return NvidiaNimLLM(model=model) if model else NvidiaNimLLM()
+    if key == "deepseek":
+        if not settings.deepseek_enabled:
+            raise ValueError(
+                "DeepSeek is disabled. Set DEEPSEEK_ENABLED=true in .env.")
+        if not settings.deepseek_api_key:
+            raise ValueError(
+                "DeepSeek is enabled but DEEPSEEK_API_KEY is not set in .env.")
+        from providers.llm.deepseek import DeepSeekLLM
+        return DeepSeekLLM(model=model) if model else DeepSeekLLM()
+    if key == "qwen":
+        if not settings.qwen_enabled:
+            raise ValueError(
+                "Qwen is disabled. Set QWEN_ENABLED=true in .env.")
+        if not settings.qwen_api_key:
+            raise ValueError(
+                "Qwen is enabled but QWEN_API_KEY is not set in .env.")
+        from providers.llm.qwen import QwenLLM
+        return QwenLLM(model=model) if model else QwenLLM()
     raise ValueError(
         f"Unsupported LLM_PROVIDER '{key}'. "
-        f"Supported values: ollama | anthropic | gemini | openai | mistral_ai | bedrock | nvidia_nim"
+        f"Supported values: ollama | anthropic | gemini | openai | mistral_ai | "
+        f"bedrock | nvidia_nim | deepseek | qwen"
     )
 
 
@@ -170,9 +218,15 @@ def _build_llm_provider(
     message_text: Optional[str] = None,
     admin_config: Optional[dict] = None,
     free_only: bool = False,
+    is_admin: bool = False,
 ) -> tuple[LLMProvider, Optional[str]]:
     """
     Instantiate the LLM provider.
+
+    is_admin defaults to False so a caller that has not been updated to pass
+    it gets the *restricted* view rather than the privileged one. Defaulting
+    the other way would mean any missed call site silently hands out admin
+    reach.
 
     When provider_override is "auto" and model_intent_router_enabled is true,
     the model intent router classifies message_text and picks the best provider.
@@ -191,8 +245,30 @@ def _build_llm_provider(
     router_label: Optional[str] = None
 
     from providers.llm.registry import LLMRegistry
-    from api.routes.models_settings import _get_enabled_providers
+    from providers.llm.model_intent_router import NoModelAvailable
+    from api.routes.models_settings import (
+        _get_enabled_providers,
+        get_provider_user_access,
+    )
     enabled_providers = _get_enabled_providers(admin_config)
+
+    # The two narrower gates that a human picking a model already passes
+    # through, applied to the automatic pick as well.
+    #
+    # Without these, "River Decides" was the one way to reach a model the
+    # admin had switched off for this account, or hidden outright — the
+    # coarse provider switch was the only thing auto ever consulted.
+    hidden_models = set((admin_config or {}).get("hidden_llms", []) or [])
+    # Kept unfiltered so a refusal can say which of the two it is. Collapsing
+    # them made a per-account denial report as "disabled globally by the
+    # administrator", which sends the user to ask for the wrong thing.
+    globally_enabled = dict(enabled_providers)
+    if not is_admin:
+        access = get_provider_user_access(admin_config)
+        enabled_providers = {
+            p: bool(v) and bool(access.get(p, True))
+            for p, v in enabled_providers.items()
+        }
 
     # Tracks whether this turn was resolved by the "auto" (River decides)
     # router. When River routes to a cloud/NIM model we always keep a local
@@ -206,7 +282,8 @@ def _build_llm_provider(
             from providers.llm.model_intent_router import route as router_route
             try:
                 decision = router_route(
-                    message_text, enabled_providers, free_only=free_only)
+                    message_text, enabled_providers, free_only=free_only,
+                    hidden_models=hidden_models)
                 key = decision.provider
                 model_override = decision.model_id
                 router_label = decision.display_label
@@ -215,17 +292,28 @@ def _build_llm_provider(
                     decision.intent, key, model_override, decision.confidence,
                     free_only,
                 )
+            except NoModelAvailable:
+                # Not a routing failure — a configuration state. Falling back
+                # to settings.llm_provider here would land on the very
+                # provider the admin disabled, so let it surface.
+                raise
             except Exception as exc:
                 logger.error(
                     "Intent router failed, falling back to direct provider resolution: %s", exc)
                 key = fallback_provider or settings.llm_provider
                 model_override = fallback_model or settings.llm_model
         else:
-            # Router disabled or no message text yet — default to local.
-            key = "ollama"
+            # Router disabled or no message text yet — default to local, but
+            # only if local is actually switched on.
+            key = "ollama" if enabled_providers.get("ollama", False) else (
+                fallback_provider or settings.llm_provider)
             model_override = fallback_model or settings.llm_model
 
     if key != "auto" and key in enabled_providers and not enabled_providers[key]:
+        if globally_enabled.get(key):
+            raise ValueError(
+                f"Provider '{key}' is not available to your account. "
+                f"Ask an administrator to enable access.")
         raise ValueError(
             f"Provider '{key}' is disabled globally by the administrator.")
 
@@ -254,7 +342,11 @@ def _build_llm_provider(
     # River-decided cloud/NIM pick with no explicit fallback: guarantee a
     # local Ollama safety net so NVIDIA NIM (or any cloud) errors degrade
     # gracefully to a local model instead of failing the turn.
-    if auto_routed and key != "ollama":
+    # The switch is checked here too. Without it a disabled Ollama still
+    # answered every auto-routed turn whose primary happened to error — a
+    # blocked provider that quietly kept serving is worse than one that
+    # visibly fails.
+    if auto_routed and key != "ollama" and enabled_providers.get("ollama", False):
         try:
             local_safety = _instantiate_llm("ollama", _get_local_default_model())
             return FallbackLLMProvider(primary, local_safety), router_label
@@ -388,6 +480,7 @@ class ConversationLoop:
         # Defaults to False so a store lookup failure can never silently
         # restrict a user who was not restricted by an admin.
         self._free_models_only: bool = False
+        self._is_admin: bool = False
         self._history: List[dict] = []
         self._initialized: bool = False
         self._turn_transcript: str = ""
@@ -450,29 +543,68 @@ class ConversationLoop:
             # Memory and settings are keyed by user, so the prompt has to be
             # rebuilt against the new person rather than carrying the
             # previous speaker's context into their turn.
-            self._free_models_only = await self._load_free_models_only()
+            #
+            # Only the RESTRICTION follows the speaker. `is_admin` stays
+            # bound to the authenticated session, deliberately.
+            #
+            # A voiceprint is not an authentication factor. Rebinding
+            # free_models_only tightens what this turn may reach and is safe
+            # in the wrong direction — the worst case is a cheaper model.
+            # Rebinding is_admin would do the opposite: a confident match
+            # against an admin's voice would hand out the admin's provider
+            # reach with no token involved, gated only by
+            # voice_id_threshold — and the settings file says outright that
+            # household members often score alike. That is the "never accept
+            # a self-asserted identity" line, reached by another route.
+            access = await self._load_user_access()
+            self._free_models_only = access.free_models_only
 
-    async def _load_free_models_only(self) -> bool:
-        """
-        Read this user's admin-set free_models_only flag.
+    async def _load_user_access(self) -> UserAccess:
+        """Read this user's role and model restriction — one row, one policy.
 
-        Returns False when the store is unavailable or the user row is missing.
-        Failing open matters here: the flag restricts which models a user gets,
-        so a transient store error should not silently downgrade someone who
-        was never restricted. An admin who wants the restriction enforced will
-        see it applied on the next successful lookup.
+        These were two loaders doing the same query with opposite failure
+        behaviour, which is the kind of thing that is defensible line by line
+        and indefensible as a pair. Unified here.
+
+        The policy turns on a distinction the old pair blurred: *row absent*
+        and *lookup failed* are not the same event.
+
+        **Row absent is a definite answer, not an error.** A session that
+        falls back to `settings.default_user_id` ("primary_user") has no
+        `users` row and never will — real accounts get UUIDs, and that id is
+        a token-storage key. Kiosk, webhook and unit-initiated turns land
+        here routinely. For those, neither flag was ever configured, so both
+        take their unset value: not an admin, not restricted. Treating a
+        missing row as "restricted" would quietly cut every one of those
+        sessions down to free models.
+
+        **A lookup failure means we do not know who this is.** Both flags
+        then take their least-privileged value: not an admin, and restricted
+        to free models. The earlier version failed open on the restriction,
+        reasoning that a database hiccup should not downgrade someone who was
+        never restricted — but the cost of being wrong runs the other way. A
+        wrongly-restricted user gets a worse answer for a few seconds; a
+        wrongly-unrestricted one spends money against a restriction an admin
+        set deliberately, and it is exactly the accounts that *are* restricted
+        (children, guests) where being wrong matters.
         """
         if not self._memory or not hasattr(self._memory, "_store"):
-            return False
+            return UserAccess.UNCONFIGURED
         try:
             user = await self._memory._store.get_user_by_id(self._user_id)
         except Exception as exc:
             logger.warning(
-                "Could not read free_models_only for user %s: %s",
+                "Could not read access flags for user %s — applying the "
+                "restricted default until the next successful lookup: %s",
                 self._user_id, exc,
             )
-            return False
-        return bool(user.get("free_models_only")) if user else False
+            return UserAccess.UNKNOWN
+        if not user:
+            return UserAccess.UNCONFIGURED
+        return UserAccess(
+            is_admin=user.get("role") == "admin",
+            free_models_only=bool(user.get("free_models_only")),
+        )
 
     def _spawn_background(self, coro, label: str) -> "asyncio.Task":
         """
@@ -528,7 +660,9 @@ class ConversationLoop:
         # pick models that cost nothing. Read once at init rather than per
         # message -- an admin toggling it takes effect on the user's next
         # session, which is the same latency as the other user flags.
-        self._free_models_only = await self._load_free_models_only()
+        access = await self._load_user_access()
+        self._free_models_only = access.free_models_only
+        self._is_admin = access.is_admin
 
         try:
             llm_provider_override = self._llm_provider_override
@@ -539,6 +673,7 @@ class ConversationLoop:
             stt_model_override = self._stt_model_override
 
             free_only = self._free_models_only
+            is_admin = self._is_admin
 
             def _build_llm():
                 llm, _router_label = _build_llm_provider(
@@ -548,6 +683,7 @@ class ConversationLoop:
                     fallback_model=fallback_model,
                     admin_config=admin_config,
                     free_only=free_only,
+                    is_admin=is_admin,
                 )
                 return llm
 
@@ -1143,6 +1279,7 @@ class ConversationLoop:
                 message_text=text,
                 admin_config=self._admin_config,
                 free_only=self._free_models_only,
+                is_admin=self._is_admin,
             )
         try:
             llm, label = await loop.run_in_executor(None, _build)

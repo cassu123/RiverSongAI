@@ -159,6 +159,34 @@ export const MODEL_FAMILIES = [
     },
   },
 
+  {
+    id: 'deepseek-cloud',
+    displayName: 'DeepSeek (cloud)',
+    provider: 'deepseek',
+    // Deliberately distinct from the local 'deepseek' family above. Same
+    // models by name, entirely different bill — the label has to say so or
+    // someone picks the paid one thinking it is the free one they know.
+    blurb: 'DeepSeek hosted — full size, metered',
+    icon: 'think',
+    tiers: {
+      fast:     'deepseek-chat',
+      thinking: 'deepseek-reasoner',
+      pro:      null,
+    },
+  },
+  {
+    id: 'qwen-cloud',
+    displayName: 'Qwen (cloud)',
+    provider: 'qwen',
+    blurb: 'Alibaba hosted — strong multilingual, metered',
+    icon: 'translate',
+    tiers: {
+      fast:     'qwen-turbo',
+      thinking: 'qwen-plus',
+      pro:      'qwen-max',
+    },
+  },
+
   // ---------------------------------------------------------------------------
   // NVIDIA NIM — full model list, not 3-tier — isFullList flag triggers
   // a dedicated model sheet in ChatPage/ConversationPage

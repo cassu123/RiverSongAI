@@ -215,7 +215,7 @@ export default function ModelSection({
               : 'Disabled globally by admin switch above.'}
           </div>
 
-          {['anthropic', 'gemini', 'openai', 'mistral_ai', 'nvidia_nim'].map(providerKey => {
+          {['anthropic', 'gemini', 'openai', 'mistral_ai', 'nvidia_nim', 'deepseek', 'qwen'].map(providerKey => {
             const provModels = models.cloud.filter(m => m.provider === providerKey)
             const enabled    = !!enabledProviders[providerKey]
             if (!provModels.length) return null
@@ -226,6 +226,8 @@ export default function ModelSection({
               openai:     'OpenAI',
               mistral_ai: 'Mistral AI',
               nvidia_nim: 'NVIDIA NIM (free tier)',
+              deepseek:   'DeepSeek (cloud · paid)',
+              qwen:       'Qwen (cloud · paid)',
             }
 
             return (

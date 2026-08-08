@@ -14,7 +14,7 @@ import threading
 import time
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 # Which feature is currently spending tokens. Set by feature entrypoints via
 # usage_source(...); read by record_usage so the providers themselves don't
@@ -76,6 +76,16 @@ _COST_PER_M: Dict[str, Dict[str, float]] = {
     "deepseek-ai/deepseek-r1": {"in": 0.0, "out": 0.0},
     "meta/llama-3.1-70b-instruct": {"in": 0.0, "out": 0.0},
     "mistralai/mistral-large-2-instruct": {"in": 0.0, "out": 0.0},
+    # DeepSeek first-party cloud — METERED. Note these sit alongside the free
+    # NIM entry "deepseek-ai/deepseek-r1" above; the ids differ, so a free
+    # call and a billed call are never confused for one another.
+    "deepseek-chat": {"in": 0.27, "out": 1.10},
+    "deepseek-reasoner": {"in": 0.55, "out": 2.19},
+    # Qwen via Alibaba DashScope — METERED. The local ollama "qwen2.5:*" ids
+    # are absent on purpose: they cost nothing and must not be priced here.
+    "qwen-turbo": {"in": 0.05, "out": 0.20},
+    "qwen-plus": {"in": 0.40, "out": 1.20},
+    "qwen-max": {"in": 1.60, "out": 6.40},
 }
 
 
@@ -181,6 +191,36 @@ def record_usage(
         logger.debug("token_tracker: write failed: %s", exc)
 
 
+def _is_local(provider: str) -> bool:
+    return provider == "ollama"
+
+
+def _rates_for(model: str) -> Optional[Dict[str, float]]:
+    """The per-1M USD rates applied to this model, or None if it has none.
+
+    Split out of _estimate_cost so the rate can be reported next to the cost
+    it produced. None means "no rate on file" — which is not the same as
+    free, and the two are shown differently.
+    """
+    rates = _COST_PER_M.get(model)
+    if rates:
+        return rates
+    for key, r in _COST_PER_M.items():
+        if model.startswith(key) or key.startswith(model):
+            return r
+    try:
+        from providers.llm.registry import LLMRegistry
+        for entry in LLMRegistry.all_models():
+            if entry.model_id == model and entry.is_cloud:
+                return {
+                    "in": (entry.cost_per_1k_input_usd or 0.0) * 1000,
+                    "out": (entry.cost_per_1k_output_usd or 0.0) * 1000,
+                }
+    except Exception:
+        pass
+    return None
+
+
 def _estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
     """Return estimated USD cost. Returns 0.0 for unknown / local models."""
     rates = _COST_PER_M.get(model)
@@ -265,13 +305,26 @@ def get_summary(days: int = 30) -> dict:
             total_in += inp
             total_out += out
             total_cost += cost  # type: ignore
+            rates = _rates_for(r["model"])
+            calls = r["calls"] or 0
             by_model.append({
                 "provider": r["provider"],
                 "model": r["model"],
                 "input_tokens": inp,
                 "output_tokens": out,
                 "estimated_cost_usd": round(cost, 6),
-                "calls": r["calls"],
+                "calls": calls,
+                # The rate that produced the dollar figure, carried alongside
+                # it. A cost with no visible rate cannot be checked against
+                # the provider's invoice, and these rates go stale — showing
+                # them is what makes a wrong number noticeable instead of
+                # merely believed.
+                "rate_per_1m_input_usd": rates["in"] if rates else None,
+                "rate_per_1m_output_usd": rates["out"] if rates else None,
+                "is_free": bool(rates is not None and rates["in"] == 0.0 and rates["out"] == 0.0)
+                or rates is None and _is_local(r["provider"]),
+                "priced": rates is not None,
+                "avg_tokens_per_call": round((inp + out) / calls, 1) if calls else 0,
             })
 
         # Where the tokens went: per-feature rows, each with its model mix
@@ -362,3 +415,103 @@ def get_provider_rate(provider: str, window_seconds: int = 60) -> dict:
         logger.warning("token_tracker: rate query failed: %s", exc)
         return {"provider": provider, "window_seconds": window_seconds, "calls": 0,
                 "input_tokens": 0, "output_tokens": 0}
+
+
+def get_model_usage(days: int = 30, model: Optional[str] = None) -> dict:
+    """Real recorded usage per model, with who spent it.
+
+    get_summary already rolls up per model; this adds the two things it
+    cannot answer — *when* a model was last actually used, and *which
+    account* spent the tokens. Both matter once a provider costs money and
+    an admin has to decide whether to keep it switched on: a model nobody
+    has touched in three weeks is a different decision from one a single
+    account is running up daily.
+
+    Rows carry the rate that produced their cost, same as get_summary, so a
+    stale price is visible rather than merely applied.
+    """
+    try:
+        ensure_table()
+        cutoff = time.time() - days * 86400
+        conn = _connect()
+        conn.row_factory = sqlite3.Row
+        not_test = "LOWER(provider) NOT IN ({})".format(
+            ",".join("?" * len(_TEST_PROVIDERS)))
+        params: tuple = (cutoff, *_TEST_PROVIDERS)
+        model_filter = ""
+        if model:
+            model_filter = " AND model = ?"
+            params = (*params, model)
+
+        rows = conn.execute(
+            f"""
+            SELECT provider, model, user_id,
+                   SUM(input_tokens)  AS input_tokens,
+                   SUM(output_tokens) AS output_tokens,
+                   COUNT(*)           AS calls,
+                   MIN(ts)            AS first_ts,
+                   MAX(ts)            AS last_ts
+            FROM token_usage
+            WHERE ts >= ? AND {not_test}{model_filter}
+            GROUP BY provider, model, user_id
+            """,
+            params,
+        ).fetchall()
+
+        models: Dict[tuple, dict] = {}
+        for r in rows:
+            key = (r["provider"], r["model"])
+            inp, out = r["input_tokens"] or 0, r["output_tokens"] or 0
+            cost = _estimate_cost(r["model"], inp, out)
+            entry = models.get(key)
+            if entry is None:
+                rates = _rates_for(r["model"])
+                entry = models[key] = {
+                    "provider": r["provider"],
+                    "model": r["model"],
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "calls": 0,
+                    "estimated_cost_usd": 0.0,
+                    "rate_per_1m_input_usd": rates["in"] if rates else None,
+                    "rate_per_1m_output_usd": rates["out"] if rates else None,
+                    "priced": rates is not None,
+                    "first_used_ts": r["first_ts"],
+                    "last_used_ts": r["last_ts"],
+                    "by_user": [],
+                }
+            entry["input_tokens"] += inp
+            entry["output_tokens"] += out
+            entry["calls"] += r["calls"] or 0
+            entry["estimated_cost_usd"] += cost
+            entry["first_used_ts"] = min(entry["first_used_ts"], r["first_ts"])
+            entry["last_used_ts"] = max(entry["last_used_ts"], r["last_ts"])
+            entry["by_user"].append({
+                "user_id": r["user_id"],
+                "input_tokens": inp,
+                "output_tokens": out,
+                "calls": r["calls"] or 0,
+                "estimated_cost_usd": round(cost, 6),
+            })
+
+        out_rows = []
+        for entry in models.values():
+            entry["estimated_cost_usd"] = round(entry["estimated_cost_usd"], 6)
+            entry["by_user"].sort(
+                key=lambda u: u["estimated_cost_usd"], reverse=True)
+            out_rows.append(entry)
+        out_rows.sort(
+            key=lambda e: (e["estimated_cost_usd"],
+                           e["input_tokens"] + e["output_tokens"]),
+            reverse=True,
+        )
+
+        return {
+            "days": days,
+            "models": out_rows,
+            "total_estimated_cost_usd": round(
+                sum(e["estimated_cost_usd"] for e in out_rows), 6),
+        }
+    except Exception as exc:
+        logger.warning("token_tracker: get_model_usage failed: %s", exc)
+        return {"days": days, "models": [], "total_estimated_cost_usd": 0.0}
