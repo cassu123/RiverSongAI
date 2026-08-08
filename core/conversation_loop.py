@@ -189,9 +189,15 @@ def _build_llm_provider(
     message_text: Optional[str] = None,
     admin_config: Optional[dict] = None,
     free_only: bool = False,
+    is_admin: bool = False,
 ) -> tuple[LLMProvider, Optional[str]]:
     """
     Instantiate the LLM provider.
+
+    is_admin defaults to False so a caller that has not been updated to pass
+    it gets the *restricted* view rather than the privileged one. Defaulting
+    the other way would mean any missed call site silently hands out admin
+    reach.
 
     When provider_override is "auto" and model_intent_router_enabled is true,
     the model intent router classifies message_text and picks the best provider.
@@ -211,8 +217,25 @@ def _build_llm_provider(
 
     from providers.llm.registry import LLMRegistry
     from providers.llm.model_intent_router import NoModelAvailable
-    from api.routes.models_settings import _get_enabled_providers
+    from api.routes.models_settings import (
+        _get_enabled_providers,
+        get_provider_user_access,
+    )
     enabled_providers = _get_enabled_providers(admin_config)
+
+    # The two narrower gates that a human picking a model already passes
+    # through, applied to the automatic pick as well.
+    #
+    # Without these, "River Decides" was the one way to reach a model the
+    # admin had switched off for this account, or hidden outright — the
+    # coarse provider switch was the only thing auto ever consulted.
+    hidden_models = set((admin_config or {}).get("hidden_llms", []) or [])
+    if not is_admin:
+        access = get_provider_user_access(admin_config)
+        enabled_providers = {
+            p: bool(v) and bool(access.get(p, True))
+            for p, v in enabled_providers.items()
+        }
 
     # Tracks whether this turn was resolved by the "auto" (River decides)
     # router. When River routes to a cloud/NIM model we always keep a local
@@ -226,7 +249,8 @@ def _build_llm_provider(
             from providers.llm.model_intent_router import route as router_route
             try:
                 decision = router_route(
-                    message_text, enabled_providers, free_only=free_only)
+                    message_text, enabled_providers, free_only=free_only,
+                    hidden_models=hidden_models)
                 key = decision.provider
                 model_override = decision.model_id
                 router_label = decision.display_label
@@ -419,6 +443,7 @@ class ConversationLoop:
         # Defaults to False so a store lookup failure can never silently
         # restrict a user who was not restricted by an admin.
         self._free_models_only: bool = False
+        self._is_admin: bool = False
         self._history: List[dict] = []
         self._initialized: bool = False
         self._turn_transcript: str = ""
@@ -482,6 +507,27 @@ class ConversationLoop:
             # rebuilt against the new person rather than carrying the
             # previous speaker's context into their turn.
             self._free_models_only = await self._load_free_models_only()
+            self._is_admin = await self._load_is_admin()
+
+    async def _load_is_admin(self) -> bool:
+        """Whether this user is an admin, for the auto-router's access gate.
+
+        Fails CLOSED, unlike _load_free_models_only below. That asymmetry is
+        deliberate: failing open there leaves someone unrestricted who was
+        never restricted, while failing open here would hand a household
+        member the admin's reach every time the store hiccupped.
+        """
+        if not self._memory or not hasattr(self._memory, "_store"):
+            return False
+        try:
+            user = await self._memory._store.get_user_by_id(self._user_id)
+        except Exception as exc:
+            logger.warning(
+                "Could not read role for user %s, treating as non-admin: %s",
+                self._user_id, exc,
+            )
+            return False
+        return bool(user and user.get("role") == "admin")
 
     async def _load_free_models_only(self) -> bool:
         """
@@ -560,6 +606,7 @@ class ConversationLoop:
         # message -- an admin toggling it takes effect on the user's next
         # session, which is the same latency as the other user flags.
         self._free_models_only = await self._load_free_models_only()
+        self._is_admin = await self._load_is_admin()
 
         try:
             llm_provider_override = self._llm_provider_override
@@ -570,6 +617,7 @@ class ConversationLoop:
             stt_model_override = self._stt_model_override
 
             free_only = self._free_models_only
+            is_admin = self._is_admin
 
             def _build_llm():
                 llm, _router_label = _build_llm_provider(
@@ -579,6 +627,7 @@ class ConversationLoop:
                     fallback_model=fallback_model,
                     admin_config=admin_config,
                     free_only=free_only,
+                    is_admin=is_admin,
                 )
                 return llm
 
@@ -1173,6 +1222,7 @@ class ConversationLoop:
                 message_text=text,
                 admin_config=self._admin_config,
                 free_only=self._free_models_only,
+                is_admin=self._is_admin,
             )
         try:
             llm, label = await loop.run_in_executor(None, _build)

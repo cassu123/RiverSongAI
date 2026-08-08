@@ -283,3 +283,94 @@ def test_listing_reports_the_switch_matrix(_state):
     body = client.get("/api/models", headers=_admin()).json()
     assert body["provider_enabled"]["ollama"] is False
     assert body["provider_order"] == list(PROVIDER_ORDER)
+
+
+# =============================================================================
+# The two narrower gates auto used to walk straight past
+# =============================================================================
+
+
+def test_auto_avoids_a_model_the_admin_hid():
+    """hidden_llms is enforced everywhere a human picks a model, but the
+    automatic pick never saw it — so hiding one model left auto still
+    reaching for it."""
+    from providers.llm.model_intent_router import route
+
+    enabled = {"ollama": True}
+    first = route("write me a python function to sort a list", enabled)
+    assert first.provider == "ollama"
+
+    second = route(
+        "write me a python function to sort a list",
+        enabled,
+        hidden_models={first.model_id},
+    )
+    assert second.model_id != first.model_id
+
+
+def test_hiding_every_model_in_a_chain_still_finds_something():
+    """Hiding models must narrow the choice, not dead-end the turn while a
+    perfectly good model is still enabled."""
+    from providers.llm.model_intent_router import route
+    from providers.llm.registry import LLMRegistry
+
+    local_ids = {m.model_id for m in LLMRegistry.list_local()}
+    decision = route(
+        "write me a python function",
+        {"ollama": True, "nvidia_nim": True},
+        hidden_models=local_ids,
+    )
+    assert decision.model_id not in local_ids
+
+
+def test_hidden_models_are_excluded_from_the_last_resort_fallback():
+    from providers.llm.model_intent_router import NoModelAvailable, route
+    from providers.llm.registry import LLMRegistry
+
+    nim_ids = {m.model_id for m in LLMRegistry.list_by_provider("nvidia_nim")}
+    with pytest.raises(NoModelAvailable):
+        route("hello", {"ollama": False, "nvidia_nim": True},
+              hidden_models=nim_ids)
+
+
+def test_auto_respects_per_user_provider_access(monkeypatch):
+    """A provider closed to non-admins was still reachable through auto,
+    because the router only ever saw the coarse provider switch."""
+    from config import settings as settings_module
+    from core import conversation_loop as cl
+
+    s = settings_module.get_settings()
+    monkeypatch.setattr(s, "qwen_api_key", "sk-test", raising=False)
+    monkeypatch.setattr(s, "qwen_enabled", True, raising=False)
+
+    captured = {}
+
+    def fake_route(message, enabled_providers, free_only=False, hidden_models=None):
+        captured["enabled"] = dict(enabled_providers)
+        captured["hidden"] = set(hidden_models or ())
+        raise RuntimeError("stop here — we only want the inputs")
+
+    monkeypatch.setattr(
+        "providers.llm.model_intent_router.route", fake_route)
+    monkeypatch.setattr(s, "model_intent_router_enabled", True, raising=False)
+
+    admin_config = {
+        "provider_enabled": {"ollama": True, "qwen": True},
+        "provider_user_access": {"qwen": False},
+        "hidden_llms": ["llama3.2:1b"],
+    }
+
+    for is_admin, expected_qwen in ((False, False), (True, True)):
+        captured.clear()
+        try:
+            cl._build_llm_provider(
+                provider_override="auto",
+                message_text="hello there",
+                admin_config=admin_config,
+                is_admin=is_admin,
+            )
+        except Exception:
+            pass
+        assert captured["enabled"]["qwen"] is expected_qwen, (
+            f"is_admin={is_admin}")
+        assert "llama3.2:1b" in captured["hidden"]

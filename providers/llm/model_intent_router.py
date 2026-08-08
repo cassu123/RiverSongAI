@@ -302,6 +302,7 @@ def route(
     message: str,
     enabled_providers: dict[str, bool],
     free_only: bool = False,
+    hidden_models: Optional[set] = None,
 ) -> RouterDecision:
     """
     Classify message intent and pick the first available provider/model.
@@ -324,6 +325,17 @@ def route(
 
     intent, confidence = classify_intent(message)
     preference_chain = _INTENT_ROUTES.get(intent, _INTENT_ROUTES["general"])
+    hidden_models = hidden_models or set()
+
+    # Per-model visibility. The provider switch is coarse — an admin who hid
+    # one specific model expects auto to stop reaching for that model, not
+    # just to stop when the whole provider is off. Without this the chains
+    # below walk straight past `hidden_llms`, which is enforced everywhere a
+    # human picks a model but was invisible to the automatic pick.
+    if hidden_models:
+        preference_chain = [
+            (p, m) for p, m in preference_chain if m not in hidden_models
+        ]
 
     if free_only:
         filtered = [
@@ -377,6 +389,7 @@ def route(
     candidates = [
         e for e in LLMRegistry.all_models()
         if enabled_providers.get(e.provider, False)
+        and e.model_id not in hidden_models
         and (not free_only or LLMRegistry.is_free(e.provider, e.model_id))
     ]
     if candidates:
