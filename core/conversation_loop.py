@@ -30,7 +30,10 @@ import asyncio
 import base64
 import logging
 import re
-from typing import Union, Any, Callable, Coroutine, List, Optional, AsyncGenerator
+from dataclasses import dataclass
+from typing import (
+    Union, Any, Callable, ClassVar, Coroutine, List, Optional, AsyncGenerator,
+)
 
 from config.settings import get_settings
 from core.kill_switch import is_kill_switch_active
@@ -46,6 +49,31 @@ logger = logging.getLogger(__name__)
 # Typically sends JSON over a WebSocket connection.
 EventCallback = Callable[[Union[dict, bytes]],
                          Coroutine[Any, Any, None]]  # type: ignore
+
+
+@dataclass(frozen=True)
+class UserAccess:
+    """What this speaker is allowed to reach.
+
+    Both flags come from one `users` row, so they are loaded and reasoned
+    about together rather than as two lookups that can disagree about what a
+    failure means.
+    """
+
+    is_admin: bool = False
+    free_models_only: bool = False
+
+    #: No row for this identity — kiosk, webhook, or a unit-initiated turn.
+    #: Neither flag was ever set, so both take their unset value.
+    UNCONFIGURED: ClassVar["UserAccess"]
+
+    #: The lookup failed and we do not know who this is. Least privilege on
+    #: both axes until the next successful read.
+    UNKNOWN: ClassVar["UserAccess"]
+
+
+UserAccess.UNCONFIGURED = UserAccess(is_admin=False, free_models_only=False)
+UserAccess.UNKNOWN = UserAccess(is_admin=False, free_models_only=True)
 
 
 class FallbackLLMProvider(LLMProvider):
@@ -506,50 +534,56 @@ class ConversationLoop:
             # Memory and settings are keyed by user, so the prompt has to be
             # rebuilt against the new person rather than carrying the
             # previous speaker's context into their turn.
-            self._free_models_only = await self._load_free_models_only()
-            self._is_admin = await self._load_is_admin()
+            access = await self._load_user_access()
+            self._free_models_only = access.free_models_only
+            self._is_admin = access.is_admin
 
-    async def _load_is_admin(self) -> bool:
-        """Whether this user is an admin, for the auto-router's access gate.
+    async def _load_user_access(self) -> UserAccess:
+        """Read this user's role and model restriction — one row, one policy.
 
-        Fails CLOSED, unlike _load_free_models_only below. That asymmetry is
-        deliberate: failing open there leaves someone unrestricted who was
-        never restricted, while failing open here would hand a household
-        member the admin's reach every time the store hiccupped.
+        These were two loaders doing the same query with opposite failure
+        behaviour, which is the kind of thing that is defensible line by line
+        and indefensible as a pair. Unified here.
+
+        The policy turns on a distinction the old pair blurred: *row absent*
+        and *lookup failed* are not the same event.
+
+        **Row absent is a definite answer, not an error.** A session that
+        falls back to `settings.default_user_id` ("primary_user") has no
+        `users` row and never will — real accounts get UUIDs, and that id is
+        a token-storage key. Kiosk, webhook and unit-initiated turns land
+        here routinely. For those, neither flag was ever configured, so both
+        take their unset value: not an admin, not restricted. Treating a
+        missing row as "restricted" would quietly cut every one of those
+        sessions down to free models.
+
+        **A lookup failure means we do not know who this is.** Both flags
+        then take their least-privileged value: not an admin, and restricted
+        to free models. The earlier version failed open on the restriction,
+        reasoning that a database hiccup should not downgrade someone who was
+        never restricted — but the cost of being wrong runs the other way. A
+        wrongly-restricted user gets a worse answer for a few seconds; a
+        wrongly-unrestricted one spends money against a restriction an admin
+        set deliberately, and it is exactly the accounts that *are* restricted
+        (children, guests) where being wrong matters.
         """
         if not self._memory or not hasattr(self._memory, "_store"):
-            return False
+            return UserAccess.UNCONFIGURED
         try:
             user = await self._memory._store.get_user_by_id(self._user_id)
         except Exception as exc:
             logger.warning(
-                "Could not read role for user %s, treating as non-admin: %s",
+                "Could not read access flags for user %s — applying the "
+                "restricted default until the next successful lookup: %s",
                 self._user_id, exc,
             )
-            return False
-        return bool(user and user.get("role") == "admin")
-
-    async def _load_free_models_only(self) -> bool:
-        """
-        Read this user's admin-set free_models_only flag.
-
-        Returns False when the store is unavailable or the user row is missing.
-        Failing open matters here: the flag restricts which models a user gets,
-        so a transient store error should not silently downgrade someone who
-        was never restricted. An admin who wants the restriction enforced will
-        see it applied on the next successful lookup.
-        """
-        if not self._memory or not hasattr(self._memory, "_store"):
-            return False
-        try:
-            user = await self._memory._store.get_user_by_id(self._user_id)
-        except Exception as exc:
-            logger.warning(
-                "Could not read free_models_only for user %s: %s",
-                self._user_id, exc,
-            )
-            return False
-        return bool(user.get("free_models_only")) if user else False
+            return UserAccess.UNKNOWN
+        if not user:
+            return UserAccess.UNCONFIGURED
+        return UserAccess(
+            is_admin=user.get("role") == "admin",
+            free_models_only=bool(user.get("free_models_only")),
+        )
 
     def _spawn_background(self, coro, label: str) -> "asyncio.Task":
         """
@@ -605,8 +639,9 @@ class ConversationLoop:
         # pick models that cost nothing. Read once at init rather than per
         # message -- an admin toggling it takes effect on the user's next
         # session, which is the same latency as the other user flags.
-        self._free_models_only = await self._load_free_models_only()
-        self._is_admin = await self._load_is_admin()
+        access = await self._load_user_access()
+        self._free_models_only = access.free_models_only
+        self._is_admin = access.is_admin
 
         try:
             llm_provider_override = self._llm_provider_override

@@ -374,3 +374,102 @@ def test_auto_respects_per_user_provider_access(monkeypatch):
         assert captured["enabled"]["qwen"] is expected_qwen, (
             f"is_admin={is_admin}")
         assert "llama3.2:1b" in captured["hidden"]
+
+
+# =============================================================================
+# UserAccess — one row, one failure policy
+# =============================================================================
+#
+# These were two loaders running the same query with opposite behaviour on
+# error. The unification turns on a distinction the pair blurred: a missing
+# row is a definite answer, a failed lookup is not.
+
+
+def test_unconfigured_is_not_restricted():
+    """A session with no users row — kiosk, webhook, unit-initiated — has
+    never had either flag set, so both take their unset value. Restricting
+    these would quietly cut every such turn down to free models."""
+    from core.conversation_loop import UserAccess
+
+    assert UserAccess.UNCONFIGURED.is_admin is False
+    assert UserAccess.UNCONFIGURED.free_models_only is False
+
+
+def test_unknown_is_least_privilege_on_both_axes():
+    """A failed lookup means we do not know who this is."""
+    from core.conversation_loop import UserAccess
+
+    assert UserAccess.UNKNOWN.is_admin is False
+    assert UserAccess.UNKNOWN.free_models_only is True
+
+
+class _FakeStore:
+    def __init__(self, result=None, raises=False):
+        self._result = result
+        self._raises = raises
+        self.calls = 0
+
+    async def get_user_by_id(self, user_id):
+        self.calls += 1
+        if self._raises:
+            raise RuntimeError("database is down")
+        return self._result
+
+
+class _FakeMemory:
+    def __init__(self, store):
+        self._store = store
+
+
+def _loop_with(store):
+    from core.conversation_loop import ConversationLoop
+
+    loop = ConversationLoop.__new__(ConversationLoop)
+    loop._memory = _FakeMemory(store)
+    loop._user_id = "someone"
+    return loop
+
+
+def _access(store):
+    import asyncio
+
+    return asyncio.run(_loop_with(store)._load_user_access())
+
+
+def test_a_real_admin_row_is_read_correctly():
+    access = _access(_FakeStore({"role": "admin", "free_models_only": 0}))
+    assert access.is_admin is True
+    assert access.free_models_only is False
+
+
+def test_a_restricted_user_row_is_read_correctly():
+    access = _access(_FakeStore({"role": "user", "free_models_only": 1}))
+    assert access.is_admin is False
+    assert access.free_models_only is True
+
+
+def test_a_missing_row_is_unconfigured_not_restricted():
+    from core.conversation_loop import UserAccess
+
+    assert _access(_FakeStore(None)) == UserAccess.UNCONFIGURED
+
+
+def test_a_store_error_restricts_on_both_axes():
+    """The old pair failed OPEN here on the restriction: a database hiccup
+    handed a restricted account paid models. It is the accounts that *are*
+    restricted where being wrong matters."""
+    from core.conversation_loop import UserAccess
+
+    assert _access(_FakeStore(raises=True)) == UserAccess.UNKNOWN
+
+
+def test_an_admin_is_not_promoted_by_a_store_error():
+    """Symmetrically: a failure must not grant admin reach either."""
+    assert _access(_FakeStore(raises=True)).is_admin is False
+
+
+def test_both_flags_come_from_one_read():
+    """Two loaders meant two round-trips per turn for the same row."""
+    store = _FakeStore({"role": "admin", "free_models_only": 0})
+    _access(store)
+    assert store.calls == 1
