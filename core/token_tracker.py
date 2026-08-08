@@ -76,6 +76,16 @@ _COST_PER_M: Dict[str, Dict[str, float]] = {
     "deepseek-ai/deepseek-r1": {"in": 0.0, "out": 0.0},
     "meta/llama-3.1-70b-instruct": {"in": 0.0, "out": 0.0},
     "mistralai/mistral-large-2-instruct": {"in": 0.0, "out": 0.0},
+    # DeepSeek first-party cloud — METERED. Note these sit alongside the free
+    # NIM entry "deepseek-ai/deepseek-r1" above; the ids differ, so a free
+    # call and a billed call are never confused for one another.
+    "deepseek-chat": {"in": 0.27, "out": 1.10},
+    "deepseek-reasoner": {"in": 0.55, "out": 2.19},
+    # Qwen via Alibaba DashScope — METERED. The local ollama "qwen2.5:*" ids
+    # are absent on purpose: they cost nothing and must not be priced here.
+    "qwen-turbo": {"in": 0.05, "out": 0.20},
+    "qwen-plus": {"in": 0.40, "out": 1.20},
+    "qwen-max": {"in": 1.60, "out": 6.40},
 }
 
 

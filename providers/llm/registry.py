@@ -706,6 +706,92 @@ _CATALOG: List[ModelEntry] = [
         ),
         priority=156,
     ),
+
+    # =========================================================================
+    # DeepSeek first-party cloud (priority 170-179) — METERED
+    # =========================================================================
+    # DeepSeek is reachable three ways in this codebase and only this one is
+    # billed. Local ollama deepseek-r1:* and the NIM free tier both remain.
+    #
+    # Prices are USD per 1K tokens at standard (non-discount) rates. DeepSeek
+    # has repriced more than once and runs off-peak discounts, so treat these
+    # as the basis for an estimate, not an invoice. The figures the admin
+    # dashboard reports as spend are derived from these — if they drift from
+    # platform.deepseek.com/pricing, correct them here and in
+    # core/token_tracker.py's _COST_PER_M, which is the table that actually
+    # costs recorded usage.
+    ModelEntry(
+        provider="deepseek",
+        model_id="deepseek-chat",
+        display_name="DeepSeek Chat (cloud)",
+        context_window=64000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.00027,
+        cost_per_1k_output_usd=0.00110,
+        notes=(
+            "Full-size DeepSeek V3, metered. Far cheaper per token than the "
+            "Western frontier models; no rate ceiling like the NIM free tier."
+        ),
+        priority=170,
+    ),
+    ModelEntry(
+        provider="deepseek",
+        model_id="deepseek-reasoner",
+        display_name="DeepSeek Reasoner (cloud)",
+        context_window=64000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.00055,
+        cost_per_1k_output_usd=0.00219,
+        notes=(
+            "R1 reasoning model, metered. Bills its chain-of-thought as "
+            "output tokens, so a reply costs well above the headline rate "
+            "difference vs deepseek-chat."
+        ),
+        priority=171,
+    ),
+
+    # =========================================================================
+    # Qwen via Alibaba DashScope (priority 180-189) — METERED
+    # =========================================================================
+    # Local ollama qwen2.5:* entries stay free and unaffected. Same caveat as
+    # DeepSeek above: verify against Alibaba's pricing page before trusting
+    # the cost column, and keep _COST_PER_M in step.
+    ModelEntry(
+        provider="qwen",
+        model_id="qwen-turbo",
+        display_name="Qwen Turbo (cloud)",
+        context_window=1000000,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.00005,
+        cost_per_1k_output_usd=0.00020,
+        notes="Cheapest hosted Qwen. Very large context, fast, good multilingual.",
+        priority=180,
+    ),
+    ModelEntry(
+        provider="qwen",
+        model_id="qwen-plus",
+        display_name="Qwen Plus (cloud)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.00040,
+        cost_per_1k_output_usd=0.00120,
+        notes="Balanced hosted Qwen — the sensible default of the three.",
+        priority=181,
+    ),
+    ModelEntry(
+        provider="qwen",
+        model_id="qwen-max",
+        display_name="Qwen Max (cloud)",
+        context_window=131072,
+        is_cloud=True,
+        cost_per_1k_input_usd=0.00160,
+        cost_per_1k_output_usd=0.00640,
+        notes=(
+            "Most capable Qwen. No local equivalent — qwen2.5:14b is a much "
+            "smaller model that happens to share the name."
+        ),
+        priority=182,
+    ),
 ]
 
 

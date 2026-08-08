@@ -156,9 +156,28 @@ def _instantiate_llm(key: str, model: Optional[str]) -> LLMProvider:
                 "NVIDIA NIM is disabled. Set NVIDIA_API_KEY in .env or enable it in Settings.")
         from providers.llm.nvidia_nim import NvidiaNimLLM
         return NvidiaNimLLM(model=model) if model else NvidiaNimLLM()
+    if key == "deepseek":
+        if not settings.deepseek_enabled:
+            raise ValueError(
+                "DeepSeek is disabled. Set DEEPSEEK_ENABLED=true in .env.")
+        if not settings.deepseek_api_key:
+            raise ValueError(
+                "DeepSeek is enabled but DEEPSEEK_API_KEY is not set in .env.")
+        from providers.llm.deepseek import DeepSeekLLM
+        return DeepSeekLLM(model=model) if model else DeepSeekLLM()
+    if key == "qwen":
+        if not settings.qwen_enabled:
+            raise ValueError(
+                "Qwen is disabled. Set QWEN_ENABLED=true in .env.")
+        if not settings.qwen_api_key:
+            raise ValueError(
+                "Qwen is enabled but QWEN_API_KEY is not set in .env.")
+        from providers.llm.qwen import QwenLLM
+        return QwenLLM(model=model) if model else QwenLLM()
     raise ValueError(
         f"Unsupported LLM_PROVIDER '{key}'. "
-        f"Supported values: ollama | anthropic | gemini | openai | mistral_ai | bedrock | nvidia_nim"
+        f"Supported values: ollama | anthropic | gemini | openai | mistral_ai | "
+        f"bedrock | nvidia_nim | deepseek | qwen"
     )
 
 

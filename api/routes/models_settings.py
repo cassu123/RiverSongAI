@@ -118,6 +118,34 @@ def _model_to_dict(m: ModelEntry,
     }
 
 
+# Providers whose models are hidden from non-admins unless the admin has
+# granted access. Each maps to the admin_config key holding that grant.
+#
+# nvidia_nim keeps its original standalone key so an existing deployment's
+# saved setting is not silently reset by this generalisation. New providers
+# live in the `provider_user_access` map.
+_LEGACY_USER_ACCESS_KEYS = {"nvidia_nim": "nvidia_nim_user_access"}
+
+#: Providers that can be gated per-user, and whether access defaults to on.
+#: The metered providers default to on as well — they are already behind two
+#: locks (an enable flag and an API key, both off/empty by default), so a
+#: third one that an admin has to find would only make "I turned it on and
+#: nobody can see it" the common case.
+_USER_GATED_PROVIDERS = ("nvidia_nim", "deepseek", "qwen")
+
+
+def get_provider_user_access(admin_config: Optional[dict] = None) -> dict:
+    """Which gated providers non-admin accounts may select models from."""
+    admin_config = admin_config or {}
+    stored = admin_config.get("provider_user_access") or {}
+    access = {}
+    for provider in _USER_GATED_PROVIDERS:
+        legacy_key = _LEGACY_USER_ACCESS_KEYS.get(provider)
+        default = admin_config.get(legacy_key, True) if legacy_key else True
+        access[provider] = bool(stored.get(provider, default))
+    return access
+
+
 def _get_enabled_providers(admin_config: Optional[dict] = None) -> dict:
     s = get_settings()
     admin_config = admin_config or {}
@@ -127,6 +155,9 @@ def _get_enabled_providers(admin_config: Optional[dict] = None) -> dict:
     nvidia_enabled = admin_config.get(
         "nvidia_nim_enabled_global",
         s.nvidia_nim_enabled)
+    deepseek_enabled = admin_config.get(
+        "deepseek_enabled_global", s.deepseek_enabled)
+    qwen_enabled = admin_config.get("qwen_enabled_global", s.qwen_enabled)
 
     return {
         "anthropic": cloud_enabled and s.anthropic_enabled and bool(s.anthropic_api_key),
@@ -135,6 +166,10 @@ def _get_enabled_providers(admin_config: Optional[dict] = None) -> dict:
         "mistral_ai": cloud_enabled and s.mistral_ai_enabled and bool(s.mistral_api_key),
         "bedrock": cloud_enabled and s.bedrock_enabled and bool(s.aws_access_key_id) and bool(s.aws_secret_access_key),
         "nvidia_nim": nvidia_enabled and bool(s.nvidia_api_key),
+        # Both metered providers sit behind the same cloud kill switch as the
+        # other paid ones, so "disable cloud LLMs" means all of them.
+        "deepseek": cloud_enabled and deepseek_enabled and bool(s.deepseek_api_key),
+        "qwen": cloud_enabled and qwen_enabled and bool(s.qwen_api_key),
         "ollama": local_enabled,
     }
 
@@ -187,22 +222,26 @@ async def list_models(
 
     hidden_llms: set[str] = set()
     family_overrides: dict = {}
-    nvidia_nim_users_enabled: bool = True
+    user_access: dict = get_provider_user_access()
     try:
         config = await request.app.state.memory_manager._store.get_admin_config()
         hidden_llms = set(config.get("hidden_llms", []))
         family_overrides = config.get("model_families", {}) or {}
-        nvidia_nim_users_enabled = config.get("nvidia_nim_user_access", True)
+        user_access = get_provider_user_access(config)
 
         enabled = _get_enabled_providers(config)
     except Exception:
         pass
 
-    # Non-admins cannot see NIM models when access is restricted
-    if not is_admin and not nvidia_nim_users_enabled:
+    # Non-admins cannot see a gated provider's models unless access is granted.
+    # Admins always retain access, so a household member cannot spend money on
+    # a provider the admin has not opened up, while the admin can still test it.
+    if not is_admin:
         from providers.llm.registry import LLMRegistry as _reg
-        hidden_llms = hidden_llms | {
-            m.model_id for m in _reg.list_by_provider("nvidia_nim")}
+        for provider, allowed in user_access.items():
+            if not allowed:
+                hidden_llms = hidden_llms | {
+                    m.model_id for m in _reg.list_by_provider(provider)}
 
     local_models = [
         _model_to_dict(m, installed)
@@ -219,6 +258,7 @@ async def list_models(
         "local": local_models,
         "cloud": cloud_models,
         "enabled_providers": enabled,
+        "provider_user_access": user_access,
         "ollama_reachable": bool(installed) or True,
         "family_overrides": family_overrides,
     }
@@ -377,6 +417,17 @@ async def save_llm_settings(
             if not enabled.get(body.provider, False):
                 raise bad_request(f"Provider '{body.provider}' is disabled (admin toggle, "
                                   f"{body.provider.upper()}_ENABLED, or missing API key).")
+
+        # Per-provider user access. Without this the gate is cosmetic: the
+        # provider's models are merely absent from /api/models, and anyone who
+        # knows a model id can still save it here and start spending on it.
+        if not is_admin:
+            access = get_provider_user_access(admin_config)
+            if not access.get(body.provider, True):
+                raise forbidden(
+                    f"Your account is not permitted to use {body.provider} models. "
+                    f"Ask an administrator to enable access."
+                )
 
     # ----- Cloud fallback: admin-only, Anthropic/Gemini only -----
     # Always start from the persisted state. Non-fallback saves (plain model
@@ -755,6 +806,11 @@ async def set_nvidia_nim_access(
         store = request.app.state.memory_manager._store
         config = await store.get_admin_config()
         config["nvidia_nim_user_access"] = body.enabled
+        # Keep the generalised map in step, or the two would disagree and
+        # whichever the reader consults would decide the answer.
+        access = config.get("provider_user_access") or {}
+        access["nvidia_nim"] = body.enabled
+        config["provider_user_access"] = access
         await store.set_admin_config(config)
     except Exception as e:
         logger.warning("Failed to persist nvidia_nim_user_access: %s", e)
@@ -765,10 +821,72 @@ async def set_nvidia_nim_access(
     return {"ok": True, "enabled": body.enabled}
 
 
+# -----------------------------------------------------------------------------
+# Per-provider user access — the generalisation of the NIM toggle above
+# -----------------------------------------------------------------------------
+
+class ProviderUserAccessBody(BaseModel):
+    provider: str
+    enabled: bool
+
+
+@router.get("/settings/provider-user-access")
+async def get_provider_user_access_route(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Which gated providers non-admins may pick models from."""
+    await _require_admin(authorization)
+    try:
+        config = await request.app.state.memory_manager._store.get_admin_config()
+        return {"access": get_provider_user_access(config)}
+    except Exception:
+        return {"access": get_provider_user_access()}
+
+
+@router.post("/settings/provider-user-access")
+async def set_provider_user_access(
+    request: Request,
+    body: ProviderUserAccessBody,
+    authorization: Optional[str] = Header(default=None),
+):
+    user_id = await _require_admin(authorization)
+    if body.provider not in _USER_GATED_PROVIDERS:
+        raise bad_request(
+            f"Unknown gated provider '{body.provider}'. "
+            f"Expected one of: {', '.join(_USER_GATED_PROVIDERS)}."
+        )
+    try:
+        store = request.app.state.memory_manager._store
+        config = await store.get_admin_config()
+        access = config.get("provider_user_access") or {}
+        access[body.provider] = body.enabled
+        config["provider_user_access"] = access
+        # Mirror back to the legacy key so an older client reading it, or a
+        # rollback to a previous build, still sees the admin's real choice.
+        legacy_key = _LEGACY_USER_ACCESS_KEYS.get(body.provider)
+        if legacy_key:
+            config[legacy_key] = body.enabled
+        await store.set_admin_config(config)
+    except Exception as e:
+        logger.warning("Failed to persist provider_user_access: %s", e)
+    logger.info(
+        "User access for %s set to %s by admin %s.",
+        body.provider,
+        body.enabled,
+        user_id,
+    )
+    return {"ok": True, "provider": body.provider, "enabled": body.enabled}
+
+
 class LLMRoutingFlagsBody(BaseModel):
     local_enabled: bool
     cloud_enabled: bool
     nvidia_enabled: bool
+    # Optional so an older frontend that posts only the original three fields
+    # does not silently switch the metered providers off.
+    deepseek_enabled: Optional[bool] = None
+    qwen_enabled: Optional[bool] = None
 
 
 @router.get("/admin/llm-routing-flags")
@@ -784,11 +902,14 @@ async def get_llm_routing_flags(
         return {
             "local_enabled": config.get("local_llms_enabled_global", True),
             "cloud_enabled": config.get("cloud_llms_enabled_global", True),
-            "nvidia_enabled": config.get("nvidia_nim_enabled_global", s.nvidia_nim_enabled)
+            "nvidia_enabled": config.get("nvidia_nim_enabled_global", s.nvidia_nim_enabled),
+            "deepseek_enabled": config.get("deepseek_enabled_global", s.deepseek_enabled),
+            "qwen_enabled": config.get("qwen_enabled_global", s.qwen_enabled),
         }
     except Exception:
-        return {"local_enabled": True,
-                "cloud_enabled": True, "nvidia_enabled": False}
+        return {"local_enabled": True, "cloud_enabled": True,
+                "nvidia_enabled": False, "deepseek_enabled": False,
+                "qwen_enabled": False}
 
 
 @router.post("/admin/llm-routing-flags")
@@ -804,6 +925,10 @@ async def set_llm_routing_flags(
         config["local_llms_enabled_global"] = body.local_enabled
         config["cloud_llms_enabled_global"] = body.cloud_enabled
         config["nvidia_nim_enabled_global"] = body.nvidia_enabled
+        if body.deepseek_enabled is not None:
+            config["deepseek_enabled_global"] = body.deepseek_enabled
+        if body.qwen_enabled is not None:
+            config["qwen_enabled_global"] = body.qwen_enabled
         await store.set_admin_config(config)
     except Exception as e:
         logger.warning("Failed to persist llm routing flags: %s", e)

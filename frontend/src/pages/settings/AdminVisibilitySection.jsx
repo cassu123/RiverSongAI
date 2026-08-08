@@ -14,6 +14,8 @@ const PROVIDER_DISPLAY = {
   gemini:     'Google Gemini',
   openai:     'OpenAI',
   mistral_ai: 'Mistral AI',
+  deepseek:   'DeepSeek (cloud)',
+  qwen:       'Qwen (cloud)',
   ollama:     'Ollama (local)',
 }
 

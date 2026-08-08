@@ -15,6 +15,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { API_BASE, Section, Toggle } from './settings/shared.jsx'
 import NimSection from './settings/NimSection.jsx'
+import MeteredProviderSection from './settings/MeteredProviderSection.jsx'
 import ModelSection from './settings/ModelSection.jsx'
 import BriefingSection from './settings/BriefingSection.jsx'
 import PersonaSection from './settings/PersonaSection.jsx'
@@ -80,7 +81,7 @@ export default function SettingsPage({
     n8n_webhook_secret: ''
   })
   const [intentRouterSettings, setIntentRouterSettings] = useState({ enabled: false, min_hits: 2 })
-  const [llmRoutingFlags,      setLlmRoutingFlags]      = useState({ local_enabled: true, cloud_enabled: true, nvidia_enabled: true })
+  const [llmRoutingFlags,      setLlmRoutingFlags]      = useState({ local_enabled: true, cloud_enabled: true, nvidia_enabled: true, deepseek_enabled: false, qwen_enabled: false })
   const [scribeEnabled,        setScribeEnabled]        = useState(false)
   const [feedPrefs,            setFeedPrefs]            = useState(null)
   const [hardwareCookbook,     setHardwareCookbook]     = useState(null)  // admin: GPU/RAM/CPU + per-model fit (null when flag off)
@@ -639,6 +640,22 @@ export default function SettingsPage({
           saveLlmRoutingFlags={saveLlmRoutingFlags}
         />
       )}
+
+      {/* ================================================================ */}
+      {/* METERED CLOUD PROVIDERS — admin                                  */}
+      {/* Separate from the NIM panel above because these cost money: they  */}
+      {/* lead with spend rather than with a rate-limit gauge.              */}
+      {/* ================================================================ */}
+      {showAdmin && ['deepseek', 'qwen'].map(p => (
+        <MeteredProviderSection
+          key={p}
+          provider={p}
+          enabled={enabledProviders[p] || false}
+          token={token}
+          llmRoutingFlags={llmRoutingFlags}
+          saveLlmRoutingFlags={saveLlmRoutingFlags}
+        />
+      ))}
 
       {/* ================================================================ */}
       {/* INTENT ROUTER — admin                                            */}

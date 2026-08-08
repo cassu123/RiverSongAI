@@ -13,6 +13,8 @@ const PROVIDER_NAMES = {
   openai:     'OpenAI',
   mistral_ai: 'Mistral AI',
   nvidia_nim: 'NVIDIA NIM',
+  deepseek:   'DeepSeek (cloud)',
+  qwen:       'Qwen (cloud)',
   ollama:     'Ollama (local)',
   auto:       'River Decides (Auto)',
 }
