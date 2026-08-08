@@ -1150,6 +1150,7 @@ async def ingest_recipe(
     request: Request,
     db: Session = Depends(get_db),
     source_url: Optional[str] = Form(default=None),
+    raw_text: Optional[str] = Form(default=None),
     file: Optional[UploadFile] = File(default=None),
     force: bool = False,
 ):
@@ -1303,8 +1304,38 @@ async def ingest_recipe(
                 if not recipe_dict.get("image_url"):
                     recipe_dict["image_url"] = og_image
 
+    elif raw_text and raw_text.strip():
+        # Pasted text. The third source, and the one that rescues the other
+        # two: a site behind bot protection, or a PDF that will not parse,
+        # both end with "copy the text and paste it here". Without this the
+        # advice in those error messages had nowhere to go.
+        #
+        # Same AI parse as the PDF and URL text tracks — no structured data
+        # to mine, so it goes straight to the model.
+        src_type = SourceType.MANUAL
+        for chunk in _chunk_text(raw_text, 20000):
+            try:
+                raw = await _call_ollama(_RECIPE_SCHEMA_PROMPT + chunk)
+                all_parsed.extend(_collect_parsed(raw))
+            except Exception as exc:
+                logger.warning("Pasted-text chunk parse failed: %s", exc)
+        if not all_parsed:
+            # Distinct from the generic "no recipes found" below: with pasted
+            # text the likely cause is the local model being unreachable, and
+            # sending someone to check their paste instead of their Ollama
+            # daemon wastes their time.
+            raise HTTPException(
+                status_code=502,
+                detail=(
+                    "Could not read a recipe from that text. If the local AI "
+                    "model is not running, use Manual Entry instead — it needs "
+                    "no model."
+                ),
+            )
+
     else:
-        raise bad_request("Provide either a PDF file or a source_url")
+        raise bad_request(
+            "Provide a PDF file, a source_url, or raw_text to parse.")
 
     if not all_parsed:
         raise HTTPException(

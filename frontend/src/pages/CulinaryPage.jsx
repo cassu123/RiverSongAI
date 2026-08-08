@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import BarcodeScanner from '../components/BarcodeScanner.jsx'
+import AddRecipeModal from '../components/AddRecipeModal.jsx'
 
 /**
  * CulinaryPage — Spatial Intelligence v2.0
@@ -459,6 +460,7 @@ export default function CulinaryPage({ setAction }) {
   const [error, setError] = useState(null)
   
   const [scannerMode, setScannerMode] = useState(null)
+  const [showAddRecipe, setShowAddRecipe] = useState(false)
   const [recipes, setRecipes] = useState([])
   const [stock, setStock] = useState([])
   const [grocery, setGrocery] = useState([])
@@ -579,6 +581,15 @@ export default function CulinaryPage({ setAction }) {
 
   const renderLibrary = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+       <button
+         className="rs-btn-primary"
+         style={{ width: '100%', height: 48, justifyContent: 'center' }}
+         onClick={() => setShowAddRecipe(true)}
+       >
+         <span className="material-symbols-rounded">add</span>
+         ADD RECIPE
+       </button>
+
        {/* Structured Filter Bar */}
        <div className="rs-card is-wide" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)' }}>
           <div className="rs-card-inner" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -835,6 +846,14 @@ export default function CulinaryPage({ setAction }) {
         <h1 className="rs-greeting">Culinary</h1>
         <div className="rs-greeting-sub">Sector provisioning and autonomous culinary archives.</div>
       </div>
+
+      {showAddRecipe && (
+        <AddRecipeModal
+          token={token}
+          onClose={() => setShowAddRecipe(false)}
+          onSaved={() => fetchData('library')}
+        />
+      )}
 
       {scannerMode && (
         <BarcodeScanner 
