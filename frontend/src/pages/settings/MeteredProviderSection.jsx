@@ -54,33 +54,42 @@ const fmtUsd = (n) => (n >= 0.01 ? `$${n.toFixed(2)}` : n > 0 ? `$${n.toFixed(4)
 const fmtTokens = (n) =>
   n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : String(n)
 
-export default function MeteredProviderSection({
-  provider,
-  enabled,
-  token,
-  llmRoutingFlags,
-  saveLlmRoutingFlags,
-}) {
+export default function MeteredProviderSection({ provider, enabled, token }) {
   const meta = METERED_PROVIDERS[provider]
-  const [globalOn, setGlobalOn] = useState(llmRoutingFlags?.[meta.flagKey] ?? false)
-  const [userAccess, setUserAccess] = useState(true)
+  const [globalOn, setGlobalOn] = useState(false)
+  const [userAccess, setUserAccess] = useState(null)
   const [usage, setUsage] = useState(null)
   const [days, setDays] = useState(30)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    const v = llmRoutingFlags?.[meta.flagKey]
-    if (v !== undefined) setGlobalOn(v)
-  }, [llmRoutingFlags, meta.flagKey])
-
-  useEffect(() => {
+  // Both switches read from /api/admin/provider-switches — the same endpoint
+  // and the same `provider_enabled` key the Provider Access matrix writes.
+  //
+  // This panel used to drive its global toggle through llm-routing-flags,
+  // which persists `{provider}_enabled_global`. Routing resolves
+  // `provider_enabled` first, so once an admin had touched the matrix the
+  // toggle here silently stopped affecting anything while still moving.
+  // Two panels, two keys, one of them a lie.
+  const loadSwitches = useCallback(() => {
     if (!token) return
-    fetch(`${API_BASE}/api/settings/provider-user-access`, {
+    const ctrl = new AbortController()
+    fetch(`${API_BASE}/api/admin/provider-switches`, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: ctrl.signal,
     })
-      .then((r) => r.json())
-      .then((d) => setUserAccess(d?.access?.[provider] ?? true))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d) return
+        const row = (d.providers || []).find((x) => x.provider === provider)
+        if (!row) return
+        setGlobalOn(!!row.enabled)
+        setUserAccess(!!row.user_access)
+      })
       .catch(() => {})
+    return () => ctrl.abort()
   }, [token, provider])
+
+  useEffect(() => loadSwitches(), [loadSwitches])
 
   const loadUsage = useCallback(() => {
     if (!token) return
@@ -98,19 +107,41 @@ export default function MeteredProviderSection({
     return () => clearInterval(id)
   }, [loadUsage])
 
-  const saveGlobal = (val) => {
-    setGlobalOn(val)
-    saveLlmRoutingFlags({ [meta.flagKey]: val })
+  // Both writes go through the same helper so a rejection restores the
+  // previous position. Treating every fetch outcome as success left an
+  // access control showing a state the server never agreed to.
+  const save = async (field, val) => {
+    const url =
+      field === 'enabled'
+        ? `${API_BASE}/api/admin/provider-switches`
+        : `${API_BASE}/api/settings/provider-user-access`
+    const setter = field === 'enabled' ? setGlobalOn : setUserAccess
+    const previous = field === 'enabled' ? globalOn : userAccess
+    setter(val)
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ provider, enabled: val }),
+      })
+      if (!res.ok) {
+        let detail = `Save failed (${res.status})`
+        try { detail = (await res.json())?.detail || detail } catch { /* non-JSON */ }
+        setError(detail)
+        setter(previous)
+        return
+      }
+      setError('')
+      window.dispatchEvent(new Event('rs-models-changed'))
+      loadSwitches()
+    } catch {
+      setError('Could not reach the server — nothing was changed.')
+      setter(previous)
+    }
   }
 
-  const saveUserAccess = async (val) => {
-    setUserAccess(val)
-    await fetch(`${API_BASE}/api/settings/provider-user-access`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ provider, enabled: val }),
-    }).catch(() => {})
-  }
+  const saveGlobal = (val) => save('enabled', val)
+  const saveUserAccess = (val) => save('user_access', val)
 
   // Roll up every model belonging to this provider.
   const rows = (usage?.by_model || []).filter((r) => r.provider === provider)
@@ -164,6 +195,21 @@ export default function MeteredProviderSection({
         </span>
       </div>
 
+      {error && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex', gap: 8, padding: '10px 12px', borderRadius: 10,
+            background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
+            fontSize: '0.72rem',
+          }}
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>error</span>
+          <span>{error}</span>
+        </div>
+      )}
+
       {/* Cost warning — this is the one thing that separates these two panels
           from every other provider section. */}
       <div
@@ -198,7 +244,7 @@ export default function MeteredProviderSection({
       <Toggle
         id={`${provider}-user-access`}
         label={`Allow all users to select ${meta.label} models`}
-        checked={userAccess}
+        checked={userAccess ?? true}
         onChange={saveUserAccess}
         disabled={!globalOn}
       />

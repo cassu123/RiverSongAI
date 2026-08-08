@@ -114,7 +114,15 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
 
   const saveIngest = async () => {
     if (mode === 'paste' && !rawText.trim()) return setError('Paste the recipe text first.')
-    if (mode === 'link' && !sourceUrl.trim() && !file) return setError('Add a link or choose a PDF.')
+    if (mode === 'link') {
+      // Exactly one. The backend processes `file` first and ignores
+      // source_url when both arrive, so sending both silently imports a
+      // different source than the one the user was looking at.
+      if (!sourceUrl.trim() && !file) return setError('Add a link or choose a PDF.')
+      if (sourceUrl.trim() && file) {
+        return setError('Use a link or a PDF, not both — clear one of them.')
+      }
+    }
 
     setBusy(true)
     setError('')

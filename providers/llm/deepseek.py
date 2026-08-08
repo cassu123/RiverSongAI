@@ -100,4 +100,4 @@ class DeepSeekLLM(OpenAICompatibleLLM):
             self._record(last_usage, call_type="stream")
         except Exception as exc:
             logger.error("DeepSeek thinking stream failed: %s", exc, exc_info=True)
-            yield self.friendly_error(exc)
+            raise RuntimeError(self.friendly_error(exc)) from exc

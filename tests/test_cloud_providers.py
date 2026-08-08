@@ -16,6 +16,8 @@ whether the HTTP client works:
 The last two are what stop a household member spending the admin's money.
 """
 
+import importlib.util
+
 import pytest
 
 from api.routes.models_settings import (
@@ -241,7 +243,14 @@ def test_each_provider_is_gated_independently():
 # raise on a gate before the import runs). Without them a typo in deepseek.py
 # or qwen.py would ship green.
 
-pytest.importorskip("openai", reason="openai client not installed")
+# Scoped to the provider tests only. At module scope importorskip raises
+# during collection and skips this entire file — including the catalog and
+# costing tests above, which import no openai and which the docstring calls
+# the assertions that carry weight.
+openai_required = pytest.mark.skipif(
+    importlib.util.find_spec("openai") is None,
+    reason="openai client not installed",
+)
 
 
 class _FakeDelta:
@@ -311,6 +320,7 @@ def _install_stream(provider, chunks):
     return fake_create
 
 
+@openai_required
 @pytest.mark.parametrize("kind", ["deepseek", "qwen"])
 @pytest.mark.asyncio
 async def test_streaming_yields_text_and_records_usage(kind, monkeypatch):
@@ -345,6 +355,7 @@ async def test_streaming_yields_text_and_records_usage(kind, monkeypatch):
     assert args[3] == 45            # output tokens
 
 
+@openai_required
 @pytest.mark.parametrize("kind", ["deepseek", "qwen"])
 @pytest.mark.asyncio
 async def test_streaming_requests_usage_in_the_stream(kind, monkeypatch):
@@ -358,6 +369,7 @@ async def test_streaming_requests_usage_in_the_stream(kind, monkeypatch):
     assert create.kwargs["stream"] is True
 
 
+@openai_required
 @pytest.mark.asyncio
 async def test_deepseek_reasoner_streams_its_thinking(monkeypatch):
     provider = _provider("deepseek", monkeypatch, model="deepseek-reasoner")
@@ -375,6 +387,7 @@ async def test_deepseek_reasoner_streams_its_thinking(monkeypatch):
     assert out == "thinking...answer"
 
 
+@openai_required
 @pytest.mark.asyncio
 async def test_non_reasoner_thinking_falls_through(monkeypatch):
     """deepseek-chat has no reasoning_content, so the thinking path must not
@@ -387,21 +400,56 @@ async def test_non_reasoner_thinking_falls_through(monkeypatch):
     assert out == "plain"
 
 
+@openai_required
 @pytest.mark.parametrize("kind", ["deepseek", "qwen"])
 @pytest.mark.asyncio
-async def test_a_failure_speaks_instead_of_raising(kind, monkeypatch):
-    """These strings get spoken aloud, so a provider outage must not surface
-    as an exception into the conversation loop."""
+async def test_a_failure_raises_so_the_fallback_can_take_over(kind, monkeypatch):
+    """This asserted the opposite until CodeRabbit pointed out what it cost.
+
+    providers/base.py specifies that a provider raises when the service is
+    unreachable, and FallbackLLMProvider switches to the secondary only on an
+    exception. Returning the friendly text as though it were the model's reply
+    looked tidier and silently disabled the fallback — an outage produced
+    "I had trouble responding." while a healthy local Ollama sat attached and
+    unused. The friendly wording rides on the exception instead."""
     provider = _provider(kind, monkeypatch)
 
     async def boom(**kwargs):
         raise RuntimeError("Error code: 401 - authentication failed")
 
     provider._client.chat.completions.create = boom
-    out = "".join([c async for c in provider.stream_response([{"role": "user", "content": "x"}])])
-    assert "admin" in out.lower()
+    with pytest.raises(RuntimeError) as excinfo:
+        [c async for c in provider.stream_response([{"role": "user", "content": "x"}])]
+    assert "admin" in str(excinfo.value).lower()
 
 
+@openai_required
+@pytest.mark.parametrize("kind", ["deepseek", "qwen"])
+@pytest.mark.asyncio
+async def test_the_local_fallback_actually_engages(kind, monkeypatch):
+    """The point of raising: a wrapped provider must reach its secondary."""
+    from core.conversation_loop import FallbackLLMProvider
+
+    primary = _provider(kind, monkeypatch)
+
+    async def boom(**kwargs):
+        raise RuntimeError("Error code: 503 - service unavailable")
+
+    primary._client.chat.completions.create = boom
+
+    class _Local:
+        async def stream_response(self, messages):
+            yield "answered locally"
+
+        async def stream_response_thinking(self, messages):
+            yield "answered locally"
+
+    wrapped = FallbackLLMProvider(primary, _Local())
+    out = "".join([c async for c in wrapped.stream_response([{"role": "user", "content": "x"}])])
+    assert out == "answered locally"
+
+
+@openai_required
 @pytest.mark.parametrize("kind", ["deepseek", "qwen"])
 @pytest.mark.asyncio
 async def test_empty_messages_make_no_request(kind, monkeypatch):

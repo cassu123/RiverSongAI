@@ -1145,6 +1145,12 @@ async def cook_now(
 # Ingest Engine (PDF / URL → Ollama)
 # ---------------------------------------------------------------------------
 
+#: Ceiling on a single pasted-recipe submission. Each 20,000-char chunk is one
+#: sequential call to the local model, so this bounds the endpoint to ~4 of
+#: them. A long recipe with notes is well under 10,000 characters.
+_MAX_PASTED_RECIPE_CHARS = 80_000
+
+
 @router.post("/recipes/ingest", status_code=status.HTTP_201_CREATED)
 async def ingest_recipe(
     request: Request,
@@ -1305,6 +1311,18 @@ async def ingest_recipe(
                     recipe_dict["image_url"] = og_image
 
     elif raw_text and raw_text.strip():
+        # Cap the work before starting it. Each chunk is one sequential model
+        # request against a single local Ollama, so an unbounded paste is an
+        # unbounded queue — one permitted user pasting a book keeps the model
+        # busy and every other room's turn waiting behind it. A recipe is a
+        # few thousand characters; the cap is generous against that and still
+        # bounds the loop to a handful of calls.
+        if len(raw_text) > _MAX_PASTED_RECIPE_CHARS:
+            raise bad_request(
+                f"That text is {len(raw_text):,} characters; the limit is "
+                f"{_MAX_PASTED_RECIPE_CHARS:,}. Paste one recipe at a time, "
+                f"or use Manual Entry."
+            )
         # Pasted text. The third source, and the one that rescues the other
         # two: a site behind bot protection, or a PDF that will not parse,
         # both end with "copy the text and paste it here". Without this the

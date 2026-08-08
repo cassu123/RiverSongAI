@@ -258,6 +258,10 @@ def _build_llm_provider(
     # admin had switched off for this account, or hidden outright — the
     # coarse provider switch was the only thing auto ever consulted.
     hidden_models = set((admin_config or {}).get("hidden_llms", []) or [])
+    # Kept unfiltered so a refusal can say which of the two it is. Collapsing
+    # them made a per-account denial report as "disabled globally by the
+    # administrator", which sends the user to ask for the wrong thing.
+    globally_enabled = dict(enabled_providers)
     if not is_admin:
         access = get_provider_user_access(admin_config)
         enabled_providers = {
@@ -305,6 +309,10 @@ def _build_llm_provider(
             model_override = fallback_model or settings.llm_model
 
     if key != "auto" and key in enabled_providers and not enabled_providers[key]:
+        if globally_enabled.get(key):
+            raise ValueError(
+                f"Provider '{key}' is not available to your account. "
+                f"Ask an administrator to enable access.")
         raise ValueError(
             f"Provider '{key}' is disabled globally by the administrator.")
 
@@ -534,9 +542,21 @@ class ConversationLoop:
             # Memory and settings are keyed by user, so the prompt has to be
             # rebuilt against the new person rather than carrying the
             # previous speaker's context into their turn.
+            #
+            # Only the RESTRICTION follows the speaker. `is_admin` stays
+            # bound to the authenticated session, deliberately.
+            #
+            # A voiceprint is not an authentication factor. Rebinding
+            # free_models_only tightens what this turn may reach and is safe
+            # in the wrong direction — the worst case is a cheaper model.
+            # Rebinding is_admin would do the opposite: a confident match
+            # against an admin's voice would hand out the admin's provider
+            # reach with no token involved, gated only by
+            # voice_id_threshold — and the settings file says outright that
+            # household members often score alike. That is the "never accept
+            # a self-asserted identity" line, reached by another route.
             access = await self._load_user_access()
             self._free_models_only = access.free_models_only
-            self._is_admin = access.is_admin
 
     async def _load_user_access(self) -> UserAccess:
         """Read this user's role and model restriction — one row, one policy.

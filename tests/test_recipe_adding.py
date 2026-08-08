@@ -171,3 +171,38 @@ def test_a_corrupt_pdf_is_a_clean_error_not_a_crash(chef):
     )
     assert r.status_code in (400, 500)
     assert r.status_code != 201
+
+
+def test_oversized_paste_is_refused_before_any_model_call(chef, monkeypatch):
+    """Each chunk is one sequential call to a single local model, so an
+    unbounded paste is an unbounded queue — one user pasting a book keeps
+    every other room's turn waiting behind it."""
+    import api.routes.culinary as culinary
+
+    async def explode(prompt):
+        raise AssertionError("must reject before calling the model")
+
+    monkeypatch.setattr(culinary, "_call_ollama", explode)
+
+    r = client.post(
+        "/api/culinary/recipes/ingest",
+        headers=chef,
+        data={"raw_text": "x" * (culinary._MAX_PASTED_RECIPE_CHARS + 1)},
+    )
+    assert r.status_code == 400
+    assert "limit" in r.json()["detail"].lower()
+
+
+def test_a_normal_length_paste_is_still_accepted(chef, monkeypatch):
+    import api.routes.culinary as culinary
+
+    async def fake(prompt):
+        return '{"title": "Long But Fine", "ingredients": [], "steps": ["Cook."]}'
+
+    monkeypatch.setattr(culinary, "_call_ollama", fake)
+    r = client.post(
+        "/api/culinary/recipes/ingest",
+        headers=chef,
+        data={"raw_text": "a recipe " * 500},
+    )
+    assert r.status_code == 201, r.text

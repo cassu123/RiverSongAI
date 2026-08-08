@@ -473,3 +473,116 @@ def test_both_flags_come_from_one_read():
     store = _FakeStore({"role": "admin", "free_models_only": 0})
     _access(store)
     assert store.calls == 1
+
+
+# =============================================================================
+# CodeRabbit findings on PR #158
+# =============================================================================
+
+
+def test_cloud_kill_switch_survives_a_per_provider_flip():
+    """The coarse switch was consulted only in the last branch of the
+    resolution chain, and set_provider_switch writes both keys — so one flip
+    of any provider put it in an earlier branch permanently, after which
+    'disable all cloud LLMs' silently stopped applying to it."""
+    config = {
+        "provider_enabled": {"qwen": True, "deepseek": True},
+        "qwen_enabled_global": True,
+        "cloud_llms_enabled_global": False,
+    }
+    switches = get_provider_global_enabled(config)
+    assert switches["qwen"] is False
+    assert switches["deepseek"] is False
+
+
+def test_local_kill_switch_survives_a_per_provider_flip():
+    config = {
+        "provider_enabled": {"ollama": True},
+        "local_llms_enabled_global": False,
+    }
+    assert get_provider_global_enabled(config)["ollama"] is False
+
+
+def test_a_failed_config_read_denies_gated_providers_to_users(_state, monkeypatch):
+    """A store error must not widen access. The defaults grant everything, so
+    continuing on them served a restricted account the full metered catalog."""
+    import api.routes.models_settings as ms
+
+    async def boom():
+        raise RuntimeError("store is down")
+
+    class _BrokenStore:
+        get_admin_config = staticmethod(boom)
+
+    monkeypatch.setattr(
+        type(app.state.memory_manager), "_store",
+        property(lambda self: _BrokenStore()), raising=False,
+    )
+    try:
+        payload = client.get("/api/models", headers=_user()).json()
+        cloud = {m["model_id"] for m in payload["cloud"]}
+        gated = {
+            m.model_id
+            for p in ms._USER_GATED_PROVIDERS
+            for m in __import__("providers.llm.registry", fromlist=["LLMRegistry"])
+            .LLMRegistry.list_by_provider(p)
+            if m.is_cloud
+        }
+        assert not (cloud & gated), "a failed policy read must not widen access"
+    finally:
+        monkeypatch.undo()
+
+
+def test_a_failed_persist_is_reported_as_a_failure(_state, monkeypatch):
+    """Returning ok:True after a failed save showed the admin their setting
+    as applied while the stored policy was unchanged — they close access, see
+    it closed, and it is open."""
+    store = app.state.memory_manager._store
+
+    async def boom(_config):
+        raise RuntimeError("disk full")
+
+    monkeypatch.setattr(store, "set_admin_config", boom, raising=False)
+
+    r = client.post(
+        "/api/admin/provider-switches",
+        json={"provider": "qwen", "enabled": False},
+        headers=_admin(),
+    )
+    assert r.status_code == 500, r.text
+
+    r = client.post(
+        "/api/settings/provider-user-access",
+        json={"provider": "qwen", "enabled": False},
+        headers=_admin(),
+    )
+    assert r.status_code == 500, r.text
+
+
+def test_a_hidden_default_local_model_is_not_used_as_the_last_resort():
+    """The Ollama last-resort branch skipped the hidden filter that the
+    cheapest-model branch below it applied."""
+    from providers.llm.model_intent_router import (
+        NoModelAvailable, _get_default_ollama_model, route,
+    )
+    from providers.llm.registry import LLMRegistry
+
+    default_model = _get_default_ollama_model()
+    hidden = {m.model_id for m in LLMRegistry.list_local()} | {default_model}
+    with pytest.raises(NoModelAvailable):
+        route("hello there", {"ollama": True}, hidden_models=hidden)
+
+
+def test_a_voice_match_does_not_grant_admin_reach():
+    """A voiceprint is not an authentication factor. Letting is_admin follow
+    the recognised speaker handed out the admin's provider reach on a
+    confident match, with no token involved."""
+    import inspect
+
+    from core.conversation_loop import ConversationLoop
+
+    src = inspect.getsource(ConversationLoop._apply_speaker_identity)
+    assert "self._free_models_only = access.free_models_only" in src, (
+        "the restriction should still follow the speaker")
+    assert "self._is_admin = access" not in src, (
+        "is_admin must stay bound to the authenticated session")

@@ -369,8 +369,12 @@ def route(
     # local provider and kept using it. That made the local switch
     # decorative for every auto-routed message, which is the one path most
     # messages take. It is checked now.
-    if enabled_providers.get("ollama", False):
-        settings_model = _get_default_ollama_model()
+    settings_model = _get_default_ollama_model()
+    # The hidden check applies here too. The cheapest-model branch below
+    # already filtered on it, so without this the two fallback paths enforced
+    # different rules — and an admin who hid the configured local default
+    # would still be routed to it.
+    if enabled_providers.get("ollama", False) and settings_model not in hidden_models:
         logger.warning(
             "Intent router exhausted all preferences for '%s', using Ollama default.",
             intent,

@@ -22,7 +22,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
 import urllib.request
 import urllib.error
 import json
@@ -153,23 +155,52 @@ def _model_to_dict(m: ModelEntry,
     }
 
 
-def _hardware_fit_map() -> dict:
+#: Cached (monotonic_timestamp, fit_map). GPU headroom moves on the timescale
+#: of minutes, and /api/models is hit by the model picker and the settings
+#: page on every open — probing per request bought nothing and cost a
+#: subprocess spawn each time.
+_fit_cache: tuple = (0.0, {})
+_FIT_TTL_SECONDS = 60.0
+
+
+async def _hardware_fit_map() -> dict:
     """Model id -> {status, reason} for local models on this machine.
 
-    Best effort. Hardware probing shells out to nvidia-smi and reads
-    /proc, either of which can be absent or slow; a failure here must
-    degrade to "no verdict" rather than take down the model list.
+    Async and off-thread on purpose. `detect_hardware()` shells out to
+    nvidia-smi and reads /proc; run inline it blocks the event loop for the
+    length of a subprocess spawn, on a route two different pages poll.
+
+    Skipped entirely when the hardware cookbook feature is off — the admin
+    endpoint that exposes these verdicts already 404s in that case, so
+    probing anyway did work nobody could see.
+
+    Best effort throughout: a probe failure degrades to "no verdict" rather
+    than taking down the model list.
     """
-    try:
+    global _fit_cache
+    if not getattr(get_settings(), "hardware_cookbook_enabled", False):
+        return {}
+
+    now = time.monotonic()
+    cached_at, cached = _fit_cache
+    if cached and (now - cached_at) < _FIT_TTL_SECONDS:
+        return cached
+
+    def _probe() -> dict:
         from core.hardware_cookbook import detect_hardware, score_models
 
         return {
             row["model_id"]: {"status": row.get("status"), "reason": row.get("reason")}
             for row in score_models(detect_hardware())
         }
+
+    try:
+        result = await asyncio.to_thread(_probe)
     except Exception as exc:
         logger.debug("hardware fit probe unavailable: %s", exc)
         return {}
+    _fit_cache = (now, result)
+    return result
 
 
 # nvidia_nim keeps its original standalone key so an existing deployment's
@@ -275,18 +306,25 @@ def get_provider_global_enabled(admin_config: Optional[dict] = None) -> dict:
     out = {}
     for provider in _USER_GATED_PROVIDERS:
         if provider in stored:
-            out[provider] = bool(stored[provider])
-            continue
-        legacy = admin_config.get(f"{provider}_enabled_global")
-        if legacy is not None:
-            out[provider] = bool(legacy)
-            continue
-        if provider in LOCAL_PROVIDERS:
-            out[provider] = bool(local_enabled)
+            resolved = bool(stored[provider])
+        elif admin_config.get(f"{provider}_enabled_global") is not None:
+            resolved = bool(admin_config[f"{provider}_enabled_global"])
+        elif provider in LOCAL_PROVIDERS:
+            resolved = bool(local_enabled)
         else:
-            env_default = getattr(s, _PROVIDER_ENV_FLAG.get(provider, ""), False)
-            # The coarse cloud kill switch still wins when it is off.
-            out[provider] = bool(cloud_enabled) and bool(env_default)
+            resolved = bool(getattr(s, _PROVIDER_ENV_FLAG.get(provider, ""), False))
+
+        # The coarse kill switches are applied AFTER the chain resolves, not
+        # inside its last branch. Previously they lived only in the `else`,
+        # so the two earlier branches returned before ever consulting them —
+        # and set_provider_switch writes both `provider_enabled[p]` and
+        # `{p}_enabled_global` for every flip. One toggle of any provider
+        # therefore put it permanently in an earlier branch, after which
+        # "disable all cloud LLMs" silently stopped applying to it. A kill
+        # switch that stops working once you use the panel next to it is
+        # worse than no kill switch.
+        coarse = local_enabled if provider in LOCAL_PROVIDERS else cloud_enabled
+        out[provider] = resolved and bool(coarse)
     return out
 
 
@@ -377,8 +415,17 @@ async def list_models(
         switches = get_provider_global_enabled(config)
 
         enabled = _get_enabled_providers(config)
-    except Exception:
-        pass
+    except Exception as exc:
+        # A failed policy read must not widen access. The defaults computed
+        # above grant every provider to everyone, so silently continuing on
+        # them served a restricted household member the full metered catalog
+        # — the store erroring was all it took to lift the restriction.
+        logger.warning(
+            "Could not read admin config for /api/models; "
+            "denying gated providers to non-admins: %s", exc,
+        )
+        if not is_admin:
+            user_access = {p: False for p in _USER_GATED_PROVIDERS}
 
     # Non-admins cannot see a gated provider's models unless access is granted.
     # Admins always retain access, so a household member cannot reach a
@@ -389,7 +436,7 @@ async def list_models(
                 hidden_llms = hidden_llms | {
                     m.model_id for m in LLMRegistry.list_by_provider(provider)}
 
-    fit_by_model = _hardware_fit_map()
+    fit_by_model = await _hardware_fit_map()
 
     local_models = [
         {
@@ -1046,7 +1093,15 @@ async def set_provider_user_access(
             config[legacy_key] = body.enabled
         await store.set_admin_config(config)
     except Exception as e:
-        logger.warning("Failed to persist provider_user_access: %s", e)
+        # Returning ok:True here showed the admin their new setting as saved
+        # while the stored policy was unchanged — for an access control that
+        # decides who can spend money, that is the worst possible failure
+        # mode: they close it, see it closed, and it is open.
+        logger.error("Failed to persist provider_user_access: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Could not save provider access. The previous setting is still in effect.",
+        )
     logger.info(
         "User access for %s set to %s by admin %s.",
         body.provider,
@@ -1121,7 +1176,11 @@ async def set_provider_switch(
         config[legacy] = body.enabled
         await store.set_admin_config(config)
     except Exception as e:
-        logger.warning("Failed to persist provider switch: %s", e)
+        logger.error("Failed to persist provider switch: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Could not save the provider switch. The previous setting is still in effect.",
+        )
     logger.info(
         "Provider %s globally %s by admin %s.",
         body.provider,

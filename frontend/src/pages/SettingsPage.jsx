@@ -659,8 +659,6 @@ export default function SettingsPage({
           provider={p}
           enabled={enabledProviders[p] || false}
           token={token}
-          llmRoutingFlags={llmRoutingFlags}
-          saveLlmRoutingFlags={saveLlmRoutingFlags}
         />
       ))}
 

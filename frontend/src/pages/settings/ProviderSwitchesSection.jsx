@@ -30,12 +30,16 @@ const PROVIDER_LABEL = {
   bedrock:    { name: 'Amazon Bedrock',  note: 'Paid · AWS' },
 }
 
-function Switch({ on, onClick, disabled, labelOn = 'ON', labelOff = 'OFF' }) {
+function Switch({ on, onClick, disabled, label, labelOn = 'ON', labelOff = 'OFF' }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <button
         role="switch"
         aria-checked={on}
+        // Each row renders two knob-only buttons; the provider name is a
+        // sibling, so without this a screen reader announces "switch, switch"
+        // with no way to tell which provider or which column.
+        aria-label={label}
         disabled={disabled}
         className={`toggle-switch ${on ? 'toggle-switch--on' : ''}`}
         onClick={onClick}
@@ -53,6 +57,7 @@ function Switch({ on, onClick, disabled, labelOn = 'ON', labelOff = 'OFF' }) {
 export default function ProviderSwitchesSection({ token }) {
   const [rows, setRows] = useState([])
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
 
   const load = useCallback(() => {
     if (!token) return
@@ -67,6 +72,7 @@ export default function ProviderSwitchesSection({ token }) {
   useEffect(load, [load])
 
   const patch = async (provider, field, value) => {
+    const previous = rows.find((r) => r.provider === provider)?.[field]
     setRows((rs) => rs.map((r) => (r.provider === provider ? { ...r, [field]: value } : r)))
     setBusy(true)
     const url =
@@ -74,16 +80,29 @@ export default function ProviderSwitchesSection({ token }) {
         ? `${API_BASE}/api/admin/provider-switches`
         : `${API_BASE}/api/settings/provider-user-access`
     try {
-      await fetch(url, {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ provider, enabled: value }),
       })
+      // A rejected change used to read as saved: fetch resolves on a 4xx/5xx,
+      // so the catch never ran, the optimistic row stayed on screen, and the
+      // reload could not correct it because load() drops a non-OK response.
+      // An admin denied a change watched the switch move anyway.
+      if (!res.ok) {
+        let detail = `Save failed (${res.status})`
+        try { detail = (await res.json())?.detail || detail } catch { /* non-JSON */ }
+        setError(detail)
+        setRows((rs) => rs.map((r) => (r.provider === provider ? { ...r, [field]: previous } : r)))
+        return
+      }
+      setError('')
       window.dispatchEvent(new Event('rs-models-changed'))
       load()
     } catch (e) {
       console.error('[Admin] provider switch failed:', e)
-      load()
+      setError('Could not reach the server — the switch was not changed.')
+      setRows((rs) => rs.map((r) => (r.provider === provider ? { ...r, [field]: previous } : r)))
     } finally {
       setBusy(false)
     }
@@ -101,6 +120,21 @@ export default function ProviderSwitchesSection({ token }) {
         Local and free providers are switchable too — costing nothing is not a reason
         to be unblockable.
       </p>
+
+      {error && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex', gap: 8, padding: '10px 12px', borderRadius: 8, marginBottom: 10,
+            background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
+            fontSize: '0.74rem',
+          }}
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>error</span>
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Column headers */}
       <div
@@ -158,6 +192,7 @@ export default function ProviderSwitchesSection({ token }) {
 
               <Switch
                 on={!!r.enabled}
+                label={`Allow ${meta.name}`}
                 onClick={() => patch(r.provider, 'enabled', !r.enabled)}
                 labelOn="ON"
                 labelOff="OFF"
@@ -166,6 +201,7 @@ export default function ProviderSwitchesSection({ token }) {
               <Switch
                 on={!!r.user_access}
                 disabled={!r.enabled}
+                label={`Let all users select ${meta.name}`}
                 onClick={() => patch(r.provider, 'user_access', !r.user_access)}
                 labelOn="ALL"
                 labelOff="ADMIN"

@@ -21,6 +21,16 @@ Usage accounting is the reason the streaming path asks for
 no token counts and every streamed reply would be recorded as zero spend,
 which for a metered provider means a usage dashboard that reads $0.00 while
 the bill climbs.
+
+**Errors are raised, not returned.** `providers/base.py` specifies that a
+provider raises when the service is unreachable, and FallbackLLMProvider
+switches to the secondary only on an exception. An earlier version of this
+file caught everything and returned the friendly message as though it were
+the model's reply — which looked tidy and quietly disabled the fallback: a
+DeepSeek outage produced "I had trouble responding." while a healthy local
+Ollama sat attached as the safety net, unused. The friendly text is now
+carried as the exception message, so the caller can still speak it once the
+fallback has had its turn.
 """
 
 from __future__ import annotations
@@ -119,7 +129,7 @@ class OpenAICompatibleLLM(LLMProvider):
             logger.error(
                 "%s chat failed: %s", type(self).__name__, exc, exc_info=True
             )
-            return self.friendly_error(exc)
+            raise RuntimeError(self.friendly_error(exc)) from exc
 
     async def stream_response(
         self, messages: List[dict]
@@ -149,7 +159,7 @@ class OpenAICompatibleLLM(LLMProvider):
             logger.error(
                 "%s streaming failed: %s", type(self).__name__, exc, exc_info=True
             )
-            yield self.friendly_error(exc)
+            raise RuntimeError(self.friendly_error(exc)) from exc
 
     async def stream_response_thinking(
         self, messages: List[dict]
