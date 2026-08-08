@@ -70,6 +70,7 @@ class GoogleAuth:
             str(self._secrets_path), self._scopes
         )
         creds = flow.run_local_server(port=0)
+        assert isinstance(creds, Credentials)
         self._save_credentials(token_path, creds)
         return creds
 
@@ -118,9 +119,8 @@ class GoogleAuth:
         if state:
             params["state"] = state
 
-        auth_url = f"{
-            flow.client_config['auth_uri']}?{
-            urllib.parse.urlencode(params)}"
+        auth_uri = flow.client_config['auth_uri']
+        auth_url = f"{auth_uri}?{urllib.parse.urlencode(params)}"
         return auth_url
 
     def fetch_token_from_code(self, user_id: str, code: str,

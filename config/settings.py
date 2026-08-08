@@ -206,6 +206,10 @@ class Settings(BaseSettings):
         default="http://localhost:11434",
         description="Base URL for the Ollama REST API",
     )
+    glances_url: str = Field(
+        default="http://localhost:61208/api/3",
+        description="Base URL of the local Glances REST API used by /api/health/system.",
+    )
     llm_model: str = Field(
         default="llama3.2:3b",
         description="Model ID for the selected LLM provider",

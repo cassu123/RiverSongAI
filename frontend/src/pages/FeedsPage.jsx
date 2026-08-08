@@ -20,13 +20,13 @@ export default function FeedsPage({ setAction }) {
   }, [setAction])
 
   return (
-    <div className="rs-foyer">
-      <div className="rs-foyer-head" style={{ marginBottom: 24 }}>
+    <div className="rs-foyer rs-feeds-page">
+      <header className="rs-foyer-head rs-feeds-head">
         <h1 className="rs-greeting">Global Intelligence</h1>
         <div className="rs-greeting-sub">
           Live feeds across weather, markets, air traffic, space, earth, and whats happening right now.
         </div>
-      </div>
+      </header>
       <FeedTabsContainer token={token} />
     </div>
   )

@@ -215,7 +215,7 @@ body[data-env="unsc"] { --card-texture: linear-gradient(180deg, rgba(255,255,255
 
 body {
   font-family: var(--font-base);
-  background: var(--bg-base);
+  background-color: var(--bg-base);
   color: var(--fg);
-  transition: background 1.0s var(--rs-motion-curve), color 1.0s var(--rs-motion-curve);
+  transition: background-color 1.0s var(--rs-motion-curve), color 1.0s var(--rs-motion-curve);
 }

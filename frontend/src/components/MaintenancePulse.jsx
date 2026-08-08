@@ -107,7 +107,7 @@ function fmtDays(d) {
   return `${d}d`;
 }
 
-function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
+function CheckPointRow({ cp, token, vehicleId, onUpdated, isNonRoad }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     description:    cp.description    ?? '',
@@ -318,7 +318,7 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated }) {
   );
 }
 
-function SpecsEditor({ vehicle, token, onUpdated }) {
+function SpecsEditor({ vehicle, token, onUpdated, isNonRoad }) {
   const [newPoint, setNewPoint] = useState(BLANK_CP);
   const [showAdd,  setShowAdd]  = useState(false);
   const [busy, setBusy] = useState(false);
@@ -378,7 +378,7 @@ function SpecsEditor({ vehicle, token, onUpdated }) {
 
         <ul className="spec-edit-list cp-list">
           {(vehicle.check_points || []).map((cp) => (
-            <CheckPointRow key={cp.id} cp={cp} token={token} vehicleId={vehicle.id} onUpdated={onUpdated} />
+            <CheckPointRow key={cp.id} cp={cp} token={token} vehicleId={vehicle.id} onUpdated={onUpdated} isNonRoad={isNonRoad} />
           ))}
         </ul>
 
@@ -1243,6 +1243,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
   // -------------------------------------------------------------------------
 
   const currentVehicle = vehicles.find((v) => v.id === selectedId);
+  const isNonRoad = ['atv', 'other'].includes(currentVehicle?.vehicle_type);
 
   // Cycle: pending → done → skip → pending
   const handlePointToggle = (idx) =>
@@ -1654,7 +1655,7 @@ export default function MaintenancePulse({ preselectedId, onBack }) {
       {formMode === 'none' && view === 'specs' && currentVehicle && (
         <div className="rs-card is-wide animate-fade-in" style={{ marginBottom: 24 }}>
           <h3 className="rs-card-label" style={{ marginBottom: 16 }}>&gt; SPECS EDITOR // {vehicleLabel.toUpperCase()}</h3>
-          <SpecsEditor vehicle={currentVehicle} token={token} onUpdated={fetchVehicles} />
+          <SpecsEditor vehicle={currentVehicle} token={token} onUpdated={fetchVehicles} isNonRoad={isNonRoad} />
         </div>
       )}
 

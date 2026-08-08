@@ -38,9 +38,27 @@ do_backup() {
     STAMP="$(date '+%Y%m%d-%H%M%S')"
     ARCHIVE="$BACKUP_DIR/river-song-$STAMP.tar.gz"
     step "Backing up databases and .env to $ARCHIVE"
+    # nullglob: without it a data/ with no .db files leaves the pattern
+    # unexpanded, tar is handed the literal string "data/*.db", fails to stat
+    # it, and `set -e` aborts the whole deploy at the backup step — before it
+    # has done anything, but with a confusing error. Scoped and restored so the
+    # rest of the script keeps normal glob behaviour.
+    shopt -s nullglob
     FILES=(data/*.db)
+    shopt -u nullglob
+    if [[ ${#FILES[@]} -eq 0 ]]; then
+        echo "    (no databases in data/ yet — backing up config only)"
+    fi
     [[ -f .env ]] && FILES+=(.env)
     [[ -f data/.token_encryption_key ]] && FILES+=(data/.token_encryption_key)
+    if [[ ${#FILES[@]} -eq 0 ]]; then
+        # tar exits non-zero on an empty file list ("Cowardly refusing to
+        # create an empty archive"), which under set -e would abort a deploy
+        # that has nothing to lose in the first place — a first run on a fresh
+        # box. Say so and carry on.
+        step "Nothing to back up yet (no databases, no .env) — skipping"
+        return 0
+    fi
     tar -czf "$ARCHIVE" "${FILES[@]}"
     chmod 600 "$ARCHIVE"
     # Keep the 14 most recent backups
@@ -71,6 +89,13 @@ step "Pulling latest from GitHub"
 # local churn that blocks the next fast-forward pull. It's a generated file —
 # discard any such local changes so the pull always succeeds.
 git checkout -- frontend/package-lock.json 2>/dev/null || true
+# Same story for .npm_package.sha256, with one extra wrinkle: it used to be
+# committed, and the pull that removes it from the index would refuse to run
+# while the on-disk copy differs from HEAD — which it always does here, because
+# the hash is computed after npm install has rewritten package-lock.json. Reset
+# it so that pull can delete it. Once it is gone from the index this is a no-op
+# (the file is untracked and ignored), so the line is safe to keep forever.
+git checkout -- .npm_package.sha256 2>/dev/null || true
 git pull --ff-only origin main
 
 step "Activating virtualenv"

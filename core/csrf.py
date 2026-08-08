@@ -55,7 +55,7 @@ from __future__ import annotations
 import hmac
 import logging
 import secrets
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Mapping
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ def csrf_required(
     method: str,
     path: str,
     cookies: dict,
-    headers: dict,
+    headers: Mapping,
     exempt_paths: Iterable[str] = EXEMPT_PATHS,
 ) -> bool:
     """Whether this request must present a matching CSRF token.

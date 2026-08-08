@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import time
-import socket
 from typing import Dict, Tuple
 from daemons.base_daemon import BaseDaemon
 from providers.memory.sqlite_store import SQLiteStore
@@ -37,13 +36,14 @@ class VectorDiscoveryDaemon(BaseDaemon):
             if info:
                 props = {k.decode('utf-8'): v.decode('utf-8') for k, v in info.properties.items()}
                 unit_id = props.get("unit_id")
-                proto_version = int(props.get("proto_version", 1))
-                if unit_id and info.parsed_addresses():
-                    try:
-                        ip_address = socket.inet_ntoa(info.parsed_addresses()[0])
-                    except (OSError, ValueError, IndexError) as exc:
-                        logger.debug("Could not parse mDNS address for %s: %s", unit_id, exc)
-                        ip_address = "unknown"
+                try:
+                    proto_version = int(props.get("proto_version", 1))
+                except (TypeError, ValueError):
+                    proto_version = 1
+                addresses = info.parsed_addresses()
+                if unit_id and addresses:
+                    # parsed_addresses() already returns dotted-quad strings.
+                    ip_address = addresses[0]
                     self._discovered[unit_id] = (time.time(), ip_address, proto_version)
 
     async def _main_loop(self):

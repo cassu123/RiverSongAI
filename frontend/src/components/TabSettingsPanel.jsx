@@ -23,17 +23,16 @@ export function InlineSettingsSection({
     else setInternalOpen(next)
   }
   return (
-    <div className="rs-card" style={{ marginBottom: 20, overflow: 'hidden' }}>
-      <div
+    /* Was a nested .rs-card. A card inside a card gives the double-bezel
+       treatment twice over, which is what made the Feeds tabs read as a stack
+       of boxes-within-boxes; DESIGN.md 7 bans it outright. This is now a
+       divider-delimited section instead. */
+    <section className={`rs-tabset ${open ? 'is-open' : ''}`}>
+      <button
+        type="button"
+        className="rs-tabset-head"
         onClick={() => setOpen(!open)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 16px',
-          cursor: 'pointer',
-          userSelect: 'none',
-        }}
+        aria-expanded={open}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
           {icon && (
@@ -73,19 +72,13 @@ export function InlineSettingsSection({
         >
           expand_more
         </span>
-      </div>
+      </button>
       {open && (
-        <div
-          className="animate-fade-in"
-          style={{
-            borderTop: '1px solid var(--md-outline-variant)',
-            padding: '16px',
-          }}
-        >
+        <div className="rs-tabset-body animate-fade-in">
           {children}
         </div>
       )}
-    </div>
+    </section>
   )
 }
 

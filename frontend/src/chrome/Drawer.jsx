@@ -2,9 +2,19 @@ import React from 'react'
 import RsMark from '../components/RsMark.jsx'
 import EnvIcon from './EnvIcon.jsx'
 import { NAV_GROUPS } from '../utils/constants.js'
+import { useMediaQuery, BREAKPOINTS } from '../hooks/useBreakpoint.js'
 
 /**
- * Drawer — overlay navigation. Replaces the permanent Sidebar.
+ * Drawer — primary navigation.
+ *
+ * Renders the same markup at every size; CSS decides the shape:
+ *   < 768px   off-canvas overlay drawer behind the hamburger
+ *   768–1199  persistent 88px icon+label rail
+ *   >= 1200   persistent 260px drawer
+ *
+ * The `open` prop only means anything in the overlay case. From 768px up the
+ * nav is always on screen, so it must not be marked aria-hidden and must not
+ * trap the page behind a scrim.
  */
 export default function Drawer({
   open,
@@ -22,9 +32,14 @@ export default function Drawer({
     ? displayName.trim().split(/\s+/).map(w => w ? w[0] : '').join('').slice(0, 2).toUpperCase()
     : 'RS'
 
+  // At/above md the nav is permanently visible (rail or full drawer).
+  const isPersistent = useMediaQuery(`(min-width: ${BREAKPOINTS.md}px)`)
+
   function navigate(key) {
     onNavigate(key)
-    onClose()
+    // Closing is meaningless for a persistent rail, and calling it would leave
+    // the shell's `drawerOpen` state out of sync with what's on screen.
+    if (!isPersistent) onClose()
   }
 
   // Filter NAV_GROUPS based on admin mode and enabled features
@@ -41,15 +56,19 @@ export default function Drawer({
 
   return (
     <>
-      <div
-        className={`rs-drawer-scrim ${open ? 'is-open' : ''}`}
-        onClick={onClose}
-        aria-hidden={!open}
-      />
+      {!isPersistent && (
+        <div
+          className={`rs-drawer-scrim ${open ? 'is-open' : ''}`}
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
       <nav
         className={`rs-drawer ${open ? 'is-open' : ''}`}
         aria-label="Primary"
-        aria-hidden={!open}
+        // Only the off-canvas drawer is hidden when closed. A visible rail
+        // marked aria-hidden would be unreachable to assistive tech.
+        aria-hidden={isPersistent ? undefined : !open}
       >
         <div className="rs-drawer-head">
           <span className="rs-drawer-title">
@@ -82,6 +101,8 @@ export default function Drawer({
                           key={itemKey}
                           className={`rs-drawer-cell ${currentPage === it.key ? 'is-active' : ''}`}
                           onClick={() => navigate(it.key)}
+                          title={it.label}
+                          aria-current={currentPage === it.key ? 'page' : undefined}
                         >
                           <div className="rs-card-inner" style={{ padding: '12px 8px', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                             <EnvIcon name={it.icon || it.key} className="rs-icon" />
@@ -95,6 +116,8 @@ export default function Drawer({
                         key={itemKey}
                         className={`rs-drawer-item ${currentPage === it.key ? 'is-active' : ''} ${danger ? 'is-danger' : ''}`}
                         onClick={() => navigate(it.key)}
+                        title={it.label}
+                        aria-current={currentPage === it.key ? 'page' : undefined}
                       >
                         <EnvIcon name={it.icon || it.key} className="rs-icon" />
                         <span style={{ fontWeight: 700, letterSpacing: '-0.01em' }}>{it.label}</span>
@@ -130,6 +153,7 @@ export default function Drawer({
               className={`rs-drawer-toggle ${adminMode ? 'is-on' : ''}`}
               onClick={() => onAdminToggle(!adminMode)}
               aria-pressed={adminMode}
+              title="Admin mode"
             >
               <span>Admin mode</span>
               <span className="rs-toggle-track" aria-hidden="true">

@@ -11,7 +11,7 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-export default function ChatInterface({ setAction, onNavigate, initialIntent, embedded, onClose, vehicleId }) {
+export default function ChatInterface({ setAction, onNavigate, initialIntent, onIntentConsumed, embedded, onClose, vehicleId }) {
   const { token, user } = useAuth()
 
   const [models,          setModels]          = useState({ cloud: [], local: [] })
@@ -44,6 +44,14 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, em
     if (vehicleId) q.vehicle_id = vehicleId;
     return q;
   }, [vehicleId]);
+
+  useEffect(() => {
+    if (initialIntent) {
+      setInputText(initialIntent.text || '')
+      setTimeout(() => handleSend(initialIntent.text, initialIntent.docId), 50)
+      if (onIntentConsumed) onIntentConsumed()
+    }
+  }, [initialIntent, handleSend, onIntentConsumed])
 
   // Initialize Session Hook
   const {

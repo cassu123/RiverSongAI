@@ -12,12 +12,13 @@ _APRISE: apprise.Apprise | None = None
 def _get_client() -> apprise.Apprise:
     global _APRISE
     if _APRISE is None:
-        _APRISE = apprise.Apprise()
+        client = apprise.Apprise()
         urls = (os.getenv("APPRISE_URLS") or "").split(",")
         for url in urls:
             url = url.strip()
             if url:
-                _APRISE.add(url)
+                client.add(url)
+        _APRISE = client
     return _APRISE
 
 

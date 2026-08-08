@@ -486,23 +486,33 @@
 
 .rs-greeting {
   font-size: var(--rs-fs-h1);
-  line-height: 1.05;
+  line-height: 1.25;
   letter-spacing: -0.04em;
   font-weight: 400;
   margin: 0;
+  margin-block-end: 8px;
   color: var(--md-on-surface);
   text-wrap: balance;
   font-family: var(--font-mood, var(--font-base));
 }
 
 .rs-greeting-sub {
+  /* Used by 23 pages, and on several of them for a whole sentence rather than
+     a short status line. The telemetry voice stays — DESIGN.md 3 asks for it —
+     but three lines of tracked uppercase accent over a photographic Stage was
+     unreadable on the bright skins. Fixes: cap the measure so it stops running
+     to three lines, open the leading, and carry a scrim so it holds over sand
+     as well as night. */
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: var(--primary);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
+  line-height: 1.6;
   text-transform: uppercase;
-  margin-block-start: 8px;
+  margin-block-start: 16px;
+  max-inline-size: 62ch;
   text-wrap: balance;
+  text-shadow: 0 1px 10px color-mix(in srgb, var(--bg-base) 88%, transparent);
 }
 
 /* ── LOADING SCREEN ─────────────────────────────────────────────────────────── */

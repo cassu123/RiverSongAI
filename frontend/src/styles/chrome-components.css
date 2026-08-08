@@ -11,22 +11,24 @@
   background: color-mix(in srgb, var(--md-surface-container-low) 45%, transparent);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  /* Double-Bezel Implementation via CSS */
-  border: 1px solid rgba(255, 255, 255, 0.12); /* Whisper border */
-  border-radius: calc(2rem - 4px); /* Inner radius */
+  /* Softened Double-Bezel Implementation via CSS */
+  border: 1px solid var(--card-border-alpha, rgba(255, 255, 255, 0.08));
+  border-radius: var(--card-radius, 1.5rem);
   padding: clamp(20px, 5cqi, 32px);
   box-shadow: 
-    0 0 0 4px rgba(5, 5, 5, 0.6), /* Dark outer shell */
-    0 0 0 5px rgba(255, 255, 255, 0.05), /* Outer shell edge */
     0 8px 32px -12px rgba(0,0,0,0.5), /* Drop shadow */
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.08); /* Inner refraction bezel */
+    inset 0 1px 1px 0 var(--inner-refraction, rgba(255, 255, 255, 0.12)); /* Inner refraction bezel */
   transition: background var(--rs-motion-fast) var(--rs-motion-curve),
               border-color var(--rs-motion-fast) var(--rs-motion-curve),
               transform var(--rs-motion-fast) var(--rs-motion-curve),
               box-shadow var(--rs-motion-fast) var(--rs-motion-curve);
   overflow: hidden;
   min-width: 0;
-  word-break: break-word;
+  /* `word-break: break-word` shatters ordinary words at any character once a
+     container gets tight, which is how button labels rendered as "NOTE/S" and
+     "KITCH/EN". `overflow-wrap` only breaks a word that genuinely cannot fit
+     on a line of its own, which is the behavior actually wanted here. */
+  overflow-wrap: break-word;
 }
 
 .rs-card::before {
@@ -52,10 +54,8 @@
   background: color-mix(in srgb, var(--md-surface-container-high) 65%, transparent);
   border-color: rgba(255, 255, 255, 0.15);
   box-shadow: 
-    0 0 0 4px rgba(5, 5, 5, 0.8),
-    0 0 0 5px rgba(255, 255, 255, 0.08),
     0 16px 64px -16px rgba(0,0,0,0.6),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+    inset 0 1px 1px 0 var(--inner-refraction, rgba(255, 255, 255, 0.18));
 }
 
 .rs-card.is-tappable { cursor: pointer; }
@@ -580,7 +580,8 @@
   gap: 14px;
   cursor: pointer;
   user-select: none;
-  padding: 8px 0;
+  padding: 10px 0;
+  min-height: 44px;
 }
 
 .toggle-label {
@@ -636,7 +637,8 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 8px 0;
+  padding: 10px 0;
+  min-height: 44px;
 }
 
 .select-label {
@@ -652,11 +654,12 @@
   background: var(--bg-card);
   color: var(--primary);
   border: 1px solid var(--border-bright);
-  border-radius: 2px;
-  padding: 6px 12px;
+  border-radius: 4px;
+  padding: 10px 14px;
   appearance: none;
   cursor: pointer;
   min-width: 140px;
+  min-height: 44px;
 }
 
 .settings-select:focus {
@@ -682,10 +685,11 @@
   color: var(--md-on-surface);
   border: 1px solid var(--md-outline-variant);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   outline: none;
   transition: border-color 180ms;
   min-width: 0;
+  min-height: 44px;
 }
 
 .settings-input:focus {

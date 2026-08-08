@@ -37,7 +37,7 @@ import os
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Any
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,7 @@ try:
     import audible
     _AUDIBLE_AVAILABLE = True
 except ImportError:
+    audible = None  # type: ignore
     _AUDIBLE_AVAILABLE = False
     logger.warning("audible package not installed. Run: pip install audible")
 
@@ -96,7 +97,7 @@ class AudibleProvider:
     def _auth_file_for(self, user_id: str) -> str:
         return os.path.join(self._auth_base, f"{user_id}.json")
 
-    def _load_auth(self, user_id: str) -> "audible.Authenticator":
+    def _load_auth(self, user_id: str) -> Any:
         if not _AUDIBLE_AVAILABLE:
             raise RuntimeError(
                 "audible package not installed. Run: pip install audible")
@@ -107,7 +108,7 @@ class AudibleProvider:
                 "Run: python -m providers.reading.audible --setup "
                 f"--user-id {user_id}"
             )
-        return audible.Authenticator.from_file(path)
+        return audible.Authenticator.from_file(path)  # type: ignore
 
     def setup_auth(self, user_id: str, username: str, password: str) -> None:
         """
@@ -118,7 +119,7 @@ class AudibleProvider:
         if not _AUDIBLE_AVAILABLE:
             raise RuntimeError(
                 "audible package not installed. Run: pip install audible")
-        auth = audible.Authenticator.from_login(
+        auth = audible.Authenticator.from_login(  # type: ignore
             username=username,
             password=password,
             locale=self._country_code,
@@ -135,7 +136,7 @@ class AudibleProvider:
     def _sync_get_library(self, user_id: str,
                           limit: int) -> List[AudiobookEntry]:
         auth = self._load_auth(user_id)
-        with audible.Client(auth=auth) as client:
+        with audible.Client(auth=auth) as client:  # type: ignore
             resp = client.get(
                 "library",
                 num_results=limit,
@@ -152,7 +153,7 @@ class AudibleProvider:
     def _sync_get_last_listened(
             self, user_id: str) -> Optional[AudiobookEntry]:
         auth = self._load_auth(user_id)
-        with audible.Client(auth=auth) as client:
+        with audible.Client(auth=auth) as client:  # type: ignore
             resp = client.get(
                 "library",
                 num_results=50,

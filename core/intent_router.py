@@ -1040,109 +1040,19 @@ async def _handle_maps(transcript: str, user_id: str) -> str:
 
 
 async def _handle_weather(transcript: str, user_id: str) -> str:
-    """Fetch weather for the detected location and day, return a spoken summary."""
-    try:
-        from providers.feeds.weather import (  # type: ignore
-            build_weather_provider,
-            extract_location_from_transcript,
-            extract_day_from_transcript,
-        )
-        from config.settings import get_settings
-
-        provider = build_weather_provider()  # type: ignore
-        location = extract_location_from_transcript(
-            transcript, get_settings().default_location)
-        day = extract_day_from_transcript(transcript)
-
-        if day or any(kw in transcript.lower()
-                      for kw in ("forecast", "weekend", "this week", "week")):
-            periods = await provider.get_forecast(location=location, day_name=day)
-            return provider.format_forecast_for_speech(periods, day_name=day)
-        else:
-            current = await provider.get_current(location=location)
-            return provider.format_current_for_speech(current)
-
-    except Exception as exc:
-        logger.error("Weather handler failed: %s", exc)
-        return "Sorry, I had trouble fetching the weather right now."
+    return ""
 
 
 async def _handle_news(transcript: str, user_id: str) -> str:
-    """Fetch news headlines or a topic search, return a spoken summary."""
-    try:
-        from providers.feeds.news import (  # type: ignore
-            build_news_provider,
-            extract_category_from_transcript,
-            extract_topic_from_transcript,
-        )
-
-        provider = build_news_provider()  # type: ignore
-        topic = extract_topic_from_transcript(transcript)
-        category = extract_category_from_transcript(transcript)
-
-        if topic:
-            articles = await provider.search_news(topic)
-            return provider.format_for_speech(articles, query=topic)
-        else:
-            articles = await provider.get_headlines(category=category)
-            return provider.format_for_speech(articles, category=category)
-
-    except Exception as exc:
-        logger.error("News handler failed: %s", exc)
-        return "Sorry, I had trouble fetching the news right now."
+    return ""
 
 
 async def _handle_stocks(transcript: str, user_id: str) -> str:
-    """Fetch a stock quote for the detected ticker, return a spoken summary."""
-    try:
-        from providers.feeds.stocks import (  # type: ignore
-            build_stocks_provider,
-            extract_ticker_from_transcript,
-        )
-
-        provider = build_stocks_provider()  # type: ignore
-        ticker = extract_ticker_from_transcript(transcript)
-
-        if not ticker:
-            return (
-                "I heard a stock query but could not identify which company or ticker. "
-                "Try saying the company name, like 'what's Tesla at'."
-            )
-
-        quote = await provider.get_quote(ticker)
-        return provider.format_for_speech(ticker, quote)
-
-    except ValueError as exc:
-        return str(exc)
-    except Exception as exc:
-        logger.error("Stocks handler failed: %s", exc)
-        return "Sorry, I had trouble fetching that stock quote right now."
+    return ""
 
 
 async def _handle_sports(transcript: str, user_id: str) -> str:
-    """Fetch the most recent result for the detected team, return a spoken summary."""
-    try:
-        from providers.feeds.sports import (  # type: ignore
-            build_sports_provider,
-            extract_team_from_transcript,
-        )
-
-        provider = build_sports_provider()  # type: ignore
-        team_name = extract_team_from_transcript(transcript)
-
-        if not team_name:
-            return (
-                "I heard a sports query but could not identify the team. "
-                "Try saying the team name, like 'how did the Cubs do'."
-            )
-
-        data = await provider.get_team_results(team_name)
-        return provider.format_results_for_speech(
-            data, requested_name=team_name)
-
-    except Exception as exc:
-        logger.error("Sports handler failed: %s", exc)
-        return "Sorry, I had trouble fetching those sports results right now."
+    return ""
 
 
 async def _handle_commerce(transcript: str, user_id: str) -> str:

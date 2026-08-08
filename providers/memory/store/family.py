@@ -18,7 +18,8 @@ from providers.memory.store._util import (
 )
 
 
-class FamilyStoreMixin:
+from ._util import StoreProtocol
+class FamilyStoreMixin(StoreProtocol):
     """Family groups, memberships and routines.
 
     Mixin for SQLiteStore: relies on self._run / self._get_conn from the
@@ -218,11 +219,11 @@ class FamilyStoreMixin:
             "days": json.loads(row["days"] or "[]"),
             "prompt": row["prompt"],
             "type": row["type"],
-            "severity": row.get("severity", "info"),
+            "severity": row["severity"] if "severity" in row.keys() else "info",
             "webhook_url": row["webhook_url"],
             "enabled": bool(row["enabled"]),
             "last_run": row["last_run"],
-            "last_output": row.get("last_output"),
+            "last_output": row["last_output"] if "last_output" in row.keys() else None,
             "created_at": row["created_at"],
             "updated_at": row["updated_at"],
         }

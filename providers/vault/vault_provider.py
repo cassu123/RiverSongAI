@@ -12,7 +12,6 @@ import logging
 import os
 import re
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -21,6 +20,7 @@ from watchdog.events import FileSystemEventHandler
 
 from config.settings import get_settings
 from core.family import resolve_module_owner
+from core.timeutil import local_now, local_today_str
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +208,7 @@ class VaultProvider:
         ``{virtual_path, date, content}``.
         """
         if not date_str:
-            date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            date_str = local_today_str()
         virtual_path = f"{VROOT_PERSONAL}/Daily/{date_str}.md"
         template = (
             f"---\ndate: {date_str}\nkind: daily\n---\n\n"
@@ -232,14 +232,17 @@ class VaultProvider:
         """
         Append a timestamped section to today's (or ``date_str``'s) daily note.
         """
+        now = local_now()
         if not date_str:
-            date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            date_str = now.strftime("%Y-%m-%d")
         virtual_path = f"{VROOT_PERSONAL}/Daily/{date_str}.md"
         template = (
             f"---\ndate: {date_str}\nkind: daily\n---\n\n"
             f"# {date_str}\n\n"
         )
-        hhmm = datetime.now(timezone.utc).strftime("%H:%M UTC")
+        # Local wall-clock: an entry stamped "23:40 UTC" inside a note dated by
+        # local midnight reads as belonging to a different day than it does.
+        hhmm = now.strftime("%H:%M")
         entry = f"\n## {hhmm} — {section_title}\n\n{body.strip()}\n"
         return await self.append_to_note(user_id, virtual_path, entry, default_template=template)
 
@@ -498,9 +501,10 @@ def start_vault_watcher(app):
     provider = VaultProvider(store=app.state.memory_manager._store)
     handler = VaultWatcher(provider, loop)
 
-    _observer = Observer()
-    _observer.schedule(handler, str(base_vault), recursive=True)
-    _observer.start()
+    obs = Observer()
+    obs.schedule(handler, str(base_vault), recursive=True)
+    obs.start()
+    _observer = obs
     logger.info("CHRONOS vault watcher started at %s", base_vault)
 
     # Initial indexing walk (A.2.2)

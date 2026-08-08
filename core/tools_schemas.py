@@ -347,53 +347,6 @@ TOOL_SCHEMAS = [
         }
     },
     {
-        "name": "get_vehicle_status",
-        "description": "Get the maintenance timeline status (next up, upcoming, overdue) for a specific vehicle.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "vehicle_name": {"type": "string", "description": "Name or make/model of the vehicle."}
-            },
-            "required": ["vehicle_name"]
-        }
-    },
-    {
-        "name": "get_vehicle_spec",
-        "description": "Look up checkpoint specs (torque, fluid, volume) for a vehicle.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "vehicle_name": {"type": "string", "description": "Name of the vehicle."},
-                "item": {"type": "string", "description": "What to look up (e.g., drain plug torque, engine oil)."}
-            },
-            "required": ["vehicle_name", "item"]
-        }
-    },
-    {
-        "name": "query_vehicle_manual",
-        "description": "Ask a question about a vehicle by searching its uploaded owner's manual.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "vehicle_name": {"type": "string", "description": "Name of the vehicle."},
-                "question": {"type": "string", "description": "Question to answer from the manual."}
-            },
-            "required": ["vehicle_name", "question"]
-        }
-    },
-    {
-        "name": "record_odometer",
-        "description": "Record a new odometer/mileage reading for a vehicle.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "vehicle_name": {"type": "string", "description": "Name of the vehicle."},
-                "value": {"type": "integer", "description": "Odometer reading."}
-            },
-            "required": ["vehicle_name", "value"]
-        }
-    },
-    {
         "name": "add_recipe_to_library",
         "description": "Save a new recipe to the user's culinary library.",
         "input_schema": {

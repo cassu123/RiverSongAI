@@ -149,6 +149,10 @@ _Session = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
 Base.metadata.create_all(_engine)
 
 
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 def _migrate_culinary_schema() -> None:
     import sqlalchemy
     with _engine.connect() as conn:
@@ -2179,7 +2183,7 @@ class ShoppingItemUpdate(BaseModel):
     checked: Optional[bool] = None
 
 @router.get("/grocery")
-async def get_shopping_list(request: Request, db: Session = Depends(get_db)):
+async def get_grocery_list(request: Request, db: Session = Depends(get_db)):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     
@@ -2500,9 +2504,8 @@ async def create_prep_from_plan(body: MealPlanPrepRequest, request: Request, db:
         pr = PrepSessionRecipe(
             session_id=session.id,
             recipe_id=recipe.id,
-            target_servings=target_servings,
+            servings_target=target_servings,
             scaled_ingredients_json=json.dumps(scaled),
-            scaling_factor=factor
         )
         db.add(pr)
         

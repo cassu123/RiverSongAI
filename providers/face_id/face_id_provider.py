@@ -182,9 +182,9 @@ class FaceIDProvider:
             raise FaceModelsUnavailable(self._unavailable_reason)
 
         try:
-            self._detector = cv2.FaceDetectorYN_create(
+            self._detector = cv2.FaceDetectorYN_create(  # type: ignore
                 detector_path, "", (320, 320), score_threshold=0.8)
-            self._recognizer = cv2.FaceRecognizerSF_create(recognizer_path, "")
+            self._recognizer = cv2.FaceRecognizerSF_create(recognizer_path, "")  # type: ignore
         except Exception as exc:
             self._unavailable_reason = f"Face models failed to load: {exc}"
             self._detector = self._recognizer = None
@@ -318,7 +318,7 @@ class FaceIDProvider:
 
             manifest_path = os.path.join(user_dir, "manifest.json")
             now = datetime.now(timezone.utc).isoformat()
-            manifest = {"enrolled_at": now}
+            manifest: Dict[str, Any] = {"enrolled_at": now}
             if os.path.exists(manifest_path):
                 try:
                     with open(manifest_path) as handle:

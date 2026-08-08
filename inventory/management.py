@@ -118,7 +118,17 @@ def create_home(db: Session, owner: InvUser, name: str, description: str = "", q
     return home
 
 
-def get_homes_for_user(db: Session, user: InvUser) -> list[InvHome]:
+def get_homes_for_user(db: Session, user) -> list[InvHome]:
+    """List homes owned or collaborated on.
+
+    Accepts either an InvUser instance or a user id (str/UUID) — call sites
+    use both forms.
+    """
+    if not isinstance(user, InvUser):
+        resolved = db.query(InvUser).filter(InvUser.id == _uid(user)).first()
+        if not resolved:
+            raise NoResultFound(f"User '{user}' not found.")
+        user = resolved
     owned       = db.query(InvHome).filter(InvHome.owner_id == user.id).all()
     collaborated = user.homes_collaborating
     seen = {h.id for h in owned}
@@ -421,7 +431,7 @@ def generate_insurance_manifest(db: Session, user_id: str, home_id: str) -> dict
     items = (
         db.query(InventoryItem)
         .filter(
-            InventoryItem.home_id    == home_id,
+            InventoryItem.home_id    == home.id,
             InventoryItem.asset_status == AssetStatus.SERVICEABLE,
         )
         .order_by(InventoryItem.category, InventoryItem.name)

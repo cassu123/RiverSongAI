@@ -102,17 +102,27 @@ export default function UnitDetail() {
 
   const manualTimer = useRef(null)
 
+  const stopManual = useCallback(() => {
+    if (manualTimer.current) {
+      clearInterval(manualTimer.current)
+      manualTimer.current = null
+    }
+  }, [])
+
+  useEffect(() => stopManual, [stopManual])
+  useEffect(() => { if (!manualMode) stopManual() }, [manualMode, stopManual])
+
   const bindManualKey = (action, payload = {}) => {
     const start = () => {
       if (!manualMode) return
       sendCommand(action, payload)
-      if (manualTimer.current) clearInterval(manualTimer.current)
+      stopManual()
       manualTimer.current = setInterval(() => sendCommand(action, payload), 500)
     }
-    const stop = () => {
-      if (manualTimer.current) clearInterval(manualTimer.current)
+    return {
+      onMouseDown: start, onMouseUp: stopManual, onMouseLeave: stopManual,
+      onTouchStart: start, onTouchEnd: stopManual, onTouchCancel: stopManual,
     }
-    return { onMouseDown: start, onMouseUp: stop, onMouseLeave: stop, onTouchStart: start, onTouchEnd: stop }
   }
 
   if (!unit) return <div style={{ padding: 20 }}>Loading unit...</div>

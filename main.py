@@ -493,6 +493,7 @@ def create_app() -> FastAPI:
         chat_sessions_router,
         proactive_router,
         sweeps_router,
+        briefing_router,
     )
 
     app.include_router(auth_router)
@@ -510,6 +511,7 @@ def create_app() -> FastAPI:
     app.include_router(commerce_router)
     app.include_router(vehicles_router)
     app.include_router(feeds_router)
+    app.include_router(briefing_router)
     app.include_router(reading_router)
     app.include_router(features_router)
     app.include_router(parent_router)

@@ -15,6 +15,7 @@ class RoomState:
     last_updated: datetime = field(
         default_factory=lambda: datetime.now(
             timezone.utc))
+    _entities: Dict[str, str] = field(default_factory=dict)
 
     def is_stale(self, max_age_minutes: int = 30) -> bool:
         return (datetime.now(timezone.utc) -
@@ -81,8 +82,6 @@ class ContextEngine:
             # To count active lights, we'd need to store the state of all lights.
             # We'll use a hack: if it's on, we set it to True.
             # For a proper active lights count, we need to track individual entities.
-            if not hasattr(rs, '_entities'):
-                rs._entities = {}
             rs._entities[entity_id] = state_val
             
             # Recalculate lights_on
@@ -94,8 +93,6 @@ class ContextEngine:
             except ValueError:
                 pass
         elif "occupancy" in entity_id or "motion" in entity_id or "presence" in entity_id:
-            if not hasattr(rs, '_entities'):
-                rs._entities = {}
             rs._entities[entity_id] = state_val
             
             is_active = any(v in ("on", "detected", "occupied", "home") for k, v in rs._entities.items() if "occupancy" in k or "motion" in k or "presence" in k)
@@ -125,7 +122,7 @@ class ContextEngine:
         # Return aggregate view per room
         res = {}
         for name, r in self._rooms.items():
-            active_lights = sum(1 for k, v in getattr(r, '_entities', {}).items() if k.startswith("light.") and v == "on")
+            active_lights = sum(1 for k, v in r._entities.items() if k.startswith("light.") and v == "on")
             d = r.to_dict()
             d["active_lights"] = active_lights
             res[name] = d
@@ -137,7 +134,7 @@ class ContextEngine:
         for name, r in self._rooms.items():
             if r.is_stale():
                 continue
-            active_lights = sum(1 for k, v in getattr(r, '_entities', {}).items() if k.startswith("light.") and v == "on")
+            active_lights = sum(1 for k, v in r._entities.items() if k.startswith("light.") and v == "on")
             active_rooms.append(
                 f"- {name.replace('_', ' ').title()}: {r.persons} person(s) present, {r.activity}. "
                 f"Temp: {r.temperature if r.temperature else '??'}°F. Lights: {'On' if r.lights_on else 'Off'} ({active_lights} active)."

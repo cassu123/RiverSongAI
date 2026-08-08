@@ -43,6 +43,7 @@ try:
     import audible
     _AUDIBLE_AVAILABLE = True
 except ImportError:
+    audible = None  # type: ignore
     _AUDIBLE_AVAILABLE = False
 
 
@@ -92,7 +93,7 @@ class KindleProvider:
                 f"No Amazon auth found for user '{user_id}'. "
                 "Connect Audible first — Kindle shares the same Amazon account."
             )
-        auth = audible.Authenticator.from_file(path)
+        auth = audible.Authenticator.from_file(path)  # type: ignore
         return auth.access_token
 
     def _sync_get_library(self, user_id: str, limit: int) -> List[KindleBook]:

@@ -27,6 +27,7 @@ Service logs
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from datetime import datetime, timezone
@@ -48,6 +49,7 @@ from vehicles.management import (
     PersonNotFoundError,
     PersonStillAssignedError,
     VehicleNotFoundError,
+    _get_vehicle,
     add_check_point,
     add_fluid_spec,
     add_person,
@@ -781,8 +783,10 @@ def get_maintenance_timeline(
             item_data["projected_due_date"] = proj_date.isoformat(
             ) if proj_date else None
             item_data["is_overdue"] = is_overdue
-            item_data["delta_miles"] = delta_miles
-            item_data["delta_days"] = delta_days
+            # float('inf') is only a sort sentinel — JSON cannot carry it
+            # (Starlette serializes with allow_nan=False), so send None.
+            item_data["delta_miles"] = delta_miles if proj_miles is not None else None
+            item_data["delta_days"] = delta_days if proj_date is not None else None
             item_data["score"] = score
 
             timeline_items.append(item_data)
@@ -964,8 +968,9 @@ def list_parts(
 ):
     try:
         from vehicles.models import VehiclePart
+        v = _get_vehicle(db, vehicle_id, user_id)
         parts = db.query(VehiclePart).filter(
-            VehiclePart.vehicle_id == vehicle_id).all()
+            VehiclePart.vehicle_id == v.id).all()
         return [_ser_part(p) for p in parts]
     except Exception as e:
         raise _http(e)
@@ -977,17 +982,14 @@ def add_part(
     db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
 ):
     try:
-        from vehicles.models import VehiclePart, Vehicle
+        from vehicles.models import VehiclePart
         # Verify ownership
-        get_vehicles(db, user_id)
-        v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-        if not v:
-            raise not_found("Vehicle not found")
+        v = _get_vehicle(db, vehicle_id, user_id)
 
         alts = [a.model_dump() for a in body.alternatives]
 
         part = VehiclePart(
-            vehicle_id=vehicle_id,
+            vehicle_id=v.id,
             checkpoint_id=body.checkpoint_id,
             part_name=body.part_name,
             brand=body.brand,
@@ -1013,10 +1015,10 @@ def update_part(
 ):
     try:
         from vehicles.models import VehiclePart
-        get_vehicles(db, user_id)
+        v = _get_vehicle(db, vehicle_id, user_id)
         part = db.query(VehiclePart).filter(
             VehiclePart.id == part_id,
-            VehiclePart.vehicle_id == vehicle_id).first()
+            VehiclePart.vehicle_id == v.id).first()
         if not part:
             raise not_found("Part not found")
 
@@ -1045,12 +1047,9 @@ async def lookup_part_ai(
     from core.tools import _exec_web_search
     import json
     import re
-    from vehicles.models import VehiclePart, Vehicle
+    from vehicles.models import VehiclePart
     try:
-        get_vehicles(db, user_id)
-        v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-        if not v:
-            raise not_found("Vehicle not found")
+        v = _get_vehicle(db, vehicle_id, user_id)
 
         existing = db.query(VehiclePart).filter(VehiclePart.checkpoint_id == body.checkpoint_id).first()
         if existing:
@@ -1148,7 +1147,7 @@ If asking about parts, cite OEM and verified alternatives from the context above
         # We don't want history across queries for the one-off "ask" in the drawer, 
         # or maybe we do. The session_id caches it in DB. Let's just run text.
         queue: asyncio.Queue = asyncio.Queue()
-        async def on_event(evt: dict):
+        async def on_event(evt: dict | bytes):
             await queue.put(evt)
             
         task = asyncio.create_task(loop.run_text(body.question, on_event))
@@ -1204,7 +1203,7 @@ async def preview_manual(
         if not data:
             raise bad_request("Uploaded file is empty.")
         try:
-            pdf_text = extract_text_from_pdf(data)
+            pdf_text = await asyncio.to_thread(extract_text_from_pdf, data)
         except Exception as e:
             raise bad_request(f"Could not read PDF: {e}")
 
@@ -1215,8 +1214,10 @@ async def preview_manual(
         ollama_url = getattr(settings, "ollama_base_url", None) or None
         ollama_model = getattr(settings, "ollama_model", None) or "mistral"
 
-        items = parse_manual(
-            pdf_text,
+        # Blocking work (regex pass + up-to-120s Ollama call): keep it off
+        # the event loop.
+        items = await asyncio.to_thread(
+            parse_manual, pdf_text,
             ollama_url=ollama_url,
             ollama_model=ollama_model)
         return {
@@ -1250,7 +1251,7 @@ async def upload_manual(
             raise bad_request("Uploaded file is empty.")
 
         try:
-            pdf_text = extract_text_from_pdf(data)
+            pdf_text = await asyncio.to_thread(extract_text_from_pdf, data)
         except Exception as e:
             raise bad_request(f"Could not read PDF: {e}")
 
@@ -1262,8 +1263,10 @@ async def upload_manual(
         ollama_url = getattr(settings, "ollama_base_url", None) or None
         ollama_model = getattr(settings, "ollama_model", None) or "mistral"
 
-        items = parse_manual(
-            pdf_text,
+        # Blocking work (regex pass + up-to-120s Ollama call): keep it off
+        # the event loop.
+        items = await asyncio.to_thread(
+            parse_manual, pdf_text,
             ollama_url=ollama_url,
             ollama_model=ollama_model)
 
@@ -1462,51 +1465,9 @@ async def upload_receipt(
 # Media (Phase G3)
 # ---------------------------------------------------------------------------
 
-# from vehicles.media import process_and_save_media, get_media, delete_media
 from vehicles.models import MediaSource
 from fastapi.responses import FileResponse
 import mimetypes
-
-@router.post("/{vehicle_id}/media")
-async def upload_media(
-    vehicle_id: str,
-    file: UploadFile = File(...),
-    checkpoint_id: Optional[str] = None,
-    log_id: Optional[str] = None,
-    source: str = "user_upload",
-    title: Optional[str] = None,
-    db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
-):
-    try:
-        source_enum = MediaSource(source)
-    except ValueError:
-        source_enum = MediaSource.USER_UPLOAD
-        
-    mime = (file.content_type or "").lower().split(";")[0].strip()
-    try:
-        data = await file.read()
-        media = process_and_save_media(
-            db=db,
-            user_id=user_id,
-            vehicle_id=vehicle_id,
-            file_data=data,
-            filename=file.filename or "media",
-            mime_type=mime,
-            checkpoint_id=checkpoint_id,
-            log_id=log_id,
-            source=source_enum,
-            title=title
-        )
-        return {
-            "id": str(media.id),
-            "kind": media.kind.value,
-            "title": media.title,
-            "source": media.source.value,
-            "created_at": media.created_at.isoformat()
-        }
-    except Exception as e:
-        raise _http(e)
 
 @router.get("/{vehicle_id}/media")
 async def list_media(
@@ -1570,7 +1531,7 @@ async def archive_guide(
             checkpoint_id=uuid.UUID(checkpoint_id) if checkpoint_id else None,
             kind=MediaKind.LINK_ARCHIVE,
             title=f"Guide: {q}",
-            source=MediaSource.WEB_ARCHIVE,
+            source=MediaSource.URL,
             file_path="https://www.youtube.com/watch?v=dQw4w9WgXcQ", # Mock URL
         )
         db.add(media)
@@ -1588,25 +1549,6 @@ async def archive_guide(
     except Exception as e:
         raise _http(e)
 
-@router.get("/media/{media_id}")
-async def fetch_media(
-    media_id: str,
-    thumb: bool = False,
-    db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
-):
-    try:
-        media = get_media(db, user_id, media_id)
-        
-        path = media.thumb_path if thumb else media.file_path
-        if not path or not os.path.exists(path):
-            raise HTTPException(status_code=404, detail="File not found")
-            
-        mime_type, _ = mimetypes.guess_type(path)
-        return FileResponse(path, media_type=mime_type or "application/octet-stream")
-    except Exception as e:
-        raise _http(e)
-
 @router.delete("/media/{media_id}")
 async def remove_media(
     media_id: str,
@@ -1614,7 +1556,20 @@ async def remove_media(
     user_id: str = Depends(get_current_user_id),
 ):
     try:
-        delete_media(db, user_id, media_id)
+        from vehicles.models import VehicleMedia
+        m = db.query(VehicleMedia).filter(VehicleMedia.id == media_id).first()
+        if not m:
+            raise not_found("Media not found")
+        # Only the vehicle owner may delete its media
+        _get_vehicle(db, str(m.vehicle_id), user_id)
+        for path in (m.file_path, m.thumb_path):
+            if path and os.path.exists(path):
+                try:
+                    os.remove(path)
+                except OSError:
+                    logger.warning("Could not remove media file %s", path)
+        db.delete(m)
+        db.commit()
         return {"status": "ok"}
     except Exception as e:
         raise _http(e)
@@ -1664,9 +1619,12 @@ async def get_vehicle_media(
     m = db.query(VehicleMedia).filter(VehicleMedia.id == media_id).first()
     if not m:
         raise not_found("Media not found")
-        
-    # We should probably check if user has access to m.vehicle_id
-    
+
+    try:
+        _get_vehicle(db, str(m.vehicle_id), user_id)
+    except Exception as e:
+        raise _http(e)
+
     path = m.thumb_path if thumb and m.thumb_path else m.file_path
     if not path or not os.path.exists(path):
         raise not_found("File not found on disk")

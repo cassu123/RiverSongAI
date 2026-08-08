@@ -3,8 +3,14 @@
 # Covers: Python backend, React/Vite frontend, AI models, credentials, OS/IDE
 # =============================================================================
 
-# Local deploy state
+# Local deploy state. deploy.sh writes these to skip a reinstall when the
+# lockfile hasn't moved, so their contents describe one machine's venv and
+# node_modules -- never the repo. .npm_package.sha256 used to be committed,
+# which left every server with a permanently dirty tree (the hash it computes
+# after `npm install` rewrites package-lock.json never matches the committed
+# one) and made the file a `git pull --ff-only` conflict waiting to happen.
 .venv_requirements.sha256
+.npm_package.sha256
 
 
 # -----------------------------------------------------------------------------
@@ -194,6 +200,17 @@ venv.bak/
 # -----------------------------------------------------------------------------
 output.txt
 project_tree.txt
+
+# Debug screenshots dropped at the repo root. Four of these (~12.5 MB of PNGs)
+# were committed by hand and had to be deleted again; UI captures belong in an
+# issue or a PR comment, not in the tree. Scoped to the root so the Android
+# launcher icons and PWA assets under frontend/ are unaffected.
+# Bracket the first letter rather than listing each spelling: gitignore
+# matching is case-sensitive, and macOS/Windows both capitalise these by
+# default ("Screenshot 2026-08-05 at ...").
+/[Ss]creenshot*.png
+/[Ss]creenshot*.jpg
+/[Ss]creenshot*.jpeg
 
 # Conversation transcript files (Claude Code session logs)
 *.jsonl

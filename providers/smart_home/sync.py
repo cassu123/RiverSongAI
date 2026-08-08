@@ -38,6 +38,7 @@ async def sync_ha_entities() -> int:
         {% endfor %}
         {{ res | to_json }}
         '''
+        assert client._client is not None
         resp = await client._client.post(f"{client._base}/template", json={"template": template})
         resp.raise_for_status()
         

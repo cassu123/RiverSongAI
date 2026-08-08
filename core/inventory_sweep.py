@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from api.routes.inventory import _DB_URL
-from inventory.models import InvHome, InventoryItem
+from inventory.models import AuditStatus, InvHome, InventoryAudit, InventoryItem
 from core.push import send_push_notification
 
 logger = logging.getLogger(__name__)
@@ -34,8 +34,18 @@ async def inventory_sweep_func(app):
         for home in homes:
             owner_id = str(home.owner_id)
             
-            # 1. Stale Audit
-            last_audit = home.last_audit_date
+            # 1. Stale Audit — InvHome has no last-audit column; derive it
+            # from the newest completed audit for this home.
+            last_audit_row = (
+                db.query(InventoryAudit)
+                .filter(
+                    InventoryAudit.home_id == home.id,
+                    InventoryAudit.status == AuditStatus.COMPLETED,
+                )
+                .order_by(InventoryAudit.completed_at.desc())
+                .first()
+            )
+            last_audit = last_audit_row.completed_at if last_audit_row else None
             if last_audit:
                 # Assuming last_audit_date is naive UTC or aware
                 if last_audit.tzinfo is None:

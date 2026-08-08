@@ -32,7 +32,8 @@ import logging
 import re
 from dataclasses import dataclass
 from typing import (
-    Union, Any, Callable, ClassVar, Coroutine, List, Optional, AsyncGenerator,
+    Union, Any, Callable, ClassVar, Coroutine, Dict, List, Optional,
+    AsyncGenerator,
 )
 
 from config.settings import get_settings
@@ -1143,6 +1144,7 @@ class ConversationLoop:
                     full_response += t
                     await on_event({"type": "token", "content": t})
 
+                assert self._llm is not None
                 # Handle Tool Use first if enabled
                 if self._settings.tool_use_enabled:
                     from core.tools import TOOL_SCHEMAS, execute_tool
@@ -1167,7 +1169,7 @@ class ConversationLoop:
                         on_event,
                         self._append_history,
                         self._user_id,
-                        self._session_id,
+                        self._session_id or "",
                         tool_system_prompt
                     )
                     
@@ -1192,7 +1194,7 @@ class ConversationLoop:
                 # Interleave TTS synthesis with LLM token arrival
                 await self._process_tts_stream(sentence_stream, on_event)
 
-                meta = {"model_label": router_label or "default"}
+                meta: Dict[str, Any] = {"model_label": router_label or "default"}
                 if receipts:
                     meta["receipts"] = receipts
                 await self._append_history("assistant", full_response, meta)
@@ -1449,7 +1451,7 @@ class ConversationLoop:
                     on_event,
                     self._append_history,
                     self._user_id,
-                    self._session_id,
+                    self._session_id or "",
                     tool_system_prompt,
                     tool_context=self._tool_context_extras
                 )
@@ -1494,7 +1496,7 @@ class ConversationLoop:
             full_response,
             flags=_re.DOTALL).strip()
 
-        meta = {"model_label": router_label or "default"}
+        meta: Dict[str, Any] = {"model_label": router_label or "default"}
         if receipts:
             meta["receipts"] = receipts
         await self._append_history("assistant", full_response, meta)

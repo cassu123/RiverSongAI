@@ -1,6 +1,8 @@
 import asyncio
+import json
 import logging
 import os
+import re
 import time
 from pathlib import Path
 from datetime import datetime, timezone
@@ -190,7 +192,6 @@ class ScribeDaemon(BaseDaemon):
             ]):
                 full += chunk
 
-            import json, re
             match = re.search(r"\[.*\]", full, re.DOTALL)
             elapsed_ms = int((time.perf_counter() - started) * 1000)
             registry.record_invocation(AgentRole.SCRIBE, success=True, elapsed_ms=elapsed_ms)

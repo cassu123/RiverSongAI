@@ -42,12 +42,15 @@ export default function Sessions() {
 
   const openSessionDetail = async (session) => {
     setSelectedSession(session)
+    setSessionDetails(null)
     try {
       const res = await fetch(`/api/vector/sessions/${session.session_id}`, { headers: { Authorization: `Bearer ${token}` } })
-      if (res.ok) {
-        setSessionDetails(await res.json())
-      }
-    } catch (err) { console.error(err) }
+      if (!res.ok) throw new Error(`Detail request failed with ${res.status}`)
+      setSessionDetails(await res.json())
+    } catch (err) {
+      console.error(err)
+      setSessionDetails({ error: 'Failed to load session details.' })
+    }
   }
 
   const filtered = sessions.filter(s => {
@@ -143,6 +146,9 @@ export default function Sessions() {
             </div>
 
             {sessionDetails ? (
+              sessionDetails.error ? (
+                <div style={{ textAlign: 'center', padding: 20, color: 'var(--danger)' }}>{sessionDetails.error}</div>
+              ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {sessionDetails.telemetry && sessionDetails.telemetry.length > 0 && (
                   <div>
@@ -177,6 +183,7 @@ export default function Sessions() {
                   </div>
                 )}
               </div>
+              )
             ) : (
               <div style={{ textAlign: 'center', padding: 20 }}>Loading details...</div>
             )}

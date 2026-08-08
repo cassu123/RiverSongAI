@@ -31,7 +31,7 @@ from providers.push.fcm import send_fcm, is_configured as fcm_is_configured
 logger = logging.getLogger(__name__)
 
 
-async def _send_one_webpush(sub_json: str, title: str, body: str, icon: str, url: str = None):
+async def _send_one_webpush(sub_json: str, title: str, body: str, icon: str, url: str | None = None):
     """Wrap send_push so transient exceptions don't tear down asyncio.gather.
 
     Returns a tri-state: True (delivered), False (410 Gone — delete the sub),
@@ -173,6 +173,7 @@ async def notify_admins(
     title: str,
     body: str,
     icon: Optional[str] = None,
+    priority: str = "normal",
 ) -> int:
     """
     Push to every active admin in parallel.

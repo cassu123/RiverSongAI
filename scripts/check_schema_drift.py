@@ -1,3 +1,17 @@
+"""
+Report columns that the SQLAlchemy models declare but the live SQLite files do
+not have -- i.e. a model gained a field and the matching ALTER TABLE never ran.
+
+    python scripts/check_schema_drift.py
+
+Run it from the repo root: the db/model paths below are relative to the working
+directory, same as the other diagnostics in this folder. Read-only, and it
+skips any database that hasn't been created yet.
+
+This is a hand-run diagnostic, not a test -- it lived at the repo root as
+check_missing_cols_actual.py until it was moved here.
+"""
+
 import sqlite3
 import sys
 import importlib.util

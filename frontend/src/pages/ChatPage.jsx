@@ -10,7 +10,6 @@ export default function ChatPage({ setAction, onNavigate }) {
       if (stored) {
         const parsed = JSON.parse(stored)
         setInitialIntent(parsed)
-        localStorage.removeItem('rs-chat-intent')
       }
     } catch (err) {
       console.warn('Failed to parse rs-chat-intent', err)
@@ -23,6 +22,10 @@ export default function ChatPage({ setAction, onNavigate }) {
       setAction={setAction}
       onNavigate={onNavigate}
       initialIntent={initialIntent}
+      onIntentConsumed={() => {
+        localStorage.removeItem('rs-chat-intent')
+        setInitialIntent(null)
+      }}
       embedded={false}
     />
   )

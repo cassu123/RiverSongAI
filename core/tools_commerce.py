@@ -80,16 +80,15 @@ async def _exec_create_commerce_sale(args: dict, user_id: str) -> str:
             return f"Insufficient stock for {target_product.name}. You only have {target_product.stock_qty} units available."
 
         customer_id = None
-        if args.get('customer_name'):
-            # naive search
+        customer_name = (args.get('customer_name') or '').strip()
+        if customer_name:
             cust = db.query(Customer).filter(
-                Customer.workspace_id == str(ws.id)).first()
-            # for perfection, let's just create if not exists
+                Customer.workspace_id == str(ws.id),
+                Customer.name.ilike(customer_name)).first()
             if not cust:
                 cust = Customer(
-                    workspace_id=str(
-                        ws.id),
-                    name=args['customer_name'])
+                    workspace_id=str(ws.id),
+                    name=customer_name)
                 db.add(cust)
                 db.flush()
             customer_id = str(cust.id)

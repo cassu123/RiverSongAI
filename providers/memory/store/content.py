@@ -18,7 +18,8 @@ from providers.memory.store._util import (
 )
 
 
-class ContentStoreMixin:
+from ._util import StoreProtocol
+class ContentStoreMixin(StoreProtocol):
     """Documents workspace, skills, session presets and reading shelf.
 
     Mixin for SQLiteStore: relies on self._run / self._get_conn from the

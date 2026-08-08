@@ -234,7 +234,27 @@
     pointer-events: none;
     mix-blend-mode: screen;
   }
-  .rs-photo svg { display: block; inline-size: 100%; block-size: 100%; }
+  /* Scene geometry — hidden now that real photographs exist.
+
+     Each scene in Stage.jsx draws its environment as hand-built SVG paths: the
+     Caladan cliffs and castle, the Giedi stacks, the Arrakis dunes, the
+     Forerunner ring arc. That art WAS the backdrop, because
+     /<scene>_base.jpg never existed and .rs-photo-base fell through to its
+     gradients. With a real photograph underneath, the same paths read as
+     translucent geometry floating over the image — the outline of a drawn cliff
+     sitting on top of a photographed one.
+
+     Only the vector geometry is hidden. The atmospheric layers still apply,
+     because they complement a photo rather than compete with it:
+       - .rs-*-mist / .rs-*-haze  — CSS gradient divs, untouched by this rule
+       - .rs-photo-particles      — the <canvas> rain/dust field, untouched
+
+     Sizing is kept so a scene can opt back in without restating it:
+       .rs-photo--forerunner svg { display: block; }
+
+     If a scene's photo is ever removed, .rs-photo-base still falls back to its
+     gradients, which is what they were written for. */
+  .rs-photo svg { display: none; inline-size: 100%; block-size: 100%; }
 
   /* ---- ATREIDES / CALADAN — ocean storm, cliffs, rain --------------------- */
   .rs-photo--atreides .rs-photo-base {

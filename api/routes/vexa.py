@@ -45,6 +45,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from core.auth import require_role
+from core.vortex_security import hash_unit_token, mint_unit_token, verify_unit_token
 from providers.memory.sqlite_store import SQLiteStore
 
 logger = logging.getLogger(__name__)
@@ -134,7 +135,7 @@ async def _verify_unit(store: SQLiteStore, unit_id: str,
                        token: Optional[str]) -> dict:
     unit = await store.execute_read_one_async(
         "SELECT * FROM vexa_units WHERE unit_id=?", (unit_id,))
-    if not unit or not token or token != unit["unit_token"]:
+    if not unit or not token or not verify_unit_token(token, unit["unit_token"]):
         raise HTTPException(status_code=401, detail="Invalid unit credentials")
     return unit
 
@@ -242,12 +243,21 @@ async def _handle_voice_task_request(store: SQLiteStore, unit: dict,
 
 class ClaimBody(BaseModel):
     name: str = Field(min_length=1, max_length=120)
+    # The user this unit acts for. Bound at claim time by the admin — never
+    # taken from the device itself.
+    rider_id: Optional[str] = None
 
 
 class SessionStartBody(BaseModel):
     unit_id: str
-    rider_id: str
+    # Optional and advisory only: the effective rider always comes from the
+    # unit record; a mismatch is rejected.
+    rider_id: Optional[str] = None
     vehicle_type: Literal["motorcycle", "car"]
+
+
+class RiderAssignBody(BaseModel):
+    rider_id: str = Field(min_length=1, max_length=120)
 
 
 class SessionEndBody(BaseModel):
@@ -293,11 +303,13 @@ async def claim_unit(body: ClaimBody):
     store = SQLiteStore()
     await _ensure_schema(store)
     unit_id = uuid.uuid4().hex[:12]
-    unit_token = uuid.uuid4().hex + uuid.uuid4().hex
+    unit_token = mint_unit_token()
+    # Store the hash only; the plaintext token exists exactly once, in this
+    # response to the claiming admin.
     await store.execute_write_async(
-        "INSERT INTO vexa_units (unit_id, name, unit_token, registered_at) "
-        "VALUES (?, ?, ?, ?)",
-        (unit_id, body.name, unit_token, _now()),
+        "INSERT INTO vexa_units (unit_id, name, unit_token, rider_id, registered_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (unit_id, body.name, hash_unit_token(unit_token), body.rider_id, _now()),
     )
     logger.info("Vexa: claimed unit %s (%s)", unit_id, body.name)
     return {"unit_id": unit_id, "unit_token": unit_token}
@@ -313,6 +325,22 @@ async def list_units():
         (),
     )
     return {"units": rows}
+
+
+@router.put("/units/{unit_id}/rider",
+            dependencies=[Depends(require_role("admin"))])
+async def assign_rider(unit_id: str, body: RiderAssignBody):
+    """Bind the rider a unit acts for. Admin-only — see session_start."""
+    store = SQLiteStore()
+    await _ensure_schema(store)
+    unit = await store.execute_read_one_async(
+        "SELECT unit_id FROM vexa_units WHERE unit_id=?", (unit_id,))
+    if not unit:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    await store.execute_write_async(
+        "UPDATE vexa_units SET rider_id=? WHERE unit_id=?",
+        (body.rider_id, unit_id))
+    return {"status": "ok"}
 
 
 @router.delete("/units/{unit_id}",
@@ -365,24 +393,35 @@ async def session_start(body: SessionStartBody,
                         x_unit_token: Optional[str] = Header(default=None)):
     store = SQLiteStore()
     await _ensure_schema(store)
-    await _verify_unit(store, body.unit_id, x_unit_token)
+    unit = await _verify_unit(store, body.unit_id, x_unit_token)
+
+    # The device only proves it holds a unit token. The identity tools run
+    # as comes from the rider bound to the unit at claim time — a device
+    # must never select an arbitrary user.
+    rider = unit.get("rider_id")
+    if not rider:
+        raise HTTPException(
+            status_code=409,
+            detail="This unit has no rider assigned. Assign one from the admin app.")
+    if body.rider_id and body.rider_id != rider:
+        raise HTTPException(status_code=403, detail="Rider mismatch for this unit.")
 
     session_id = uuid.uuid4().hex
     started_at = _now()
     await store.execute_write_async(
         "INSERT INTO vexa_sessions (session_id, unit_id, rider_id, vehicle_type, "
         "started_at, status) VALUES (?, ?, ?, ?, ?, 'active')",
-        (session_id, body.unit_id, body.rider_id, body.vehicle_type, started_at),
+        (session_id, body.unit_id, rider, body.vehicle_type, started_at),
     )
     # Presence flip: the rider is on the road — notification routing and
     # initiative delivery can key off presence='driving'.
     await store.execute_write_async(
         "UPDATE vexa_units SET presence='driving', active_session_id=?, "
-        "rider_id=?, online=1, last_seen=? WHERE unit_id=?",
-        (session_id, body.rider_id, started_at, body.unit_id),
+        "online=1, last_seen=? WHERE unit_id=?",
+        (session_id, started_at, body.unit_id),
     )
     logger.info("Vexa: session %s started on %s (%s, rider=%s)",
-                session_id, body.unit_id, body.vehicle_type, body.rider_id)
+                session_id, body.unit_id, body.vehicle_type, rider)
     return {"session_id": session_id, "started_at": started_at}
 
 
@@ -412,7 +451,7 @@ async def session_end(body: SessionEndBody,
     )
     samples = (stats or {}).get("samples") or 0
     summary = None
-    if samples:
+    if samples and stats:
         summary = json.dumps({
             "samples": samples,
             "max_speed_mph": stats["max_speed_mph"],

@@ -15,7 +15,7 @@ websockets==14.0                # for Home Assistant WS events
 starlette>=0.50.0               # WebSocket state management; >=0.50.0 clears CVE range headers DoS (<=0.49.0)
 python-multipart==0.0.31        # Form data parsing for FastAPI
 pypdf==6.14.2                   # PDF text extraction for vehicle manual uploads (11 CVEs fixed since 6.12.0)
-pymupdf==1.27.2.3               # Culinary: PDF ingestion + image ripping
+pymupdf==1.28.0               # Culinary: PDF ingestion + image ripping
 beautifulsoup4==4.14.3          # Culinary: URL recipe scraping
 
 
@@ -46,7 +46,7 @@ anthropic>=0.105.2,<1.0.0               # Claude API cloud LLM
 google-genai==1.16.0            # Google Gemini cloud LLM
 openai==2.50.0                  # OpenAI cloud LLM
 mistralai==2.8.0                # Mistral AI cloud LLM
-boto3==1.38.0                   # Amazon Bedrock (and AWS SDK)
+boto3==1.43.64                   # Amazon Bedrock (and AWS SDK)
 
 
 # -----------------------------------------------------------------------------
@@ -84,7 +84,7 @@ PyJWT==2.13.0                   # JWT token generation and verification (PYSEC-2
 # -----------------------------------------------------------------------------
 google-api-python-client==2.194.0   # Calendar, Gmail, Drive REST clients
 google-auth==2.49.2                  # Google OAuth 2.0 core library
-google-auth-oauthlib==1.3.1          # InstalledAppFlow for desktop OAuth
+google-auth-oauthlib==1.4.0          # InstalledAppFlow for desktop OAuth
 google-auth-httplib2==0.3.1          # httplib2 transport for google-auth
 googlemaps==4.10.0                   # Google Maps Platform Python client
 
@@ -100,7 +100,7 @@ sounddevice==0.5.5                   # Audio playback for YouTube Music provider
 # -----------------------------------------------------------------------------
 # Commerce
 # -----------------------------------------------------------------------------
-python-amazon-sp-api==2.1.8          # Amazon Selling Partner API
+python-amazon-sp-api==2.1.20          # Amazon Selling Partner API
 
 
 # -----------------------------------------------------------------------------
@@ -158,7 +158,7 @@ setuptools>=78.1.1                   # CVE-2025-47273 path traversal
 requests>=2.33.0                     # CVE-2024-35195 + CVE-2025-23159 temp-file reuse
 urllib3>=2.7.0                       # CVE-2024-37891 + decompression bomb chain (several CVEs)
 certifi>=2024.7.4                    # stale certificate bundle
-cryptography>=43.0.1                 # CVE-2024-26130
+cryptography>=50.0.0                 # CVE-2024-26130
 h11>=0.16.0                          # CRITICAL: malformed chunked-encoding bypass
 Pillow>=12.2.0                       # HIGH: FITS decompression bomb + PSD out-of-bounds write
 tornado>=6.5.7                       # HIGH: cookie injection + multipart DoS

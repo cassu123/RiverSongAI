@@ -37,12 +37,19 @@ export default function BarcodeScanner({ onDetected, onClose, formats, continuou
   const videoRef = useRef(null)
   const readerRef = useRef(null)
   const [error, setError] = useState('')
-  const [lastValue, setLastValue] = useState('')
-  const [lastSeen, setLastSeen] = useState(0)
+  const lastValueRef = useRef('')
+  const lastSeenRef = useRef(0)
+  const onDetectedRef = useRef(onDetected)
+  const continuousRef = useRef(continuous)
+  
+  useEffect(() => { onDetectedRef.current = onDetected }, [onDetected])
+  useEffect(() => { continuousRef.current = continuous }, [continuous])
 
   const handleClose = useCallback(() => {
     if (onClose) onClose()
   }, [onClose])
+  const handleCloseRef = useRef(handleClose)
+  useEffect(() => { handleCloseRef.current = handleClose }, [handleClose])
 
   useEffect(() => {
 
@@ -68,12 +75,12 @@ export default function BarcodeScanner({ onDetected, onClose, formats, continuou
             const value = result.getText()
             const format = result.getBarcodeFormat()
             const now = Date.now()
-            if (value === lastValue && now - lastSeen < 1500) return
-            setLastValue(value)
-            setLastSeen(now)
+            if (value === lastValueRef.current && now - lastSeenRef.current < 1500) return
+            lastValueRef.current = value
+            lastSeenRef.current = now
             try { navigator.vibrate?.(80) } catch {}
-            onDetected(value, format)
-            if (!continuous) setTimeout(() => handleClose(), 300)
+            onDetectedRef.current(value, format)
+            if (!continuousRef.current) setTimeout(() => handleCloseRef.current(), 300)
           }
         })
       } catch (e) {
@@ -107,7 +114,7 @@ export default function BarcodeScanner({ onDetected, onClose, formats, continuou
         }
       } catch {}
     }
-  }, [continuous, formats, onDetected, onClose, lastValue, lastSeen])
+  }, [formats])
 
   return (
     <div className="barcode-scanner-modal" role="dialog" aria-modal="true" aria-label="Barcode Scanner">

@@ -19,7 +19,8 @@ from providers.memory.store._util import (
 )
 
 
-class UsersStoreMixin:
+from ._util import StoreProtocol
+class UsersStoreMixin(StoreProtocol):
     """User accounts, JWT revocation, TOTP, Google OAuth and parent-child links.
 
     Mixin for SQLiteStore: relies on self._run / self._get_conn from the
@@ -544,3 +545,4 @@ class UsersStoreMixin:
             "INSERT OR REPLACE INTO child_features (child_id, enabled_features) VALUES (?,?)",
             (child_id, json.dumps(features)),
         )
+        conn.commit()

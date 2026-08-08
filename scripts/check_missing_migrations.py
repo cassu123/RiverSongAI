@@ -1,5 +1,20 @@
+"""
+Cross-check each route module's inline `ALTER TABLE ... ADD COLUMN` migrations
+against the columns its SQLAlchemy models declare.
+
+    python scripts/check_missing_migrations.py
+
+Run it from the repo root -- the paths below are relative to the working
+directory. The output needs a human: a column absent from the _migrate block is
+usually part of the original CREATE TABLE and therefore fine, so this narrows
+where to look rather than reporting faults. For the stricter check of models
+against the databases that actually exist, use check_schema_drift.py.
+
+A hand-run diagnostic, not a test. Lived at the repo root until it was moved
+here.
+"""
+
 import re
-import ast
 
 def get_add_columns_from_migrate(filepath):
     added = set()

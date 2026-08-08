@@ -899,12 +899,6 @@ class SQLiteStore(
             "ALTER TABLE routines ADD COLUMN webhook_url TEXT",
             "ALTER TABLE routines ADD COLUMN last_output TEXT",
             "INSERT OR IGNORE INTO admin_config (key, value) VALUES ('__global__', '{}')",
-            # FIX B11: Remove (user_id, category) uniqueness to allow
-            # multi-value preferences
-            "CREATE TABLE IF NOT EXISTS preferences_new (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, category TEXT NOT NULL, value TEXT NOT NULL, confidence TEXT NOT NULL DEFAULT 'low', last_updated TEXT NOT NULL, UNIQUE(user_id, category, value))",
-            "INSERT OR IGNORE INTO preferences_new SELECT id, user_id, category, value, confidence, last_updated FROM preferences",
-            "DROP TABLE preferences",
-            "ALTER TABLE preferences_new RENAME TO preferences",
             "CREATE TABLE IF NOT EXISTS vault_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, owner_kind TEXT NOT NULL, owner_id TEXT NOT NULL, virtual_path TEXT NOT NULL UNIQUE, title TEXT, size INTEGER, mtime REAL, indexed_at REAL)",
             "CREATE TABLE IF NOT EXISTS vault_links (id INTEGER PRIMARY KEY AUTOINCREMENT, src_note_id INTEGER NOT NULL, target_title TEXT NOT NULL, FOREIGN KEY(src_note_id) REFERENCES vault_notes(id) ON DELETE CASCADE)",
             "CREATE TABLE IF NOT EXISTS vault_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, action TEXT NOT NULL, virtual_path TEXT NOT NULL, ts REAL NOT NULL)",
@@ -969,6 +963,39 @@ class SQLiteStore(
                         "Migration FAILED and was skipped: %s -> %s",
                         migration, exc,
                     )
+
+        self._migrate_preferences_unique(conn)
+
+    def _migrate_preferences_unique(self, conn) -> None:
+        """Rebuild `preferences` only while the legacy UNIQUE(user_id, category) exists."""
+        sql = conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='preferences'"
+        ).fetchone()
+        if not sql or "UNIQUE(user_id, category, value)" in sql[0]:
+            return  # already migrated
+        conn.executescript(
+            """
+            BEGIN;
+            CREATE TABLE preferences_new (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                category TEXT NOT NULL,
+                value TEXT NOT NULL,
+                confidence TEXT NOT NULL DEFAULT 'low',
+                source_kind TEXT NOT NULL DEFAULT 'conversation',
+                source_ref TEXT,
+                last_updated TEXT NOT NULL,
+                UNIQUE(user_id, category, value)
+            );
+            INSERT OR IGNORE INTO preferences_new
+                SELECT id, user_id, category, value, confidence,
+                       source_kind, source_ref, last_updated
+                FROM preferences;
+            DROP TABLE preferences;
+            ALTER TABLE preferences_new RENAME TO preferences;
+            COMMIT;
+            """
+        )
 
     def close(self) -> None:
         """Close the connection and shut down the thread pool."""
@@ -1067,65 +1094,3 @@ class SQLiteStore(
         )
         return rows
 
-    async def create_chat_session(self, user_id: str, title: str, **kwargs) -> str:
-        session_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc).isoformat()
-        await self._run(self._execute_write,
-            "INSERT INTO chat_sessions (id, user_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-            (session_id, user_id, title, now, now)
-        )
-        return session_id
-
-    async def get_chat_session(self, user_id: str, session_id: str) -> Optional[dict]:
-        return await self._run(self._execute_read_one, "SELECT * FROM chat_sessions WHERE id = ? AND user_id = ?", (session_id, user_id))
-
-    async def get_chat_messages(self, user_id: str, session_id: str) -> List[dict]:
-        rows = await self._run(self._execute_read, "SELECT role, content, meta, created_at FROM chat_messages WHERE session_id = ? ORDER BY id ASC", (session_id,))
-        result = []
-        for r in rows:
-            d = dict(r)
-            if d.get("meta"):
-                try:
-                    d["meta"] = json.loads(d["meta"])
-                except:
-                    d["meta"] = {}
-            else:
-                d["meta"] = {}
-            result.append(d)
-        return result
-
-    async def archive_chat_session(self, user_id: str, session_id: str) -> None:
-        await self._run(self._execute_write, "UPDATE chat_sessions SET archived = 1 WHERE id = ? AND user_id = ?", (session_id, user_id))
-
-    async def add_chat_message(self, session_id: str, role: str, content: str, meta: dict = None) -> None:
-        now = datetime.now(timezone.utc).isoformat()
-        meta_str = json.dumps(meta) if meta else "{}"
-        await self._run(self._execute_write,
-            "INSERT INTO chat_messages (session_id, role, content, meta, created_at) VALUES (?, ?, ?, ?, ?)",
-            (session_id, role, content, meta_str, now)
-        )
-        await self._run(self._execute_write, "UPDATE chat_sessions SET updated_at = ? WHERE id = ?", (now, session_id))
-
-    async def get_undistilled_sessions(self, idle_minutes: int) -> List[Dict[str, Any]]:
-        return await self._run(self._execute_read, """
-            SELECT id, user_id, title, updated_at
-            FROM chat_sessions
-            WHERE distilled_at IS NULL
-              AND updated_at < datetime('now', '-' || ? || ' minutes')
-        """, (idle_minutes,))
-
-    async def mark_session_distilled(self, session_id: str, title: str) -> None:
-        await self._run(self._execute_write, """
-            UPDATE chat_sessions
-            SET distilled_at = CURRENT_TIMESTAMP, title = ?
-            WHERE id = ?
-        """, (title, session_id))
-
-    async def delete_old_chat_messages(self, retention_days: int) -> int:
-        await self._run(self._execute_write, """
-            DELETE FROM chat_messages
-            WHERE session_id IN (SELECT id FROM chat_sessions WHERE distilled_at IS NOT NULL)
-              AND created_at < datetime('now', '-' || ? || ' days')
-        """, (retention_days,))
-        # SQLite doesn't easily return row count here, so just return 0 to satisfy the contract
-        return 0

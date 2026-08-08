@@ -68,7 +68,8 @@ async def execute_tool(
         elif tool_name == "read_note":
             return await _exec_read_note(tool_input, context)
         elif tool_name == "deep_research":
-            return await _exec_deep_research(tool_input, user_id)
+            return await _exec_deep_research(
+                tool_input, user_id, session_id=(context or {}).get("session_id"))
 
         elif tool_name == "create_calendar_event":
             return await _exec_calendar_event(tool_input, user_id)
@@ -110,18 +111,6 @@ async def execute_tool(
         elif tool_name == "find_parts": return await _exec_find_parts(tool_input, user_id)
         elif tool_name == "list_vehicles":
             return await _exec_list_vehicles(tool_input, context)
-            
-        elif tool_name == "get_vehicle_status":
-            return await _exec_get_vehicle_status(tool_input, context)
-            
-        elif tool_name == "get_vehicle_spec":
-            return await _exec_get_vehicle_spec(tool_input, context)
-            
-        elif tool_name == "query_vehicle_manual":
-            return await _exec_query_vehicle_manual(tool_input, context)
-            
-        elif tool_name == "record_odometer":
-            return await _exec_record_odometer(tool_input, context)
 
         elif tool_name == "add_recipe_to_library":
             return await _exec_add_recipe(tool_input, user_id)
@@ -213,7 +202,8 @@ async def execute_tool(
         return f"Tool execution failed due to an internal error: {exc}"
 
 
-async def _exec_deep_research(args: dict, user_id: str) -> str:
+async def _exec_deep_research(args: dict, user_id: str,
+                              session_id: str | None = None) -> str:
     try:
         query = args.get("query", "").strip()
         if not query:
@@ -265,8 +255,8 @@ async def _exec_deep_research(args: dict, user_id: str) -> str:
                 logger.info(f"Background research complete for '{query}': doc_id={result.get('document_id')}")
                 
                 # Append to the session
-                session_id = args.get("session_id") or context.get("session_id")
-                if session_id:
+                target_session = args.get("session_id") or session_id
+                if target_session:
                     report = result.get("report", "Research complete.")
                     doc_id = result.get("document_id")
                     
@@ -277,7 +267,7 @@ async def _exec_deep_research(args: dict, user_id: str) -> str:
                         
                     await store.save_chat_message(
                         user_id=user_id,
-                        session_id=session_id,
+                        session_id=target_session,
                         role="assistant",
                         content=content
                     )
@@ -289,7 +279,7 @@ async def _exec_deep_research(args: dict, user_id: str) -> str:
                             user_id=user_id,
                             title="Research Complete",
                             body=f"Your deep research on '{query}' is ready.",
-                            data={"session_id": session_id, "doc_id": doc_id or ""}
+                            data={"session_id": target_session, "doc_id": doc_id or ""}
                         )
                     except Exception as e:
                         logger.debug("Failed to push FCM notification for research: %s", e)
@@ -351,7 +341,7 @@ async def _exec_add_asset(args: dict, user_id: str) -> str:
             
             if not home:
                 if not homes:
-                    home = create_home(db, str(inv_user.id), "Primary Residence", "")
+                    home = create_home(db, inv_user, "Primary Residence", "")
                 else:
                     home = homes[0]
             
@@ -361,12 +351,15 @@ async def _exec_add_asset(args: dict, user_id: str) -> str:
             except ValueError:
                 cat = ItemCategory.OTHER
                 
-            item = create_item(db, str(inv_user.id), str(home.id), {
-                "name": args['name'],
-                "location": args.get('location'),
-                "category": cat,
-                "description": args.get('details', '')
-            })
+            item = create_item(
+                db=db, 
+                user_id=str(inv_user.id), 
+                home_id=str(home.id), 
+                name=args['name'],
+                location=args.get('location', ''),
+                category=cat,
+                description=args.get('details', '')
+            )
             return f"Added {item.name} to the inventory at {item.location} in {home.name}."
         finally:
             db.close()
@@ -641,14 +634,14 @@ async def _exec_alias_device(args: dict, user_id: str) -> str:
         return "Failed to save the new name."
 
 
-async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
+async def _exec_vehicle_maintenance(args: dict, context: dict) -> str:
     user_id = context.get("user_id")
     
     vehicle_id = context.get("vehicle_id")
     if not vehicle_id:
         vehicle_id = await _resolve_vehicle(args.get("vehicle", ""), user_id)
     if not vehicle_id:
-        return "No vehicle_id in context and could not resolve vehicle."
+        return {"error": "No vehicle_id in context and could not resolve vehicle."}
 
 
     def _sync_work():
@@ -669,20 +662,24 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
         else:
             close_db = False
 
+        # A distinct local name: assigning to `vehicle_id` here would make it
+        # local to the whole function and shadow the enclosing-scope value,
+        # raising UnboundLocalError on the first read below.
+        resolved_id = vehicle_id
         try:
             # If vehicle_id is missing, try to resolve from args
-            if not vehicle_id:
+            if not resolved_id:
                 vehicle_name = args.get('vehicle_name')
                 if not vehicle_name:
                     return {"error": "Must specify a vehicle_name if not already in context."}
-                
+
                 v = _resolve_vehicle_sync(db, user_id, vehicle_name)
                 if not v:
                     return {"error": f"Could not find a vehicle matching '{vehicle_name}'."}
-                vehicle_id = str(v.id)
+                resolved_id = str(v.id)
             else:
                 vehicles = get_vehicles(db, user_id)  # type: ignore
-                v = next((v for v in vehicles if str(v.id) == vehicle_id), None)
+                v = next((v for v in vehicles if str(v.id) == resolved_id), None)
                 if not v:
                     return {"error": "Vehicle not found."}
 
@@ -721,7 +718,7 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
                 db.commit()
 
             log = create_service_log(
-                db, user_id, vehicle_id,  # type: ignore
+                db, user_id, resolved_id,  # type: ignore
                 service_date=service_date,
                 odometer=mileage,
                 service_type=service_type,
@@ -749,7 +746,8 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> dict:
                 "matched_checkpoint": matched_cp.description if matched_cp else None,
                 "log_id": str(log.id)
             }
-            return result
+            import json
+            return json.dumps(result)
         finally:
             if close_db:
                 db.close()
@@ -793,8 +791,8 @@ def _get_db_for_tools(context):
     return db, False
 
 
-async def _exec_list_vehicles(args: dict, context: dict) -> dict:
-    user_id = context.get("user_id")
+async def _exec_list_vehicles(args: dict, context: dict) -> str:
+    user_id = context.get("user_id") or "primary_user"
     def _sync():
         db, close = _get_db_for_tools(context)
         try:
@@ -811,163 +809,8 @@ async def _exec_list_vehicles(args: dict, context: dict) -> dict:
                     "name": v.nickname or f"{v.year} {v.make} {v.model}",
                     "effective_odometer": tl.get("eff_odometer")
                 })
-            return {"vehicles": res}
-        finally:
-            if close: db.close()
-    return await asyncio.get_running_loop().run_in_executor(None, _sync)
-
-
-async def _exec_get_vehicle_status(args: dict, context: dict) -> dict:
-    user_id = context.get("user_id")
-    v_id = context.get("vehicle_id")
-    v_name = args.get("vehicle_name")
-    
-    def _sync():
-        db, close = _get_db_for_tools(context)
-        try:
-            from api.routes.vehicles import get_maintenance_timeline
-            vehicle_id = v_id
-            if not vehicle_id and v_name:
-                v = _resolve_vehicle_sync(db, user_id, v_name)
-                if not v: return {"error": "Vehicle not found."}
-                vehicle_id = str(v.id)
-            
-            if not vehicle_id:
-                return {"error": "Could not determine vehicle."}
-                
-            tl = get_maintenance_timeline(vehicle_id, None, None, db, user_id)
-            return tl
-        finally:
-            if close: db.close()
-    return await asyncio.get_running_loop().run_in_executor(None, _sync)
-
-
-async def _exec_get_vehicle_spec(args: dict, context: dict) -> dict:
-    user_id = context.get("user_id")
-    v_id = context.get("vehicle_id")
-    v_name = args.get("vehicle_name")
-    item = args.get("item", "")
-    
-    def _sync():
-        import difflib
-        db, close = _get_db_for_tools(context)
-        try:
-            vehicle_id = v_id
-            if not vehicle_id and v_name:
-                v = _resolve_vehicle_sync(db, user_id, v_name)
-                if not v: return {"error": "Vehicle not found."}
-                vehicle_id = str(v.id)
-            else:
-                from api.routes.vehicles import get_vehicles
-                v = next((x for x in get_vehicles(db, user_id) if str(x.id) == vehicle_id), None)
-                
-            if not v:
-                return {"error": "Could not determine vehicle."}
-                
-            cps = {cp.description: cp for cp in v.check_points}
-            matches = difflib.get_close_matches(item, list(cps.keys()), n=1, cutoff=0.3)
-            if matches:
-                cp = cps[matches[0]]
-                return {
-                    "checkpoint": cp.description,
-                    "expected_spec": cp.expected_spec,
-                    "volume": cp.volume,
-                    "unit": cp.unit,
-                    "torque": f"{cp.ft_lb} ft-lb" if cp.ft_lb else None
-                }
-            return {"error": "Spec not found."}
-        finally:
-            if close: db.close()
-    return await asyncio.get_running_loop().run_in_executor(None, _sync)
-
-
-async def _exec_query_vehicle_manual(args: dict, context: dict) -> dict:
-    user_id = context.get("user_id")
-    v_id = context.get("vehicle_id")
-    v_name = args.get("vehicle_name")
-    question = args.get("question", "")
-    
-    # We must run this async as it uses memory_manager / llm
-    db, close = _get_db_for_tools(context)
-    try:
-        vehicle_id = v_id
-        if not vehicle_id and v_name:
-            v = await asyncio.get_running_loop().run_in_executor(None, _resolve_vehicle_sync, db, user_id, v_name)
-            if not v: return {"error": "Vehicle not found."}
-            vehicle_id = str(v.id)
-        
-        if not vehicle_id:
-            return {"error": "Could not determine vehicle."}
-    finally:
-        if close: db.close()
-        
-    # Use RAG with metadata filter
-    from core.memory_manager import MemoryManager
-    try:
-        from main import get_app
-        app = get_app()
-        if app:
-            memory_manager = app.state.memory_manager
-        else:
-            return {"error": "App not ready."}
-    except Exception:
-        return {"error": "App not ready."}
-        
-    results = await memory_manager.search_rag(user_id, question, n_results=5)
-    # Filter strictly to vehicle_id if possible, or just return the text
-    filtered = []
-    for r in results:
-        meta = r.get("metadata", {})
-        if meta.get("vehicle_id") == vehicle_id or meta.get("doc_type") == "vehicle_manual":
-            filtered.append(r["text"])
-            
-    if not filtered:
-        return {"answer": "No relevant manual pages found."}
-        
-    context_str = "\n".join(filtered)
-    # Summarize with LLM
-    from core.llm_service import _generate_text
-    prompt = f"Answer the following question about a vehicle based on the provided manual excerpts.\n\nQuestion: {question}\n\nExcerpts:\n{context_str}"
-    ans = await _generate_text([{"role": "user", "content": prompt}], user_id)
-    return {"answer": ans}
-
-
-async def _exec_record_odometer(args: dict, context: dict) -> dict:
-    user_id = context.get("user_id")
-    v_id = context.get("vehicle_id")
-    v_name = args.get("vehicle_name")
-    val = args.get("value")
-    
-    if not val:
-        return {"error": "Value required."}
-        
-    def _sync():
-        db, close = _get_db_for_tools(context)
-        try:
-            vehicle_id = v_id
-            if not vehicle_id and v_name:
-                v = _resolve_vehicle_sync(db, user_id, v_name)
-                if not v: return {"error": "Vehicle not found."}
-                vehicle_id = str(v.id)
-            else:
-                from api.routes.vehicles import get_vehicles
-                v = next((x for x in get_vehicles(db, user_id) if str(x.id) == vehicle_id), None)
-                
-            if not v:
-                return {"error": "Could not determine vehicle."}
-                
-            from vehicles.models import UsageReading, UsageUnit, UsageSource
-            from datetime import datetime, timezone
-            ur = UsageReading(
-                vehicle_id=v.id,
-                value=val,
-                unit=UsageUnit.MILES,
-                source=UsageSource.MANUAL,
-                recorded_at=datetime.now(timezone.utc)
-            )
-            db.add(ur)
-            db.commit()
-            return {"success": True, "message": f"Recorded {val} miles for {v.nickname or v.model}."}
+            import json
+            return json.dumps({"vehicles": res})
         finally:
             if close: db.close()
     return await asyncio.get_running_loop().run_in_executor(None, _sync)
@@ -1441,20 +1284,22 @@ async def _exec_set_timer(args: dict, user_id: str) -> str:
     asyncio.create_task(_timer_task())
     return f"Timer '{label}' set for {duration} seconds."
 
-async def _resolve_vehicle(query: str, user_id: str):
+async def _resolve_vehicle(query: str | None, user_id: str | None):
     from vehicles.management import get_vehicles
     from core.family import resolve_module_owner
     from database.core import engine
     from sqlalchemy.orm import sessionmaker
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
+    if not user_id:
+        user_id = "primary_user"
     owner_id = resolve_module_owner(user_id, "maintenance")
     try:
         vehicles = get_vehicles(db, owner_id)
         if not vehicles:
             return None
         # simple fuzzy match
-        query = query.lower()
+        query = (query or "").lower()
         for v in vehicles:
             if v.nickname and query in v.nickname.lower(): return v.id
             if v.make and query in v.make.lower(): return v.id
@@ -1516,11 +1361,11 @@ async def _exec_record_odometer(args: dict, user_id: str) -> str:
     val = args.get("value")
     from database.core import engine
     from sqlalchemy.orm import sessionmaker
-    from vehicles.models import UsageReading
+    from vehicles.models import UsageReading, UsageSource
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
     try:
-        db.add(UsageReading(vehicle_id=str(vid), value=val, source="manual"))
+        db.add(UsageReading(vehicle_id=str(vid), value=val, source=UsageSource.MANUAL))
         db.commit()
         return f"Recorded odometer {val} for vehicle."
     finally:
