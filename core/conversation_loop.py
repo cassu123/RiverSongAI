@@ -40,6 +40,7 @@ from config.settings import get_settings
 from core.kill_switch import is_kill_switch_active
 from core.intent_router import get_intent_router
 from core.memory_manager import MemoryManager
+from core.token_tracker import set_usage_user
 from providers.base import LLMProvider, STTProvider, TTSProvider
 from providers.memory.graphiti_provider import Episode, get_graphiti_provider
 
@@ -556,6 +557,11 @@ class ConversationLoop:
             # voice_id_threshold — and the settings file says outright that
             # household members often score alike. That is the "never accept
             # a self-asserted identity" line, reached by another route.
+            # Spend follows the speaker, unlike the admin flag above: this is
+            # bookkeeping, not permission, and the whole point of the per-user
+            # breakdown is that the person who actually asked is the one it
+            # shows.
+            set_usage_user(self._user_id)
             access = await self._load_user_access()
             self._free_models_only = access.free_models_only
 
@@ -663,6 +669,8 @@ class ConversationLoop:
         access = await self._load_user_access()
         self._free_models_only = access.free_models_only
         self._is_admin = access.is_admin
+        # Every token this connection spends is attributed to this user.
+        set_usage_user(self._user_id)
 
         try:
             llm_provider_override = self._llm_provider_override

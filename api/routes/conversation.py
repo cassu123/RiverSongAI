@@ -52,7 +52,7 @@ from starlette.websockets import WebSocketState
 
 from core.auth import decode_token
 from core.conversation_loop import ConversationLoop, _build_llm_provider, _build_stt_provider
-from core.token_tracker import set_usage_source
+from core.token_tracker import set_usage_source, set_usage_user
 from core.memory_manager import MemoryManager
 from core.wake_word_service import WakeWordService
 from config.settings import get_settings
