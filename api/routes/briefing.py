@@ -169,7 +169,8 @@ async def _section_agenda(user_id: str) -> Dict[str, Any]:
 
         try:
             auth.get_credentials(user_id)
-        except Exception:
+        except RuntimeError:
+            # No stored token found for this user
             return {"status": "disconnected", "events": []}
 
         from providers.google.calendar import GoogleCalendarProvider
@@ -212,7 +213,7 @@ async def _section_reminders(user_id: str) -> Dict[str, Any]:
                 "notes": t.get("notes"),
             }
             for t in (tasks or []) if isinstance(t, dict)
-            if (t.get("title") or "").strip()
+            if isinstance(t.get("title"), str) and t.get("title").strip()
         ]
         return {"status": "ok", "items": items}
     except Exception as exc:
@@ -269,7 +270,7 @@ async def _section_headlines(request: Request, user_id: str) -> Dict[str, Any]:
                     "image_url": a.get("image_url"),
                 }
                 for a in (articles or [])[:6] if isinstance(a, dict)
-                if (a.get("title") or "").strip()
+                if isinstance(a.get("title"), str) and a.get("title").strip()
             ],
         }
     except Exception as exc:
@@ -445,7 +446,10 @@ async def speak_briefing(
                 {"role": "user", "content": prompt}
             ]
             text = await llm.chat(messages)
-            text = text.strip()
+            text = (text or "").strip()
+            if not text:
+                # Treat empty LLM response as missing, use fallback
+                text = summary.get("script") or ""
         except Exception as exc:
             logger.error("LLM generation for briefing script failed: %s", exc)
             # Fallback to the hardcoded script

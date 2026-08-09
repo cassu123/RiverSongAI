@@ -36,6 +36,7 @@ import AdminModelFamiliesSection from './settings/AdminModelFamiliesSection.jsx'
 import NotificationsSection from './settings/NotificationsSection.jsx'
 import ProactivePage from './ProactivePage.jsx'
 import TokenUsageSection from './settings/TokenUsageSection.jsx'
+import VoiceIDSection from './settings/VoiceIDSection.jsx'
 import CapabilityFlagsSection from './settings/CapabilityFlagsSection.jsx'
 
 const TTL_LABELS = {
@@ -198,6 +199,7 @@ export default function SettingsPage({
           if (intentRouterData.data) setIntentRouterSettings(intentRouterData.data)
           if (routingFlags.data) setLlmRoutingFlags(routingFlags.data)
           if (hwData.data) setHardwareCookbook(hwData.data)
+          if (flagsData.data) setFeatureFlags(flagsData.data)
 
           setSectionStatuses(prev => ({
             ...prev,
