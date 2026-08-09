@@ -38,7 +38,6 @@ import ProactivePage from './ProactivePage.jsx'
 import TokenUsageSection from './settings/TokenUsageSection.jsx'
 import VoiceIDSection from './settings/VoiceIDSection.jsx'
 import CapabilityFlagsSection from './settings/CapabilityFlagsSection.jsx'
-import VoiceIDSection from './settings/VoiceIDSection.jsx'
 
 const TTL_LABELS = {
   short:    '7 days',
@@ -155,6 +154,19 @@ export default function SettingsPage({
         setLlmSettings(llmData)
         setMemSettings(memData)
         if (voiceData.data) setVoiceSettings(voiceData.data)
+        if (prefData.data) setUserPrefs(prefData.data)
+        if (feedPrefsData.data) setFeedPrefs(feedPrefsData.data)
+        if (featData.data) setAiFeatures(featData.data.ai_features || {})
+
+        setSectionStatuses(prev => ({
+          ...prev,
+          voice:       voiceData.status,
+          userPrefs:   prefData.status,
+          feedPrefs:   feedPrefsData.status,
+          aiFeatures:  featData.status,
+        }))
+
+        if (user?.role === 'admin') {
           const [visData, featVisData, familyRaw, familyGroupsRaw, orchData, elData, personaData, briefingData, dStatus, intentRouterData, routingFlags, hwData, flagsData] = await Promise.all([
             settle(`${API_BASE}/api/admin/model-visibility`),
             settle(`${API_BASE}/api/admin/feature-visibility`),
