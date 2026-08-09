@@ -168,9 +168,9 @@ async def _section_agenda(user_id: str) -> Dict[str, Any]:
         )
 
         try:
+        try:
             auth.get_credentials(user_id)
         except RuntimeError:
-            # No stored token found for this user
             return {"status": "disconnected", "events": []}
 
         from providers.google.calendar import GoogleCalendarProvider
