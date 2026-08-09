@@ -345,6 +345,32 @@ async def set_feature_visibility(
     return {"hidden_features": body.hidden_features}
 
 
+@router.get("/feature-flags")
+async def get_feature_flags(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    from config.settings import get_settings, Settings
+    
+    settings = get_settings()
+    flags = []
+    
+    for field_name, field_info in Settings.model_fields.items():
+        if field_name.endswith("_enabled"):
+            flags.append({
+                "key": field_name,
+                "env_var": field_name.upper(),
+                "enabled": getattr(settings, field_name),
+                "description": field_info.description or ""
+            })
+            
+    # Sort alphabetically by key for better usability
+    flags.sort(key=lambda x: x["key"])
+    
+    return {"flags": flags}
+
+
 # =============================================================================
 # Family management — parent-child link assignment
 # =============================================================================
