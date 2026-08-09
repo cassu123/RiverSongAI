@@ -58,6 +58,10 @@ export default function DaemonHealthWidget({ token }) {
   const [error, setError] = useState(false)
 
   const fetchStatus = useCallback(async () => {
+    if (!token) {
+      // Auth still resolving; keep loading=true, don't issue a request.
+      return
+    }
     try {
       const res = await fetch('/api/daemon/status', {
         headers: { Authorization: `Bearer ${token}` },
@@ -70,6 +74,7 @@ export default function DaemonHealthWidget({ token }) {
       const json = await res.json()
       setDaemons(json.daemons || {})
       setError(false)
+      setForbidden(false)
     } catch {
       setError(true)
     } finally {
