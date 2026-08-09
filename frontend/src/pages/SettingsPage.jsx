@@ -38,6 +38,7 @@ import ProactivePage from './ProactivePage.jsx'
 import TokenUsageSection from './settings/TokenUsageSection.jsx'
 import VoiceIDSection from './settings/VoiceIDSection.jsx'
 import CapabilityFlagsSection from './settings/CapabilityFlagsSection.jsx'
+import VoiceIDSection from './settings/VoiceIDSection.jsx'
 
 const TTL_LABELS = {
   short:    '7 days',
