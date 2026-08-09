@@ -16,6 +16,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
 
   const [models,          setModels]          = useState({ cloud: [], local: [], providerOrder: [] })
   const [selectedModel,   setSelectedModel]   = useState(null)
+  const [modelNotice,     setModelNotice]     = useState(null)
   const [savingModel,     setSavingModel]     = useState(false)
 
   const [historySessions, setHistorySessions] = useState([])
@@ -111,7 +112,27 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
     if (user) {
       fetch(`${API_BASE}/api/settings/llm?user_id=${user.id}`, { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
-        .then(s => setSelectedModel({ provider: s.provider, model_id: s.model }))
+        .then(s => {
+          // The saved selection can go unusable between sessions — a provider
+          // switched off, closed to non-admins, or a model hidden. The server
+          // re-checks it on read and hands back a free substitute. Switch to
+          // it for this session only, and say so: silently answering as a
+          // different model than the button names is worse than the failure
+          // this replaces. The stored choice is left alone so it comes back
+          // if the provider is turned on again.
+          if (s.available === false) {
+            setModelNotice({
+              name: s.display_name || s.model,
+              reason: s.unavailable_reason,
+              usingName: s.fallback_display_name,
+            })
+            if (s.fallback_provider) {
+              setSelectedModel({ provider: s.fallback_provider, model_id: s.fallback_model })
+              return
+            }
+          }
+          setSelectedModel({ provider: s.provider, model_id: s.model })
+        })
         .catch(() => {})
         
       const url = new URL(`${API_BASE}/api/chat/sessions`)
@@ -165,6 +186,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
 
   const handleModelSelect = async (provider, model_id) => {
     setSelectedModel({ provider, model_id })
+    setModelNotice(null)   // they have just answered it
     setSavingModel(true)
     try {
       await fetch(`${API_BASE}/api/settings/llm?user_id=${user.id}`, {
@@ -375,6 +397,23 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
               <button className="rs-pill is-active" onClick={() => setViewingSession(null)}>
                  <span className="material-symbols-rounded">live_tv</span>
                  RETURN TO LIVE STREAM
+              </button>
+            </div>
+          )}
+          {modelNotice && (
+            <div className="rs-model-notice animate-fade-in" style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 16px', marginBottom: 16, borderRadius: 10,
+              background: 'rgba(230,170,60,0.13)', border: '1px solid rgba(230,170,60,0.3)',
+              color: '#e6c07b', fontSize: '0.9rem',
+            }}>
+              <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>info</span>
+              <span style={{ flex: 1 }}>
+                {modelNotice.name} is unavailable{modelNotice.reason ? ` — ${modelNotice.reason}` : '.'}
+                {modelNotice.usingName ? ` Using ${modelNotice.usingName} for now.` : ' Pick another model to continue.'}
+              </span>
+              <button onClick={() => setModelNotice(null)} style={{ all: 'unset', cursor: 'pointer', opacity: 0.7 }}>
+                <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>close</span>
               </button>
             </div>
           )}
