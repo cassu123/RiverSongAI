@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import RiverStatusBox from '../components/RiverStatusBox.jsx'
 import HealthCard from '../components/HealthCard.jsx'
-import PulseWidget from '../components/PulseWidget.jsx'
+// PulseWidget is not deleted, it is relocated: its NEWS and MARKETS rows belong
+// on the Feeds page beside NewsTab and StocksTab, which already serve the same
+// data. It is now the leading PULSE tab there (FeedTabsContainer.jsx).
+import DaemonHealthWidget from '../components/DaemonHealthWidget.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 
 /**
@@ -267,13 +270,13 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
 
           <div className="rs-card-inner">
             <div className="rs-card-head">
-              <span className="rs-card-label">MARKET & NEWS PULSE</span>
-              <span className="material-symbols-rounded" style={{ opacity: 0.2 }}>sensors</span>
+              <span className="rs-card-label">DAEMON HEALTH</span>
+              <span className="material-symbols-rounded" style={{ opacity: 0.2 }}>monitor_heart</span>
             </div>
             <div className="rs-widget-pulse-wrapper">
-              <PulseWidget token={token} />
+              <DaemonHealthWidget token={token} />
             </div>
-            <div className="rs-card-meta">Real-time activity reports</div>
+            <div className="rs-card-meta">Background worker heartbeats</div>
 
             {expandedCard === 'pulse' && (
               <div className="rs-card-inner animate-fade-in">
