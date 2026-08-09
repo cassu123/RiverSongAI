@@ -134,6 +134,8 @@ function DaemonRow({ name, alive, port, status, age, first }) {
   const tone = alive ? C.green : C.red
   return (
     <div
+      role="group"
+      aria-label={`${name.replace(/_/g, ' ')}: ${alive ? 'alive' : 'no heartbeat'}`}
       style={{
         display: 'flex',
         alignItems: 'center',
