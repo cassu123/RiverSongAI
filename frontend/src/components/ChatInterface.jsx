@@ -14,7 +14,7 @@ function fmtDate(iso) {
 export default function ChatInterface({ setAction, onNavigate, initialIntent, onIntentConsumed, embedded, onClose, vehicleId }) {
   const { token, user } = useAuth()
 
-  const [models,          setModels]          = useState({ cloud: [], local: [] })
+  const [models,          setModels]          = useState({ cloud: [], local: [], providerOrder: [] })
   const [selectedModel,   setSelectedModel]   = useState(null)
   const [savingModel,     setSavingModel]     = useState(false)
 
@@ -100,7 +100,11 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
     fetch(`${API_BASE}/api/models`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {
-        setModels({ cloud: data.cloud || [], local: data.local || [] })
+        setModels({
+          cloud: data.cloud || [],
+          local: data.local || [],
+          providerOrder: data.provider_order || [],
+        })
       })
       .catch(() => {})
 
@@ -135,8 +139,6 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
   const localModels  = useMemo(() => models.local, [models.local])
   const nimModels    = useMemo(() => models.cloud.filter(m => m.provider === 'nvidia_nim'), [models.cloud])
   const cloudModels  = useMemo(() => models.cloud.filter(m => m.provider !== 'nvidia_nim'), [models.cloud])
-  const hasNvidia    = nimModels.length > 0
-  const hasCloud     = cloudModels.some(m => m.available)
 
   const closeModelPicker = () => { setModelPickerOpen(false) }
   const openModelPicker = useCallback((e) => {
@@ -409,8 +411,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
         localModels={localModels}
         nimModels={nimModels}
         cloudModels={cloudModels}
-        hasNvidia={hasNvidia}
-        hasCloud={hasCloud}
+        providerOrder={models.providerOrder}
       />
 
       {toolsOpen && (
