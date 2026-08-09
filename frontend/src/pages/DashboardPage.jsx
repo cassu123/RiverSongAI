@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import RiverStatusBox from '../components/RiverStatusBox.jsx'
 import HealthCard from '../components/HealthCard.jsx'
-// PulseWidget is intentionally left in components/ rather than deleted: its
-// NEWS and MARKETS rows belong on the Feeds page beside NewsTab and StocksTab,
-// which already serve the same data. Moving it there is a separate change.
+// PulseWidget is not deleted, it is relocated: its NEWS and MARKETS rows belong
+// on the Feeds page beside NewsTab and StocksTab, which already serve the same
+// data. It is now the leading PULSE tab there (FeedTabsContainer.jsx).
 import DaemonHealthWidget from '../components/DaemonHealthWidget.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 

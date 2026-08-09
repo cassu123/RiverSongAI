@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import PulseWidget from './PulseWidget.jsx'
 import NewsTab    from './tabs/NewsTab.jsx'
 import WeatherTab from './tabs/WeatherTab.jsx'
 import SportsTab  from './tabs/SportsTab.jsx'
@@ -13,6 +14,11 @@ import {
 } from './tabs/FeedTabSettings.jsx'
 
 const TABS = [
+  // Pulse leads: it is the digest of what the tabs behind it cover in full, so
+  // it reads as an overview you drill down from. It moved here off the system
+  // dashboard, where a news-and-markets panel was the one card reporting content
+  // instead of machine state -- and where it duplicated NEWS and STOCKS below.
+  { key: 'pulse',   label: 'PULSE',   icon: 'sensors' },
   { key: 'news',    label: 'NEWS',    icon: 'newspaper' },
   { key: 'weather', label: 'WEATHER', icon: 'cloud' },
   { key: 'sports',  label: 'SPORTS',  icon: 'sports_kabaddi' },
@@ -142,6 +148,10 @@ export default function FeedTabsContainer({ token, defaultTab = 'news' }) {
       {/* Tab content */}
       <div className="rs-feeds-body">
         {settingsForActive}
+        {/* PulseWidget stays under components/ rather than tabs/: it is a widget
+            rendered as a tab, not a feed with its own fetch/settings contract
+            like the others. It takes no `active` prop. */}
+        {active === 'pulse'   && <PulseWidget token={token} />}
         {active === 'news'    && <NewsTab    token={token} active={active === 'news'} />}
         {active === 'weather' && <WeatherTab token={token} active={active === 'weather'} />}
         {active === 'sports'  && <SportsTab  token={token} active={active === 'sports'} />}
