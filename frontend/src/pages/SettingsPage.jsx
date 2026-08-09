@@ -36,7 +36,7 @@ import AdminModelFamiliesSection from './settings/AdminModelFamiliesSection.jsx'
 import NotificationsSection from './settings/NotificationsSection.jsx'
 import ProactivePage from './ProactivePage.jsx'
 import TokenUsageSection from './settings/TokenUsageSection.jsx'
-import VoiceIDSection from './settings/VoiceIDSection.jsx'
+import CapabilityFlagsSection from './settings/CapabilityFlagsSection.jsx'
 
 const TTL_LABELS = {
   short:    '7 days',
@@ -44,6 +44,28 @@ const TTL_LABELS = {
   extended: '90 days',
   long:     '365 days',
   forever:  'Forever',
+}
+
+function SectionStatusWrapper({ status, children }) {
+  if (status === 'ok' || !status) return children
+  if (status === 'disabled') return null
+  if (status === 'forbidden') {
+    return (
+      <div style={{ opacity: 0.6, pointerEvents: 'none' }}>
+        <Section title="ACCESS DENIED">
+          <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>You do not have permission to view this section.</div>
+        </Section>
+      </div>
+    )
+  }
+  // status === 'error'
+  return (
+    <div style={{ opacity: 0.6 }}>
+      <Section title="FAILED TO LOAD">
+        <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>This section could not be loaded. Please check server logs.</div>
+      </Section>
+    </div>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -62,6 +84,7 @@ export default function SettingsPage({
   const [visibility,       setVisibility]       = useState(null)
   const [featureVis,       setFeatureVis]       = useState(null)  // admin: global feature flags
   const [familyData,       setFamilyData]       = useState(null)  // admin: parent-child links
+  const [featureFlags,     setFeatureFlags]     = useState(null)  // admin: env capabilities
   const [familyGroups,     setFamilyGroups]     = useState(null)  // admin: family groups
   const [childrenData,     setChildrenData]     = useState(null)  // parent: my children
   const [enabledProviders, setEnabledProviders] = useState({})
@@ -90,6 +113,7 @@ export default function SettingsPage({
   const [saveStatus,       setSaveStatus]       = useState('')
   const [saveErrorDetail,  setSaveErrorDetail]  = useState('')
   const [reloadPending,    setReloadPending]    = useState(false)
+  const [sectionStatuses,  setSectionStatuses]  = useState({})
 
   // ---- Initial data load ----
   useEffect(() => {
@@ -98,15 +122,28 @@ export default function SettingsPage({
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
       const query = user?.id ? `?user_id=${user.id}` : ''
       const okJson = (r) => { if (!r.ok) throw new Error(`HTTP ${r.status} from ${r.url}`); return r.json() }
+      
+      const settle = async (url) => {
+        try {
+          const r = await fetch(url, { headers })
+          if (r.status === 401 || r.status === 403) return { status: 'forbidden', data: null }
+          if (r.status === 404) return { status: 'disabled',  data: null }
+          if (!r.ok)            return { status: 'error',     data: null }
+          return { status: 'ok', data: await r.json() }
+        } catch {
+          return { status: 'error', data: null }
+        }
+      }
+
       try {
         const [modData, llmData, memData, voiceData, featData, prefData, feedPrefsData] = await Promise.all([
           fetch(`${API_BASE}/api/models`, { headers }).then(okJson),
           fetch(`${API_BASE}/api/settings/llm${query}`, { headers }).then(okJson),
           fetch(`${API_BASE}/api/settings/memory${query}`, { headers }).then(okJson),
-          fetch(`${API_BASE}/api/settings/voice`, { headers }).then(r => r.json()).catch(() => null),
-          fetch(`${API_BASE}/api/features`, { headers }).then(r => r.json()).catch(() => ({ ai_features: {} })),
-          fetch(`${API_BASE}/api/settings`, { headers }).then(r => r.json()).catch(() => ({ music_provider: 'youtube_music' })),
-          fetch(`${API_BASE}/api/feeds/preferences`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+          settle(`${API_BASE}/api/settings/voice`),
+          settle(`${API_BASE}/api/features`),
+          settle(`${API_BASE}/api/settings`),
+          settle(`${API_BASE}/api/feeds/preferences`),
         ])
 
         if (!active) return
@@ -115,48 +152,76 @@ export default function SettingsPage({
         setEnabledProviders(modData.enabled_providers || {})
         setLlmSettings(llmData)
         setMemSettings(memData)
-        setVoiceSettings(voiceData)
-        setUserPrefs(prefData)
-        if (feedPrefsData) setFeedPrefs(feedPrefsData)
-        if (featData) setAiFeatures(featData.ai_features || {})
+        if (voiceData.data) setVoiceSettings(voiceData.data)
+        if (featData.data) setAiFeatures(featData.data.ai_features || {})
+        if (prefData.data) setUserPrefs(prefData.data)
+        if (feedPrefsData.data) setFeedPrefs(feedPrefsData.data)
+
+        setSectionStatuses(prev => ({
+          ...prev,
+          voice: voiceData.status,
+          features: featData.status,
+          settings: prefData.status,
+          feedPrefs: feedPrefsData.status
+        }))
 
         if (user?.role === 'admin') {
-          const [visData, featVisData, familyRaw, familyGroupsRaw, orchData, elData, personaData, briefingData, dStatus, intentRouterData, routingFlags, hwData] = await Promise.all([
-            fetch(`${API_BASE}/api/admin/model-visibility`, { headers }).then(r => r.json()).catch(() => null),
-            fetch(`${API_BASE}/api/admin/feature-visibility`, { headers }).then(r => r.json()).catch(() => null),
-            fetch(`${API_BASE}/api/admin/family`, { headers }).then(r => r.json()).catch(() => null),
-            fetch(`${API_BASE}/api/admin/family-groups`, { headers }).then(r => r.json()).catch(() => null),
-            fetch(`${API_BASE}/api/settings/orchestration`, { headers }).then(r => r.json()).catch(() => null),
-            fetch(`${API_BASE}/api/settings/elevenlabs`, { headers }).then(r => r.json()).catch(() => null),
-            fetch(`${API_BASE}/api/settings/persona`, { headers }).then(r => r.json()).catch(() => null),
-            fetch(`${API_BASE}/api/settings/briefing`, { headers }).then(r => r.json()).catch(() => null),
-            fetch(`${API_BASE}/api/daemon/status`, { headers }).then(r => r.json()).catch(() => null),
-            fetch(`${API_BASE}/api/settings/intent-router`, { headers }).then(r => r.json()).catch(() => null),
-            fetch(`${API_BASE}/api/admin/llm-routing-flags`, { headers }).then(r => r.json()).catch(() => null),
-            fetch(`${API_BASE}/api/models/hardware`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+          const [visData, featVisData, familyRaw, familyGroupsRaw, orchData, elData, personaData, briefingData, dStatus, intentRouterData, routingFlags, hwData, flagsData] = await Promise.all([
+            settle(`${API_BASE}/api/admin/model-visibility`),
+            settle(`${API_BASE}/api/admin/feature-visibility`),
+            settle(`${API_BASE}/api/admin/family`),
+            settle(`${API_BASE}/api/admin/family-groups`),
+            settle(`${API_BASE}/api/settings/orchestration`),
+            settle(`${API_BASE}/api/settings/elevenlabs`),
+            settle(`${API_BASE}/api/settings/persona`),
+            settle(`${API_BASE}/api/settings/briefing`),
+            settle(`${API_BASE}/api/daemon/status`),
+            settle(`${API_BASE}/api/settings/intent-router`),
+            settle(`${API_BASE}/api/admin/llm-routing-flags`),
+            settle(`${API_BASE}/api/models/hardware`),
+            settle(`${API_BASE}/api/admin/feature-flags`),
           ])
+          
           if (!active) return
-          if (visData) setVisibility(visData)
-          if (featVisData) setFeatureVis(featVisData)
-          if (familyRaw) setFamilyData(familyRaw)
-          if (familyGroupsRaw) setFamilyGroups(familyGroupsRaw)
-          if (orchData) {
-            setOrchestrationSettings(orchData)
-            if (orchData.daemon_scribe_enabled != null) setScribeEnabled(orchData.daemon_scribe_enabled)
+          if (visData.data) setVisibility(visData.data)
+          if (featVisData.data) setFeatureVis(featVisData.data)
+          if (familyRaw.data) setFamilyData(familyRaw.data)
+          if (familyGroupsRaw.data) setFamilyGroups(familyGroupsRaw.data)
+          if (orchData.data) {
+            setOrchestrationSettings(orchData.data)
+            if (orchData.data.daemon_scribe_enabled != null) setScribeEnabled(orchData.data.daemon_scribe_enabled)
           }
-          if (elData) setElevenLabsSettings(elData)
-          if (personaData) setPersonaSettings(personaData)
-          if (briefingData) setBriefingSettings(briefingData)
-          if (dStatus) setDaemonStatus(dStatus.daemons || {})
-          if (intentRouterData) setIntentRouterSettings(intentRouterData)
-          if (routingFlags) setLlmRoutingFlags(routingFlags)
-          if (hwData) setHardwareCookbook(hwData)
+          if (elData.data) setElevenLabsSettings(elData.data)
+          if (personaData.data) setPersonaSettings(personaData.data)
+          if (briefingData.data) setBriefingSettings(briefingData.data)
+          if (dStatus.data) setDaemonStatus(dStatus.data.daemons || {})
+          if (intentRouterData.data) setIntentRouterSettings(intentRouterData.data)
+          if (routingFlags.data) setLlmRoutingFlags(routingFlags.data)
+          if (hwData.data) setHardwareCookbook(hwData.data)
+
+          setSectionStatuses(prev => ({
+            ...prev,
+            visibility: visData.status,
+            featureVis: featVisData.status,
+            family: familyRaw.status,
+            familyGroups: familyGroupsRaw.status,
+            orchestration: orchData.status,
+            elevenlabs: elData.status,
+            persona: personaData.status,
+            briefing: briefingData.status,
+            daemonStatus: dStatus.status,
+            intentRouter: intentRouterData.status,
+            llmRoutingFlags: routingFlags.status,
+            hardwareCookbook: hwData.status,
+            featureFlags: flagsData.status
+          }))
         } else if (user?.role === 'parent') {
           const [childrenRaw] = await Promise.all([
-            fetch(`${API_BASE}/api/parent/children`, { headers }).then(r => r.json()).catch(() => null)
+            settle(`${API_BASE}/api/parent/children`)
           ])
           if (!active) return
-          if (childrenRaw) setChildrenData(childrenRaw)
+          if (childrenRaw.data) setChildrenData(childrenRaw.data)
+          setSectionStatuses(prev => ({ ...prev, children: childrenRaw.status }))
         }
 
         setLoading(false)
@@ -616,18 +681,22 @@ export default function SettingsPage({
       {/* ================================================================ */}
       {/* ORCHESTRATION (n8n) — admin view, toggle only. Credentials live in .env */}
       {/* ================================================================ */}
-      {showAdmin && orchestrationSettings && (
-        <Section title="WORKFLOW AUTOMATION">
-          <Toggle
-            id="n8n-toggle"
-            label="Enable Background Automation"
-            checked={orchestrationSettings.n8n_enabled}
-            onChange={v => saveOrchestration({ n8n_enabled: v })}
-          />
-          <p className="rs-card-meta">
-            River can execute complex, multi-step routines in the background. System credentials are automatically securely loaded from the core environment.
-          </p>
-        </Section>
+      {showAdmin && (
+        <SectionStatusWrapper status={sectionStatuses.orchestration}>
+          {orchestrationSettings && (
+            <Section title="WORKFLOW AUTOMATION">
+              <Toggle
+                id="n8n-toggle"
+                label="Enable Background Automation"
+                checked={orchestrationSettings.n8n_enabled}
+                onChange={v => saveOrchestration({ n8n_enabled: v })}
+              />
+              <p className="rs-card-meta">
+                River can execute complex, multi-step routines in the background. System credentials are automatically securely loaded from the core environment.
+              </p>
+            </Section>
+          )}
+        </SectionStatusWrapper>
       )}
 
       {/* ================================================================ */}
@@ -666,21 +735,25 @@ export default function SettingsPage({
       {/* INTENT ROUTER — admin                                            */}
       {/* ================================================================ */}
       {showAdmin && (
-        <IntentRouterSection
-          intentRouterSettings={intentRouterSettings}
-          saveIntentRouter={saveIntentRouter}
-        />
+        <SectionStatusWrapper status={sectionStatuses.intentRouter}>
+          <IntentRouterSection
+            intentRouterSettings={intentRouterSettings}
+            saveIntentRouter={saveIntentRouter}
+          />
+        </SectionStatusWrapper>
       )}
 
       {/* ================================================================ */}
       {/* CHRONOS / SCRIBE — admin                                         */}
       {/* ================================================================ */}
       {showAdmin && (
-        <ChronosSection
-          scribeEnabled={scribeEnabled}
-          saveScribeEnabled={saveScribeEnabled}
-          daemonStatus={daemonStatus}
-        />
+        <SectionStatusWrapper status={sectionStatuses.daemonStatus}>
+          <ChronosSection
+            scribeEnabled={scribeEnabled}
+            saveScribeEnabled={saveScribeEnabled}
+            daemonStatus={daemonStatus}
+          />
+        </SectionStatusWrapper>
       )}
 
       {/* ================================================================ */}
@@ -729,53 +802,69 @@ export default function SettingsPage({
       {/* Hidden when settings.hardware_cookbook_enabled = False (route    */}
       {/* returns 404 → fetch null → section does not render).             */}
       {/* ================================================================ */}
-      {showAdmin && hardwareCookbook && (
-        <HardwareCookbookSection hardwareCookbook={hardwareCookbook} />
+      {showAdmin && (
+        <SectionStatusWrapper status={sectionStatuses.hardwareCookbook}>
+          {hardwareCookbook && (
+            <HardwareCookbookSection hardwareCookbook={hardwareCookbook} />
+          )}
+        </SectionStatusWrapper>
       )}
 
       {/* ================================================================ */}
       {/* DAEMON CONTROL — admin                                          */}
       {/* ================================================================ */}
       {showAdmin && (
-        <DaemonControlSection
-          daemonStatus={daemonStatus}
-          aiFeatures={aiFeatures}
-          saveAiFeature={saveAiFeature}
-          triggerDaemonTask={triggerDaemonTask}
-        />
+        <SectionStatusWrapper status={sectionStatuses.daemonStatus}>
+          <DaemonControlSection
+            daemonStatus={daemonStatus}
+            aiFeatures={aiFeatures}
+            saveAiFeature={saveAiFeature}
+            triggerDaemonTask={triggerDaemonTask}
+          />
+        </SectionStatusWrapper>
       )}
 
       {/* ================================================================ */}
       {/* LOCAL AI FEATURES — admin                                        */}
       {/* ================================================================ */}
       {showAdmin && (
-        <LocalAiFeaturesSection
-          aiFeatures={aiFeatures}
-          saveAiFeature={saveAiFeature}
-        />
+        <SectionStatusWrapper status={sectionStatuses.features}>
+          <LocalAiFeaturesSection
+            aiFeatures={aiFeatures}
+            saveAiFeature={saveAiFeature}
+          />
+        </SectionStatusWrapper>
       )}
 
       {/* ================================================================ */}
       {/* PERSONALITY — admin                                              */}
       {/* ================================================================ */}
-      {showAdmin && personaSettings && (
-        <PersonaSection
-          personaSettings={personaSettings}
-          setPersonaSettings={setPersonaSettings}
-          savePersona={savePersona}
-          resetPersona={resetPersona}
-        />
+      {showAdmin && (
+        <SectionStatusWrapper status={sectionStatuses.persona}>
+          {personaSettings && (
+            <PersonaSection
+              personaSettings={personaSettings}
+              setPersonaSettings={setPersonaSettings}
+              savePersona={savePersona}
+              resetPersona={resetPersona}
+            />
+          )}
+        </SectionStatusWrapper>
       )}
 
       {/* ================================================================ */}
       {/* BRIEFING — admin                                                 */}
       {/* ================================================================ */}
-      {showAdmin && briefingSettings && (
-        <BriefingSection
-          briefingSettings={briefingSettings}
-          setBriefingSettings={setBriefingSettings}
-          saveBriefingSettings={saveBriefingSettings}
-        />
+      {showAdmin && (
+        <SectionStatusWrapper status={sectionStatuses.briefing}>
+          {briefingSettings && (
+            <BriefingSection
+              briefingSettings={briefingSettings}
+              setBriefingSettings={setBriefingSettings}
+              saveBriefingSettings={saveBriefingSettings}
+            />
+          )}
+        </SectionStatusWrapper>
       )}
 
       {/* Feed preferences (weather, sports, stocks, space, earth, happenings)
@@ -798,50 +887,54 @@ export default function SettingsPage({
       {/* VOICE — user                                                     */}
       {/* ================================================================ */}
       {showUser && (
-      <Section title="VOICE">
-        {voiceSettings ? (
-          <VoiceSection
-            voiceSettings={voiceSettings}
-            token={token}
-            user={user}
-            elevenLabsSettings={elevenLabsSettings}
-            onSaveElevenLabs={saveElevenLabs}
-            onSwitched={() => {
-              const headers = token ? { Authorization: `Bearer ${token}` } : {}
-              fetch(`${API_BASE}/api/settings/voice`, { headers })
-                .then(r => r.json()).then(setVoiceSettings).catch(() => {})
-            }}
-          />
-        ) : (
-          <div className="rs-card-meta">Loading voices…</div>
-        )}
-      </Section>
+      <SectionStatusWrapper status={sectionStatuses.voice}>
+        <Section title="VOICE">
+          {voiceSettings ? (
+            <VoiceSection
+              voiceSettings={voiceSettings}
+              token={token}
+              user={user}
+              elevenLabsSettings={elevenLabsSettings}
+              onSaveElevenLabs={saveElevenLabs}
+              onSwitched={() => {
+                const headers = token ? { Authorization: `Bearer ${token}` } : {}
+                fetch(`${API_BASE}/api/settings/voice`, { headers })
+                  .then(r => r.json()).then(setVoiceSettings).catch(() => {})
+              }}
+            />
+          ) : (
+            <div className="rs-card-meta">Loading voices…</div>
+          )}
+        </Section>
+      </SectionStatusWrapper>
       )}
 
       {/* ================================================================ */}
       {/* MUSIC & ENTERTAINMENT — user                                    */}
       {/* ================================================================ */}
       {showUser && (
-      <Section title="MUSIC & ENTERTAINMENT">
-        <p className="rs-card-meta" style={{ marginTop: -8 }}>
-          Select your preferred discovery and playback service.
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="toggle-row" style={{ padding: 0 }}>
-            <span className="toggle-label">Preferred Provider</span>
-            <select
-              className="rs-input"
-              style={{ width: 'auto', minWidth: 180 }}
-              value={userPrefs?.music_provider || 'youtube_music'}
-              onChange={(e) => saveUserPrefs({ music_provider: e.target.value })}
-            >
-              <option value="youtube_music">YouTube Music</option>
-              <option value="spotify" disabled>Spotify (Coming Soon)</option>
-              <option value="none">None</option>
-            </select>
+      <SectionStatusWrapper status={sectionStatuses.settings}>
+        <Section title="MUSIC & ENTERTAINMENT">
+          <p className="rs-card-meta" style={{ marginTop: -8 }}>
+            Select your preferred discovery and playback service.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="toggle-row" style={{ padding: 0 }}>
+              <span className="toggle-label">Preferred Provider</span>
+              <select
+                className="rs-input"
+                style={{ width: 'auto', minWidth: 180 }}
+                value={userPrefs?.music_provider || 'youtube_music'}
+                onChange={(e) => saveUserPrefs({ music_provider: e.target.value })}
+              >
+                <option value="youtube_music">YouTube Music</option>
+                <option value="spotify" disabled>Spotify (Coming Soon)</option>
+                <option value="none">None</option>
+              </select>
+            </div>
           </div>
-        </div>
-      </Section>
+        </Section>
+      </SectionStatusWrapper>
       )}
 
       {/* ================================================================ */}
@@ -941,40 +1034,52 @@ export default function SettingsPage({
       {/* ================================================================ */}
       {/* PARENT — my children (parent only, user view)                   */}
       {/* ================================================================ */}
-      {showUser && user?.role === 'parent' && childrenData && (
-        <ParentChildrenSection
-          data={childrenData}
-          token={token}
-          onChanged={updated => {
-            setChildrenData(updated)
-            if (onFeaturesChanged) onFeaturesChanged()
-          }}
-        />
+      {showUser && user?.role === 'parent' && (
+        <SectionStatusWrapper status={sectionStatuses.children}>
+          {childrenData && (
+            <ParentChildrenSection
+              data={childrenData}
+              token={token}
+              onChanged={updated => {
+                setChildrenData(updated)
+                if (onFeaturesChanged) onFeaturesChanged()
+              }}
+            />
+          )}
+        </SectionStatusWrapper>
       )}
 
       {/* ================================================================ */}
       {/* ADMIN — feature visibility                                       */}
       {/* ================================================================ */}
-      {showAdmin && featureVis && (
-        <AdminFeatureSection
-          featureVis={featureVis}
-          token={token}
-          onChanged={updated => {
-            setFeatureVis(updated)
-            if (onFeaturesChanged) onFeaturesChanged()
-          }}
-        />
+      {showAdmin && (
+        <SectionStatusWrapper status={sectionStatuses.featureVis}>
+          {featureVis && (
+            <AdminFeatureSection
+              featureVis={featureVis}
+              token={token}
+              onChanged={updated => {
+                setFeatureVis(updated)
+                if (onFeaturesChanged) onFeaturesChanged()
+              }}
+            />
+          )}
+        </SectionStatusWrapper>
       )}
 
       {/* ================================================================ */}
       {/* ADMIN — family groups                                            */}
       {/* ================================================================ */}
-      {showAdmin && familyGroups && (
-        <FamilyGroupsSection
-          data={familyGroups}
-          token={token}
-          onChanged={setFamilyGroups}
-        />
+      {showAdmin && (
+        <SectionStatusWrapper status={sectionStatuses.familyGroups}>
+          {familyGroups && (
+            <FamilyGroupsSection
+              data={familyGroups}
+              token={token}
+              onChanged={setFamilyGroups}
+            />
+          )}
+        </SectionStatusWrapper>
       )}
 
       {/* ================================================================ */}
@@ -987,12 +1092,16 @@ export default function SettingsPage({
       {/* ================================================================ */}
       {/* ADMIN — model visibility                                         */}
       {/* ================================================================ */}
-      {showAdmin && visibility && (
-        <AdminVisibilitySection
-          visibility={visibility}
-          token={token}
-          onChanged={updated => setVisibility(updated)}
-        />
+      {showAdmin && (
+        <SectionStatusWrapper status={sectionStatuses.visibility}>
+          {visibility && (
+            <AdminVisibilitySection
+              visibility={visibility}
+              token={token}
+              onChanged={updated => setVisibility(updated)}
+            />
+          )}
+        </SectionStatusWrapper>
       )}
 
       {/* ================================================================ */}
@@ -1000,6 +1109,17 @@ export default function SettingsPage({
       {/* ================================================================ */}
       {showAdmin && (
         <AdminModelFamiliesSection token={token} />
+      )}
+
+      {/* ================================================================ */}
+      {/* ADMIN — capability flags (.env viewer)                           */}
+      {/* ================================================================ */}
+      {showAdmin && (
+        <SectionStatusWrapper status={sectionStatuses.featureFlags}>
+          {featureFlags && (
+            <CapabilityFlagsSection data={featureFlags} />
+          )}
+        </SectionStatusWrapper>
       )}
 
       </div>

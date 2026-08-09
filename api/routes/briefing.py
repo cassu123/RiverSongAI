@@ -17,6 +17,7 @@ four of five sections is worth far more than a 500.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -109,8 +110,6 @@ async def _section_weather(request: Request, user_id: str) -> Dict[str, Any]:
         from api.services.feed_service import FeedService
         data = await FeedService.get_weather(_store(request), user_id)
     except HTTPException as exc:
-        # 404 from the service means "no location saved" — actionable by the
-        # user, so it is a distinct state from a provider outage.
         if exc.status_code == 404:
             return {"status": "unconfigured"}
         return {"status": "unavailable"}
@@ -118,72 +117,74 @@ async def _section_weather(request: Request, user_id: str) -> Dict[str, Any]:
         logger.warning("Briefing weather failed for %s: %s", user_id, exc)
         return {"status": "unavailable"}
 
-    current = (data or {}).get("current") or {}
-    daily = (data or {}).get("daily") or {}
-    code = current.get("weathercode")
-    icon, description = _WMO.get(int(code) if code is not None else -1, ("thermostat", "current conditions"))
+    try:
+        current = (data or {}).get("current") or {}
+        daily = (data or {}).get("daily") or {}
+        code = current.get("weathercode")
+        
+        try:
+            code_int = int(code) if code is not None else -1
+        except (ValueError, TypeError):
+            code_int = -1
+            
+        icon, description = _WMO.get(code_int, ("thermostat", "current conditions"))
 
-    temp = current.get("temperature_2m")
-    unit = "F" if (data or {}).get("unit") == "fahrenheit" else "C"
+        temp = current.get("temperature_2m")
+        unit = "F" if (data or {}).get("unit") == "fahrenheit" else "C"
 
-    def _first(seq):
-        return seq[0] if isinstance(seq, list) and seq else None
+        def _first(seq):
+            return seq[0] if isinstance(seq, list) and seq else None
 
-    return {
-        "status": "ok",
-        "temperature": round(temp) if isinstance(temp, (int, float)) else None,
-        "feels_like": (round(current["apparent_temperature"])
-                       if isinstance(current.get("apparent_temperature"),
-                                     (int, float)) else None),
-        "unit": unit,
-        "code": code,
-        "icon": icon,
-        "description": description,
-        "high": (round(v) if isinstance(
-            v := _first(daily.get("temperature_2m_max")), (int, float)) else None),
-        "low": (round(v) if isinstance(
-            v := _first(daily.get("temperature_2m_min")), (int, float)) else None),
-    }
+        return {
+            "status": "ok",
+            "temperature": round(temp) if isinstance(temp, (int, float)) else None,
+            "feels_like": (round(current.get("apparent_temperature"))
+                           if isinstance(current.get("apparent_temperature"),
+                                         (int, float)) else None),
+            "unit": unit,
+            "code": code,
+            "icon": icon,
+            "description": description,
+            "high": (round(v) if isinstance(
+                v := _first(daily.get("temperature_2m_max")), (int, float)) else None),
+            "low": (round(v) if isinstance(
+                v := _first(daily.get("temperature_2m_min")), (int, float)) else None),
+        }
+    except Exception as exc:
+        logger.warning("Briefing weather parsing failed for %s: %s", user_id, exc)
+        return {"status": "unavailable"}
 
 
 async def _section_agenda(user_id: str) -> Dict[str, Any]:
     """Today's calendar. status: ok | disconnected | unavailable"""
-    from config.settings import get_settings
-    from providers.google.auth import GoogleAuth
-
-    settings = get_settings()
-    auth = GoogleAuth(
-        client_secrets_path=settings.google_client_secrets_path,
-        token_storage_path=settings.google_token_storage_path,
-    )
-
-    # get_credentials raises when the user has never connected Google. That is
-    # a different situation from the API being down, and the card offers a
-    # "Connect Google" action for it, so keep the two apart.
     try:
-        auth.get_credentials(user_id)
-    except Exception:
-        return {"status": "disconnected", "events": []}
+        from config.settings import get_settings
+        from providers.google.auth import GoogleAuth
 
-    try:
+        settings = get_settings()
+        auth = GoogleAuth(
+            client_secrets_path=settings.google_client_secrets_path,
+            token_storage_path=settings.google_token_storage_path,
+        )
+
+        try:
+            auth.get_credentials(user_id)
+        except Exception:
+            return {"status": "disconnected", "events": []}
+
         from providers.google.calendar import GoogleCalendarProvider
         provider = GoogleCalendarProvider(auth, user_id)
-        events = await provider.get_upcoming_events(days_ahead=1,
-                                                    max_results=10)
+        events = await provider.get_upcoming_events(days_ahead=1, max_results=10)
+
+        return {"status": "ok", "events": [_norm_event(e) for e in (events or []) if isinstance(e, dict)]}
     except Exception as exc:
         logger.warning("Briefing agenda failed for %s: %s", user_id, exc)
         return {"status": "unavailable", "events": []}
-
-    return {"status": "ok", "events": [_norm_event(e) for e in (events or [])]}
 
 
 def _norm_event(event: Dict[str, Any]) -> Dict[str, Any]:
     """
     Flatten a Google event into what the card needs.
-
-    All-day events arrive as ``start.date`` with no ``start.dateTime``; the old
-    frontend formatter fell through to a time format and rendered them as
-    "00:00", which reads as a midnight appointment.
     """
     start = event.get("start") or {}
     all_day = bool(start.get("date") and not start.get("dateTime"))
@@ -202,21 +203,21 @@ async def _section_reminders(user_id: str) -> Dict[str, Any]:
         from providers.google.tasks import build_tasks_provider
         provider = build_tasks_provider(user_id)
         tasks = await provider.get_tasks(tasklist_id="@default")
+        
+        items = [
+            {
+                "id": t.get("id"),
+                "title": t.get("title") or "Untitled",
+                "due": t.get("due"),
+                "notes": t.get("notes"),
+            }
+            for t in (tasks or []) if isinstance(t, dict)
+            if (t.get("title") or "").strip()
+        ]
+        return {"status": "ok", "items": items}
     except Exception as exc:
         logger.warning("Briefing reminders failed for %s: %s", user_id, exc)
         return {"status": "unavailable", "items": []}
-
-    items = [
-        {
-            "id": t.get("id"),
-            "title": t.get("title") or "Untitled",
-            "due": t.get("due"),
-            "notes": t.get("notes"),
-        }
-        for t in (tasks or [])
-        if (t.get("title") or "").strip()
-    ]
-    return {"status": "ok", "items": items}
 
 
 async def _section_updates(request: Request, user_id: str) -> Dict[str, Any]:
@@ -232,23 +233,23 @@ async def _section_updates(request: Request, user_id: str) -> Dict[str, Any]:
             "ORDER BY created_at DESC LIMIT 20",
             (user_id,),
         )
+
+        return {
+            "status": "ok",
+            "items": [
+                {
+                    "kind": r["kind"],
+                    "severity": r["severity"],
+                    "title": r["title"],
+                    "body": r["body"],
+                    "created_at": r["created_at"],
+                }
+                for r in (rows or [])
+            ],
+        }
     except Exception as exc:
         logger.warning("Briefing updates failed for %s: %s", user_id, exc)
         return {"status": "unavailable", "items": []}
-
-    return {
-        "status": "ok",
-        "items": [
-            {
-                "kind": r["kind"],
-                "severity": r["severity"],
-                "title": r["title"],
-                "body": r["body"],
-                "created_at": r["created_at"],
-            }
-            for r in (rows or [])
-        ],
-    }
 
 
 async def _section_headlines(request: Request, user_id: str) -> Dict[str, Any]:
@@ -257,23 +258,23 @@ async def _section_headlines(request: Request, user_id: str) -> Dict[str, Any]:
         from api.services.feed_service import FeedService
         # Returns a flat list of articles (empty when no sources are chosen).
         articles = await FeedService.get_news(_store(request), user_id)
+
+        return {
+            "status": "ok",
+            "items": [
+                {
+                    "title": a.get("title"),
+                    "source": a.get("source"),
+                    "url": a.get("url"),
+                    "image_url": a.get("image_url"),
+                }
+                for a in (articles or [])[:6] if isinstance(a, dict)
+                if (a.get("title") or "").strip()
+            ],
+        }
     except Exception as exc:
         logger.warning("Briefing headlines failed for %s: %s", user_id, exc)
         return {"status": "unavailable", "items": []}
-
-    return {
-        "status": "ok",
-        "items": [
-            {
-                "title": a.get("title"),
-                "source": a.get("source"),
-                "url": a.get("url"),
-                "image_url": a.get("image_url"),
-            }
-            for a in (articles or [])[:6]
-            if (a.get("title") or "").strip()
-        ],
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -299,11 +300,11 @@ def build_script(payload: Dict[str, Any]) -> str:
     """Compose the human-readable briefing that River reads aloud."""
     parts: List[str] = []
     name = payload.get("name") or ""
-    parts.append(f"{payload['greeting']}{', ' + name if name else ''}.")
+    parts.append(f"{payload.get('greeting', 'Hello')}{', ' + name if name else ''}.")
 
     wx = payload.get("weather") or {}
     if wx.get("status") == "ok" and wx.get("temperature") is not None:
-        line = f"It's {wx['temperature']} degrees and {wx['description']}"
+        line = f"It's {wx['temperature']} degrees and {wx.get('description', 'current conditions')}"
         if wx.get("high") is not None and wx.get("low") is not None:
             line += f", with a high of {wx['high']} and a low of {wx['low']}"
         parts.append(line + ".")
@@ -356,13 +357,23 @@ async def get_briefing_summary(
     user_id = await _require_user(authorization)
     now = local_now()
 
-    weather, agenda, reminders, updates, headlines = await asyncio.gather(
+    results = await asyncio.gather(
         _section_weather(request, user_id),
         _section_agenda(user_id),
         _section_reminders(user_id),
         _section_updates(request, user_id),
         _section_headlines(request, user_id),
+        return_exceptions=True
     )
+
+    def _safe_res(res, fallback):
+        return fallback if isinstance(res, Exception) else res
+
+    weather = _safe_res(results[0], {"status": "unavailable"})
+    agenda = _safe_res(results[1], {"status": "unavailable", "events": []})
+    reminders = _safe_res(results[2], {"status": "unavailable", "items": []})
+    updates = _safe_res(results[3], {"status": "unavailable", "items": []})
+    headlines = _safe_res(results[4], {"status": "unavailable", "items": []})
 
     name = ""
     try:
@@ -404,16 +415,42 @@ async def speak_briefing(
 ):
     """
     Synthesize the briefing in River's configured voice and return WAV audio.
-
-    Reuses the same provider the conversation loop uses, so this tracks the
-    user's selected voice rather than introducing a second voice for the app.
     """
     user_id = await _require_user(authorization)
 
     text = (body.text or "").strip()
     if not text:
         summary = await get_briefing_summary(request, authorization)
-        text = summary.get("script") or ""
+        
+        # Try to generate script via LLM
+        try:
+            from core.conversation_loop import _instantiate_llm
+            store = _store(request)
+            llm_settings = await store.get_llm_settings(user_id)
+            provider = getattr(llm_settings, "provider", "ollama")
+            model = getattr(llm_settings, "model", "llama3.2:3b")
+            llm = _instantiate_llm(provider, model)
+            
+            prompt = (
+                "You are an AI assistant giving a daily briefing to the user. "
+                "You will receive a JSON payload with today's weather, agenda, reminders, "
+                "updates, and news headlines. Synthesize this data into a conversational, "
+                "friendly, and concise audio script meant to be read aloud (about 1 minute long). "
+                "Do NOT use markdown. Write exactly what you will say. Keep it smooth and professional.\n\n"
+                f"Data: {json.dumps(summary)}"
+            )
+            
+            messages = [
+                {"role": "system", "content": "You are a helpful, conversational AI assistant."},
+                {"role": "user", "content": prompt}
+            ]
+            text = await llm.chat(messages)
+            text = text.strip()
+        except Exception as exc:
+            logger.error("LLM generation for briefing script failed: %s", exc)
+            # Fallback to the hardcoded script
+            text = summary.get("script") or ""
+            
     if not text:
         raise HTTPException(status_code=422,
                             detail="Nothing to read for this briefing.")
