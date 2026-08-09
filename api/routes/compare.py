@@ -156,10 +156,11 @@ async def run_compare(
     until the user votes — the client never sees the identity ↔ side
     mapping pre-vote.
     """
-    from core.token_tracker import set_usage_source
+    from core.token_tracker import set_usage_source, set_usage_user
     set_usage_source("compare")
     _require_enabled()
     user_id = await _require_user(authorization)
+    set_usage_user(user_id)
     store = _store(request)
 
     a = {"provider": body.model_a.provider.strip(),

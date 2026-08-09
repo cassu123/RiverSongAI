@@ -21,6 +21,18 @@ from typing import Dict, List, Optional
 # need to know who called them.
 _usage_source: ContextVar[str] = ContextVar("usage_source", default="other")
 
+# Who is spending them. Same ContextVar trick as the source tag above, and for
+# the same reason: the providers sit three or four call frames below anything
+# that knows who is talking, and threading a user_id through every signature
+# would touch every provider for a field only the tracker uses.
+#
+# The default is "system" because that is what the column meant before this
+# existed: every provider called record_usage without a user_id, so *all*
+# recorded spend landed under one bucket and the per-user breakdown in
+# /api/usage/models had exactly one row. Anything still unattributed keeps
+# that label rather than being blamed on whoever spoke last.
+_usage_user: ContextVar[str] = ContextVar("usage_user", default="system")
+
 # Rows written by test scripts (TestClient runs, verify_gates) — never real
 # spend; excluded from summaries and purged once per process.
 _TEST_PROVIDERS = ("test_provider", "verify")
@@ -43,6 +55,25 @@ def usage_source(source: str):
         yield
     finally:
         _usage_source.reset(token)
+
+
+def set_usage_user(user_id: str) -> None:
+    """Attribute this async task's token spend to `user_id`.
+
+    Called wherever the speaker is known — a request handler, or the
+    conversation loop when voice identification rebinds the speaker mid-turn.
+    """
+    _usage_user.set(user_id or "system")
+
+
+@contextlib.contextmanager
+def usage_user(user_id: str):
+    """Attribute all LLM token usage inside this context to `user_id`."""
+    token = _usage_user.set(user_id or "system")
+    try:
+        yield
+    finally:
+        _usage_user.reset(token)
 
 logger = logging.getLogger(__name__)
 
@@ -166,14 +197,15 @@ def record_usage(
     model: str,
     input_tokens: int,
     output_tokens: int,
-    user_id: str = "system",
+    user_id: str | None = None,
     call_type: str = "stream",
     source: str | None = None,
 ) -> None:
     """Insert one token-usage row. Silently no-ops on any error.
 
-    `source` (which feature spent the tokens) defaults to the ambient
-    usage_source(...) context set by the calling feature.
+    `source` (which feature spent the tokens) and `user_id` (who) both default
+    to the ambient context set by the caller, so a provider that passes
+    neither still gets attributed.
     """
     if not input_tokens and not output_tokens:
         return
@@ -184,7 +216,7 @@ def record_usage(
             "INSERT INTO token_usage (ts, provider, model, input_tokens, output_tokens, user_id, call_type, source) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (time.time(), provider, model, input_tokens,
-             output_tokens, user_id, call_type,
+             output_tokens, user_id or _usage_user.get(), call_type,
              source or _usage_source.get()),
         )
     except Exception as exc:

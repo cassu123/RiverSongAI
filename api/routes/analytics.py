@@ -22,7 +22,7 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from config.settings import get_settings
-from core.token_tracker import set_usage_source
+from core.token_tracker import set_usage_source, set_usage_user
 from core.auth import decode_token
 
 logger = logging.getLogger(__name__)
