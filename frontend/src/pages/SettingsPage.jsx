@@ -154,19 +154,6 @@ export default function SettingsPage({
         setLlmSettings(llmData)
         setMemSettings(memData)
         if (voiceData.data) setVoiceSettings(voiceData.data)
-        if (featData.data) setAiFeatures(featData.data.ai_features || {})
-        if (prefData.data) setUserPrefs(prefData.data)
-        if (feedPrefsData.data) setFeedPrefs(feedPrefsData.data)
-
-        setSectionStatuses(prev => ({
-          ...prev,
-          voice: voiceData.status,
-          features: featData.status,
-          settings: prefData.status,
-          feedPrefs: feedPrefsData.status
-        }))
-
-        if (user?.role === 'admin') {
           const [visData, featVisData, familyRaw, familyGroupsRaw, orchData, elData, personaData, briefingData, dStatus, intentRouterData, routingFlags, hwData, flagsData] = await Promise.all([
             settle(`${API_BASE}/api/admin/model-visibility`),
             settle(`${API_BASE}/api/admin/feature-visibility`),
