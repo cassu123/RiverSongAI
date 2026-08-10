@@ -58,8 +58,13 @@ def _get_ollama_installed_models() -> Set[str]:
     # list as the catalog, a single chat load would have probed twice. A few
     # seconds of staleness is nothing next to holding the event loop for up to
     # the 3s timeout again — pulling a model is not a sub-second operation.
-    global _ollama_cache, _ollama_cache_at
-    if _ollama_cache and (time.monotonic() - _ollama_cache_at) < _OLLAMA_TTL_SECONDS:
+    #
+    # Gated on the timestamp, not on the cache being non-empty: a reachable
+    # daemon with nothing pulled yet returns an empty set, and keying off
+    # emptiness meant a fresh install — the one deployment guaranteed to be in
+    # that state — re-probed on every single request.
+    global _ollama_cache, _ollama_cache_at, _ollama_reachable
+    if _ollama_cache_at and (time.monotonic() - _ollama_cache_at) < _OLLAMA_TTL_SECONDS:
         return set(_ollama_cache)
 
     try:
@@ -85,10 +90,12 @@ def _get_ollama_installed_models() -> Set[str]:
         models = {m["name"] for m in data.get("models", [])}
         _ollama_cache = models
         _ollama_cache_at = time.monotonic()
+        _ollama_reachable = True
         return models
     except Exception as exc:
         # Ollama restarting / briefly unreachable: serve the last-known list
         # instead of making every local model vanish from the pickers.
+        _ollama_reachable = False
         logger.warning("Ollama discovery failed (%s); using cached list (%d models)",
                        exc, len(_ollama_cache))
         return set(_ollama_cache)
@@ -98,8 +105,13 @@ def _get_ollama_installed_models() -> Set[str]:
 # doesn't empty the model pickers. `_ollama_cache_at` bounds how long it is
 # served as fresh; after a failure the list is served regardless of age,
 # which is the point of keeping it.
+#
+# `_ollama_reachable` is tracked separately because the model list cannot
+# carry that information: a daemon that is up with nothing pulled and a
+# daemon that is down both produce an empty set.
 _ollama_cache: Set[str] = set()
 _ollama_cache_at: float = 0.0
+_ollama_reachable: bool = False
 _OLLAMA_TTL_SECONDS = 5.0
 
 
@@ -362,9 +374,13 @@ def get_provider_switch_sources(admin_config: Optional[dict] = None) -> dict:
 
     out = {}
     for provider in _USER_GATED_PROVIDERS:
-        if provider in stored or admin_config.get(
-                f"{provider}_enabled_global") is not None:
+        resolved: Optional[bool] = None
+        if provider in stored:
             source = "admin"
+            resolved = bool(stored[provider])
+        elif admin_config.get(f"{provider}_enabled_global") is not None:
+            source = "admin"
+            resolved = bool(admin_config[f"{provider}_enabled_global"])
         else:
             # Local providers have no .env flag of their own; untouched, they
             # follow the coarse switch, which the check below reports.
@@ -372,9 +388,13 @@ def get_provider_switch_sources(admin_config: Optional[dict] = None) -> dict:
 
         # The coarse kill switch is applied last and beats whatever the chain
         # resolved, so when it is the thing holding a provider down it is the
-        # thing to report.
+        # thing to report — but only when it is. An admin who set this
+        # provider off explicitly AND has the kill switch off would otherwise
+        # be told the kill switch is the cause, turn it back on, watch the
+        # provider stay off, and be exactly where this function was written to
+        # stop them being.
         coarse = local_enabled if provider in LOCAL_PROVIDERS else cloud_enabled
-        if not coarse:
+        if not coarse and resolved is not False:
             source = "coarse"
         out[provider] = source
     return out
@@ -456,6 +476,7 @@ async def _catalog_context(request: Request, is_admin: bool) -> dict:
     return {
         "is_admin": is_admin,
         "installed": installed,
+        "ollama_reachable": _ollama_reachable,
         "enabled": enabled,
         "switches": switches,
         "user_access": user_access,
@@ -522,14 +543,37 @@ def _first_usable_free_model(
     return None, None
 
 
+def _any_usable_model(ctx: dict, fit_by_model: Optional[dict] = None) -> bool:
+    """True when at least one model, free or paid, can serve a message.
+
+    Distinct from `_first_usable_free_model`: that one answers "what may I
+    silently move this user onto", which has to stay free. This one answers
+    "can anything answer at all", and the router is not restricted to free
+    models — so a deployment with Ollama off and only a paid key configured
+    routes `auto` perfectly well.
+    """
+    for m in LLMRegistry.list_local():
+        if m.model_id in ctx["hidden_llms"]:
+            continue
+        if _annotate(m, ctx, fit_by_model).get("available"):
+            return True
+    for m in LLMRegistry.list_cloud():
+        if m.model_id in ctx["hidden_llms"]:
+            continue
+        if _annotate(m, ctx).get("available"):
+            return True
+    return False
+
+
 def _selection_status(provider: str, model_id: str, ctx: dict,
                       fit_by_model: Optional[dict] = None) -> tuple:
     """Whether a saved selection can still serve a message, and why not."""
     if provider == "auto":
         # Auto has no single model to check; it is usable while the router
-        # has anything at all to route to.
-        chosen, _ = _first_usable_free_model(ctx, fit_by_model)
-        if chosen:
+        # has anything at all to route to. Asking the free-only helper here
+        # called a working `auto` unavailable on any deployment whose only
+        # usable providers are paid.
+        if _any_usable_model(ctx, fit_by_model):
             return True, None
         return False, "No models are available."
 
@@ -610,7 +654,10 @@ async def list_models(
         "provider_user_access": ctx["user_access"],
         "provider_enabled": ctx["switches"],
         "provider_order": list(PROVIDER_ORDER),
-        "ollama_reachable": bool(ctx["installed"]) or True,
+        # `bool(installed) or True` — which this was — is True unconditionally,
+        # and the model list cannot stand in for reachability anyway: a daemon
+        # that is up with nothing pulled looks identical to one that is down.
+        "ollama_reachable": ctx["ollama_reachable"],
         "family_overrides": ctx["family_overrides"],
         # "River Decides" is offered in the picker whether or not the router
         # is on. With it off, provider="auto" resolves to the local default

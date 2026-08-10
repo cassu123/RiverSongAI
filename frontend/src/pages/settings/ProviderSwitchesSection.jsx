@@ -210,7 +210,11 @@ export default function ProviderSwitchesSection({ token }) {
               />
 
               <Switch
-                on={!!r.user_access}
+                // Gate off → the knob reads off and aria-checked is false, to
+                // match the "—" label. Leaving it on while the label said "—"
+                // announced "switch, checked" to a screen reader for a control
+                // that governs nothing.
+                on={r.enabled && !!r.user_access}
                 disabled={!r.enabled}
                 label={`Let all users select ${meta.name}`}
                 onClick={() => patch(r.provider, 'user_access', !r.user_access)}
