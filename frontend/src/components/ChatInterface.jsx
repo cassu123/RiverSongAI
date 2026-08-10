@@ -14,7 +14,7 @@ function fmtDate(iso) {
 export default function ChatInterface({ setAction, onNavigate, initialIntent, onIntentConsumed, embedded, onClose, vehicleId }) {
   const { token, user } = useAuth()
 
-  const [models,          setModels]          = useState({ cloud: [], local: [], providerOrder: [] })
+  const [models,          setModels]          = useState({ cloud: [], local: [], providerOrder: [], intentRouterEnabled: false })
   const [selectedModel,   setSelectedModel]   = useState(null)
   const [modelNotice,     setModelNotice]     = useState(null)
   const [savingModel,     setSavingModel]     = useState(false)
@@ -105,6 +105,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
           cloud: data.cloud || [],
           local: data.local || [],
           providerOrder: data.provider_order || [],
+          intentRouterEnabled: !!data.intent_router_enabled,
         })
       })
       .catch(() => {})
@@ -451,6 +452,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
         nimModels={nimModels}
         cloudModels={cloudModels}
         providerOrder={models.providerOrder}
+        intentRouterEnabled={models.intentRouterEnabled}
       />
 
       {toolsOpen && (

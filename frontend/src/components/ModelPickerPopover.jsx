@@ -47,6 +47,7 @@ export default function ModelPickerPopover({
   nimModels = [],
   cloudModels = [],
   providerOrder = [],
+  intentRouterEnabled = false,
 }) {
   const [pickerView, setPickerView] = useState('home');
   const [cloudProvider, setCloudProvider] = useState(null);
@@ -126,7 +127,11 @@ export default function ModelPickerPopover({
       <div style={{ position: 'fixed', inset: 0, zIndex: 9990 }} onClick={closeModelPicker} />
       <div className="rs-mpop" style={panelStyle}>
         {pickerView === 'home' && <>
-          <MpopRow icon="auto_awesome" title="River Decides" sub="Auto-routes to the best model" active={selectedModel?.provider === 'auto'} onClick={() => pick('auto', 'auto')} />
+          {/* With the intent router off, provider="auto" does not route — it
+              resolves to the local default. The row claimed automatic model
+              choice either way, which is a promise the server was not
+              keeping. */}
+          <MpopRow icon="auto_awesome" title="River Decides" sub={intentRouterEnabled ? 'Auto-routes to the best model' : 'Routing off · uses your local model'} active={selectedModel?.provider === 'auto'} onClick={() => pick('auto', 'auto')} />
           {usableLocal.length > 0 && <MpopRow icon="memory" title="Local" sub={`${usableLocal.length} ready · Ollama`} active={selectedModel?.provider === 'ollama'} chevron onClick={() => setPickerView('local')} />}
           {usableNim.length > 0 && <MpopRow icon="memory_alt" title="NVIDIA NIM" sub="Free cloud inference" active={selectedModel?.provider === 'nvidia_nim'} chevron onClick={() => setPickerView('nvidia')} />}
           {cloudGroups.length > 0 && <MpopRow icon="cloud" title="Cloud" sub={cloudSummary} active={!!selectedModel && !['auto','ollama','nvidia_nim'].includes(selectedModel?.provider)} chevron onClick={() => setPickerView('cloud')} />}

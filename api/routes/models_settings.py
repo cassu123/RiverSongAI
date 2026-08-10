@@ -612,6 +612,12 @@ async def list_models(
         "provider_order": list(PROVIDER_ORDER),
         "ollama_reachable": bool(ctx["installed"]) or True,
         "family_overrides": ctx["family_overrides"],
+        # "River Decides" is offered in the picker whether or not the router
+        # is on. With it off, provider="auto" resolves to the local default
+        # rather than routing anything, so the picker needs to know in order
+        # to stop describing it as automatic model choice.
+        "intent_router_enabled": bool(
+            getattr(get_settings(), "model_intent_router_enabled", False)),
     }
 
 
@@ -1450,12 +1456,30 @@ async def get_intent_router_settings(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    """Return the current model intent router configuration."""
+    """Return the current model intent router configuration and its routes.
+
+    `routes` is resolved against the live provider gates rather than listed
+    from a fixed table, so the panel shows where each intent would actually
+    land today — including the ones that have fallen through to a later
+    preference because the first is switched off.
+    """
     await _require_admin(authorization)
     s = get_settings()
+
+    routes: list = []
+    try:
+        from providers.llm.model_intent_router import resolved_routes
+        ctx = await _catalog_context(request, is_admin=True)
+        routes = resolved_routes(ctx["enabled"], hidden_models=ctx["hidden_llms"])
+    except Exception as exc:
+        # The two switches are the point of this route; a preview that cannot
+        # be built should not take them down with it.
+        logger.warning("Could not resolve intent router routes: %s", exc)
+
     return {
         "enabled": s.model_intent_router_enabled,
         "min_hits": s.model_intent_router_min_hits,
+        "routes": routes,
     }
 
 
