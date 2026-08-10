@@ -51,22 +51,38 @@ router = APIRouter(prefix="/api", tags=["settings"])
 _OLLAMA_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
-def _get_ollama_installed_models() -> Set[str]:
-    """Query the local Ollama daemon for pulled model names. Returns empty set on failure."""
-    # urlopen below is blocking, and this runs inside async routes. It used to
-    # fire once per request; now that the saved-selection check needs the same
-    # list as the catalog, a single chat load would have probed twice. A few
-    # seconds of staleness is nothing next to holding the event loop for up to
-    # the 3s timeout again — pulling a model is not a sub-second operation.
-    #
-    # Gated on the timestamp, not on the cache being non-empty: a reachable
-    # daemon with nothing pulled yet returns an empty set, and keying off
-    # emptiness meant a fresh install — the one deployment guaranteed to be in
-    # that state — re-probed on every single request.
-    global _ollama_cache, _ollama_cache_at, _ollama_reachable
+async def _get_ollama_installed_models() -> Set[str]:
+    """Pulled Ollama model names, cached briefly. Empty set when unreachable.
+
+    The probe itself is blocking and this runs inside async routes, so it goes
+    to a worker thread: a cache miss against an unreachable daemon otherwise
+    held the event loop for the full 3s timeout, stalling every other request
+    on the process.
+
+    A lock guards the refresh and the TTL is rechecked after acquiring it, so
+    a burst of concurrent requests on a cold cache produces one probe rather
+    than one each — the thundering herd being the case that made the blocking
+    call expensive in the first place.
+    """
     if _ollama_cache_at and (time.monotonic() - _ollama_cache_at) < _OLLAMA_TTL_SECONDS:
         return set(_ollama_cache)
 
+    async with _ollama_lock:
+        if _ollama_cache_at and (
+                time.monotonic() - _ollama_cache_at) < _OLLAMA_TTL_SECONDS:
+            return set(_ollama_cache)
+        return await asyncio.to_thread(_probe_ollama_models)
+
+
+def _probe_ollama_models() -> Set[str]:
+    """Query the local Ollama daemon for pulled model names. Blocking.
+
+    Gated on the timestamp, not on the cache being non-empty: a reachable
+    daemon with nothing pulled yet returns an empty set, and keying off
+    emptiness meant a fresh install — the one deployment guaranteed to be in
+    that state — re-probed on every single request.
+    """
+    global _ollama_cache, _ollama_cache_at, _ollama_reachable
     try:
         settings = get_settings()
         base = getattr(
@@ -96,6 +112,10 @@ def _get_ollama_installed_models() -> Set[str]:
         # Ollama restarting / briefly unreachable: serve the last-known list
         # instead of making every local model vanish from the pickers.
         _ollama_reachable = False
+        # Stamp the failure too, so a daemon that stays down is retried once
+        # per TTL rather than on every single request. The last-known list is
+        # still what gets served in the meantime, which is the point of it.
+        _ollama_cache_at = time.monotonic()
         logger.warning("Ollama discovery failed (%s); using cached list (%d models)",
                        exc, len(_ollama_cache))
         return set(_ollama_cache)
@@ -113,6 +133,7 @@ _ollama_cache: Set[str] = set()
 _ollama_cache_at: float = 0.0
 _ollama_reachable: bool = False
 _OLLAMA_TTL_SECONDS = 5.0
+_ollama_lock = asyncio.Lock()
 
 
 #: Hardware verdicts (from core.hardware_cookbook) that mean "this machine
@@ -382,9 +403,10 @@ def get_provider_switch_sources(admin_config: Optional[dict] = None) -> dict:
             source = "admin"
             resolved = bool(admin_config[f"{provider}_enabled_global"])
         else:
-            # Local providers have no .env flag of their own; untouched, they
-            # follow the coarse switch, which the check below reports.
-            source = "env"
+            # Local providers have no .env flag of their own — untouched, they
+            # resolve straight from the coarse switch, so reporting "env"
+            # would point the admin at an OLLAMA_ENABLED that does not exist.
+            source = "coarse" if provider in LOCAL_PROVIDERS else "env"
 
         # The coarse kill switch is applied last and beats whatever the chain
         # resolved, so when it is the thing holding a provider down it is the
@@ -438,7 +460,7 @@ async def _catalog_context(request: Request, is_admin: bool) -> dict:
     handing the same model back as the current selection, leaving the user
     with a model button naming something that fails at send time.
     """
-    installed = _get_ollama_installed_models()
+    installed = await _get_ollama_installed_models()
 
     hidden_llms: set[str] = set()
     family_overrides: dict = {}
@@ -1521,7 +1543,8 @@ async def get_intent_router_settings(
     except Exception as exc:
         # The two switches are the point of this route; a preview that cannot
         # be built should not take them down with it.
-        logger.warning("Could not resolve intent router routes: %s", exc)
+        logger.warning(
+            "Could not resolve intent router routes: %s", exc, exc_info=True)
 
     return {
         "enabled": s.model_intent_router_enabled,

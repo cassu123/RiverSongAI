@@ -479,6 +479,29 @@ def resolved_routes(
                     and default_model not in hidden_models):
                 chosen_provider, chosen_model = "ollama", default_model
 
+        # And route()'s final resort after that: the cheapest model still
+        # enabled anywhere in the catalog. Stopping at the Ollama branch made
+        # the panel report "No provider available" for an intent that runtime
+        # routing would happily have sent to a cloud model — the preview
+        # claiming a dead end the router does not have.
+        if chosen_provider is None:
+            catalog = [
+                e for e in LLMRegistry.all_models()
+                if enabled_providers.get(e.provider, False)
+                and e.model_id not in hidden_models
+                and (not free_only or LLMRegistry.is_free(e.provider, e.model_id))
+            ]
+            if catalog:
+                pick = min(
+                    catalog,
+                    key=lambda e: (
+                        (e.cost_per_1k_input_usd or 0.0)
+                        + (e.cost_per_1k_output_usd or 0.0),
+                        e.priority,
+                    ),
+                )
+                chosen_provider, chosen_model = pick.provider, pick.model_id
+
         entry = (LLMRegistry.get(chosen_provider, chosen_model)
                  if chosen_provider else None)
         head_entry = LLMRegistry.get(head_provider, head_model)

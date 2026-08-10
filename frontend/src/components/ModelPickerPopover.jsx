@@ -93,6 +93,13 @@ export default function ModelPickerPopover({
   const nothingUsable =
     usableLocal.length === 0 && usableNim.length === 0 && cloudGroups.length === 0;
 
+  // "River Decides" needs something behind it too. With routing on it needs
+  // any usable model; with routing off it resolves to the local default, so
+  // it needs a usable local one specifically. It was rendered unconditionally,
+  // which meant the one row that could still be picked with nothing installed
+  // was the one that then failed on send.
+  const autoUsable = intentRouterEnabled ? !nothingUsable : usableLocal.length > 0;
+
   if (!isOpen) return null;
 
   // The anchored popover (positioned by the model button's right edge) slides
@@ -131,7 +138,7 @@ export default function ModelPickerPopover({
               resolves to the local default. The row claimed automatic model
               choice either way, which is a promise the server was not
               keeping. */}
-          <MpopRow icon="auto_awesome" title="River Decides" sub={intentRouterEnabled ? 'Auto-routes to the best model' : 'Routing off · uses your local model'} active={selectedModel?.provider === 'auto'} onClick={() => pick('auto', 'auto')} />
+          {autoUsable && <MpopRow icon="auto_awesome" title="River Decides" sub={intentRouterEnabled ? 'Auto-routes to the best model' : 'Routing off · uses your local model'} active={selectedModel?.provider === 'auto'} onClick={() => pick('auto', 'auto')} />}
           {usableLocal.length > 0 && <MpopRow icon="memory" title="Local" sub={`${usableLocal.length} ready · Ollama`} active={selectedModel?.provider === 'ollama'} chevron onClick={() => setPickerView('local')} />}
           {usableNim.length > 0 && <MpopRow icon="memory_alt" title="NVIDIA NIM" sub="Free cloud inference" active={selectedModel?.provider === 'nvidia_nim'} chevron onClick={() => setPickerView('nvidia')} />}
           {cloudGroups.length > 0 && <MpopRow icon="cloud" title="Cloud" sub={cloudSummary} active={!!selectedModel && !['auto','ollama','nvidia_nim'].includes(selectedModel?.provider)} chevron onClick={() => setPickerView('cloud')} />}
