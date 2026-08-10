@@ -341,6 +341,45 @@ def get_provider_global_enabled(admin_config: Optional[dict] = None) -> dict:
     return out
 
 
+def get_provider_switch_sources(admin_config: Optional[dict] = None) -> dict:
+    """Where each provider's resolved switch value actually came from.
+
+    Mirrors the resolution chain in `get_provider_global_enabled` exactly.
+    Without it the admin UI had no way to tell an explicit choice from an
+    inherited default, so it labelled every off provider "Blocked by you" —
+    including the ones nobody had ever touched, which are off because .env
+    says so. Following that label to the toggle and flipping it appears to do
+    nothing on a fresh deployment, because the block being reported was never
+    the admin's to begin with.
+
+    One of: "admin" (this account set it), "env" (the .env flag's default),
+    "coarse" (the local/cloud kill switch overrode an otherwise-on provider).
+    """
+    admin_config = admin_config or {}
+    stored = admin_config.get("provider_enabled") or {}
+    local_enabled = admin_config.get("local_llms_enabled_global", True)
+    cloud_enabled = admin_config.get("cloud_llms_enabled_global", True)
+
+    out = {}
+    for provider in _USER_GATED_PROVIDERS:
+        if provider in stored or admin_config.get(
+                f"{provider}_enabled_global") is not None:
+            source = "admin"
+        else:
+            # Local providers have no .env flag of their own; untouched, they
+            # follow the coarse switch, which the check below reports.
+            source = "env"
+
+        # The coarse kill switch is applied last and beats whatever the chain
+        # resolved, so when it is the thing holding a provider down it is the
+        # thing to report.
+        coarse = local_enabled if provider in LOCAL_PROVIDERS else cloud_enabled
+        if not coarse:
+            source = "coarse"
+        out[provider] = source
+    return out
+
+
 def _cloud_unavailable_reason(provider: str, switches: dict) -> Optional[str]:
     """Why a cloud provider cannot be used, or None when it can.
 
@@ -1286,12 +1325,14 @@ async def get_provider_switches(
     s = get_settings()
     switches = get_provider_global_enabled(config)
     access = get_provider_user_access(config)
+    sources = get_provider_switch_sources(config)
     return {
         "order": list(PROVIDER_ORDER),
         "providers": [
             {
                 "provider": p,
                 "enabled": switches.get(p, False),
+                "enabled_source": sources.get(p, "env"),
                 "user_access": access.get(p, True),
                 "has_credentials": _has_credentials(p, s),
                 "is_local": p in LOCAL_PROVIDERS,

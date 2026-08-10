@@ -47,7 +47,9 @@ function Switch({ on, onClick, disabled, label, labelOn = 'ON', labelOff = 'OFF'
       >
         <span className="toggle-knob" />
       </button>
-      <span className="toggle-value" style={{ minWidth: 30, fontSize: '0.62rem' }}>
+      {/* nowrap: "ADMIN" and "VISIBLE" were breaking mid-word on phones,
+          rendering as ADMI / N beside the knob. */}
+      <span className="toggle-value" style={{ minWidth: 30, fontSize: '0.62rem', whiteSpace: 'nowrap' }}>
         {on ? labelOn : labelOff}
       </span>
     </div>
@@ -156,8 +158,17 @@ export default function ProviderSwitchesSection({ token }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {rows.map((r) => {
           const meta = PROVIDER_LABEL[r.provider] || { name: r.provider, note: '' }
+          // "Off" has three causes and they need three different actions.
+          // This row used to call all of them "Blocked by you", which is only
+          // true when an admin actually flipped the switch — a provider still
+          // sitting on its .env default is off because the server says so,
+          // and flipping the toggle here is not what turns it back on.
           const blockedReason = !r.enabled
-            ? 'Blocked by you'
+            ? r.enabled_source === 'admin'
+              ? 'Blocked by you'
+              : r.enabled_source === 'coarse'
+                ? 'Blocked by the kill switch above'
+                : `Disabled in .env — set ${r.provider.toUpperCase()}_ENABLED=true`
             : !r.has_credentials
               ? 'No API key in .env'
               : null
@@ -203,8 +214,11 @@ export default function ProviderSwitchesSection({ token }) {
                 disabled={!r.enabled}
                 label={`Let all users select ${meta.name}`}
                 onClick={() => patch(r.provider, 'user_access', !r.user_access)}
-                labelOn="ALL"
-                labelOff="ADMIN"
+                // With the hard gate off this switch governs nothing, and a
+                // row reading OFF / ALL invited "so is it available to
+                // everyone or not?". Report no value rather than a stale one.
+                labelOn={r.enabled ? 'ALL' : '—'}
+                labelOff={r.enabled ? 'ADMIN' : '—'}
               />
             </div>
           )
