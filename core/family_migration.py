@@ -86,9 +86,67 @@ def migrate_member_to_family(
 # Culinary
 # ---------------------------------------------------------------------------
 
+def _household_scoped_tables(conn) -> List[str]:
+    """Every cul_* table carrying a household_id, read from the live schema.
+
+    Discovered rather than listed by hand. The list this replaces named six
+    tables while the schema had ten, so cul_shopping_list,
+    cul_banned_ingredients, cul_meal_plan and cul_cooking_sessions were left
+    behind pointing at a household the next statement deleted -- and since
+    sqlite3 leaves foreign keys off unless asked and this module never asks,
+    nothing cascaded. The rows survived, unreachable, because every query
+    filters on household_id.
+
+    A hand-maintained list goes stale the first time someone adds a table
+    without thinking about family linking. Those four are exactly the tables
+    added after this function was written. The schema cannot go stale.
+    """
+    tables = []
+    rows = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'cul_%'"
+    ).fetchall()
+    for row in rows:
+        name = row["name"]
+        if name == "cul_households":
+            continue
+        cols = {c["name"] for c in conn.execute(f"PRAGMA table_info({name})")}
+        if "household_id" in cols:
+            tables.append(name)
+    return sorted(tables)
+
+
+def _tables_referencing_household(conn, household_id: str) -> dict:
+    """Row counts still pointing at `household_id`, per table.
+
+    Runs its own schema scan rather than reusing the list the move iterated.
+    Sharing that list would make the guard blind in exactly the same way the
+    move was: ask the same incomplete question twice and you get the same
+    incomplete answer, and the delete proceeds looking verified. The whole
+    point of the check is to be a second opinion.
+    """
+    counts = {}
+    rows = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'cul_%'"
+    ).fetchall()
+    for row in rows:
+        name = row["name"]
+        if name == "cul_households":
+            continue
+        cols = {c["name"] for c in conn.execute(f"PRAGMA table_info({name})")}
+        if "household_id" not in cols:
+            continue
+        left = conn.execute(
+            f"SELECT COUNT(*) FROM {name} WHERE household_id=?", (household_id,)
+        ).fetchone()[0]
+        if left:
+            counts[name] = left
+    return counts
+
+
 def _migrate_culinary(profile_id: str, family_owner: str,
                       group_id: str) -> dict:
     moved = 0
+    moved_by_table: dict = {}
     try:
         conn = sqlite3.connect(_CUL_DB())
         conn.row_factory = sqlite3.Row
@@ -122,15 +180,38 @@ def _migrate_culinary(profile_id: str, family_owner: str,
             conn.close()
             return {"moved": 0}
 
-        for tbl in (
-            "cul_recipes", "cul_stockroom", "cul_prep_sessions",
-            "cul_walmart_mappings", "cul_kitchen_equipment", "cul_active_vote",
-        ):
+        scoped = _household_scoped_tables(conn)
+        for tbl in scoped:
             cur = conn.execute(
                 f"UPDATE {tbl} SET household_id=? WHERE household_id=?",
                 (fhh_id, phh_id),
             )
+            if cur.rowcount:
+                moved_by_table[tbl] = cur.rowcount
             moved += cur.rowcount
+
+        # The personal household is dropped only once nothing points at it.
+        #
+        # This DELETE is the one destructive statement in the whole migration:
+        # the inventory, vehicle and commerce migrators reparent and leave the
+        # personal record standing, so a table they miss is merely unmigrated
+        # and still reachable by unsharing. Here a missed table became
+        # permanently invisible. Re-counting before deleting turns that class
+        # of bug from silent data loss into a loud log line with the rows
+        # still in place.
+        stragglers = _tables_referencing_household(conn, phh_id)
+        if stragglers:
+            conn.commit()
+            conn.close()
+            logger.error(
+                "Culinary migration for %s: keeping personal household %s -- "
+                "still referenced by %s. Everything migrated so far is saved and "
+                "the household row is left intact so the remainder stays "
+                "reachable and can be moved once the cause is understood.",
+                profile_id[:8], phh_id, stragglers,
+            )
+            return {"moved": moved, "by_table": moved_by_table,
+                    "household_deleted": False, "stragglers": stragglers}
 
         conn.execute("DELETE FROM cul_households WHERE id=?", (phh_id,))
         conn.commit()
@@ -138,8 +219,10 @@ def _migrate_culinary(profile_id: str, family_owner: str,
     except Exception as exc:
         logger.warning("Culinary migration failed for %s: %s",
                        profile_id[:8], exc)
+        return {"moved": moved, "by_table": moved_by_table, "error": str(exc)}
 
-    return {"moved": moved}
+    return {"moved": moved, "by_table": moved_by_table,
+            "household_deleted": True}
 
 
 # ---------------------------------------------------------------------------
