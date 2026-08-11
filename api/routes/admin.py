@@ -13,7 +13,11 @@ import uuid
 from typing import List, Optional
 
 import bcrypt
-from core.family_migration import migrate_member_to_family
+from core.family_migration import (
+    count_family_data,
+    migrate_member_to_family,
+    reassign_culinary_household,
+)
 
 from fastapi import APIRouter, Request, Header
 from pydantic import BaseModel
@@ -527,15 +531,66 @@ async def update_family_group(
 async def delete_family_group(
     group_id: str,
     request: Request,
+    reassign_to: Optional[str] = None,
     authorization: Optional[str] = Header(default=None),
 ):
+    """Dissolve a family group.
+
+    Deleting the group used to drop the group row and its memberships and
+    nothing else, which left everything filed under "family:<group_id>" with
+    no owner that resolves to it. The rows were not removed -- they became
+    unreachable, for every member at once, silently.
+
+    So the group is only dissolved once its shared data has somewhere to go.
+    Pass `reassign_to` with a member's profile id to hand them the shared
+    household; without it, a group that still owns data is refused and the
+    counts are reported. There is no way to split a shared household back
+    into the parts each member contributed -- nothing records who added what
+    -- so naming an heir is the honest operation, and refusing is better than
+    guessing.
+    """
     payload = await _require_admin(request, authorization)
     store = _get_store(request)
     group = await store.get_family_group(group_id)
     if not group:
         raise not_found("Family group not found.")
+
+    holdings = count_family_data(group_id)
+    if holdings and not reassign_to:
+        raise bad_request(
+            f"Family group still owns data: {holdings}. Pass reassign_to=<profile_id> "
+            f"to hand it to a member, or empty the group's modules first. "
+            f"Deleting now would leave these rows with no owner and no way to reach them."
+        )
+
+    if reassign_to and holdings:
+        heir_group = await store.get_user_family_group(reassign_to)
+        if not heir_group or heir_group["id"] != group_id:
+            raise bad_request(
+                "reassign_to must be a current member of this group.")
+
+        result = reassign_culinary_household(group_id, reassign_to)
+        if not result.get("reassigned"):
+            raise bad_request(
+                f"Could not reassign the shared household: {result}. "
+                f"Nothing was deleted.")
+        logger.info(
+            "Admin %s reassigned family group %s culinary data to %s: %s",
+            payload["sub"], group_id, reassign_to, result)
+
+        # Only culinary has a reassignment path. Anything else still held is
+        # reported rather than quietly dropped along with the group.
+        remaining = {k: v for k, v in count_family_data(group_id).items()
+                     if k != "culinary"}
+        if remaining:
+            raise bad_request(
+                f"Culinary data was reassigned, but these modules are still owned "
+                f"by the group and have no reassignment path yet: {remaining}. "
+                f"The group was not deleted.")
+
     await store.delete_family_group(group_id)
-    logger.info("Admin %s deleted family group %s", payload["sub"], group_id)
+    logger.info("Admin %s deleted family group %s (reassigned to %s)",
+                payload["sub"], group_id, reassign_to or "nobody")
 
 
 @router.post("/family-groups/{group_id}/members", status_code=201)

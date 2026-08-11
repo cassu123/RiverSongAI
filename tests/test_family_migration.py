@@ -17,7 +17,6 @@ exactly the tables added after the migration was written. Banned ingredients
 carry allergies, so that one failed quietly and dangerously.
 """
 
-import os
 import sqlite3
 
 import pytest
@@ -176,3 +175,74 @@ def test_migration_is_idempotent(culinary_db):
 
     for table in SCOPED_TABLES:
         assert len(_rows(culinary_db, f"SELECT id FROM {table}")) == 1
+
+
+# ---------------------------------------------------------------------------
+# Dissolving a group
+# ---------------------------------------------------------------------------
+
+def test_count_reports_what_a_delete_would_strand(culinary_db):
+    """The number the refusal is built on."""
+    from core.family_migration import count_family_data
+
+    _migrate_culinary("user-42", "family:grp-7", "grp-7")
+    holdings = count_family_data("grp-7")
+
+    assert holdings["culinary"] == len(SCOPED_TABLES)
+
+
+def test_count_is_empty_for_a_group_owning_nothing(culinary_db):
+    from core.family_migration import count_family_data
+
+    assert count_family_data("grp-nobody") == {}
+
+
+def test_reassignment_hands_the_household_to_a_member(culinary_db):
+    from core.family_migration import count_family_data, reassign_culinary_household
+
+    _migrate_culinary("user-42", "family:grp-7", "grp-7")
+    result = reassign_culinary_household("grp-7", "user-99")
+
+    assert result["reassigned"] is True
+    owner = _rows(
+        culinary_db,
+        "SELECT owner_id FROM cul_households WHERE id=?",
+        (result["household_id"],))[0]["owner_id"]
+    assert owner == "user-99"
+
+    # Nothing is stranded, and the group no longer holds anything, so the
+    # delete that follows is safe.
+    assert count_family_data("grp-7") == {}
+    for table in SCOPED_TABLES:
+        orphaned = _rows(
+            culinary_db,
+            f"SELECT COUNT(*) AS n FROM {table} WHERE household_id NOT IN "
+            "(SELECT id FROM cul_households)")[0]["n"]
+        assert orphaned == 0, f"{table} stranded by reassignment"
+
+
+def test_reassignment_merges_when_the_heir_already_has_a_household(culinary_db):
+    """Two households for one owner is a state nothing in the app can show."""
+    from core.family_migration import reassign_culinary_household
+
+    _migrate_culinary("user-42", "family:grp-7", "grp-7")
+    conn = sqlite3.connect(culinary_db)
+    conn.execute(
+        "INSERT INTO cul_households VALUES ('hh-heir', 'user-99', 'Theirs')")
+    conn.execute("INSERT INTO cul_recipes VALUES ('own-recipe', 'hh-heir')")
+    conn.commit()
+    conn.close()
+
+    result = reassign_culinary_household("grp-7", "user-99")
+
+    assert result["reassigned"] is True
+    assert result["merged_into"] == "hh-heir"
+
+    owners = _rows(
+        culinary_db, "SELECT id FROM cul_households WHERE owner_id='user-99'")
+    assert len(owners) == 1, "heir was left holding two households"
+
+    # Their own recipe and the inherited one both landed in the one household.
+    recipes = _rows(
+        culinary_db, "SELECT household_id FROM cul_recipes")
+    assert {r["household_id"] for r in recipes} == {"hh-heir"}

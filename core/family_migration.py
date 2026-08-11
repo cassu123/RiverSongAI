@@ -392,3 +392,148 @@ def _migrate_commerce(profile_id: str, family_owner: str,
                        profile_id[:8], exc)
 
     return {"moved": moved}
+
+
+# ---------------------------------------------------------------------------
+# Dissolving a group — the inverse question
+# ---------------------------------------------------------------------------
+
+def count_family_data(group_id: str) -> dict:
+    """How many rows the shared owner still holds, per module.
+
+    Deleting a family group drops the group row and its memberships and
+    nothing else, so everything filed under "family:<group_id>" loses the only
+    owner that resolved to it. The rows are not deleted -- they become
+    unreachable, because every query filters on an owner nobody maps to any
+    more. That is the same failure the culinary migration had, except total
+    rather than partial and hitting every member at once.
+
+    Read-only, and deliberately covers modules this file cannot reassign, so
+    a refusal can name everything at stake rather than only the part that has
+    a recovery path.
+    """
+    family_owner = f"family:{group_id}"
+    counts: dict = {}
+
+    def _count(db_path: str, sql: str, params: tuple) -> int:
+        try:
+            conn = sqlite3.connect(db_path)
+            try:
+                return conn.execute(sql, params).fetchone()[0]
+            finally:
+                conn.close()
+        except Exception as exc:            # table absent, module unused
+            logger.debug("Count skipped for %s: %s", db_path, exc)
+            return 0
+
+    hh = _count(
+        _CUL_DB(),
+        "SELECT COUNT(*) FROM cul_households WHERE owner_id=?",
+        (family_owner,),
+    )
+    if hh:
+        # A household is only worth reporting for what hangs off it.
+        rows = 0
+        try:
+            conn = sqlite3.connect(_CUL_DB())
+            conn.row_factory = sqlite3.Row
+            try:
+                ids = [r["id"] for r in conn.execute(
+                    "SELECT id FROM cul_households WHERE owner_id=?",
+                    (family_owner,)).fetchall()]
+                for hid in ids:
+                    for tbl in _household_scoped_tables(conn):
+                        rows += conn.execute(
+                            f"SELECT COUNT(*) FROM {tbl} WHERE household_id=?",
+                            (hid,)).fetchone()[0]
+            finally:
+                conn.close()
+        except Exception as exc:
+            logger.debug("Culinary row count failed: %s", exc)
+        counts["culinary"] = rows
+
+    inv = _count(
+        _INV_DB(),
+        "SELECT COUNT(*) FROM inv_homes WHERE owner_id IN "
+        "(SELECT id FROM inv_users WHERE external_user_id=?)",
+        (family_owner,),
+    )
+    if inv:
+        counts["inventory"] = inv
+
+    veh = _count(
+        _VEH_DB(),
+        "SELECT COUNT(*) FROM vehicles WHERE external_user_id=?",
+        (family_owner,),
+    )
+    if veh:
+        counts["maintenance"] = veh
+
+    com = _count(
+        _COM_DB(),
+        "SELECT COUNT(*) FROM biz_workspaces WHERE owner_id IN "
+        "(SELECT id FROM biz_users WHERE external_user_id=?)",
+        (family_owner,),
+    )
+    if com:
+        counts["store"] = com
+
+    return counts
+
+
+def reassign_culinary_household(group_id: str, target_profile_id: str) -> dict:
+    """Hand the shared culinary household to one profile.
+
+    The dissolve counterpart to _migrate_culinary: same reparenting, opposite
+    direction. Used when a group is being deleted and someone has to keep the
+    kitchen -- there is no way to split a shared household back into the parts
+    each member contributed, because nothing records who contributed what, so
+    the honest operation is to name an heir rather than pretend at a division.
+    """
+    family_owner = f"family:{group_id}"
+    try:
+        conn = sqlite3.connect(_CUL_DB())
+        conn.row_factory = sqlite3.Row
+        try:
+            fam = conn.execute(
+                "SELECT id FROM cul_households WHERE owner_id=?",
+                (family_owner,)).fetchone()
+            if not fam:
+                return {"reassigned": False, "reason": "no shared household"}
+
+            existing = conn.execute(
+                "SELECT id FROM cul_households WHERE owner_id=?",
+                (target_profile_id,)).fetchone()
+            if existing and existing["id"] != fam["id"]:
+                # The heir already has a household of their own. Fold the
+                # shared one into it rather than leaving them with two, which
+                # nothing in the app can display.
+                moved = 0
+                for tbl in _household_scoped_tables(conn):
+                    moved += conn.execute(
+                        f"UPDATE {tbl} SET household_id=? WHERE household_id=?",
+                        (existing["id"], fam["id"])).rowcount
+                stragglers = _tables_referencing_household(conn, fam["id"])
+                if stragglers:
+                    conn.commit()
+                    logger.error(
+                        "Kept shared household %s: still referenced by %s",
+                        fam["id"], stragglers)
+                    return {"reassigned": False, "stragglers": stragglers}
+                conn.execute(
+                    "DELETE FROM cul_households WHERE id=?", (fam["id"],))
+                conn.commit()
+                return {"reassigned": True, "merged_into": existing["id"],
+                        "moved": moved}
+
+            conn.execute(
+                "UPDATE cul_households SET owner_id=? WHERE id=?",
+                (target_profile_id, fam["id"]))
+            conn.commit()
+            return {"reassigned": True, "household_id": fam["id"]}
+        finally:
+            conn.close()
+    except Exception as exc:
+        logger.warning("Culinary reassignment failed for group %s: %s",
+                       group_id[:8], exc)
+        return {"reassigned": False, "error": str(exc)}
