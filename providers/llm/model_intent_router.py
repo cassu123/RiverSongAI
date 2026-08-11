@@ -388,22 +388,9 @@ def route(
         )
 
     # Ollama is off too. Take the cheapest model from whatever the admin has
-    # left enabled rather than failing the turn — but still honour free_only,
-    # which is a restriction on the user and not a preference to trade away.
-    candidates = [
-        e for e in LLMRegistry.all_models()
-        if enabled_providers.get(e.provider, False)
-        and e.model_id not in hidden_models
-        and (not free_only or LLMRegistry.is_free(e.provider, e.model_id))
-    ]
-    if candidates:
-        pick = min(
-            candidates,
-            key=lambda e: (
-                (e.cost_per_1k_input_usd or 0.0) + (e.cost_per_1k_output_usd or 0.0),
-                e.priority,
-            ),
-        )
+    # left enabled rather than failing the turn.
+    pick = _cheapest_enabled_model(enabled_providers, free_only, hidden_models)
+    if pick:
         logger.warning(
             "Intent router: local provider disabled; falling back to %s/%s for '%s'.",
             pick.provider, pick.model_id, intent,
@@ -429,6 +416,44 @@ def _get_default_ollama_model() -> str:
         return get_settings().llm_model or "llama3.2:3b"
     except Exception:
         return "llama3.2:3b"
+
+
+def _cheapest_enabled_model(
+    enabled_providers: dict[str, bool],
+    free_only: bool = False,
+    hidden_models: Optional[set] = None,
+):
+    """The last resort: cheapest model still enabled anywhere in the catalog.
+
+    Shared by route() and resolved_routes() rather than written twice. The
+    preview originally stopped one branch short of this and reported "No
+    provider available" for intents the router would happily have answered --
+    a preview is only worth having if it runs the same policy, so the policy
+    lives in one place now.
+
+    free_only is a restriction on the account, not a preference to trade
+    away, so it survives all the way down here.
+
+    Returns a registry entry, or None when nothing is left enabled.
+    """
+    from providers.llm.registry import LLMRegistry
+
+    hidden_models = hidden_models or set()
+    candidates = [
+        e for e in LLMRegistry.all_models()
+        if enabled_providers.get(e.provider, False)
+        and e.model_id not in hidden_models
+        and (not free_only or LLMRegistry.is_free(e.provider, e.model_id))
+    ]
+    if not candidates:
+        return None
+    return min(
+        candidates,
+        key=lambda e: (
+            (e.cost_per_1k_input_usd or 0.0) + (e.cost_per_1k_output_usd or 0.0),
+            e.priority,
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -485,21 +510,9 @@ def resolved_routes(
         # routing would happily have sent to a cloud model — the preview
         # claiming a dead end the router does not have.
         if chosen_provider is None:
-            catalog = [
-                e for e in LLMRegistry.all_models()
-                if enabled_providers.get(e.provider, False)
-                and e.model_id not in hidden_models
-                and (not free_only or LLMRegistry.is_free(e.provider, e.model_id))
-            ]
-            if catalog:
-                pick = min(
-                    catalog,
-                    key=lambda e: (
-                        (e.cost_per_1k_input_usd or 0.0)
-                        + (e.cost_per_1k_output_usd or 0.0),
-                        e.priority,
-                    ),
-                )
+            pick = _cheapest_enabled_model(
+                enabled_providers, free_only, hidden_models)
+            if pick:
                 chosen_provider, chosen_model = pick.provider, pick.model_id
 
         entry = (LLMRegistry.get(chosen_provider, chosen_model)
