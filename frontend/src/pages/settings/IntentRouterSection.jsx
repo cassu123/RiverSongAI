@@ -20,6 +20,11 @@ const INTENT_ICONS = {
   general:      'chat',
 }
 
+/**
+ * Render the automatic model routing settings panel.
+ * @param {Object} intentRouterSettings - Current routing settings and resolved provider routes.
+ * @param {Function} saveIntentRouter - Saves changes to the routing settings.
+ */
 export default function IntentRouterSection({ intentRouterSettings, saveIntentRouter }) {
   return (
     <Section title="INTENT ROUTER">
