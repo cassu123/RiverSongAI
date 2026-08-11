@@ -77,6 +77,35 @@ def resolve_module_owner(user_id: str, module: str) -> str:
     return user_id
 
 
+def family_member_ids(user_id: str) -> list:
+    """Everyone in `user_id`'s family group, including them.
+
+    Unlike resolve_module_owner this does not care which modules are shared:
+    the question it answers is "whose spending is my household's", and that
+    is a property of the group, not of what the group happens to pool.
+
+    Returns [user_id] when the user is in no group, so callers can filter on
+    the result unconditionally.
+    """
+    try:
+        conn = _get_conn()
+        row = conn.execute(
+            "SELECT family_group_id FROM family_memberships WHERE profile_id = ?",
+            (user_id,),
+        ).fetchone()
+        if not row:
+            return [user_id]
+        members = conn.execute(
+            "SELECT profile_id FROM family_memberships WHERE family_group_id = ?",
+            (row["family_group_id"],),
+        ).fetchall()
+        ids = [m["profile_id"] for m in members]
+        return ids or [user_id]
+    except Exception as exc:
+        logger.debug("Family member lookup failed for %s: %s", user_id, exc)
+        return [user_id]
+
+
 async def is_feature_enabled_for(user_id: str, feature_key: str) -> bool:
     """
     Central permission check for the feature cascade.

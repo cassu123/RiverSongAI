@@ -1102,7 +1102,7 @@ export default function SettingsPage({
       {/* ================================================================ */}
       {/* TOKEN USAGE — user                                               */}
       {/* ================================================================ */}
-      {showUser && <TokenUsageSection token={token} />}
+      {showUser && <TokenUsageSection token={token} isAdmin={user?.role === 'admin'} />}
       </G>
 
 
