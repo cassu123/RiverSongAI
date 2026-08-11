@@ -135,21 +135,39 @@ Browser (mic) → base64 WAV over WebSocket
 
 ```bash
 # 1. Clone
-# NOTE: on this machine, default `git@github.com:` resolves to a deploy
-# key scoped to the Android repo. The main repo uses the SSH alias below.
-git clone git@github-riversongai:cassu123/RiverSongAI.git
+git clone https://github.com/cassu123/RiverSongAI.git
 cd RiverSongAI
 
-# 2. Copy and fill in .env
-cp .env.example .env
-nano .env
-
-# 3. Run setup (handles venv, Piper, voices, Ollama models, systemd, cron)
+# 2. Run setup
+#    Creates .env, generates this install's secrets, downloads Piper and
+#    voices, pulls a starter set of local models, builds the frontend and
+#    installs the systemd service. Safe to re-run.
 chmod +x setup.sh
 ./setup.sh
 
-# 4. Start
+# 3. Start
 sudo systemctl start river-song
+```
+
+Setup asks one question: whether you have a domain pointed at this machine.
+Press Enter and it configures a home-network install — reachable from other
+devices on your wifi, not from the internet. No domain, no DNS, no tunnel.
+It prints the address to open when it finishes.
+
+**The first account you create becomes the administrator**, so create it
+before anyone else can reach the machine.
+
+Options, all off by default:
+
+| Variable | Effect |
+|---|---|
+| `RIVER_DOMAIN=example.com` | Skip the network question and use this domain |
+| `RIVER_PULL_ALL_MODELS=1` | Pull the full local model catalogue (~150 GB) instead of the ~8 GB starter set |
+| `RIVER_AUTO_DEPLOY=1` | Install the nightly cron that pulls `main`, reinstalls dependencies and restarts |
+
+On this machine specifically, the default `git@github.com:` resolves to a
+deploy key scoped to the Android repo; the main repo is reachable over the
+SSH alias `git@github-riversongai:cassu123/RiverSongAI.git`.
 
 ## Security Hooks
 To prevent accidental commits of sensitive data, install the pre-commit hook:
@@ -180,8 +198,8 @@ npm run dev  # http://localhost:5173
 # Manual deploy (pull + build + restart)
 ./deploy.sh
 
-# Auto-deploy runs nightly at 3am via cron
-# Logs: tail -f /mnt/data/river-song/logs/deploy.log
+# Auto-deploy runs nightly at 3am via cron, if it was opted into with
+# RIVER_AUTO_DEPLOY=1 at setup. Logs: tail -f logs/deploy.log
 ```
 
 ---
