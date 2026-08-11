@@ -335,6 +335,52 @@ class CookingSession(Base):  # type: ignore
                           cascade="all, delete-orphan")
 
 
+class MealCook(Base):  # type: ignore
+    """
+    Several recipes being cooked together as one meal.
+
+    CookingSession is one recipe and a pointer into its steps. That is the
+    wrong shape for a meal: three dishes share one oven, one pair of hands and
+    one moment when everything is meant to be hot, and none of that exists
+    inside a single recipe's step list.
+
+    The timeline is **materialised** at start, for the same reason
+    CookingSession materialises its steps and one more. Scheduling is cheap,
+    but a plan that silently re-derived would move under the cook whenever
+    somebody edited a recipe, adjusted the prep session, or plugged in an air
+    fryer -- and a cooking plan that changes while you are following it is
+    worse than a stale one. `plan_json` is the plan they agreed to start.
+
+    Progress is a set of keys rather than an index. Steps interleave across
+    recipes, so "we are on step 4" means nothing; what is true is that these
+    particular steps are done, in whatever order the cook actually got to
+    them.
+    """
+    __tablename__ = "cul_meal_cooks"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    household_id: Mapped[str] = mapped_column(String, ForeignKey("cul_households.id"), nullable=False, index=True)
+    # Nullable so clearing a prep session does not delete the record of cooking it.
+    prep_session_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    label: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    #: Wall-clock target. The plan itself is in offsets from its own start, so
+    #: a cook running late slides the whole thing rather than being told they
+    #: are behind on every row at once.
+    serve_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    plan_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    done_steps_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+    started_by: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    household = relationship("Household")
+
+
 class CookingTimer(Base):  # type: ignore
     """
     A named timer bound to a step of a cooking session.

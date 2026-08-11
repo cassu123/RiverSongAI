@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import BarcodeScanner from '../components/BarcodeScanner.jsx'
 import AddRecipeModal from '../components/AddRecipeModal.jsx'
 import ShoppingListTab from '../components/ShoppingListTab.jsx'
+import CookPlanTab from '../components/CookPlanTab.jsx'
 
 /**
  * CulinaryPage — Spatial Intelligence v2.0
@@ -534,7 +535,7 @@ export default function CulinaryPage({ setAction }) {
         const start = d2.toISOString().split('T')[0];
         setMealPlan(await api.get(`/meal-plan?start=${start}`));
       }
-      if (tab === 'prep') {
+      if (tab === 'prep' || tab === 'cook') {
         try { setActivePrep(await api.get('/prep')) } catch { setActivePrep(null) }
       }
       if (tab === 'equipment') setEquipment(await api.get('/household/equipment'))
@@ -564,6 +565,10 @@ export default function CulinaryPage({ setAction }) {
         if (msg.event === 'grocery_updated') {
           setGroceryNonce(n => n + 1);
         }
+        if (msg.event === 'meal_cook_updated') {
+          // Two people cooking the same meal tick steps off on two phones.
+          if (activeTab === 'cook') fetchData('cook');
+        }
       } catch (e) {}
     };
     return () => ws.close();
@@ -590,6 +595,7 @@ export default function CulinaryPage({ setAction }) {
             { key: 'list', icon: 'shopping_cart', label: 'LIST' },
             { key: 'stockroom', icon: 'warehouse', label: 'STOCK' },
             { key: 'prep', icon: 'set_meal', label: 'PREP' },
+            { key: 'cook', icon: 'skillet', label: 'COOK' },
             { key: 'equipment', icon: 'kitchen', label: 'HARDWARE' },
             { key: 'banned', icon: 'block', label: 'BANNED' }
           ].map(t => (
@@ -911,7 +917,7 @@ export default function CulinaryPage({ setAction }) {
             <div className="rs-card-meta">{error}</div>
           </div>
         </div>
-      ) : loading && !['equipment', 'prep', 'dinner', 'library', 'banned', 'list'].includes(activeTab) ? (
+      ) : loading && !['equipment', 'prep', 'dinner', 'library', 'banned', 'list', 'cook'].includes(activeTab) ? (
         <div className="rs-card-meta" style={{ padding: 64, textAlign: 'center' }}>ACCESSING {activeTab.toUpperCase()} ARCHIVES...</div>
       ) : (
         <div className="animate-page-in" style={{ animationDuration: '400ms' }}>
@@ -921,6 +927,9 @@ export default function CulinaryPage({ setAction }) {
               rather than the key so a half-typed item survives someone
               else's edit. */}
           {activeTab === 'list' && <ShoppingListTab api={api} refreshKey={groceryNonce} />}
+          {/* The cook plan needs the staged recipes, so it reads the same
+              activePrep the prep tab does rather than fetching its own. */}
+          {activeTab === 'cook' && <CookPlanTab api={api} activePrep={activePrep} />}
           {activeTab === 'stockroom' && renderStockroom()}
           {activeTab === 'dinner' && renderDinner()}
           {activeTab === 'prep' && renderPrep()}

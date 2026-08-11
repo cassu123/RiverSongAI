@@ -191,24 +191,6 @@ def test_steps_within_a_recipe_stay_in_order():
         assert earlier.end_min == later.start_min
 
 
-def test_one_oven_two_roasts_is_reported():
-    """Contention is surfaced, not silently resolved.
-
-    Which roast moves depends on which tolerates sitting, and the recipe does
-    not say. Shifting one anyway would produce a plan that looks fine and is
-    wrong, so the cook is told and decides.
-    """
-    plan = plan_meal([
-        _recipe("r1", "Roast Chicken", ["Roast in the oven for 40 minutes"]),
-        _recipe("r2", "Roast Potatoes", ["Roast in the oven for 40 minutes"]),
-    ])
-
-    oven = [c for c in plan.conflicts if c.resource == "oven"]
-    assert oven, "two roasts sharing one oven should be reported"
-    assert "Roast Chicken" in oven[0].detail
-    assert "Roast Potatoes" in oven[0].detail
-
-
 def test_four_pans_on_the_stove_is_fine():
     """Four burners. Three pans is a normal Tuesday, not a conflict."""
     plan = plan_meal([
@@ -269,3 +251,54 @@ def test_stations_used_lists_the_appliances_to_get_out():
     ])
     assert set(plan.stations_used) == {"oven", "air_fryer"}
     assert "counter" not in plan.stations_used
+
+
+# ---------------------------------------------------------------------------
+# Regressions from running the scheduler on a real Sunday roast
+#
+# The first version of this module produced a plausible-looking plan for
+# chicken, roast potatoes and green beans, and three things in it were wrong.
+# All three were invisible in the unit tests above and obvious the moment a
+# whole meal was printed out, which is why they get their own section.
+# ---------------------------------------------------------------------------
+
+def test_boiling_and_steaming_are_waiting():
+    """Parboiling is not eight minutes of holding a pan.
+
+    These were missing from the passive verbs, so a roast dinner booked
+    fourteen minutes of hands for standing over water -- most of the window
+    the plan exists to fill with something else.
+    """
+    parboil = analyse_step(0, "Parboil the potatoes for 8 minutes")
+    assert parboil.passive_min == 8
+    assert not parboil.blocks_the_cook
+
+    steam = analyse_step(0, "Steam for 6 minutes")
+    assert steam.passive_min == 6
+    assert not steam.blocks_the_cook
+
+
+def test_one_oven_fits_a_roast_and_the_potatoes():
+    """The commonest meal there is must not be reported as a clash.
+
+    An oven has shelves. Warning about this would be the false alarm that
+    teaches people to ignore the real ones -- and the real one an oven has is
+    two temperatures, which is a different check.
+    """
+    plan = plan_meal([
+        _recipe("r1", "Roast Chicken", ["Roast for 50 minutes"]),
+        _recipe("r2", "Roast Potatoes", ["Roast for 35 minutes"]),
+    ])
+    assert not [c for c in plan.conflicts if c.resource == "oven"]
+
+
+def test_a_third_tray_still_reports():
+    plan = plan_meal([
+        _recipe(f"r{i}", f"Tray {i}", ["Roast for 30 minutes"]) for i in range(3)
+    ])
+    assert [c for c in plan.conflicts if c.resource == "oven"]
+
+
+def test_preheating_is_prep():
+    """It happens before the cooking and needs no attention while it does."""
+    assert analyse_step(0, "Preheat the oven to 220C").phase == "prep"

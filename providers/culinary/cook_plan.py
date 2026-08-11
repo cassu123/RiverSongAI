@@ -47,7 +47,11 @@ from typing import Dict, Iterable, List, Optional, Tuple
 IMPLICIT_STATIONS: Dict[str, int] = {
     "counter": 99,     # unbounded: chopping does not contend with anything
     "stove": 4,
-    "oven": 1,
+    # Two shelves. A chicken and a tray of potatoes in one oven is the most
+    # common meal there is, and reporting it as a clash would have been the
+    # warning that teaches people to ignore the warnings. What an oven cannot
+    # do is two temperatures, which is a different check and not modelled yet.
+    "oven": 2,
     "microwave": 1,
 }
 
@@ -82,6 +86,12 @@ _STATION_PATTERNS: List[Tuple[str, Tuple[str, ...]]] = [
 #: plan can interleave, so it is worth more than the station map.
 _PASSIVE_VERBS = (
     "bake", "roast", "braise", "simmer", "marinate", "rest", "chill",
+    # Boiling and steaming are waiting, not doing. Left out of the first pass
+    # and it showed immediately: a Sunday roast booked eight minutes of hands
+    # for parboiling potatoes and six more for steaming beans, which is most
+    # of the window the plan was meant to be filling with something else.
+    # "boil" also covers parboil and hard-boil.
+    "boil", "blanch", "steam", "poach",
     "refrigerate", "freeze", "proof", "rise", "slow cook", "pressure cook",
     "air fry", "sous vide", "preheat", "soak", "brine", "cool", "set aside",
     "let stand", "steep", "reduce", "smoke", "cure", "ferment", "thaw",
@@ -105,6 +115,11 @@ _PREP_VERBS = (
     "marinate", "brine", "measure", "gather", "wash", "rinse", "pat dry",
     "bring to room temperature", "thaw", "soften",
 )
+
+#: Prep no matter which station they name. The station test below is what
+#: stops "sear the sliced beef" reading as knife work, but it also catches
+#: preheating, which happens at the oven and is still setup.
+_ALWAYS_PREP_VERBS = ("preheat", "get out", "line the", "grease")
 
 _FINISH_VERBS = ("plate", "garnish", "serve", "slice to serve", "rest before")
 
@@ -168,6 +183,15 @@ class StepFacts:
     def total_min(self) -> int:
         return self.active_min + self.passive_min
 
+    @property
+    def blocks_the_cook(self) -> bool:
+        """Whether this step holds the cook rather than merely starting.
+
+        Same distinction PlannedStep draws, defined here too so the two cannot
+        drift apart and callers need not know which one they are holding.
+        """
+        return self.active_min > 0 and self.passive_min == 0
+
 
 #: What an unnamed hands-on step costs. Most recipes write "season the chicken"
 #: without a duration, and treating those as instant produces a plan that
@@ -207,6 +231,8 @@ def analyse_step(index: int, text: str) -> StepFacts:
 
     if _first_match(lowered, _FINISH_VERBS):
         phase = "finish"
+    elif _first_match(lowered, _ALWAYS_PREP_VERBS):
+        phase = "prep"
     elif _first_match(lowered, _PREP_VERBS) and station == "counter":
         # Station matters: "slice the onions" is prep, "sear the sliced beef"
         # is not, and both contain a prep verb.
