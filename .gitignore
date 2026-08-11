@@ -218,8 +218,9 @@ project_tree.txt
 # Ignore NOTES folder
 NOTES/
 
-# Ignore Claude config
-CLAUDE.md
+# CLAUDE.md is tracked on purpose: it carries working preferences that have
+# to survive a fresh clone, which is every remote session. Keep secrets and
+# scratch notes out of it.
 
 # Voice biometric data — local only, never sync
 data/voice_prints/
