@@ -225,13 +225,34 @@ def test_a_second_family_migrating_later_does_not_capture_the_first(
 # and on a two-family box is the other family's spending.
 # ---------------------------------------------------------------------------
 
-def test_family_member_ids_groups_the_household(two_families):
-    from core.family import family_member_ids
+def test_only_a_parent_or_an_admin_may_look_at_another_account():
+    """Who may see whose usage.
 
-    assert sorted(family_member_ids("chris")) == ["chris", "pat"]
-    assert family_member_ids("sam") == ["sam"]
-    # Not in a group: filterable without the caller special-casing it.
-    assert family_member_ids("stranger") == ["stranger"]
+    Family group membership is not the test. Two adults who pool recipes have
+    not agreed to show each other what they spend, and a parent and child who
+    were never put in a group still stand in that relationship -- so the rule
+    is about who answers for an account, not who shares a pantry with it.
+    """
+    from core.family import may_view_usage
+
+    # Yourself, always.
+    assert may_view_usage("chris", False, "chris", [])
+
+    # Your child, because you are recorded as their parent.
+    assert may_view_usage("chris", False, "kid", ["kid"])
+
+    # Someone else's child is not yours to look at.
+    assert not may_view_usage("chris", False, "other-kid", ["kid"])
+
+    # An adult you merely share a household with. This is the case that
+    # family-group scoping would have allowed and should not.
+    assert not may_view_usage("chris", False, "pat", [])
+
+    # A child cannot turn the relationship around on their parent.
+    assert not may_view_usage("kid", False, "chris", [])
+
+    # Admins see the machine they run.
+    assert may_view_usage("admin", True, "anyone", [])
 
 
 def test_usage_summary_is_filtered_by_account(tmp_path, monkeypatch):

@@ -19,21 +19,37 @@ const SOURCE_LABELS = {
   other:            { label: 'OTHER',              icon: 'more_horiz' },
 }
 
-export default function TokenUsageSection({ token, isAdmin = false }) {
+export default function TokenUsageSection({ token, isAdmin = false, isParent = false }) {
   const [data,    setData]    = useState(null)
   const [days,    setDays]    = useState(30)
   const [scope,   setScope]   = useState('mine')
+  const [account, setAccount] = useState('')   // a named child, overrides scope
+  const [children, setChildren] = useState([])
   const [loading, setLoading] = useState(true)
   const [openSource, setOpenSource] = useState(null)
+
+  // A parent can look at one child at a time as well as at the roll-up, so
+  // the picker needs their names. Admins see this too when they are also a
+  // parent; the instance-wide view is a separate button.
+  useEffect(() => {
+    if (!token || !isParent) return
+    fetch('/api/parent/children', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setChildren(d?.children || d || []))
+      .catch(() => {})
+  }, [token, isParent])
 
   useEffect(() => {
     if (!token) return
     setLoading(true)
-    fetch(`/api/usage/tokens?days=${days}&scope=${scope}`, { headers: { Authorization: `Bearer ${token}` } })
+    const q = account
+      ? `days=${days}&user_id=${encodeURIComponent(account)}`
+      : `days=${days}&scope=${scope}`
+    fetch(`/api/usage/tokens?${q}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(d => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [token, days, scope])
+  }, [token, days, scope, account])
 
   function fmtTokens(n) {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
@@ -68,30 +84,42 @@ export default function TokenUsageSection({ token, isAdmin = false }) {
 
         {/* Whose usage. This used to be unlabelled because there was only one
             answer -- the endpoint returned the whole machine to everybody.
-            With more than one household on the box the number means nothing
+            Now that it depends on who is asking, the number means nothing
             unless it says who it is counting. */}
         <span className="rs-card-label">WHOSE</span>
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {[
-            { id: 'mine',   label: 'ME' },
-            { id: 'family', label: 'HOUSEHOLD' },
+            { id: 'mine', label: 'ME' },
+            ...(isParent && children.length ? [{ id: 'dependents', label: 'ME + KIDS' }] : []),
             ...(isAdmin ? [{ id: 'all', label: 'EVERYTHING' }] : []),
           ].map(s => (
             <button
               key={s.id}
-              className={`rs-pill ${scope === s.id ? 'is-active' : ''}`}
+              className={`rs-pill ${!account && scope === s.id ? 'is-active' : ''}`}
               style={{ fontSize: '0.7rem' }}
-              onClick={() => setScope(s.id)}
+              onClick={() => { setAccount(''); setScope(s.id) }}
             >{s.label}</button>
+          ))}
+          {/* One child at a time: a roll-up cannot tell you which of them is
+              the reason the bill moved. */}
+          {children.map(c => (
+            <button
+              key={c.id}
+              className={`rs-pill ${account === c.id ? 'is-active' : ''}`}
+              style={{ fontSize: '0.7rem' }}
+              onClick={() => setAccount(c.id)}
+            >{(c.display_name || c.email || c.id).toUpperCase()}</button>
           ))}
         </div>
       </div>
 
-      {!loading && data && scope !== 'mine' && (
+      {!loading && data && (account || scope !== 'mine') && (
         <p className="rs-card-meta" style={{ marginTop: -8, marginBottom: 16 }}>
-          {scope === 'family'
-            ? `Across ${data.accounts_counted || 1} account${data.accounts_counted === 1 ? '' : 's'} in your household.`
-            : 'Everything on this machine, including background work that belongs to no account — so this is more than the households add up to.'}
+          {account
+            ? 'One account. You can see this because you are recorded as their parent.'
+            : scope === 'dependents'
+              ? `You and ${(data.accounts_counted || 1) - 1} account${data.accounts_counted === 2 ? '' : 's'} you answer for.`
+              : 'Everything on this machine, including background work that belongs to no account — so this is more than the accounts add up to.'}
         </p>
       )}
 

@@ -6,6 +6,7 @@ Provides resolve_module_owner(user_id, module) which returns either
 given module shared) or the original user_id.
 
 Both culinary and inventory import this so the logic lives in one place.
+Also home to the permission rules that turn on who answers for whom.
 """
 
 from __future__ import annotations
@@ -77,33 +78,21 @@ def resolve_module_owner(user_id: str, module: str) -> str:
     return user_id
 
 
-def family_member_ids(user_id: str) -> list:
-    """Everyone in `user_id`'s family group, including them.
+def may_view_usage(me: str, is_admin: bool, target: str,
+                   dependents: list) -> bool:
+    """Whether `me` may see `target`'s token usage.
 
-    Unlike resolve_module_owner this does not care which modules are shared:
-    the question it answers is "whose spending is my household's", and that
-    is a property of the group, not of what the group happens to pool.
+    Family group membership is deliberately not the test. Two adults who pool
+    recipes have not thereby agreed to show each other what they spend, and a
+    parent and child who were never put in a group still stand in that
+    relationship. What licenses looking at someone's usage is answering for
+    them, so: yourself, a child you are recorded as the parent of, or -- for
+    an admin -- the machine they run.
 
-    Returns [user_id] when the user is in no group, so callers can filter on
-    the result unconditionally.
+    A plain function taking the dependents rather than looking them up, so
+    the rule is testable without a database or an app.
     """
-    try:
-        conn = _get_conn()
-        row = conn.execute(
-            "SELECT family_group_id FROM family_memberships WHERE profile_id = ?",
-            (user_id,),
-        ).fetchone()
-        if not row:
-            return [user_id]
-        members = conn.execute(
-            "SELECT profile_id FROM family_memberships WHERE family_group_id = ?",
-            (row["family_group_id"],),
-        ).fetchall()
-        ids = [m["profile_id"] for m in members]
-        return ids or [user_id]
-    except Exception as exc:
-        logger.debug("Family member lookup failed for %s: %s", user_id, exc)
-        return [user_id]
+    return bool(is_admin or target == me or target in dependents)
 
 
 async def is_feature_enabled_for(user_id: str, feature_key: str) -> bool:

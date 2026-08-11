@@ -4,20 +4,21 @@ api/routes/usage.py
 Token usage summary endpoint.
 
 Endpoints:
-  GET /api/usage/tokens?days=30&scope=mine|family|all
+  GET /api/usage/tokens?days=30&scope=mine|dependents|all[&user_id=]
                                  -- token counts + estimated cost, scoped to
-                                    the caller, their family, or (admin only)
-                                    the whole instance
+                                    the caller, the accounts they answer for,
+                                    a named account they are allowed to see,
+                                    or (admin only) the whole instance
   GET /api/usage/rate/{provider} -- request/token counts in a short window
   GET /api/usage/models          -- per-model breakdown with accounts (admin)
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query, Request
 
 from core.auth import decode_token
-from core.family import family_member_ids
+from core.family import may_view_usage
 from core.token_tracker import get_model_usage, get_summary, get_provider_rate
 
 router = APIRouter(prefix="/api/usage", tags=["usage"])
@@ -25,28 +26,39 @@ router = APIRouter(prefix="/api/usage", tags=["usage"])
 
 @router.get("/tokens")
 async def token_usage(
+    request: Request,
     days: int = Query(default=30, ge=1, le=365),
-    scope: str = Query(default="mine", pattern="^(mine|family|all)$"),
+    scope: str = Query(default="mine", pattern="^(mine|dependents|all)$"),
+    user_id: str = Query(default=""),
     authorization: str = Header(default=""),
 ):
-    """Token usage for the caller, their family, or the whole instance.
+    """Token usage for the caller, an account they answer for, or everything.
 
-    This returned the instance total to every authenticated account, which
-    on a single-household box merely looked like your own usage and was
-    close enough to it not to matter. With a second family on the same box
-    it is a leak: their spending, their model choices, and the shape of how
-    much they use River, handed to anyone with a login. The /models endpoint
-    below was already admin-gated for exactly this reason -- this one was
-    not, and sat directly above it.
+    This returned the instance total to every authenticated account. On a
+    single-household box that merely looked like your own usage and was close
+    enough not to notice; with a second family on the same box it hands over
+    their spending, their model choices, and the shape of how much they use
+    River. The /models endpoint below was already admin-gated for exactly
+    this reason -- this one was not, and sat directly above it.
 
-    scope=mine (the default) is the caller's own rows. scope=family adds the
-    rest of their group, which is the honest unit for "what is this household
-    costing". scope=all is the instance and stays admin-only.
+    Who may see whose usage is a question about responsibility, not about
+    sharing a pantry. Family group membership is the wrong test on both
+    sides: it exposes one adult's spending to another who merely pools
+    recipes with them, and it misses a parent and child who are not in a
+    group at all. The rule is:
 
-    Background work records under 'system' and belongs to no account, so a
-    scoped total is smaller than the instance total. The scope is echoed back
-    so the UI can label which number it is showing instead of calling every
-    one of them "usage".
+      * your own usage, always;
+      * a child's usage, if you are recorded as their parent;
+      * everything, if you are an admin.
+
+    scope=dependents rolls up the first two -- you plus the accounts you
+    answer for -- which is the number a parent actually wants. user_id names
+    a single account and is checked against the same rule, so a parent can
+    look at one child rather than at the total.
+
+    Background work records under 'system' and belongs to no account, so
+    every scoped total is smaller than the instance total. The scope comes
+    back with the figures so the UI can say which number it is showing.
     """
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
@@ -54,17 +66,36 @@ async def token_usage(
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    user_id = str(payload.get("sub") or "")
-    if scope == "all":
-        if payload.get("role") != "admin":
+    me = str(payload.get("sub") or "")
+    is_admin = payload.get("role") == "admin"
+    store = request.app.state.memory_manager._store
+
+    async def _dependents() -> list:
+        """Accounts this caller answers for, not counting themselves."""
+        try:
+            return list(await store.get_children_of_parent(me))
+        except Exception:
+            return []
+
+    if user_id:
+        # A named account. Admins may name anyone; everyone else may name
+        # themselves or one of their children, and nobody else.
+        if not may_view_usage(me, is_admin, user_id, await _dependents()):
+            raise HTTPException(
+                status_code=403,
+                detail="You can only view your own usage, or a child's.")
+        user_ids = [user_id]
+        scope = "account"
+    elif scope == "all":
+        if not is_admin:
             raise HTTPException(
                 status_code=403,
                 detail="Admin role required for instance-wide usage.")
         user_ids = None
-    elif scope == "family":
-        user_ids = family_member_ids(user_id)
+    elif scope == "dependents":
+        user_ids = [me, *await _dependents()]
     else:
-        user_ids = [user_id]
+        user_ids = [me]
 
     summary = get_summary(days=days, user_ids=user_ids)
     summary["scope"] = scope

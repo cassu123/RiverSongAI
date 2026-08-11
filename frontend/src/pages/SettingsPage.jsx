@@ -1102,7 +1102,15 @@ export default function SettingsPage({
       {/* ================================================================ */}
       {/* TOKEN USAGE — user                                               */}
       {/* ================================================================ */}
-      {showUser && <TokenUsageSection token={token} isAdmin={user?.role === 'admin'} />}
+      {/* isParent covers admins too: /api/parent/children admits both, and an
+          admin may look at any account anyway. */}
+      {showUser && (
+        <TokenUsageSection
+          token={token}
+          isAdmin={user?.role === 'admin'}
+          isParent={['parent', 'admin'].includes(user?.role)}
+        />
+      )}
       </G>
 
 
