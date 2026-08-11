@@ -70,6 +70,35 @@ function SectionStatusWrapper({ status, children }) {
 }
 
 // ---------------------------------------------------------------------------
+// Section groups
+//
+// Both views used to be one flat scroll -- seventeen cards in admin, eleven in
+// user, in an order that grew by appending. On a phone that is a long column of
+// similar-looking cards with no landmarks, so finding anything meant scrolling
+// past everything. These groups are the landmarks.
+//
+// Every section keeps its own component, props and data fetch; grouping only
+// decides which ones are on screen at once. `id` is what the section blocks
+// below test against, so adding a section means tagging it, not rewiring it.
+// ---------------------------------------------------------------------------
+
+const USER_GROUPS = [
+  { id: 'model',   icon: 'neurology',      label: 'MODEL' },
+  { id: 'voice',   icon: 'record_voice_over', label: 'VOICE' },
+  { id: 'memory',  icon: 'psychology',     label: 'MEMORY' },
+  { id: 'alerts',  icon: 'notifications',  label: 'ALERTS' },
+  { id: 'general', icon: 'tune',           label: 'GENERAL' },
+]
+
+const ADMIN_GROUPS = [
+  { id: 'providers', icon: 'cloud',        label: 'PROVIDERS' },
+  { id: 'models',    icon: 'neurology',    label: 'MODELS' },
+  { id: 'people',    icon: 'group',        label: 'PEOPLE' },
+  { id: 'persona',   icon: 'face',         label: 'PERSONA' },
+  { id: 'system',    icon: 'memory',       label: 'SYSTEM' },
+]
+
+// ---------------------------------------------------------------------------
 // Main settings page
 // ---------------------------------------------------------------------------
 
@@ -80,6 +109,20 @@ export default function SettingsPage({
   const { user, token } = useAuth()
   const showUser = viewMode === 'user'
   const showAdmin = viewMode === 'admin' && user?.role === 'admin'
+
+  const groups = showAdmin ? ADMIN_GROUPS : USER_GROUPS
+  const [group, setGroup] = useState(groups[0].id)
+  // Switching between the user and admin views swaps the whole group list, so
+  // the previously selected id would match nothing and the page would render
+  // empty.
+  useEffect(() => { setGroup(groups[0].id) }, [viewMode])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Shows its children only in the active group. Sections keep their existing
+  // conditions inside -- this wraps, it does not replace showUser/showAdmin.
+  const G = useCallback(
+    ({ id, children }) => (group === id ? <>{children}</> : null),
+    [group],
+  )
 
   const [models,           setModels]           = useState({ local: [], cloud: [] })
   const [visibility,       setVisibility]       = useState(null)
@@ -620,6 +663,30 @@ export default function SettingsPage({
         </div>
       </header>
 
+      {/* Group rail. Horizontally scrollable so it survives a narrow phone
+          without wrapping into two rows and pushing the content down. */}
+      <nav
+        aria-label="Settings sections"
+        style={{
+          display: 'flex', gap: 8, marginBottom: 16,
+          overflowX: 'auto', paddingBottom: 4,
+          scrollbarWidth: 'none',
+        }}
+      >
+        {groups.map(g => (
+          <button
+            key={g.id}
+            className={`rs-pill ${group === g.id ? 'is-active' : ''}`}
+            aria-current={group === g.id ? 'page' : undefined}
+            style={{ flexShrink: 0 }}
+            onClick={() => setGroup(g.id)}
+          >
+            <span className="material-symbols-rounded">{g.icon}</span>
+            {g.label}
+          </button>
+        ))}
+      </nav>
+
       {/* Reload-pending banner for LLM routing flag changes */}
       {reloadPending && (
         <div style={{
@@ -680,6 +747,7 @@ export default function SettingsPage({
 
       <div className="rs-card-flow">
       
+      <G id="system">
       {/* ================================================================ */}
       {/* ORCHESTRATION (n8n) — admin view, toggle only. Credentials live in .env */}
       {/* ================================================================ */}
@@ -700,7 +768,10 @@ export default function SettingsPage({
           )}
         </SectionStatusWrapper>
       )}
+      </G>
 
+
+      <G id="providers">
       {/* ================================================================ */}
       {/* NVIDIA NIM — admin                                               */}
       {/* ================================================================ */}
@@ -712,13 +783,19 @@ export default function SettingsPage({
           saveLlmRoutingFlags={saveLlmRoutingFlags}
         />
       )}
+      </G>
 
+
+      <G id="providers">
       {/* ================================================================ */}
       {/* PROVIDER ACCESS — admin. The uniform allow/deny matrix; the      */}
       {/* per-provider panels below add spend detail for the paid ones.    */}
       {/* ================================================================ */}
       {showAdmin && <ProviderSwitchesSection token={token} />}
+      </G>
 
+
+      <G id="providers">
       {/* ================================================================ */}
       {/* METERED CLOUD PROVIDERS — admin                                  */}
       {/* Separate from the NIM panel above because these cost money: they  */}
@@ -732,7 +809,10 @@ export default function SettingsPage({
           token={token}
         />
       ))}
+      </G>
 
+
+      <G id="models">
       {/* ================================================================ */}
       {/* INTENT ROUTER — admin                                            */}
       {/* ================================================================ */}
@@ -744,7 +824,10 @@ export default function SettingsPage({
           />
         </SectionStatusWrapper>
       )}
+      </G>
 
+
+      <G id="system">
       {/* ================================================================ */}
       {/* CHRONOS / SCRIBE — admin                                         */}
       {/* ================================================================ */}
@@ -757,7 +840,10 @@ export default function SettingsPage({
           />
         </SectionStatusWrapper>
       )}
+      </G>
 
+
+      <G id="model">
       {/* ================================================================ */}
       {/* AI MODEL — user-facing                                           */}
       {/* ================================================================ */}
@@ -773,7 +859,10 @@ export default function SettingsPage({
           selectModel={selectModel}
         />
       )}
+      </G>
 
+
+      <G id="voice">
       {/* ================================================================ */}
       {/* VOICE RECOGNITION (STT) — user-facing                            */}
       {/* ================================================================ */}
@@ -798,7 +887,10 @@ export default function SettingsPage({
         </div>
       </Section>
       )}
+      </G>
 
+
+      <G id="system">
       {/* ================================================================ */}
       {/* HARDWARE COOKBOOK — admin, flag-gated                            */}
       {/* Hidden when settings.hardware_cookbook_enabled = False (route    */}
@@ -811,7 +903,10 @@ export default function SettingsPage({
           )}
         </SectionStatusWrapper>
       )}
+      </G>
 
+
+      <G id="system">
       {/* ================================================================ */}
       {/* DAEMON CONTROL — admin                                          */}
       {/* ================================================================ */}
@@ -825,7 +920,10 @@ export default function SettingsPage({
           />
         </SectionStatusWrapper>
       )}
+      </G>
 
+
+      <G id="system">
       {/* ================================================================ */}
       {/* LOCAL AI FEATURES — admin                                        */}
       {/* ================================================================ */}
@@ -837,7 +935,10 @@ export default function SettingsPage({
           />
         </SectionStatusWrapper>
       )}
+      </G>
 
+
+      <G id="persona">
       {/* ================================================================ */}
       {/* PERSONALITY — admin                                              */}
       {/* ================================================================ */}
@@ -853,7 +954,10 @@ export default function SettingsPage({
           )}
         </SectionStatusWrapper>
       )}
+      </G>
 
+
+      <G id="persona">
       {/* ================================================================ */}
       {/* BRIEFING — admin                                                 */}
       {/* ================================================================ */}
@@ -872,7 +976,10 @@ export default function SettingsPage({
       {/* Feed preferences (weather, sports, stocks, space, earth, happenings)
           now live inline on the Feeds page — each tab owns its own settings,
           and the "manage tabs" gear controls which optional tabs show. */}
+      </G>
 
+
+      <G id="providers">
       {/* ================================================================ */}
       {/* CLOUD FALLBACK — admin only (activated by admin)                 */}
       {/* ================================================================ */}
@@ -884,7 +991,10 @@ export default function SettingsPage({
           models={models}
         />
       )}
+      </G>
 
+
+      <G id="voice">
       {/* ================================================================ */}
       {/* VOICE — user                                                     */}
       {/* ================================================================ */}
@@ -910,7 +1020,10 @@ export default function SettingsPage({
         </Section>
       </SectionStatusWrapper>
       )}
+      </G>
 
+
+      <G id="general">
       {/* ================================================================ */}
       {/* MUSIC & ENTERTAINMENT — user                                    */}
       {/* ================================================================ */}
@@ -938,7 +1051,10 @@ export default function SettingsPage({
         </Section>
       </SectionStatusWrapper>
       )}
+      </G>
 
+
+      <G id="voice">
       {/* ================================================================ */}
       {/* WAKE WORD — user                                                 */}
       {/* ================================================================ */}
@@ -971,17 +1087,26 @@ export default function SettingsPage({
         </div>
       </Section>
       )}
+      </G>
 
+
+      <G id="voice">
       {/* ================================================================ */}
       {/* VOICE ID — user                                                  */}
       {/* ================================================================ */}
       {showUser && <VoiceIDSection token={token} />}
+      </G>
 
+
+      <G id="memory">
       {/* ================================================================ */}
       {/* TOKEN USAGE — user                                               */}
       {/* ================================================================ */}
       {showUser && <TokenUsageSection token={token} />}
+      </G>
 
+
+      <G id="memory">
       {/* ================================================================ */}
       {/* MEMORY — user                                                    */}
       {/* ================================================================ */}
@@ -1022,17 +1147,26 @@ export default function SettingsPage({
           </p>
         </Section>
       )}
+      </G>
 
+
+      <G id="alerts">
       {/* ================================================================ */}
       {/* NOTIFICATIONS — user                                             */}
       {/* ================================================================ */}
       {showUser && <NotificationsSection token={token} />}
+      </G>
 
+
+      <G id="alerts">
       {/* ================================================================ */}
       {/* PROACTIVE — quiet hours, push severity, muting, delivery log     */}
       {/* ================================================================ */}
       {showUser && <ProactivePage embedded />}
+      </G>
 
+
+      <G id="general">
       {/* ================================================================ */}
       {/* PARENT — my children (parent only, user view)                   */}
       {/* ================================================================ */}
@@ -1050,7 +1184,10 @@ export default function SettingsPage({
           )}
         </SectionStatusWrapper>
       )}
+      </G>
 
+
+      <G id="people">
       {/* ================================================================ */}
       {/* ADMIN — feature visibility                                       */}
       {/* ================================================================ */}
@@ -1068,7 +1205,10 @@ export default function SettingsPage({
           )}
         </SectionStatusWrapper>
       )}
+      </G>
 
+
+      <G id="people">
       {/* ================================================================ */}
       {/* ADMIN — family groups                                            */}
       {/* ================================================================ */}
@@ -1083,14 +1223,20 @@ export default function SettingsPage({
           )}
         </SectionStatusWrapper>
       )}
+      </G>
 
+
+      <G id="people">
       {/* ================================================================ */}
       {/* ADMIN — Wake Word configuration                                  */}
       {/* ================================================================ */}
       {showAdmin && (
         <AdminWakeWordSection token={token} />
       )}
+      </G>
 
+
+      <G id="models">
       {/* ================================================================ */}
       {/* ADMIN — model visibility                                         */}
       {/* ================================================================ */}
@@ -1105,14 +1251,20 @@ export default function SettingsPage({
           )}
         </SectionStatusWrapper>
       )}
+      </G>
 
+
+      <G id="models">
       {/* ================================================================ */}
       {/* ADMIN — model families (Phase B)                                 */}
       {/* ================================================================ */}
       {showAdmin && (
         <AdminModelFamiliesSection token={token} />
       )}
+      </G>
 
+
+      <G id="system">
       {/* ================================================================ */}
       {/* ADMIN — capability flags (.env viewer)                           */}
       {/* ================================================================ */}
@@ -1123,6 +1275,8 @@ export default function SettingsPage({
           )}
         </SectionStatusWrapper>
       )}
+
+      </G>
 
       </div>
     </div>
