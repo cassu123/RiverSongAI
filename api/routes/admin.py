@@ -635,10 +635,52 @@ async def remove_family_member(
     group_id: str,
     profile_id: str,
     request: Request,
+    confirm: bool = False,
     authorization: Optional[str] = Header(default=None),
 ):
+    """Remove a member from a family group.
+
+    Joining a group moves that member's recipes, homes, vehicles and
+    workspaces to the shared owner, and in culinary's case deletes their
+    personal household outright. Leaving does not move any of it back, and
+    it cannot: nothing records who contributed which row, and the rest of
+    the group is still using it. So the member leaves with an empty
+    module and the group keeps everything they brought.
+
+    That may well be what you want -- a shared pantry belongs to the house,
+    not to whoever stocked it. What is not acceptable is that it used to
+    happen silently on a bare DELETE. Now the counts are reported and the
+    call is refused until `confirm=true`, so the decision is made rather
+    than discovered afterwards.
+    """
     payload = await _require_admin(request, authorization)
     store = _get_store(request)
+
+    # list_family_groups rather than get_family_group: only the list form
+    # carries the membership rows, and whether this is the last member changes
+    # what the warning has to say.
+    groups = await store.list_family_groups()
+    group = next((g for g in groups if g["id"] == group_id), None)
+    if not group:
+        raise not_found("Family group not found.")
+
+    holdings = count_family_data(group_id)
+    remaining = [m for m in (group.get("members") or [])
+                 if m["profile_id"] != profile_id]
+
+    if holdings and not confirm:
+        raise bad_request(
+            f"This group holds shared data: {holdings}. Removing this member "
+            f"does not give any of it back -- it stays with the group, and "
+            f"their personal modules will be empty. Re-send with confirm=true "
+            f"to proceed."
+            + ("" if remaining else
+               " They are also the last member, so nothing will be able to "
+               "reach this data afterwards; dissolve the group with "
+               "reassign_to instead.")
+        )
+
     await store.remove_family_member(group_id, profile_id)
-    logger.info("Admin %s removed %s from family group %s",
-                payload["sub"], profile_id, group_id)
+    logger.info(
+        "Admin %s removed %s from family group %s (group still holds %s)",
+        payload["sub"], profile_id, group_id, holdings or "nothing")
