@@ -6,19 +6,29 @@
 # Safe to re-run -- every step checks whether work is already done.
 #
 # What this does:
-#   1. Python packages  -- pip install -r requirements.txt
-#   2. Piper binary     -- downloads latest release for your arch
-#   3. Piper voices     -- en_US-lessac-medium + en_US-amy-medium
-#   4. .env setup       -- creates from .env.example, writes Piper paths
-#   5. Kill switch      -- prompts for a password, writes bcrypt hash to .env
-#   6. Ollama models    -- pulls all configured local models
-#   7. Frontend         -- npm install + npm run build
-#   8. Systemd service  -- installs and enables river-song.service
-#   9. Verification     -- confirms every critical import and path resolves
+#    1. Python packages  -- pip install -r requirements.txt
+#    2. Piper binary     -- downloads latest release for your arch
+#    3. Piper voices     -- en_US-lessac-medium + en_US-amy-medium
+#    4. .env setup       -- creates from .env.example, writes Piper paths
+#    5. Secrets          -- generates JWT and daemon secrets if unset
+#    6. Network          -- ALLOWED_HOSTS / CORS_ORIGINS for LAN or a domain
+#    7. Kill switch      -- prompts for a password, writes bcrypt hash to .env
+#    8. Ollama models    -- pulls a starter set of local models
+#    9. Frontend         -- npm install + npm run build
+#   10. Systemd service  -- installs and enables river-song.service
+#   11. Auto-deploy      -- optional nightly git pull + restart
+#       Verification     -- confirms every critical import and path resolves
 #
 # Usage:
 #   chmod +x setup.sh
 #   ./setup.sh
+#
+# Options (environment variables):
+#   RIVER_DOMAIN=example.com   Skip the network prompt and use this domain.
+#                              Set to "lan" for a LAN-only install.
+#   RIVER_PULL_ALL_MODELS=1    Pull the full local model catalogue (~150 GB)
+#                              instead of the starter set.
+#   RIVER_AUTO_DEPLOY=1        Install the nightly git-pull-and-restart cron.
 #
 # Requirements:
 #   python3, pip3, node, npm, curl
@@ -114,11 +124,39 @@ env_set() {
   fi
 }
 
+# As env_set, but also overwrites values copied verbatim out of .env.example.
+# Those placeholders are not blank, so env_set treats them as configured and
+# leaves them alone -- which is how a fresh clone ends up advertising
+# yourdomain.com and refusing to boot.
+env_set_placeholder() {
+  local key="$1"
+  local value="$2"
+  local file=".env"
+  local current
+
+  current=$(grep "^${key}=" "$file" 2>/dev/null | head -1 | cut -d= -f2-)
+
+  case "$current" in
+    ""|*yourdomain.com*|*your_*|change_me_in_production)
+      if grep -q "^${key}=" "$file" 2>/dev/null; then
+        sed -i.bak "s|^${key}=.*|${key}=${value}|" "$file" && rm -f "${file}.bak"
+        info "Set ${key}"
+      else
+        echo "${key}=${value}" >> "$file"
+        info "Added ${key}"
+      fi
+      ;;
+    *)
+      info "${key} already configured -- skipping"
+      ;;
+  esac
+}
+
 # ---------------------------------------------------------------------------
 # STEP 1: Python packages
 # ---------------------------------------------------------------------------
 
-step "Step 1/9 -- Python packages"
+step "Step 1/11 -- Python packages"
 
 if [[ ! -d "venv" ]]; then
   info "Creating Python virtual environment..."
@@ -144,7 +182,7 @@ ok "Python packages installed"
 # STEP 2: Piper binary
 # ---------------------------------------------------------------------------
 
-step "Step 2/9 -- Piper TTS binary"
+step "Step 2/11 -- Piper TTS binary"
 
 PIPER_BIN="/usr/local/bin/piper"
 
@@ -204,7 +242,7 @@ fi
 # STEP 3: Piper voice models
 # ---------------------------------------------------------------------------
 
-step "Step 3/9 -- Piper voice models"
+step "Step 3/11 -- Piper voice models"
 
 VOICE_DIR="${HOME}/.local/share/piper"
 mkdir -p "$VOICE_DIR"
@@ -242,7 +280,7 @@ PRIMARY_ONNX="${VOICE_DIR}/en_US-lessac-medium.onnx"
 # STEP 4: .env setup
 # ---------------------------------------------------------------------------
 
-step "Step 4/9 -- .env configuration"
+step "Step 4/11 -- .env configuration"
 
 if [[ ! -f ".env" ]]; then
   if [[ -f ".env.example" ]]; then
@@ -262,10 +300,94 @@ env_set "PIPER_MODEL_PATH"      "$PRIMARY_ONNX"
 ok ".env updated"
 
 # ---------------------------------------------------------------------------
-# STEP 5: Kill switch password
+# STEP 5: Secrets
+#
+# config/settings.py refuses to construct without a JWT_SECRET_KEY of at least
+# 32 characters and a DAEMON_INTERNAL_SECRET of at least 24. .env.example ships
+# both blank, and nothing here used to fill them in -- so a fresh clone got all
+# the way through setup and then would not start. They are generated per
+# install on purpose: a shared JWT secret would let a token minted on one
+# household's server authenticate against another's.
 # ---------------------------------------------------------------------------
 
-step "Step 5/9 -- Kill switch password"
+step "Step 5/11 -- Secrets"
+
+gen_secret() {
+  python3 -c "import secrets; print(secrets.token_urlsafe(${1:-32}))"
+}
+
+for secret_key in JWT_SECRET_KEY DAEMON_INTERNAL_SECRET; do
+  current=$(grep "^${secret_key}=" .env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
+  if [[ -n "$current" && "$current" != "change_me_in_production" && ${#current} -ge 24 ]]; then
+    ok "${secret_key} already set -- leaving it alone"
+  else
+    env_set_placeholder "$secret_key" "$(gen_secret 48)"
+    ok "Generated ${secret_key}"
+  fi
+done
+
+# ---------------------------------------------------------------------------
+# STEP 6: Network identity
+#
+# ALLOWED_HOSTS backs TrustedHostMiddleware and is rejected outright if it
+# contains "*" in production, so the shipped yourdomain.com placeholder is not
+# merely cosmetic -- every request 400s until it matches how the box is
+# actually reached. Most installs are a machine on a home network with no
+# domain at all, so that is the default.
+# ---------------------------------------------------------------------------
+
+step "Step 6/11 -- Network identity"
+
+LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+[[ -z "$LAN_IP" ]] && LAN_IP=$(ipconfig getifaddr en0 2>/dev/null || true)
+SHORT_HOST=$(hostname -s 2>/dev/null || hostname)
+APP_PORT_VAL=$(grep "^APP_PORT=" .env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"')
+[[ -z "$APP_PORT_VAL" ]] && APP_PORT_VAL=8000
+
+DOMAIN="${RIVER_DOMAIN:-}"
+
+if [[ -z "$DOMAIN" ]]; then
+  if [[ -t 0 ]]; then
+    echo ""
+    echo -e "  ${BOLD}How will you reach River Song?${RESET}"
+    echo -e "  ${DIM}If you have a domain pointed at this machine, type it (no https://).${RESET}"
+    echo -e "  ${DIM}Press Enter for a home-network install -- reachable from other${RESET}"
+    echo -e "  ${DIM}devices on your wifi, not from the internet.${RESET}"
+    echo ""
+    read -rp "  Domain (blank for LAN only): " DOMAIN
+  else
+    info "Not a terminal -- defaulting to a LAN-only install."
+  fi
+fi
+
+if [[ -n "$DOMAIN" && "$DOMAIN" != "lan" ]]; then
+  DOMAIN="${DOMAIN#http://}"
+  DOMAIN="${DOMAIN#https://}"
+  DOMAIN="${DOMAIN%%/*}"
+  HOSTS="[\"${DOMAIN}\",\"www.${DOMAIN}\",\"localhost\",\"127.0.0.1\""
+  [[ -n "$LAN_IP" ]] && HOSTS="${HOSTS},\"${LAN_IP}\""
+  HOSTS="${HOSTS}]"
+  env_set_placeholder "ALLOWED_HOSTS" "$HOSTS"
+  env_set_placeholder "CORS_ORIGINS"  "[\"https://${DOMAIN}\",\"https://www.${DOMAIN}\"]"
+  ok "Configured for ${DOMAIN}"
+else
+  HOSTS="[\"localhost\",\"127.0.0.1\",\"${SHORT_HOST}\",\"${SHORT_HOST}.local\""
+  ORIGINS="[\"http://localhost:${APP_PORT_VAL}\",\"http://${SHORT_HOST}.local:${APP_PORT_VAL}\""
+  if [[ -n "$LAN_IP" ]]; then
+    HOSTS="${HOSTS},\"${LAN_IP}\""
+    ORIGINS="${ORIGINS},\"http://${LAN_IP}:${APP_PORT_VAL}\""
+  fi
+  env_set_placeholder "ALLOWED_HOSTS" "${HOSTS}]"
+  env_set_placeholder "CORS_ORIGINS"  "${ORIGINS}]"
+  ok "Configured for this network${LAN_IP:+ -- http://${LAN_IP}:${APP_PORT_VAL}}"
+  info "No domain, so this is not reachable from outside your house. That is the safe default."
+fi
+
+# ---------------------------------------------------------------------------
+# STEP 7: Kill switch password
+# ---------------------------------------------------------------------------
+
+step "Step 7/11 -- Kill switch password"
 
 CURRENT_HASH=$(grep "^KILL_SWITCH_PASSWORD_HASH=" .env 2>/dev/null | cut -d= -f2- | tr -d '"' | tr -d "'")
 
@@ -306,7 +428,18 @@ fi
 # STEP 6: Ollama models
 # ---------------------------------------------------------------------------
 
-step "Step 6/9 -- Ollama models"
+step "Step 8/11 -- Ollama models"
+
+# The starter set: enough to hold a conversation and run the intent router on
+# a modest machine, roughly 8 GB of downloads. The full catalogue below is
+# sized for 32 GB of RAM and runs to about 150 GB, which is not a reasonable
+# thing to do to someone's disk without asking -- hence RIVER_PULL_ALL_MODELS.
+OLLAMA_STARTER_MODELS=(
+  "llama3.2:3b"
+  "qwen2.5:3b"
+  "phi4-mini"
+  "gemma3:1b"
+)
 
 OLLAMA_MODELS=(
   # GPU models (fit on GTX 1050 Ti 4GB)
@@ -342,9 +475,19 @@ OLLAMA_MODELS=(
   # "mixtral:8x7b"
 )
 
+if [[ "${RIVER_PULL_ALL_MODELS:-0}" == "1" ]]; then
+  PULL_LIST=("${OLLAMA_MODELS[@]}")
+  PULL_DESC="the full catalogue (~150 GB)"
+else
+  PULL_LIST=("${OLLAMA_STARTER_MODELS[@]}")
+  PULL_DESC="the starter set (~8 GB)"
+fi
+
 if command -v ollama &>/dev/null; then
-  info "Pulling all configured models (already downloaded will be skipped)."
-  for model in "${OLLAMA_MODELS[@]}"; do
+  info "Pulling ${PULL_DESC}. Already-downloaded models are skipped."
+  [[ "${RIVER_PULL_ALL_MODELS:-0}" == "1" ]] || \
+    info "Re-run with RIVER_PULL_ALL_MODELS=1 for every model, or pull individually later."
+  for model in "${PULL_LIST[@]}"; do
     if ollama list 2>/dev/null | grep -q "^${model}"; then
       ok "Already pulled: $model"
     else
@@ -361,7 +504,7 @@ fi
 # STEP 7: Frontend build
 # ---------------------------------------------------------------------------
 
-step "Step 7/9 -- Frontend (npm install + build)"
+step "Step 9/11 -- Frontend (npm install + build)"
 
 if [[ ! -d "frontend" ]]; then
   soft_error "frontend/ directory not found."
@@ -385,7 +528,7 @@ fi
 # STEP 8: Systemd service
 # ---------------------------------------------------------------------------
 
-step "Step 8/9 -- Systemd service"
+step "Step 10/11 -- Systemd service"
 
 SERVICE_FILE="/etc/systemd/system/river-song.service"
 PROJECT_DIR="$(pwd)"
@@ -423,20 +566,28 @@ EOF
 fi
 
 # ---------------------------------------------------------------------------
-# STEP 9: Auto-deploy cron job
+# STEP 11: Auto-deploy cron job
+#
+# Opt-in. This pulls whatever is on main at 3am, reinstalls dependencies and
+# restarts the service, unattended. That is a reasonable thing to do to a box
+# you develop on and an unreasonable thing to do to somebody else's -- a bad
+# commit takes their household down overnight with no one watching.
 # ---------------------------------------------------------------------------
 
-step "Step 9/9 -- Auto-deploy cron job"
+step "Step 11/11 -- Auto-deploy cron job"
 
 CRON_CMD="cd ${PROJECT_DIR} && git pull origin main --quiet && source venv/bin/activate && pip install -r requirements.txt --no-build-isolation --quiet && cd frontend && npm install --silent && npm run build --silent && cd .. && sudo systemctl restart river-song"
 CRON_JOB="0 3 * * * ${CRON_CMD} >> ${PROJECT_DIR}/logs/deploy.log 2>&1"
 
 if crontab -l 2>/dev/null | grep -q "river-song\|deploy.log"; then
   ok "Auto-deploy cron job already set"
-else
+elif [[ "${RIVER_AUTO_DEPLOY:-0}" == "1" ]]; then
   mkdir -p "${PROJECT_DIR}/logs"
   (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
   ok "Auto-deploy cron job set (runs nightly at 3am)"
+else
+  info "Skipped. Re-run with RIVER_AUTO_DEPLOY=1 to update automatically at 3am;"
+  info "otherwise update by hand with: git pull && ./setup.sh && sudo systemctl restart river-song"
 fi
 
 # ---------------------------------------------------------------------------
@@ -472,10 +623,21 @@ done
 [[ -d "frontend/dist" ]]           && ok "Frontend dist built"             || { soft_error "frontend/dist missing"; VERIFY_PASS=false; }
 systemctl is-enabled river-song &>/dev/null && ok "river-song service enabled" || { soft_error "river-song service not enabled"; VERIFY_PASS=false; }
 
-for key in PIPER_EXECUTABLE_PATH PIPER_MODEL_PATH KILL_SWITCH_PASSWORD_HASH JWT_SECRET_KEY; do
+for key in PIPER_EXECUTABLE_PATH PIPER_MODEL_PATH KILL_SWITCH_PASSWORD_HASH \
+           JWT_SECRET_KEY DAEMON_INTERNAL_SECRET ALLOWED_HOSTS CORS_ORIGINS; do
   val=$(grep "^${key}=" .env 2>/dev/null | cut -d= -f2-)
   [[ -n "$val" ]] && ok ".env: $key is set" || { soft_error ".env: $key is empty"; VERIFY_PASS=false; }
 done
+
+# The one check that actually predicts whether the app boots: settings has
+# validators that reject weak secrets and a wildcard ALLOWED_HOSTS, and they
+# raise at construction, not at first request.
+if SETTINGS_ERR=$(python3 -c "from config.settings import get_settings; get_settings()" 2>&1); then
+  ok "Configuration validates"
+else
+  soft_error "Configuration rejected: $(echo "$SETTINGS_ERR" | tail -3 | tr '\n' ' ')"
+  VERIFY_PASS=false
+fi
 
 # ---------------------------------------------------------------------------
 # Final summary
@@ -490,6 +652,17 @@ if [[ ${#ERRORS[@]} -eq 0 ]] && $VERIFY_PASS; then
   echo -e "  Start now:       ${BOLD}sudo systemctl start river-song${RESET}"
   echo -e "  Check status:    ${BOLD}sudo systemctl status river-song${RESET}"
   echo -e "  Live logs:       ${BOLD}journalctl -u river-song -f${RESET}"
+  echo ""
+  if [[ -n "$DOMAIN" && "$DOMAIN" != "lan" ]]; then
+    RIVER_URL="https://${DOMAIN}"
+  elif [[ -n "$LAN_IP" ]]; then
+    RIVER_URL="http://${LAN_IP}:${APP_PORT_VAL}"
+  else
+    RIVER_URL="http://localhost:${APP_PORT_VAL}"
+  fi
+  echo -e "  ${BOLD}Then open ${RIVER_URL} and create your account.${RESET}"
+  echo -e "  ${DIM}The first account created becomes the administrator. Do it before${RESET}"
+  echo -e "  ${DIM}anyone else can reach the machine.${RESET}"
   echo ""
   echo -e "  Available voices in ${BOLD}~/.local/share/piper/${RESET}:"
   echo -e "    en_US-lessac-medium (default), en_US-amy-medium,"
