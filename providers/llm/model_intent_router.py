@@ -388,22 +388,9 @@ def route(
         )
 
     # Ollama is off too. Take the cheapest model from whatever the admin has
-    # left enabled rather than failing the turn — but still honour free_only,
-    # which is a restriction on the user and not a preference to trade away.
-    candidates = [
-        e for e in LLMRegistry.all_models()
-        if enabled_providers.get(e.provider, False)
-        and e.model_id not in hidden_models
-        and (not free_only or LLMRegistry.is_free(e.provider, e.model_id))
-    ]
-    if candidates:
-        pick = min(
-            candidates,
-            key=lambda e: (
-                (e.cost_per_1k_input_usd or 0.0) + (e.cost_per_1k_output_usd or 0.0),
-                e.priority,
-            ),
-        )
+    # left enabled rather than failing the turn.
+    pick = _cheapest_enabled_model(enabled_providers, free_only, hidden_models)
+    if pick:
         logger.warning(
             "Intent router: local provider disabled; falling back to %s/%s for '%s'.",
             pick.provider, pick.model_id, intent,
@@ -429,3 +416,124 @@ def _get_default_ollama_model() -> str:
         return get_settings().llm_model or "llama3.2:3b"
     except Exception:
         return "llama3.2:3b"
+
+
+def _cheapest_enabled_model(
+    enabled_providers: dict[str, bool],
+    free_only: bool = False,
+    hidden_models: Optional[set] = None,
+):
+    """The last resort: cheapest model still enabled anywhere in the catalog.
+
+    Shared by route() and resolved_routes() rather than written twice. The
+    preview originally stopped one branch short of this and reported "No
+    provider available" for intents the router would happily have answered --
+    a preview is only worth having if it runs the same policy, so the policy
+    lives in one place now.
+
+    free_only is a restriction on the account, not a preference to trade
+    away, so it survives all the way down here.
+
+    Returns a registry entry, or None when nothing is left enabled.
+    """
+    from providers.llm.registry import LLMRegistry
+
+    hidden_models = hidden_models or set()
+    candidates = [
+        e for e in LLMRegistry.all_models()
+        if enabled_providers.get(e.provider, False)
+        and e.model_id not in hidden_models
+        and (not free_only or LLMRegistry.is_free(e.provider, e.model_id))
+    ]
+    if not candidates:
+        return None
+    return min(
+        candidates,
+        key=lambda e: (
+            (e.cost_per_1k_input_usd or 0.0) + (e.cost_per_1k_output_usd or 0.0),
+            e.priority,
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Route preview — what each intent would actually reach right now
+# ---------------------------------------------------------------------------
+
+def resolved_routes(
+    enabled_providers: dict[str, bool],
+    free_only: bool = False,
+    hidden_models: Optional[set] = None,
+) -> List[dict]:
+    """One row per intent: the model it would reach, given today's gates.
+
+    The admin panel used to draw this table from a hardcoded array of eight
+    (intent, model) pairs, which was only ever the head of each chain and
+    never consulted anything. It showed "Commerce -> Claude" with Anthropic
+    switched off — not because Commerce was broken, but because the display
+    stopped at the first preference while the router itself walks on to
+    Gemini and then to Kimi on NIM. The panel was describing a decision it
+    was not making.
+
+    `first_choice` is reported alongside so a row that fell through says so,
+    rather than quietly presenting a third preference as the plan.
+    """
+    from providers.llm.registry import LLMRegistry
+
+    hidden_models = hidden_models or set()
+    rows: List[dict] = []
+
+    for intent, chain in _INTENT_ROUTES.items():
+        head_provider, head_model = chain[0]
+        candidates = [(p, m) for p, m in chain if m not in hidden_models]
+        if free_only:
+            candidates = [
+                (p, m) for p, m in candidates if LLMRegistry.is_free(p, m)]
+
+        chosen_provider = chosen_model = None
+        for provider, model_id in candidates:
+            if enabled_providers.get(provider, False):
+                chosen_provider, chosen_model = provider, model_id
+                break
+
+        # Mirrors route()'s last resort so the preview does not promise a
+        # dead end where the router would still answer from the local default.
+        if chosen_provider is None:
+            default_model = _get_default_ollama_model()
+            if (enabled_providers.get("ollama", False)
+                    and default_model not in hidden_models):
+                chosen_provider, chosen_model = "ollama", default_model
+
+        # And route()'s final resort after that: the cheapest model still
+        # enabled anywhere in the catalog. Stopping at the Ollama branch made
+        # the panel report "No provider available" for an intent that runtime
+        # routing would happily have sent to a cloud model — the preview
+        # claiming a dead end the router does not have.
+        if chosen_provider is None:
+            pick = _cheapest_enabled_model(
+                enabled_providers, free_only, hidden_models)
+            if pick:
+                chosen_provider, chosen_model = pick.provider, pick.model_id
+
+        entry = (LLMRegistry.get(chosen_provider, chosen_model)
+                 if chosen_provider else None)
+        head_entry = LLMRegistry.get(head_provider, head_model)
+
+        rows.append({
+            "intent": intent,
+            "label": intent.replace("_", " ").title(),
+            "provider": chosen_provider,
+            "model_id": chosen_model,
+            "display_name": (
+                entry.display_name if entry
+                else (chosen_model.split("/")[-1] if chosen_model else None)),
+            "reachable": chosen_provider is not None,
+            "first_choice_provider": head_provider,
+            "first_choice_display_name": (
+                head_entry.display_name if head_entry
+                else head_model.split("/")[-1]),
+            "fell_back": bool(
+                chosen_provider is not None
+                and (chosen_provider, chosen_model) != (head_provider, head_model)),
+        })
+    return rows

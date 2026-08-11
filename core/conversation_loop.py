@@ -249,6 +249,7 @@ def _build_llm_provider(
     from providers.llm.model_intent_router import NoModelAvailable
     from api.routes.models_settings import (
         _get_enabled_providers,
+        get_provider_global_enabled,
         get_provider_user_access,
     )
     enabled_providers = _get_enabled_providers(admin_config)
@@ -315,8 +316,15 @@ def _build_llm_provider(
             raise ValueError(
                 f"Provider '{key}' is not available to your account. "
                 f"Ask an administrator to enable access.")
-        raise ValueError(
-            f"Provider '{key}' is disabled globally by the administrator.")
+        # `globally_enabled` folds the admin's switch together with whether
+        # the credentials exist, so reporting it as the switch sent anyone
+        # whose API key was simply missing to argue with an administrator who
+        # had not turned anything off. _cloud_unavailable_reason already
+        # separates the two for the catalog; ask it rather than guess.
+        from api.routes.models_settings import _cloud_unavailable_reason
+        reason = _cloud_unavailable_reason(
+            key, get_provider_global_enabled(admin_config))
+        raise ValueError(f"Provider '{key}' is unavailable — {reason}")
 
     primary = _instantiate_llm(key, model_override)
 

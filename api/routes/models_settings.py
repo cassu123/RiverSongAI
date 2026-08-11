@@ -51,8 +51,38 @@ router = APIRouter(prefix="/api", tags=["settings"])
 _OLLAMA_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
-def _get_ollama_installed_models() -> Set[str]:
-    """Query the local Ollama daemon for pulled model names. Returns empty set on failure."""
+async def _get_ollama_installed_models() -> Set[str]:
+    """Pulled Ollama model names, cached briefly. Empty set when unreachable.
+
+    The probe itself is blocking and this runs inside async routes, so it goes
+    to a worker thread: a cache miss against an unreachable daemon otherwise
+    held the event loop for the full 3s timeout, stalling every other request
+    on the process.
+
+    A lock guards the refresh and the TTL is rechecked after acquiring it, so
+    a burst of concurrent requests on a cold cache produces one probe rather
+    than one each — the thundering herd being the case that made the blocking
+    call expensive in the first place.
+    """
+    if _ollama_cache_at and (time.monotonic() - _ollama_cache_at) < _OLLAMA_TTL_SECONDS:
+        return set(_ollama_cache)
+
+    async with _ollama_lock:
+        if _ollama_cache_at and (
+                time.monotonic() - _ollama_cache_at) < _OLLAMA_TTL_SECONDS:
+            return set(_ollama_cache)
+        return await asyncio.to_thread(_probe_ollama_models)
+
+
+def _probe_ollama_models() -> Set[str]:
+    """Query the local Ollama daemon for pulled model names. Blocking.
+
+    Gated on the timestamp, not on the cache being non-empty: a reachable
+    daemon with nothing pulled yet returns an empty set, and keying off
+    emptiness meant a fresh install — the one deployment guaranteed to be in
+    that state — re-probed on every single request.
+    """
+    global _ollama_cache, _ollama_cache_at, _ollama_reachable
     try:
         settings = get_settings()
         base = getattr(
@@ -74,20 +104,36 @@ def _get_ollama_installed_models() -> Set[str]:
         with urllib.request.urlopen(req, timeout=3) as resp:
             data = json.loads(resp.read())
         models = {m["name"] for m in data.get("models", [])}
-        global _ollama_cache
         _ollama_cache = models
+        _ollama_cache_at = time.monotonic()
+        _ollama_reachable = True
         return models
     except Exception as exc:
         # Ollama restarting / briefly unreachable: serve the last-known list
         # instead of making every local model vanish from the pickers.
+        _ollama_reachable = False
+        # Stamp the failure too, so a daemon that stays down is retried once
+        # per TTL rather than on every single request. The last-known list is
+        # still what gets served in the meantime, which is the point of it.
+        _ollama_cache_at = time.monotonic()
         logger.warning("Ollama discovery failed (%s); using cached list (%d models)",
                        exc, len(_ollama_cache))
         return set(_ollama_cache)
 
 
 # Last successful Ollama /api/tags result, kept so a transient outage
-# doesn't empty the model pickers.
+# doesn't empty the model pickers. `_ollama_cache_at` bounds how long it is
+# served as fresh; after a failure the list is served regardless of age,
+# which is the point of keeping it.
+#
+# `_ollama_reachable` is tracked separately because the model list cannot
+# carry that information: a daemon that is up with nothing pulled and a
+# daemon that is down both produce an empty set.
 _ollama_cache: Set[str] = set()
+_ollama_cache_at: float = 0.0
+_ollama_reachable: bool = False
+_OLLAMA_TTL_SECONDS = 5.0
+_ollama_lock = asyncio.Lock()
 
 
 #: Hardware verdicts (from core.hardware_cookbook) that mean "this machine
@@ -328,6 +374,54 @@ def get_provider_global_enabled(admin_config: Optional[dict] = None) -> dict:
     return out
 
 
+def get_provider_switch_sources(admin_config: Optional[dict] = None) -> dict:
+    """Where each provider's resolved switch value actually came from.
+
+    Mirrors the resolution chain in `get_provider_global_enabled` exactly.
+    Without it the admin UI had no way to tell an explicit choice from an
+    inherited default, so it labelled every off provider "Blocked by you" —
+    including the ones nobody had ever touched, which are off because .env
+    says so. Following that label to the toggle and flipping it appears to do
+    nothing on a fresh deployment, because the block being reported was never
+    the admin's to begin with.
+
+    One of: "admin" (this account set it), "env" (the .env flag's default),
+    "coarse" (the local/cloud kill switch overrode an otherwise-on provider).
+    """
+    admin_config = admin_config or {}
+    stored = admin_config.get("provider_enabled") or {}
+    local_enabled = admin_config.get("local_llms_enabled_global", True)
+    cloud_enabled = admin_config.get("cloud_llms_enabled_global", True)
+
+    out = {}
+    for provider in _USER_GATED_PROVIDERS:
+        resolved: Optional[bool] = None
+        if provider in stored:
+            source = "admin"
+            resolved = bool(stored[provider])
+        elif admin_config.get(f"{provider}_enabled_global") is not None:
+            source = "admin"
+            resolved = bool(admin_config[f"{provider}_enabled_global"])
+        else:
+            # Local providers have no .env flag of their own — untouched, they
+            # resolve straight from the coarse switch, so reporting "env"
+            # would point the admin at an OLLAMA_ENABLED that does not exist.
+            source = "coarse" if provider in LOCAL_PROVIDERS else "env"
+
+        # The coarse kill switch is applied last and beats whatever the chain
+        # resolved, so when it is the thing holding a provider down it is the
+        # thing to report — but only when it is. An admin who set this
+        # provider off explicitly AND has the kill switch off would otherwise
+        # be told the kill switch is the cause, turn it back on, watch the
+        # provider stay off, and be exactly where this function was written to
+        # stop them being.
+        coarse = local_enabled if provider in LOCAL_PROVIDERS else cloud_enabled
+        if not coarse and resolved is not False:
+            source = "coarse"
+        out[provider] = source
+    return out
+
+
 def _cloud_unavailable_reason(provider: str, switches: dict) -> Optional[str]:
     """Why a cloud provider cannot be used, or None when it can.
 
@@ -355,6 +449,167 @@ def _get_enabled_providers(admin_config: Optional[dict] = None) -> dict:
         provider: bool(switches.get(provider)) and _has_credentials(provider, s)
         for provider in _USER_GATED_PROVIDERS
     }
+
+
+async def _catalog_context(request: Request, is_admin: bool) -> dict:
+    """Everything the "can this account use this model" question needs.
+
+    Both the catalog and the saved-selection check have to answer that
+    question, and they used to answer it in two places. That is how the
+    picker could stop offering a model while GET /settings/llm went on
+    handing the same model back as the current selection, leaving the user
+    with a model button naming something that fails at send time.
+    """
+    installed = await _get_ollama_installed_models()
+
+    hidden_llms: set[str] = set()
+    family_overrides: dict = {}
+    user_access: dict = get_provider_user_access()
+    switches: dict = get_provider_global_enabled()
+    enabled: dict = _get_enabled_providers()
+    try:
+        config = await request.app.state.memory_manager._store.get_admin_config()
+        hidden_llms = set(config.get("hidden_llms", []))
+        family_overrides = config.get("model_families", {}) or {}
+        user_access = get_provider_user_access(config)
+        switches = get_provider_global_enabled(config)
+        enabled = _get_enabled_providers(config)
+    except Exception as exc:
+        # A failed policy read must not widen access. The defaults computed
+        # above grant every provider to everyone, so silently continuing on
+        # them served a restricted household member the full metered catalog
+        # — the store erroring was all it took to lift the restriction.
+        logger.warning(
+            "Could not read admin config for the model catalog; "
+            "denying gated providers to non-admins: %s", exc,
+        )
+        if not is_admin:
+            user_access = {p: False for p in _USER_GATED_PROVIDERS}
+
+    # Non-admins cannot see a gated provider's models unless access is granted.
+    # Admins always retain access, so a household member cannot reach a
+    # provider the admin has closed, while the admin can still test it.
+    if not is_admin:
+        for provider, allowed in user_access.items():
+            if not allowed:
+                hidden_llms = hidden_llms | {
+                    m.model_id for m in LLMRegistry.list_by_provider(provider)}
+
+    return {
+        "is_admin": is_admin,
+        "installed": installed,
+        "ollama_reachable": _ollama_reachable,
+        "enabled": enabled,
+        "switches": switches,
+        "user_access": user_access,
+        "hidden_llms": hidden_llms,
+        "family_overrides": family_overrides,
+    }
+
+
+def _annotate(m: ModelEntry, ctx: dict,
+              fit_by_model: Optional[dict] = None) -> dict:
+    """One catalog row with the provider-level gates applied on top.
+
+    `_model_to_dict` knows about the model — pulled, too big for this box.
+    The admin's switches and the credentials live out here, and folding them
+    in has to happen identically everywhere the answer is needed.
+    """
+    if m.is_cloud:
+        return {
+            **_model_to_dict(m),
+            "available": ctx["enabled"].get(m.provider, False),
+            "unavailable_reason": _cloud_unavailable_reason(
+                m.provider, ctx["switches"]),
+        }
+
+    row = _model_to_dict(m, ctx["installed"], fit_by_model)
+    # A local provider switched off by the admin is unavailable for the same
+    # reason a keyless cloud one is, and must say so — "free" is not a reason
+    # to escape the switch.
+    if not ctx["enabled"].get(m.provider, True):
+        return {
+            **row,
+            "available": False,
+            "unavailable_reason": "Disabled by the administrator.",
+        }
+    return row
+
+
+def _first_usable_free_model(
+        ctx: dict, fit_by_model: Optional[dict] = None) -> tuple:
+    """A free model this account can use right now, or (None, None).
+
+    Deliberately free-only. This backs the automatic substitution made when a
+    saved selection has gone unusable, and a substitution the user did not ask
+    for must never be one that bills them. If nothing free is left, the caller
+    reports the problem and lets them choose instead.
+    """
+    for m in LLMRegistry.list_local():
+        if m.model_id in ctx["hidden_llms"]:
+            continue
+        if _annotate(m, ctx, fit_by_model).get("available"):
+            return m.provider, m.model_id
+
+    by_provider: dict = {}
+    for m in LLMRegistry.list_cloud():
+        by_provider.setdefault(m.provider, []).append(m)
+    for provider in PROVIDER_ORDER:
+        for m in by_provider.get(provider, []):
+            if m.model_id in ctx["hidden_llms"]:
+                continue
+            if not LLMRegistry.is_free(provider, m.model_id):
+                continue
+            if _annotate(m, ctx).get("available"):
+                return m.provider, m.model_id
+    return None, None
+
+
+def _any_usable_model(ctx: dict, fit_by_model: Optional[dict] = None) -> bool:
+    """True when at least one model, free or paid, can serve a message.
+
+    Distinct from `_first_usable_free_model`: that one answers "what may I
+    silently move this user onto", which has to stay free. This one answers
+    "can anything answer at all", and the router is not restricted to free
+    models — so a deployment with Ollama off and only a paid key configured
+    routes `auto` perfectly well.
+    """
+    for m in LLMRegistry.list_local():
+        if m.model_id in ctx["hidden_llms"]:
+            continue
+        if _annotate(m, ctx, fit_by_model).get("available"):
+            return True
+    for m in LLMRegistry.list_cloud():
+        if m.model_id in ctx["hidden_llms"]:
+            continue
+        if _annotate(m, ctx).get("available"):
+            return True
+    return False
+
+
+def _selection_status(provider: str, model_id: str, ctx: dict,
+                      fit_by_model: Optional[dict] = None) -> tuple:
+    """Whether a saved selection can still serve a message, and why not."""
+    if provider == "auto":
+        # Auto has no single model to check; it is usable while the router
+        # has anything at all to route to. Asking the free-only helper here
+        # called a working `auto` unavailable on any deployment whose only
+        # usable providers are paid.
+        if _any_usable_model(ctx, fit_by_model):
+            return True, None
+        return False, "No models are available."
+
+    if model_id in ctx["hidden_llms"]:
+        return False, "Hidden by the administrator."
+
+    entry = LLMRegistry.get(provider, model_id)
+    if entry is None:
+        return False, "No longer in the model catalog."
+
+    row = _annotate(entry, ctx, fit_by_model)
+    if row.get("available"):
+        return True, None
+    return False, row.get("unavailable_reason") or "Unavailable."
 
 
 async def _require_user(authorization: Optional[str]) -> str:
@@ -400,77 +655,38 @@ async def list_models(
     except Exception:
         pass
 
-    installed = _get_ollama_installed_models()
-    enabled = _get_enabled_providers()
-
-    hidden_llms: set[str] = set()
-    family_overrides: dict = {}
-    user_access: dict = get_provider_user_access()
-    switches: dict = get_provider_global_enabled()
-    try:
-        config = await request.app.state.memory_manager._store.get_admin_config()
-        hidden_llms = set(config.get("hidden_llms", []))
-        family_overrides = config.get("model_families", {}) or {}
-        user_access = get_provider_user_access(config)
-        switches = get_provider_global_enabled(config)
-
-        enabled = _get_enabled_providers(config)
-    except Exception as exc:
-        # A failed policy read must not widen access. The defaults computed
-        # above grant every provider to everyone, so silently continuing on
-        # them served a restricted household member the full metered catalog
-        # — the store erroring was all it took to lift the restriction.
-        logger.warning(
-            "Could not read admin config for /api/models; "
-            "denying gated providers to non-admins: %s", exc,
-        )
-        if not is_admin:
-            user_access = {p: False for p in _USER_GATED_PROVIDERS}
-
-    # Non-admins cannot see a gated provider's models unless access is granted.
-    # Admins always retain access, so a household member cannot reach a
-    # provider the admin has closed, while the admin can still test it.
-    if not is_admin:
-        for provider, allowed in user_access.items():
-            if not allowed:
-                hidden_llms = hidden_llms | {
-                    m.model_id for m in LLMRegistry.list_by_provider(provider)}
-
+    ctx = await _catalog_context(request, is_admin)
     fit_by_model = await _hardware_fit_map()
 
     local_models = [
-        {
-            **_model_to_dict(m, installed, fit_by_model),
-            # A local provider switched off by the admin is unavailable for
-            # the same reason a keyless cloud one is, and must say so —
-            # "free" is not a reason to escape the switch.
-            **({} if enabled.get(m.provider, True) else {
-                "available": False,
-                "unavailable_reason": "Disabled by the administrator.",
-            }),
-        }
+        _annotate(m, ctx, fit_by_model)
         for m in LLMRegistry.list_local()
-        if m.model_id not in hidden_llms
+        if m.model_id not in ctx["hidden_llms"]
     ]
     cloud_models = [
-        {
-            **_model_to_dict(m),
-            "available": enabled.get(m.provider, False),
-            "unavailable_reason": _cloud_unavailable_reason(m.provider, switches),
-        }
+        _annotate(m, ctx)
         for m in LLMRegistry.list_cloud()
-        if m.model_id not in hidden_llms
+        if m.model_id not in ctx["hidden_llms"]
     ]
 
     return {
         "local": local_models,
         "cloud": cloud_models,
-        "enabled_providers": enabled,
-        "provider_user_access": user_access,
-        "provider_enabled": switches,
+        "enabled_providers": ctx["enabled"],
+        "provider_user_access": ctx["user_access"],
+        "provider_enabled": ctx["switches"],
         "provider_order": list(PROVIDER_ORDER),
-        "ollama_reachable": bool(installed) or True,
-        "family_overrides": family_overrides,
+        # `bool(installed) or True` — which this was — is True unconditionally,
+        # and the model list cannot stand in for reachability anyway: a daemon
+        # that is up with nothing pulled looks identical to one that is down.
+        "ollama_reachable": ctx["ollama_reachable"],
+        "family_overrides": ctx["family_overrides"],
+        # "River Decides" is offered in the picker whether or not the router
+        # is on. With it off, provider="auto" resolves to the local default
+        # rather than routing anything, so the picker needs to know in order
+        # to stop describing it as automatic model choice.
+        "intent_router_enabled": bool(
+            getattr(get_settings(), "model_intent_router_enabled", False)),
     }
 
 
@@ -559,19 +775,69 @@ class LLMSettingsBody(BaseModel):
 @router.get("/settings/llm")
 async def get_llm_settings(
         request: Request, authorization: Optional[str] = Header(default=None)):
-    """Return the current LLM provider + model selection for a user."""
+    """Return the current LLM provider + model selection for a user.
+
+    The selection is re-checked against the gates on every read rather than
+    trusted because it was valid when it was saved. An admin switching a
+    provider off, closing it to non-admins, or hiding a model does not touch
+    anyone's stored choice, so the stale selection used to come back looking
+    perfectly ordinary and fail at send time with "disabled globally by the
+    administrator" — the first hint anything had changed.
+
+    The stored value is reported as-is and never rewritten here: the admin
+    may turn the provider back on tomorrow, and the user should get their
+    model back when they do rather than having been quietly migrated off it.
+    """
     user_id = await _require_user(authorization)
     memory = request.app.state.memory_manager
     s = await memory.get_llm_settings(user_id)
+
+    is_admin = False
+    try:
+        payload = await decode_token((authorization or "").removeprefix("Bearer "))
+        is_admin = bool(payload) and payload.get("role") == "admin"
+    except Exception:
+        pass
 
     # Get display name from registry
     entry = LLMRegistry.get(s.provider, s.model)
     display_name = entry.display_name if entry else s.model
 
+    available = True
+    unavailable_reason: Optional[str] = None
+    fallback_provider: Optional[str] = None
+    fallback_model: Optional[str] = None
+    fallback_display_name: Optional[str] = None
+    try:
+        ctx = await _catalog_context(request, is_admin)
+        fit_by_model = await _hardware_fit_map()
+        available, unavailable_reason = _selection_status(
+            s.provider, s.model, ctx, fit_by_model)
+        if not available:
+            fallback_provider, fallback_model = _first_usable_free_model(
+                ctx, fit_by_model)
+            if fallback_provider:
+                fb = LLMRegistry.get(fallback_provider, fallback_model)
+                fallback_display_name = fb.display_name if fb else fallback_model
+    except Exception as exc:
+        # The selection itself is the answer to this route. A gating read
+        # that falls over should not turn a working model button into an
+        # error, so report the stored choice unannotated and let the send
+        # path be the thing that refuses.
+        logger.warning(
+            "Could not revalidate the saved LLM selection for %s: %s",
+            user_id, exc,
+        )
+
     return {
         "provider": s.provider,
         "model": s.model,
         "display_name": display_name,
+        "available": available,
+        "unavailable_reason": unavailable_reason,
+        "fallback_provider": fallback_provider,
+        "fallback_model": fallback_model,
+        "fallback_display_name": fallback_display_name,
         "cloud_fallback_enabled": s.cloud_fallback_enabled,
         "cloud_fallback_provider": s.cloud_fallback_provider,
         "cloud_fallback_model": s.cloud_fallback_model,
@@ -1134,12 +1400,14 @@ async def get_provider_switches(
     s = get_settings()
     switches = get_provider_global_enabled(config)
     access = get_provider_user_access(config)
+    sources = get_provider_switch_sources(config)
     return {
         "order": list(PROVIDER_ORDER),
         "providers": [
             {
                 "provider": p,
                 "enabled": switches.get(p, False),
+                "enabled_source": sources.get(p, "env"),
                 "user_access": access.get(p, True),
                 "has_credentials": _has_credentials(p, s),
                 "is_local": p in LOCAL_PROVIDERS,
@@ -1257,12 +1525,31 @@ async def get_intent_router_settings(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    """Return the current model intent router configuration."""
+    """Return the current model intent router configuration and its routes.
+
+    `routes` is resolved against the live provider gates rather than listed
+    from a fixed table, so the panel shows where each intent would actually
+    land today — including the ones that have fallen through to a later
+    preference because the first is switched off.
+    """
     await _require_admin(authorization)
     s = get_settings()
+
+    routes: list = []
+    try:
+        from providers.llm.model_intent_router import resolved_routes
+        ctx = await _catalog_context(request, is_admin=True)
+        routes = resolved_routes(ctx["enabled"], hidden_models=ctx["hidden_llms"])
+    except Exception as exc:
+        # The two switches are the point of this route; a preview that cannot
+        # be built should not take them down with it.
+        logger.warning(
+            "Could not resolve intent router routes: %s", exc, exc_info=True)
+
     return {
         "enabled": s.model_intent_router_enabled,
         "min_hits": s.model_intent_router_min_hits,
+        "routes": routes,
     }
 
 
