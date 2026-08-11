@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import BarcodeScanner from '../components/BarcodeScanner.jsx'
 import AddRecipeModal from '../components/AddRecipeModal.jsx'
+import ShoppingListTab from '../components/ShoppingListTab.jsx'
 
 /**
  * CulinaryPage — Spatial Intelligence v2.0
@@ -34,9 +35,15 @@ function StarRating({ value, size = 14, onChange }) {
   )
 }
 
-function ShoppingListModal({ items, onClose, api }) {
+// One prep session's ingredients, aggregated. Not the household's standing
+// shopping list -- that is the LIST tab, and PUSH TO LIST copies this onto it.
+// This used to be labelled "MASTER SHOPPING LIST", which is the name the other
+// one actually deserves.
+function ShoppingListModal({ items, sessionId, onClose, onPushed, api }) {
   const [exporting, setExporting] = useState(false);
   const [exportResult, setExportResult] = useState(null);
+  const [pushing, setPushing] = useState(false);
+  const [pushed, setPushed] = useState(null);
 
   const handleWalmartExport = async () => {
     setExporting(true);
@@ -50,12 +57,27 @@ function ShoppingListModal({ items, onClose, api }) {
     }
   };
 
+  const handlePush = async () => {
+    setPushing(true);
+    try {
+      const res = await api.post(`/prep/${sessionId}/shopping-list/push`, {});
+      setPushed(res.added);
+      // Nothing new means everything was already there; jumping to the list
+      // would look like the button did nothing, so stay put and say so.
+      if (res.added > 0) onPushed?.();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setPushing(false);
+    }
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)' }} onClick={onClose}>
        <div className="rs-card is-elev animate-page-in" style={{ width: 'min(95%, 500px)', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
           <div className="rs-card-inner" style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
              <div className="rs-card-head" style={{ marginBottom: 24 }}>
-                <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>MASTER SHOPPING LIST</span>
+                <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>PREP SHOPPING LIST</span>
                 <button className="rs-pill" onClick={onClose}><span className="material-symbols-rounded">close</span></button>
              </div>
              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -71,6 +93,12 @@ function ShoppingListModal({ items, onClose, api }) {
              </div>
              
              <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                 <button className="rs-pill" style={{ width: '100%', justifyContent: 'center' }} onClick={handlePush} disabled={pushing || !sessionId || items.length === 0 || pushed !== null}>
+                   <span className="material-symbols-rounded">playlist_add</span>
+                   {pushed !== null
+                     ? (pushed === 0 ? 'ALREADY ON THE LIST' : `ADDED ${pushed} TO THE LIST`)
+                     : (pushing ? 'ADDING...' : 'PUSH TO SHOPPING LIST')}
+                 </button>
                  {exportResult ? (
                    <div style={{ padding: 16, background: 'rgba(74,222,128,0.1)', border: '1px solid #4ade80', borderRadius: 8 }}>
                      <div style={{ color: '#4ade80', fontWeight: 800, marginBottom: 8 }}>EXPORT SUCCESSFUL</div>
@@ -469,7 +497,11 @@ export default function CulinaryPage({ setAction }) {
   const [mealPlan, setMealPlan] = useState([])
   const [proposals, setProposals] = useState([])
   const [activePrep, setActivePrep] = useState(null)
-  
+  // Bumped on grocery_updated and by the sync pill; ShoppingListTab reloads
+  // when it changes. The list is shared across the household, so it moves
+  // without this tab having touched it.
+  const [groceryNonce, setGroceryNonce] = useState(0)
+
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState('ALL')
   const [filterProtein, setFilterProtein] = useState('ALL')
@@ -529,6 +561,9 @@ export default function CulinaryPage({ setAction }) {
         if (msg.event === 'meal_plan_updated' || msg.event === 'dinner_updated') {
           if (activeTab === 'dinner') fetchData('dinner');
         }
+        if (msg.event === 'grocery_updated') {
+          setGroceryNonce(n => n + 1);
+        }
       } catch (e) {}
     };
     return () => ws.close();
@@ -552,6 +587,7 @@ export default function CulinaryPage({ setAction }) {
           {[
             { key: 'library', icon: 'menu_book', label: 'MENU' },
             { key: 'dinner', icon: 'dinner_dining', label: 'DINNER' },
+            { key: 'list', icon: 'shopping_cart', label: 'LIST' },
             { key: 'stockroom', icon: 'warehouse', label: 'STOCK' },
             { key: 'prep', icon: 'set_meal', label: 'PREP' },
             { key: 'equipment', icon: 'kitchen', label: 'HARDWARE' },
@@ -562,7 +598,7 @@ export default function CulinaryPage({ setAction }) {
               <span className="rs-speak-actions-label">{t.label}</span>
             </button>
           ))}
-          <button className="rs-pill" onClick={() => fetchData(activeTab)}>
+          <button className="rs-pill" onClick={() => { fetchData(activeTab); setGroceryNonce(n => n + 1) }}>
             <span className="material-symbols-rounded">sync</span>
           </button>
         </div>
@@ -813,7 +849,7 @@ export default function CulinaryPage({ setAction }) {
                <div style={{ marginTop: 40, display: 'flex', gap: 12 }}>
                   <button className="rs-btn-primary" style={{ flex: 1 }} onClick={async () => {
                      const res = await api.get(`/prep/${activePrep.id}/shopping-list`);
-                     setShowShoppingList(res.shopping_list);
+                     setShowShoppingList({ items: res.shopping_list, sessionId: activePrep.id });
                   }}>
                     <span className="material-symbols-rounded">shopping_cart</span>
                     SHOPPING LIST
@@ -875,11 +911,16 @@ export default function CulinaryPage({ setAction }) {
             <div className="rs-card-meta">{error}</div>
           </div>
         </div>
-      ) : loading && !['equipment', 'prep', 'dinner', 'library', 'banned'].includes(activeTab) ? (
+      ) : loading && !['equipment', 'prep', 'dinner', 'library', 'banned', 'list'].includes(activeTab) ? (
         <div className="rs-card-meta" style={{ padding: 64, textAlign: 'center' }}>ACCESSING {activeTab.toUpperCase()} ARCHIVES...</div>
       ) : (
         <div className="animate-page-in" style={{ animationDuration: '400ms' }}>
           {activeTab === 'library' && renderLibrary()}
+          {/* The tab owns its own fetch; refreshKey is how the sync pill and
+              an incoming grocery_updated ask it to reload. Bumping a prop
+              rather than the key so a half-typed item survives someone
+              else's edit. */}
+          {activeTab === 'list' && <ShoppingListTab api={api} refreshKey={groceryNonce} />}
           {activeTab === 'stockroom' && renderStockroom()}
           {activeTab === 'dinner' && renderDinner()}
           {activeTab === 'prep' && renderPrep()}
@@ -950,7 +991,21 @@ export default function CulinaryPage({ setAction }) {
          setActiveRecipe(null)
       }} api={api} />}
       {showStagingArea && <StagingAreaModal piles={showStagingArea} onClose={() => setShowStagingArea(null)} />}
-      {showShoppingList && <ShoppingListModal items={showShoppingList} onClose={() => setShowShoppingList(null)} api={api} />}
+      {showShoppingList && (
+        <ShoppingListModal
+          items={showShoppingList.items}
+          sessionId={showShoppingList.sessionId}
+          onClose={() => setShowShoppingList(null)}
+          onPushed={() => {
+            // Land on the list they just filled, rather than leaving them in
+            // a modal that now describes something that happened elsewhere.
+            setGroceryNonce(n => n + 1)
+            setShowShoppingList(null)
+            setActiveTab('list')
+          }}
+          api={api}
+        />
+      )}
       
       {adjustItem && (
         <div className="rs-modal-overlay">

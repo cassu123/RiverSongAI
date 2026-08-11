@@ -1885,20 +1885,13 @@ async def remove_recipe_from_prep(
         await _ws_manager.broadcast(hh.id, "prep_updated", _session_out(session))
 
 
-@router.get("/prep/{session_id}/shopping-list")
-async def get_shopping_list(
-        session_id: str, request: Request, db: Session = Depends(get_db)):
-    """
-    Master Shopping List: aggregate + deduplicate all ingredients across staged recipes.
-    Cross-reference Stockroom — anything marked Good is omitted.
-    """
-    uid = await _get_user_id(request)
-    hh = _get_household(db, uid)
-    session = db.query(PrepSession).filter_by(
-        id=session_id, household_id=hh.id).first()
-    if not session:
-        raise not_found("Prep session not found")
+def _aggregate_prep_list(db: Session, hh: Household, session) -> List[dict]:
+    """Deduplicated ingredients for one prep session, minus what is in stock.
 
+    Split out of the route because pushing the same list onto the household's
+    standing shopping list has to agree with what the prep screen showed --
+    two copies of this arithmetic would drift.
+    """
     # Build set of Good stockroom items (normalized lowercase)
     good_stock = {
         s.name.lower().strip()
@@ -1947,8 +1940,77 @@ async def get_shopping_list(
                     "unit": "",
                     "_from_stockroom": True}
 
+    return list(aggregated.values())
+
+
+@router.get("/prep/{session_id}/shopping-list")
+async def get_shopping_list(
+        session_id: str, request: Request, db: Session = Depends(get_db)):
+    """
+    Aggregate + deduplicate all ingredients across the session's staged
+    recipes. Cross-reference Stockroom — anything marked Good is omitted.
+
+    This is the list for one prep session, not the household's standing
+    shopping list; that one lives at /grocery. POST .../shopping-list/push
+    copies this onto it.
+    """
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    session = db.query(PrepSession).filter_by(
+        id=session_id, household_id=hh.id).first()
+    if not session:
+        raise not_found("Prep session not found")
+
     return {"session_id": session_id,
-            "shopping_list": list(aggregated.values())}
+            "shopping_list": _aggregate_prep_list(db, hh, session)}
+
+
+@router.post("/prep/{session_id}/shopping-list/push")
+async def push_prep_list_to_grocery(
+        session_id: str, request: Request, db: Session = Depends(get_db)):
+    """Copy a prep session's ingredients onto the household shopping list.
+
+    Names already sitting unchecked on the list are skipped rather than
+    duplicated -- someone else may have added them by voice, and the point of
+    a shared list is that it reads as one list.
+    """
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    session = db.query(PrepSession).filter_by(
+        id=session_id, household_id=hh.id).first()
+    if not session:
+        raise not_found("Prep session not found")
+
+    existing = {
+        i.name.lower().strip()
+        for i in db.query(ShoppingListItem).filter(
+            ShoppingListItem.household_id == hh.id,
+            ShoppingListItem.checked_at.is_(None),
+        ).all()
+    }
+
+    added = 0
+    for ing in _aggregate_prep_list(db, hh, session):
+        name = (ing.get("name") or "").strip()
+        if not name or name.lower() in existing:
+            continue
+        existing.add(name.lower())
+        db.add(ShoppingListItem(
+            household_id=hh.id,
+            name=name,
+            qty=str(ing.get("qty") or "") or None,
+            unit=str(ing.get("unit") or "") or None,
+            category="grocery",
+            source=ListSource.PREP,
+            source_ref=session_id,
+            added_by=uid,
+        ))
+        added += 1
+
+    if added:
+        db.commit()
+        await _ws_manager.broadcast(hh.id, "grocery_updated", {})
+    return {"status": "ok", "added": added, "skipped_existing": True}
 
 
 @router.get("/prep/{session_id}/staging")
@@ -2098,38 +2160,55 @@ async def walmart_export(
     request: Request,
     db: Session = Depends(get_db),
     session_id: Optional[str] = None,
+    source: str = "prep",
 ):
     """
-    Generate a Walmart Add-To-Cart URL from the active (or specified) prep session's shopping list.
+    Generate a Walmart Add-To-Cart URL.
+
+    source="prep" (default) reads the active or specified prep session,
+    skipping anything the stockroom says is in GOOD supply. source="list"
+    reads the household's master shopping list instead — the unchecked
+    items, which is what somebody standing in the kitchen has actually
+    decided they need. The list is already the union of voice adds, low
+    stock and prep, so it does not get filtered against the stockroom a
+    second time.
+
     Returns mapped items as a URL and unmapped items as an alert list.
     """
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
 
-    if session_id:
-        session = db.query(PrepSession).filter_by(
-            id=session_id, household_id=hh.id).first()
-    else:
-        session = db.query(PrepSession).filter_by(
-            household_id=hh.id, is_active=True).first()
-
-    if not session:
-        raise not_found("No prep session found")
-
-    # Gather all ingredients from session
     all_ingredients: List[dict] = []
-    good_stock = {
-        s.name.lower().strip()
-        for s in db.query(StockroomItem).filter_by(household_id=hh.id).all()
-        if s.state == StockState.GOOD
-    }
-    for entry in session.recipes:
-        ings_json = entry.scaled_ingredients_json or (
-            entry.recipe.ingredients_json if entry.recipe else "[]"
-        )
-        for ing in json.loads(ings_json):
-            if ing.get("name", "").lower().strip() not in good_stock:
-                all_ingredients.append(ing)
+
+    if source == "list":
+        for item in db.query(ShoppingListItem).filter(
+            ShoppingListItem.household_id == hh.id,
+            ShoppingListItem.checked_at.is_(None),
+        ).all():
+            all_ingredients.append({"name": item.name, "qty": item.qty or 1})
+    else:
+        if session_id:
+            session = db.query(PrepSession).filter_by(
+                id=session_id, household_id=hh.id).first()
+        else:
+            session = db.query(PrepSession).filter_by(
+                household_id=hh.id, is_active=True).first()
+
+        if not session:
+            raise not_found("No prep session found")
+
+        good_stock = {
+            s.name.lower().strip()
+            for s in db.query(StockroomItem).filter_by(household_id=hh.id).all()
+            if s.state == StockState.GOOD
+        }
+        for entry in session.recipes:
+            ings_json = entry.scaled_ingredients_json or (
+                entry.recipe.ingredients_json if entry.recipe else "[]"
+            )
+            for ing in json.loads(ings_json):
+                if ing.get("name", "").lower().strip() not in good_stock:
+                    all_ingredients.append(ing)
 
     # Load mappings
     mappings = {
@@ -2174,36 +2253,69 @@ from typing import List, Optional
 class ShoppingItemCreate(BaseModel):
     name: str
     qty: Optional[str] = None
+    unit: Optional[str] = None
     category: Optional[str] = "grocery"
 
 class ShoppingItemUpdate(BaseModel):
     name: Optional[str] = None
     qty: Optional[str] = None
+    unit: Optional[str] = None
     category: Optional[str] = None
     checked: Optional[bool] = None
+
+
+async def _display_names(request: Request, user_ids) -> Dict[str, str]:
+    """Map user ids to display names for the shopping list byline.
+
+    The household is shared, so `added_by` is whichever member put the item
+    there — a raw user id, not the household owner. Showing the id would be
+    worse than showing nothing, so anything that fails to resolve is simply
+    left out and the UI falls back to no byline.
+    """
+    wanted = {u for u in user_ids if u}
+    if not wanted:
+        return {}
+    try:
+        store = request.app.state.memory_manager._store
+    except AttributeError:
+        return {}
+    names: Dict[str, str] = {}
+    for uid in wanted:
+        try:
+            user = await store.get_user_by_id(uid)
+        except Exception:
+            continue
+        if user and user.get("display_name"):
+            names[uid] = user["display_name"]
+    return names
+
 
 @router.get("/grocery")
 async def get_grocery_list(request: Request, db: Session = Depends(get_db)):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    
-    # Also fetch low stock automatically to inject into the returned list?
-    # Actually, K1 says "Stockroom min_quantity triggers auto-add to the list (via _ws_manager broadcast)."
-    
+
     items = db.query(ShoppingListItem).filter(
         ShoppingListItem.household_id == hh.id
     ).order_by(
         ShoppingListItem.checked_at.is_(None).desc(), # Unchecked first
         ShoppingListItem.created_at.desc()
     ).all()
-    
+
+    names = await _display_names(request, (i.added_by for i in items))
+
     return [
         {
             "id": i.id,
             "name": i.name,
             "qty": i.qty,
+            "unit": i.unit,
             "category": i.category,
             "source": i.source.value if i.source else "manual",
+            "added_by": i.added_by,
+            "added_by_name": names.get(i.added_by),
+            "is_mine": i.added_by == uid,
+            "created_at": i.created_at.isoformat() if i.created_at else None,
             "checked": bool(i.checked_at)
         }
         for i in items
@@ -2222,6 +2334,7 @@ async def add_shopping_item(
         household_id=hh.id,
         name=body.name,
         qty=body.qty,
+        unit=body.unit,
         category=body.category or "grocery",
         source=ListSource.MANUAL,
         added_by=uid
@@ -2250,6 +2363,8 @@ async def update_shopping_item(
         item.name = body.name
     if body.qty is not None:
         item.qty = body.qty
+    if body.unit is not None:
+        item.unit = body.unit
     if body.category is not None:
         item.category = body.category
     if body.checked is not None:
