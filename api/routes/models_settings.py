@@ -52,17 +52,13 @@ _OLLAMA_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
 async def _get_ollama_installed_models() -> Set[str]:
-    """Pulled Ollama model names, cached briefly. Empty set when unreachable.
-
-    The probe itself is blocking and this runs inside async routes, so it goes
-    to a worker thread: a cache miss against an unreachable daemon otherwise
-    held the event loop for the full 3s timeout, stalling every other request
-    on the process.
-
-    A lock guards the refresh and the TTL is rechecked after acquiring it, so
-    a burst of concurrent requests on a cold cache produces one probe rather
-    than one each — the thundering herd being the case that made the blocking
-    call expensive in the first place.
+    """
+    Retrieve the names of installed Ollama models.
+    
+    Results are cached briefly and the last known model list is retained when Ollama is unreachable.
+    
+    Returns:
+        Set[str]: Installed Ollama model names.
     """
     if _ollama_cache_at and (time.monotonic() - _ollama_cache_at) < _OLLAMA_TTL_SECONDS:
         return set(_ollama_cache)
@@ -75,12 +71,11 @@ async def _get_ollama_installed_models() -> Set[str]:
 
 
 def _probe_ollama_models() -> Set[str]:
-    """Query the local Ollama daemon for pulled model names. Blocking.
-
-    Gated on the timestamp, not on the cache being non-empty: a reachable
-    daemon with nothing pulled yet returns an empty set, and keying off
-    emptiness meant a fresh install — the one deployment guaranteed to be in
-    that state — re-probed on every single request.
+    """
+    Query the Ollama daemon for pulled model names.
+    
+    Returns:
+        Set[str]: The current model names, or the most recently cached names when discovery fails.
     """
     global _ollama_cache, _ollama_cache_at, _ollama_reachable
     try:
@@ -335,12 +330,14 @@ def _has_credentials(provider: str, s) -> bool:
 
 
 def get_provider_global_enabled(admin_config: Optional[dict] = None) -> dict:
-    """The admin's per-provider on/off switch, independent of credentials.
-
-    Reads `provider_enabled` first, then the older per-provider keys, then
-    the coarse local/cloud kill switches, then the .env flag. That chain
-    exists so an existing deployment's saved choices survive: none of the
-    older keys are dropped, they are just no longer the only way to say it.
+    """
+    Resolve the effective global enablement for each user-gated provider.
+    
+    Parameters:
+        admin_config (Optional[dict]): Optional administrator configuration containing provider-specific and coarse enablement settings.
+    
+    Returns:
+        dict: A mapping of provider names to their effective global enablement, after applying local or cloud-wide switches.
     """
     s = get_settings()
     admin_config = admin_config or {}
@@ -375,18 +372,14 @@ def get_provider_global_enabled(admin_config: Optional[dict] = None) -> dict:
 
 
 def get_provider_switch_sources(admin_config: Optional[dict] = None) -> dict:
-    """Where each provider's resolved switch value actually came from.
-
-    Mirrors the resolution chain in `get_provider_global_enabled` exactly.
-    Without it the admin UI had no way to tell an explicit choice from an
-    inherited default, so it labelled every off provider "Blocked by you" —
-    including the ones nobody had ever touched, which are off because .env
-    says so. Following that label to the toggle and flipping it appears to do
-    nothing on a fresh deployment, because the block being reported was never
-    the admin's to begin with.
-
-    One of: "admin" (this account set it), "env" (the .env flag's default),
-    "coarse" (the local/cloud kill switch overrode an otherwise-on provider).
+    """
+    Identify the configuration source for each provider's resolved enablement switch.
+    
+    Parameters:
+        admin_config (Optional[dict]): Administrative provider settings to inspect. Defaults to an empty configuration.
+    
+    Returns:
+        dict: A mapping of provider names to their source: ``"admin"``, ``"env"``, or ``"coarse"``.
     """
     admin_config = admin_config or {}
     stored = admin_config.get("provider_enabled") or {}
@@ -423,11 +416,14 @@ def get_provider_switch_sources(admin_config: Optional[dict] = None) -> dict:
 
 
 def _cloud_unavailable_reason(provider: str, switches: dict) -> Optional[str]:
-    """Why a cloud provider cannot be used, or None when it can.
-
-    The admin's switch is reported ahead of the missing key: if they turned
-    it off, telling them to go find an API key sends them after the wrong
-    problem.
+    """Determine why a cloud provider is unavailable.
+    
+    Parameters:
+        provider (str): Provider identifier to evaluate.
+        switches (dict): Resolved provider enablement switches.
+    
+    Returns:
+        str | None: An unavailability reason, or None when the provider can be used.
     """
     if not switches.get(provider, False):
         return "Disabled by the administrator."
@@ -437,11 +433,14 @@ def _cloud_unavailable_reason(provider: str, switches: dict) -> Optional[str]:
 
 
 def _get_enabled_providers(admin_config: Optional[dict] = None) -> dict:
-    """Providers that can actually serve a request right now.
-
-    A provider is usable only when the admin's switch is on AND the
-    credentials exist. Both halves are required, which is why the two are
-    computed separately above.
+    """
+    Determine which providers are currently available to serve requests.
+    
+    Parameters:
+        admin_config (Optional[dict]): Optional administrator configuration used to resolve provider switches.
+    
+    Returns:
+        dict: A mapping of provider names to booleans indicating whether each provider is enabled and has valid credentials.
     """
     s = get_settings()
     switches = get_provider_global_enabled(admin_config)
@@ -452,13 +451,16 @@ def _get_enabled_providers(admin_config: Optional[dict] = None) -> dict:
 
 
 async def _catalog_context(request: Request, is_admin: bool) -> dict:
-    """Everything the "can this account use this model" question needs.
-
-    Both the catalog and the saved-selection check have to answer that
-    question, and they used to answer it in two places. That is how the
-    picker could stop offering a model while GET /settings/llm went on
-    handing the same model back as the current selection, leaving the user
-    with a model button naming something that fails at send time.
+    """
+    Build the model-catalog context used to determine model visibility and availability.
+    
+    Parameters:
+        request (Request): The current request, including access to application configuration.
+        is_admin (bool): Whether the requesting user has administrator access.
+    
+    Returns:
+        dict: Catalog context containing Ollama availability, provider enablement and switches,
+            user access, hidden models, model-family overrides, and administrator status.
     """
     installed = await _get_ollama_installed_models()
 
@@ -509,12 +511,17 @@ async def _catalog_context(request: Request, is_admin: bool) -> dict:
 
 def _annotate(m: ModelEntry, ctx: dict,
               fit_by_model: Optional[dict] = None) -> dict:
-    """One catalog row with the provider-level gates applied on top.
-
-    `_model_to_dict` knows about the model — pulled, too big for this box.
-    The admin's switches and the credentials live out here, and folding them
-    in has to happen identically everywhere the answer is needed.
     """
+              Apply provider-level availability and access status to a model catalog entry.
+              
+              Parameters:
+              	m (ModelEntry): The model entry to annotate.
+              	ctx (dict): Catalog context containing provider enablement, switches, and installed local models.
+              	fit_by_model (Optional[dict]): Optional hardware-fit results keyed by model.
+              
+              Returns:
+              	dict: The model catalog row with availability and, when applicable, an unavailability reason.
+              """
     if m.is_cloud:
         return {
             **_model_to_dict(m),
@@ -538,13 +545,15 @@ def _annotate(m: ModelEntry, ctx: dict,
 
 def _first_usable_free_model(
         ctx: dict, fit_by_model: Optional[dict] = None) -> tuple:
-    """A free model this account can use right now, or (None, None).
-
-    Deliberately free-only. This backs the automatic substitution made when a
-    saved selection has gone unusable, and a substitution the user did not ask
-    for must never be one that bills them. If nothing free is left, the caller
-    reports the problem and lets them choose instead.
-    """
+    """Finds the first available local or free cloud model for automatic substitution.
+        
+        Parameters:
+            ctx (dict): Catalog context used to determine model visibility and availability.
+            fit_by_model (Optional[dict]): Optional hardware-fit results for local models.
+        
+        Returns:
+            tuple: The provider and model ID of the first usable model, or `(None, None)` if no suitable model is available.
+        """
     for m in LLMRegistry.list_local():
         if m.model_id in ctx["hidden_llms"]:
             continue
@@ -566,13 +575,15 @@ def _first_usable_free_model(
 
 
 def _any_usable_model(ctx: dict, fit_by_model: Optional[dict] = None) -> bool:
-    """True when at least one model, free or paid, can serve a message.
-
-    Distinct from `_first_usable_free_model`: that one answers "what may I
-    silently move this user onto", which has to stay free. This one answers
-    "can anything answer at all", and the router is not restricted to free
-    models — so a deployment with Ollama off and only a paid key configured
-    routes `auto` perfectly well.
+    """
+    Determine whether any visible local or cloud model is available to handle a message.
+    
+    Args:
+        ctx (dict): Catalog and provider availability context.
+        fit_by_model (Optional[dict]): Optional hardware-fit results for local models.
+    
+    Returns:
+        bool: `True` if at least one visible model is available, `False` otherwise.
     """
     for m in LLMRegistry.list_local():
         if m.model_id in ctx["hidden_llms"]:
@@ -589,7 +600,19 @@ def _any_usable_model(ctx: dict, fit_by_model: Optional[dict] = None) -> bool:
 
 def _selection_status(provider: str, model_id: str, ctx: dict,
                       fit_by_model: Optional[dict] = None) -> tuple:
-    """Whether a saved selection can still serve a message, and why not."""
+    """
+                      Determine whether a saved provider and model selection is currently usable.
+                      
+                      Parameters:
+                          provider (str): Provider identifier, including ``"auto"``.
+                          model_id (str): Model identifier to validate.
+                          ctx (dict): Current catalog, visibility, access, and provider state.
+                          fit_by_model (Optional[dict]): Optional hardware-fit results by model.
+                      
+                      Returns:
+                          tuple: A ``(usable, reason)`` pair, where ``usable`` is a boolean and
+                          ``reason`` contains the unavailability explanation or ``None`` when usable.
+                      """
     if provider == "auto":
         # Auto has no single model to check; it is usable while the router
         # has anything at all to route to. Asking the free-only helper here
@@ -613,6 +636,15 @@ def _selection_status(provider: str, model_id: str, ctx: dict,
 
 
 async def _require_user(authorization: Optional[str]) -> str:
+    """
+    Validate a Bearer token and return the authenticated user ID.
+    
+    Parameters:
+    	authorization (Optional[str]): The Authorization header value.
+    
+    Returns:
+    	str: The user ID from the token.
+    """
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Not authenticated.")
     payload: Optional[dict] = await decode_token(
@@ -642,9 +674,10 @@ async def list_models(
     authorization: Optional[str] = Header(default=None),
 ):
     """
-    Return the LLM model catalog split into local and cloud sections.
-    Local models include an `available` flag based on what Ollama has pulled.
-    Cloud models include an `available` flag based on configured API keys.
+    Return the authenticated user's visible local and cloud model catalogs with availability and provider metadata.
+    
+    Returns:
+    	dict: A catalog containing local and cloud models, enabled providers, provider access and switch settings, provider order, Ollama reachability, family overrides, and intent-router status.
     """
     await _require_user(authorization)
     is_admin = False
@@ -775,19 +808,17 @@ class LLMSettingsBody(BaseModel):
 @router.get("/settings/llm")
 async def get_llm_settings(
         request: Request, authorization: Optional[str] = Header(default=None)):
-    """Return the current LLM provider + model selection for a user.
-
-    The selection is re-checked against the gates on every read rather than
-    trusted because it was valid when it was saved. An admin switching a
-    provider off, closing it to non-admins, or hiding a model does not touch
-    anyone's stored choice, so the stale selection used to come back looking
-    perfectly ordinary and fail at send time with "disabled globally by the
-    administrator" — the first hint anything had changed.
-
-    The stored value is reported as-is and never rewritten here: the admin
-    may turn the provider back on tomorrow, and the user should get their
-    model back when they do rather than having been quietly migrated off it.
     """
+        Return the user's saved LLM selection and its current availability.
+        
+        The stored selection is preserved even when provider access, model visibility,
+        credentials, or hardware-fit checks make it unavailable. A usable free model
+        is included as a fallback when the saved selection cannot currently be used.
+        
+        Returns:
+        	dict: The provider, model, display name, availability status, fallback
+        	selection, cloud fallback settings, and Whisper model.
+        """
     user_id = await _require_user(authorization)
     memory = request.app.state.memory_manager
     s = await memory.get_llm_settings(user_id)
@@ -1387,10 +1418,11 @@ async def get_provider_switches(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    """Every provider's two switches plus whether its credentials exist.
-
-    One call so the admin UI can render the whole matrix without guessing
-    which of "off" means "no key" and which means "I turned it off".
+    """
+    Provide administrators with provider enablement, access, credential, locality, and usability details.
+    
+    Returns:
+        dict: Provider ordering and per-provider status information.
     """
     await _require_admin(authorization)
     try:
@@ -1525,12 +1557,10 @@ async def get_intent_router_settings(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    """Return the current model intent router configuration and its routes.
-
-    `routes` is resolved against the live provider gates rather than listed
-    from a fixed table, so the panel shows where each intent would actually
-    land today — including the ones that have fallen through to a later
-    preference because the first is switched off.
+    """Provide the current intent-router configuration and routes resolved against live provider availability.
+    
+    Returns:
+        dict: The router enablement state, minimum hit threshold, and resolved intent routes.
     """
     await _require_admin(authorization)
     s = get_settings()

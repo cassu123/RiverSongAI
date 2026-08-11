@@ -305,21 +305,19 @@ def route(
     hidden_models: Optional[set] = None,
 ) -> RouterDecision:
     """
-    Classify message intent and pick the first available provider/model.
-
+    Classify a message and select an eligible provider and model for its intent.
+    
     Args:
-        message: The raw user message text.
-        enabled_providers: Dict from _get_enabled_providers() — keys are
-            provider strings, values are True when enabled + keyed.
-            "ollama" is always True (local, no key needed).
-        free_only: When True, models that cost money per token are removed
-            from the preference chain before dispatch. Set per-user by an
-            admin via the free_models_only flag. The final Ollama fallback is
-            always local, so a free-only user can never be left without a
-            model even if every entry in the chain is paid.
-
+        message (str): The user's message text.
+        enabled_providers (dict[str, bool]): Provider availability mapping.
+        free_only (bool): Whether to restrict selection to free models.
+        hidden_models (Optional[set]): Model identifiers excluded from selection.
+    
     Returns:
-        RouterDecision with the best available provider + model.
+        RouterDecision: The selected provider, model, intent, confidence, and display label.
+    
+    Raises:
+        NoModelAvailable: If no permitted model is available.
     """
     from providers.llm.registry import LLMRegistry
 
@@ -411,6 +409,11 @@ def route(
 
 
 def _get_default_ollama_model() -> str:
+    """Return the configured Ollama model name, or the default local model when configuration is unavailable.
+    
+    Returns:
+        str: The configured model name or `llama3.2:3b`.
+    """
     try:
         from config.settings import get_settings
         return get_settings().llm_model or "llama3.2:3b"
@@ -423,18 +426,17 @@ def _cheapest_enabled_model(
     free_only: bool = False,
     hidden_models: Optional[set] = None,
 ):
-    """The last resort: cheapest model still enabled anywhere in the catalog.
-
-    Shared by route() and resolved_routes() rather than written twice. The
-    preview originally stopped one branch short of this and reported "No
-    provider available" for intents the router would happily have answered --
-    a preview is only worth having if it runs the same policy, so the policy
-    lives in one place now.
-
-    free_only is a restriction on the account, not a preference to trade
-    away, so it survives all the way down here.
-
-    Returns a registry entry, or None when nothing is left enabled.
+    """
+    Select the lowest-cost eligible model from the provider catalog.
+    
+    Parameters:
+        enabled_providers (dict[str, bool]): Provider availability flags.
+        free_only (bool): Whether to restrict selection to free models.
+        hidden_models (set): Model identifiers excluded from selection.
+    
+    Returns:
+        The eligible model with the lowest combined input and output cost, or
+        `None` when no eligible model is available.
     """
     from providers.llm.registry import LLMRegistry
 
@@ -465,18 +467,16 @@ def resolved_routes(
     free_only: bool = False,
     hidden_models: Optional[set] = None,
 ) -> List[dict]:
-    """One row per intent: the model it would reach, given today's gates.
-
-    The admin panel used to draw this table from a hardcoded array of eight
-    (intent, model) pairs, which was only ever the head of each chain and
-    never consulted anything. It showed "Commerce -> Claude" with Anthropic
-    switched off — not because Commerce was broken, but because the display
-    stopped at the first preference while the router itself walks on to
-    Gemini and then to Kimi on NIM. The panel was describing a decision it
-    was not making.
-
-    `first_choice` is reported alongside so a row that fell through says so,
-    rather than quietly presenting a third preference as the plan.
+    """
+    Preview the effective model route for each intent under the supplied provider and model restrictions.
+    
+    Parameters:
+        enabled_providers (dict[str, bool]): Provider availability flags.
+        free_only (bool): Whether to restrict routing to free models.
+        hidden_models (Optional[set]): Model identifiers excluded from routing.
+    
+    Returns:
+        List[dict]: Route details for each intent, including the selected model, reachability, first-choice metadata, and whether fallback was required.
     """
     from providers.llm.registry import LLMRegistry
 

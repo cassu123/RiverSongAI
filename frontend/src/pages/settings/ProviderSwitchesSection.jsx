@@ -30,6 +30,16 @@ const PROVIDER_LABEL = {
   bedrock:    { name: 'Amazon Bedrock',  note: 'Paid · AWS' },
 }
 
+/**
+ * Renders an accessible switch control with a state label.
+ * @param {boolean} on - Whether the switch is enabled.
+ * @param {Function} onClick - Callback invoked when the switch is clicked.
+ * @param {boolean} disabled - Whether the switch is unavailable for interaction.
+ * @param {string} label - Accessible name for the switch.
+ * @param {string} [labelOn='ON'] - Label displayed when the switch is enabled.
+ * @param {string} [labelOff='OFF'] - Label displayed when the switch is disabled.
+ * @return {JSX.Element} The switch control.
+ */
 function Switch({ on, onClick, disabled, label, labelOn = 'ON', labelOff = 'OFF' }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -56,6 +66,11 @@ function Switch({ on, onClick, disabled, label, labelOn = 'ON', labelOff = 'OFF'
   )
 }
 
+/**
+ * Renders administrative controls for enabling providers and managing user access.
+ * @param {string} token - Authentication token used to load and update provider settings.
+ * @returns {JSX.Element} The provider access settings section.
+ */
 export default function ProviderSwitchesSection({ token }) {
   const [rows, setRows] = useState([])
   const [busy, setBusy] = useState(false)
