@@ -129,6 +129,11 @@ _DURATION = re.compile(
     re.IGNORECASE,
 )
 
+#: What may sit between two durations that are one quantity. "and" and a bare
+#: comma continue the phrase; "or" and "then" start a new one, and so does any
+#: other word.
+_JOINS_A_DURATION = re.compile(r"[\s,]*(?:and)?[\s,]*", re.IGNORECASE)
+
 _UNIT_MINUTES = {
     "second": 1 / 60, "sec": 1 / 60,
     "minute": 1, "min": 1,
@@ -144,9 +149,11 @@ def extract_minutes(text: str) -> int:
     cost of the two spare minutes is that you wait; the cost of being early is
     that the plan is wrong from there on.
 
-    Compound durations like "1 hour 30 minutes" are recognized and summed.
-    Adjacent matches are considered part of the same phrase when they appear
-    within a few characters of each other.
+    Compound durations are summed: "1 hour 30 minutes" is ninety, not sixty.
+    Two durations belong to the same phrase only when what sits between them
+    joins rather than separates -- whitespace, "and", a comma. Measuring the
+    gap by length instead reads "bake 25 minutes or 30 minutes" as
+    fifty-five, because " or " is short, and that is a real phrasing.
     """
     matches = list(_DURATION.finditer(text))
     if not matches:
@@ -161,22 +168,17 @@ def extract_minutes(text: str) -> int:
         factor = _UNIT_MINUTES.get(unit.lower(), 0)
         value = float(hi or lo) * factor
 
-        # Check if this match is adjacent to the previous one (compound duration)
-        if last_end >= 0 and match.start() - last_end <= 5:
-            # Part of a compound duration - accumulate
+        joined = last_end >= 0 and _JOINS_A_DURATION.fullmatch(
+            text[last_end:match.start()]) is not None
+        if joined:
             compound += value
         else:
-            # New phrase - save the previous compound and start fresh
-            if compound > 0:
-                best = max(best, compound)
+            best = max(best, compound)
             compound = value
 
         last_end = match.end()
 
-    # Don't forget the final compound
-    if compound > 0:
-        best = max(best, compound)
-
+    best = max(best, compound)
     return int(round(best))
 
 

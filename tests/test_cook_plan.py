@@ -388,3 +388,36 @@ def test_courses_still_contend_for_the_oven():
         _course("r3", "Bread", ["Bake for 40 minutes"], after=20),
     ])
     assert [c for c in plan.conflicts if c.resource == "oven"]
+
+
+def test_compound_durations_sum_but_alternatives_do_not():
+    """"1 hour 30 minutes" is ninety. "25 minutes or 30 minutes" is thirty.
+
+    Two durations are one quantity only when what sits between them joins.
+    Judging that by the length of the gap -- the first attempt at this --
+    reads " or " as a join because it is short, and turns a choice into a
+    sum. Recipes really do write "bake 25 minutes or 30 if frozen".
+    """
+    assert extract_minutes("Bake for 1 hour 30 minutes") == 90
+    assert extract_minutes("Cook 2 hours 15 min") == 135
+    assert extract_minutes("Simmer 1 hour and 30 minutes") == 90
+    assert extract_minutes("Marinate 2 hours, 30 minutes minimum") == 150
+
+    assert extract_minutes("Bake 25 minutes or 30 minutes") == 30
+    assert extract_minutes("Rest 5 minutes, then bake 40 minutes") == 40
+    assert extract_minutes("Chill 1 hour. Bake 20 minutes.") == 60
+
+
+def test_equal_offsets_are_not_a_stagger():
+    """Every dish wanted "+30" is one meal, later -- not a staggered one.
+
+    Offsets are relative to the first course, so a set of identical ones has
+    no first course to be relative to. Normalising them to zero is what keeps
+    "start by" pointing at the meal rather than half an hour before it.
+    """
+    plan = plan_meal([
+        _course("r1", "A", ["Roast for 40 minutes"], after=30),
+        _course("r2", "B", ["Steam for 6 minutes"], after=30),
+    ])
+    assert plan.first_course_min == plan.serve_offset_min
+    assert len({s.end_min for s in plan.steps}) == 1

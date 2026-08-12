@@ -55,13 +55,20 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
     return () => clearInterval(t)
   }, [])
 
+  // Generation counter in a ref, because the guard has to survive the call it
+  // is guarding. The merged version declared `let current = true` inside load
+  // and returned a cleanup that set it false -- but an async function's return
+  // value is a promise nobody awaits, so nothing ever ran it and every check
+  // against it was dead. A stale response could still overwrite a fresh one.
+  const runRef = React.useRef(0)
+
   const load = useCallback(async () => {
-    const runId = Math.random()
-    let current = true
+    const run = ++runRef.current
+    const stale = () => run !== runRef.current
     setLoading(true)
     try {
       const active = await api.get('/meal-cook').catch(() => ({ cook: null }))
-      if (!current) return  // Newer invocation has started
+      if (stale()) return
       if (active?.cook) {
         // A started meal shows the plan it was started with, never a fresh
         // one — the whole point of freezing it.
@@ -78,18 +85,17 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
         const plan = activePrep
           ? await api.get(`/prep/${activePrep.id}/cook-plan${q ? `?courses=${encodeURIComponent(q)}` : ''}`)
           : null
-        if (!current) return  // Newer invocation finished first
+        if (stale()) return
         setPlan(plan)
       }
-      if (!current) return
+      if (stale()) return
       setError(null)
     } catch (err) {
-      if (!current) return
+      if (stale()) return
       setError(err.message)
     } finally {
-      if (current) setLoading(false)
+      if (!stale()) setLoading(false)
     }
-    return () => { current = false }
   }, [api, activePrep, courses])
 
   useEffect(() => { load() }, [load, refreshNonce])
