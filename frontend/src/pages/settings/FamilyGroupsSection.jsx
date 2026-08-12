@@ -30,6 +30,7 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
   const [err,          setErr]          = useState('')
   const [expandedId,   setExpandedId]   = useState(null)
   const [confirmDelId, setConfirmDelId] = useState(null)
+  const [heirId,       setHeirId]       = useState('')  // who inherits on dissolve
 
   const reload = async () => {
     const r = await fetch('/api/admin/family-groups', {
@@ -54,12 +55,21 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
     finally { setWorking(false) }
   }
 
-  const deleteGroup = async (id) => {
+  // A group that still owns shared data is refused with the counts and a
+  // pointer to reassign_to. That refusal used to be dropped on the floor --
+  // the response was never checked, so the list just reloaded unchanged and
+  // the group looked like it had failed to delete for no reason.
+  const deleteGroup = async (id, reassignTo = null) => {
     setWorking(true); setErr('')
     try {
-      await fetch(`/api/admin/family-groups/${id}`, {
-        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(
+        `/api/admin/family-groups/${id}`
+        + (reassignTo ? `?reassign_to=${encodeURIComponent(reassignTo)}` : ''),
+        { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.detail || 'Failed to delete group.')
+      }
       setConfirmDelId(null)
       await reload()
     } catch (e) { setErr(e.message) }
@@ -120,7 +130,7 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
               token={token}
               expanded={expandedId === group.id}
               onToggleExpand={() => setExpandedId(expandedId === group.id ? null : group.id)}
-              onDelete={() => setConfirmDelId(group.id)}
+              onDelete={() => { setHeirId(''); setConfirmDelId(group.id) }}
               onToggleModule={(mod) => toggleModule(group, mod)}
               onRename={(name) => renameGroup(group, name)}
               onMemberChange={reload}
@@ -128,18 +138,39 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
             />
             {confirmDelId === group.id && (
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, padding: '10px 14px',
+                display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4, padding: '10px 14px',
                 background: 'color-mix(in srgb, var(--md-error) 10%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)',
                 borderRadius: 8, fontSize: '0.8rem',
               }}>
-                <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-error)', flexShrink: 0 }}>warning</span>
-                <span style={{ flex: 1, color: 'var(--md-on-surface)' }}>Delete <strong>{group.name}</strong>? Members will lose shared access.</span>
-                <button className="rs-pill" style={{ color: 'var(--md-error)', borderColor: 'color-mix(in srgb, var(--md-error) 50%, transparent)', cursor: 'pointer' }}
-                  onClick={() => deleteGroup(group.id)} disabled={working}>
-                  DELETE
-                </button>
-                <button className="rs-pill" style={{ cursor: 'pointer' }} onClick={() => setConfirmDelId(null)}>CANCEL</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-error)', flexShrink: 0 }}>warning</span>
+                  <span style={{ flex: 1, color: 'var(--md-on-surface)' }}>
+                    Delete <strong>{group.name}</strong>? Whatever the group holds has to go
+                    to someone — nothing records who contributed which row, so it moves
+                    as one piece or not at all.
+                  </span>
+                </div>
+                {/* Naming an heir is what lets the backend proceed when the
+                    group still owns data; without one it refuses, and the
+                    error below says by how much. */}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <select
+                    className="settings-select"
+                    value={heirId}
+                    onChange={e => setHeirId(e.target.value)}
+                  >
+                    <option value="">— give its data to —</option>
+                    {(group.members || []).map(m => (
+                      <option key={m.profile_id} value={m.profile_id}>{m.display_name}</option>
+                    ))}
+                  </select>
+                  <button className="rs-pill" style={{ color: 'var(--md-error)', borderColor: 'color-mix(in srgb, var(--md-error) 50%, transparent)', cursor: 'pointer' }}
+                    onClick={() => deleteGroup(group.id, heirId || null)} disabled={working}>
+                    DELETE
+                  </button>
+                  <button className="rs-pill" style={{ cursor: 'pointer' }} onClick={() => { setConfirmDelId(null); setHeirId('') }}>CANCEL</button>
+                </div>
               </div>
             )}
           </div>
@@ -183,6 +214,7 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
   const [addRelation, setAddRelation] = useState('member')
   const [addWorking,  setAddWorking]  = useState(false)
   const [addErr,      setAddErr]      = useState('')
+  const [confirmRemove, setConfirmRemove] = useState(null)  // {profileId, message}
 
   // Keep editName in sync if group.name changes from parent reload
   React.useEffect(() => { setEditName(group.name) }, [group.name])
@@ -206,12 +238,22 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
     finally { setAddWorking(false) }
   }
 
-  const removeMember = async (profileId) => {
+  // Removing a member does not hand their data back -- it stays with the
+  // group. The backend refuses the first attempt and says so; `confirm` is
+  // the second press, once that has actually been read.
+  const removeMember = async (profileId, confirm = false) => {
     setAddWorking(true); setAddErr('')
     try {
-      await fetch(`/api/admin/family-groups/${group.id}/members/${profileId}`, {
-        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(
+        `/api/admin/family-groups/${group.id}/members/${profileId}`
+        + (confirm ? '?confirm=true' : ''),
+        { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setConfirmRemove({ profileId, message: d.detail || 'Failed to remove member.' })
+        return
+      }
+      setConfirmRemove(null)
       await onMemberChange()
     } catch (e) { setAddErr(e.message) }
     finally { setAddWorking(false) }
@@ -311,6 +353,29 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
                 </div>
               ))}
             </div>
+
+            {confirmRemove && (
+              <div style={{
+                marginBottom: 10, padding: '10px 12px', borderRadius: 8,
+                background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)',
+              }}>
+                <div style={{ fontSize: '0.8rem', marginBottom: 8 }}>{confirmRemove.message}</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => removeMember(confirmRemove.profileId, true)}
+                    disabled={addWorking}
+                    style={{ background: 'none', border: '1px solid var(--md-error)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: 'var(--md-error)', fontSize: '0.75rem' }}>
+                    Remove anyway
+                  </button>
+                  <button
+                    onClick={() => setConfirmRemove(null)}
+                    style={{ background: 'none', border: '1px solid var(--md-outline-variant)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: '0.75rem' }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Add member row */}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>

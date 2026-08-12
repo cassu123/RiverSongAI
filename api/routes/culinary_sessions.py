@@ -31,7 +31,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Request, status
 from pydantic import BaseModel, Field
@@ -611,3 +611,346 @@ async def voice_command(user_id: str, command: str,
     finally:
         if db is not None:
             db.close()
+
+
+# ---------------------------------------------------------------------------
+# Meal cooks — several recipes on one timeline
+#
+# The single-recipe session above answers "what is the next step". A meal
+# answers a different question: given three dishes, one oven and one cook,
+# what happens when. Those are separate objects rather than one generalised
+# one, because the single-recipe flow is voice-driven and step-at-a-time while
+# a meal plan is something you read ahead in.
+# ---------------------------------------------------------------------------
+
+class MealCookStart(BaseModel):
+    prep_session_id: Optional[str] = None
+    label: Optional[str] = None
+    #: ISO-8601. Only used to render wall-clock times; the plan is offsets.
+    serve_at: Optional[str] = None
+    #: recipe_id -> minutes after the first course. Absent means "together".
+    courses: Optional[Dict[str, Annotated[int, Field(ge=0)]]] = None
+
+
+class MealStepDone(BaseModel):
+    key: str
+    done: bool = True
+
+
+def _courses_from_query(raw: str) -> Dict[str, int]:
+    """Parse "recipeid:30,otherid:60" from the preview query string.
+
+    A GET so the plan stays cacheable and linkable, which means the course
+    offsets have to survive as text. Anything unparseable is dropped rather
+    than rejected -- a malformed offset should cost you a stagger, not the
+    whole plan.
+    """
+    courses: Dict[str, int] = {}
+    for part in (raw or "").split(","):
+        rid, _, minutes = part.partition(":")
+        if rid.strip() and minutes.strip().lstrip("-").isdigit():
+            parsed = int(minutes)
+            if parsed >= 0:
+                courses[rid.strip()] = parsed
+    return courses
+
+
+def _owned_stations(db: Session, household_id: str) -> Dict[str, int]:
+    """How many of each appliance the household has.
+
+    Two air fryers is not exotic and it is the difference between a reported
+    conflict and a fine plan, so equipment is counted rather than checked for
+    presence.
+    """
+    from culinary.models import KitchenEquipment
+
+    counts: Dict[str, int] = {}
+    for eq in db.query(KitchenEquipment).filter_by(household_id=household_id).all():
+        types = _safe_json(eq.capabilities_json, None) or (
+            [eq.equipment_type] if eq.equipment_type else [])
+        for t in types:
+            counts[t] = counts.get(t, 0) + 1
+    return counts
+
+
+def _plan_for_prep_session(db: Session, hh, session,
+                           courses: Optional[Dict[str, int]] = None) -> Dict[str, Any]:
+    """Build the meal plan for a prep session's staged recipes.
+
+    `courses` maps a recipe id to how many minutes after the first course it
+    is wanted. Everything defaults to 0, which is one meal landing together.
+    """
+    from providers.culinary.cook_plan import RecipeInPlan, analyse_steps, plan_meal
+
+    recipes = []
+    #: Mise en place. Most of prep is measuring and portioning, and none of
+    #: that appears in the steps -- a recipe says "add the paprika", never
+    #: "get the paprika out". Carried per recipe so the prep screen can ask
+    #: for bowls rather than only for knife work.
+    mise: Dict[str, List[dict]] = {}
+
+    for entry in session.recipes:
+        if not entry.recipe:
+            continue
+        steps = normalise_steps(_safe_json(entry.recipe.steps_json, []))
+        if not steps:
+            continue
+        recipes.append(RecipeInPlan(
+            recipe_id=entry.recipe_id,
+            title=entry.recipe.title,
+            steps=analyse_steps(steps),
+            course_offset_min=int((courses or {}).get(entry.recipe_id, 0)),
+        ))
+        # Scaled quantities when the session has them: portioning out the
+        # unscaled amount for a doubled recipe is the mistake this screen
+        # exists to prevent.
+        ingredients = _safe_json(
+            entry.scaled_ingredients_json,
+            None) or _safe_json(entry.recipe.ingredients_json, [])
+        mise[entry.recipe_id] = [
+            {
+                "key": f"{entry.recipe_id}:ing:{i}",
+                "name": ing.get("name", ""),
+                "qty": ing.get("qty", ""),
+                "unit": ing.get("unit", ""),
+            }
+            for i, ing in enumerate(ingredients)
+            if isinstance(ing, dict) and ing.get("name")
+        ]
+
+    plan = plan_meal(recipes, owned_stations=_owned_stations(db, hh.id))
+    return {
+        "total_minutes": plan.serve_offset_min,
+        # Where "start by" counts back from. Equal to total_minutes unless the
+        # dishes are staggered, in which case the end of the plan is the last
+        # course going out and not the moment anyone sits down.
+        "first_course_minutes": plan.first_course_min,
+        "stations": plan.stations_used,
+        "recipes": [{"id": r.recipe_id, "title": r.title,
+                     "course_offset_min": r.course_offset_min,
+                     "ingredients": mise.get(r.recipe_id, [])} for r in recipes],
+        "steps": [
+            {
+                # Stable across replans, so ticking a step survives a reload.
+                "key": f"{s.recipe_id}:{s.step_index}",
+                "recipe_id": s.recipe_id,
+                "recipe_title": s.recipe_title,
+                "step_index": s.step_index,
+                "text": s.text,
+                "station": s.station,
+                "phase": s.phase,
+                "start_min": s.start_min,
+                "end_min": s.end_min,
+                "active_min": s.active_min,
+                "passive_min": s.passive_min,
+                "hands_on": s.hands_on,
+            }
+            for s in plan.steps
+        ],
+        "conflicts": [
+            {"kind": c.kind, "resource": c.resource,
+             "start_min": c.start_min, "detail": c.detail}
+            for c in plan.conflicts
+        ],
+    }
+
+
+def _meal_cook_out(cook) -> Dict[str, Any]:
+    return {
+        "id": cook.id,
+        "label": cook.label,
+        "prep_session_id": cook.prep_session_id,
+        "serve_at": cook.serve_at.isoformat() if cook.serve_at else None,
+        "plan": _safe_json(cook.plan_json, {}),
+        "done": _safe_json(cook.done_steps_json, []),
+        "is_active": cook.is_active,
+        "started_at": cook.created_at.isoformat() if cook.created_at else None,
+    }
+
+
+@router.get("/prep/{session_id}/cook-plan")
+async def preview_cook_plan(
+    session_id: str, request: Request, db: Session = Depends(get_db),
+    courses: str = "",
+):
+    """What cooking this prep session would look like, without starting it.
+
+    Read-only and re-derived on every call, so it tracks edits to the recipes
+    and the staged list. Starting a cook freezes a copy; this is the version
+    you are still allowed to change your mind about.
+    """
+    from culinary.models import PrepSession
+
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    session = db.query(PrepSession).filter_by(
+        id=session_id, household_id=hh.id).first()
+    if not session:
+        raise not_found("Prep session not found")
+    return _plan_for_prep_session(db, hh, session, _courses_from_query(courses))
+
+
+@router.post("/meal-cook", status_code=status.HTTP_201_CREATED)
+async def start_meal_cook(
+    body: MealCookStart, request: Request, db: Session = Depends(get_db)
+):
+    """Freeze a plan and start cooking it.
+
+    Like the single-recipe session, starting a second one ends the first: the
+    kitchen screen shows one meal, and two live plans would fight over it.
+    """
+    from culinary.models import MealCook, PrepSession
+
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+
+    if body.prep_session_id:
+        session = db.query(PrepSession).filter_by(
+            id=body.prep_session_id, household_id=hh.id).first()
+    else:
+        session = db.query(PrepSession).filter_by(
+            household_id=hh.id, is_active=True).first()
+    if not session:
+        raise not_found("No prep session to cook")
+
+    plan = _plan_for_prep_session(db, hh, session, body.courses)
+    if not plan["steps"]:
+        raise not_found("Nothing staged has any steps to cook")
+
+    for previous in db.query(MealCook).filter_by(
+            household_id=hh.id, is_active=True).all():
+        previous.is_active = False
+        previous.ended_at = _now()
+
+    serve_at = None
+    if body.serve_at:
+        try:
+            serve_at = datetime.fromisoformat(body.serve_at.replace("Z", "+00:00"))
+        except ValueError as e:
+            from core.errors import bad_request
+            raise bad_request("Could not parse serve_at as a valid ISO datetime") from e
+
+    cook = MealCook(
+        household_id=hh.id,
+        prep_session_id=session.id,
+        label=body.label or session.label,
+        serve_at=serve_at,
+        plan_json=json.dumps(plan),
+        done_steps_json="[]",
+        started_by=uid,
+    )
+    db.add(cook)
+    db.commit()
+    db.refresh(cook)
+
+    await _ws_manager.broadcast(hh.id, "meal_cook_updated", {})
+    return _meal_cook_out(cook)
+
+
+@router.get("/meal-cook")
+async def active_meal_cook(request: Request, db: Session = Depends(get_db)):
+    """The household's meal in progress, or `{"cook": null}`."""
+    from culinary.models import MealCook
+
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    cook = db.query(MealCook).filter_by(
+        household_id=hh.id, is_active=True).order_by(
+        MealCook.created_at.desc()).first()
+    return {"cook": _meal_cook_out(cook) if cook else None}
+
+
+@router.post("/meal-cook/{cook_id}/step")
+async def mark_meal_step(
+    cook_id: str, body: MealStepDone, request: Request,
+    db: Session = Depends(get_db)
+):
+    """Tick a step off, or un-tick it.
+
+    Keyed rather than indexed: steps interleave across recipes, so there is no
+    single position to advance. Two people cooking together also do not go in
+    the same order, and the broadcast is what keeps their screens agreeing.
+    """
+    from culinary.models import MealCook
+
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    cook = db.query(MealCook).filter_by(id=cook_id, household_id=hh.id).first()
+    if not cook or not cook.is_active:
+        raise not_found("That meal is not being cooked")
+
+    done = set(_safe_json(cook.done_steps_json, []))
+    plan = _safe_json(cook.plan_json, {})
+    # Mise en place lines are ticked the same way steps are -- measuring the
+    # paprika out is a thing you finish, and on a shared list it wants to be
+    # visible to whoever is doing the other half of the prep.
+    known = {s["key"] for s in plan.get("steps", [])}
+    for r in plan.get("recipes", []):
+        known.update(i["key"] for i in r.get("ingredients", []))
+    if body.key not in known:
+        raise not_found("No such step in this plan")
+
+    done.add(body.key) if body.done else done.discard(body.key)
+    cook.done_steps_json = json.dumps(sorted(done))
+    db.commit()
+
+    await _ws_manager.broadcast(hh.id, "meal_cook_updated", {})
+    return {"done": sorted(done)}
+
+
+class MealServeTime(BaseModel):
+    serve_at: Optional[str] = None
+
+
+@router.patch("/meal-cook/{cook_id}")
+async def set_meal_serve_time(
+    cook_id: str, body: MealServeTime, request: Request,
+    db: Session = Depends(get_db)
+):
+    """Move the serve time of a meal already in progress.
+
+    Separate from starting because running late is the normal case, not an
+    error. The plan is stored as offsets, so changing this re-labels every row
+    at once and never reshuffles the order -- what was true about which dish
+    goes in when does not stop being true because dinner slipped half an hour.
+    """
+    from culinary.models import MealCook
+
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    cook = db.query(MealCook).filter_by(id=cook_id, household_id=hh.id).first()
+    if not cook or not cook.is_active:
+        raise not_found("That meal is not being cooked")
+
+    if body.serve_at:
+        try:
+            cook.serve_at = datetime.fromisoformat(
+                body.serve_at.replace("Z", "+00:00"))
+        except ValueError as e:
+            from core.errors import bad_request
+            raise bad_request("Could not parse serve_at as a valid ISO datetime") from e
+    else:
+        cook.serve_at = None
+    db.commit()
+
+    await _ws_manager.broadcast(hh.id, "meal_cook_updated", {})
+    return _meal_cook_out(cook)
+
+
+@router.post("/meal-cook/{cook_id}/end")
+async def end_meal_cook(
+    cook_id: str, request: Request, db: Session = Depends(get_db)
+):
+    from culinary.models import MealCook
+
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    cook = db.query(MealCook).filter_by(id=cook_id, household_id=hh.id).first()
+    if not cook:
+        raise not_found("Meal not found")
+    cook.is_active = False
+    cook.ended_at = _now()
+    db.commit()
+
+    await _ws_manager.broadcast(hh.id, "meal_cook_updated", {})
+    return {"status": "ok"}

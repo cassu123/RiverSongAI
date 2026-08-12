@@ -13,7 +13,11 @@ import uuid
 from typing import List, Optional
 
 import bcrypt
-from core.family_migration import migrate_member_to_family
+from core.family_migration import (
+    count_family_data,
+    migrate_member_to_family,
+    reassign_culinary_household,
+)
 
 from fastapi import APIRouter, Request, Header
 from pydantic import BaseModel
@@ -84,8 +88,7 @@ async def update_user(
 
     if body.role is not None and body.role not in VALID_ROLES:
         raise bad_request(
-            f"Invalid role. Must be one of: {
-                ', '.join(VALID_ROLES)}")
+            f"Invalid role. Must be one of: {', '.join(VALID_ROLES)}")
 
     # Prevent admin from demoting themselves
     if payload["sub"] == user_id and body.role and body.role != "admin":
@@ -527,15 +530,68 @@ async def update_family_group(
 async def delete_family_group(
     group_id: str,
     request: Request,
+    reassign_to: Optional[str] = None,
     authorization: Optional[str] = Header(default=None),
 ):
+    """Dissolve a family group.
+
+    Deleting the group used to drop the group row and its memberships and
+    nothing else, which left everything filed under "family:<group_id>" with
+    no owner that resolves to it. The rows were not removed -- they became
+    unreachable, for every member at once, silently.
+
+    So the group is only dissolved once its shared data has somewhere to go.
+    Pass `reassign_to` with a member's profile id to hand them the shared
+    household; without it, a group that still owns data is refused and the
+    counts are reported. There is no way to split a shared household back
+    into the parts each member contributed -- nothing records who added what
+    -- so naming an heir is the honest operation, and refusing is better than
+    guessing.
+    """
     payload = await _require_admin(request, authorization)
     store = _get_store(request)
     group = await store.get_family_group(group_id)
     if not group:
         raise not_found("Family group not found.")
+
+    holdings = count_family_data(group_id)
+    if holdings and not reassign_to:
+        raise bad_request(
+            f"Family group still owns data: {holdings}. Pass reassign_to=<profile_id> "
+            f"to hand it to a member, or empty the group's modules first. "
+            f"Deleting now would leave these rows with no owner and no way to reach them."
+        )
+
+    if reassign_to and holdings:
+        heir_group = await store.get_user_family_group(reassign_to)
+        if not heir_group or heir_group["id"] != group_id:
+            raise bad_request(
+                "reassign_to must be a current member of this group.")
+
+        # Only invoke culinary reassignment when culinary is present
+        if "culinary" in holdings:
+            result = reassign_culinary_household(group_id, reassign_to)
+            if not result.get("reassigned"):
+                raise bad_request(
+                    f"Could not reassign the shared household: {result}. "
+                    f"Nothing was deleted.")
+            logger.info(
+                "Admin %s reassigned family group %s culinary data to %s: %s",
+                payload["sub"], group_id, reassign_to, result)
+
+        # Only culinary has a reassignment path. Anything else still held is
+        # reported rather than quietly dropped along with the group.
+        remaining = {k: v for k, v in count_family_data(group_id).items()
+                     if k != "culinary"}
+        if remaining:
+            raise bad_request(
+                f"Culinary data was reassigned, but these modules are still owned "
+                f"by the group and have no reassignment path yet: {remaining}. "
+                f"The group was not deleted.")
+
     await store.delete_family_group(group_id)
-    logger.info("Admin %s deleted family group %s", payload["sub"], group_id)
+    logger.info("Admin %s deleted family group %s (reassigned to %s)",
+                payload["sub"], group_id, reassign_to or "nobody")
 
 
 @router.post("/family-groups/{group_id}/members", status_code=201)
@@ -548,8 +604,7 @@ async def add_family_member(
     payload = await _require_admin(request, authorization)
     if body.relationship not in VALID_RELATIONS:
         raise bad_request(
-            f"Invalid relationship. Choose from: {
-                ', '.join(VALID_RELATIONS)}")
+            f"Invalid relationship. Choose from: {', '.join(VALID_RELATIONS)}")
     store = _get_store(request)
     group = await store.get_family_group(group_id)
     if not group:
@@ -580,10 +635,52 @@ async def remove_family_member(
     group_id: str,
     profile_id: str,
     request: Request,
+    confirm: bool = False,
     authorization: Optional[str] = Header(default=None),
 ):
+    """Remove a member from a family group.
+
+    Joining a group moves that member's recipes, homes, vehicles and
+    workspaces to the shared owner, and in culinary's case deletes their
+    personal household outright. Leaving does not move any of it back, and
+    it cannot: nothing records who contributed which row, and the rest of
+    the group is still using it. So the member leaves with an empty
+    module and the group keeps everything they brought.
+
+    That may well be what you want -- a shared pantry belongs to the house,
+    not to whoever stocked it. What is not acceptable is that it used to
+    happen silently on a bare DELETE. Now the counts are reported and the
+    call is refused until `confirm=true`, so the decision is made rather
+    than discovered afterwards.
+    """
     payload = await _require_admin(request, authorization)
     store = _get_store(request)
+
+    # list_family_groups rather than get_family_group: only the list form
+    # carries the membership rows, and whether this is the last member changes
+    # what the warning has to say.
+    groups = await store.list_family_groups()
+    group = next((g for g in groups if g["id"] == group_id), None)
+    if not group:
+        raise not_found("Family group not found.")
+
+    holdings = count_family_data(group_id)
+    remaining = [m for m in (group.get("members") or [])
+                 if m["profile_id"] != profile_id]
+
+    if holdings and not confirm:
+        raise bad_request(
+            f"This group holds shared data: {holdings}. Removing this member "
+            f"does not give any of it back -- it stays with the group, and "
+            f"their personal modules will be empty. Re-send with confirm=true "
+            f"to proceed."
+            + ("" if remaining else
+               " They are also the last member, so nothing will be able to "
+               "reach this data afterwards; dissolve the group with "
+               "reassign_to instead.")
+        )
+
     await store.remove_family_member(group_id, profile_id)
-    logger.info("Admin %s removed %s from family group %s",
-                payload["sub"], profile_id, group_id)
+    logger.info(
+        "Admin %s removed %s from family group %s (group still holds %s)",
+        payload["sub"], profile_id, group_id, holdings or "nothing")

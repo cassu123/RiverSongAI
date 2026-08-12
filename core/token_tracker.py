@@ -283,9 +283,20 @@ def _estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
             output_tokens * rates["out"]) / 1_000_000
 
 
-def get_summary(days: int = 30) -> dict:
+def get_summary(days: int = 30, user_ids: Optional[List[str]] = None) -> dict:
     """
     Return token usage totals grouped by provider+model over the last `days` days.
+
+    `user_ids` narrows the rows to those accounts. Passing None keeps the
+    whole instance, which is what an administrator asking about the machine
+    wants and what every caller used to get regardless of who was asking --
+    on a box running more than one household that handed each of them the
+    others' spending.
+
+    Background work records under the reserved id 'system' and belongs to no
+    account, so a filtered total is genuinely smaller than the instance total
+    rather than a rounding difference. Callers should say which scope they
+    asked for rather than presenting either number as "usage".
 
     Returns:
         {
@@ -314,6 +325,12 @@ def get_summary(days: int = 30) -> dict:
         not_test = "LOWER(provider) NOT IN ({})".format(
             ",".join("?" * len(_TEST_PROVIDERS)))
         params = (cutoff, *_TEST_PROVIDERS)
+        user_clause = ""
+        if user_ids is not None:
+            # An empty list must match nothing rather than degrade to "all".
+            user_clause = " AND user_id IN ({})".format(
+                ",".join("?" * len(user_ids)) or "NULL")
+            params = (*params, *user_ids)
         rows = conn.execute(
             f"""
             SELECT provider, model,
@@ -321,7 +338,7 @@ def get_summary(days: int = 30) -> dict:
                    SUM(output_tokens) AS output_tokens,
                    COUNT(*)           AS calls
             FROM token_usage
-            WHERE ts >= ? AND {not_test}
+            WHERE ts >= ? AND {not_test}{user_clause}
             GROUP BY provider, model
             ORDER BY (SUM(input_tokens) + SUM(output_tokens)) DESC
             """,
@@ -368,7 +385,7 @@ def get_summary(days: int = 30) -> dict:
                    SUM(output_tokens) AS output_tokens,
                    COUNT(*)           AS calls
             FROM token_usage
-            WHERE ts >= ? AND {not_test}
+            WHERE ts >= ? AND {not_test}{user_clause}
             GROUP BY COALESCE(source, 'other'), provider, model
             """,
             params,

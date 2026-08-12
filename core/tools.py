@@ -522,11 +522,38 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
         return "Error: item is required."
 
     def _sync_work():
+        from core.family import resolve_module_owner
+        from sqlalchemy.exc import IntegrityError
+
         db = SessionLocal()
         try:
-            hh = db.query(Household).filter(Household.owner_id == user_id).first()
+            # The shopping list is household data, and in a shared house the
+            # household is owned by "family:<group_id>", not by the speaker.
+            # Looking it up by the raw user_id found nothing -- and unlike the
+            # HTTP path this one does not create on miss -- so every voice add
+            # in a shared household answered "Error: Household not found."
+            # The one place the list is easiest to reach was the one place it
+            # did not work.
+            owner_id = resolve_module_owner(user_id, "culinary")
+            hh = db.query(Household).filter(
+                Household.owner_id == owner_id).first()
             if not hh:
-                return "Error: Household not found."
+                # Matches _get_household in api/routes/culinary.py, which
+                # creates on miss. Saying "not found" to someone who has
+                # simply never opened the Culinary page is a dead end they
+                # cannot act on.
+                try:
+                    hh = Household(owner_id=owner_id)
+                    db.add(hh)
+                    db.commit()
+                    db.refresh(hh)
+                except IntegrityError:
+                    # Concurrent insert - re-query to get the existing record
+                    db.rollback()
+                    hh = db.query(Household).filter(
+                        Household.owner_id == owner_id).first()
+                    if not hh:
+                        raise  # Something else went wrong
             sl_item = ShoppingListItem(
                 household_id=hh.id,
                 name=item,
@@ -537,12 +564,26 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
             )
             db.add(sl_item)
             db.commit()
-            return f"Added '{item}' to your shopping list."
+            return hh.id
         finally:
             db.close()
 
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, _sync_work)
+    household_id = await loop.run_in_executor(None, _sync_work)
+
+    # Everyone else's screen has to learn about it. The HTTP routes broadcast
+    # on every mutation; this path wrote straight to the database, so a spoken
+    # item sat invisible until someone reloaded -- which for a list whose
+    # whole point is being shared is most of the value gone.
+    try:
+        from api.routes.culinary import _ws_manager
+        await _ws_manager.broadcast(household_id, "grocery_updated", {})
+    except Exception as exc:
+        logger.warning(
+            "Shopping list item saved but the household was not notified: %s",
+            exc)
+
+    return f"Added '{item}' to your shopping list."
 
 
 async def _exec_set_reminder(args: dict, user_id: str) -> str:
@@ -1240,10 +1281,7 @@ async def _exec_mow_command(args: dict, user_id: str) -> str:
         if online:
             return f"Command queued: {label}. Voyager will execute it on the next poll (within 100 ms)."
         else:
-            ago = f"{
-                round(
-                    time.time() -
-                    last_seen)}s ago" if last_seen else "never"
+            ago = f"{round(time.time() - last_seen)}s ago" if last_seen else "never"
             return (
                 f"Command queued: {label}. "
                 f"Note: Voyager was last seen {ago} and may be offline. "

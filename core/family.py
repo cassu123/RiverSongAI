@@ -6,6 +6,7 @@ Provides resolve_module_owner(user_id, module) which returns either
 given module shared) or the original user_id.
 
 Both culinary and inventory import this so the logic lives in one place.
+Also home to the permission rules that turn on who answers for whom.
 """
 
 from __future__ import annotations
@@ -75,6 +76,23 @@ def resolve_module_owner(user_id: str, module: str) -> str:
     except Exception as exc:
         logger.debug("Family resolution failed for user %s: %s", user_id, exc)
     return user_id
+
+
+def may_view_usage(me: str, is_admin: bool, target: str,
+                   dependents: list) -> bool:
+    """Whether `me` may see `target`'s token usage.
+
+    Family group membership is deliberately not the test. Two adults who pool
+    recipes have not thereby agreed to show each other what they spend, and a
+    parent and child who were never put in a group still stand in that
+    relationship. What licenses looking at someone's usage is answering for
+    them, so: yourself, a child you are recorded as the parent of, or -- for
+    an admin -- the machine they run.
+
+    A plain function taking the dependents rather than looking them up, so
+    the rule is testable without a database or an app.
+    """
+    return bool(is_admin or target == me or target in dependents)
 
 
 async def is_feature_enabled_for(user_id: str, feature_key: str) -> bool:
