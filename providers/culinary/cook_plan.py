@@ -305,6 +305,10 @@ class CookPlan:
     serve_offset_min: int                       # length of the whole plan
     steps: List[PlannedStep] = field(default_factory=list)
     conflicts: List[Conflict] = field(default_factory=list)
+    #: When the first course lands. Equal to serve_offset_min unless the
+    #: dishes are staggered, in which case it is the only honest anchor for
+    #: "start by" -- the end of the plan is when the last course goes out.
+    first_course_min: int = 0
 
     def phase(self, name: str) -> List[PlannedStep]:
         return [s for s in self.steps if s.phase == name]
@@ -323,6 +327,17 @@ class RecipeInPlan:
     recipe_id: str
     title: str
     steps: List[StepFacts]
+    #: Minutes after the first course that this dish is wanted. 0 means it
+    #: lands with everything else, which is the default and the common case.
+    #:
+    #: Courses are the reason this is not simply "everything finishes
+    #: together". A starter at seven and a main at half past are one cooking
+    #: session with two deadlines, and so is a bulk cook where tonight's
+    #: dinner is wanted now and tomorrow's can come out whenever. Modelling
+    #: that as separate plans would be wrong: the dishes still share one oven
+    #: and one cook, and it is precisely the contention between courses that
+    #: nobody can hold in their head.
+    course_offset_min: int = 0
 
     @property
     def total_min(self) -> int:
@@ -360,13 +375,18 @@ def plan_meal(
     if not recipes:
         return CookPlan(serve_offset_min=0)
 
-    # Longest recipe defines the start of the plan; the others begin later so
-    # that everything finishes at the same moment.
-    horizon = max(r.total_min for r in recipes)
+    # When the first course is served. Each dish has to have started early
+    # enough to be ready for its own course, so the earliest possible first
+    # course is set by whichever dish is most behind relative to when it is
+    # wanted -- a two-hour main wanted thirty minutes after the starter still
+    # pins the whole evening.
+    base = max(r.total_min - r.course_offset_min for r in recipes)
+    last_course = max(r.course_offset_min for r in recipes)
     placed: List[PlannedStep] = []
 
     for recipe in recipes:
-        cursor = horizon - recipe.total_min
+        # Finish exactly when this dish is wanted, not when the meal ends.
+        cursor = base + recipe.course_offset_min - recipe.total_min
         for step in recipe.steps:
             placed.append(PlannedStep(
                 recipe_id=recipe.recipe_id,
@@ -384,7 +404,9 @@ def plan_meal(
 
     placed.sort(key=lambda s: (s.start_min, s.recipe_title, s.step_index))
     conflicts = _find_conflicts(placed, owned_stations)
-    return CookPlan(serve_offset_min=horizon, steps=placed, conflicts=conflicts)
+    return CookPlan(serve_offset_min=base + last_course, steps=placed,
+                    conflicts=conflicts,
+                    first_course_min=base)
 
 
 def _find_conflicts(steps: List[PlannedStep],

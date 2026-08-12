@@ -628,11 +628,29 @@ class MealCookStart(BaseModel):
     label: Optional[str] = None
     #: ISO-8601. Only used to render wall-clock times; the plan is offsets.
     serve_at: Optional[str] = None
+    #: recipe_id -> minutes after the first course. Absent means "together".
+    courses: Optional[Dict[str, int]] = None
 
 
 class MealStepDone(BaseModel):
     key: str
     done: bool = True
+
+
+def _courses_from_query(raw: str) -> Dict[str, int]:
+    """Parse "recipeid:30,otherid:60" from the preview query string.
+
+    A GET so the plan stays cacheable and linkable, which means the course
+    offsets have to survive as text. Anything unparseable is dropped rather
+    than rejected -- a malformed offset should cost you a stagger, not the
+    whole plan.
+    """
+    courses: Dict[str, int] = {}
+    for part in (raw or "").split(","):
+        rid, _, minutes = part.partition(":")
+        if rid.strip() and minutes.strip().lstrip("-").isdigit():
+            courses[rid.strip()] = int(minutes)
+    return courses
 
 
 def _owned_stations(db: Session, household_id: str) -> Dict[str, int]:
@@ -653,8 +671,13 @@ def _owned_stations(db: Session, household_id: str) -> Dict[str, int]:
     return counts
 
 
-def _plan_for_prep_session(db: Session, hh, session) -> Dict[str, Any]:
-    """Build the meal plan for a prep session's staged recipes."""
+def _plan_for_prep_session(db: Session, hh, session,
+                           courses: Optional[Dict[str, int]] = None) -> Dict[str, Any]:
+    """Build the meal plan for a prep session's staged recipes.
+
+    `courses` maps a recipe id to how many minutes after the first course it
+    is wanted. Everything defaults to 0, which is one meal landing together.
+    """
     from providers.culinary.cook_plan import RecipeInPlan, analyse_steps, plan_meal
 
     recipes = []
@@ -674,6 +697,7 @@ def _plan_for_prep_session(db: Session, hh, session) -> Dict[str, Any]:
             recipe_id=entry.recipe_id,
             title=entry.recipe.title,
             steps=analyse_steps(steps),
+            course_offset_min=int((courses or {}).get(entry.recipe_id, 0)),
         ))
         # Scaled quantities when the session has them: portioning out the
         # unscaled amount for a doubled recipe is the mistake this screen
@@ -695,8 +719,13 @@ def _plan_for_prep_session(db: Session, hh, session) -> Dict[str, Any]:
     plan = plan_meal(recipes, owned_stations=_owned_stations(db, hh.id))
     return {
         "total_minutes": plan.serve_offset_min,
+        # Where "start by" counts back from. Equal to total_minutes unless the
+        # dishes are staggered, in which case the end of the plan is the last
+        # course going out and not the moment anyone sits down.
+        "first_course_minutes": plan.first_course_min,
         "stations": plan.stations_used,
         "recipes": [{"id": r.recipe_id, "title": r.title,
+                     "course_offset_min": r.course_offset_min,
                      "ingredients": mise.get(r.recipe_id, [])} for r in recipes],
         "steps": [
             {
@@ -739,7 +768,8 @@ def _meal_cook_out(cook) -> Dict[str, Any]:
 
 @router.get("/prep/{session_id}/cook-plan")
 async def preview_cook_plan(
-    session_id: str, request: Request, db: Session = Depends(get_db)
+    session_id: str, request: Request, db: Session = Depends(get_db),
+    courses: str = "",
 ):
     """What cooking this prep session would look like, without starting it.
 
@@ -755,7 +785,7 @@ async def preview_cook_plan(
         id=session_id, household_id=hh.id).first()
     if not session:
         raise not_found("Prep session not found")
-    return _plan_for_prep_session(db, hh, session)
+    return _plan_for_prep_session(db, hh, session, _courses_from_query(courses))
 
 
 @router.post("/meal-cook", status_code=status.HTTP_201_CREATED)
@@ -781,7 +811,7 @@ async def start_meal_cook(
     if not session:
         raise not_found("No prep session to cook")
 
-    plan = _plan_for_prep_session(db, hh, session)
+    plan = _plan_for_prep_session(db, hh, session, body.courses)
     if not plan["steps"]:
         raise not_found("Nothing staged has any steps to cook")
 

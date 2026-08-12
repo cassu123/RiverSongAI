@@ -15,6 +15,7 @@
  * when one is set, turns those offsets into clock times.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import CookPlanTimeline from './CookPlanTimeline.jsx'
 
 const STATION_LABELS = {
   counter: 'Counter', stove: 'Stove', oven: 'Oven', microwave: 'Microwave',
@@ -44,6 +45,15 @@ export default function CookPlanTab({ api, activePrep }) {
   const [error, setError]     = useState(null)
   const [busy, setBusy]       = useState(false)
   const [serveTime, setServeTime] = useState('')   // "HH:MM", local
+  const [courses, setCourses] = useState({})       // recipe_id -> minutes after
+  const [tick, setTick] = useState(0)              // re-render so NOW advances
+
+  // A minute is the resolution the whole plan is in; anything finer would
+  // redraw for nothing.
+  useEffect(() => {
+    const t = setInterval(() => setTick(n => n + 1), 60_000)
+    return () => clearInterval(t)
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -60,7 +70,11 @@ export default function CookPlanTab({ api, activePrep }) {
         }
       } else {
         setCook(null)
-        setPlan(activePrep ? await api.get(`/prep/${activePrep.id}/cook-plan`) : null)
+        const q = Object.entries(courses)
+          .filter(([, m]) => m > 0).map(([id, m]) => `${id}:${m}`).join(',')
+        setPlan(activePrep
+          ? await api.get(`/prep/${activePrep.id}/cook-plan${q ? `?courses=${encodeURIComponent(q)}` : ''}`)
+          : null)
       }
       setError(null)
     } catch (err) {
@@ -68,7 +82,7 @@ export default function CookPlanTab({ api, activePrep }) {
     } finally {
       setLoading(false)
     }
-  }, [api, activePrep])
+  }, [api, activePrep, courses])
 
   useEffect(() => { load() }, [load])
 
@@ -93,16 +107,25 @@ export default function CookPlanTab({ api, activePrep }) {
     return at
   }, [cook, serveTime])
 
+  // EAT AT is when you sit down, which is the *first* course. For a staggered
+  // meal the end of the plan is a later thing entirely, so anchoring on the
+  // end would quietly move dinner by however long the last course trails.
+  // One anchor, and every other time is derived from it.
+  const planStart = useMemo(() => {
+    if (!serveDate) return null
+    const firstCourse = plan?.first_course_minutes ?? plan?.total_minutes ?? 0
+    return new Date(serveDate.getTime() - firstCourse * 60000)
+  }, [serveDate, plan])
+
   // T-minus, or a clock time once the cook has said when they want to eat.
   const timeLabel = useCallback((offsetMin) => {
-    const total = plan?.total_minutes || 0
-    if (serveDate) {
-      const at = new Date(serveDate.getTime() - (total - offsetMin) * 60000)
-      return at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    if (planStart) {
+      return new Date(planStart.getTime() + offsetMin * 60000)
+        .toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
     }
-    const left = total - offsetMin
+    const left = (plan?.first_course_minutes ?? plan?.total_minutes ?? 0) - offsetMin
     return left <= 0 ? 'serve' : `T-${left}m`
-  }, [plan, serveDate])
+  }, [plan, planStart])
 
   const toggle = async (key) => {
     if (!cook) return
@@ -132,6 +155,7 @@ export default function CookPlanTab({ api, activePrep }) {
       const started = await api.post('/meal-cook', {
         prep_session_id: activePrep?.id,
         serve_at: isoForTime(serveTime),
+        courses,
       })
       setCook(started)
       setPlan(started.plan)
@@ -219,13 +243,26 @@ export default function CookPlanTab({ api, activePrep }) {
     )
   }
 
+  // How far into the plan the clock is. Only meaningful once a serve time
+  // exists to measure against; before that "now" is wherever you decide to
+  // start, which is the honest answer rather than a guess.
+  const nowMin = planStart
+    ? Math.round((Date.now() - planStart.getTime()) / 60000)
+    : null
+
+  // The one thing a phone propped against the kettle should answer.
+  const nextStep = cook
+    ? plan.steps.filter(s => !done.has(s.key))
+        .sort((a, b) => a.start_min - b.start_min)[0]
+    : null
+  const nextDue = nextStep && nowMin !== null ? nextStep.start_min - nowMin : null
+
   // When you would have to begin, and whether that has already gone past.
-  const startBy = serveDate ? new Date(serveDate.getTime() - plan.total_minutes * 60000) : null
-  const startByLabel = startBy
-    ? startBy.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  const startByLabel = planStart
+    ? planStart.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
     : 'now'
-  const minutesLeft = serveDate ? Math.round((serveDate - Date.now()) / 60000) : null
-  const tooLate = minutesLeft !== null && minutesLeft < plan.total_minutes ? minutesLeft : null
+  // Not enough runway: the plan would have had to begin before now.
+  const tooLate = nowMin !== null && nowMin > 0 ? nowMin : null
 
   const prepSteps = plan.steps.filter(s => s.phase === 'prep')
   // Prep is the mise en place plus the knife work, so the count has to be
@@ -285,18 +322,20 @@ export default function CookPlanTab({ api, activePrep }) {
 
           {tooLate !== null && (
             <div className="rs-card-meta" style={{ color: 'var(--rs-status-warning)', fontSize: '0.8rem' }}>
-              That is {tooLate} min from now and the meal needs {plan.total_minutes}.
-              Either push it back or expect to serve about {tooLate ? plan.total_minutes - tooLate : 0} min late.
+              You would have needed to start {tooLate} min ago. Push the time back,
+              or carry on and expect to serve about {tooLate} min late.
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {plan.recipes.map(r => (
-              <span key={r.id} className="rs-pill" style={{ fontSize: '0.7rem', borderLeft: `3px solid ${colorFor[r.id]}` }}>
-                {r.title}
-              </span>
-            ))}
-          </div>
+          {/* The picture. A sorted list cannot show that the chicken is in
+              the oven while you peel the potatoes, and that overlap is the
+              entire output of the scheduler. */}
+          <CookPlanTimeline
+            plan={plan}
+            colorFor={colorFor}
+            nowMin={cook ? nowMin : null}
+            onPick={(s) => setView(s.phase === 'prep' ? 'prep' : 'cook')}
+          />
 
           {/* Conflicts are reported rather than resolved: which dish moves
               depends on what tolerates sitting, and the recipe never says. */}
@@ -316,6 +355,76 @@ export default function CookPlanTab({ api, activePrep }) {
           )}
         </div>
       </div>
+
+      {/* What to do now. On a phone propped against the kettle this is the
+          only thing that matters, so it is the only thing that is big. */}
+      {cook && nextStep && (
+        <div className="rs-card is-elev" style={{ borderColor: colorFor[nextStep.recipe_id] }}>
+          <div className="rs-card-inner" style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+            <button
+              className="rs-pill"
+              aria-label={`Mark done: ${nextStep.text}`}
+              style={{ padding: 6, minWidth: 0, background: 'transparent', flexShrink: 0 }}
+              disabled={busy}
+              onClick={() => toggle(nextStep.key)}
+            >
+              <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>radio_button_unchecked</span>
+            </button>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="rs-card-label" style={{ color: 'var(--primary)', fontWeight: 900 }}>
+                {nextDue === null ? 'NEXT'
+                  : nextDue > 1 ? `IN ${nextDue} MIN`
+                  : nextDue < -1 ? `${-nextDue} MIN LATE`
+                  : 'NOW'}
+              </div>
+              <div style={{ fontSize: '1.15rem', fontWeight: 700, lineHeight: 1.35, marginTop: 4 }}>
+                {nextStep.text}
+              </div>
+              <div className="rs-card-label" style={{ fontSize: '0.65rem', marginTop: 6, opacity: 0.8 }}>
+                {nextStep.recipe_title}
+                {nextStep.station !== 'counter' && ` · ${stationLabel(nextStep.station)}`}
+                {nextStep.passive_min > 0 && ` · then ${nextStep.passive_min}m unattended`}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Courses. Before starting only: the plan is frozen once you begin, and
+          re-staggering a meal you are halfway through would move steps you
+          have already done. */}
+      {!cook && plan.recipes.length > 1 && (
+        <div className="rs-card">
+          <div className="rs-card-inner">
+            <div className="rs-card-label" style={{ marginBottom: 4 }}>COURSES</div>
+            <p className="rs-card-meta" style={{ marginTop: 0 }}>
+              Everything lands together unless you say otherwise. Stagger a dish and
+              it still shares the oven and your hands — that is why it stays one plan.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+              {plan.recipes.map(r => (
+                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{
+                    flex: '1 1 130px', minWidth: 0, fontSize: '0.85rem', fontWeight: 600,
+                    borderLeft: `3px solid ${colorFor[r.id]}`, paddingLeft: 8,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{r.title}</span>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[0, 15, 30, 60].map(m => (
+                      <button
+                        key={m}
+                        className={`rs-pill ${(courses[r.id] || 0) === m ? 'is-active' : ''}`}
+                        style={{ fontSize: '0.68rem', padding: '4px 10px' }}
+                        onClick={() => setCourses(c => ({ ...c, [r.id]: m }))}
+                      >{m === 0 ? 'WITH' : `+${m}m`}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>{error}</div>}
 

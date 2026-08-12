@@ -302,3 +302,89 @@ def test_a_third_tray_still_reports():
 def test_preheating_is_prep():
     """It happens before the cooking and needs no attention while it does."""
     assert analyse_step(0, "Preheat the oven to 220C").phase == "prep"
+
+
+# ---------------------------------------------------------------------------
+# Courses
+#
+# Not every meal lands at once. A starter at seven and a main at half past is
+# one cooking session with two deadlines, and so is a bulk cook where tonight's
+# dinner is wanted now and tomorrow's can come out whenever. Splitting those
+# into separate plans would be wrong -- the dishes still share one oven and one
+# cook, and the contention between courses is exactly the part nobody can hold
+# in their head.
+# ---------------------------------------------------------------------------
+
+def _course(rid, title, steps, after=0):
+    return RecipeInPlan(recipe_id=rid, title=title,
+                        steps=analyse_steps(steps), course_offset_min=after)
+
+
+def test_a_later_course_finishes_later():
+    plan = plan_meal([
+        _course("r1", "Soup", ["Simmer for 20 minutes"]),
+        _course("r2", "Main", ["Roast for 40 minutes"], after=30),
+    ])
+    ends = {s.recipe_title: s.end_min for s in plan.steps}
+    assert ends["Main"] - ends["Soup"] == 30
+
+
+def test_the_first_course_is_not_the_end_of_the_plan():
+    """Two anchors, and they are different numbers.
+
+    "Start by" has to count back from the first course; the length of the
+    plan runs to the last one. Conflating them would have the cook starting
+    half an hour late for a staggered meal.
+    """
+    plan = plan_meal([
+        _course("r1", "Soup", ["Simmer for 20 minutes"]),
+        _course("r2", "Main", ["Roast for 40 minutes"], after=30),
+    ])
+    # Written as the gap rather than as two numbers: a step's cost includes
+    # the minute that starts it, so "simmer 20" is 21 minutes of timeline and
+    # pinning the literal would be asserting that constant by accident.
+    assert plan.serve_offset_min - plan.first_course_min == 30
+
+
+def test_a_long_later_course_still_pins_the_start():
+    """A two-hour main wanted thirty minutes after the starter starts first.
+
+    The naive reading -- first course sets the clock, later ones follow -- gets
+    this backwards and has the main going in half an hour after it needed to.
+    """
+    plan = plan_meal([
+        _course("r1", "Salad", ["Toss for 2 minutes"]),
+        _course("r2", "Brisket", ["Braise for 120 minutes"], after=30),
+    ])
+    brisket = [s for s in plan.steps if s.recipe_id == "r2"][0]
+    assert brisket.start_min == 0, "the long dish has to begin at the top"
+
+    # The starter waits for the brisket rather than the other way round: the
+    # first course lands a full thirty minutes before the main it is ahead of.
+    assert plan.first_course_min == brisket.end_min - 30
+
+
+def test_no_offsets_still_means_everything_together():
+    """The default has to be the old behaviour, or every existing plan moves."""
+    plan = plan_meal([
+        _course("r1", "A", ["Roast for 40 minutes"]),
+        _course("r2", "B", ["Steam for 6 minutes"]),
+    ])
+    ends = {s.end_min for s in plan.steps}
+    assert len(ends) == 1
+    assert plan.first_course_min == plan.serve_offset_min
+
+
+def test_courses_still_contend_for_the_oven():
+    """The reason this is one plan and not two.
+
+    Staggering the courses does not give you a second oven, and a starter that
+    overlaps the main is exactly the clash you cannot see by reading two
+    recipes side by side.
+    """
+    plan = plan_meal([
+        _course("r1", "Tart", ["Bake for 40 minutes"]),
+        _course("r2", "Gratin", ["Bake for 40 minutes"], after=10),
+        _course("r3", "Bread", ["Bake for 40 minutes"], after=20),
+    ])
+    assert [c for c in plan.conflicts if c.resource == "oven"]
