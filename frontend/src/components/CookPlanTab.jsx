@@ -37,7 +37,7 @@ const stationIcon = s => STATION_ICONS[s] || 'restaurant'
 // A colour per recipe so an interleaved list still reads as several dishes.
 const RECIPE_COLORS = ['#7dd3fc', '#fca5a5', '#c4b5fd', '#fcd34d', '#86efac', '#f9a8d4']
 
-export default function CookPlanTab({ api, activePrep }) {
+export default function CookPlanTab({ api, activePrep, refreshNonce }) {
   const [plan, setPlan]       = useState(null)
   const [cook, setCook]       = useState(null)   // the frozen, in-progress one
   const [view, setView]       = useState('prep')
@@ -56,9 +56,12 @@ export default function CookPlanTab({ api, activePrep }) {
   }, [])
 
   const load = useCallback(async () => {
+    const runId = Math.random()
+    let current = true
     setLoading(true)
     try {
       const active = await api.get('/meal-cook').catch(() => ({ cook: null }))
+      if (!current) return  // Newer invocation has started
       if (active?.cook) {
         // A started meal shows the plan it was started with, never a fresh
         // one — the whole point of freezing it.
@@ -72,19 +75,24 @@ export default function CookPlanTab({ api, activePrep }) {
         setCook(null)
         const q = Object.entries(courses)
           .filter(([, m]) => m > 0).map(([id, m]) => `${id}:${m}`).join(',')
-        setPlan(activePrep
+        const plan = activePrep
           ? await api.get(`/prep/${activePrep.id}/cook-plan${q ? `?courses=${encodeURIComponent(q)}` : ''}`)
-          : null)
+          : null
+        if (!current) return  // Newer invocation finished first
+        setPlan(plan)
       }
+      if (!current) return
       setError(null)
     } catch (err) {
+      if (!current) return
       setError(err.message)
     } finally {
-      setLoading(false)
+      if (current) setLoading(false)
     }
+    return () => { current = false }
   }, [api, activePrep, courses])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load() }, [load, refreshNonce])
 
   const done = useMemo(() => new Set(cook?.done || []), [cook])
 

@@ -854,8 +854,7 @@ async def create_recipe(
         ).first()
         if existing:
             raise conflict(
-                f"A recipe with title '{
-                    body.title}' already exists.")
+                f"A recipe with title '{body.title}' already exists.")
 
     blacklisted = _flag_blacklist(db, hh.id, body.ingredients)
     meal = body.meal_type
@@ -1247,9 +1246,7 @@ async def ingest_recipe(
         except httpx.HTTPStatusError as exc:
             raise HTTPException(
                 status_code=502,
-                detail=f"Recipe site returned an error: {
-                    exc.response.status_code} {
-                    exc.response.reason_phrase}"
+                detail=f"Recipe site returned an error: {exc.response.status_code} {exc.response.reason_phrase}"
             )
         except Exception as exc:
             logger.error("Failed to fetch recipe URL %s: %s", source_url, exc)
@@ -1384,8 +1381,7 @@ async def ingest_recipe(
             ).first()
             if existing:
                 raise conflict(
-                    f"Recipe '{
-                        existing.title}' already exists in your library.")
+                    f"Recipe '{existing.title}' already exists in your library.")
 
     saved: List[Recipe] = []
     try:
@@ -1900,7 +1896,8 @@ def _aggregate_prep_list(db: Session, hh: Household, session) -> List[dict]:
     }
 
     # Aggregate ingredients across all recipes
-    aggregated: Dict[str, dict] = {}
+    # Key is (name, unit) to keep incompatible units separate
+    aggregated: Dict[tuple, dict] = {}
     for entry in session.recipes:
         ingredients_json = entry.scaled_ingredients_json or (
             entry.recipe.ingredients_json if entry.recipe else "[]"
@@ -1913,16 +1910,18 @@ def _aggregate_prep_list(db: Session, hh: Household, session) -> List[dict]:
             name_key = ing.get("name", "").lower().strip()
             if name_key in good_stock:
                 continue
-            if name_key in aggregated:
+            unit = str(ing.get("unit", "")).lower().strip()
+            agg_key = (name_key, unit)
+            if agg_key in aggregated:
                 try:
-                    aggregated[name_key]["qty"] = _format_qty(
-                        _parse_qty(str(aggregated[name_key]["qty"]))
+                    aggregated[agg_key]["qty"] = _format_qty(
+                        _parse_qty(str(aggregated[agg_key]["qty"]))
                         + _parse_qty(str(ing.get("qty", 0)))
                     )
                 except (ValueError, TypeError):
                     pass
             else:
-                aggregated[name_key] = {
+                aggregated[agg_key] = {
                     "name": ing.get("name", ""),
                     "qty": ing.get("qty", ""),
                     "unit": ing.get("unit", ""),
@@ -1932,9 +1931,11 @@ def _aggregate_prep_list(db: Session, hh: Household, session) -> List[dict]:
     low_items = db.query(StockroomItem).filter_by(household_id=hh.id).all()
     for item in low_items:
         if item.state == StockState.LOW:
-            key = item.name.lower().strip()
-            if key not in aggregated:
-                aggregated[key] = {
+            name_key = item.name.lower().strip()
+            unit = ""
+            agg_key = (name_key, unit)
+            if agg_key not in aggregated:
+                aggregated[agg_key] = {
                     "name": item.name,
                     "qty": "",
                     "unit": "",
@@ -1981,8 +1982,9 @@ async def push_prep_list_to_grocery(
     if not session:
         raise not_found("Prep session not found")
 
+    # Build set of existing unchecked items (normalized name+unit)
     existing = {
-        i.name.lower().strip()
+        (i.name.lower().strip(), (i.unit or "").lower().strip())
         for i in db.query(ShoppingListItem).filter(
             ShoppingListItem.household_id == hh.id,
             ShoppingListItem.checked_at.is_(None),
@@ -1992,20 +1994,34 @@ async def push_prep_list_to_grocery(
     added = 0
     for ing in _aggregate_prep_list(db, hh, session):
         name = (ing.get("name") or "").strip()
-        if not name or name.lower() in existing:
+        unit = str(ing.get("unit") or "").strip()
+        if not name:
             continue
-        existing.add(name.lower())
-        db.add(ShoppingListItem(
-            household_id=hh.id,
-            name=name,
-            qty=str(ing.get("qty") or "") or None,
-            unit=str(ing.get("unit") or "") or None,
-            category="grocery",
-            source=ListSource.PREP,
-            source_ref=session_id,
-            added_by=uid,
-        ))
-        added += 1
+
+        # Check if this name+unit combo already exists unchecked
+        norm_key = (name.lower(), unit.lower())
+        if norm_key in existing:
+            continue
+
+        # Atomic insert - if concurrent request adds the same item, skip via unique constraint
+        try:
+            db.add(ShoppingListItem(
+                household_id=hh.id,
+                name=name,
+                qty=str(ing.get("qty") or "") or None,
+                unit=unit or None,
+                category="grocery",
+                source=ListSource.PREP,
+                source_ref=session_id,
+                added_by=uid,
+            ))
+            db.flush()  # Force constraint check before commit
+            existing.add(norm_key)
+            added += 1
+        except Exception:
+            # Concurrent insert won - skip this item
+            db.rollback()
+            continue
 
     if added:
         db.commit()

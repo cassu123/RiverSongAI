@@ -41,14 +41,16 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
 
   useEffect(() => {
     if (!token) return
+    let active = true
     setLoading(true)
     const q = account
       ? `days=${days}&user_id=${encodeURIComponent(account)}`
       : `days=${days}&scope=${scope}`
     fetch(`/api/usage/tokens?${q}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { setData(d); setLoading(false) })
-      .catch(() => setLoading(false))
+      .then(d => { if (active) { setData(d); setLoading(false) } })
+      .catch(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [token, days, scope, account])
 
   function fmtTokens(n) {

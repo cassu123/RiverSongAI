@@ -130,7 +130,7 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
               token={token}
               expanded={expandedId === group.id}
               onToggleExpand={() => setExpandedId(expandedId === group.id ? null : group.id)}
-              onDelete={() => setConfirmDelId(group.id)}
+              onDelete={() => { setHeirId(''); setConfirmDelId(group.id) }}
               onToggleModule={(mod) => toggleModule(group, mod)}
               onRename={(name) => renameGroup(group, name)}
               onMemberChange={reload}

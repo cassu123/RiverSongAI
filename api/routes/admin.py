@@ -88,8 +88,7 @@ async def update_user(
 
     if body.role is not None and body.role not in VALID_ROLES:
         raise bad_request(
-            f"Invalid role. Must be one of: {
-                ', '.join(VALID_ROLES)}")
+            f"Invalid role. Must be one of: {', '.join(VALID_ROLES)}")
 
     # Prevent admin from demoting themselves
     if payload["sub"] == user_id and body.role and body.role != "admin":
@@ -569,14 +568,16 @@ async def delete_family_group(
             raise bad_request(
                 "reassign_to must be a current member of this group.")
 
-        result = reassign_culinary_household(group_id, reassign_to)
-        if not result.get("reassigned"):
-            raise bad_request(
-                f"Could not reassign the shared household: {result}. "
-                f"Nothing was deleted.")
-        logger.info(
-            "Admin %s reassigned family group %s culinary data to %s: %s",
-            payload["sub"], group_id, reassign_to, result)
+        # Only invoke culinary reassignment when culinary is present
+        if "culinary" in holdings:
+            result = reassign_culinary_household(group_id, reassign_to)
+            if not result.get("reassigned"):
+                raise bad_request(
+                    f"Could not reassign the shared household: {result}. "
+                    f"Nothing was deleted.")
+            logger.info(
+                "Admin %s reassigned family group %s culinary data to %s: %s",
+                payload["sub"], group_id, reassign_to, result)
 
         # Only culinary has a reassignment path. Anything else still held is
         # reported rather than quietly dropped along with the group.
@@ -603,8 +604,7 @@ async def add_family_member(
     payload = await _require_admin(request, authorization)
     if body.relationship not in VALID_RELATIONS:
         raise bad_request(
-            f"Invalid relationship. Choose from: {
-                ', '.join(VALID_RELATIONS)}")
+            f"Invalid relationship. Choose from: {', '.join(VALID_RELATIONS)}")
     store = _get_store(request)
     group = await store.get_family_group(group_id)
     if not group:

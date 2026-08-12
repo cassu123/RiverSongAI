@@ -523,6 +523,7 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
 
     def _sync_work():
         from core.family import resolve_module_owner
+        from sqlalchemy.exc import IntegrityError
 
         db = SessionLocal()
         try:
@@ -541,10 +542,18 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
                 # creates on miss. Saying "not found" to someone who has
                 # simply never opened the Culinary page is a dead end they
                 # cannot act on.
-                hh = Household(owner_id=owner_id)
-                db.add(hh)
-                db.commit()
-                db.refresh(hh)
+                try:
+                    hh = Household(owner_id=owner_id)
+                    db.add(hh)
+                    db.commit()
+                    db.refresh(hh)
+                except IntegrityError:
+                    # Concurrent insert - re-query to get the existing record
+                    db.rollback()
+                    hh = db.query(Household).filter(
+                        Household.owner_id == owner_id).first()
+                    if not hh:
+                        raise  # Something else went wrong
             sl_item = ShoppingListItem(
                 household_id=hh.id,
                 name=item,
@@ -1272,10 +1281,7 @@ async def _exec_mow_command(args: dict, user_id: str) -> str:
         if online:
             return f"Command queued: {label}. Voyager will execute it on the next poll (within 100 ms)."
         else:
-            ago = f"{
-                round(
-                    time.time() -
-                    last_seen)}s ago" if last_seen else "never"
+            ago = f"{round(time.time() - last_seen)}s ago" if last_seen else "never"
             return (
                 f"Command queued: {label}. "
                 f"Note: Voyager was last seen {ago} and may be offline. "

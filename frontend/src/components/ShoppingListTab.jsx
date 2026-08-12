@@ -37,6 +37,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
   const [error, setError] = useState(null)
   const [name, setName] = useState('')
   const [qty, setQty] = useState('')
+  const [unit, setUnit] = useState('')
   const [busy, setBusy] = useState(false)
 
   const [showWalmart, setShowWalmart] = useState(false)
@@ -87,7 +88,8 @@ export default function ShoppingListTab({ api, refreshKey }) {
     if (!trimmed) return
     setName('')
     setQty('')
-    await mutate(() => api.post('/grocery', { name: trimmed, qty: qty.trim() || null }))
+    setUnit('')
+    await mutate(() => api.post('/grocery', { name: trimmed, qty: qty.trim() || null, unit: unit.trim() || null }))
   }
 
   const unchecked = items.filter(i => !i.checked)
@@ -177,10 +179,10 @@ export default function ShoppingListTab({ api, refreshKey }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 720, margin: '0 auto', width: '100%' }}>
-      <form onSubmit={add} style={{ display: 'flex', gap: 8 }}>
+      <form onSubmit={add} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <input
           className="rs-pill"
-          style={{ flex: 1, minWidth: 0, background: 'var(--md-surface-container-low)', border: 'none' }}
+          style={{ flex: 1, minWidth: 120, background: 'var(--md-surface-container-low)', border: 'none' }}
           placeholder="Add to the list…"
           aria-label="Item to add"
           value={name}
@@ -188,11 +190,19 @@ export default function ShoppingListTab({ api, refreshKey }) {
         />
         <input
           className="rs-pill"
-          style={{ width: 88, background: 'var(--md-surface-container-low)', border: 'none', textAlign: 'center' }}
+          style={{ width: 68, background: 'var(--md-surface-container-low)', border: 'none', textAlign: 'center' }}
           placeholder="Qty"
           aria-label="Quantity"
           value={qty}
           onChange={e => setQty(e.target.value)}
+        />
+        <input
+          className="rs-pill"
+          style={{ width: 72, background: 'var(--md-surface-container-low)', border: 'none', textAlign: 'center' }}
+          placeholder="Unit"
+          aria-label="Unit"
+          value={unit}
+          onChange={e => setUnit(e.target.value)}
         />
         <button className="rs-btn-primary" type="submit" disabled={busy || !name.trim()}>
           <span className="material-symbols-rounded">add</span>

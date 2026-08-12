@@ -143,12 +143,40 @@ def extract_minutes(text: str) -> int:
     the next dish on the counter while this one is still in the oven, and the
     cost of the two spare minutes is that you wait; the cost of being early is
     that the plan is wrong from there on.
+
+    Compound durations like "1 hour 30 minutes" are recognized and summed.
+    Adjacent matches are considered part of the same phrase when they appear
+    within a few characters of each other.
     """
+    matches = list(_DURATION.finditer(text))
+    if not matches:
+        return 0
+
     best = 0.0
-    for lo, hi, unit in _DURATION.findall(text):
+    compound = 0.0
+    last_end = -1
+
+    for match in matches:
+        lo, hi, unit = match.groups()
         factor = _UNIT_MINUTES.get(unit.lower(), 0)
         value = float(hi or lo) * factor
-        best = max(best, value)
+
+        # Check if this match is adjacent to the previous one (compound duration)
+        if last_end >= 0 and match.start() - last_end <= 5:
+            # Part of a compound duration - accumulate
+            compound += value
+        else:
+            # New phrase - save the previous compound and start fresh
+            if compound > 0:
+                best = max(best, compound)
+            compound = value
+
+        last_end = match.end()
+
+    # Don't forget the final compound
+    if compound > 0:
+        best = max(best, compound)
+
     return int(round(best))
 
 
@@ -375,16 +403,30 @@ def plan_meal(
     if not recipes:
         return CookPlan(serve_offset_min=0)
 
+    # Normalize course offsets so the minimum is zero - if the earliest course
+    # is offset by 30 minutes, treat that as time zero rather than letting
+    # negative offsets put steps before the plan begins.
+    min_course_offset = min(r.course_offset_min for r in recipes)
+    normalized_recipes = [
+        RecipeInPlan(
+            recipe_id=r.recipe_id,
+            title=r.title,
+            steps=r.steps,
+            course_offset_min=r.course_offset_min - min_course_offset,
+        )
+        for r in recipes
+    ]
+
     # When the first course is served. Each dish has to have started early
     # enough to be ready for its own course, so the earliest possible first
     # course is set by whichever dish is most behind relative to when it is
     # wanted -- a two-hour main wanted thirty minutes after the starter still
     # pins the whole evening.
-    base = max(r.total_min - r.course_offset_min for r in recipes)
-    last_course = max(r.course_offset_min for r in recipes)
+    base = max(r.total_min - r.course_offset_min for r in normalized_recipes)
+    last_course = max(r.course_offset_min for r in normalized_recipes)
     placed: List[PlannedStep] = []
 
-    for recipe in recipes:
+    for recipe in normalized_recipes:
         # Finish exactly when this dish is wanted, not when the meal ends.
         cursor = base + recipe.course_offset_min - recipe.total_min
         for step in recipe.steps:

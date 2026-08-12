@@ -318,10 +318,15 @@ gen_secret() {
 
 for secret_key in JWT_SECRET_KEY DAEMON_INTERNAL_SECRET; do
   current=$(grep "^${secret_key}=" .env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
-  if [[ -n "$current" && "$current" != "change_me_in_production" && ${#current} -ge 24 ]]; then
+  # JWT_SECRET_KEY requires 32 chars minimum, DAEMON_INTERNAL_SECRET requires 24
+  min_len=24
+  [[ "$secret_key" == "JWT_SECRET_KEY" ]] && min_len=32
+
+  if [[ -n "$current" && "$current" != "change_me_in_production" && ${#current} -ge $min_len ]]; then
     ok "${secret_key} already set -- leaving it alone"
   else
-    env_set_placeholder "$secret_key" "$(gen_secret 48)"
+    new_val="$(gen_secret 48)"
+    env_set_placeholder "$secret_key" "$new_val"
     ok "Generated ${secret_key}"
   fi
 done
@@ -368,8 +373,11 @@ if [[ -n "$DOMAIN" && "$DOMAIN" != "lan" ]]; then
   [[ -n "$LAN_IP" ]] && HOSTS="${HOSTS},\"${LAN_IP}\""
   HOSTS="${HOSTS}]"
   env_set_placeholder "ALLOWED_HOSTS" "$HOSTS"
-  env_set_placeholder "CORS_ORIGINS"  "[\"https://${DOMAIN}\",\"https://www.${DOMAIN}\"]"
-  ok "Configured for ${DOMAIN}"
+  # Use HTTP by default unless TLS is actually configured and reachable
+  # Setting https:// here when no TLS terminator exists would break CORS
+  env_set_placeholder "CORS_ORIGINS"  "[\"http://${DOMAIN}\",\"http://www.${DOMAIN}\"]"
+  ok "Configured for ${DOMAIN} (HTTP)"
+  info "To use HTTPS, set up a TLS terminator and update CORS_ORIGINS manually"
 else
   HOSTS="[\"localhost\",\"127.0.0.1\",\"${SHORT_HOST}\",\"${SHORT_HOST}.local\""
   ORIGINS="[\"http://localhost:${APP_PORT_VAL}\",\"http://${SHORT_HOST}.local:${APP_PORT_VAL}\""
@@ -574,17 +582,52 @@ fi
 # commit takes their household down overnight with no one watching.
 # ---------------------------------------------------------------------------
 
-step "Step 11/11 -- Auto-deploy cron job"
+step "Step 11/11 -- Auto-deploy systemd timer"
 
-CRON_CMD="cd ${PROJECT_DIR} && git pull origin main --quiet && source venv/bin/activate && pip install -r requirements.txt --no-build-isolation --quiet && cd frontend && npm install --silent && npm run build --silent && cd .. && sudo systemctl restart river-song"
-CRON_JOB="0 3 * * * ${CRON_CMD} >> ${PROJECT_DIR}/logs/deploy.log 2>&1"
-
-if crontab -l 2>/dev/null | grep -q "river-song\|deploy.log"; then
-  ok "Auto-deploy cron job already set"
+# Check if systemd service/timer already exists
+if systemctl --user list-unit-files | grep -q "river-song-deploy"; then
+  ok "Auto-deploy systemd service already configured"
 elif [[ "${RIVER_AUTO_DEPLOY:-0}" == "1" ]]; then
   mkdir -p "${PROJECT_DIR}/logs"
-  (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
-  ok "Auto-deploy cron job set (runs nightly at 3am)"
+  mkdir -p ~/.config/systemd/user
+
+  # Create systemd service file
+  cat > ~/.config/systemd/user/river-song-deploy.service <<EOF
+[Unit]
+Description=River Song Auto-Deploy
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=${PROJECT_DIR}
+ExecStart=/bin/bash -c 'git pull origin main --quiet && ${PROJECT_DIR}/venv/bin/pip install -r requirements.txt --no-build-isolation --quiet && cd frontend && npm install --silent && npm run build --silent && cd .. && systemctl --user restart river-song'
+StandardOutput=append:${PROJECT_DIR}/logs/deploy.log
+StandardError=append:${PROJECT_DIR}/logs/deploy.log
+
+[Install]
+WantedBy=default.target
+EOF
+
+  # Create systemd timer file
+  cat > ~/.config/systemd/user/river-song-deploy.timer <<EOF
+[Unit]
+Description=River Song Auto-Deploy Timer
+Requires=river-song-deploy.service
+
+[Timer]
+OnCalendar=daily
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+  systemctl --user daemon-reload
+  systemctl --user enable river-song-deploy.timer
+  systemctl --user start river-song-deploy.timer
+  ok "Auto-deploy systemd timer set (runs nightly at 3am)"
+  info "View status: systemctl --user status river-song-deploy.timer"
 else
   info "Skipped. Re-run with RIVER_AUTO_DEPLOY=1 to update automatically at 3am;"
   info "otherwise update by hand with: git pull && ./setup.sh && sudo systemctl restart river-song"

@@ -31,7 +31,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Request, status
 from pydantic import BaseModel, Field
@@ -629,7 +629,7 @@ class MealCookStart(BaseModel):
     #: ISO-8601. Only used to render wall-clock times; the plan is offsets.
     serve_at: Optional[str] = None
     #: recipe_id -> minutes after the first course. Absent means "together".
-    courses: Optional[Dict[str, int]] = None
+    courses: Optional[Dict[str, Annotated[int, Field(ge=0)]]] = None
 
 
 class MealStepDone(BaseModel):
@@ -649,7 +649,9 @@ def _courses_from_query(raw: str) -> Dict[str, int]:
     for part in (raw or "").split(","):
         rid, _, minutes = part.partition(":")
         if rid.strip() and minutes.strip().lstrip("-").isdigit():
-            courses[rid.strip()] = int(minutes)
+            parsed = int(minutes)
+            if parsed >= 0:
+                courses[rid.strip()] = parsed
     return courses
 
 
@@ -824,8 +826,9 @@ async def start_meal_cook(
     if body.serve_at:
         try:
             serve_at = datetime.fromisoformat(body.serve_at.replace("Z", "+00:00"))
-        except ValueError:
-            serve_at = None
+        except ValueError as e:
+            from core.errors import bad_request
+            raise bad_request("Could not parse serve_at as a valid ISO datetime") from e
 
     cook = MealCook(
         household_id=hh.id,
@@ -923,8 +926,9 @@ async def set_meal_serve_time(
         try:
             cook.serve_at = datetime.fromisoformat(
                 body.serve_at.replace("Z", "+00:00"))
-        except ValueError:
-            raise not_found("Could not read that time")
+        except ValueError as e:
+            from core.errors import bad_request
+            raise bad_request("Could not parse serve_at as a valid ISO datetime") from e
     else:
         cook.serve_at = None
     db.commit()

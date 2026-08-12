@@ -502,6 +502,9 @@ export default function CulinaryPage({ setAction }) {
   // when it changes. The list is shared across the household, so it moves
   // without this tab having touched it.
   const [groceryNonce, setGroceryNonce] = useState(0)
+  // Bumped when the active meal cook changes; CookPlanTab reloads to reflect
+  // the new state or cleared activePrep.
+  const [mealCookNonce, setMealCookNonce] = useState(0)
 
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState('ALL')
@@ -568,6 +571,8 @@ export default function CulinaryPage({ setAction }) {
         if (msg.event === 'meal_cook_updated') {
           // Two people cooking the same meal tick steps off on two phones.
           if (activeTab === 'cook') fetchData('cook');
+          // Increment the nonce to trigger CookPlanTab reload
+          setMealCookNonce(n => n + 1);
         }
       } catch (e) {}
     };
@@ -929,7 +934,7 @@ export default function CulinaryPage({ setAction }) {
           {activeTab === 'list' && <ShoppingListTab api={api} refreshKey={groceryNonce} />}
           {/* The cook plan needs the staged recipes, so it reads the same
               activePrep the prep tab does rather than fetching its own. */}
-          {activeTab === 'cook' && <CookPlanTab api={api} activePrep={activePrep} />}
+          {activeTab === 'cook' && <CookPlanTab api={api} activePrep={activePrep} refreshNonce={mealCookNonce} />}
           {activeTab === 'stockroom' && renderStockroom()}
           {activeTab === 'dinner' && renderDinner()}
           {activeTab === 'prep' && renderPrep()}

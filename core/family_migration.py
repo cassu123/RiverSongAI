@@ -211,7 +211,8 @@ def _migrate_culinary(profile_id: str, family_owner: str,
                 profile_id[:8], phh_id, stragglers,
             )
             return {"moved": moved, "by_table": moved_by_table,
-                    "household_deleted": False, "stragglers": stragglers}
+                    "household_deleted": False, "stragglers": stragglers,
+                    "partial": True}
 
         conn.execute("DELETE FROM cul_households WHERE id=?", (phh_id,))
         conn.commit()
@@ -450,7 +451,8 @@ def count_family_data(group_id: str) -> dict:
                 conn.close()
         except Exception as exc:
             logger.debug("Culinary row count failed: %s", exc)
-        counts["culinary"] = rows
+        if rows:
+            counts["culinary"] = rows
 
     inv = _count(
         _INV_DB(),
@@ -519,7 +521,8 @@ def reassign_culinary_household(group_id: str, target_profile_id: str) -> dict:
                     logger.error(
                         "Kept shared household %s: still referenced by %s",
                         fam["id"], stragglers)
-                    return {"reassigned": False, "stragglers": stragglers}
+                    return {"reassigned": False, "stragglers": stragglers,
+                            "partial": True, "moved": moved}
                 conn.execute(
                     "DELETE FROM cul_households WHERE id=?", (fam["id"],))
                 conn.commit()
