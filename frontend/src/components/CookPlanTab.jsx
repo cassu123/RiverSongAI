@@ -178,6 +178,10 @@ export default function CookPlanTab({ api, activePrep }) {
   }
 
   const prepSteps = plan.steps.filter(s => s.phase === 'prep')
+  // Prep is the mise en place plus the knife work, so the count has to be
+  // both or the tab promises less than the screen holds.
+  const prepCount = prepSteps.length +
+    (plan.recipes || []).reduce((n, r) => n + (r.ingredients?.length || 0), 0)
   const cookSteps = plan.steps.filter(s => s.phase !== 'prep')
 
   // What each appliance is doing, and when. Answers "what do I need out"
@@ -242,7 +246,7 @@ export default function CookPlanTab({ api, activePrep }) {
 
       <div style={{ display: 'flex', gap: 8 }}>
         {[
-          { id: 'prep', icon: 'cut', label: `PREP (${prepSteps.length})` },
+          { id: 'prep', icon: 'cut', label: `PREP (${prepCount})` },
           { id: 'kit',  icon: 'kitchen', label: `KIT (${Object.keys(byStation).length})` },
           { id: 'cook', icon: 'skillet', label: `COOK (${cookSteps.length})` },
         ].map(v => (
@@ -258,14 +262,68 @@ export default function CookPlanTab({ api, activePrep }) {
       </div>
 
       {view === 'prep' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <p className="rs-card-meta">
-            Everything that can be done before the heat goes on, in the order the
-            timeline needs it. Do it all up front and the cook phase has no knife work in it.
+            Everything before the heat goes on. Get it all out and measured first
+            and the cook phase is just heat and timing.
           </p>
-          {prepSteps.length === 0
-            ? <div className="rs-card-meta">No separate prep — these recipes start at the stove.</div>
-            : prepSteps.map(step)}
+
+          {/* Mise en place. Most of prep is portioning, and none of it appears
+              in the steps -- a recipe says "add the paprika", never "get the
+              paprika out". One card per dish, because that is how the bowls
+              end up on the counter. */}
+          {plan.recipes.filter(r => r.ingredients?.length).map(r => (
+            <div key={r.id} className="rs-card">
+              <div className="rs-card-inner">
+                <div className="rs-card-head" style={{ marginBottom: 10 }}>
+                  <span className="rs-card-label" style={{ fontWeight: 900, borderLeft: `3px solid ${colorFor[r.id]}`, paddingLeft: 8 }}>
+                    MEASURE OUT · {r.title.toUpperCase()}
+                  </span>
+                  <span className="rs-card-label" style={{ fontSize: '0.65rem' }}>
+                    {r.ingredients.filter(i => done.has(i.key)).length}/{r.ingredients.length}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {r.ingredients.map(ing => {
+                    const isDone = done.has(ing.key)
+                    return (
+                      <div key={ing.key} className="rs-pill" style={{
+                        justifyContent: 'flex-start', gap: 10, padding: '8px 12px',
+                        background: 'var(--md-surface-container-low)',
+                        opacity: isDone ? 0.45 : 1,
+                      }}>
+                        {cook && (
+                          <button
+                            className="rs-pill"
+                            aria-label={isDone ? `Undo ${ing.name}` : `Measured out ${ing.name}`}
+                            aria-pressed={isDone}
+                            style={{ padding: 2, minWidth: 0, background: 'transparent' }}
+                            disabled={busy}
+                            onClick={() => toggle(ing.key)}
+                          >
+                            <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', color: isDone ? 'var(--primary)' : 'inherit' }}>
+                              {isDone ? 'check_circle' : 'radio_button_unchecked'}
+                            </span>
+                          </button>
+                        )}
+                        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, minWidth: 68, color: 'var(--primary)', fontSize: '0.8rem' }}>
+                          {[ing.qty, ing.unit].filter(Boolean).join(' ') || '—'}
+                        </span>
+                        <span style={{ flex: 1, textDecoration: isDone ? 'line-through' : 'none' }}>{ing.name}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {prepSteps.length > 0 && (
+            <>
+              <div className="rs-card-label" style={{ marginTop: 4 }}>THEN, IN THIS ORDER</div>
+              {prepSteps.map(step)}
+            </>
+          )}
         </div>
       )}
 

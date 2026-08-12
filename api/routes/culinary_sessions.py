@@ -658,6 +658,12 @@ def _plan_for_prep_session(db: Session, hh, session) -> Dict[str, Any]:
     from providers.culinary.cook_plan import RecipeInPlan, analyse_steps, plan_meal
 
     recipes = []
+    #: Mise en place. Most of prep is measuring and portioning, and none of
+    #: that appears in the steps -- a recipe says "add the paprika", never
+    #: "get the paprika out". Carried per recipe so the prep screen can ask
+    #: for bowls rather than only for knife work.
+    mise: Dict[str, List[dict]] = {}
+
     for entry in session.recipes:
         if not entry.recipe:
             continue
@@ -669,12 +675,29 @@ def _plan_for_prep_session(db: Session, hh, session) -> Dict[str, Any]:
             title=entry.recipe.title,
             steps=analyse_steps(steps),
         ))
+        # Scaled quantities when the session has them: portioning out the
+        # unscaled amount for a doubled recipe is the mistake this screen
+        # exists to prevent.
+        ingredients = _safe_json(
+            entry.scaled_ingredients_json,
+            None) or _safe_json(entry.recipe.ingredients_json, [])
+        mise[entry.recipe_id] = [
+            {
+                "key": f"{entry.recipe_id}:ing:{i}",
+                "name": ing.get("name", ""),
+                "qty": ing.get("qty", ""),
+                "unit": ing.get("unit", ""),
+            }
+            for i, ing in enumerate(ingredients)
+            if isinstance(ing, dict) and ing.get("name")
+        ]
 
     plan = plan_meal(recipes, owned_stations=_owned_stations(db, hh.id))
     return {
         "total_minutes": plan.serve_offset_min,
         "stations": plan.stations_used,
-        "recipes": [{"id": r.recipe_id, "title": r.title} for r in recipes],
+        "recipes": [{"id": r.recipe_id, "title": r.title,
+                     "ingredients": mise.get(r.recipe_id, [])} for r in recipes],
         "steps": [
             {
                 # Stable across replans, so ticking a step survives a reload.
@@ -824,7 +847,13 @@ async def mark_meal_step(
         raise not_found("That meal is not being cooked")
 
     done = set(_safe_json(cook.done_steps_json, []))
-    known = {s["key"] for s in _safe_json(cook.plan_json, {}).get("steps", [])}
+    plan = _safe_json(cook.plan_json, {})
+    # Mise en place lines are ticked the same way steps are -- measuring the
+    # paprika out is a thing you finish, and on a shared list it wants to be
+    # visible to whoever is doing the other half of the prep.
+    known = {s["key"] for s in plan.get("steps", [])}
+    for r in plan.get("recipes", []):
+        known.update(i["key"] for i in r.get("ingredients", []))
     if body.key not in known:
         raise not_found("No such step in this plan")
 
