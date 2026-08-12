@@ -197,6 +197,11 @@ class PrepSessionRecipe(Base):  # type: ignore
 
     servings_target: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     scaled_ingredients_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)# post-scaling JSON
+    #: A method rewritten for a different appliance, for this session only:
+    #: {"station", "steps", "ingredients", "note"}. Deliberately here and not
+    #: on the Recipe -- trying the Dutch oven once should not rewrite the
+    #: thing you will cook in a skillet next month.
+    appliance_swap_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     added_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 

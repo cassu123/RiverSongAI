@@ -52,6 +52,8 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
   const [busy, setBusy]       = useState(false)
   const [serveTime, setServeTime] = useState('')   // "HH:MM", local
   const [courses, setCourses] = useState({})       // recipe_id -> minutes after
+  const [swapping, setSwapping] = useState(null)   // recipe_id being rewritten
+  const [swapError, setSwapError] = useState(null)
   const [tick, setTick] = useState(0)              // re-render so NOW advances
 
   // A minute is the resolution the whole plan is in; anything finer would
@@ -199,6 +201,21 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
     return at.toISOString()
   }
 
+  // The one place a model is doing real work. It can genuinely fail, and when
+  // it does the recipe is unchanged and the cook is told -- silently keeping
+  // the old method would say the appliance works and hand over the wrong
+  // instructions for it.
+  const swapAppliance = async (recipeId, station) => {
+    setSwapping(recipeId)
+    setSwapError(null)
+    try {
+      await api.post(`/prep/${activePrep.id}/appliance-swap`, { recipe_id: recipeId, station })
+      await load()
+    } catch (err) {
+      setSwapError({ recipeId, message: err.message })
+    } finally { setSwapping(null) }
+  }
+
   const start = async () => {
     setBusy(true)
     try {
@@ -335,6 +352,8 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
     : 'now'
   // Not enough runway: the plan would have had to begin before now.
   const tooLate = nowMin !== null && nowMin > 0 ? nowMin : null
+
+  const swapFor = (recipeId) => (plan.swaps || []).find(w => w.recipe_id === recipeId)
 
   const prepSteps = plan.steps.filter(s => s.phase === 'prep')
   // Prep is the mise en place plus the knife work, so the count has to be
@@ -491,6 +510,42 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
                       >{m === 0 ? 'WITH' : `+${m}m`}</button>
                     ))}
                   </div>
+
+                  {/* Cook it in something else. Unlike everything around it
+                      this rewrites the method, so it only ever affects this
+                      session — the saved recipe is not touched and REVERT
+                      brings the original back because it never left. */}
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', width: '100%' }}>
+                    <select
+                      className="settings-select"
+                      style={{ fontSize: '0.72rem', flex: 1, minWidth: 0 }}
+                      aria-label={`Cook ${r.title} in`}
+                      disabled={swapping === r.id}
+                      value={swapFor(r.id)?.station || ''}
+                      onChange={e => swapAppliance(r.id, e.target.value || null)}
+                    >
+                      <option value="">cook it as written</option>
+                      {Object.entries(STATION_LABELS)
+                        .filter(([k]) => k !== 'counter')
+                        .map(([k, label]) => (
+                          <option key={k} value={k}>cook it in the {label.toLowerCase()}</option>
+                        ))}
+                    </select>
+                    {swapping === r.id && (
+                      <span className="rs-card-label" style={{ fontSize: '0.6rem' }}>REWRITING…</span>
+                    )}
+                  </div>
+
+                  {swapFor(r.id)?.note && (
+                    <div className="rs-card-meta" style={{ fontSize: '0.72rem', width: '100%', marginTop: -2 }}>
+                      {swapFor(r.id).note} <em>This session only — the saved recipe is unchanged.</em>
+                    </div>
+                  )}
+                  {swapError?.recipeId === r.id && (
+                    <div className="rs-card-meta" style={{ fontSize: '0.72rem', width: '100%', color: 'var(--md-error)' }}>
+                      {swapError.message}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

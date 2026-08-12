@@ -187,6 +187,14 @@ def _migrate_culinary_schema() -> None:
             conn.commit()
         except Exception:
             pass
+        # Per-session appliance swaps, added after the table existed.
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE cul_prep_session_recipes ADD COLUMN appliance_swap_json TEXT"
+            ))
+            conn.commit()
+        except Exception:
+            pass
         try:
             conn.execute(sqlalchemy.text(
                 "ALTER TABLE cul_banned_ingredients ADD COLUMN substitute TEXT"
