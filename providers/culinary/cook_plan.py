@@ -163,6 +163,17 @@ _IS_A_CADENCE = re.compile(r"\b(?:every|each)\s*$", re.IGNORECASE)
 #: which is where an underestimate hurts most.
 _PER_SIDE = re.compile(r"^\W*(?:per|each|a)\s+side", re.IGNORECASE)
 
+#: "3-5 minutes per side, until golden brown" -- the minutes are a guide and
+#: your eyes are the actual instrument. Worth knowing because a timer on a
+#: step like this should offer itself rather than insist: it is a nudge to go
+#: and look, not a deadline. Steps with no cue ("bake 25 minutes") are the
+#: ones a timer can genuinely be trusted with.
+_BY_EYE = re.compile(
+    r"\b(?:until|till)\b|\b(?:or\s+)?(?:until\s+)?"
+    r"(?:golden|browned?|tender|crisp|fragrant|translucent|softened|"
+    r"bubbling|set|thickened|reduced|cooked through|done)\b",
+    re.IGNORECASE)
+
 _UNIT_MINUTES = {
     "second": 1 / 60, "sec": 1 / 60,
     "minute": 1, "min": 1,
@@ -259,6 +270,11 @@ class StepFacts:
     phase: str = "cook"          # prep | cook | finish
     active_min: int = 0          # occupies the cook
     passive_min: int = 0         # occupies the station, frees the cook
+    #: The step judges doneness by eye, so its stated time is an estimate.
+    #: Scheduling is unaffected -- the plan still needs a number -- but a
+    #: timer offered for this step is a prompt to go and look, not an alarm
+    #: that means the food is ready.
+    by_eye: bool = False
 
     @property
     def total_min(self) -> int:
@@ -322,7 +338,8 @@ def analyse_step(index: int, text: str) -> StepFacts:
         phase = "cook"
 
     return StepFacts(index=index, text=text, station=station, phase=phase,
-                     active_min=active, passive_min=passive)
+                     active_min=active, passive_min=passive,
+                     by_eye=bool(minutes and _BY_EYE.search(lowered)))
 
 
 def analyse_steps(steps: Iterable[str]) -> List[StepFacts]:
@@ -352,6 +369,7 @@ class PlannedStep:
     end_min: int
     active_min: int
     passive_min: int
+    by_eye: bool = False
 
     @property
     def hands_on(self) -> bool:
@@ -494,6 +512,7 @@ def plan_meal(
                 end_min=cursor + step.total_min,
                 active_min=step.active_min,
                 passive_min=step.passive_min,
+                by_eye=step.by_eye,
             ))
             cursor += step.total_min
 

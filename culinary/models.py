@@ -109,11 +109,6 @@ class Recipe(Base):  # type: ignore
     ingredients_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     steps_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     equipment_needed_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
-    #: Cached per-step analysis for the cook planner: {"fingerprint", "facts"}.
-    #: Keyed by a hash of the steps, so editing a recipe invalidates it and
-    #: nothing has to remember to. Empty means "not analysed yet", which is a
-    #: usable state -- the planner falls back to reading the words.
-    steps_analysis_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     # Flagged blacklist ingredients found during ingest
     blacklisted_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)# 1–5 stars
@@ -384,6 +379,36 @@ class MealCook(Base):  # type: ignore
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     household = relationship("Household")
+
+
+class MealTimer(Base):  # type: ignore
+    """A timer for one step of a meal cook.
+
+    Stores a deadline, never a countdown, for the same reason CookingTimer
+    does: a countdown has to be decremented by something that is still
+    running, so it loses time across a reload and then lies about how long is
+    left. A deadline is simply true whenever it is next read, on any device.
+
+    Pausing is the one case that needs the other representation. A paused
+    timer has no deadline -- there is no instant it is counting towards -- so
+    it holds the seconds remaining instead, and resuming turns that back into
+    a deadline. Exactly one of the two is set at a time.
+    """
+    __tablename__ = "cul_meal_timers"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    cook_id: Mapped[str] = mapped_column(String, ForeignKey("cul_meal_cooks.id"), nullable=False, index=True)
+    #: "<recipe_id>:<step_index>" -- the same key the done-set uses.
+    step_key: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    label: Mapped[str] = mapped_column(String, nullable=False, default="Timer")
+
+    ends_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    paused_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    #: Set once the cook has acknowledged the alarm, which is what stops it
+    #: going off again on the next device to open the page.
+    stopped_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
 class CookingTimer(Base):  # type: ignore

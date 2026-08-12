@@ -16,6 +16,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import CookPlanTimeline from './CookPlanTimeline.jsx'
+import StepTimer from './StepTimer.jsx'
 
 const STATION_LABELS = {
   counter: 'Counter', stove: 'Stove', oven: 'Oven', microwave: 'Microwave',
@@ -32,6 +33,11 @@ const STATION_ICONS = {
 }
 
 const stationLabel = s => STATION_LABELS[s] || s
+
+// What to set a step's timer to. The unattended stretch when there is one --
+// that is the bit you walk away from and need calling back for. Otherwise the
+// hands-on minutes, which is the "3-5 minutes per side" case.
+const timerSeconds = (s) => (s.passive_min > 0 ? s.passive_min : s.active_min) * 60
 const stationIcon = s => STATION_ICONS[s] || 'restaurant'
 
 // A colour per recipe so an interleaved list still reads as several dishes.
@@ -47,7 +53,6 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
   const [serveTime, setServeTime] = useState('')   // "HH:MM", local
   const [courses, setCourses] = useState({})       // recipe_id -> minutes after
   const [tick, setTick] = useState(0)              // re-render so NOW advances
-  const [sharpening, setSharpening] = useState(false)
 
   // A minute is the resolution the whole plan is in; anything finer would
   // redraw for nothing.
@@ -89,17 +94,6 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
         if (stale()) return
         setPlan(plan)
 
-        // Then ask a model to read the steps properly and swap the sharper
-        // plan in underneath. Deliberately after, not instead: reading the
-        // words is instant and roughly right, and a model can take minutes.
-        // If it never answers, the plan on screen is still the plan.
-        if (plan?.steps?.length) {
-          setSharpening(true)
-          api.post(`/prep/${activePrep.id}/cook-plan/refine${q ? `?courses=${encodeURIComponent(q)}` : ''}`, {})
-            .then(better => { if (!stale() && better?.steps?.length) setPlan(better) })
-            .catch(() => {})
-            .finally(() => { if (!stale()) setSharpening(false) })
-        }
       }
       if (stale()) return
       setError(null)
@@ -114,6 +108,35 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
   useEffect(() => { load() }, [load, refreshNonce])
 
   const done = useMemo(() => new Set(cook?.done || []), [cook])
+
+  const timersFor = useMemo(() => {
+    const map = {}
+    ;(cook?.timers || []).forEach(t => { (map[t.step_key] = map[t.step_key] || []).push(t) })
+    return map
+  }, [cook])
+
+  // Re-read the cook rather than patching a timer in place: a second phone
+  // may have paused it, and the timers are the one thing two people in a
+  // kitchen touch at the same moment.
+  const reloadTimers = useCallback(async () => {
+    try {
+      const active = await api.get('/meal-cook')
+      if (active?.cook) setCook(active.cook)
+    } catch { /* the countdown on screen is still right */ }
+  }, [api])
+
+  const startTimer = async (step, seconds) => {
+    setBusy(true)
+    try {
+      await api.post(`/meal-cook/${cook.id}/timers`, {
+        step_key: step.key,
+        seconds,
+        label: step.recipe_title,
+      })
+      await reloadTimers()
+    } catch (err) { setError(err.message) }
+    finally { setBusy(false) }
+  }
 
   const colorFor = useMemo(() => {
     const map = {}
@@ -264,8 +287,30 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
             {s.recipe_title}
             {s.station !== 'counter' && ` · ${stationLabel(s.station)}`}
             {s.passive_min > 0 && ` · ${s.passive_min}m unattended`}
+            {s.by_eye && ' · judge by eye'}
           </div>
+          {(timersFor[s.key] || []).map(t => (
+            <StepTimer key={t.id} timer={t} api={api} onChanged={reloadTimers} />
+          ))}
         </div>
+
+        {/* An offer, not an alarm that starts itself. Steps judged by eye get
+            the same button and a quieter one: the minutes are a nudge to go
+            and look, not the moment the food is ready. */}
+        {cook && !isDone && timerSeconds(s) > 0 && !(timersFor[s.key] || []).length && (
+          <button
+            className="rs-pill"
+            style={{ padding: 6, minWidth: 0, background: 'transparent', flexShrink: 0,
+                     opacity: s.by_eye ? 0.55 : 1 }}
+            aria-label={`Start a ${Math.round(timerSeconds(s) / 60)} minute timer for ${s.text.slice(0, 40)}`}
+            title={s.by_eye ? 'Timer as a guide — this step is judged by eye'
+                            : `Start a ${Math.round(timerSeconds(s) / 60)} minute timer`}
+            disabled={busy}
+            onClick={() => startTimer(s, timerSeconds(s))}
+          >
+            <span className="material-symbols-rounded">timer</span>
+          </button>
+        )}
       </div>
     )
   }
@@ -317,11 +362,6 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
               <div className="rs-card-value" style={{ fontSize: '1.4rem' }}>
                 {plan.total_minutes} min · {plan.recipes.length} dish{plan.recipes.length === 1 ? '' : 'es'}
               </div>
-              {sharpening && (
-                <div className="rs-card-label" style={{ fontSize: '0.6rem', opacity: 0.7, marginTop: 4 }}>
-                  READING THE STEPS MORE CLOSELY…
-                </div>
-              )}
             </div>
             {cook ? (
               <button className="rs-pill" onClick={end} disabled={busy}>

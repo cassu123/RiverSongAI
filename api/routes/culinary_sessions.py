@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Request, status
@@ -44,8 +44,9 @@ from api.routes.culinary import (
     get_db,
 )
 from api.services.recipe_parser import _format_qty, _parse_qty, _safe_json
-from core.errors import not_found
+from core.errors import bad_request, not_found
 from core.cooking_sessions import (
+    _as_utc,
     build_step,
     expired_timers,
     find_ingredient,
@@ -680,8 +681,7 @@ def _plan_for_prep_session(db: Session, hh, session,
     `courses` maps a recipe id to how many minutes after the first course it
     is wanted. Everything defaults to 0, which is one meal landing together.
     """
-    from providers.culinary.cook_plan import RecipeInPlan, StepFacts, analyse_steps, plan_meal
-    from providers.culinary.step_analysis import steps_fingerprint
+    from providers.culinary.cook_plan import RecipeInPlan, analyse_steps, plan_meal
 
     recipes = []
     #: Mise en place. Most of prep is measuring and portioning, and none of
@@ -697,20 +697,10 @@ def _plan_for_prep_session(db: Session, hh, session,
         if not steps:
             continue
 
-        # Cached model analysis when it matches the current steps, the keyword
-        # read otherwise. Never a model call from here: a plan that waits on
-        # Ollama is a plan that hangs the kitchen screen for three minutes,
-        # and the keyword answer is good enough to show immediately.
-        cached = _safe_json(entry.recipe.steps_analysis_json, {}) or {}
-        if cached.get("fingerprint") == steps_fingerprint(steps):
-            facts = [StepFacts(**f) for f in cached.get("facts", [])]
-        else:
-            facts = analyse_steps(steps)
-
         recipes.append(RecipeInPlan(
             recipe_id=entry.recipe_id,
             title=entry.recipe.title,
-            steps=facts,
+            steps=analyse_steps(steps),
             course_offset_min=int((courses or {}).get(entry.recipe_id, 0)),
         ))
         # Scaled quantities when the session has them: portioning out the
@@ -767,7 +757,24 @@ def _plan_for_prep_session(db: Session, hh, session,
     }
 
 
-def _meal_cook_out(cook) -> Dict[str, Any]:
+def _timer_out(t) -> Dict[str, Any]:
+    """A timer as the browser needs it: an instant, not a number of seconds.
+
+    Sending "180 seconds left" would be stale the moment it arrived and would
+    drift on a slow connection. An end time is right whenever it is read.
+    """
+    return {
+        "id": t.id,
+        "step_key": t.step_key,
+        "label": t.label,
+        "ends_at": t.ends_at.isoformat() if t.ends_at else None,
+        "paused_seconds": t.paused_seconds,
+        "running": t.ends_at is not None and t.stopped_at is None,
+        "stopped": t.stopped_at is not None,
+    }
+
+
+def _meal_cook_out(cook, timers=None) -> Dict[str, Any]:
     return {
         "id": cook.id,
         "label": cook.label,
@@ -777,6 +784,7 @@ def _meal_cook_out(cook) -> Dict[str, Any]:
         "done": _safe_json(cook.done_steps_json, []),
         "is_active": cook.is_active,
         "started_at": cook.created_at.isoformat() if cook.created_at else None,
+        "timers": [_timer_out(t) for t in (timers or [])],
     }
 
 
@@ -800,60 +808,6 @@ async def preview_cook_plan(
     if not session:
         raise not_found("Prep session not found")
     return _plan_for_prep_session(db, hh, session, _courses_from_query(courses))
-
-
-@router.post("/prep/{session_id}/cook-plan/refine")
-async def refine_cook_plan(
-    session_id: str, request: Request, db: Session = Depends(get_db),
-    courses: str = "",
-):
-    """Have a model read the steps, cache what it says, return the new plan.
-
-    Separate from the plan itself so the plan never blocks. The screen shows
-    the keyword read straight away and this sharpens it underneath, which is
-    the right way round: the rough answer is useful and the model is slow.
-
-    Analysis is cached per recipe against a hash of its steps, so a household
-    that cooks the same six dinners pays for each recipe once, and editing one
-    re-analyses only that one.
-    """
-    from culinary.models import PrepSession, Recipe
-    from providers.culinary.step_analysis import (
-        analyse_steps_smart, steps_fingerprint)
-
-    uid = await _get_user_id(request)
-    hh = _get_household(db, uid)
-    session = db.query(PrepSession).filter_by(
-        id=session_id, household_id=hh.id).first()
-    if not session:
-        raise not_found("Prep session not found")
-
-    refined = 0
-    for entry in session.recipes:
-        recipe = entry.recipe
-        if not recipe:
-            continue
-        steps = normalise_steps(_safe_json(recipe.steps_json, []))
-        if not steps:
-            continue
-        fingerprint = steps_fingerprint(steps)
-        cached = _safe_json(recipe.steps_analysis_json, {}) or {}
-        if cached.get("fingerprint") == fingerprint:
-            continue                       # already done for these exact steps
-
-        facts = await analyse_steps_smart(steps)
-        recipe.steps_analysis_json = json.dumps({
-            "fingerprint": fingerprint,
-            "facts": [vars(f) for f in facts],
-        })
-        refined += 1
-
-    if refined:
-        db.commit()
-
-    plan = _plan_for_prep_session(db, hh, session, _courses_from_query(courses))
-    plan["refined_recipes"] = refined
-    return plan
 
 
 @router.post("/meal-cook", status_code=status.HTTP_201_CREATED)
@@ -910,7 +864,133 @@ async def start_meal_cook(
     db.refresh(cook)
 
     await _ws_manager.broadcast(hh.id, "meal_cook_updated", {})
-    return _meal_cook_out(cook)
+    return _meal_cook_out(cook, _live_timers(db, cook.id))
+
+
+def _live_timers(db: Session, cook_id: str) -> List[Any]:
+    """Timers still worth showing: running, paused, or ringing unacknowledged."""
+    from culinary.models import MealTimer
+
+    return db.query(MealTimer).filter(
+        MealTimer.cook_id == cook_id,
+        MealTimer.stopped_at.is_(None),
+    ).order_by(MealTimer.created_at.asc()).all()
+
+
+class TimerStart(BaseModel):
+    step_key: str
+    seconds: int
+    label: Optional[str] = None
+
+
+class TimerAction(BaseModel):
+    #: pause | resume | extend
+    action: str
+    seconds: int = 60
+
+
+@router.post("/meal-cook/{cook_id}/timers", status_code=status.HTTP_201_CREATED)
+async def start_meal_timer(
+    cook_id: str, body: TimerStart, request: Request,
+    db: Session = Depends(get_db)
+):
+    """Start a timer for one step.
+
+    Offered per step rather than started automatically. A step that says
+    "3-5 minutes per side, until golden" is judged by looking, and an alarm
+    that implies otherwise is worse than no alarm -- so the cook decides which
+    steps get one.
+    """
+    from culinary.models import MealCook, MealTimer
+
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    cook = db.query(MealCook).filter_by(id=cook_id, household_id=hh.id).first()
+    if not cook or not cook.is_active:
+        raise not_found("That meal is not being cooked")
+
+    seconds = max(1, min(int(body.seconds), _MAX_TIMER_SECONDS))
+    timer = MealTimer(
+        cook_id=cook.id,
+        step_key=body.step_key,
+        label=body.label or "Timer",
+        ends_at=_now() + timedelta(seconds=seconds),
+    )
+    db.add(timer)
+    db.commit()
+    db.refresh(timer)
+
+    await _ws_manager.broadcast(hh.id, "meal_cook_updated", {})
+    return _timer_out(timer)
+
+
+@router.patch("/meal-cook/timers/{timer_id}")
+async def adjust_meal_timer(
+    timer_id: str, body: TimerAction, request: Request,
+    db: Session = Depends(get_db)
+):
+    """Pause, resume, or add time.
+
+    Pausing converts the deadline into the seconds left; resuming converts it
+    back. Only one of the two is ever set, so there is no state where both
+    disagree about how long is left.
+    """
+    from culinary.models import MealCook, MealTimer
+
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    timer = db.query(MealTimer).join(
+        MealCook, MealCook.id == MealTimer.cook_id).filter(
+        MealTimer.id == timer_id, MealCook.household_id == hh.id).first()
+    if not timer:
+        raise not_found("Timer not found")
+
+    if body.action == "pause" and timer.ends_at:
+        left = int((_as_utc(timer.ends_at) - _now()).total_seconds())
+        timer.paused_seconds = max(0, left)
+        timer.ends_at = None
+    elif body.action == "resume" and timer.paused_seconds is not None:
+        timer.ends_at = _now() + timedelta(seconds=timer.paused_seconds)
+        timer.paused_seconds = None
+    elif body.action == "extend":
+        bump = max(1, min(int(body.seconds), _MAX_TIMER_SECONDS))
+        if timer.paused_seconds is not None:
+            timer.paused_seconds += bump
+        else:
+            # Extending a timer that has already rung starts from now rather
+            # than from a deadline in the past, which is what "one more
+            # minute" means when you have just looked in the oven.
+            base = max(_as_utc(timer.ends_at) if timer.ends_at else _now(), _now())
+            timer.ends_at = base + timedelta(seconds=bump)
+    else:
+        raise bad_request("Unknown timer action")
+
+    db.commit()
+    db.refresh(timer)
+    await _ws_manager.broadcast(hh.id, "meal_cook_updated", {})
+    return _timer_out(timer)
+
+
+@router.delete("/meal-cook/timers/{timer_id}", status_code=204)
+async def stop_meal_timer(
+    timer_id: str, request: Request, db: Session = Depends(get_db)
+):
+    """Acknowledge a timer, whether it has rung or not.
+
+    Marked stopped rather than deleted so an alarm that has been silenced on
+    one phone does not start ringing again on the next one to open the page.
+    """
+    from culinary.models import MealCook, MealTimer
+
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    timer = db.query(MealTimer).join(
+        MealCook, MealCook.id == MealTimer.cook_id).filter(
+        MealTimer.id == timer_id, MealCook.household_id == hh.id).first()
+    if timer:
+        timer.stopped_at = _now()
+        db.commit()
+        await _ws_manager.broadcast(hh.id, "meal_cook_updated", {})
 
 
 @router.get("/meal-cook")
@@ -923,7 +1003,7 @@ async def active_meal_cook(request: Request, db: Session = Depends(get_db)):
     cook = db.query(MealCook).filter_by(
         household_id=hh.id, is_active=True).order_by(
         MealCook.created_at.desc()).first()
-    return {"cook": _meal_cook_out(cook) if cook else None}
+    return {"cook": _meal_cook_out(cook, _live_timers(db, cook.id)) if cook else None}
 
 
 @router.post("/meal-cook/{cook_id}/step")
@@ -1000,7 +1080,7 @@ async def set_meal_serve_time(
     db.commit()
 
     await _ws_manager.broadcast(hh.id, "meal_cook_updated", {})
-    return _meal_cook_out(cook)
+    return _meal_cook_out(cook, _live_timers(db, cook.id))
 
 
 @router.post("/meal-cook/{cook_id}/end")

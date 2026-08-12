@@ -478,3 +478,25 @@ def test_finish_verbs_are_matched_as_verbs(text, phase):
     require the word after the verb to confirm the sense.
     """
     assert analyse_step(0, text).phase == phase
+
+
+@pytest.mark.parametrize("text,by_eye", [
+    # A time and a cue: the minutes are a guide, your eyes are the instrument.
+    ("Cook for 3-5 minutes per side, until golden brown", True),
+    ("Simmer 20 minutes until thickened", True),
+    ("Bake 25 minutes or until a skewer comes out clean", True),
+    # A time and nothing else: a timer can be trusted with this.
+    ("Bake for 25 minutes", False),
+    ("Roast 40 minutes", False),
+    # A cue and no time at all: nothing for a timer to count.
+    ("Saute until fragrant", False),
+])
+def test_a_step_can_say_its_time_is_only_a_guide(text, by_eye):
+    """Whether a timer on this step means "look" or means "ready".
+
+    "3-5 minutes per side, until golden brown" is not something anyone
+    actually follows to the second, and an alarm that implies otherwise is
+    worse than no alarm. The scheduler still needs a number and still gets
+    one -- this only changes what the timer button promises.
+    """
+    assert analyse_step(0, text).by_eye is by_eye
