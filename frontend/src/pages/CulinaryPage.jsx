@@ -40,7 +40,12 @@ function StarRating({ value, size = 14, onChange }) {
 // shopping list -- that is the LIST tab, and PUSH TO LIST copies this onto it.
 // This used to be labelled "MASTER SHOPPING LIST", which is the name the other
 // one actually deserves.
-function ShoppingListModal({ items, sessionId, onClose, onPushed, api }) {
+// Inline, not a modal. A floating sheet over a full page is awkward on a
+// phone: it is semi-transparent so the page behind bleeds through it, it
+// clips at the bottom of the viewport so the export result falls off screen,
+// and it hides the tab rail you would use to leave. The COOK tab shows its
+// sub-views inline and reads far better, so these match it.
+function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
   const [exporting, setExporting] = useState(false);
   const [exportResult, setExportResult] = useState(null);
   const [pushing, setPushing] = useState(false);
@@ -74,13 +79,12 @@ function ShoppingListModal({ items, sessionId, onClose, onPushed, api }) {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)' }} onClick={onClose}>
-       <div className="rs-card is-elev animate-page-in" style={{ width: 'min(95%, 500px)', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
-          <div className="rs-card-inner" style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
-             <div className="rs-card-head" style={{ marginBottom: 24 }}>
-                <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>PREP SHOPPING LIST</span>
-                <button className="rs-pill" onClick={onClose}><span className="material-symbols-rounded">close</span></button>
-             </div>
+    <div className="rs-card">
+       <div className="rs-card-inner" style={{ padding: 24 }}>
+          <div className="rs-card-head" style={{ marginBottom: 20 }}>
+             <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>WHAT THIS SESSION NEEDS</span>
+          </div>
+          <div>
              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {items.length === 0 ? (
                   <div className="rs-card-meta">No provisions required. Stock nominal.</div>
@@ -125,16 +129,21 @@ function ShoppingListModal({ items, sessionId, onClose, onPushed, api }) {
   )
 }
 
-function StagingAreaModal({ piles, onClose }) {
+function StagingAreaPanel({ piles }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)' }} onClick={onClose}>
-       <div className="rs-card is-elev animate-page-in" style={{ width: 'min(95%, 800px)', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
-          <div className="rs-card-inner" style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
-             <div className="rs-card-head" style={{ marginBottom: 24 }}>
-                <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>STAGING AREA</span>
-                <button className="rs-pill" onClick={onClose}><span className="material-symbols-rounded">close</span></button>
-             </div>
-             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
+    <div className="rs-card">
+       <div className="rs-card-inner" style={{ padding: 24 }}>
+          <div className="rs-card-head" style={{ marginBottom: 8 }}>
+             <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>PILES, ONE PER DISH</span>
+          </div>
+          <p className="rs-card-meta" style={{ marginTop: 0, marginBottom: 16 }}>
+             The same ingredients as the list, split back out by recipe — what goes
+             in each bowl before any of it is cooked.
+          </p>
+          <div>
+             {/* One column on a phone. Two 300px columns side by side is a
+                 horizontal scroll on anything narrower than a tablet. */}
+             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 16 }}>
                 {piles.map((pile, idx) => (
                   <div key={idx} className="rs-card" style={{ border: '1px solid var(--md-outline-variant)' }}>
                      <div className="rs-card-inner">
@@ -512,8 +521,9 @@ export default function CulinaryPage({ setAction }) {
   const [sortMode, setSortMode] = useState('NEWEST') // NEWEST, RATING
   
   const [activeRecipe, setActiveRecipe] = useState(null)
-  const [showShoppingList, setShowShoppingList] = useState(null) // items
-  const [showStagingArea, setShowStagingArea] = useState(null) // piles
+  const [prepView,  setPrepView]  = useState('recipes')
+  const [prepList,  setPrepList]  = useState(null)   // this session's needs
+  const [prepPiles, setPrepPiles] = useState(null)   // the same, split by dish
   const [adjustItem, setAdjustItem] = useState(null)
 
   const [recommendations, setRecommendations] = useState({}) // bannedId -> recs[]
@@ -540,6 +550,10 @@ export default function CulinaryPage({ setAction }) {
       }
       if (tab === 'prep' || tab === 'cook') {
         try { setActivePrep(await api.get('/prep')) } catch { setActivePrep(null) }
+        // Both panels derive from the staged recipes, so they are dropped
+        // with the session rather than fetched once when a modal opened --
+        // scaling a recipe used to leave a stale list behind the button.
+        setPrepList(null); setPrepPiles(null)
       }
       if (tab === 'equipment') setEquipment(await api.get('/household/equipment'))
       if (tab === 'banned') setBanned(await api.get('/household/banned'))
@@ -551,6 +565,27 @@ export default function CulinaryPage({ setAction }) {
   }, [api, token])
 
   useEffect(() => { fetchData(activeTab) }, [activeTab, fetchData])
+
+  // Fetched when the panel is first opened rather than up front: both are
+  // derived server-side from the staged recipes, and most visits to PREP are
+  // to add or scale a dish, not to read the list.
+  useEffect(() => {
+    if (!activePrep) return
+    let live = true
+    const want = prepView === 'list' ? 'shopping-list' : prepView === 'staging' ? 'staging' : null
+    if (!want) return
+    if (want === 'shopping-list' && prepList) return
+    if (want === 'staging' && prepPiles) return
+
+    api.get(`/prep/${activePrep.id}/${want}`)
+      .then(res => {
+        if (!live) return
+        if (want === 'shopping-list') setPrepList(res.shopping_list || [])
+        else setPrepPiles(res.piles || [])
+      })
+      .catch(err => { if (live) setError(err.message) })
+    return () => { live = false }
+  }, [api, activePrep, prepView, prepList, prepPiles])
 
   useEffect(() => {
     if (!token) return;
@@ -857,24 +892,46 @@ export default function CulinaryPage({ setAction }) {
                     </div>
                   ))}
                </div>
-               <div style={{ marginTop: 40, display: 'flex', gap: 12 }}>
-                  <button className="rs-btn-primary" style={{ flex: 1 }} onClick={async () => {
-                     const res = await api.get(`/prep/${activePrep.id}/shopping-list`);
-                     setShowShoppingList({ items: res.shopping_list, sessionId: activePrep.id });
-                  }}>
-                    <span className="material-symbols-rounded">shopping_cart</span>
-                    SHOPPING LIST
-                  </button>
-                  <button className="rs-pill" style={{ flex: 1 }} onClick={async () => {
-                     const res = await api.get(`/prep/${activePrep.id}/staging`);
-                     setShowStagingArea(res.piles);
-                  }}>
-                    <span className="material-symbols-rounded">view_column</span>
-                    STAGING AREA
-                  </button>
-               </div>
             </div>
          </div>
+       )}
+
+       {/* The list and the piles show inline below the session rather than in
+           a sheet over it. Same rail idiom as the COOK tab. */}
+       {activePrep && (
+         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+           {[
+             { id: 'recipes', icon: 'list_alt',      label: 'STAGED' },
+             { id: 'list',    icon: 'shopping_cart', label: 'NEEDS' },
+             { id: 'staging', icon: 'view_column',   label: 'PILES' },
+           ].map(v => (
+             <button
+               key={v.id}
+               className={`rs-pill ${prepView === v.id ? 'is-active' : ''}`}
+               onClick={() => setPrepView(v.id)}
+             >
+               <span className="material-symbols-rounded">{v.icon}</span>
+               {v.label}
+             </button>
+           ))}
+         </div>
+       )}
+
+       {activePrep && prepView === 'list' && (
+         prepList
+           ? <PrepShoppingListPanel
+               items={prepList}
+               sessionId={activePrep.id}
+               api={api}
+               onPushed={() => { setGroceryNonce(n => n + 1); setActiveTab('list') }}
+             />
+           : <div className="rs-card-meta" style={{ padding: 32, textAlign: 'center' }}>WORKING OUT WHAT IS NEEDED…</div>
+       )}
+
+       {activePrep && prepView === 'staging' && (
+         prepPiles
+           ? <StagingAreaPanel piles={prepPiles} />
+           : <div className="rs-card-meta" style={{ padding: 32, textAlign: 'center' }}>SPLITTING INTO PILES…</div>
        )}
     </div>
   )
@@ -938,7 +995,13 @@ export default function CulinaryPage({ setAction }) {
           {activeTab === 'stockroom' && renderStockroom()}
           {activeTab === 'dinner' && renderDinner()}
           {activeTab === 'prep' && renderPrep()}
-          {activeTab === 'equipment' && (
+          {activeTab === 'equipment' && equipment.length === 0 && (
+            <div className="rs-card-meta" style={{ padding: 48, textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
+              No appliances recorded. Adding them is what lets the cook plan know
+              whether two dishes can share the air fryer, or have to queue for it.
+            </div>
+          )}
+          {activeTab === 'equipment' && equipment.length > 0 && (
              <div className="rs-card-flow">
                {equipment.map((eq, i) => (
                  <div key={i} className="rs-card animate-page-in" style={{ animationDuration: '400ms' }}>
@@ -1004,23 +1067,6 @@ export default function CulinaryPage({ setAction }) {
          setRecipes(recipes.filter(r => r.id !== id))
          setActiveRecipe(null)
       }} api={api} />}
-      {showStagingArea && <StagingAreaModal piles={showStagingArea} onClose={() => setShowStagingArea(null)} />}
-      {showShoppingList && (
-        <ShoppingListModal
-          items={showShoppingList.items}
-          sessionId={showShoppingList.sessionId}
-          onClose={() => setShowShoppingList(null)}
-          onPushed={() => {
-            // Land on the list they just filled, rather than leaving them in
-            // a modal that now describes something that happened elsewhere.
-            setGroceryNonce(n => n + 1)
-            setShowShoppingList(null)
-            setActiveTab('list')
-          }}
-          api={api}
-        />
-      )}
-      
       {adjustItem && (
         <div className="rs-modal-overlay">
           <div className="rs-modal" style={{ maxWidth: 400 }}>
