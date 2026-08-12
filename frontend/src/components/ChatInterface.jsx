@@ -16,11 +16,11 @@ function fmtDate(iso) {
  * @param {Object} props - Chat interface configuration.
  * @param {Function} props.setAction - Registers the chat input action slot in non-embedded mode.
  * @param {Function} props.onNavigate - Handles navigation requests from conversation messages.
- * @param {Object} props.initialIntent - Optional intent used to prefill and send a message.
+ * @param {Object} [props.initialIntent] - Optional intent used to prefill and send a message.
  * @param {Function} props.onIntentConsumed - Called after the initial intent is consumed.
  * @param {boolean} props.embedded - Whether to render the interface in embedded vehicle-assistant mode.
  * @param {Function} props.onClose - Closes the interface in embedded mode.
- * @param {string} props.vehicleId - Optional vehicle identifier used to scope conversation data.
+ * @param {string} [props.vehicleId] - Optional vehicle identifier used to scope conversation data.
  * @return {JSX.Element} The rendered chat interface.
  */
 export default function ChatInterface({ setAction, onNavigate, initialIntent, onIntentConsumed, embedded, onClose, vehicleId }) {

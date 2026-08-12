@@ -305,12 +305,18 @@ def _build_llm_provider(
                     "Intent router failed, falling back to direct provider resolution: %s", exc)
                 key = fallback_provider or settings.llm_provider
                 model_override = fallback_model or settings.llm_model
+                # Enforce free_only for fallback when routing raises.
+                if free_only and key and not LLMRegistry.is_free(key):
+                    key = "ollama" if enabled_providers.get("ollama", False) else key
         else:
             # Router disabled or no message text yet — default to local, but
             # only if local is actually switched on.
             key = "ollama" if enabled_providers.get("ollama", False) else (
                 fallback_provider or settings.llm_provider)
             model_override = fallback_model or settings.llm_model
+            # Enforce free_only when automatic routing is disabled or message_text is absent.
+            if free_only and key and not LLMRegistry.is_free(key):
+                key = "ollama" if enabled_providers.get("ollama", False) else key
 
     if key != "auto" and key in enabled_providers and not enabled_providers[key]:
         if globally_enabled.get(key):

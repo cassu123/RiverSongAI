@@ -3,13 +3,13 @@ import { useBreakpoint } from '../hooks/useBreakpoint';
 import { providerLabel, PROVIDER_ORDER } from '../utils/providers';
 
 /**
- * Formats a per-token cost as a dollar-per-million-tokens value.
+ * Formats a per-token cost as a dollar-per-thousand-tokens value.
  * @param {number|null|undefined} v - The cost per token.
- * @return {string|null} The formatted cost, or `null` when no cost is provided.
+ * @return {string|null} The formatted cost per 1K tokens, or `null` when no cost is provided.
  */
 function fmtCost(v) {
   if (v == null) return null;
-  return `$${(v * 1000000).toFixed(2)}/M`;
+  return `$${(v * 1000).toFixed(2)}/M`;
 }
 
 /**
@@ -63,11 +63,11 @@ function MpopBack({ label, onClick }) {
  * @param {Object} props.pos - Desktop positioning values for the picker.
  * @param {Object} props.selectedModel - Currently selected model.
  * @param {Function} props.onSelect - Called with the selected provider and model ID.
- * @param {Array<Object>} props.localModels - Available local models.
- * @param {Array<Object>} props.nimModels - Available NVIDIA NIM models.
- * @param {Array<Object>} props.cloudModels - Available cloud models.
- * @param {string[]} props.providerOrder - Preferred order for cloud providers.
- * @param {boolean} props.intentRouterEnabled - Whether automatic model routing is enabled.
+ * @param {Array<Object>} [props.localModels=[]] - Available local models. Defaults to an empty array.
+ * @param {Array<Object>} [props.nimModels=[]] - Available NVIDIA NIM models. Defaults to an empty array.
+ * @param {Array<Object>} [props.cloudModels=[]] - Available cloud models. Defaults to an empty array.
+ * @param {string[]} [props.providerOrder=[]] - Preferred order for cloud providers. Defaults to an empty array.
+ * @param {boolean} [props.intentRouterEnabled=false] - Whether automatic model routing is enabled. Defaults to false.
  * @return {JSX.Element|null} The model picker, or null when closed.
  */
 export default function ModelPickerPopover({

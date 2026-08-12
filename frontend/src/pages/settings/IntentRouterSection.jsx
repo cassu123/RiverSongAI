@@ -22,8 +22,9 @@ const INTENT_ICONS = {
 
 /**
  * Render the automatic model routing settings panel.
- * @param {Object} intentRouterSettings - Current routing settings and resolved provider routes.
- * @param {Function} saveIntentRouter - Saves changes to the routing settings.
+ * @param {Object} props - Component properties.
+ * @param {Object} props.intentRouterSettings - Current routing settings and resolved provider routes.
+ * @param {Function} props.saveIntentRouter - Saves changes to the routing settings.
  */
 export default function IntentRouterSection({ intentRouterSettings, saveIntentRouter }) {
   return (

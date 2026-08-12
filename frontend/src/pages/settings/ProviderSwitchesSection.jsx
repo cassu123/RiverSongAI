@@ -32,12 +32,13 @@ const PROVIDER_LABEL = {
 
 /**
  * Renders an accessible switch control with a state label.
- * @param {boolean} on - Whether the switch is enabled.
- * @param {Function} onClick - Callback invoked when the switch is clicked.
- * @param {boolean} disabled - Whether the switch is unavailable for interaction.
- * @param {string} label - Accessible name for the switch.
- * @param {string} [labelOn='ON'] - Label displayed when the switch is enabled.
- * @param {string} [labelOff='OFF'] - Label displayed when the switch is disabled.
+ * @param {Object} props - Component properties.
+ * @param {boolean} props.on - Whether the switch is enabled.
+ * @param {Function} props.onClick - Callback invoked when the switch is clicked.
+ * @param {boolean} props.disabled - Whether the switch is unavailable for interaction.
+ * @param {string} props.label - Accessible name for the switch.
+ * @param {string} [props.labelOn='ON'] - Label displayed when the switch is enabled.
+ * @param {string} [props.labelOff='OFF'] - Label displayed when the switch is disabled.
  * @return {JSX.Element} The switch control.
  */
 function Switch({ on, onClick, disabled, label, labelOn = 'ON', labelOff = 'OFF' }) {
@@ -68,7 +69,8 @@ function Switch({ on, onClick, disabled, label, labelOn = 'ON', labelOff = 'OFF'
 
 /**
  * Renders administrative controls for enabling providers and managing user access.
- * @param {string} token - Authentication token used to load and update provider settings.
+ * @param {Object} props - Component properties.
+ * @param {string} props.token - Authentication token used to load and update provider settings.
  * @returns {JSX.Element} The provider access settings section.
  */
 export default function ProviderSwitchesSection({ token }) {

@@ -810,11 +810,16 @@ async def get_llm_settings(
         request: Request, authorization: Optional[str] = Header(default=None)):
     """
         Return the user's saved LLM selection and its current availability.
-        
+
         The stored selection is preserved even when provider access, model visibility,
         credentials, or hardware-fit checks make it unavailable. A usable free model
         is included as a fallback when the saved selection cannot currently be used.
-        
+
+        Catalog or hardware validation failures may prevent authoritative availability
+        and fallback determination. The response is best-effort and may preserve the
+        stored selection with its initial availability value and no fallback when
+        validation raises.
+
         Returns:
         	dict: The provider, model, display name, availability status, fallback
         	selection, cloud fallback settings, and Whisper model.
