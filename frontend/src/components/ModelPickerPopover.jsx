@@ -2,11 +2,29 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { providerLabel, PROVIDER_ORDER } from '../utils/providers';
 
+/**
+ * Formats a per-token cost as a dollar-per-thousand-tokens value.
+ * @param {number|null|undefined} v - The cost per token.
+ * @return {string|null} The formatted cost per 1K tokens, or `null` when no cost is provided.
+ */
 function fmtCost(v) {
   if (v == null) return null;
-  return `$${(v * 1000000).toFixed(2)}/M`;
+  return `$${(v * 1000).toFixed(2)}/M`;
 }
 
+/**
+ * Render a selectable picker row with optional status and navigation indicators.
+ * @param {Object} props - Row display and interaction properties.
+ * @param {string} props.icon - Material Symbols icon name.
+ * @param {string} props.title - Primary row label.
+ * @param {string} [props.sub] - Secondary descriptive text.
+ * @param {boolean} [props.active] - Whether the row represents the current selection.
+ * @param {boolean} [props.disabled] - Whether the row is unavailable for selection.
+ * @param {boolean} [props.chevron] - Whether to show a navigation chevron.
+ * @param {string} [props.badge] - Optional badge text displayed beside the title.
+ * @param {Function} [props.onClick] - Callback invoked when the row is selected.
+ * @returns {JSX.Element} The picker row element.
+ */
 function MpopRow({ icon, title, sub, active, disabled, chevron, badge, onClick }) {
   return (
     <button
@@ -37,6 +55,21 @@ function MpopBack({ label, onClick }) {
   );
 }
 
+/**
+ * Renders a model-selection popover or mobile bottom sheet.
+ * @param {Object} props - Component properties.
+ * @param {boolean} props.isOpen - Whether the picker is visible.
+ * @param {Function} props.onClose - Called when the picker closes.
+ * @param {Object} props.pos - Desktop positioning values for the picker.
+ * @param {Object} props.selectedModel - Currently selected model.
+ * @param {Function} props.onSelect - Called with the selected provider and model ID.
+ * @param {Array<Object>} [props.localModels=[]] - Available local models. Defaults to an empty array.
+ * @param {Array<Object>} [props.nimModels=[]] - Available NVIDIA NIM models. Defaults to an empty array.
+ * @param {Array<Object>} [props.cloudModels=[]] - Available cloud models. Defaults to an empty array.
+ * @param {string[]} [props.providerOrder=[]] - Preferred order for cloud providers. Defaults to an empty array.
+ * @param {boolean} [props.intentRouterEnabled=false] - Whether automatic model routing is enabled. Defaults to false.
+ * @return {JSX.Element|null} The model picker, or null when closed.
+ */
 export default function ModelPickerPopover({
   isOpen,
   onClose,

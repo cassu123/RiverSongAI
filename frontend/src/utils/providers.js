@@ -39,6 +39,11 @@ export const PROVIDER_ORDER = [
   'bedrock',
 ]
 
+/**
+ * Resolves a provider ID to its user-facing display label.
+ * @param {string} id - The provider ID.
+ * @return {string} The mapped display label, or the provider ID when no label is defined.
+ */
 export function providerLabel(id) {
   return PROVIDER_LABELS[id] || id
 }

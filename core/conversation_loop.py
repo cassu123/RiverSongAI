@@ -222,24 +222,25 @@ def _build_llm_provider(
     is_admin: bool = False,
 ) -> tuple[LLMProvider, Optional[str]]:
     """
-    Instantiate the LLM provider.
-
-    is_admin defaults to False so a caller that has not been updated to pass
-    it gets the *restricted* view rather than the privileged one. Defaulting
-    the other way would mean any missed call site silently hands out admin
-    reach.
-
-    When provider_override is "auto" and model_intent_router_enabled is true,
-    the model intent router classifies message_text and picks the best provider.
-
-    free_only constrains that automatic pick to models that cost nothing per
-    token. It is set per-user by an admin (users.free_models_only) and only
-    affects "auto" routing -- an explicit model choice is still honoured, since
-    the user picked it deliberately.
-
+    Build the configured language model provider and optional fallback chain.
+    
+    Parameters:
+        provider_override (Optional[str]): Provider to use instead of the configured provider.
+            Use ``"auto"`` to select a provider from the message text when routing is enabled.
+        model_override (Optional[str]): Model to use instead of the configured model.
+        fallback_provider (Optional[str]): Provider to use if the primary provider fails.
+        fallback_model (Optional[str]): Model for the fallback provider.
+        message_text (Optional[str]): Message used for automatic provider and model selection.
+        admin_config (Optional[dict]): Administrator and provider-availability settings.
+        free_only (bool): Restricts automatic selection and fallbacks to free models.
+        is_admin (bool): Whether account-level provider restrictions should be bypassed.
+    
     Returns:
-        (provider_instance, router_label) — router_label is a UI display string
-        like "Nemotron · Reasoning" when Auto routing was used, else None.
+        tuple[LLMProvider, Optional[str]]: The configured provider and a display label for
+        automatic routing, or ``None`` when automatic routing was not used.
+    
+    Raises:
+        ValueError: If the selected provider is unavailable globally or for the account.
     """
     settings = get_settings()
     key = provider_override or settings.llm_provider
@@ -304,12 +305,18 @@ def _build_llm_provider(
                     "Intent router failed, falling back to direct provider resolution: %s", exc)
                 key = fallback_provider or settings.llm_provider
                 model_override = fallback_model or settings.llm_model
+                # Enforce free_only for fallback when routing raises.
+                if free_only and key and not LLMRegistry.is_free(key):
+                    key = "ollama" if enabled_providers.get("ollama", False) else key
         else:
             # Router disabled or no message text yet — default to local, but
             # only if local is actually switched on.
             key = "ollama" if enabled_providers.get("ollama", False) else (
                 fallback_provider or settings.llm_provider)
             model_override = fallback_model or settings.llm_model
+            # Enforce free_only when automatic routing is disabled or message_text is absent.
+            if free_only and key and not LLMRegistry.is_free(key):
+                key = "ollama" if enabled_providers.get("ollama", False) else key
 
     if key != "auto" and key in enabled_providers and not enabled_providers[key]:
         if globally_enabled.get(key):
