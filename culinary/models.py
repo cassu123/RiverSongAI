@@ -109,6 +109,11 @@ class Recipe(Base):  # type: ignore
     ingredients_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     steps_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     equipment_needed_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    #: Cached per-step analysis for the cook planner: {"fingerprint", "facts"}.
+    #: Keyed by a hash of the steps, so editing a recipe invalidates it and
+    #: nothing has to remember to. Empty means "not analysed yet", which is a
+    #: usable state -- the planner falls back to reading the words.
+    steps_analysis_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     # Flagged blacklist ingredients found during ingest
     blacklisted_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)# 1–5 stars

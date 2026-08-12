@@ -47,6 +47,7 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
   const [serveTime, setServeTime] = useState('')   // "HH:MM", local
   const [courses, setCourses] = useState({})       // recipe_id -> minutes after
   const [tick, setTick] = useState(0)              // re-render so NOW advances
+  const [sharpening, setSharpening] = useState(false)
 
   // A minute is the resolution the whole plan is in; anything finer would
   // redraw for nothing.
@@ -87,6 +88,18 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
           : null
         if (stale()) return
         setPlan(plan)
+
+        // Then ask a model to read the steps properly and swap the sharper
+        // plan in underneath. Deliberately after, not instead: reading the
+        // words is instant and roughly right, and a model can take minutes.
+        // If it never answers, the plan on screen is still the plan.
+        if (plan?.steps?.length) {
+          setSharpening(true)
+          api.post(`/prep/${activePrep.id}/cook-plan/refine${q ? `?courses=${encodeURIComponent(q)}` : ''}`, {})
+            .then(better => { if (!stale() && better?.steps?.length) setPlan(better) })
+            .catch(() => {})
+            .finally(() => { if (!stale()) setSharpening(false) })
+        }
       }
       if (stale()) return
       setError(null)
@@ -304,6 +317,11 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
               <div className="rs-card-value" style={{ fontSize: '1.4rem' }}>
                 {plan.total_minutes} min · {plan.recipes.length} dish{plan.recipes.length === 1 ? '' : 'es'}
               </div>
+              {sharpening && (
+                <div className="rs-card-label" style={{ fontSize: '0.6rem', opacity: 0.7, marginTop: 4 }}>
+                  READING THE STEPS MORE CLOSELY…
+                </div>
+              )}
             </div>
             {cook ? (
               <button className="rs-pill" onClick={end} disabled={busy}>

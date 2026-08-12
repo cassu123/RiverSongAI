@@ -187,6 +187,17 @@ def _migrate_culinary_schema() -> None:
             conn.commit()
         except Exception:
             pass
+
+        # Cached step analysis for the cook planner. Added later than the
+        # table, so an existing household needs the ALTER or every recipe
+        # SELECT 500s -- the same way image_url and blacklisted_json did.
+        try:
+            conn.execute(sqlalchemy.text(
+                "ALTER TABLE cul_recipes ADD COLUMN steps_analysis_json TEXT NOT NULL DEFAULT '{}'"
+            ))
+            conn.commit()
+        except Exception:
+            pass
         try:
             conn.execute(sqlalchemy.text(
                 "ALTER TABLE cul_banned_ingredients ADD COLUMN substitute TEXT"

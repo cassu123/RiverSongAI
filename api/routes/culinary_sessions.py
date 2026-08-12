@@ -680,7 +680,8 @@ def _plan_for_prep_session(db: Session, hh, session,
     `courses` maps a recipe id to how many minutes after the first course it
     is wanted. Everything defaults to 0, which is one meal landing together.
     """
-    from providers.culinary.cook_plan import RecipeInPlan, analyse_steps, plan_meal
+    from providers.culinary.cook_plan import RecipeInPlan, StepFacts, analyse_steps, plan_meal
+    from providers.culinary.step_analysis import steps_fingerprint
 
     recipes = []
     #: Mise en place. Most of prep is measuring and portioning, and none of
@@ -695,10 +696,21 @@ def _plan_for_prep_session(db: Session, hh, session,
         steps = normalise_steps(_safe_json(entry.recipe.steps_json, []))
         if not steps:
             continue
+
+        # Cached model analysis when it matches the current steps, the keyword
+        # read otherwise. Never a model call from here: a plan that waits on
+        # Ollama is a plan that hangs the kitchen screen for three minutes,
+        # and the keyword answer is good enough to show immediately.
+        cached = _safe_json(entry.recipe.steps_analysis_json, {}) or {}
+        if cached.get("fingerprint") == steps_fingerprint(steps):
+            facts = [StepFacts(**f) for f in cached.get("facts", [])]
+        else:
+            facts = analyse_steps(steps)
+
         recipes.append(RecipeInPlan(
             recipe_id=entry.recipe_id,
             title=entry.recipe.title,
-            steps=analyse_steps(steps),
+            steps=facts,
             course_offset_min=int((courses or {}).get(entry.recipe_id, 0)),
         ))
         # Scaled quantities when the session has them: portioning out the
@@ -788,6 +800,60 @@ async def preview_cook_plan(
     if not session:
         raise not_found("Prep session not found")
     return _plan_for_prep_session(db, hh, session, _courses_from_query(courses))
+
+
+@router.post("/prep/{session_id}/cook-plan/refine")
+async def refine_cook_plan(
+    session_id: str, request: Request, db: Session = Depends(get_db),
+    courses: str = "",
+):
+    """Have a model read the steps, cache what it says, return the new plan.
+
+    Separate from the plan itself so the plan never blocks. The screen shows
+    the keyword read straight away and this sharpens it underneath, which is
+    the right way round: the rough answer is useful and the model is slow.
+
+    Analysis is cached per recipe against a hash of its steps, so a household
+    that cooks the same six dinners pays for each recipe once, and editing one
+    re-analyses only that one.
+    """
+    from culinary.models import PrepSession, Recipe
+    from providers.culinary.step_analysis import (
+        analyse_steps_smart, steps_fingerprint)
+
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    session = db.query(PrepSession).filter_by(
+        id=session_id, household_id=hh.id).first()
+    if not session:
+        raise not_found("Prep session not found")
+
+    refined = 0
+    for entry in session.recipes:
+        recipe = entry.recipe
+        if not recipe:
+            continue
+        steps = normalise_steps(_safe_json(recipe.steps_json, []))
+        if not steps:
+            continue
+        fingerprint = steps_fingerprint(steps)
+        cached = _safe_json(recipe.steps_analysis_json, {}) or {}
+        if cached.get("fingerprint") == fingerprint:
+            continue                       # already done for these exact steps
+
+        facts = await analyse_steps_smart(steps)
+        recipe.steps_analysis_json = json.dumps({
+            "fingerprint": fingerprint,
+            "facts": [vars(f) for f in facts],
+        })
+        refined += 1
+
+    if refined:
+        db.commit()
+
+    plan = _plan_for_prep_session(db, hh, session, _courses_from_query(courses))
+    plan["refined_recipes"] = refined
+    return plan
 
 
 @router.post("/meal-cook", status_code=status.HTTP_201_CREATED)
