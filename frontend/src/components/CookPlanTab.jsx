@@ -43,6 +43,7 @@ export default function CookPlanTab({ api, activePrep }) {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
   const [busy, setBusy]       = useState(false)
+  const [serveTime, setServeTime] = useState('')   // "HH:MM", local
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -53,6 +54,10 @@ export default function CookPlanTab({ api, activePrep }) {
         // one — the whole point of freezing it.
         setCook(active.cook)
         setPlan(active.cook.plan)
+        if (active.cook.serve_at) {
+          const d = new Date(active.cook.serve_at)
+          setServeTime(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`)
+        }
       } else {
         setCook(null)
         setPlan(activePrep ? await api.get(`/prep/${activePrep.id}/cook-plan`) : null)
@@ -75,17 +80,29 @@ export default function CookPlanTab({ api, activePrep }) {
     return map
   }, [plan])
 
-  // T-minus, or a clock time when the cook has committed to one.
+  // The serve instant, from whichever source has one: a started cook carries
+  // it, and before that the picker does. Reading only the saved cook left the
+  // preview showing T-minus after you had already said when you wanted to eat.
+  const serveDate = useMemo(() => {
+    if (cook?.serve_at) return new Date(cook.serve_at)
+    if (!serveTime) return null
+    const [h, m] = serveTime.split(':').map(Number)
+    const at = new Date()
+    at.setHours(h, m, 0, 0)
+    if (at.getTime() < Date.now() - 60_000) at.setDate(at.getDate() + 1)
+    return at
+  }, [cook, serveTime])
+
+  // T-minus, or a clock time once the cook has said when they want to eat.
   const timeLabel = useCallback((offsetMin) => {
     const total = plan?.total_minutes || 0
-    if (cook?.serve_at) {
-      const serve = new Date(cook.serve_at)
-      const at = new Date(serve.getTime() - (total - offsetMin) * 60000)
+    if (serveDate) {
+      const at = new Date(serveDate.getTime() - (total - offsetMin) * 60000)
       return at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
     }
     const left = total - offsetMin
     return left <= 0 ? 'serve' : `T-${left}m`
-  }, [plan, cook])
+  }, [plan, serveDate])
 
   const toggle = async (key) => {
     if (!cook) return
@@ -97,13 +114,38 @@ export default function CookPlanTab({ api, activePrep }) {
     finally { setBusy(false) }
   }
 
+  // "18:30" -> an ISO instant. Tomorrow if that time has already gone today,
+  // because someone setting 00:30 at eleven at night means tonight's dinner,
+  // not one that was due twenty-two hours ago.
+  const isoForTime = (hhmm) => {
+    if (!hhmm) return null
+    const [h, m] = hhmm.split(':').map(Number)
+    const at = new Date()
+    at.setHours(h, m, 0, 0)
+    if (at.getTime() < Date.now() - 60_000) at.setDate(at.getDate() + 1)
+    return at.toISOString()
+  }
+
   const start = async () => {
     setBusy(true)
     try {
-      const started = await api.post('/meal-cook', { prep_session_id: activePrep?.id })
+      const started = await api.post('/meal-cook', {
+        prep_session_id: activePrep?.id,
+        serve_at: isoForTime(serveTime),
+      })
       setCook(started)
       setPlan(started.plan)
-      setView('cook')
+      setView('prep')
+    } catch (err) { setError(err.message) }
+    finally { setBusy(false) }
+  }
+
+  const reschedule = async (hhmm) => {
+    setServeTime(hhmm)
+    if (!cook) return
+    setBusy(true)
+    try {
+      setCook(await api.patch(`/meal-cook/${cook.id}`, { serve_at: isoForTime(hhmm) }))
     } catch (err) { setError(err.message) }
     finally { setBusy(false) }
   }
@@ -177,6 +219,14 @@ export default function CookPlanTab({ api, activePrep }) {
     )
   }
 
+  // When you would have to begin, and whether that has already gone past.
+  const startBy = serveDate ? new Date(serveDate.getTime() - plan.total_minutes * 60000) : null
+  const startByLabel = startBy
+    ? startBy.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    : 'now'
+  const minutesLeft = serveDate ? Math.round((serveDate - Date.now()) / 60000) : null
+  const tooLate = minutesLeft !== null && minutesLeft < plan.total_minutes ? minutesLeft : null
+
   const prepSteps = plan.steps.filter(s => s.phase === 'prep')
   // Prep is the mise en place plus the knife work, so the count has to be
   // both or the tab promises less than the screen holds.
@@ -214,6 +264,31 @@ export default function CookPlanTab({ api, activePrep }) {
               </button>
             )}
           </div>
+
+          {/* Without a serve time every row reads T-45m, which is only useful
+              if you are already cooking. With one they become clock times,
+              which is what you can actually act on. */}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span className="rs-card-label">EAT AT</span>
+            <input
+              type="time"
+              className="rs-pill"
+              aria-label="Serve time"
+              style={{ background: 'var(--md-surface-container-low)', border: 'none' }}
+              value={serveTime}
+              onChange={e => reschedule(e.target.value)}
+            />
+            {serveTime
+              ? <span className="rs-card-meta" style={{ fontSize: '0.75rem' }}>start by {startByLabel}</span>
+              : <span className="rs-card-meta" style={{ fontSize: '0.75rem' }}>set one and the steps become clock times</span>}
+          </div>
+
+          {tooLate !== null && (
+            <div className="rs-card-meta" style={{ color: 'var(--rs-status-warning)', fontSize: '0.8rem' }}>
+              That is {tooLate} min from now and the meal needs {plan.total_minutes}.
+              Either push it back or expect to serve about {tooLate ? plan.total_minutes - tooLate : 0} min late.
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {plan.recipes.map(r => (

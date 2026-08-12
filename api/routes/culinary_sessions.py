@@ -865,6 +865,44 @@ async def mark_meal_step(
     return {"done": sorted(done)}
 
 
+class MealServeTime(BaseModel):
+    serve_at: Optional[str] = None
+
+
+@router.patch("/meal-cook/{cook_id}")
+async def set_meal_serve_time(
+    cook_id: str, body: MealServeTime, request: Request,
+    db: Session = Depends(get_db)
+):
+    """Move the serve time of a meal already in progress.
+
+    Separate from starting because running late is the normal case, not an
+    error. The plan is stored as offsets, so changing this re-labels every row
+    at once and never reshuffles the order -- what was true about which dish
+    goes in when does not stop being true because dinner slipped half an hour.
+    """
+    from culinary.models import MealCook
+
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    cook = db.query(MealCook).filter_by(id=cook_id, household_id=hh.id).first()
+    if not cook or not cook.is_active:
+        raise not_found("That meal is not being cooked")
+
+    if body.serve_at:
+        try:
+            cook.serve_at = datetime.fromisoformat(
+                body.serve_at.replace("Z", "+00:00"))
+        except ValueError:
+            raise not_found("Could not read that time")
+    else:
+        cook.serve_at = None
+    db.commit()
+
+    await _ws_manager.broadcast(hh.id, "meal_cook_updated", {})
+    return _meal_cook_out(cook)
+
+
 @router.post("/meal-cook/{cook_id}/end")
 async def end_meal_cook(
     cook_id: str, request: Request, db: Session = Depends(get_db)
