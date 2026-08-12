@@ -390,6 +390,35 @@ def test_courses_still_contend_for_the_oven():
     assert [c for c in plan.conflicts if c.resource == "oven"]
 
 
+@pytest.mark.parametrize("text,expected,why", [
+    # One quantity, written in two units.
+    ("Bake for 1 hour 30 minutes", 90, "compound"),
+    ("Simmer 1 hour and 30 minutes", 90, "compound with 'and'"),
+    # Two durations that follow one another.
+    ("Bake 20 minutes, then uncover and bake 10 minutes more", 30, "sequential"),
+    ("Chill 1 hour, then bake 25 minutes", 85, "sequential across stations"),
+    # Twice what it says, and always on a step that is pure hands.
+    ("Cook for 3-5 minutes per side", 10, "per side, from a range"),
+    ("Sear 4 minutes per side until golden", 8, "per side"),
+    # How often, not how long.
+    ("Simmer 20 minutes, stirring every 5 minutes", 20, "cadence ignored"),
+    ("Roast 40 minutes, basting every 15 minutes", 40, "cadence ignored"),
+    ("Stir every 2 minutes", 0, "cadence is the only number"),
+    # Alternatives: the longest, not the sum.
+    ("Bake 25 minutes or 30 minutes", 30, "either/or"),
+])
+def test_a_step_naming_several_durations(text, expected, why):
+    """Steps name more than one duration, and they do not all mean the same.
+
+    Taking the largest handles only the cadence case. Everything else needs
+    the words around the number read: "per side" doubles, "then" adds, "every"
+    is not a duration at all. Getting "3-5 minutes per side" wrong understates
+    exactly the steps that are all hands, which is where the plan can least
+    afford to be optimistic.
+    """
+    assert extract_minutes(text) == expected, why
+
+
 def test_compound_durations_sum_but_alternatives_do_not():
     """"1 hour 30 minutes" is ninety. "25 minutes or 30 minutes" is thirty.
 
@@ -404,7 +433,14 @@ def test_compound_durations_sum_but_alternatives_do_not():
     assert extract_minutes("Marinate 2 hours, 30 minutes minimum") == 150
 
     assert extract_minutes("Bake 25 minutes or 30 minutes") == 30
-    assert extract_minutes("Rest 5 minutes, then bake 40 minutes") == 40
+
+    # Sequential phrasings moved to the parametrised test above once "then"
+    # started adding rather than competing. "Rest 5 minutes, then bake 40" is
+    # forty-five, and asserting forty here was pinning the old max-only rule.
+    #
+    # A bare sentence break stays a separator: two sentences in one step are
+    # usually sequential, but not reliably enough to add minutes on the
+    # strength of a full stop.
     assert extract_minutes("Chill 1 hour. Bake 20 minutes.") == 60
 
 
@@ -421,3 +457,24 @@ def test_equal_offsets_are_not_a_stagger():
     ])
     assert plan.first_course_min == plan.serve_offset_min
     assert len({s.end_min for s in plan.steps}) == 1
+
+
+@pytest.mark.parametrize("text,phase", [
+    # "plate" is a noun far more often than a verb, and this is the first step
+    # of a chicken piccata. It was being filed as the last one.
+    ("Place 1/4 cup flour on a shallow plate. Dredge each cutlet.", "prep"),
+    ("Remove the chicken and set it aside on a plate.", "cook"),
+    # The genuine article still reads as plating up.
+    ("Garnish with parsley and serve immediately.", "finish"),
+    ("Plate the pasta and spoon the sauce over.", "finish"),
+    ("Divide among four bowls.", "finish"),
+])
+def test_finish_verbs_are_matched_as_verbs(text, phase):
+    """Substring matching cannot tell a plate from plating.
+
+    Three of the four steps in a real piccata came back as "finish" because
+    two of them mention a plate and one says "serve". A phase that wrong makes
+    the prep screen empty and the cook screen nonsense, so these patterns
+    require the word after the verb to confirm the sense.
+    """
+    assert analyse_step(0, text).phase == phase
