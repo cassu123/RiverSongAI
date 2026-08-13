@@ -30,12 +30,27 @@ from providers.culinary.appliance_profile import (
 )
 
 
-def built(payload, make="Instant", model="Dutch Oven"):
-    async def _call(_prompt):
+def built(payload, make="Instant", model="Dutch Oven", results=None, seen=None):
+    async def _call(prompt):
+        if seen is not None:
+            seen.append(prompt)
         if isinstance(payload, Exception):
             raise payload
         return payload
-    return asyncio.run(build_profile(make, model, call_model=_call))
+
+    async def _search(query, count=5):
+        if isinstance(results, Exception):
+            raise results
+        return results or ""
+
+    return asyncio.run(
+        build_profile(make, model, call_model=_call, search=_search))
+
+
+PAGE = ("Search results for 'Instant Ace Nova': The Instant Ace Nova is a "
+        "cooking blender with a 1.7 L glass jug and eight one-touch programs "
+        "including Soup, Smoothie and Nut Milk. It heats while it blends and "
+        "is not a pressure cooker.")
 
 
 MULTI = ('{"label": "Instant Dutch Oven", '
@@ -124,9 +139,24 @@ def test_stations_the_planner_cannot_schedule_are_dropped():
     assert profile["stations"] == ["air_fryer"]
 
 
-def test_an_appliance_with_no_usable_station_is_no_profile_at_all():
-    """Better none than one the planner will silently ignore."""
-    assert built('{"label": "Mystery Box", "stations": ["tandoor"]}') is None
+def test_an_appliance_with_no_usable_station_still_gets_a_profile():
+    """A cooking blender is a real machine that a meal plan cannot schedule.
+
+    Both halves of that are true and the profile says both. Discarding it
+    would answer "what is this thing" with silence, when what was actually
+    wanted was its capacity, its buttons and the fact that nothing gets
+    scheduled onto it.
+    """
+    profile = built('{"label": "Instant Ace Nova", '
+                    '"panel": ["Soup", "Smoothie", "Nut Milk"], '
+                    '"capacity": "1.7 L"}',
+                    make="Instant", model="Ace Nova")
+
+    assert profile is not None
+    assert profile["stations"] == []
+    assert profile["schedulable"] is False
+    assert profile["capacity"] == "1.7 L"
+    assert profile["mode_labels"] == ["Blend"]
 
 
 def test_a_backwards_range_is_discarded():
@@ -181,3 +211,58 @@ def test_the_summary_is_checkable_at_a_glance():
 
 def test_no_profile_summarises_to_nothing():
     assert profile_summary(None) == ""
+
+
+# ---------------------------------------------------------------------------
+# Looking it up rather than recalling it
+# ---------------------------------------------------------------------------
+
+def test_what_the_web_says_is_put_in_front_of_the_model():
+    """The point of searching at all.
+
+    "Instant" is a pressure cooker brand and the Ace Nova is a blender, so a
+    model working from the name alone has every reason to get it wrong. A
+    page about the actual product is what settles it.
+    """
+    seen = []
+    built(MULTI, make="Instant", model="Ace Nova", results=PAGE, seen=seen)
+
+    assert "cooking blender" in seen[0]
+    assert "1.7 L" in seen[0]
+    # And it is told which of the two sources wins.
+    assert "believe them" in seen[0]
+
+
+def test_a_profile_records_whether_it_was_looked_up():
+    grounded = built(MULTI, results=PAGE)
+    recalled = built(MULTI, results="")
+
+    assert grounded["sourced"] is True
+    assert recalled["sourced"] is False
+
+
+def test_search_being_down_still_produces_a_profile():
+    """Degrades to what it did before rather than to nothing."""
+    profile = built(MULTI, results=ConnectionError("no route to host"))
+
+    assert profile is not None
+    assert profile["sourced"] is False
+
+
+@pytest.mark.parametrize("useless", [
+    "",
+    "no results",
+    ("I wasn't able to search the web right now — all search services are "
+     "currently unavailable. Try asking me something I can answer from "
+     "memory, or check your .env to configure a search provider."),
+])
+def test_a_non_answer_from_search_is_not_passed_off_as_research(useless):
+    """The provider chain reports its own failure in prose.
+
+    Pasting that under "here is what the web says" would be handing the model
+    a paragraph about search outages and calling it evidence.
+    """
+    seen = []
+    built(MULTI, results=useless, seen=seen)
+
+    assert "SEARCH RESULTS" not in seen[0]

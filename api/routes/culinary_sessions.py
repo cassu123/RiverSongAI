@@ -674,6 +674,36 @@ def _owned_stations(db: Session, household_id: str) -> Dict[str, int]:
     return counts
 
 
+def _owned_appliances(db: Session, household_id: str) -> List[Dict[str, Any]]:
+    """The machines on the counter, each with the stations it can stand in for.
+
+    Named rather than typed, because a household with two pressure cookers has
+    two different appliances: the one with the air fry lid can take a dish the
+    other cannot, and "cook it in the pressure cooker" does not say which.
+
+    Appliances with no schedulable station are left out. A cooking blender is
+    worth recording and is not somewhere a dish gets sent.
+    """
+    from culinary.models import KitchenEquipment
+
+    out: List[Dict[str, Any]] = []
+    for eq in db.query(KitchenEquipment).filter_by(household_id=household_id).all():
+        stations = _safe_json(eq.capabilities_json, None) or (
+            [eq.equipment_type] if eq.equipment_type else [])
+        stations = [s for s in stations if s and s != "counter"]
+        if not stations:
+            continue
+        profile = _safe_json(eq.profile_json, {}) or {}
+        out.append({
+            "id": eq.id,
+            "label": eq.label or " ".join(
+                x for x in (eq.make, eq.model) if x) or "Appliance",
+            "stations": stations,
+            "panel_confirmed": bool(profile.get("panel_confirmed")),
+        })
+    return out
+
+
 def _plan_for_prep_session(db: Session, hh, session,
                            courses: Optional[Dict[str, int]] = None) -> Dict[str, Any]:
     """Build the meal plan for a prep session's staged recipes.
@@ -706,6 +736,11 @@ def _plan_for_prep_session(db: Session, hh, session,
         swapped_to.append({
             "recipe_id": entry.recipe_id,
             "station": swap.get("station"),
+            # What the picker had selected, so reopening the plan shows the
+            # machine that was chosen rather than falling back to its type.
+            "pick": (f"{swap['equipment_id']}:{swap['station']}"
+                     if swap.get("equipment_id") else swap.get("station")),
+            "equipment_label": swap.get("equipment_label", ""),
             "note": swap.get("note", ""),
             "unusual": swap.get("unusual", []),
             "safety": swap.get("safety", ""),
@@ -748,6 +783,11 @@ def _plan_for_prep_session(db: Session, hh, session,
         "first_course_minutes": plan.first_course_min,
         "swaps": swapped_to,
         "stations": plan.stations_used,
+        # The machines actually on the counter, by name. Offering "cook it in
+        # the pressure cooker" to a household with two of them asks a question
+        # they cannot answer -- only one has the air fry lid, and which one is
+        # used changes the method.
+        "appliances": _owned_appliances(db, hh.id),
         "recipes": [{"id": r.recipe_id, "title": r.title,
                      "course_offset_min": r.course_offset_min,
                      "ingredients": mise.get(r.recipe_id, [])} for r in recipes],
@@ -830,8 +870,8 @@ async def preview_cook_plan(
     return _plan_for_prep_session(db, hh, session, _courses_from_query(courses))
 
 
-def _appliance_profile(db: Session, household_id: str,
-                       station: str) -> Optional[dict]:
+def _appliance_profile(db: Session, household_id: str, station: str,
+                       equipment_id: Optional[str] = None) -> Optional[dict]:
     """What this household knows about its own machine of that kind.
 
     Make and model, the facts they have recorded, and how it has actually
@@ -839,10 +879,21 @@ def _appliance_profile(db: Session, household_id: str,
     converge on being right about *your* oven, because it is the only part
     that observes it -- a model can tell you what an air fryer usually needs,
     and only your kitchen can tell you that yours runs hot.
+
+    ``equipment_id`` names which machine when the household owns more than one
+    that can do the job. Two Instant Pots where only one has an air fry lid
+    are not interchangeable, and picking whichever came back from the database
+    first would silently rewrite a method for the wrong appliance.
     """
     from culinary.models import KitchenEquipment
 
-    for eq in db.query(KitchenEquipment).filter_by(household_id=household_id).all():
+    owned = db.query(KitchenEquipment).filter_by(household_id=household_id).all()
+    if equipment_id:
+        # Named machine first, and only that one -- falling back to a sibling
+        # would answer a specific question with a different appliance.
+        owned = [eq for eq in owned if eq.id == equipment_id]
+
+    for eq in owned:
         types = _safe_json(eq.capabilities_json, None) or (
             [eq.equipment_type] if eq.equipment_type else [])
         if station not in types:
@@ -922,6 +973,10 @@ class ApplianceSwap(BaseModel):
     recipe_id: str
     #: A station key, or null to put the original method back.
     station: Optional[str] = None
+    #: Which of the household's machines, when more than one can do the job.
+    #: Two Instant Pots where one has an air fry lid are different appliances,
+    #: and the rewrite has to be for the one actually being used.
+    equipment_id: Optional[str] = None
 
 
 @router.post("/prep/{session_id}/appliance-swap")
@@ -981,7 +1036,7 @@ async def swap_appliance(
     stations = [f.station for f in facts if f.station != "counter"]
     origin = max(set(stations), key=stations.count) if stations else "stove"
 
-    profile = _appliance_profile(db, hh.id, body.station)
+    profile = _appliance_profile(db, hh.id, body.station, body.equipment_id)
 
     try:
         swap = await rewrite_for_appliance(
@@ -995,6 +1050,11 @@ async def swap_appliance(
     except SwapFailed as exc:
         raise bad_request(str(exc))
 
+    # Which machine, not just which kind. Reopening the plan has to show the
+    # appliance that was chosen, and a later replan has to rewrite for the
+    # same one.
+    swap["equipment_id"] = body.equipment_id or ""
+    swap["equipment_label"] = (profile or {}).get("label", "")
     entry.appliance_swap_json = json.dumps(swap)
     db.commit()
 

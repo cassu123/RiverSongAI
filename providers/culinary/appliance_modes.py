@@ -67,10 +67,21 @@ class Mode:
 #: Ordered, because the first station a panel yields becomes the appliance's
 #: primary one and that should be stable between saves.
 MODES: Tuple[Mode, ...] = (
+    # Only wording that can mean nothing else. The preset names an Instant Pot
+    # also prints -- SOUP, STEW, RICE, CAKE -- are deliberately absent: an
+    # Instant Ace Nova is a cooking blender with a SOUP button, and treating
+    # that as pressure cooking would hand it a pressure vessel it does not
+    # have. A missed button costs a tap; an invented one costs a safety check.
     Mode("pressure_cook", "Pressure Cook", "instant_pot", (
-        "pressure", "manual", "high pressure", "low pressure", "pressure cooking",
-        "soup", "broth", "stew", "meat", "poultry", "bean", "chili", "rice",
-        "multigrain", "porridge", "egg", "cake", "canning", "sterilize",
+        "pressure", "high pressure", "low pressure", "pressure cooking",
+        "canning", "sterilize", "pressure cook high", "pressure cook low",
+    )),
+    # Heats while it blends, which is a real appliance and not a stove. No
+    # station: nothing in a meal plan is scheduled onto a blender, and saying
+    # so is better than filing it under something it can stand in for.
+    Mode("blend", "Blend", None, (
+        "smoothie", "puree", "nut milk", "crush", "blending", "soup blend",
+        "ice crush",
     )),
     Mode("saute", "Sauté", "stove", (
         "saute", "sear", "brown", "sear saute", "saute sear", "browning",

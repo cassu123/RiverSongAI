@@ -205,11 +205,18 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
   // it does the recipe is unchanged and the cook is told -- silently keeping
   // the old method would say the appliance works and hand over the wrong
   // instructions for it.
-  const swapAppliance = async (recipeId, station) => {
+  // A choice is either a bare station ("any oven") or one of the household's
+  // machines as "<equipment id>:<station>". Split here rather than carrying
+  // two selects, because to the cook it is one question: cook this where?
+  const swapAppliance = async (recipeId, choice) => {
     setSwapping(recipeId)
     setSwapError(null)
+    const [head, tail] = String(choice || '').split(':')
+    const station = tail || head || null
+    const equipment_id = tail ? head : null
     try {
-      await api.post(`/prep/${activePrep.id}/appliance-swap`, { recipe_id: recipeId, station })
+      await api.post(`/prep/${activePrep.id}/appliance-swap`,
+                     { recipe_id: recipeId, station, equipment_id })
       await load()
     } catch (err) {
       setSwapError({ recipeId, message: err.message })
@@ -521,15 +528,31 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
                       style={{ fontSize: '0.72rem', flex: 1, minWidth: 0 }}
                       aria-label={`Cook ${r.title} in`}
                       disabled={swapping === r.id}
-                      value={swapFor(r.id)?.station || ''}
+                      value={swapFor(r.id)?.pick || swapFor(r.id)?.station || ''}
                       onChange={e => swapAppliance(r.id, e.target.value || null)}
                     >
                       <option value="">cook it as written</option>
-                      {Object.entries(STATION_LABELS)
-                        .filter(([k]) => k !== 'counter')
-                        .map(([k, label]) => (
-                          <option key={k} value={k}>cook it in the {label.toLowerCase()}</option>
-                        ))}
+                      {/* Owned machines by name first. A household with two
+                          pressure cookers cannot answer "cook it in the
+                          pressure cooker" — only one has the air fry lid, and
+                          which one is used changes the method. */}
+                      {(plan.appliances || []).length > 0 && (
+                        <optgroup label="what you have">
+                          {(plan.appliances || []).flatMap(a =>
+                            a.stations.map(st => (
+                              <option key={`${a.id}:${st}`} value={`${a.id}:${st}`}>
+                                {a.label} — as {(STATION_LABELS[st] || st).toLowerCase()}
+                              </option>
+                            )))}
+                        </optgroup>
+                      )}
+                      <optgroup label="any machine of that kind">
+                        {Object.entries(STATION_LABELS)
+                          .filter(([k]) => k !== 'counter')
+                          .map(([k, label]) => (
+                            <option key={k} value={k}>cook it in the {label.toLowerCase()}</option>
+                          ))}
+                      </optgroup>
                     </select>
                     {swapping === r.id && (
                       <span className="rs-card-label" style={{ fontSize: '0.6rem' }}>REWRITING…</span>
@@ -538,6 +561,11 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
 
                   {swapFor(r.id)?.note && (
                     <div className="rs-card-meta" style={{ fontSize: '0.72rem', width: '100%', marginTop: -2 }}>
+                      {swapFor(r.id).equipment_label && (
+                        <strong style={{ color: 'var(--primary)' }}>
+                          {swapFor(r.id).equipment_label}:{' '}
+                        </strong>
+                      )}
                       {swapFor(r.id).note} <em>This session only — the saved recipe is unchanged.</em>
                     </div>
                   )}

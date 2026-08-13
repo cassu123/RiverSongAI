@@ -237,6 +237,13 @@ def validate_profile(raw: dict, make: str = "", model: str = "") -> dict:
         # True only once somebody has read the panel off the appliance. Until
         # then every station here traces back to a guess about the product.
         "panel_confirmed": bool(raw.get("panel_confirmed", False)),
+        # Whether a page about this product was found and read, as opposed to
+        # recalled. The difference between the two is the whole reason an
+        # Instant Ace Nova is not filed as a pressure cooker.
+        "sourced": bool(raw.get("sourced", False)),
+        # Nothing in a meal plan is scheduled onto a blender. Said plainly so
+        # the appliance can still be recorded without looking broken.
+        "schedulable": bool(stations),
     }
 
 
@@ -259,8 +266,60 @@ def confirm_panel(profile: Optional[dict], panel: List[str]) -> dict:
                             model=base.get("model", ""))
 
 
-async def build_profile(make: str, model: str, call_model=None) -> Optional[dict]:
-    """Ask what this appliance is, and validate the answer before believing it.
+_SEARCH_QUERY = "{make} {model} specifications manual cooking functions"
+
+#: Long enough to be a product page rather than an error string. The search
+#: chain returns prose on failure, and prose about being unable to search is
+#: worse than no context at all -- it would be read as evidence.
+_MIN_SEARCH_CHARS = 120
+
+_GROUNDED = """Here are web search results about this appliance:
+
+--- SEARCH RESULTS ---
+{results}
+--- END SEARCH RESULTS ---
+
+Use these results. They describe the actual product. Where they disagree with
+what you remember, believe them. Where they do not mention something, leave it
+out rather than filling it in.
+
+"""
+
+
+async def _search_for(make: str, model: str, search=None) -> str:
+    """What the web says about this product, or "" if it cannot be reached.
+
+    The whole reason this call exists: "Instant Ace Nova" is a cooking blender
+    and "Instant Pot Duo" is a pressure cooker, and a model working from the
+    word "Instant" will confidently make the first one into the second. A
+    product page settles it; memory does not.
+    """
+    try:
+        if search is None:
+            from providers.web.search import build_search_provider
+            search = build_search_provider().search
+        results = await search(_SEARCH_QUERY.format(make=make, model=model), 5)
+    except Exception as exc:
+        logger.info("Appliance profile: search unavailable (%s)", exc)
+        return ""
+
+    results = (results or "").strip()
+    # The provider chain reports its own failure in prose. Passing that along
+    # as context would be handing the model a paragraph about search outages
+    # and calling it research.
+    if len(results) < _MIN_SEARCH_CHARS or "wasn't able to search" in results:
+        return ""
+    return results[:6000]
+
+
+async def build_profile(make: str, model: str, call_model=None,
+                        search=None) -> Optional[dict]:
+    """Look the appliance up, then have the answer read into a profile.
+
+    Search first and memory second, because the failure this is built around
+    is a confident wrong answer about a product the model half-recognises.
+    Grounding it in a page about the actual machine is what turns "Instant, so
+    pressure cooker" into "Ace Nova, so blender that cooks".
 
     Returns None when there is no usable answer. That is a mild failure by
     design: without a profile the generic class limits apply and the swap
@@ -274,6 +333,10 @@ async def build_profile(make: str, model: str, call_model=None) -> Optional[dict
         make=make or "(unknown)", model=model or "(unknown)",
         stations=", ".join(sorted(_CLAIMABLE)),
     )
+
+    found = await _search_for(make, model, search=search)
+    if found:
+        prompt = _GROUNDED.format(results=found) + prompt
 
     try:
         if call_model is None:
@@ -289,12 +352,17 @@ async def build_profile(make: str, model: str, call_model=None) -> Optional[dict
         logger.info("Appliance profile: no JSON object in reply")
         return None
 
+    parsed["sourced"] = bool(found)
     profile = validate_profile(parsed, make=make, model=model)
+
+    # An appliance with no schedulable station keeps its profile. A cooking
+    # blender is a real machine with a real capacity and a real set of
+    # buttons, and throwing all of that away because a meal plan has nothing
+    # to schedule onto it would answer "what is this" with silence. It simply
+    # never appears as a station, which is already true of it.
     if not profile["stations"]:
-        # Nothing the planner can do with an appliance it cannot place.
-        logger.info("Appliance profile: no recognisable stations for %s %s",
+        logger.info("Appliance profile: %s %s has no schedulable station",
                     make, model)
-        return None
     return profile
 
 

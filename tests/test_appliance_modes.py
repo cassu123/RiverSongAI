@@ -103,7 +103,6 @@ def test_unticking_a_button_removes_the_station():
     ("SEAR-SAUTE", "saute"),
     ("Slow Cook", "slow_cook"),
     ("Pressure Cook", "pressure_cook"),
-    ("Manual", "pressure_cook"),         # what older Instant Pots print
     ("Bake/Roast", "bake"),
     ("Sous Vide", "sous_vide"),
 ])
@@ -122,6 +121,31 @@ def test_a_longer_button_is_not_claimed_by_a_shorter_one_inside_it():
 def test_an_unknown_button_is_ignored_rather_than_guessed_at():
     assert normalise_mode("Nutri-Boost") is None
     assert modes_from_panel(["Nutri-Boost", "Sauté"]) == ["saute"]
+
+
+@pytest.mark.parametrize("ambiguous", ["Soup", "Stew", "Rice", "Cake", "Manual"])
+def test_a_preset_name_that_could_mean_anything_claims_nothing(ambiguous):
+    """An Instant Ace Nova is a cooking blender with a SOUP button.
+
+    Instant Pots print SOUP too, and reading it as pressure cooking would give
+    a blender a pressure vessel — then let the swap check clear a pressure
+    instruction against a machine that cannot pressurise anything. A missed
+    button costs one tap. An invented one costs the safety check.
+    """
+    assert normalise_mode(ambiguous) is None
+
+
+def test_a_cooking_blender_is_not_a_pressure_cooker():
+    """The whole panel, as the Ace Nova actually prints it."""
+    modes = modes_from_panel(["Soup", "Smoothie", "Nut Milk", "Puree", "Crush"])
+
+    assert modes == ["blend"]
+    assert stations_for_modes(modes) == []
+
+
+def test_pressure_wording_that_cannot_mean_anything_else_still_reads():
+    assert normalise_mode("Pressure Cook") == "pressure_cook"
+    assert normalise_mode("High Pressure") == "pressure_cook"
 
 
 def test_buttons_come_back_in_catalogue_order_not_typing_order():
