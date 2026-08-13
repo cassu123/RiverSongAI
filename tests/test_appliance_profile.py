@@ -39,9 +39,9 @@ def built(payload, make="Instant", model="Dutch Oven"):
 
 
 MULTI = ('{"label": "Instant Dutch Oven", '
-         '"stations": ["dutch_oven", "slow_cooker", "air_fryer", "stove"], '
-         '"max_c": 230, "min_c": 60, "watts": 1500, "capacity": "5.7 L", '
-         '"modes": ["Sear/Sauté", "Slow Cook", "Air Fry", "Bake"], '
+         '"panel": ["Sear/Sauté", "Slow Cook", "Air Fry", "Bake"], '
+         '"station_max_c": {"air_fryer": 230, "oven": 230}, '
+         '"watts": 1500, "capacity": "5.7 L", '
          '"notes": "Electric, so the base heats rather than the whole pot.", '
          '"confident": true}')
 
@@ -51,16 +51,17 @@ MULTI = ('{"label": "Instant Dutch Oven", '
 # ---------------------------------------------------------------------------
 
 def test_one_appliance_can_be_several_stations():
-    """An Instant Dutch Oven sears, braises, slow cooks and air fries.
+    """An Instant Dutch Oven sears, slow cooks, air fries and bakes.
 
     Filing it under a single station is what would make three of those
-    invisible: a swap only offers a machine for the stations it claims.
+    invisible: a swap only offers a machine for the stations it claims. Each
+    one here traces back to a button rather than to the words "Dutch Oven".
     """
     profile = built(MULTI)
 
     assert set(profile["stations"]) == {
-        "dutch_oven", "slow_cooker", "air_fryer", "stove"}
-    assert profile["modes"][:2] == ["Sear/Sauté", "Slow Cook"]
+        "stove", "slow_cooker", "air_fryer", "oven"}
+    assert profile["mode_labels"][:2] == ["Sauté", "Slow Cook"]
     assert profile["capacity"] == "5.7 L"
 
 
@@ -175,7 +176,7 @@ def test_the_summary_is_checkable_at_a_glance():
 
     assert "230°C" in summary
     assert "5.7 L" in summary
-    assert "Sear/Sauté" in summary
+    assert "Sauté" in summary
 
 
 def test_no_profile_summarises_to_nothing():

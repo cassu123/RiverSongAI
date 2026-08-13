@@ -166,11 +166,18 @@ def effective_limits(station: str,
         return base
 
     max_c = base.max_c
-    claimed = profile.get("max_c")
+    # A figure recorded for this station beats one recorded for the appliance.
+    # A multicooker that air fries at 205C and bakes at 175C has two different
+    # true answers, and the appliance-wide number is only the larger of them --
+    # using it for the cooler station would permit an instruction that machine
+    # cannot carry out.
+    per_station = profile.get("station_max_c")
+    claimed = (per_station or {}).get(station) if isinstance(per_station, dict) else None
+    if claimed is None:
+        claimed = profile.get("max_c")
     if isinstance(claimed, (int, float)) and claimed > 0:
         ceiling = HARD_CEILING_C.get(station, base.max_c or int(claimed))
-        max_c = min(int(claimed), ceiling) if base.max_c is None else (
-            min(int(claimed), ceiling))
+        max_c = min(int(claimed), ceiling)
 
     min_c = base.min_c
     claimed_min = profile.get("min_c")

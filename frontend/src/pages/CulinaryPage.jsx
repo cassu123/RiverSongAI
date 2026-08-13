@@ -4,6 +4,7 @@ import BarcodeScanner from '../components/BarcodeScanner.jsx'
 import AddRecipeModal from '../components/AddRecipeModal.jsx'
 import ShoppingListTab from '../components/ShoppingListTab.jsx'
 import CookPlanTab from '../components/CookPlanTab.jsx'
+import AppliancePanel from '../components/AppliancePanel.jsx'
 
 /**
  * CulinaryPage — Spatial Intelligence v2.0
@@ -524,6 +525,9 @@ export default function CulinaryPage({ setAction }) {
   const [eqMake,  setEqMake]  = useState('')
   const [eqModel, setEqModel] = useState('')
   const [eqBusy,  setEqBusy]  = useState(false)
+  // Which appliance has its panel checklist open. One at a time: it is read
+  // side by side with the machine, and two open at once is two machines.
+  const [panelFor, setPanelFor] = useState(null)
   const [prepView,  setPrepView]  = useState('recipes')
   const [prepList,  setPrepList]  = useState(null)   // this session's needs
   const [prepPiles, setPrepPiles] = useState(null)   // the same, split by dish
@@ -1059,6 +1063,28 @@ export default function CulinaryPage({ setAction }) {
                        <div className="rs-card-meta" style={{ marginTop: 6, fontSize: '0.72rem', color: 'var(--rs-status-warning)' }}>
                          Not certain of this model — the general limits for the type apply.
                        </div>
+                     )}
+                     {!eq.panel_confirmed && panelFor !== eq.id && (
+                       <div className="rs-card-meta" style={{ marginTop: 6, fontSize: '0.72rem', color: 'var(--rs-status-warning)' }}>
+                         Guessed from the name, not checked against the machine.
+                       </div>
+                     )}
+                     {panelFor === eq.id ? (
+                       <AppliancePanel
+                         api={api}
+                         equipmentId={eq.id}
+                         onClose={() => setPanelFor(null)}
+                         onSaved={() => { setPanelFor(null); fetchData('equipment') }}
+                       />
+                     ) : (
+                       <button
+                         className="rs-pill"
+                         style={{ marginTop: 12 }}
+                         onClick={() => setPanelFor(eq.id)}
+                       >
+                         <span className="material-symbols-rounded">checklist</span>
+                         {eq.panel_confirmed ? 'PANEL' : 'CHECK THE PANEL'}
+                       </button>
                      )}
                    </div>
                  </div>

@@ -114,6 +114,13 @@ def _equipment_out(eq: KitchenEquipment) -> dict:
         "profile": _safe_json(getattr(eq, "profile_json", None), None),
         "profile_summary": _profile_summary(
             _safe_json(getattr(eq, "profile_json", None), None)),
+        # Whether the panel was read off the machine or guessed from its name.
+        # Worth surfacing on its own: two appliances from one maker can share
+        # a name and differ by a button, so an unconfirmed profile is a claim
+        # about a product line rather than about this machine.
+        "panel_confirmed": bool(
+            (_safe_json(getattr(eq, "profile_json", None), None) or {})
+            .get("panel_confirmed")),
         "label": eq.label,
         "make": eq.make,
         "model": eq.model,

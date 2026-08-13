@@ -30,6 +30,25 @@ not be able to widen the walls that exist to catch it.
 The failure mode is deliberately mild. No profile means the generic class
 limits apply and the swap still works -- slightly less specific, exactly as
 correct.
+
+**Where the answer actually comes from.** Two Instant Pot pressure cookers,
+one with an air fry lid, are the case that decides the design: same brand,
+near enough the same name, and one is an air fryer while the other is not. A
+model asked "what is an Instant Pot" cannot separate them, because what
+separates them is not in the name -- it is the AIR CRISP button on the front
+of one of them.
+
+So the panel is the specification, and the stations are derived from it by
+the table in appliance_modes with no model in the loop. That leaves the model
+a much smaller and much safer job: propose the buttons it thinks are on the
+machine, for a person to confirm by looking at it. A wrong guess costs a tap.
+A profile carrying ``panel_confirmed`` has been read off the appliance by
+somebody, and is the only kind that is not a guess at all.
+
+Temperature is kept **per station** for the same reason. One number cannot
+describe a Duo Crisp, which pressure cooks at no temperature you set and air
+fries at 205°C, and a single ``max_c`` for the appliance would either
+wrongly cap one or wrongly permit the other.
 """
 
 from __future__ import annotations
@@ -40,6 +59,12 @@ import re
 from typing import Any, Dict, List, Optional
 
 from providers.culinary.appliance_limits import HARD_CEILING_C, LIMITS
+from providers.culinary.appliance_modes import (
+    MODES,
+    mode_labels,
+    modes_from_panel,
+    stations_for_modes,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,29 +73,38 @@ logger = logging.getLogger(__name__)
 #: silently ignores.
 _CLAIMABLE = set(LIMITS) - {"counter"}
 
-_MAX_MODES = 12
+_MAX_MODES = 24
 
-_PROMPT = """Identify this kitchen appliance and describe what it can do.
+_PROMPT = """Identify this kitchen appliance by the controls on its front panel.
 
 Make: {make}
 Model: {model}
 
-Answer only about this appliance. Many machines do several jobs — an Instant
-Dutch Oven sears, slow cooks, pressure cooks and air fries; an indoor grill
-also griddles. List every one it genuinely does.
+The buttons are what matter. Two appliances from the same maker with almost
+the same name can differ entirely — an Instant Pot Duo and a Duo Crisp are
+both "Instant Pot pressure cookers", but only one has an AIR CRISP button, and
+that button is the whole difference between them.
+
+So list the buttons and dial positions you believe are printed on THIS model,
+using the wording the manufacturer prints. Someone will check your list
+against the machine in front of them, so a plausible extra button is worse
+than a missing one.
 
 Return ONLY this JSON object, no prose and no markdown:
 {{
   "label": "how a person would refer to it",
-  "stations": ["which of: {stations}"],
-  "max_c": 0,
-  "min_c": 0,
+  "panel": ["the buttons printed on it, e.g. Pressure Cook, Sauté, Air Crisp"],
+  "station_max_c": {{"station": 0}},
   "watts": 0,
   "capacity": "e.g. 5.7 L or 6 qt, empty string if unknown",
-  "modes": ["the names printed on the dial or panel"],
-  "notes": "one or two sentences on what it is good at and any quirk that changes cooking times",
+  "notes": "any quirk that changes cooking times",
+  "variants": ["other models in this line whose panels differ, if any"],
   "confident": true
 }}
+
+For "station_max_c", give the highest temperature the appliance can be SET to
+for each of these that apply: {stations}. Omit any station where you do not
+set a temperature (pressure cooking) or do not know.
 
 If you do not actually recognise this make and model, set "confident" to false
 and give only what is certain from the name. A guessed specification is worse
@@ -118,45 +152,111 @@ def _clamp_max_c(stations: List[str], claimed: Optional[int]) -> Optional[int]:
     return min(claimed, max(ceilings))
 
 
+def _station_temps(raw: Any, stations: List[str]) -> Dict[str, int]:
+    """A ceiling per station, each capped by its own class.
+
+    Per station because one number cannot describe a machine that pressure
+    cooks at no set temperature and air fries at 205°C. Capping each against
+    its own ceiling is what stops a generous oven figure from being borrowed
+    by the air fryer sharing the same body.
+    """
+    if not isinstance(raw, dict):
+        return {}
+    out: Dict[str, int] = {}
+    for station, value in raw.items():
+        if station not in stations:
+            continue
+        claimed = _positive_int(value, 600)
+        if claimed is None:
+            continue
+        out[station] = min(claimed, HARD_CEILING_C.get(station, claimed))
+    return out
+
+
 def validate_profile(raw: dict, make: str = "", model: str = "") -> dict:
     """Turn a model's answer into something safe to store and to check against.
 
     Pure, and separate from the call, because this is where the safety lives:
     every bound the rest of the module trusts comes through here.
-    """
-    stations = [s for s in (raw.get("stations") or [])
-                if isinstance(s, str) and s in _CLAIMABLE]
-    # Order and uniqueness, so the primary station is stable across saves.
-    stations = list(dict.fromkeys(stations))
 
-    modes = [str(m).strip()[:40] for m in (raw.get("modes") or [])
-             if str(m).strip()][:_MAX_MODES]
+    Stations are **derived** from the panel wherever there is one. That is the
+    difference between an appliance described and an appliance identified: the
+    buttons are a fact about the machine, and the mapping from buttons to
+    stations is a table, so nothing between the panel and the schedule is a
+    guess. A caller may still hand over stations directly, which is what a
+    profile written by hand does.
+    """
+    panel = [str(p).strip()[:40] for p in (raw.get("panel") or [])
+             if str(p).strip()][:_MAX_MODES]
+    modes = modes_from_panel(panel)
+
+    if modes:
+        stations = stations_for_modes(modes)
+    else:
+        stations = [s for s in (raw.get("stations") or [])
+                    if isinstance(s, str) and s in _CLAIMABLE]
+        # Order and uniqueness, so the primary station is stable across saves.
+        stations = list(dict.fromkeys(stations))
+
+    station_max_c = _station_temps(raw.get("station_max_c"), stations)
 
     max_c = _clamp_max_c(stations, _positive_int(raw.get("max_c"), 600))
+    if station_max_c and max_c is None:
+        # The appliance-wide figure is the hottest thing it does, so an
+        # older check that reads only max_c still gets a true answer.
+        max_c = max(station_max_c.values())
     min_c = _positive_int(raw.get("min_c"), 300)
     if max_c and min_c and min_c >= max_c:
         min_c = None                    # a range that is not one tells us nothing
 
-    # An unconfident answer keeps its stations -- those are checkable against
-    # the name -- and loses its numbers, which are the part that would widen a
-    # bound on the strength of a guess.
+    # An unconfident answer keeps its panel and stations -- those are what a
+    # person can check by looking at the machine -- and loses its numbers,
+    # which are the part that would widen a bound on the strength of a guess.
     confident = bool(raw.get("confident", True))
     if not confident:
         max_c = min_c = None
+        station_max_c = {}
 
     return {
         "label": str(raw.get("label") or f"{make} {model}").strip()[:80],
         "make": make,
         "model": model,
+        "panel": panel,
+        "modes": modes,
+        "mode_labels": mode_labels(modes),
         "stations": stations,
+        "station_max_c": station_max_c,
         "max_c": max_c,
         "min_c": min_c,
         "watts": _positive_int(raw.get("watts"), 5000),
         "capacity": str(raw.get("capacity") or "").strip()[:40],
-        "modes": modes,
         "notes": str(raw.get("notes") or "").strip()[:400],
+        "variants": [str(v).strip()[:60] for v in (raw.get("variants") or [])
+                     if str(v).strip()][:6],
         "confident": confident,
+        # True only once somebody has read the panel off the appliance. Until
+        # then every station here traces back to a guess about the product.
+        "panel_confirmed": bool(raw.get("panel_confirmed", False)),
     }
+
+
+def confirm_panel(profile: Optional[dict], panel: List[str]) -> dict:
+    """Replace the guessed panel with the one somebody read off the machine.
+
+    The only path in this module that produces a profile which is not a guess.
+    Stations are re-derived rather than edited, so ticking AIR CRISP is all it
+    takes to make the appliance schedulable as an air fryer -- and unticking
+    it is all it takes to stop the planner offering a machine that cannot do
+    the job.
+    """
+    base = dict(profile or {})
+    base["panel"] = panel
+    base["panel_confirmed"] = True
+    # Stations came from the old panel and must not survive it.
+    base.pop("stations", None)
+    return validate_profile(base,
+                            make=base.get("make", ""),
+                            model=base.get("model", ""))
 
 
 async def build_profile(make: str, model: str, call_model=None) -> Optional[dict]:
@@ -217,6 +317,21 @@ def profile_summary(profile: Optional[dict]) -> str:
         bits.append(profile["capacity"])
     if profile.get("watts"):
         bits.append(f"{profile['watts']}W")
-    if profile.get("modes"):
-        bits.append("modes: " + ", ".join(profile["modes"][:6]))
+    labels = profile.get("mode_labels") or mode_labels(profile.get("modes") or [])
+    if labels:
+        bits.append("panel: " + ", ".join(labels[:8]))
     return " · ".join(bits)
+
+
+def suggested_panel(profile: Optional[dict]) -> List[Dict[str, Any]]:
+    """Every button the catalogue knows, ticked where this profile claims it.
+
+    The checklist a person confirms against the machine. Offering the whole
+    catalogue rather than only what was guessed is what lets somebody *add*
+    the air fry button the model missed -- which is exactly the case that
+    separates two otherwise identical pressure cookers.
+    """
+    claimed = set(profile.get("modes") or []) if profile else set()
+    return [{"key": m.key, "label": m.label, "station": m.station,
+             "on": m.key in claimed}
+            for m in MODES]

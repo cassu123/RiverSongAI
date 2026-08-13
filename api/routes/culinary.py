@@ -43,7 +43,12 @@ from providers.culinary.ingredients import (
     _collect_parsed,
     _flag_blacklist,
 )
-from providers.culinary.appliance_profile import build_profile, profile_summary
+from providers.culinary.appliance_profile import (
+    build_profile,
+    confirm_panel,
+    profile_summary,
+    suggested_panel,
+)
 from providers.culinary.llm import (
     _EQUIPMENT_TRANSLATE_PROMPT,
     _RECIPE_SCHEMA_PROMPT,
@@ -109,7 +114,7 @@ from fastapi import (
     WebSocketDisconnect,
     status,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -406,6 +411,16 @@ class ScaleRequest(BaseModel):
 
 class EquipmentTranslateRequest(BaseModel):
     equipment: str  # e.g. "Air Fryer"
+
+
+class EquipmentPanelConfirm(BaseModel):
+    """The buttons somebody has read off the front of the appliance.
+
+    Sent whole rather than as a diff: the panel replaces what was there, so
+    unticking is expressed by absence and the stored profile can never drift
+    out of step with what was last confirmed.
+    """
+    panel: List[str] = Field(default_factory=list)
 
 
 class StockroomItemCreate(BaseModel):
@@ -733,6 +748,125 @@ async def add_equipment(
         flag = f"has_{t}"
         if hasattr(hh, flag):
             setattr(hh, flag, True)
+    db.commit()
+    db.refresh(eq)
+    await _ws_manager.broadcast(hh.id, "equipment_updated", _equipment_out(eq))
+    return _equipment_out(eq)
+
+
+def _apply_station_flags(db: Session, hh, eq_id: str,
+                         old_types: List[str], new_types: List[str]) -> None:
+    """Move the household's has_* flags to match a changed set of stations.
+
+    A flag is only cleared once no *other* appliance still provides it, so
+    unticking AIR CRISP on one machine does not tell the household it has no
+    air fryer when a second one is sitting next to it.
+    """
+    siblings = db.query(KitchenEquipment).filter(
+        KitchenEquipment.household_id == hh.id,
+        KitchenEquipment.id != eq_id,
+    ).all()
+    sibling_caps: set = set()
+    for s_eq in siblings:
+        try:
+            sibling_caps.update(json.loads(s_eq.capabilities_json or "[]"))
+        except Exception:
+            if s_eq.equipment_type:
+                sibling_caps.add(s_eq.equipment_type)
+
+    for t in old_types:
+        if t not in new_types and t not in sibling_caps:
+            flag = f"has_{t}"
+            if hasattr(hh, flag):
+                setattr(hh, flag, False)
+    for t in new_types:
+        flag = f"has_{t}"
+        if hasattr(hh, flag):
+            setattr(hh, flag, True)
+
+
+@router.get("/household/equipment/{eq_id}/panel")
+async def get_equipment_panel(
+    eq_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """The checklist to hold up against the front of the appliance.
+
+    Every button the catalogue knows, ticked where this profile claims it —
+    the whole list rather than only the guessed ones, because the correction
+    that matters most is *adding* the button the model missed.
+    """
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    eq = db.query(KitchenEquipment).filter(
+        KitchenEquipment.id == eq_id,
+        KitchenEquipment.household_id == hh.id,
+    ).first()
+    if not eq:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+
+    try:
+        profile = json.loads(eq.profile_json) if eq.profile_json else None
+    except Exception:
+        profile = None
+    return {
+        "equipment_id": eq.id,
+        "label": eq.label,
+        "confirmed": bool((profile or {}).get("panel_confirmed")),
+        "buttons": suggested_panel(profile),
+    }
+
+
+@router.post("/household/equipment/{eq_id}/panel")
+async def confirm_equipment_panel(
+    eq_id: str,
+    body: EquipmentPanelConfirm,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Record the buttons somebody has actually read off the machine.
+
+    This is the only path that produces a profile which is not a guess. Two
+    Instant Pots that answer to the same name stop being ambiguous here: the
+    one with AIR CRISP ticked becomes schedulable as an air fryer and the
+    other does not.
+
+    Stations are re-derived from the panel rather than edited, so the buttons
+    stay the single source of what the appliance can do.
+    """
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    eq = db.query(KitchenEquipment).filter(
+        KitchenEquipment.id == eq_id,
+        KitchenEquipment.household_id == hh.id,
+    ).first()
+    if not eq:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+
+    try:
+        profile = json.loads(eq.profile_json) if eq.profile_json else None
+    except Exception:
+        profile = None
+    profile = dict(profile or {})
+    profile.setdefault("make", eq.make or "")
+    profile.setdefault("model", eq.model or "")
+    profile.setdefault("label", eq.label or "")
+
+    old_types: List[str] = []
+    try:
+        old_types = json.loads(eq.capabilities_json or "[]")
+    except Exception:
+        old_types = [eq.equipment_type] if eq.equipment_type else []
+
+    confirmed = confirm_panel(profile, list(body.panel or []))
+    new_types = confirmed["stations"]
+
+    eq.profile_json = json.dumps(confirmed)
+    eq.capabilities_json = json.dumps(new_types)
+    eq.equipment_type = new_types[0] if new_types else "other"
+    _apply_station_flags(db, hh, eq_id, old_types, new_types)
+
     db.commit()
     db.refresh(eq)
     await _ws_manager.broadcast(hh.id, "equipment_updated", _equipment_out(eq))
