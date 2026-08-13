@@ -103,6 +103,49 @@ class TavilySearchProvider(SearchProvider):
             return "\n\n".join(output)
 
 
+class BraveSearchProvider(SearchProvider):
+    """Brave Search (2,000 free/month, independent index).
+
+    The key has been in settings since Phase 12 and nothing read it, so a
+    household that had configured Brave was silently falling through to
+    whatever came next.
+    """
+
+    def __init__(self, api_key: str):
+        if not api_key:
+            raise RuntimeError("Brave API key empty")
+        self.api_key = api_key
+        self.url = "https://api.search.brave.com/res/v1/web/search"
+
+    async def search(self, query: str, count: int = 5) -> str:
+        headers = {
+            "Accept": "application/json",
+            "X-Subscription-Token": self.api_key,
+        }
+        params = {"q": query, "count": count}
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(self.url, params=params,
+                                    headers=headers, timeout=15.0)
+            if resp.status_code != 200:
+                raise RuntimeError(f"Brave error {resp.status_code}")
+
+            results = (resp.json().get("web") or {}).get("results", [])[:count]
+            if not results:
+                return ""
+
+            output = [f"Search results for '{query}':"]
+            for i, res in enumerate(results):
+                title = res.get("title", "No Title")
+                content = (res.get("description")
+                           or res.get("extra_snippets", [""])[0]
+                           or "No content")
+                url = res.get("url", "")
+                output.append(
+                    f"{i + 1}. {title}\n   {content}\n   Source: {url}")
+
+            return "\n\n".join(output)
+
+
 class GooglePSESearchProvider(SearchProvider):
     """Google Programmable Search (100 free/day)."""
 
@@ -231,6 +274,11 @@ def build_search_provider() -> SearchProvider:
     providers.append(SearXNGSearchProvider(s.searxng_base_url))
 
     # Add paid-free providers only if keys are configured
+    if s.brave_search_api_key:
+        providers.append(
+            BraveSearchProvider(
+                s.brave_search_api_key))  # type: ignore
+
     if s.tavily_api_key:
         providers.append(
             TavilySearchProvider(
