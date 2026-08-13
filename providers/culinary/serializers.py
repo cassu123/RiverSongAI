@@ -91,6 +91,11 @@ def _stock_out(s: StockroomItem) -> dict:
     }
 
 
+def _profile_summary(profile):
+    from providers.culinary.appliance_profile import profile_summary
+    return profile_summary(profile)
+
+
 def _equipment_out(eq: KitchenEquipment) -> dict:
     raw_caps = eq.capabilities_json
     if raw_caps:
@@ -103,6 +108,12 @@ def _equipment_out(eq: KitchenEquipment) -> dict:
     return {
         "id": eq.id,
         "equipment_type": eq.equipment_type,
+        # The profile is a guess from a product name, so it is shown rather
+        # than kept behind the scenes: the cook is the only one who can read
+        # "up to 230C, Sear/Saute, Slow Cook" and know if that is their machine.
+        "profile": _safe_json(getattr(eq, "profile_json", None), None),
+        "profile_summary": _profile_summary(
+            _safe_json(getattr(eq, "profile_json", None), None)),
         "label": eq.label,
         "make": eq.make,
         "model": eq.model,

@@ -43,6 +43,7 @@ from providers.culinary.ingredients import (
     _collect_parsed,
     _flag_blacklist,
 )
+from providers.culinary.appliance_profile import build_profile, profile_summary
 from providers.culinary.llm import (
     _EQUIPMENT_TRANSLATE_PROMPT,
     _RECIPE_SCHEMA_PROMPT,
@@ -701,16 +702,31 @@ async def add_equipment(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    identified = await _identify_equipment(body.make.strip(), body.model.strip())
-    types = identified["types"]
+    make, model = body.make.strip(), body.model.strip()
+
+    # A full profile rather than a category. "Instant Dutch Oven" is four
+    # stations, a ceiling, and a set of mode names printed on its panel, and
+    # none of that survives being filed as one equipment_type. Falls back to
+    # the older classifier when no profile can be built, so adding an
+    # appliance never depends on the model being up.
+    profile = await build_profile(make, model)
+    if profile:
+        types = profile["stations"]
+        label = profile["label"]
+    else:
+        identified = await _identify_equipment(make, model)
+        types = identified["types"]
+        label = identified["label"]
+
     primary_type = types[0] if types else "other"
     eq = KitchenEquipment(
         household_id=hh.id,
         equipment_type=primary_type,
-        label=identified["label"],
-        make=body.make.strip(),
-        model=body.model.strip(),
+        label=label,
+        make=make,
+        model=model,
         capabilities_json=json.dumps(types),
+        profile_json=json.dumps(profile) if profile else None,
     )
     db.add(eq)
     for t in types:

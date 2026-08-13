@@ -127,6 +127,67 @@ LIMITS: Dict[str, ApplianceLimits] = {
     ),
 }
 
+#: An indoor electric grill is not an outdoor one -- lower ceiling, no wind,
+#: and the plate temperature is what the dial says. Given its own entry
+#: because an "Instant indoor smokeless grill" checked against outdoor-grill
+#: limits would accept 350C, which it does not do.
+LIMITS["indoor_grill"] = ApplianceLimits(
+    label="indoor grill", min_c=50, max_c=260,
+    min_minutes=1, max_minutes=180, typical_minutes=(2, 40),
+    safety_note=(
+        "Grill plates run hotter at the centre — check meat with a "
+        "thermometer rather than by the clock."),
+)
+
+#: The furthest any machine of this class plausibly goes. A profile may
+#: narrow a class limit as much as it likes; it may only widen one up to
+#: here.
+#:
+#: The asymmetry is the point. A household saying "mine only reaches 200C"
+#: makes the check stricter and can only help. A profile saying "mine reaches
+#: 400C" makes the check looser, and if that number came from a model
+#: guessing about a product it half-recognised, the loosening is exactly the
+#: failure this was built to catch. Narrowing is trusted; widening is capped.
+HARD_CEILING_C: Dict[str, int] = {
+    "oven": 320, "air_fryer": 250, "dutch_oven": 320, "grill": 400,
+    "indoor_grill": 290, "sous_vide": 99, "microwave": 100, "stove": 400,
+}
+
+
+def effective_limits(station: str,
+                     profile: Optional[dict] = None) -> Optional[ApplianceLimits]:
+    """Class limits, adjusted by what the household knows about its machine.
+
+    Returns None for a station with no limits defined, which callers treat as
+    "nothing to check" rather than "everything is fine".
+    """
+    base = LIMITS.get(station)
+    if not base or not profile:
+        return base
+
+    max_c = base.max_c
+    claimed = profile.get("max_c")
+    if isinstance(claimed, (int, float)) and claimed > 0:
+        ceiling = HARD_CEILING_C.get(station, base.max_c or int(claimed))
+        max_c = min(int(claimed), ceiling) if base.max_c is None else (
+            min(int(claimed), ceiling))
+
+    min_c = base.min_c
+    claimed_min = profile.get("min_c")
+    if isinstance(claimed_min, (int, float)) and claimed_min > 0:
+        # Only ever tightened upward from below, never dropped past the class
+        # floor, so a bad number cannot make an impossible step look fine.
+        min_c = max(int(claimed_min), base.min_c) if base.min_c else int(claimed_min)
+
+    return ApplianceLimits(
+        label=(profile.get("label") or base.label),
+        min_c=min_c, max_c=max_c,
+        min_minutes=base.min_minutes, max_minutes=base.max_minutes,
+        typical_minutes=base.typical_minutes,
+        safety_note=base.safety_note or str(profile.get("safety") or ""),
+    )
+
+
 _TEMP = re.compile(r"(\d{2,3})\s*°?\s*([CF])\b", re.IGNORECASE)
 _MINUTES = re.compile(
     r"(\d+(?:\.\d+)?)\s*(?:to|-|–)?\s*(\d+(?:\.\d+)?)?\s*"
@@ -152,14 +213,15 @@ class Check:
         return not self.impossible
 
 
-def check_method(station: str, steps: List[str]) -> Check:
+def check_method(station: str, steps: List[str],
+                 profile: Optional[dict] = None) -> Check:
     """Read the numbers in a rewritten method against what the machine can do.
 
     Only what the text actually states is checked. A step that names no
     temperature is not assumed to be at any particular one, because inventing
     a number in order to reject it would fail perfectly good instructions.
     """
-    limits = LIMITS.get(station)
+    limits = effective_limits(station, profile)
     result = Check()
     if not limits:
         return result

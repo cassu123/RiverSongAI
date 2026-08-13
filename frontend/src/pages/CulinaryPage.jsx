@@ -521,6 +521,9 @@ export default function CulinaryPage({ setAction }) {
   const [sortMode, setSortMode] = useState('NEWEST') // NEWEST, RATING
   
   const [activeRecipe, setActiveRecipe] = useState(null)
+  const [eqMake,  setEqMake]  = useState('')
+  const [eqModel, setEqModel] = useState('')
+  const [eqBusy,  setEqBusy]  = useState(false)
   const [prepView,  setPrepView]  = useState('recipes')
   const [prepList,  setPrepList]  = useState(null)   // this session's needs
   const [prepPiles, setPrepPiles] = useState(null)   // the same, split by dish
@@ -995,9 +998,44 @@ export default function CulinaryPage({ setAction }) {
           {activeTab === 'stockroom' && renderStockroom()}
           {activeTab === 'dinner' && renderDinner()}
           {activeTab === 'prep' && renderPrep()}
+          {activeTab === 'equipment' && (
+            <div className="rs-card" style={{ maxWidth: 620, margin: '0 auto 20px' }}>
+              <div className="rs-card-inner">
+                <div className="rs-card-label" style={{ marginBottom: 4 }}>ADD AN APPLIANCE</div>
+                <p className="rs-card-meta" style={{ marginTop: 0 }}>
+                  Make and model is enough. It works out what the machine does, how hot
+                  it goes and what its modes are called — an Instant Dutch Oven is four
+                  different stations, not one.
+                </p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                  <input
+                    className="rs-pill" style={{ flex: '1 1 140px', minWidth: 0, background: 'var(--md-surface-container-low)', border: 'none' }}
+                    placeholder="Make (e.g. Instant)" aria-label="Make"
+                    value={eqMake} onChange={e => setEqMake(e.target.value)} />
+                  <input
+                    className="rs-pill" style={{ flex: '2 1 200px', minWidth: 0, background: 'var(--md-surface-container-low)', border: 'none' }}
+                    placeholder="Model (e.g. Dutch Oven)" aria-label="Model"
+                    value={eqModel} onChange={e => setEqModel(e.target.value)} />
+                  <button
+                    className="rs-btn-primary"
+                    disabled={eqBusy || !eqMake.trim()}
+                    onClick={async () => {
+                      setEqBusy(true)
+                      try {
+                        await api.post('/household/equipment', { make: eqMake.trim(), model: eqModel.trim() })
+                        setEqMake(''); setEqModel('')
+                        fetchData('equipment')
+                      } catch (err) { setError(err.message) }
+                      finally { setEqBusy(false) }
+                    }}
+                  >{eqBusy ? 'WORKING IT OUT…' : 'ADD'}</button>
+                </div>
+              </div>
+            </div>
+          )}
           {activeTab === 'equipment' && equipment.length === 0 && (
-            <div className="rs-card-meta" style={{ padding: 48, textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
-              No appliances recorded. Adding them is what lets the cook plan know
+            <div className="rs-card-meta" style={{ padding: 32, textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
+              Nothing recorded yet. What you add here is what lets the cook plan know
               whether two dishes can share the air fryer, or have to queue for it.
             </div>
           )}
@@ -1012,6 +1050,16 @@ export default function CulinaryPage({ setAction }) {
                      </div>
                      <div className="rs-card-value" style={{ fontSize: '1.2rem', fontWeight: 800 }}>{eq.make}</div>
                      <div className="rs-card-meta" style={{ marginTop: 6 }}>{eq.model}</div>
+                     {eq.profile_summary && (
+                       <div className="rs-card-meta" style={{ marginTop: 10, fontSize: '0.75rem' }}>
+                         {eq.profile_summary}
+                       </div>
+                     )}
+                     {eq.profile && eq.profile.confident === false && (
+                       <div className="rs-card-meta" style={{ marginTop: 6, fontSize: '0.72rem', color: 'var(--rs-status-warning)' }}>
+                         Not certain of this model — the general limits for the type apply.
+                       </div>
+                     )}
                    </div>
                  </div>
                ))}
