@@ -707,6 +707,8 @@ def _plan_for_prep_session(db: Session, hh, session,
             "recipe_id": entry.recipe_id,
             "station": swap.get("station"),
             "note": swap.get("note", ""),
+            "unusual": swap.get("unusual", []),
+            "safety": swap.get("safety", ""),
         }) if swap else None
 
         recipes.append(RecipeInPlan(
@@ -828,6 +830,94 @@ async def preview_cook_plan(
     return _plan_for_prep_session(db, hh, session, _courses_from_query(courses))
 
 
+def _appliance_profile(db: Session, household_id: str,
+                       station: str) -> Optional[dict]:
+    """What this household knows about its own machine of that kind.
+
+    Make and model, the facts they have recorded, and how it has actually
+    behaved. The last of those is the only part of any of this that can
+    converge on being right about *your* oven, because it is the only part
+    that observes it -- a model can tell you what an air fryer usually needs,
+    and only your kitchen can tell you that yours runs hot.
+    """
+    from culinary.models import KitchenEquipment
+
+    for eq in db.query(KitchenEquipment).filter_by(household_id=household_id).all():
+        types = _safe_json(eq.capabilities_json, None) or (
+            [eq.equipment_type] if eq.equipment_type else [])
+        if station not in types:
+            continue
+
+        profile = dict(_safe_json(eq.profile_json, {}) or {})
+        profile.setdefault("make", eq.make or "")
+        profile.setdefault("model", eq.model or "")
+
+        # Only the recent past, and only what was worth writing down. A long
+        # tail of "fine" tells a rewrite nothing it did not assume.
+        history = _safe_json(eq.history_json, []) or []
+        lessons = [h.get("note", "") for h in history[-6:]
+                   if h.get("verdict") in ("longer", "shorter") and h.get("note")]
+        if lessons:
+            profile["notes"] = ((profile.get("notes", "") + " ") +
+                                " ".join(lessons)).strip()
+        return profile
+    return None
+
+
+class ApplianceOutcome(BaseModel):
+    station: str
+    #: spot_on | longer | shorter
+    verdict: str
+    note: Optional[str] = None
+    recipe_title: Optional[str] = None
+
+
+@router.post("/appliances/outcome")
+async def record_appliance_outcome(
+    body: ApplianceOutcome, request: Request, db: Session = Depends(get_db),
+):
+    """Record how an appliance actually behaved, after cooking.
+
+    The answer to "how do we know the rewrite was right" is, in the end, that
+    you cooked it and found out. Nothing before this point observes anything;
+    this is the only place the system can learn that your air fryer runs hot,
+    and it feeds straight back into the next rewrite for that machine.
+
+    Deliberately three answers and an optional sentence. A form that asks for
+    more than that after dinner does not get filled in.
+    """
+    from culinary.models import KitchenEquipment
+
+    if body.verdict not in ("spot_on", "longer", "shorter"):
+        raise bad_request("Verdict must be spot_on, longer or shorter.")
+
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+
+    target = None
+    for eq in db.query(KitchenEquipment).filter_by(household_id=hh.id).all():
+        types = _safe_json(eq.capabilities_json, None) or (
+            [eq.equipment_type] if eq.equipment_type else [])
+        if body.station in types:
+            target = eq
+            break
+    if not target:
+        raise not_found("No appliance of that kind is recorded for this household.")
+
+    history = _safe_json(target.history_json, []) or []
+    history.append({
+        "at": _now().isoformat(),
+        "recipe": (body.recipe_title or "")[:120],
+        "verdict": body.verdict,
+        "note": (body.note or "")[:200],
+    })
+    # Bounded: this is a hint for a prompt, not an archive.
+    target.history_json = json.dumps(history[-40:])
+    db.commit()
+
+    return {"status": "ok", "recorded": len(history)}
+
+
 class ApplianceSwap(BaseModel):
     recipe_id: str
     #: A station key, or null to put the original method back.
@@ -891,6 +981,8 @@ async def swap_appliance(
     stations = [f.station for f in facts if f.station != "counter"]
     origin = max(set(stations), key=stations.count) if stations else "stove"
 
+    profile = _appliance_profile(db, hh.id, body.station)
+
     try:
         swap = await rewrite_for_appliance(
             title=entry.recipe.title,
@@ -898,6 +990,7 @@ async def swap_appliance(
             ingredients=ingredients,
             origin_station=origin,
             target_station=body.station,
+            profile=profile,
         )
     except SwapFailed as exc:
         raise bad_request(str(exc))

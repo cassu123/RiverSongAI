@@ -221,6 +221,20 @@ class KitchenEquipment(Base):  # type: ignore
     make: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     model: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     capabilities_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)# JSON list of all equipment_type keys
+    #: What this particular machine can do, as facts rather than a category:
+    #: {"watts", "capacity", "max_c", "presets": [...], "notes"}.
+    #:
+    #: Two jobs. It goes into the prompt, so a rewrite says 230C because that
+    #: is what this air fryer reaches rather than because 230 is a common
+    #: number. And it tightens the check afterwards -- a household that has
+    #: recorded a 200C maximum gets a stricter bound than the generic one for
+    #: the class, so a wrong answer has less room to look plausible.
+    profile_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    #: How it has actually behaved: [{"at", "recipe", "verdict", "note"}].
+    #: Appended after a cook, and fed back into later rewrites. This is the
+    #: only part of the system that can converge on being right about *your*
+    #: oven, because it is the only part that observes it.
+    history_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)

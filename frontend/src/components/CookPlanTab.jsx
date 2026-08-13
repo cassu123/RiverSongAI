@@ -541,6 +541,21 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
                       {swapFor(r.id).note} <em>This session only — the saved recipe is unchanged.</em>
                     </div>
                   )}
+                  {/* Possible but unusual: said, not blocked. Impossible never
+                      reaches here — the swap is refused outright. */}
+                  {swapFor(r.id)?.unusual?.map((u, i) => (
+                    <div key={i} className="rs-card-meta"
+                         style={{ fontSize: '0.72rem', width: '100%', color: 'var(--rs-status-warning)' }}>
+                      {u}
+                    </div>
+                  ))}
+                  {swapFor(r.id)?.safety && (
+                    <div className="rs-card-meta"
+                         style={{ fontSize: '0.72rem', width: '100%', display: 'flex', gap: 6 }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: '1rem', flexShrink: 0 }}>thermostat</span>
+                      <span>{swapFor(r.id).safety}</span>
+                    </div>
+                  )}
                   {swapError?.recipeId === r.id && (
                     <div className="rs-card-meta" style={{ fontSize: '0.72rem', width: '100%', color: 'var(--md-error)' }}>
                       {swapError.message}

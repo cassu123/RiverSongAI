@@ -187,6 +187,18 @@ def _migrate_culinary_schema() -> None:
             conn.commit()
         except Exception:
             pass
+        # Per-appliance facts and observed behaviour.
+        for col, decl in (
+            ("profile_json", "TEXT"),
+            ("history_json", "TEXT"),
+        ):
+            try:
+                conn.execute(sqlalchemy.text(
+                    f"ALTER TABLE cul_kitchen_equipment ADD COLUMN {col} {decl}"))
+                conn.commit()
+            except Exception:
+                pass
+
         # Per-session appliance swaps, added after the table existed.
         try:
             conn.execute(sqlalchemy.text(

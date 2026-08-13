@@ -16,6 +16,16 @@ cooking, not to the recipe you keep. You tried the Dutch oven once; that
 should not rewrite the thing you will cook in a skillet next month. The
 rewrite is stored against the prep session entry and dies with it.
 
+**A rewrite is checked against the machine.** Not verified -- nothing here
+can tell you whether fifteen minutes at high pressure is right for your cut of
+beef. What it can tell you is when an instruction is impossible: an air fryer
+that does not reach 250°C, a slow cooker asked to work in forty minutes. Those
+are facts about the appliance, they need no model, and a rewrite that breaks
+one is wrong however confidently it is written. Where the appliance is one
+whose timing is a safety question rather than a texture question, the note
+says to use a thermometer, because a timer is not the test and the program
+should not imply it is.
+
 **A failure is reported, not absorbed.** Everywhere else in this module the
 model is optional and the keyword answer stands in. Here there is no fallback
 worth having: a "swap" that quietly returns the skillet instructions is worse
@@ -29,6 +39,8 @@ import json
 import logging
 import re
 from typing import Any, Dict, List, Optional
+
+from providers.culinary.appliance_limits import check_method, describe_for_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +144,7 @@ async def rewrite_for_appliance(
     ingredients: List[Any],
     origin_station: str,
     target_station: str,
+    profile: Optional[dict] = None,
     call_model=None,
 ) -> Dict[str, Any]:
     """Convert a method to a different appliance. Raises SwapFailed if it cannot.
@@ -146,9 +159,14 @@ async def rewrite_for_appliance(
     if not target:
         raise SwapFailed(f"Unknown appliance: {target_station}")
 
+    # The specific machine where the household has recorded one. "A 1700W
+    # Cosori Pro Gen 2, maximum 230C" gets a rewrite with real numbers on it;
+    # "an air fryer" gets a generic one that is harder to check afterwards.
+    described = describe_for_prompt(target_station, profile)
+
     prompt = _PROMPT.format(
         title=title,
-        target=target,
+        target=described,
         origin=APPLIANCE_NAMES.get(origin_station, "the original method"),
         ingredients="\n".join(f"- {_ingredient_line(i)}" for i in ingredients),
         steps="\n".join(f"{n}. {s}" for n, s in enumerate(steps, 1)),
@@ -181,10 +199,25 @@ async def rewrite_for_appliance(
     new_ingredients = _clean_lines(parsed.get("ingredients"), 64)
     note = str(parsed.get("note") or "").strip()[:400]
 
+    # The one check that needs no model. An instruction the machine cannot
+    # carry out is refused rather than shown with a warning attached, because
+    # a method with a wrong number in it is not improved by a caveat beside
+    # it -- the cook is going to follow the step.
+    verdict = check_method(target_station, new_steps)
+    if not verdict.ok:
+        raise SwapFailed(
+            "That rewrite asks for something the appliance cannot do: "
+            + " ".join(verdict.impossible)
+            + " The recipe is unchanged.")
+
     return {
         "station": target_station,
         "steps": new_steps,
         "ingredients": new_ingredients or [_ingredient_line(i) for i in ingredients],
         "ingredients_changed": bool(new_ingredients),
         "note": note or f"Rewritten for the {target}.",
+        # Shown alongside rather than blocking: plenty of real recipes sit at
+        # the edges, and a program that argues with all of them stops being read.
+        "unusual": verdict.unusual,
+        "safety": verdict.safety,
     }

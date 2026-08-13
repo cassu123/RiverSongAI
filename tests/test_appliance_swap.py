@@ -150,3 +150,92 @@ def test_every_station_the_scheduler_knows_can_be_named():
 
     schedulable = set(IMPLICIT_STATIONS) - {"counter"}
     assert schedulable <= set(APPLIANCE_NAMES)
+
+
+# ---------------------------------------------------------------------------
+# What the machine can actually do
+#
+# The honest answer to "how do we know the rewrite is right" is that for the
+# hard part we do not. What can be checked without a model is whether the
+# instruction is physically possible, and that catches the class of wrong
+# answer that reads perfectly well: an air fryer at 250C, a slow cooker asked
+# to work in forty minutes.
+# ---------------------------------------------------------------------------
+
+from providers.culinary.appliance_limits import (  # noqa: E402
+    LIMITS, check_method, describe_for_prompt)
+
+
+@pytest.mark.parametrize("station,step,why", [
+    ("air_fryer", "Air fry at 250C for 20 minutes", "domestic air fryers stop near 230"),
+    ("air_fryer", "Air fry at 480F for 20 minutes", "the same in Fahrenheit"),
+    ("slow_cooker", "Slow cook for 40 minutes", "not what the appliance is for"),
+    ("instant_pot", "Pressure cook for 8 hours", "far past any pressure cycle"),
+    ("sous_vide", "Set the bath to 130C", "water does not go there"),
+    ("microwave", "Microwave for 3 hours", "not a three-hour appliance"),
+])
+def test_an_impossible_instruction_is_caught(station, step, why):
+    verdict = check_method(station, [step])
+    assert not verdict.ok, why
+    assert verdict.impossible
+
+
+@pytest.mark.parametrize("station,step", [
+    ("air_fryer", "Air fry at 200C for 18 minutes, shaking halfway"),
+    ("slow_cooker", "Cook on low for 8 hours"),
+    ("instant_pot", "Pressure cook on high for 15 minutes"),
+    ("oven", "Bake at 180C for 40 minutes"),
+    ("sous_vide", "Hold at 56C for 2 hours"),
+])
+def test_a_reasonable_instruction_passes(station, step):
+    assert check_method(station, [step]).ok
+
+
+def test_a_swap_that_breaks_the_appliance_is_refused():
+    """The check runs on the rewrite, not just in a test.
+
+    A wrong number is not improved by a warning next to it -- the cook is
+    going to follow the step -- so this refuses rather than annotating.
+    """
+    with pytest.raises(SwapFailed, match="cannot do"):
+        swap('{"steps": ["Air fry at 260C for 15 minutes."], "note": "hot"}',
+             target="air_fryer")
+
+
+def test_unusual_but_possible_is_carried_not_blocked():
+    """Real recipes sit at the edges, and a program that argues with all of
+    them stops being read."""
+    result = swap('{"steps": ["Pressure cook on high for 100 minutes."],'
+                  ' "note": "a big joint"}', target="instant_pot")
+    assert result["unusual"]
+
+
+def test_the_safety_note_rides_along_where_time_is_not_the_test():
+    """Pressure, sous vide, slow cookers and grills: the clock is not the
+    instrument, and the program should say so rather than imply it settled it."""
+    result = swap('{"steps": ["Pressure cook on high for 15 minutes."], "note": "ok"}',
+                  target="instant_pot")
+    assert "thermometer" in result["safety"].lower()
+
+
+def test_a_step_naming_no_temperature_is_not_assumed_to_have_one():
+    """Inventing a number in order to reject it would fail good instructions."""
+    assert check_method("air_fryer", ["Shake the basket and carry on"]).ok
+
+
+def test_the_prompt_describes_the_actual_machine_when_one_is_known():
+    """"A 1700W Cosori Pro Gen 2, maximum 230C" gets a rewrite with real
+    numbers on it. "An air fryer" gets a generic one."""
+    generic = describe_for_prompt("air_fryer")
+    specific = describe_for_prompt("air_fryer", {
+        "make": "Cosori", "model": "Pro Gen 2", "watts": 1700, "max_c": 230,
+    })
+    assert "Cosori" in specific and "1700W" in specific
+    assert "Cosori" not in generic
+
+
+def test_every_appliance_the_swap_offers_has_limits():
+    """A target with no limits would be swapped with nothing checking it."""
+    from providers.culinary.appliance_swap import APPLIANCE_NAMES
+
+    assert set(APPLIANCE_NAMES) <= set(LIMITS)
