@@ -265,7 +265,7 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
   if (!plan || !plan.steps?.length) {
     return (
       <div className="rs-card-meta" style={{ padding: 48, textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
-        Nothing to plan yet. Stage some recipes in PREP and this works out when to
+        Nothing to plan yet. Stage some recipes in STAGE and this works out when to
         start each one so they finish together.
       </div>
     )

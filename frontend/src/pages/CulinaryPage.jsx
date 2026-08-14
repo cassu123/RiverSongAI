@@ -130,43 +130,6 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
   )
 }
 
-function StagingAreaPanel({ piles }) {
-  return (
-    <div className="rs-card">
-       <div className="rs-card-inner" style={{ padding: 24 }}>
-          <div className="rs-card-head" style={{ marginBottom: 8 }}>
-             <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>PILES, ONE PER DISH</span>
-          </div>
-          <p className="rs-card-meta" style={{ marginTop: 0, marginBottom: 16 }}>
-             The same ingredients as the list, split back out by recipe — what goes
-             in each bowl before any of it is cooked.
-          </p>
-          <div>
-             {/* One column on a phone. Two 300px columns side by side is a
-                 horizontal scroll on anything narrower than a tablet. */}
-             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 16 }}>
-                {piles.map((pile, idx) => (
-                  <div key={idx} className="rs-card" style={{ border: '1px solid var(--md-outline-variant)' }}>
-                     <div className="rs-card-inner">
-                        <div className="rs-card-label" style={{ marginBottom: 12 }}>{pile.recipe_title.toUpperCase()}</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                           {pile.ingredients.map((ing, i) => (
-                             <div key={i} className="rs-pill" style={{ justifyContent: 'flex-start', fontSize: '0.85rem' }}>
-                                <span style={{ opacity: 0.6, marginRight: 8 }}>{ing.qty} {ing.unit}</span>
-                                <span>{ing.name}</span>
-                             </div>
-                           ))}
-                        </div>
-                     </div>
-                  </div>
-                ))}
-             </div>
-          </div>
-       </div>
-    </div>
-  )
-}
-
 function PrepAdjuster({ entry, recipe, api, onUpdate }) {
   const [scaling, setScaling] = useState(false)
   const [target, setTarget] = useState(entry.servings_target || recipe?.servings || 4)
@@ -530,7 +493,6 @@ export default function CulinaryPage({ setAction }) {
   const [panelFor, setPanelFor] = useState(null)
   const [prepView,  setPrepView]  = useState('recipes')
   const [prepList,  setPrepList]  = useState(null)   // this session's needs
-  const [prepPiles, setPrepPiles] = useState(null)   // the same, split by dish
   const [adjustItem, setAdjustItem] = useState(null)
 
   const [recommendations, setRecommendations] = useState({}) // bannedId -> recs[]
@@ -578,21 +540,14 @@ export default function CulinaryPage({ setAction }) {
   // to add or scale a dish, not to read the list.
   useEffect(() => {
     if (!activePrep) return
+    if (prepView !== 'list' || prepList) return
     let live = true
-    const want = prepView === 'list' ? 'shopping-list' : prepView === 'staging' ? 'staging' : null
-    if (!want) return
-    if (want === 'shopping-list' && prepList) return
-    if (want === 'staging' && prepPiles) return
 
-    api.get(`/prep/${activePrep.id}/${want}`)
-      .then(res => {
-        if (!live) return
-        if (want === 'shopping-list') setPrepList(res.shopping_list || [])
-        else setPrepPiles(res.piles || [])
-      })
+    api.get(`/prep/${activePrep.id}/shopping-list`)
+      .then(res => { if (live) setPrepList(res.shopping_list || []) })
       .catch(err => { if (live) setError(err.message) })
     return () => { live = false }
-  }, [api, activePrep, prepView, prepList, prepPiles])
+  }, [api, activePrep, prepView, prepList])
 
   useEffect(() => {
     if (!token) return;
@@ -641,7 +596,7 @@ export default function CulinaryPage({ setAction }) {
             { key: 'dinner', icon: 'dinner_dining', label: 'DINNER' },
             { key: 'list', icon: 'shopping_cart', label: 'LIST' },
             { key: 'stockroom', icon: 'warehouse', label: 'STOCK' },
-            { key: 'prep', icon: 'set_meal', label: 'PREP' },
+            { key: 'prep', icon: 'set_meal', label: 'STAGE' },
             { key: 'cook', icon: 'skillet', label: 'COOK' },
             { key: 'equipment', icon: 'kitchen', label: 'HARDWARE' },
             { key: 'banned', icon: 'block', label: 'BANNED' }
@@ -910,7 +865,6 @@ export default function CulinaryPage({ setAction }) {
            {[
              { id: 'recipes', icon: 'list_alt',      label: 'STAGED' },
              { id: 'list',    icon: 'shopping_cart', label: 'NEEDS' },
-             { id: 'staging', icon: 'view_column',   label: 'PILES' },
            ].map(v => (
              <button
                key={v.id}
@@ -921,6 +875,15 @@ export default function CulinaryPage({ setAction }) {
                {v.label}
              </button>
            ))}
+           {/* The piles used to be a third view here, showing the same
+               ingredients this tab already lists. They belong with the
+               cooking: COOK > PREP splits them by dish and lets each one be
+               ticked off as it hits the counter, which is what the pile is
+               for. */}
+           <button className="rs-pill" onClick={() => setActiveTab('cook')}>
+             <span className="material-symbols-rounded">skillet</span>
+             MEASURE OUT
+           </button>
          </div>
        )}
 
@@ -935,11 +898,6 @@ export default function CulinaryPage({ setAction }) {
            : <div className="rs-card-meta" style={{ padding: 32, textAlign: 'center' }}>WORKING OUT WHAT IS NEEDED…</div>
        )}
 
-       {activePrep && prepView === 'staging' && (
-         prepPiles
-           ? <StagingAreaPanel piles={prepPiles} />
-           : <div className="rs-card-meta" style={{ padding: 32, textAlign: 'center' }}>SPLITTING INTO PILES…</div>
-       )}
     </div>
   )
 

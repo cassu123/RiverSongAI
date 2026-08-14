@@ -2202,7 +2202,14 @@ async def push_prep_list_to_grocery(
 @router.get("/prep/{session_id}/staging")
 async def get_staging_area(
         session_id: str, request: Request, db: Session = Depends(get_db)):
-    """Staging Area: shopping list split back into per-recipe piles."""
+    """Shopping list split back into per-recipe piles.
+
+    No longer used by the web UI: the same split is in the cook plan, where
+    each pile can be ticked off as it reaches the counter, and having it in
+    two places meant two screens showing the same ingredients. Kept because it
+    is the only version that marks what is already in the stockroom, and other
+    clients read it.
+    """
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(

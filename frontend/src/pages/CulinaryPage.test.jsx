@@ -98,15 +98,14 @@ describe('CulinaryPage Hardening Verification', () => {
     )
   })
 
-  it('opens shopping list and staging area modals in prep tab', async () => {
+  it('shows what a session needs inline, and sends measuring to the cook tab', async () => {
     let actions;
     const setAction = (el) => { actions = el };
-    
+
     const mockPrep = { id: 's1', label: 'Prep Session', recipes: [{ entry_id: 'e1', recipe_id: 'r1', recipe_title: 'Pasta' }] }
     global.fetch = vi.fn((url) => {
       if (url.includes('/api/culinary/prep')) {
          if (url.endsWith('/shopping-list')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ shopping_list: [{ name: 'Eggs', qty: '2', unit: '' }] }) })
-         if (url.endsWith('/staging')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ piles: [{ recipe_title: 'Pasta', ingredients: [] }] }) })
          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPrep) })
       }
       return Promise.resolve({ ok: true, json: () => Promise.resolve([]) })
@@ -114,17 +113,17 @@ describe('CulinaryPage Hardening Verification', () => {
 
     await act(async () => { render(<CulinaryPage setAction={setAction} />) })
     const tabs = render(<div>{actions}</div>)
-    await act(async () => { fireEvent.click(tabs.getByText('PREP')) })
+    await act(async () => { fireEvent.click(tabs.getByText('STAGE')) })
 
-    const shopBtn = screen.getByText('SHOPPING LIST')
-    await act(async () => { fireEvent.click(shopBtn) })
-    expect(screen.getByText('MASTER SHOPPING LIST')).toBeDefined()
+    // Inline, not a sheet over the page: no close button to get back.
+    await act(async () => { fireEvent.click(screen.getByText('NEEDS')) })
     expect(screen.getByText('Eggs')).toBeDefined()
+    expect(screen.queryByText('close')).toBeNull()
 
-    await act(async () => { fireEvent.click(screen.getByText('close')) })
-
-    const stageBtn = screen.getByText('STAGING AREA')
-    await act(async () => { fireEvent.click(stageBtn) })
-    expect(screen.getByText('STAGING AREA')).toBeDefined()
+    // The piles are not a third view here. They live with the cooking, where
+    // each one can be ticked off as it reaches the counter, so this tab only
+    // points at them.
+    expect(screen.queryByText('PILES')).toBeNull()
+    expect(screen.getByText('MEASURE OUT')).toBeDefined()
   })
 })
