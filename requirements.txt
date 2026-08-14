@@ -92,7 +92,7 @@ googlemaps==4.10.0                   # Google Maps Platform Python client
 # -----------------------------------------------------------------------------
 # YouTube Music
 # -----------------------------------------------------------------------------
-ytmusicapi==1.11.5                   # Unofficial YouTube Music API client
+ytmusicapi==1.12.2                   # Unofficial YouTube Music API client
 yt-dlp==2026.7.4                    # Audio stream extraction for playback
 sounddevice==0.5.5                   # Audio playback for YouTube Music provider
 
