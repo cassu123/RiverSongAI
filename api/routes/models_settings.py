@@ -31,7 +31,7 @@ import json
 from typing import List, Optional, Set, Literal
 
 from fastapi import APIRouter, Header, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from config.settings import get_settings
 from core.auth import decode_token
@@ -1627,8 +1627,7 @@ async def get_page_settings(
 
 
 class PageSettingsPatch(BaseModel):
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
     def to_dict(self) -> dict:
         return self.model_dump()

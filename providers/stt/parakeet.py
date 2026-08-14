@@ -31,6 +31,7 @@ import asyncio
 import logging
 import os
 import tempfile
+import warnings
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import Optional
@@ -58,10 +59,12 @@ def _resolve_device(configured: str) -> str:
     if value != "auto":
         return value
     try:
-        import torch
-        t = torch.tensor([1.0], device="cuda")
-        _ = t + t
-        return "cuda"
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            import torch
+            t = torch.tensor([1.0], device="cuda")
+            _ = t + t
+            return "cuda"
     except Exception:
         return "cpu"
 
