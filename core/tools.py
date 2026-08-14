@@ -397,7 +397,7 @@ async def _exec_find_asset(args: dict, user_id: str) -> str:
                 audit_info = f"Last seen: {m.last_audit_date.date()}" if m.last_audit_date else "Never audited"
                 home_name = m.home.name if m.home else "Unknown Home"
                 lines.append(f"- {m.name} (Location: {m.location} in {home_name}). {audit_info}.")
-            return "\\n".join(lines)
+            return "\n".join(lines)
         finally:
             db.close()
             
@@ -504,7 +504,7 @@ async def _exec_warranty_check(args: dict, user_id: str) -> str:
             lines = [f"Warranty Check (Looking ahead {days} days):"]
             lines.append(f"Expiring Soon ({len(expiring_soon)}): " + ", ".join(f"{i.name} ({i.warranty_expiry_date})" for i in expiring_soon) if expiring_soon else "Expiring Soon: None")
             lines.append(f"Already Expired ({len(expired)}): " + ", ".join(f"{i.name}" for i in expired) if expired else "Already Expired: None")
-            return "\\n".join(lines)
+            return "\n".join(lines)
         finally:
             db.close()
             

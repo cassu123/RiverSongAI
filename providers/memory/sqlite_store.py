@@ -43,6 +43,7 @@ import logging
 import os
 import re
 import sqlite3
+import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -826,6 +827,7 @@ class SQLiteStore(
             from config.settings import get_settings
             db_path = get_settings().db_path
         self._db_path = db_path
+        self._local = threading.local()
         self._executor = ThreadPoolExecutor(
             max_workers=min(4, os.cpu_count() or 1),
             thread_name_prefix="sqlite",
@@ -1013,18 +1015,20 @@ class SQLiteStore(
     # -------------------------------------------------------------------------
 
     def _get_conn(self) -> sqlite3.Connection:
-        if self._conn is None:
-            self._conn = sqlite3.connect(
+        conn = getattr(self._local, "conn", None)
+        if conn is None:
+            conn = sqlite3.connect(
                 self._db_path,
                 check_same_thread=False,
                 detect_types=sqlite3.PARSE_DECLTYPES,
             )
-            self._conn.row_factory = sqlite3.Row
+            conn.row_factory = sqlite3.Row
             # WAL lets readers proceed while a writer holds the lock.
             # busy_timeout retries for up to 5 s before raising SQLITE_BUSY.
-            self._conn.execute("PRAGMA journal_mode=WAL")
-            self._conn.execute("PRAGMA busy_timeout=5000")
-        return self._conn
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=5000")
+            self._local.conn = conn
+        return conn
 
     async def _run(self, fn, *args):
         loop = asyncio.get_running_loop()
