@@ -437,6 +437,22 @@ class _ChatRequest(BaseModel):
     session_id: str | None = None
 
 
+async def _extract_user_payload(request: Request) -> dict:
+    auth_header = request.headers.get("Authorization", "")
+    token = None
+    if auth_header and auth_header.lower().startswith("bearer "):
+        parts = auth_header.split(" ", 1)
+        if len(parts) > 1:
+            token = parts[1].strip()
+    if not token:
+        token = request.cookies.get("access_token")
+    payload = await decode_token(token) if token else None
+    if not payload:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    return payload
+
+
 @router.post("/api/conversation/chat")
 @limiter.limit(get_settings().rate_limit_chat)
 async def chat_http(
@@ -449,13 +465,7 @@ async def chat_http(
     History is passed in by the client; no server-side session state.
     """
     set_usage_source("chat")
-    auth_header = request.headers.get("Authorization", "")
-    token = auth_header.removeprefix("Bearer ").strip()
-    payload = await decode_token(token) if token else None
-    if not payload:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=401, detail="Authentication required.")
-
+    payload = await _extract_user_payload(request)
     user_id: str = payload["sub"]
     memory_manager: MemoryManager | None = getattr(
         request.app.state, "memory_manager", None)
@@ -569,13 +579,7 @@ async def extract_facts_http(
     Manual trigger to distill a session. The automatic distiller runs in the background.
     """
     set_usage_source("memory")
-    auth_header = request.headers.get("Authorization", "")
-    token = auth_header.removeprefix("Bearer ").strip()
-    payload = await decode_token(token) if token else None
-    if not payload:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=401, detail="Authentication required.")
-
+    payload = await _extract_user_payload(request)
     user_id: str = payload["sub"]
     memory_manager = getattr(request.app.state, "memory_manager", None)
     if not memory_manager:
@@ -611,12 +615,7 @@ async def enhance_prompt_http(
     Uses the default LLM. Returns {"enhanced": "<improved prompt>"}.
     """
     set_usage_source("chat")
-    auth_header = request.headers.get("Authorization", "")
-    token = auth_header.removeprefix("Bearer ").strip()
-    payload = await decode_token(token) if token else None
-    if not payload:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=401, detail="Authentication required.")
+    await _extract_user_payload(request)
     if not body.prompt or not body.prompt.strip():
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Prompt is empty.")
@@ -658,12 +657,7 @@ async def transcribe_http(
     request: Request,
 ) -> dict:
     """Transcribe a base64 WAV blob and return the text."""
-    auth_header = request.headers.get("Authorization", "")
-    token = auth_header.removeprefix("Bearer ").strip()
-    payload = await decode_token(token) if token else None
-    if not payload:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=401, detail="Authentication required.")
+    await _extract_user_payload(request)
 
     try:
         audio_bytes = base64.b64decode(body.audio)

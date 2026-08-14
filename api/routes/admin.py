@@ -37,9 +37,16 @@ def _get_store(request: Request):
 
 async def _require_admin(request: Request,
                          authorization: Optional[str]) -> dict:
-    if not authorization or not authorization.startswith("Bearer "):
+    token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        parts = authorization.split(" ", 1)
+        if len(parts) > 1:
+            token = parts[1].strip()
+    if not token and request:
+        token = request.cookies.get("access_token")
+    if not token:
         raise unauthorized("Not authenticated.")
-    payload = await decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(token)
     if not payload:
         raise unauthorized("Invalid or expired token.")
     if payload.get("role") != "admin":
