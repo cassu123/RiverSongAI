@@ -548,6 +548,9 @@ async def change_password(body: ChangePasswordBody, request: Request,
             "utf-8"), user["password_hash"].encode("utf-8")):
         raise unauthorized("Current password is incorrect.")
 
+    if len(body.new_password) < 12:
+        raise bad_request("Password must be at least 12 characters.")
+
     new_hash = bcrypt.hashpw(
         body.new_password.encode("utf-8"),
         bcrypt.gensalt()).decode("utf-8")
@@ -656,7 +659,7 @@ async def save_integrations(body: IntegrationsUpdate, request: Request,
     if body.walmart_api:
         w = body.walmart_api
         if w.get("client_id") is not None:
-            integrations["WALMART_ID"] = w["client_id"]
+            integrations["WALMART_CLIENT_ID"] = w["client_id"]
         if w.get("client_secret") not in [None, "__SET__"]:
             integrations["WALMART_CLIENT_SECRET"] = w["client_secret"]
 
@@ -873,14 +876,7 @@ async def get_ws_ticket(request: Request,
     """
     Exchange a long-lived JWT for a one-time 60s WebSocket ticket.
     """
-    if not authorization or not authorization.startswith("Bearer "):
-        raise unauthorized("Not authenticated.")
-
-    token = authorization.removeprefix("Bearer ").strip()
-    payload = await decode_token(token)
-    if not payload:
-        raise unauthorized("Invalid or expired token.")
-
+    payload = await _get_auth_payload(request, authorization)
     user_id = payload["sub"]
     settings = get_settings()
     ticket = str(uuid.uuid4())
@@ -896,11 +892,8 @@ async def get_ws_ticket(request: Request,
 @router.get("/profile")
 async def get_profile(request: Request,
                       authorization: Optional[str] = Header(default=None)):
-    store = request.app.state.memory_manager._store
-    token = (authorization or "").removeprefix("Bearer ").strip()
-    payload = await decode_token(token)
-    if not payload:
-        raise unauthorized("Invalid token")
+    store = _get_store(request)
+    payload = await _get_auth_payload(request, authorization)
     user = await store.get_user_by_id(payload["sub"])
     if not user:
         raise not_found("User not found")
@@ -922,12 +915,13 @@ async def get_profile(request: Request,
 @router.patch("/profile")
 async def update_profile(body: ProfilePatch, request: Request,
                          authorization: Optional[str] = Header(default=None)):
-    store = request.app.state.memory_manager._store
-    token = (authorization or "").removeprefix("Bearer ").strip()
-    payload = await decode_token(token)
-    if not payload:
-        raise unauthorized("Invalid token")
+    store = _get_store(request)
+    payload = await _get_auth_payload(request, authorization)
     user_id = payload["sub"]
+
+    user_record = await store.get_user_by_id(user_id)
+    if not user_record:
+        raise not_found("User not found")
 
     # Legacy translation: if a client still sends `theme`, map it to the new
     # triple
@@ -957,7 +951,6 @@ async def update_profile(body: ProfilePatch, request: Request,
                 f"Invalid environment. Valid: {
                     ', '.join(
                         sorted(VALID_ENVIRONMENTS))}")
-        user_record = await store.get_user_by_id(user_id)
         current_universe = body.universe or user_record.get("universe", "dune")
         if body.environment not in UNIVERSE_ENV_PAIRS.get(
                 current_universe, set()):
@@ -967,7 +960,6 @@ async def update_profile(body: ProfilePatch, request: Request,
         await store.update_user_environment(user_id, body.environment)
 
     if body.mood is not None:
-        user_record = await store.get_user_by_id(user_id)
         current_env = body.environment or user_record.get(
             "environment", "atreides")
         if body.mood not in ENV_MOOD_PAIRS.get(current_env, set()):
