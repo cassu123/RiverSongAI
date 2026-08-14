@@ -129,9 +129,22 @@ def _extract_object(raw: str) -> Optional[dict]:
 
 
 def _positive_int(value: Any, ceiling: int) -> Optional[int]:
+    """A number from a model reply, or None.
+
+    ``Infinity`` and ``NaN`` are valid JSON to Python's parser and survive
+    ``float()``. ``round(float("inf"))`` then raises OverflowError, which is
+    neither TypeError nor ValueError -- so a reply containing one crashed the
+    profile build rather than being rejected as the nonsense it is.
+    """
     try:
-        number = int(round(float(value)))
+        number = float(value)
     except (TypeError, ValueError):
+        return None
+    if number != number or number in (float("inf"), float("-inf")):
+        return None
+    try:
+        number = int(round(number))
+    except (OverflowError, ValueError):
         return None
     return number if 0 < number <= ceiling else None
 
@@ -212,7 +225,12 @@ def validate_profile(raw: dict, make: str = "", model: str = "") -> dict:
     # An unconfident answer keeps its panel and stations -- those are what a
     # person can check by looking at the machine -- and loses its numbers,
     # which are the part that would widen a bound on the strength of a guess.
-    confident = bool(raw.get("confident", True))
+    # An actual JSON boolean, nothing else. bool("false") is True, so a reply
+    # that said `"confident": "false"` -- a model hedging in the one field
+    # built to catch a hedge -- kept the numbers it was disclaiming. Anything
+    # that is not literally true is treated as not confident, which is the
+    # safe direction: it costs a real machine its numbers, not the reverse.
+    confident = raw.get("confident", True) is True
     if not confident:
         max_c = min_c = None
         station_max_c = {}

@@ -136,8 +136,12 @@ class BraveSearchProvider(SearchProvider):
             output = [f"Search results for '{query}':"]
             for i, res in enumerate(results):
                 title = res.get("title", "No Title")
+                # `.get(k, default)` only falls back when the key is missing.
+                # Brave sends `"extra_snippets": []` alongside an empty
+                # description, and indexing that is an IndexError.
+                snippets = res.get("extra_snippets") or []
                 content = (res.get("description")
-                           or res.get("extra_snippets", [""])[0]
+                           or (snippets[0] if snippets else "")
                            or "No content")
                 url = res.get("url", "")
                 output.append(

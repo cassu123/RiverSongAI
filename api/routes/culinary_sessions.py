@@ -806,6 +806,11 @@ def _plan_for_prep_session(db: Session, hh, session,
                 "active_min": s.active_min,
                 "passive_min": s.passive_min,
                 "hands_on": s.hands_on,
+                # "3-5 minutes each side, until browned" -- the clock is a
+                # guide and the eye decides. The cook screen dims the timer
+                # and says so, which it could not do while this was computed
+                # and then left out of the payload.
+                "by_eye": s.by_eye,
             }
             for s in plan.steps
         ],

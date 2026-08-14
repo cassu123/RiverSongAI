@@ -117,7 +117,12 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
           )}
 
           <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-            <button className="rs-pill" onClick={save} disabled={saving}>
+            {/* No rows means the load failed, not that the machine has no
+                buttons. Saving that would post an empty panel and strip every
+                station off a working appliance — a failed read turning into a
+                destructive write. */}
+            <button className="rs-pill" onClick={save}
+                    disabled={saving || rows.length === 0}>
               <span className="material-symbols-rounded">check</span>
               {saving ? 'SAVING…' : 'THAT IS MY MACHINE'}
             </button>

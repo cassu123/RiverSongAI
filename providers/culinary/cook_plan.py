@@ -131,7 +131,8 @@ _ALWAYS_PREP_VERBS = ("preheat", "get out", "line the", "grease")
 #: plate" is the first step of a piccata and was being filed as the last.
 #: Every one of these needs the word that follows it to confirm the sense.
 _FINISH_PATTERNS = re.compile(
-    r"\b(?:"
+    r"^\s*plate\b"                    # "Plate pasta." — imperative, no article
+    r"|\b(?:"
     r"serve\b(?!\s+(?:with\s+)?(?:the\s+)?(?:sauce\s+)?over\s+low)"   # "serve immediately/with/over"
     r"|garnish\b"
     r"|plate\s+(?:the|each|up|onto|and)\b"                                # to plate, not a plate

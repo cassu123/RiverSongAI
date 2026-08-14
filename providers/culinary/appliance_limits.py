@@ -195,7 +195,13 @@ def effective_limits(station: str,
     )
 
 
-_TEMP = re.compile(r"(\d{2,3})\s*°?\s*([CF])\b", re.IGNORECASE)
+#: Anchored on the left, because an unanchored two-to-three digit match reads
+#: the *tail* of a longer number: "1200C" matched as "200C", which is inside
+#: every oven's range, so the one number obviously wrong enough to catch was
+#: the one that sailed through. Four digits are allowed for the same reason --
+#: an absurd temperature should be rejected as too hot, not quietly trimmed
+#: into a plausible one.
+_TEMP = re.compile(r"(?<![\d.])(\d{2,4})\s*°?\s*([CF])\b", re.IGNORECASE)
 _MINUTES = re.compile(
     r"(\d+(?:\.\d+)?)\s*(?:to|-|–)?\s*(\d+(?:\.\d+)?)?\s*"
     r"(minute|min|hour|hr)s?\b", re.IGNORECASE)

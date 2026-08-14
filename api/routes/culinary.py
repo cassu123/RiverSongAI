@@ -46,7 +46,6 @@ from providers.culinary.ingredients import (
 from providers.culinary.appliance_profile import (
     build_profile,
     confirm_panel,
-    profile_summary,
     suggested_panel,
 )
 from providers.culinary.llm import (
@@ -159,6 +158,35 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _add_column(conn, table: str, column: str, decl: str) -> None:
+    """Add a column if it is not already there, and say so when it fails.
+
+    `create_all` makes new tables and never new columns, so an existing
+    database needs this. The expected outcome is a duplicate-column error on
+    every boot after the first, which is why it is swallowed -- but swallowing
+    it silently also hid a genuinely failed migration until something read the
+    missing column hours later.
+
+    Each statement gets its own transaction. On Postgres a failed DDL poisons
+    the surrounding one, so without the rollback the first duplicate column
+    would take every migration after it down with it.
+    """
+    try:
+        conn.execute(sqlalchemy.text(
+            f"ALTER TABLE {table} ADD COLUMN {column} {decl}"))
+        conn.commit()
+    except Exception as exc:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        message = str(exc).lower()
+        if "duplicate" in message or "already exists" in message:
+            return                      # the normal path on every later boot
+        logger.warning("Migration: could not add %s.%s — %s",
+                       table, column, exc)
+
+
 def _migrate_culinary_schema() -> None:
     import sqlalchemy
     with _engine.connect() as conn:
@@ -198,21 +226,11 @@ def _migrate_culinary_schema() -> None:
             ("profile_json", "TEXT"),
             ("history_json", "TEXT"),
         ):
-            try:
-                conn.execute(sqlalchemy.text(
-                    f"ALTER TABLE cul_kitchen_equipment ADD COLUMN {col} {decl}"))
-                conn.commit()
-            except Exception:
-                pass
+            _add_column(conn, "cul_kitchen_equipment", col, decl)
 
         # Per-session appliance swaps, added after the table existed.
-        try:
-            conn.execute(sqlalchemy.text(
-                "ALTER TABLE cul_prep_session_recipes ADD COLUMN appliance_swap_json TEXT"
-            ))
-            conn.commit()
-        except Exception:
-            pass
+        _add_column(conn, "cul_prep_session_recipes",
+                    "appliance_swap_json", "TEXT")
         try:
             conn.execute(sqlalchemy.text(
                 "ALTER TABLE cul_banned_ingredients ADD COLUMN substitute TEXT"
@@ -902,10 +920,22 @@ async def update_equipment(
             if eq.equipment_type:
                 old_caps.add(eq.equipment_type)
 
-        identified = await _identify_equipment(eq.make or "", eq.model or "")
-        new_types = identified["types"]
+        # The profile describes the machine that *was* named here. Correcting
+        # a Duo to a Duo Crisp and keeping the old profile would leave the
+        # pressure cooker's stations and ceilings attached to an air fryer,
+        # and a confirmed panel would still read as confirmed. Rebuild it, or
+        # clear it and fall back to the class limits.
+        profile = await build_profile(eq.make or "", eq.model or "")
+        eq.profile_json = json.dumps(profile) if profile else None
+
+        if profile:
+            new_types = profile["stations"]
+            eq.label = profile["label"]
+        else:
+            identified = await _identify_equipment(eq.make or "", eq.model or "")
+            new_types = identified["types"]
+            eq.label = identified["label"]
         eq.equipment_type = new_types[0] if new_types else "other"
-        eq.label = identified["label"]
         eq.capabilities_json = json.dumps(new_types)
 
         # Capabilities on sibling equipment — needed to safely clear old flags

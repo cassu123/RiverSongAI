@@ -266,3 +266,45 @@ def test_a_non_answer_from_search_is_not_passed_off_as_research(useless):
     built(MULTI, results=useless, seen=seen)
 
     assert "SEARCH RESULTS" not in seen[0]
+
+
+# ---------------------------------------------------------------------------
+# Ways a reply can get past validation
+#
+# Found by review. Each of these is a model answer that looked well-formed and
+# defeated the check built to catch it, which is the only failure mode here
+# that matters -- a malformed reply is rejected and harmless.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("number", ["Infinity", "-Infinity", "NaN"])
+def test_a_non_finite_number_is_rejected_rather_than_crashing(number):
+    """json.loads accepts these, float() accepts them, round() does not.
+
+    OverflowError is neither TypeError nor ValueError, so it went straight
+    through the guard and took the whole profile build down with it.
+    """
+    profile = validate_profile(
+        {"stations": ["oven"], "max_c": float(number.replace("Infinity", "inf"))})
+
+    assert profile["max_c"] is None
+
+
+def test_confident_must_be_a_real_boolean():
+    """`bool("false")` is True.
+
+    A model hedging in the one field built to catch a hedge kept exactly the
+    numbers it was disclaiming.
+    """
+    hedged = validate_profile(
+        {"stations": ["air_fryer"], "max_c": 240, "confident": "false"})
+
+    assert hedged["confident"] is False
+    assert hedged["max_c"] is None
+
+
+def test_a_missing_confident_field_still_defaults_to_trusting_the_reply():
+    """The strictness above must not turn every ordinary answer into a hedge."""
+    plain = validate_profile({"stations": ["air_fryer"], "max_c": 210})
+
+    assert plain["confident"] is True
+    assert plain["max_c"] == 210

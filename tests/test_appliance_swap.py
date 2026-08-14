@@ -239,3 +239,29 @@ def test_every_appliance_the_swap_offers_has_limits():
     from providers.culinary.appliance_swap import APPLIANCE_NAMES
 
     assert set(APPLIANCE_NAMES) <= set(LIMITS)
+
+
+def test_an_absurd_temperature_is_caught_rather_than_read_as_its_tail():
+    """`1200C` used to match as `200C`.
+
+    The regex was unanchored on the left, so it read the tail of a longer
+    number -- and 200C is inside every oven's range. The one temperature
+    obviously wrong enough to catch was the one that passed.
+    """
+    from providers.culinary.appliance_limits import check_method
+
+    assert not check_method("oven", ["Bake at 1200C for 20 minutes"]).ok
+    assert check_method("oven", ["Bake at 200C for 20 minutes"]).ok
+
+
+def test_a_households_own_ceiling_is_what_the_rewrite_is_checked_against():
+    """The profile shaped the prompt and was then left out of the check.
+
+    A household that had recorded a 200C air fryer still had a 220C rewrite
+    validated against the generic 230C class ceiling, so the narrower bound
+    existed and was not the one enforced.
+    """
+    from providers.culinary.appliance_limits import check_method
+
+    assert check_method("air_fryer", ["Air fry at 220C"]).ok
+    assert not check_method("air_fryer", ["Air fry at 220C"], {"max_c": 200}).ok

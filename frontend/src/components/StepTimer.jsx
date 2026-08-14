@@ -40,16 +40,22 @@ function beep() {
   } catch { /* audio blocked; the row still turns red and counts up */ }
 }
 
+const secondsLeft = (timer) => {
+  if (timer.paused_seconds != null) return timer.paused_seconds
+  if (!timer.ends_at) return 0
+  return Math.round((new Date(timer.ends_at) - Date.now()) / 1000)
+}
+
 export default function StepTimer({ timer, api, onChanged }) {
-  const [left, setLeft] = useState(0)
+  // Seeded from the timer, not from zero. Starting at 0 meant the first
+  // commit had a running twenty-minute timer reading "expired", and the
+  // ring effect fires on that commit — so every timer beeped once the
+  // moment it appeared, including one with nineteen minutes to go.
+  const [left, setLeft] = useState(() => secondsLeft(timer))
   const rang = useRef(false)
 
   useEffect(() => {
-    const compute = () => {
-      if (timer.paused_seconds != null) return timer.paused_seconds
-      if (!timer.ends_at) return 0
-      return Math.round((new Date(timer.ends_at) - Date.now()) / 1000)
-    }
+    const compute = () => secondsLeft(timer)
     setLeft(compute())
     if (timer.paused_seconds != null) return          // frozen; no tick needed
     const t = setInterval(() => setLeft(compute()), 1000)

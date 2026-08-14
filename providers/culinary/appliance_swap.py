@@ -203,7 +203,11 @@ async def rewrite_for_appliance(
     # carry out is refused rather than shown with a warning attached, because
     # a method with a wrong number in it is not improved by a caveat beside
     # it -- the cook is going to follow the step.
-    verdict = check_method(target_station, new_steps)
+    # Checked against *this* machine, not the class. The profile shaped the
+    # prompt already; leaving it out here meant a household that had recorded
+    # a 200C air fryer still had a 220C rewrite validated against the generic
+    # 230C ceiling -- the narrower bound existed and was not the one enforced.
+    verdict = check_method(target_station, new_steps, profile)
     if not verdict.ok:
         raise SwapFailed(
             "That rewrite asks for something the appliance cannot do: "
