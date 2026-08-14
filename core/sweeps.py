@@ -83,6 +83,7 @@ async def start_sweeps(app):
             for t in tasks:
                 t.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
+            raise
             
     _RUNNING_TASK = asyncio.create_task(_runner(), name="sweep_runner")
     return _RUNNING_TASK
