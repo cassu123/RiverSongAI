@@ -197,6 +197,11 @@ class PrepSessionRecipe(Base):  # type: ignore
 
     servings_target: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     scaled_ingredients_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)# post-scaling JSON
+    #: A method rewritten for a different appliance, for this session only:
+    #: {"station", "steps", "ingredients", "note"}. Deliberately here and not
+    #: on the Recipe -- trying the Dutch oven once should not rewrite the
+    #: thing you will cook in a skillet next month.
+    appliance_swap_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     added_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
@@ -216,6 +221,20 @@ class KitchenEquipment(Base):  # type: ignore
     make: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     model: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     capabilities_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)# JSON list of all equipment_type keys
+    #: What this particular machine can do, as facts rather than a category:
+    #: {"watts", "capacity", "max_c", "presets": [...], "notes"}.
+    #:
+    #: Two jobs. It goes into the prompt, so a rewrite says 230C because that
+    #: is what this air fryer reaches rather than because 230 is a common
+    #: number. And it tightens the check afterwards -- a household that has
+    #: recorded a 200C maximum gets a stricter bound than the generic one for
+    #: the class, so a wrong answer has less room to look plausible.
+    profile_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    #: How it has actually behaved: [{"at", "recipe", "verdict", "note"}].
+    #: Appended after a cook, and fed back into later rewrites. This is the
+    #: only part of the system that can converge on being right about *your*
+    #: oven, because it is the only part that observes it.
+    history_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
@@ -379,6 +398,36 @@ class MealCook(Base):  # type: ignore
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     household = relationship("Household")
+
+
+class MealTimer(Base):  # type: ignore
+    """A timer for one step of a meal cook.
+
+    Stores a deadline, never a countdown, for the same reason CookingTimer
+    does: a countdown has to be decremented by something that is still
+    running, so it loses time across a reload and then lies about how long is
+    left. A deadline is simply true whenever it is next read, on any device.
+
+    Pausing is the one case that needs the other representation. A paused
+    timer has no deadline -- there is no instant it is counting towards -- so
+    it holds the seconds remaining instead, and resuming turns that back into
+    a deadline. Exactly one of the two is set at a time.
+    """
+    __tablename__ = "cul_meal_timers"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    cook_id: Mapped[str] = mapped_column(String, ForeignKey("cul_meal_cooks.id"), nullable=False, index=True)
+    #: "<recipe_id>:<step_index>" -- the same key the done-set uses.
+    step_key: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    label: Mapped[str] = mapped_column(String, nullable=False, default="Timer")
+
+    ends_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    paused_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    #: Set once the cook has acknowledged the alarm, which is what stops it
+    #: going off again on the next device to open the page.
+    stopped_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
 class CookingTimer(Base):  # type: ignore

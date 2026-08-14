@@ -16,6 +16,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import CookPlanTimeline from './CookPlanTimeline.jsx'
+import StepTimer from './StepTimer.jsx'
 
 const STATION_LABELS = {
   counter: 'Counter', stove: 'Stove', oven: 'Oven', microwave: 'Microwave',
@@ -32,6 +33,11 @@ const STATION_ICONS = {
 }
 
 const stationLabel = s => STATION_LABELS[s] || s
+
+// What to set a step's timer to. The unattended stretch when there is one --
+// that is the bit you walk away from and need calling back for. Otherwise the
+// hands-on minutes, which is the "3-5 minutes per side" case.
+const timerSeconds = (s) => (s.passive_min > 0 ? s.passive_min : s.active_min) * 60
 const stationIcon = s => STATION_ICONS[s] || 'restaurant'
 
 // A colour per recipe so an interleaved list still reads as several dishes.
@@ -46,6 +52,8 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
   const [busy, setBusy]       = useState(false)
   const [serveTime, setServeTime] = useState('')   // "HH:MM", local
   const [courses, setCourses] = useState({})       // recipe_id -> minutes after
+  const [swapping, setSwapping] = useState(null)   // recipe_id being rewritten
+  const [swapError, setSwapError] = useState(null)
   const [tick, setTick] = useState(0)              // re-render so NOW advances
 
   // A minute is the resolution the whole plan is in; anything finer would
@@ -87,6 +95,7 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
           : null
         if (stale()) return
         setPlan(plan)
+
       }
       if (stale()) return
       setError(null)
@@ -101,6 +110,35 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
   useEffect(() => { load() }, [load, refreshNonce])
 
   const done = useMemo(() => new Set(cook?.done || []), [cook])
+
+  const timersFor = useMemo(() => {
+    const map = {}
+    ;(cook?.timers || []).forEach(t => { (map[t.step_key] = map[t.step_key] || []).push(t) })
+    return map
+  }, [cook])
+
+  // Re-read the cook rather than patching a timer in place: a second phone
+  // may have paused it, and the timers are the one thing two people in a
+  // kitchen touch at the same moment.
+  const reloadTimers = useCallback(async () => {
+    try {
+      const active = await api.get('/meal-cook')
+      if (active?.cook) setCook(active.cook)
+    } catch { /* the countdown on screen is still right */ }
+  }, [api])
+
+  const startTimer = async (step, seconds) => {
+    setBusy(true)
+    try {
+      await api.post(`/meal-cook/${cook.id}/timers`, {
+        step_key: step.key,
+        seconds,
+        label: step.recipe_title,
+      })
+      await reloadTimers()
+    } catch (err) { setError(err.message) }
+    finally { setBusy(false) }
+  }
 
   const colorFor = useMemo(() => {
     const map = {}
@@ -163,6 +201,28 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
     return at.toISOString()
   }
 
+  // The one place a model is doing real work. It can genuinely fail, and when
+  // it does the recipe is unchanged and the cook is told -- silently keeping
+  // the old method would say the appliance works and hand over the wrong
+  // instructions for it.
+  // A choice is either a bare station ("any oven") or one of the household's
+  // machines as "<equipment id>:<station>". Split here rather than carrying
+  // two selects, because to the cook it is one question: cook this where?
+  const swapAppliance = async (recipeId, choice) => {
+    setSwapping(recipeId)
+    setSwapError(null)
+    const [head, tail] = String(choice || '').split(':')
+    const station = tail || head || null
+    const equipment_id = tail ? head : null
+    try {
+      await api.post(`/prep/${activePrep.id}/appliance-swap`,
+                     { recipe_id: recipeId, station, equipment_id })
+      await load()
+    } catch (err) {
+      setSwapError({ recipeId, message: err.message })
+    } finally { setSwapping(null) }
+  }
+
   const start = async () => {
     setBusy(true)
     try {
@@ -205,7 +265,7 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
   if (!plan || !plan.steps?.length) {
     return (
       <div className="rs-card-meta" style={{ padding: 48, textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
-        Nothing to plan yet. Stage some recipes in PREP and this works out when to
+        Nothing to plan yet. Stage some recipes in STAGE and this works out when to
         start each one so they finish together.
       </div>
     )
@@ -251,8 +311,30 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
             {s.recipe_title}
             {s.station !== 'counter' && ` · ${stationLabel(s.station)}`}
             {s.passive_min > 0 && ` · ${s.passive_min}m unattended`}
+            {s.by_eye && ' · judge by eye'}
           </div>
+          {(timersFor[s.key] || []).map(t => (
+            <StepTimer key={t.id} timer={t} api={api} onChanged={reloadTimers} />
+          ))}
         </div>
+
+        {/* An offer, not an alarm that starts itself. Steps judged by eye get
+            the same button and a quieter one: the minutes are a nudge to go
+            and look, not the moment the food is ready. */}
+        {cook && !isDone && timerSeconds(s) > 0 && !(timersFor[s.key] || []).length && (
+          <button
+            className="rs-pill"
+            style={{ padding: 6, minWidth: 0, background: 'transparent', flexShrink: 0,
+                     opacity: s.by_eye ? 0.55 : 1 }}
+            aria-label={`Start a ${Math.round(timerSeconds(s) / 60)} minute timer for ${s.text.slice(0, 40)}`}
+            title={s.by_eye ? 'Timer as a guide — this step is judged by eye'
+                            : `Start a ${Math.round(timerSeconds(s) / 60)} minute timer`}
+            disabled={busy}
+            onClick={() => startTimer(s, timerSeconds(s))}
+          >
+            <span className="material-symbols-rounded">timer</span>
+          </button>
+        )}
       </div>
     )
   }
@@ -277,6 +359,8 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
     : 'now'
   // Not enough runway: the plan would have had to begin before now.
   const tooLate = nowMin !== null && nowMin > 0 ? nowMin : null
+
+  const swapFor = (recipeId) => (plan.swaps || []).find(w => w.recipe_id === recipeId)
 
   const prepSteps = plan.steps.filter(s => s.phase === 'prep')
   // Prep is the mise en place plus the knife work, so the count has to be
@@ -433,6 +517,78 @@ export default function CookPlanTab({ api, activePrep, refreshNonce }) {
                       >{m === 0 ? 'WITH' : `+${m}m`}</button>
                     ))}
                   </div>
+
+                  {/* Cook it in something else. Unlike everything around it
+                      this rewrites the method, so it only ever affects this
+                      session — the saved recipe is not touched and REVERT
+                      brings the original back because it never left. */}
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', width: '100%' }}>
+                    <select
+                      className="settings-select"
+                      style={{ fontSize: '0.72rem', flex: 1, minWidth: 0 }}
+                      aria-label={`Cook ${r.title} in`}
+                      disabled={swapping === r.id}
+                      value={swapFor(r.id)?.pick || swapFor(r.id)?.station || ''}
+                      onChange={e => swapAppliance(r.id, e.target.value || null)}
+                    >
+                      <option value="">cook it as written</option>
+                      {/* Owned machines by name first. A household with two
+                          pressure cookers cannot answer "cook it in the
+                          pressure cooker" — only one has the air fry lid, and
+                          which one is used changes the method. */}
+                      {(plan.appliances || []).length > 0 && (
+                        <optgroup label="what you have">
+                          {(plan.appliances || []).flatMap(a =>
+                            a.stations.map(st => (
+                              <option key={`${a.id}:${st}`} value={`${a.id}:${st}`}>
+                                {a.label} — as {(STATION_LABELS[st] || st).toLowerCase()}
+                              </option>
+                            )))}
+                        </optgroup>
+                      )}
+                      <optgroup label="any machine of that kind">
+                        {Object.entries(STATION_LABELS)
+                          .filter(([k]) => k !== 'counter')
+                          .map(([k, label]) => (
+                            <option key={k} value={k}>cook it in the {label.toLowerCase()}</option>
+                          ))}
+                      </optgroup>
+                    </select>
+                    {swapping === r.id && (
+                      <span className="rs-card-label" style={{ fontSize: '0.6rem' }}>REWRITING…</span>
+                    )}
+                  </div>
+
+                  {swapFor(r.id)?.note && (
+                    <div className="rs-card-meta" style={{ fontSize: '0.72rem', width: '100%', marginTop: -2 }}>
+                      {swapFor(r.id).equipment_label && (
+                        <strong style={{ color: 'var(--primary)' }}>
+                          {swapFor(r.id).equipment_label}:{' '}
+                        </strong>
+                      )}
+                      {swapFor(r.id).note} <em>This session only — the saved recipe is unchanged.</em>
+                    </div>
+                  )}
+                  {/* Possible but unusual: said, not blocked. Impossible never
+                      reaches here — the swap is refused outright. */}
+                  {swapFor(r.id)?.unusual?.map((u, i) => (
+                    <div key={i} className="rs-card-meta"
+                         style={{ fontSize: '0.72rem', width: '100%', color: 'var(--rs-status-warning)' }}>
+                      {u}
+                    </div>
+                  ))}
+                  {swapFor(r.id)?.safety && (
+                    <div className="rs-card-meta"
+                         style={{ fontSize: '0.72rem', width: '100%', display: 'flex', gap: 6 }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: '1rem', flexShrink: 0 }}>thermostat</span>
+                      <span>{swapFor(r.id).safety}</span>
+                    </div>
+                  )}
+                  {swapError?.recipeId === r.id && (
+                    <div className="rs-card-meta" style={{ fontSize: '0.72rem', width: '100%', color: 'var(--md-error)' }}>
+                      {swapError.message}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

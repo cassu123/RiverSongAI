@@ -114,6 +114,11 @@ _PREP_VERBS = (
     "chop", "dice", "mince", "slice", "julienne", "peel", "trim", "grate",
     "marinate", "brine", "measure", "gather", "wash", "rinse", "pat dry",
     "bring to room temperature", "thaw", "soften",
+    # Counter work a recipe names without a knife. Dredging flour is the one
+    # that showed up first -- it is the whole of a piccata's first step, and
+    # without it that step read as cooking and got no place on the prep list.
+    "dredge", "coat", "cube", "halve", "quarter", "zest", "shred",
+    "crumble", "sift", "separate", "score", "debone", "devein",
 )
 
 #: Prep no matter which station they name. The station test below is what
@@ -121,7 +126,19 @@ _PREP_VERBS = (
 #: preheating, which happens at the oven and is still setup.
 _ALWAYS_PREP_VERBS = ("preheat", "get out", "line the", "grease")
 
-_FINISH_VERBS = ("plate", "garnish", "serve", "slice to serve", "rest before")
+#: Plating up. Matched as verbs rather than as substrings, because "plate" is
+#: a noun far more often than it is a verb: "place the flour on a shallow
+#: plate" is the first step of a piccata and was being filed as the last.
+#: Every one of these needs the word that follows it to confirm the sense.
+_FINISH_PATTERNS = re.compile(
+    r"^\s*plate\b"                    # "Plate pasta." — imperative, no article
+    r"|\b(?:"
+    r"serve\b(?!\s+(?:with\s+)?(?:the\s+)?(?:sauce\s+)?over\s+low)"   # "serve immediately/with/over"
+    r"|garnish\b"
+    r"|plate\s+(?:the|each|up|onto|and)\b"                                # to plate, not a plate
+    r"|divide\s+(?:among|between)\b"
+    r"|spoon\s+onto\b"
+    r")", re.IGNORECASE)
 
 _DURATION = re.compile(
     r"(\d+(?:\.\d+)?)\s*(?:to|-|–)?\s*(\d+(?:\.\d+)?)?\s*"
@@ -129,10 +146,34 @@ _DURATION = re.compile(
     re.IGNORECASE,
 )
 
-#: What may sit between two durations that are one quantity. "and" and a bare
-#: comma continue the phrase; "or" and "then" start a new one, and so does any
-#: other word.
+#: What may sit between two durations that are one quantity: whitespace, a
+#: bare comma, "and". "or" starts a new phrase, and so does any other word.
 _JOINS_A_DURATION = re.compile(r"[\s,]*(?:and)?[\s,]*", re.IGNORECASE)
+
+#: A second duration that follows the first rather than competing with it.
+#: "Bake 20 minutes, then bake 10 minutes more" is thirty minutes of oven.
+_CONTINUES_A_DURATION = re.compile(
+    r"\b(?:then|followed by|after that|and then)\b", re.IGNORECASE)
+
+#: "...stirring every 5 minutes" names how often, not how long. Counting it
+#: makes a twenty-minute simmer look like twenty-five.
+_IS_A_CADENCE = re.compile(r"\b(?:every|each)\s*$", re.IGNORECASE)
+
+#: "4 minutes per side" is eight minutes of standing at the pan. Missing this
+#: understates exactly the steps that are all hands -- searing and frying --
+#: which is where an underestimate hurts most.
+_PER_SIDE = re.compile(r"^\W*(?:per|each|a)\s+side", re.IGNORECASE)
+
+#: "3-5 minutes per side, until golden brown" -- the minutes are a guide and
+#: your eyes are the actual instrument. Worth knowing because a timer on a
+#: step like this should offer itself rather than insist: it is a nudge to go
+#: and look, not a deadline. Steps with no cue ("bake 25 minutes") are the
+#: ones a timer can genuinely be trusted with.
+_BY_EYE = re.compile(
+    r"\b(?:until|till)\b|\b(?:or\s+)?(?:until\s+)?"
+    r"(?:golden|browned?|tender|crisp|fragrant|translucent|softened|"
+    r"bubbling|set|thickened|reduced|cooked through|done)\b",
+    re.IGNORECASE)
 
 _UNIT_MINUTES = {
     "second": 1 / 60, "sec": 1 / 60,
@@ -149,6 +190,13 @@ def extract_minutes(text: str) -> int:
     cost of the two spare minutes is that you wait; the cost of being early is
     that the plan is wrong from there on.
 
+    A step often names more than one duration, and they do not all mean the
+    same thing. "1 hour 30 minutes" is one quantity. "Bake 20 minutes, then
+    10 minutes more" is two that follow each other. "4 minutes per side" is
+    twice what it says. "Stirring every 5 minutes" is not a duration at all.
+    Taking the largest of them handles only the last case; the rest need the
+    words around them read.
+
     Compound durations are summed: "1 hour 30 minutes" is ninety, not sixty.
     Two durations belong to the same phrase only when what sits between them
     joins rather than separates -- whitespace, "and", a comma. Measuring the
@@ -160,26 +208,41 @@ def extract_minutes(text: str) -> int:
         return 0
 
     best = 0.0
-    compound = 0.0
+    running = 0.0
     last_end = -1
 
     for match in matches:
+        before = text[max(last_end, 0):match.start()]
+
+        # "stirring every 5 minutes" is a cadence. It is not time the step
+        # costs, and adding it would inflate the commonest phrasing there is.
+        if _IS_A_CADENCE.search(before):
+            last_end = match.end()
+            continue
+
         lo, hi, unit = match.groups()
         factor = _UNIT_MINUTES.get(unit.lower(), 0)
         value = float(hi or lo) * factor
 
-        joined = last_end >= 0 and _JOINS_A_DURATION.fullmatch(
-            text[last_end:match.start()]) is not None
-        if joined:
-            compound += value
+        # "per side" means twice, and always on a step that is pure hands.
+        if _PER_SIDE.match(text[match.end():match.end() + 24]):
+            value *= 2
+
+        # Two durations add up when the phrase between them either joins them
+        # into one quantity ("1 hour 30 minutes") or sequences them ("bake 20
+        # minutes, then 10 minutes more"). Otherwise they are alternatives or
+        # separate facts, and the longest is the honest answer.
+        if last_end >= 0 and (
+                _JOINS_A_DURATION.fullmatch(before)
+                or _CONTINUES_A_DURATION.search(before)):
+            running += value
         else:
-            best = max(best, compound)
-            compound = value
+            best = max(best, running)
+            running = value
 
         last_end = match.end()
 
-    best = max(best, compound)
-    return int(round(best))
+    return int(round(max(best, running)))
 
 
 def _first_match(text: str, verbs: Iterable[str]) -> Optional[str]:
@@ -208,6 +271,11 @@ class StepFacts:
     phase: str = "cook"          # prep | cook | finish
     active_min: int = 0          # occupies the cook
     passive_min: int = 0         # occupies the station, frees the cook
+    #: The step judges doneness by eye, so its stated time is an estimate.
+    #: Scheduling is unaffected -- the plan still needs a number -- but a
+    #: timer offered for this step is a prompt to go and look, not an alarm
+    #: that means the food is ready.
+    by_eye: bool = False
 
     @property
     def total_min(self) -> int:
@@ -259,7 +327,7 @@ def analyse_step(index: int, text: str) -> StepFacts:
     else:
         active, passive = DEFAULT_ACTIVE_MIN, 0
 
-    if _first_match(lowered, _FINISH_VERBS):
+    if _FINISH_PATTERNS.search(lowered):
         phase = "finish"
     elif _first_match(lowered, _ALWAYS_PREP_VERBS):
         phase = "prep"
@@ -271,7 +339,8 @@ def analyse_step(index: int, text: str) -> StepFacts:
         phase = "cook"
 
     return StepFacts(index=index, text=text, station=station, phase=phase,
-                     active_min=active, passive_min=passive)
+                     active_min=active, passive_min=passive,
+                     by_eye=bool(minutes and _BY_EYE.search(lowered)))
 
 
 def analyse_steps(steps: Iterable[str]) -> List[StepFacts]:
@@ -301,6 +370,7 @@ class PlannedStep:
     end_min: int
     active_min: int
     passive_min: int
+    by_eye: bool = False
 
     @property
     def hands_on(self) -> bool:
@@ -443,6 +513,7 @@ def plan_meal(
                 end_min=cursor + step.total_min,
                 active_min=step.active_min,
                 passive_min=step.passive_min,
+                by_eye=step.by_eye,
             ))
             cursor += step.total_min
 

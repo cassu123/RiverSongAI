@@ -43,6 +43,11 @@ from providers.culinary.ingredients import (
     _collect_parsed,
     _flag_blacklist,
 )
+from providers.culinary.appliance_profile import (
+    build_profile,
+    confirm_panel,
+    suggested_panel,
+)
 from providers.culinary.llm import (
     _EQUIPMENT_TRANSLATE_PROMPT,
     _RECIPE_SCHEMA_PROMPT,
@@ -108,7 +113,7 @@ from fastapi import (
     WebSocketDisconnect,
     status,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -153,6 +158,35 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _add_column(conn, table: str, column: str, decl: str) -> None:
+    """Add a column if it is not already there, and say so when it fails.
+
+    `create_all` makes new tables and never new columns, so an existing
+    database needs this. The expected outcome is a duplicate-column error on
+    every boot after the first, which is why it is swallowed -- but swallowing
+    it silently also hid a genuinely failed migration until something read the
+    missing column hours later.
+
+    Each statement gets its own transaction. On Postgres a failed DDL poisons
+    the surrounding one, so without the rollback the first duplicate column
+    would take every migration after it down with it.
+    """
+    try:
+        conn.execute(sqlalchemy.text(
+            f"ALTER TABLE {table} ADD COLUMN {column} {decl}"))
+        conn.commit()
+    except Exception as exc:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        message = str(exc).lower()
+        if "duplicate" in message or "already exists" in message:
+            return                      # the normal path on every later boot
+        logger.warning("Migration: could not add %s.%s — %s",
+                       table, column, exc)
+
+
 def _migrate_culinary_schema() -> None:
     import sqlalchemy
     with _engine.connect() as conn:
@@ -187,6 +221,16 @@ def _migrate_culinary_schema() -> None:
             conn.commit()
         except Exception:
             pass
+        # Per-appliance facts and observed behaviour.
+        for col, decl in (
+            ("profile_json", "TEXT"),
+            ("history_json", "TEXT"),
+        ):
+            _add_column(conn, "cul_kitchen_equipment", col, decl)
+
+        # Per-session appliance swaps, added after the table existed.
+        _add_column(conn, "cul_prep_session_recipes",
+                    "appliance_swap_json", "TEXT")
         try:
             conn.execute(sqlalchemy.text(
                 "ALTER TABLE cul_banned_ingredients ADD COLUMN substitute TEXT"
@@ -385,6 +429,16 @@ class ScaleRequest(BaseModel):
 
 class EquipmentTranslateRequest(BaseModel):
     equipment: str  # e.g. "Air Fryer"
+
+
+class EquipmentPanelConfirm(BaseModel):
+    """The buttons somebody has read off the front of the appliance.
+
+    Sent whole rather than as a diff: the panel replaces what was there, so
+    unticking is expressed by absence and the stored profile can never drift
+    out of step with what was last confirmed.
+    """
+    panel: List[str] = Field(default_factory=list)
 
 
 class StockroomItemCreate(BaseModel):
@@ -681,22 +735,156 @@ async def add_equipment(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    identified = await _identify_equipment(body.make.strip(), body.model.strip())
-    types = identified["types"]
+    make, model = body.make.strip(), body.model.strip()
+
+    # A full profile rather than a category. "Instant Dutch Oven" is four
+    # stations, a ceiling, and a set of mode names printed on its panel, and
+    # none of that survives being filed as one equipment_type. Falls back to
+    # the older classifier when no profile can be built, so adding an
+    # appliance never depends on the model being up.
+    profile = await build_profile(make, model)
+    if profile:
+        types = profile["stations"]
+        label = profile["label"]
+    else:
+        identified = await _identify_equipment(make, model)
+        types = identified["types"]
+        label = identified["label"]
+
     primary_type = types[0] if types else "other"
     eq = KitchenEquipment(
         household_id=hh.id,
         equipment_type=primary_type,
-        label=identified["label"],
-        make=body.make.strip(),
-        model=body.model.strip(),
+        label=label,
+        make=make,
+        model=model,
         capabilities_json=json.dumps(types),
+        profile_json=json.dumps(profile) if profile else None,
     )
     db.add(eq)
     for t in types:
         flag = f"has_{t}"
         if hasattr(hh, flag):
             setattr(hh, flag, True)
+    db.commit()
+    db.refresh(eq)
+    await _ws_manager.broadcast(hh.id, "equipment_updated", _equipment_out(eq))
+    return _equipment_out(eq)
+
+
+def _apply_station_flags(db: Session, hh, eq_id: str,
+                         old_types: List[str], new_types: List[str]) -> None:
+    """Move the household's has_* flags to match a changed set of stations.
+
+    A flag is only cleared once no *other* appliance still provides it, so
+    unticking AIR CRISP on one machine does not tell the household it has no
+    air fryer when a second one is sitting next to it.
+    """
+    siblings = db.query(KitchenEquipment).filter(
+        KitchenEquipment.household_id == hh.id,
+        KitchenEquipment.id != eq_id,
+    ).all()
+    sibling_caps: set = set()
+    for s_eq in siblings:
+        try:
+            sibling_caps.update(json.loads(s_eq.capabilities_json or "[]"))
+        except Exception:
+            if s_eq.equipment_type:
+                sibling_caps.add(s_eq.equipment_type)
+
+    for t in old_types:
+        if t not in new_types and t not in sibling_caps:
+            flag = f"has_{t}"
+            if hasattr(hh, flag):
+                setattr(hh, flag, False)
+    for t in new_types:
+        flag = f"has_{t}"
+        if hasattr(hh, flag):
+            setattr(hh, flag, True)
+
+
+@router.get("/household/equipment/{eq_id}/panel")
+async def get_equipment_panel(
+    eq_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """The checklist to hold up against the front of the appliance.
+
+    Every button the catalogue knows, ticked where this profile claims it —
+    the whole list rather than only the guessed ones, because the correction
+    that matters most is *adding* the button the model missed.
+    """
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    eq = db.query(KitchenEquipment).filter(
+        KitchenEquipment.id == eq_id,
+        KitchenEquipment.household_id == hh.id,
+    ).first()
+    if not eq:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+
+    try:
+        profile = json.loads(eq.profile_json) if eq.profile_json else None
+    except Exception:
+        profile = None
+    return {
+        "equipment_id": eq.id,
+        "label": eq.label,
+        "confirmed": bool((profile or {}).get("panel_confirmed")),
+        "buttons": suggested_panel(profile),
+    }
+
+
+@router.post("/household/equipment/{eq_id}/panel")
+async def confirm_equipment_panel(
+    eq_id: str,
+    body: EquipmentPanelConfirm,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Record the buttons somebody has actually read off the machine.
+
+    This is the only path that produces a profile which is not a guess. Two
+    Instant Pots that answer to the same name stop being ambiguous here: the
+    one with AIR CRISP ticked becomes schedulable as an air fryer and the
+    other does not.
+
+    Stations are re-derived from the panel rather than edited, so the buttons
+    stay the single source of what the appliance can do.
+    """
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+    eq = db.query(KitchenEquipment).filter(
+        KitchenEquipment.id == eq_id,
+        KitchenEquipment.household_id == hh.id,
+    ).first()
+    if not eq:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+
+    try:
+        profile = json.loads(eq.profile_json) if eq.profile_json else None
+    except Exception:
+        profile = None
+    profile = dict(profile or {})
+    profile.setdefault("make", eq.make or "")
+    profile.setdefault("model", eq.model or "")
+    profile.setdefault("label", eq.label or "")
+
+    old_types: List[str] = []
+    try:
+        old_types = json.loads(eq.capabilities_json or "[]")
+    except Exception:
+        old_types = [eq.equipment_type] if eq.equipment_type else []
+
+    confirmed = confirm_panel(profile, list(body.panel or []))
+    new_types = confirmed["stations"]
+
+    eq.profile_json = json.dumps(confirmed)
+    eq.capabilities_json = json.dumps(new_types)
+    eq.equipment_type = new_types[0] if new_types else "other"
+    _apply_station_flags(db, hh, eq_id, old_types, new_types)
+
     db.commit()
     db.refresh(eq)
     await _ws_manager.broadcast(hh.id, "equipment_updated", _equipment_out(eq))
@@ -732,10 +920,22 @@ async def update_equipment(
             if eq.equipment_type:
                 old_caps.add(eq.equipment_type)
 
-        identified = await _identify_equipment(eq.make or "", eq.model or "")
-        new_types = identified["types"]
+        # The profile describes the machine that *was* named here. Correcting
+        # a Duo to a Duo Crisp and keeping the old profile would leave the
+        # pressure cooker's stations and ceilings attached to an air fryer,
+        # and a confirmed panel would still read as confirmed. Rebuild it, or
+        # clear it and fall back to the class limits.
+        profile = await build_profile(eq.make or "", eq.model or "")
+        eq.profile_json = json.dumps(profile) if profile else None
+
+        if profile:
+            new_types = profile["stations"]
+            eq.label = profile["label"]
+        else:
+            identified = await _identify_equipment(eq.make or "", eq.model or "")
+            new_types = identified["types"]
+            eq.label = identified["label"]
         eq.equipment_type = new_types[0] if new_types else "other"
-        eq.label = identified["label"]
         eq.capabilities_json = json.dumps(new_types)
 
         # Capabilities on sibling equipment — needed to safely clear old flags
@@ -2032,7 +2232,14 @@ async def push_prep_list_to_grocery(
 @router.get("/prep/{session_id}/staging")
 async def get_staging_area(
         session_id: str, request: Request, db: Session = Depends(get_db)):
-    """Staging Area: shopping list split back into per-recipe piles."""
+    """Shopping list split back into per-recipe piles.
+
+    No longer used by the web UI: the same split is in the cook plan, where
+    each pile can be ticked off as it reaches the counter, and having it in
+    two places meant two screens showing the same ingredients. Kept because it
+    is the only version that marks what is already in the stockroom, and other
+    clients read it.
+    """
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     session = db.query(PrepSession).filter_by(
