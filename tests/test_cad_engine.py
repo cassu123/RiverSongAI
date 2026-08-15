@@ -10,11 +10,31 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from main import app
 from config.settings import get_settings
-from providers.cad.cad_engine import CADEngine, get_cad_engine
+from providers.cad.cad_engine import (
+    CADEngine,
+    _find_openscad_binary,
+    get_cad_engine,
+    trimesh,
+)
+from core.auth import create_access_token
 from core.sandbox import SandboxRunner, get_sandbox_runner
 from core.tools import execute_tool
 
+# OpenSCAD is a system binary and trimesh an optional package; neither is
+# installed in CI. Tests that assert a real compiled mesh need both, and
+# asserting `res.error is None` without them fails on the environment rather
+# than on the code.
+needs_openscad = pytest.mark.skipif(
+    not _find_openscad_binary(),
+    reason="OpenSCAD binary not installed",
+)
+needs_mesh = pytest.mark.skipif(
+    not _find_openscad_binary() or trimesh is None,
+    reason="OpenSCAD binary and trimesh both required for mesh metrics",
+)
 
+
+@needs_mesh
 @pytest.mark.asyncio
 async def test_cad_engine_compilation_and_metrics():
     engine = get_cad_engine()
@@ -44,6 +64,7 @@ async def test_cad_engine_compilation_and_metrics():
     assert res.estimated_print_time_minutes >= 5
 
 
+@needs_openscad
 @pytest.mark.asyncio
 async def test_cad_engine_path_traversal_sanitization():
     engine = get_cad_engine()
@@ -60,6 +81,7 @@ async def test_cad_engine_path_traversal_sanitization():
     assert os.path.exists(res.stl_path)
 
 
+@needs_openscad
 @pytest.mark.asyncio
 async def test_cad_engine_invalid_syntax_error():
     engine = get_cad_engine()
@@ -177,6 +199,7 @@ print(f"Spawned:{p.pid}")
     settings.sandbox_enabled = False
 
 
+@needs_openscad
 @pytest.mark.asyncio
 async def test_cad_tool_execution():
     context = {"user_id": "test_user"}
@@ -205,14 +228,23 @@ async def test_diagram_tool_execution():
     assert "graph TD; A-->B; B-->C;" in result_text
 
 
+@needs_mesh
 @pytest.mark.asyncio
-async def test_cad_api_endpoints():
+async def test_cad_api_endpoints(app_store):
+    """The happy path, with credentials.
+
+    It used to send none, which meant it was asserting that anonymous
+    compile, read and list all succeed — the exact behaviour that made
+    /api/cad/sandbox/run reachable without a token.
+    """
+    token = create_access_token("cad_owner", "owner@test.com", "user")
+    auth = {"Authorization": f"Bearer {token}"}
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        # Compile model via POST /api/cad/compile
         resp = await client.post(
             "/api/cad/compile",
             json={"name": "api_part", "scad_code": "sphere(r=10);"},
+            headers=auth,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -220,26 +252,59 @@ async def test_cad_api_endpoints():
         model_id = data["model_id"]
         assert data["volume_cm3"] > 0
 
-        # Fetch STL via GET /api/cad/models/{model_id}/stl
-        stl_resp = await client.get(f"/api/cad/models/{model_id}/stl")
+        stl_resp = await client.get(f"/api/cad/models/{model_id}/stl", headers=auth)
         assert stl_resp.status_code == 200
         assert len(stl_resp.content) > 0
 
-        # Fetch SCAD via GET /api/cad/models/{model_id}/scad
-        scad_resp = await client.get(f"/api/cad/models/{model_id}/scad")
+        scad_resp = await client.get(f"/api/cad/models/{model_id}/scad", headers=auth)
         assert scad_resp.status_code == 200
         assert "sphere(r=10);" in scad_resp.text
 
-        # List models via GET /api/cad/models
-        list_resp = await client.get("/api/cad/models")
+        list_resp = await client.get("/api/cad/models", headers=auth)
         assert list_resp.status_code == 200
-        models_data = list_resp.json()
-        assert len(models_data["models"]) >= 1
+        assert len(list_resp.json()["models"]) >= 1
 
-        # Test invalid character in model_id is rejected (400)
-        bad_id_resp = await client.get("/api/cad/models/bad$id/stl")
+        bad_id_resp = await client.get("/api/cad/models/bad$id/stl", headers=auth)
         assert bad_id_resp.status_code == 400
 
-        # Test non-existent model_id returns 404
-        missing_resp = await client.get("/api/cad/models/missing_model_123/stl")
+        missing_resp = await client.get(
+            "/api/cad/models/missing_model_123/stl", headers=auth)
         assert missing_resp.status_code == 404
+
+        # Another account must not reach this model. The handler used to fall
+        # back to primary_user's directory when the caller's own was missing,
+        # so any authenticated user who guessed a model_id read someone
+        # else's STL — and the id is in every STL URL.
+        other = create_access_token("cad_stranger", "stranger@test.com", "user")
+        stranger = await client.get(
+            f"/api/cad/models/{model_id}/stl",
+            headers={"Authorization": f"Bearer {other}"},
+        )
+        assert stranger.status_code == 404
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("method,path,payload", [
+    ("post", "/api/cad/compile", {"name": "x", "scad_code": "cube(1);"}),
+    ("post", "/api/cad/sandbox/run", {"code": "print(1)"}),
+    ("get", "/api/cad/models", None),
+    ("get", "/api/cad/models/abc123/stl", None),
+    ("get", "/api/cad/models/abc123/scad", None),
+])
+async def test_cad_routes_reject_anonymous_callers(method, path, payload):
+    """_require_user used to return "primary_user" for a missing or invalid
+    token, so every route here accepted anonymous requests — including the
+    one that executes Python.
+    """
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        call = getattr(client, method)
+        resp = await (call(path, json=payload) if payload else call(path))
+        assert resp.status_code == 401, f"{method.upper()} {path} allowed anonymous access"
+
+        forged = await (
+            call(path, json=payload, headers={"Authorization": "Bearer not-a-token"})
+            if payload else
+            call(path, headers={"Authorization": "Bearer not-a-token"})
+        )
+        assert forged.status_code == 401, f"{method.upper()} {path} accepted a junk token"

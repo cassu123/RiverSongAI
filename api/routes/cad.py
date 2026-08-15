@@ -33,13 +33,24 @@ async def _require_user(
             token = parts[1].strip()
     if not token and request:
         token = request.cookies.get("access_token")
+    # No anonymous fallback. A helper called _require_user that hands an
+    # unauthenticated caller the primary user's identity is not a weaker
+    # check, it is no check: POST /api/cad/sandbox/run executes Python, so
+    # the fallback made code execution reachable without credentials.
+    #
+    # It also silently undid the fix in core/auth.py on this same branch.
+    # decode_token returns None for a *revoked* token, a suspended user and
+    # one invalidated by a forced logout, and all three landed here in the
+    # same branch as "no token at all" -- so a suspended user got in.
     if not token:
-        # Fallback to primary_user if guest access or local development
-        return "primary_user"
+        raise HTTPException(status_code=401, detail="Authentication required.")
     payload = await decode_token(token)
     if not payload:
-        return "primary_user"
-    return payload.get("sub", "primary_user")
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Token carries no subject.")
+    return user_id
 
 
 class CADCompileRequest(BaseModel):
@@ -84,12 +95,12 @@ async def get_model_stl(
         raise HTTPException(status_code=400, detail="Invalid model ID format.")
     user_id = await _require_user(request, authorization)
     safe_user_id = re.sub(r"[^a-zA-Z0-9_-]", "", user_id) or "primary_user"
+    # Only ever this caller's own directory. Falling back to primary_user's
+    # meant anyone who guessed a model_id read somebody else's model, and a
+    # model_id is a 10-character hex string attached to every STL URL.
     user_dir = os.path.join(CAD_STORAGE_DIR, safe_user_id, model_id)
     if not os.path.isdir(user_dir):
-        # Check primary_user fallback
-        user_dir = os.path.join(CAD_STORAGE_DIR, "primary_user", model_id)
-        if not os.path.isdir(user_dir):
-            raise HTTPException(status_code=404, detail="CAD Model not found.")
+        raise HTTPException(status_code=404, detail="CAD Model not found.")
 
     stl_path = os.path.join(user_dir, "model.stl")
     if not os.path.isfile(stl_path):
@@ -119,9 +130,7 @@ async def get_model_scad(
     safe_user_id = re.sub(r"[^a-zA-Z0-9_-]", "", user_id) or "primary_user"
     user_dir = os.path.join(CAD_STORAGE_DIR, safe_user_id, model_id)
     if not os.path.isdir(user_dir):
-        user_dir = os.path.join(CAD_STORAGE_DIR, "primary_user", model_id)
-        if not os.path.isdir(user_dir):
-            raise HTTPException(status_code=404, detail="CAD Model not found.")
+        raise HTTPException(status_code=404, detail="CAD Model not found.")
 
     scad_path = os.path.join(user_dir, "model.scad")
     if not os.path.isfile(scad_path):
