@@ -165,7 +165,7 @@ tornado>=6.5.7                       # HIGH: cookie injection + multipart DoS
 nltk>=3.9.4                          # CRITICAL: zip-slip + path traversal + XSS (<=3.9.3)
 orjson>=3.11.6                       # HIGH: unbounded recursion DoS
 filelock>=3.20.3                     # MEDIUM: TOCTOU symlink race
-fonttools>=4.60.2                    # MEDIUM: arbitrary file write + XML injection
+fonttools>=4.63.0                    # MEDIUM: arbitrary file write + XML injection
 Pygments>=2.20.0                     # LOW: ReDoS in GUID regex
 slowapi==0.1.9
 
