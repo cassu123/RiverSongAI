@@ -54,11 +54,6 @@ export default function Zones() {
   const [teachZoneName, setTeachZoneName] = useState('')
   const featureGroupRef = useRef(null)
 
-  useEffect(() => {
-    fetchZones()
-    fetchUnits()
-  }, [])
-
   const fetchZones = async () => {
     try {
       const res = await fetch('/api/vector/zones', { headers: { Authorization: `Bearer ${token}` } })
@@ -76,6 +71,11 @@ export default function Zones() {
       console.error("Failed to fetch units", err)
     }
   }
+
+  useEffect(() => {
+    fetchZones()
+    fetchUnits()
+  }, [])
 
   const handleCreated = async (e) => {
     const layer = e.layer

@@ -9,10 +9,6 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
   const [completing, setCompleting] = useState(false);
   const [notes, setNotes] = useState('');
 
-  useEffect(() => {
-    fetchActiveAudit();
-  }, [homeId]);
-
   const fetchActiveAudit = async () => {
     setLoading(true);
     try {
@@ -29,6 +25,10 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchActiveAudit();
+  }, [homeId]);
 
   const startAudit = async () => {
     setError('');

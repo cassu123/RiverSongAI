@@ -62,31 +62,7 @@ export default function ChronosPage({ setAction }) {
     if (viewMode === 'graph') fetchGraph()
   }, [viewMode, fetchGraph])
 
-  // Cross-page handoff: open a note someone wikilinked from Chat/Briefing.
-  useEffect(() => {
-    if (!token) return
-    let raw
-    try { raw = localStorage.getItem('rs-chronos-open') } catch { return }
-    if (!raw) return
-    try { localStorage.removeItem('rs-chronos-open') } catch {}
-    let payload
-    try { payload = JSON.parse(raw) } catch { return }
-    if (!payload?.title) return
-    const root = payload.root || 'personal'
-    if (root !== activeRoot) setActiveRoot(root)
-    const path = `${root}/${payload.title.endsWith('.md') ? payload.title : payload.title + '.md'}`
-    ;(async () => {
-      const exists = await loadNote(path)
-      if (!exists) {
-        if (window.confirm(`Note "${payload.title}" does not exist. Create it?`)) {
-          await createNote(payload.title)
-        }
-      }
-    })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
-
-  const loadNote = async (path) => {
+  const loadNote = useCallback(async (path) => {
     setViewMode('notes')
     setLoading(true)
     setError(null)
@@ -113,9 +89,9 @@ export default function ChronosPage({ setAction }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [token])
 
-  const createNote = async (suggestedName = null) => {
+  const createNote = useCallback(async (suggestedName = null) => {
     const name = suggestedName || window.prompt('NOTE NAME:')
     if (!name) return
     const path = `${activeRoot}/${name.endsWith('.md') ? name : name + '.md'}`
@@ -132,7 +108,30 @@ export default function ChronosPage({ setAction }) {
     } catch {
       setError('Failed to create.')
     }
-  }
+  }, [activeRoot, token, fetchTree, loadNote])
+
+  // Cross-page handoff: open a note someone wikilinked from Chat/Briefing.
+  useEffect(() => {
+    if (!token) return
+    let raw
+    try { raw = localStorage.getItem('rs-chronos-open') } catch { return }
+    if (!raw) return
+    try { localStorage.removeItem('rs-chronos-open') } catch {}
+    let payload
+    try { payload = JSON.parse(raw) } catch { return }
+    if (!payload?.title) return
+    const root = payload.root || 'personal'
+    if (root !== activeRoot) setActiveRoot(root)
+    const path = `${root}/${payload.title.endsWith('.md') ? payload.title : payload.title + '.md'}`
+    ;(async () => {
+      const exists = await loadNote(path)
+      if (!exists) {
+        if (window.confirm(`Note "${payload.title}" does not exist. Create it?`)) {
+          await createNote(payload.title)
+        }
+      }
+    })()
+  }, [token, activeRoot, loadNote, createNote])
 
   const deleteNote = async () => {
     if (!activeNote || !window.confirm(`Purge "${activeNote.path}"?`)) return

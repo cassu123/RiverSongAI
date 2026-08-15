@@ -58,13 +58,6 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
     return q;
   }, [vehicleId]);
 
-  useEffect(() => {
-    if (initialIntent) {
-      setInputText(initialIntent.text || '')
-      setTimeout(() => handleSend(initialIntent.text, initialIntent.docId), 50)
-      if (onIntentConsumed) onIntentConsumed()
-    }
-  }, [initialIntent, handleSend, onIntentConsumed])
 
   // Initialize Session Hook
   const {
@@ -253,6 +246,14 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       speak: speakOverride
     })
   }, [inputText, isThinking, sendText, selectedModel, webSearch, forgetMemory, systemPrompt, activeDocId, deepResearch, voiceToggle, setMessages, token, setError])
+
+  useEffect(() => {
+    if (initialIntent) {
+      setInputText(initialIntent.text || '')
+      setTimeout(() => handleSend(initialIntent.text, initialIntent.docId), 50)
+      if (onIntentConsumed) onIntentConsumed()
+    }
+  }, [initialIntent, handleSend, onIntentConsumed])
 
   const handleReset = useCallback(() => {
     resetSession()

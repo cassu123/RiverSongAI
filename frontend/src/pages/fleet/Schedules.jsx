@@ -15,11 +15,6 @@ export default function Schedules() {
     missed_run_policy: 'skip', enabled: 1
   })
 
-  useEffect(() => {
-    fetchSchedules()
-    fetchPrograms()
-  }, [])
-
   const fetchSchedules = async () => {
     try {
       const res = await fetch('/api/vector/schedules', { headers: { Authorization: `Bearer ${token}` } })
@@ -33,6 +28,11 @@ export default function Schedules() {
       if (res.ok) setPrograms(await res.json())
     } catch (err) { console.error(err) }
   }
+
+  useEffect(() => {
+    fetchSchedules()
+    fetchPrograms()
+  }, [])
 
   const handleSave = async () => {
     try {

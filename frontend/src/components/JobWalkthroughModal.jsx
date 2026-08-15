@@ -30,10 +30,6 @@ export default function JobWalkthroughModal({ vehicle, checkpoint, onClose, onLo
   
   const fileInputRef = useRef(null);
 
-  useEffect(() => {
-    loadData();
-  }, [checkpoint.id]);
-
   const loadData = async () => {
     setLoadingMedia(true);
     try {
@@ -54,6 +50,10 @@ export default function JobWalkthroughModal({ vehicle, checkpoint, onClose, onLo
       setLoadingMedia(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+  }, [checkpoint.id]);
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
