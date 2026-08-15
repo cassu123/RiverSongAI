@@ -38,6 +38,7 @@ import ProactivePage from './ProactivePage.jsx'
 import TokenUsageSection from './settings/TokenUsageSection.jsx'
 import VoiceIDSection from './settings/VoiceIDSection.jsx'
 import CapabilityFlagsSection from './settings/CapabilityFlagsSection.jsx'
+import ChatToolsSection from './settings/ChatToolsSection.jsx'
 
 const TTL_LABELS = {
   short:    '7 days',
@@ -93,6 +94,7 @@ const USER_GROUPS = [
 const ADMIN_GROUPS = [
   { id: 'providers', icon: 'cloud',        label: 'PROVIDERS' },
   { id: 'models',    icon: 'neurology',    label: 'MODELS' },
+  { id: 'tools',     icon: 'build_circle', label: 'CHAT & VOICE TOOLS' },
   { id: 'people',    icon: 'group',        label: 'PEOPLE' },
   { id: 'persona',   icon: 'face',         label: 'PERSONA' },
   { id: 'system',    icon: 'memory',       label: 'SYSTEM' },
@@ -127,6 +129,7 @@ export default function SettingsPage({
   const [models,           setModels]           = useState({ local: [], cloud: [] })
   const [visibility,       setVisibility]       = useState(null)
   const [featureVis,       setFeatureVis]       = useState(null)  // admin: global feature flags
+  const [chatToolsData,    setChatToolsData]    = useState(null)  // admin: chat & voice tools
   const [familyData,       setFamilyData]       = useState(null)  // admin: parent-child links
   const [featureFlags,     setFeatureFlags]     = useState(null)  // admin: env capabilities
   const [familyGroups,     setFamilyGroups]     = useState(null)  // admin: family groups
@@ -210,9 +213,10 @@ export default function SettingsPage({
         }))
 
         if (user?.role === 'admin') {
-          const [visData, featVisData, familyRaw, familyGroupsRaw, orchData, elData, personaData, briefingData, dStatus, intentRouterData, routingFlags, hwData, flagsData] = await Promise.all([
+          const [visData, featVisData, chatToolsRaw, familyRaw, familyGroupsRaw, orchData, elData, personaData, briefingData, dStatus, intentRouterData, routingFlags, hwData, flagsData] = await Promise.all([
             settle(`${API_BASE}/api/admin/model-visibility`),
             settle(`${API_BASE}/api/admin/feature-visibility`),
+            settle(`${API_BASE}/api/admin/chat-tools`),
             settle(`${API_BASE}/api/admin/family`),
             settle(`${API_BASE}/api/admin/family-groups`),
             settle(`${API_BASE}/api/settings/orchestration`),
@@ -229,6 +233,7 @@ export default function SettingsPage({
           if (!active) return
           if (visData.data) setVisibility(visData.data)
           if (featVisData.data) setFeatureVis(featVisData.data)
+          if (chatToolsRaw.data) setChatToolsData(chatToolsRaw.data)
           if (familyRaw.data) setFamilyData(familyRaw.data)
           if (familyGroupsRaw.data) setFamilyGroups(familyGroupsRaw.data)
           if (orchData.data) {
@@ -248,6 +253,7 @@ export default function SettingsPage({
             ...prev,
             visibility: visData.status,
             featureVis: featVisData.status,
+            chatTools: chatToolsRaw.status,
             family: familyRaw.status,
             familyGroups: familyGroupsRaw.status,
             orchestration: orchData.status,
@@ -1268,6 +1274,24 @@ export default function SettingsPage({
       {/* ================================================================ */}
       {showAdmin && (
         <AdminModelFamiliesSection token={token} />
+      )}
+      </G>
+
+
+      <G id="tools">
+      {/* ================================================================ */}
+      {/* ADMIN — chat & voice capabilities matrix                         */}
+      {/* ================================================================ */}
+      {showAdmin && (
+        <SectionStatusWrapper status={sectionStatuses.chatTools}>
+          {chatToolsData && (
+            <ChatToolsSection
+              data={chatToolsData}
+              token={token}
+              onChanged={setChatToolsData}
+            />
+          )}
+        </SectionStatusWrapper>
       )}
       </G>
 

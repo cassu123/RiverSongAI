@@ -1173,9 +1173,19 @@ class ConversationLoop:
                     from core.tools import TOOL_SCHEMAS, execute_tool
                     from core.agent_loop import run_agent_loop
                     
-                    active_tools = TOOL_SCHEMAS
-                    if self._web_search is False:
-                        active_tools = [t for t in TOOL_SCHEMAS if t["name"] != "web_search"]
+                    disabled_tools: list[str] = []
+                    if self._memory and hasattr(self._memory, "_store"):
+                        try:
+                            admin_config = await self._memory._store.get_admin_config()
+                            disabled_tools = admin_config.get("disabled_tools", [])
+                        except Exception as e:
+                            logger.debug("Could not read disabled tools: %s", e)
+
+                    active_tools = [
+                        t for t in TOOL_SCHEMAS
+                        if t["name"] not in disabled_tools
+                        and not (t["name"] == "web_search" and self._web_search is False)
+                    ]
                         
                     tool_system_prompt = (
                         "You have access to tools. If the user asks for an action that matches "
@@ -1449,11 +1459,20 @@ class ConversationLoop:
                 from core.tools import TOOL_SCHEMAS, execute_tool
                 from core.agent_loop import run_agent_loop
 
-                # Filter tools based on session settings
-                active_tools = TOOL_SCHEMAS
-                if self._web_search is False:
-                    active_tools = [
-                        t for t in TOOL_SCHEMAS if t["name"] != "web_search"]
+                disabled_tools: list[str] = []
+                if self._memory and hasattr(self._memory, "_store"):
+                    try:
+                        admin_config = await self._memory._store.get_admin_config()
+                        disabled_tools = admin_config.get("disabled_tools", [])
+                    except Exception as e:
+                        logger.debug("Could not read disabled tools: %s", e)
+
+                # Filter tools based on session settings and admin config
+                active_tools = [
+                    t for t in TOOL_SCHEMAS
+                    if t["name"] not in disabled_tools
+                    and not (t["name"] == "web_search" and self._web_search is False)
+                ]
 
                 tool_system_prompt = (
                     "You have access to tools. If the user asks for an action that matches "
