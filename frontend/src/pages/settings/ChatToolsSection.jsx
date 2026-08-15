@@ -58,7 +58,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
 
     setSaving(true)
     try {
-      await fetch('/api/admin/chat-tools', {
+      const res = await fetch('/api/admin/chat-tools', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -66,6 +66,9 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         },
         body: JSON.stringify({ disabled_tools: updatedDisabled }),
       })
+      if (!res.ok) {
+        throw new Error(`Failed to save tools (HTTP ${res.status})`)
+      }
     } catch (err) {
       console.error('Failed to update tool state:', err)
       onChanged(data) // rollback on failure
@@ -85,7 +88,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
 
     setSaving(true)
     try {
-      await fetch('/api/admin/chat-tools', {
+      const res = await fetch('/api/admin/chat-tools', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -93,9 +96,12 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         },
         body: JSON.stringify({ disabled_tools: updatedDisabled }),
       })
+      if (!res.ok) {
+        throw new Error(`Failed to save tools (HTTP ${res.status})`)
+      }
     } catch (err) {
       console.error('Failed to update all tools:', err)
-      onChanged(data)
+      onChanged(data) // rollback on failure
     } finally {
       setSaving(false)
     }

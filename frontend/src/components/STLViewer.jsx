@@ -151,8 +151,18 @@ export default function STLViewer({ url, className = '', height = 360 }) {
     return () => {
       cancelAnimationFrame(animationId)
       window.removeEventListener('resize', handleResize)
+      if (controlsRef.current) {
+        controlsRef.current.dispose()
+      }
+      if (meshRef.current) {
+        if (meshRef.current.geometry) meshRef.current.geometry.dispose()
+        if (meshRef.current.material) meshRef.current.material.dispose()
+      }
+      if (materialRef.current) {
+        materialRef.current.dispose()
+      }
       renderer.dispose()
-      if (container.contains(renderer.domElement)) {
+      if (container && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement)
       }
     }

@@ -24,12 +24,14 @@ export default function AdminFeatureSection({ featureVis, token, onChanged }) {
     onChanged(next)
     setSaving(true)
     try {
-      await fetch('/api/admin/feature-visibility', {
+      const res = await fetch('/api/admin/feature-visibility', {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify({ hidden_features: updated }),
       })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
     } catch (e) {
+      console.error('Failed to update feature visibility:', e)
       onChanged(featureVis)
     } finally {
       setSaving(false)
