@@ -32,7 +32,7 @@ python-dotenv==1.2.2            # .env file support
 # Audio capture happens in the browser; server receives WAV bytes over WebSocket
 # -----------------------------------------------------------------------------
 faster-whisper>=1.0.3
-torch>=2.12.0                    # security floor: multiple CVEs in older versions
+torch>=2.13.0                    # security floor: multiple CVEs in older versions
 numpy>=2.1.0                    # 2.x required for Python 3.13+
 scipy>=1.18.0                   # Resampling browser audio to 16 kHz for Whisper
 soundfile==0.13.1               # WAV decode (bytes -> numpy array)
@@ -54,7 +54,7 @@ boto3==1.43.64                   # Amazon Bedrock (and AWS SDK)
 # TTS — Multi-engine (Piper + Kokoro + ElevenLabs)
 # Note: elevenlabs SDK not needed — provider calls REST API directly via httpx
 # -----------------------------------------------------------------------------
-apprise==1.8.0
+apprise==1.12.0
 pywebpush>=2.3.0                # Web Push notifications (push.py route)
 
 # Wake word — "Hey River" (openWakeWord)
@@ -93,7 +93,7 @@ googlemaps==4.10.0                   # Google Maps Platform Python client
 # -----------------------------------------------------------------------------
 # YouTube Music
 # -----------------------------------------------------------------------------
-ytmusicapi==1.11.5                   # Unofficial YouTube Music API client
+ytmusicapi==1.12.2                   # Unofficial YouTube Music API client
 yt-dlp==2026.7.4                    # Audio stream extraction for playback
 sounddevice==0.5.5                   # Audio playback for YouTube Music provider
 
@@ -161,12 +161,12 @@ urllib3>=2.7.0                       # CVE-2024-37891 + decompression bomb chain
 certifi>=2024.7.4                    # stale certificate bundle
 cryptography>=50.0.0                 # CVE-2024-26130
 h11>=0.16.0                          # CRITICAL: malformed chunked-encoding bypass
-Pillow>=12.2.0                       # HIGH: FITS decompression bomb + PSD out-of-bounds write
+Pillow>=12.3.0                       # HIGH: FITS decompression bomb + PSD out-of-bounds write
 tornado>=6.5.7                       # HIGH: cookie injection + multipart DoS
 nltk>=3.9.4                          # CRITICAL: zip-slip + path traversal + XSS (<=3.9.3)
 orjson>=3.11.6                       # HIGH: unbounded recursion DoS
 filelock>=3.20.3                     # MEDIUM: TOCTOU symlink race
-fonttools>=4.60.2                    # MEDIUM: arbitrary file write + XML injection
+fonttools>=4.63.0                    # MEDIUM: arbitrary file write + XML injection
 Pygments>=2.20.0                     # LOW: ReDoS in GUID regex
 slowapi==0.1.9
 
