@@ -54,7 +54,14 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
         <div style={{
           display: 'flex', gap: 12, marginTop: 32, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 500
         }}>
-          {['Review my agenda', 'Run a maintenance check', 'Add milk to grocery list'].map((chip, idx) => (
+          {[
+            '🛠️ Design a 3D mounting bracket',
+            '📊 Generate architecture diagram',
+            '💻 Run Python code sandbox',
+            'Review my agenda',
+            'Run a maintenance check',
+            'Add milk to grocery list'
+          ].map((chip, idx) => (
             <button key={idx} style={{
               background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: '20px', padding: '10px 16px', fontSize: '0.85rem', color: 'var(--md-on-surface-variant)',
