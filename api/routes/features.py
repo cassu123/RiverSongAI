@@ -52,6 +52,8 @@ AI_FEATURE_MAP = {
     "WAKE_WORD_ENABLED": "wake_word_enabled",
     "WAKE_WORD_MODEL": "wake_word_model",
     "WAKE_WORD_THRESHOLD": "wake_word_threshold",
+    "CAD_ENABLED": "cad_enabled",
+    "SANDBOX_ENABLED": "sandbox_enabled",
 }
 
 
@@ -59,19 +61,28 @@ class FeatureUpdateBody(BaseModel):
     enabled: bool
 
 
+async def _get_auth_payload(request: Request, authorization: Optional[str]) -> dict:
+    token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        parts = authorization.split(" ", 1)
+        if len(parts) > 1:
+            token = parts[1].strip()
+    if not token and request:
+        token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    payload = await decode_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    return payload
+
+
 @router.get("/features")
 async def get_features(
     request: Request,
     authorization: Optional[str] = Header(default=None),
 ):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = await decode_token(authorization.removeprefix("Bearer "))
-    if not payload:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token.")
-
+    payload = await _get_auth_payload(request, authorization)
     role = payload.get("role", "user")
     user_id = payload.get("sub")
 
@@ -113,10 +124,8 @@ async def update_feature_flag(
     Update a global AI feature flag.
     Requires admin role as these affect the entire server.
     """
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
-    payload = await decode_token(authorization.removeprefix("Bearer "))
-    if not payload or payload.get("role") != "admin":
+    payload = await _get_auth_payload(request, authorization)
+    if payload.get("role") != "admin":
         raise HTTPException(
             status_code=403,
             detail="Only admins can toggle global AI features.")

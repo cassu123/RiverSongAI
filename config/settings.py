@@ -1594,6 +1594,16 @@ class Settings(BaseSettings):
         description="Maximum audio duration for Voice ID processing.",
     )
 
+    # Generative 3D CAD & Developer Sandbox
+    cad_enabled: bool = Field(
+        default=True,
+        description="Enable Generative 3D CAD modeling and OpenSCAD to STL compilation.",
+    )
+    sandbox_enabled: bool = Field(
+        default=True,
+        description="Enable isolated developer sandbox code execution.",
+    )
+
     # -------------------------------------------------------------------------
     # Validators
     # -------------------------------------------------------------------------
