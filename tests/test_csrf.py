@@ -113,7 +113,7 @@ def test_cookie_write_without_the_header_is_refused(token):
     r = client.patch(
         WRITE_PATH,
         json={"min_push_severity": "warning"},
-        cookies={SESSION_COOKIE_NAME: token},
+        headers={"Cookie": f"{SESSION_COOKIE_NAME}={token}"},
     )
     assert r.status_code == 403
     assert "CSRF" in r.json()["detail"]
@@ -123,8 +123,10 @@ def test_cookie_write_with_a_mismatched_header_is_refused(token):
     r = client.patch(
         WRITE_PATH,
         json={"min_push_severity": "warning"},
-        cookies={SESSION_COOKIE_NAME: token, CSRF_COOKIE_NAME: new_csrf_token()},
-        headers={"X-CSRF-Token": new_csrf_token()},
+        headers={
+            "Cookie": f"{SESSION_COOKIE_NAME}={token}; {CSRF_COOKIE_NAME}={new_csrf_token()}",
+            "X-CSRF-Token": new_csrf_token(),
+        },
     )
     assert r.status_code == 403
 
@@ -134,8 +136,10 @@ def test_cookie_write_with_a_matching_header_is_allowed(token):
     r = client.patch(
         WRITE_PATH,
         json={"min_push_severity": "warning"},
-        cookies={SESSION_COOKIE_NAME: token, CSRF_COOKIE_NAME: csrf},
-        headers={"X-CSRF-Token": csrf},
+        headers={
+            "Cookie": f"{SESSION_COOKIE_NAME}={token}; {CSRF_COOKIE_NAME}={csrf}",
+            "X-CSRF-Token": csrf,
+        },
     )
     assert r.status_code == 200, r.text
 
@@ -151,7 +155,10 @@ def test_bearer_write_needs_no_csrf_token(token):
 
 
 def test_cookie_read_needs_no_csrf_token(token):
-    r = client.get(WRITE_PATH, cookies={SESSION_COOKIE_NAME: token})
+    r = client.get(
+        WRITE_PATH,
+        headers={"Cookie": f"{SESSION_COOKIE_NAME}={token}"},
+    )
     assert r.status_code == 200, r.text
 
 
@@ -162,15 +169,17 @@ def test_refused_request_never_reaches_the_route(token):
     good = client.patch(
         WRITE_PATH,
         json={"min_push_severity": "critical"},
-        cookies={SESSION_COOKIE_NAME: token, CSRF_COOKIE_NAME: csrf},
-        headers={"X-CSRF-Token": csrf},
+        headers={
+            "Cookie": f"{SESSION_COOKIE_NAME}={token}; {CSRF_COOKIE_NAME}={csrf}",
+            "X-CSRF-Token": csrf,
+        },
     )
     assert good.status_code == 200, good.text
 
     forged = client.patch(
         WRITE_PATH,
         json={"min_push_severity": "info"},
-        cookies={SESSION_COOKIE_NAME: token},
+        headers={"Cookie": f"{SESSION_COOKIE_NAME}={token}"},
     )
     assert forged.status_code == 403
 

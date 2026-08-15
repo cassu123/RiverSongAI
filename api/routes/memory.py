@@ -53,11 +53,18 @@ def _mm(request: Request):
     return mm
 
 
-async def _require_user(authorization: Optional[str]) -> str:
-    """Validate Bearer token and return the user's sub claim."""
-    if not authorization or not authorization.startswith("Bearer "):
+async def _require_user(request: Optional[Request] = None, authorization: Optional[str] = None) -> str:
+    """Validate Bearer token or cookie session and return the user's sub claim."""
+    token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        parts = authorization.split(" ", 1)
+        if len(parts) > 1:
+            token = parts[1].strip()
+    if not token and request:
+        token = request.cookies.get("access_token")
+    if not token:
         raise unauthorized("Not authenticated.")
-    payload = await decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(token)
     if not payload:
         raise unauthorized("Invalid or expired token.")
     return payload["sub"]
@@ -66,7 +73,7 @@ async def _require_user(authorization: Optional[str]) -> str:
 @router.get("/facts")
 async def get_facts(request: Request,
                     authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     mm = _mm(request)
     facts = await mm.get_facts(user_id)
     return [
@@ -87,7 +94,7 @@ async def get_facts(request: Request,
 @router.post("/facts", status_code=201)
 async def create_fact(body: FactCreate, request: Request,
                       authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     if not body.key.strip() or not body.value.strip():
         raise bad_request("key and value are required")
     mm = _mm(request)
@@ -112,7 +119,7 @@ async def create_fact(body: FactCreate, request: Request,
 @router.patch("/facts/{fact_id}")
 async def update_fact(fact_id: str, body: FactUpdate, request: Request,
                       authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     mm = _mm(request)
     existing = await mm._store.get_fact_by_id(user_id, fact_id)
     if not existing:
@@ -133,7 +140,7 @@ async def update_fact(fact_id: str, body: FactUpdate, request: Request,
 @router.delete("/facts/{fact_id}", status_code=204)
 async def delete_fact(fact_id: str, request: Request,
                       authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     mm = _mm(request)
     ok = await mm.delete_fact(fact_id, user_id)
     if not ok:
@@ -143,7 +150,7 @@ async def delete_fact(fact_id: str, request: Request,
 @router.get("/preferences")
 async def get_preferences(request: Request,
                           authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     mm = _mm(request)
     prefs = await mm.get_preferences(user_id)
     return [
@@ -163,7 +170,7 @@ async def get_preferences(request: Request,
 @router.post("/preferences", status_code=201)
 async def create_preference(body: PreferenceCreate, request: Request,
                             authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     if not body.category.strip() or not body.value.strip():
         raise bad_request("category and value are required")
     mm = _mm(request)
@@ -180,7 +187,7 @@ async def create_preference(body: PreferenceCreate, request: Request,
 @router.patch("/preferences/{pref_id}")
 async def update_preference(pref_id: str, body: PreferenceUpdate, request: Request,
                             authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     mm = _mm(request)
     existing = await mm._store.get_preference_by_id(user_id, pref_id)
     if not existing:
@@ -201,7 +208,7 @@ async def update_preference(pref_id: str, body: PreferenceUpdate, request: Reque
 @router.delete("/preferences/{pref_id}", status_code=204)
 async def delete_preference(pref_id: str, request: Request,
                             authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     mm = _mm(request)
     ok = await mm.delete_preference(pref_id, user_id)
     if not ok:
@@ -211,7 +218,7 @@ async def delete_preference(pref_id: str, request: Request,
 @router.get("/pending-habits")
 async def get_pending_habits(
         request: Request, authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     mm = _mm(request)
     habits = await mm.get_pending_habits(user_id)
     return habits
@@ -220,7 +227,7 @@ async def get_pending_habits(
 @router.post("/pending-habits/{habit_id}/approve")
 async def approve_habit(habit_id: str, request: Request,
                         authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     mm = _mm(request)
     # Find the habit
     habits = await mm.get_pending_habits(user_id)
@@ -266,7 +273,7 @@ async def approve_habit(habit_id: str, request: Request,
 @router.delete("/pending-habits/{habit_id}", status_code=204)
 async def delete_pending_habit(
         habit_id: str, request: Request, authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     mm = _mm(request)
     ok = await mm.delete_pending_habit(habit_id, user_id)
     if not ok:
@@ -276,9 +283,10 @@ async def delete_pending_habit(
 @router.get("/summaries")
 async def get_summaries(request: Request, limit: int = 50,
                         authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     mm = _mm(request)
-    summaries = await mm._store.get_recent_summaries(user_id, limit=limit)
+    limit_clamped = max(1, min(limit, 100))
+    summaries = await mm._store.get_recent_summaries(user_id, limit=limit_clamped)
     return [
         {
             "id": s.id,
@@ -297,7 +305,7 @@ async def get_summaries(request: Request, limit: int = 50,
 @router.patch("/summaries/{summary_id}/ttl")
 async def update_summary_ttl_setting(summary_id: str, body: SummaryUpdate, request: Request,
                              authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     mm = _mm(request)
     
     if not body.ttl_setting:
@@ -314,14 +322,11 @@ async def update_summary_ttl_setting(summary_id: str, body: SummaryUpdate, reque
     from providers.memory.ttl_engine import calculate_expires_at
     new_expires_at = calculate_expires_at(body.ttl_setting)
     
-    # Update directly in sqlite_store
-    conn = mm._store._get_conn()
     from core.utils import _dt_to_str
-    conn.execute(
+    await mm._store.execute_write_async(
         "UPDATE conversation_summaries SET ttl_setting = ?, expires_at = ? WHERE id = ? AND user_id = ?",
         (body.ttl_setting, _dt_to_str(new_expires_at), summary_id, user_id)
     )
-    conn.commit()
     
     return {"status": "ok"}
 
@@ -329,7 +334,7 @@ async def update_summary_ttl_setting(summary_id: str, body: SummaryUpdate, reque
 @router.delete("/summaries/{summary_id}", status_code=204)
 async def delete_summary(summary_id: str, request: Request,
                          authorization: Optional[str] = Header(default=None)):
-    user_id = await _require_user(authorization)
+    user_id = await _require_user(request, authorization)
     mm = _mm(request)
     ok = await mm.delete_summary(summary_id, user_id)
     if not ok:

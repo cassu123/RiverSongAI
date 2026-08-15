@@ -15,10 +15,10 @@ than from request state that no middleware populates.
 
 import json
 import logging
-from typing import List, Optional
+from typing import List, Optional, Literal
 
 from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from core.auth import require_role
 
@@ -35,9 +35,9 @@ _DEFAULT_PREFS = {
 
 
 class ProactivePrefsPatch(BaseModel):
-    quiet_start: Optional[int] = None
-    quiet_end: Optional[int] = None
-    min_push_severity: Optional[str] = None
+    quiet_start: Optional[int] = Field(default=None, ge=0, le=23)
+    quiet_end: Optional[int] = Field(default=None, ge=0, le=23)
+    min_push_severity: Optional[Literal["debug", "info", "warning", "critical"]] = None
     kinds_muted: Optional[List[str]] = None
 
 

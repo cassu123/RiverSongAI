@@ -28,10 +28,10 @@ import time
 import urllib.request
 import urllib.error
 import json
-from typing import List, Optional, Set, Literal
+from typing import List, Optional, Set, Literal, Any
 
 from fastapi import APIRouter, Header, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from config.settings import get_settings
 from core.auth import decode_token
@@ -635,30 +635,67 @@ def _selection_status(provider: str, model_id: str, ctx: dict,
     return False, row.get("unavailable_reason") or "Unavailable."
 
 
-async def _require_user(authorization: Optional[str]) -> str:
+async def _require_user(
+    auth_or_req: Any = None,
+    second_arg: Any = None,
+    *,
+    request: Optional[Request] = None,
+    authorization: Optional[str] = None
+) -> str:
     """
-    Validate a Bearer token and return the authenticated user ID.
-    
-    Parameters:
-    	authorization (Optional[str]): The Authorization header value.
-    
-    Returns:
-    	str: The user ID from the token.
+    Validate a Bearer token or session cookie and return the authenticated user ID.
+    Supports being called as _require_user(authorization), _require_user(request, authorization), etc.
     """
-    if not authorization or not authorization.startswith("Bearer "):
+    req: Optional[Request] = request
+    auth: Optional[str] = authorization
+
+    for arg in (auth_or_req, second_arg):
+        if isinstance(arg, Request):
+            req = arg
+        elif isinstance(arg, str):
+            auth = arg
+
+    token = None
+    if auth and auth.lower().startswith("bearer "):
+        parts = auth.split(" ", 1)
+        if len(parts) > 1:
+            token = parts[1].strip()
+    if not token and req:
+        token = req.cookies.get("access_token")
+    if not token:
         raise unauthorized("Not authenticated.")
-    payload: Optional[dict] = await decode_token(
-        authorization.removeprefix("Bearer "))
+    payload: Optional[dict] = await decode_token(token)
     if not payload:
         raise unauthorized("Invalid or expired token.")
     return payload["sub"]
 
 
-async def _require_admin(authorization: Optional[str]) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
+async def _require_admin(
+    auth_or_req: Any = None,
+    second_arg: Any = None,
+    *,
+    request: Optional[Request] = None,
+    authorization: Optional[str] = None
+) -> str:
+    req: Optional[Request] = request
+    auth: Optional[str] = authorization
+
+    for arg in (auth_or_req, second_arg):
+        if isinstance(arg, Request):
+            req = arg
+        elif isinstance(arg, str):
+            auth = arg
+
+    token = None
+    if auth and auth.lower().startswith("bearer "):
+        parts = auth.split(" ", 1)
+        if len(parts) > 1:
+            token = parts[1].strip()
+    if not token and req:
+        token = req.cookies.get("access_token")
+    if not token:
         raise unauthorized("Not authenticated.")
-    payload: Optional[dict] = await decode_token(
-        authorization.removeprefix("Bearer "))
+    payload: Optional[dict] = await decode_token(token)
     if not payload or payload.get("role") != "admin":
         raise forbidden("Admin role required.")
     return payload["sub"]
@@ -1627,8 +1664,7 @@ async def get_page_settings(
 
 
 class PageSettingsPatch(BaseModel):
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
     def to_dict(self) -> dict:
         return self.model_dump()
@@ -1937,22 +1973,20 @@ async def save_persona(
 # =============================================================================
 
 @router.get("/settings/provider-rate")
-def get_current_provider_rate(
+async def get_current_provider_rate(
+    request: Request,
     provider: str,
     window: int = 60,
     authorization: Optional[str] = Header(default=None)
 ):
-    # Synchronous because get_provider_rate uses sqlite3 synchronously
+    await _require_user(request, authorization)
+    window_clamped = max(1, min(window, 86400))
     from core.token_tracker import get_provider_rate
-    # No auth check needed or just quick check
-    if authorization and authorization.startswith("Bearer "):
-        pass  # we could require_user but sync auth is tricky, let's keep it open or do async def + run_in_executor
-
-    rate = get_provider_rate(provider, window_seconds=window)
+    rate = get_provider_rate(provider, window_seconds=window_clamped)
     return {
         "provider": provider,
         "rpm": rate["calls"],
-        "window": window
+        "window": window_clamped
     }
 
 

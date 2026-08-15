@@ -28,6 +28,17 @@ from core.tools_schemas import TOOL_SCHEMAS  # noqa: E402,F401
 # =============================================================================
 
 
+# Dangerous tools that MUST fail closed if admin policy cannot be verified
+DANGEROUS_TOOLS = {
+    "run_sandbox_code",
+    "code_interpreter",
+    "mow_command",
+    "browser_click",
+    "browser_navigate",
+    "trigger_n8n_workflow",
+}
+
+
 async def execute_tool(
         tool_name: str, tool_input: Dict[str, Any], context: Dict[str, Any]) -> str:
     """
@@ -47,6 +58,28 @@ async def execute_tool(
         tool_name,
         user_id,
         tool_input)
+
+    # -------------------------------------------------------------------------
+    # Hard Choke Point: Admin Tool Toggles & Fail-Closed Policy
+    # -------------------------------------------------------------------------
+    disabled_tools = context.get("disabled_tools")
+    if disabled_tools is None:
+        try:
+            store = context.get("store")
+            if not store:
+                from providers.memory.sqlite_store import SQLiteStore
+                store = SQLiteStore()
+            admin_config = await store.get_admin_config()
+            disabled_tools = set(admin_config.get("disabled_tools", []))
+        except Exception as exc:
+            logger.error("Failed to load admin tool policy in execute_tool: %s", exc)
+            if tool_name in DANGEROUS_TOOLS:
+                return f"Security Error: Tool '{tool_name}' is disabled (failed closed: admin security policy could not be verified)."
+            disabled_tools = set()
+
+    if tool_name in disabled_tools:
+        logger.warning("Blocked execution of disabled tool '%s' for user '%s'", tool_name, user_id)
+        return f"Tool '{tool_name}' is currently disabled by administrative security policy."
 
     try:
         if tool_name == "remember_fact":
@@ -190,6 +223,15 @@ async def execute_tool(
 
         elif tool_name == "mow_command":
             return await _exec_mow_command(tool_input, user_id)
+
+        elif tool_name == "design_3d_model":
+            return await _exec_design_3d_model(tool_input, user_id)
+
+        elif tool_name == "run_sandbox_code":
+            return await _exec_run_sandbox_code(tool_input, user_id)
+
+        elif tool_name == "render_diagram":
+            return await _exec_render_diagram(tool_input, user_id)
 
         else:
             return f"Unknown tool '{tool_name}' requested."
@@ -397,7 +439,7 @@ async def _exec_find_asset(args: dict, user_id: str) -> str:
                 audit_info = f"Last seen: {m.last_audit_date.date()}" if m.last_audit_date else "Never audited"
                 home_name = m.home.name if m.home else "Unknown Home"
                 lines.append(f"- {m.name} (Location: {m.location} in {home_name}). {audit_info}.")
-            return "\\n".join(lines)
+            return "\n".join(lines)
         finally:
             db.close()
             
@@ -504,7 +546,7 @@ async def _exec_warranty_check(args: dict, user_id: str) -> str:
             lines = [f"Warranty Check (Looking ahead {days} days):"]
             lines.append(f"Expiring Soon ({len(expiring_soon)}): " + ", ".join(f"{i.name} ({i.warranty_expiry_date})" for i in expiring_soon) if expiring_soon else "Expiring Soon: None")
             lines.append(f"Already Expired ({len(expired)}): " + ", ".join(f"{i.name}" for i in expired) if expired else "Already Expired: None")
-            return "\\n".join(lines)
+            return "\n".join(lines)
         finally:
             db.close()
             
@@ -1415,6 +1457,56 @@ async def _exec_find_parts(args: dict, user_id: str) -> str:
     # AI lookup verified pipeline
     from core.tools import _exec_web_search
     return await _exec_web_search({"query": f"{args.get('vehicle')} {args.get('job')} OEM part number alternatives price"}, user_id)
+
+
+async def _exec_design_3d_model(args: dict, user_id: str) -> str:
+    from providers.cad.cad_engine import get_cad_engine
+    engine = get_cad_engine()
+    name = args.get("name", "3d_part").strip()
+    scad_code = args.get("scad_code", "")
+    description = args.get("description", "")
+    res = await engine.compile_scad(scad_code=scad_code, name=name, user_id=user_id)
+    if res.error:
+        return f"Error compiling 3D CAD model: {res.error}\n\nSCAD Code:\n```openscad\n{scad_code}\n```"
+    
+    lines = [
+        f"✅ Successfully designed and compiled 3D CAD Model: **{name}**",
+        f"- **Model ID**: `{res.model_id}`",
+        f"- **Bounding Dimensions (X × Y × Z)**: {res.dimensions_mm[0]} mm × {res.dimensions_mm[1]} mm × {res.dimensions_mm[2]} mm",
+        f"- **Volume**: {res.volume_cm3} cm³",
+        f"- **Surface Area**: {res.surface_area_cm2} cm²",
+        f"- **Estimated PLA Mass**: ~{res.estimated_mass_grams} grams",
+        f"- **Estimated 3D Print Time**: ~{res.estimated_print_time_minutes} minutes",
+        f"- **Mesh Watertightness**: {'Yes (Print Ready)' if res.is_watertight else 'No (Inspect Mesh)'}",
+        f"\n```stl\n/api/cad/models/{res.model_id}/stl\n```\n",
+        f"*(Interact with the 3D model above or download the STL file)*",
+    ]
+    return "\n".join(lines)
+
+
+async def _exec_run_sandbox_code(args: dict, user_id: str) -> str:
+    from core.sandbox import get_sandbox_runner
+    runner = get_sandbox_runner()
+    code = args.get("code", "")
+    lang = args.get("language", "python")
+    res = await runner.execute_code(code=code, language=lang, user_id=user_id)
+    status_icon = "✅ Success" if res.success else "❌ Failed"
+    out_lines = [
+        f"{status_icon} (Exit code: {res.exit_code}, Duration: {res.duration_ms}ms)",
+    ]
+    if res.stdout:
+        out_lines.append(f"**Output (stdout)**:\n```\n{res.stdout.strip()}\n```")
+    if res.stderr:
+        out_lines.append(f"**Errors/Traceback (stderr)**:\n```\n{res.stderr.strip()}\n```")
+    if res.artifacts:
+        out_lines.append(f"**Generated Artifacts**: {', '.join(res.artifacts)}")
+    return "\n\n".join(out_lines)
+
+
+async def _exec_render_diagram(args: dict, user_id: str) -> str:
+    title = args.get("title", "Architecture Diagram")
+    mermaid = args.get("mermaid_code", "").strip()
+    return f"### 📊 {title}\n\n```mermaid\n{mermaid}\n```"
 
 
 # Memory + note executors live in core/tools_memory.py (god-file #3);

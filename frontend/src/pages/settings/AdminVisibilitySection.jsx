@@ -34,11 +34,12 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
     setSaving(true)
 
     try {
-      await fetch('/api/admin/model-visibility', {
+      const res = await fetch('/api/admin/model-visibility', {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify({ hidden_voices: next.hidden_voices, hidden_llms: next.hidden_llms }),
       })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       window.dispatchEvent(new Event('rs-models-changed'))
     } catch (e) {
       console.error('[Admin] visibility save failed:', e)

@@ -518,6 +518,42 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
               {deepResearch && <span className="material-symbols-rounded rs-mpop-check">check</span>}
             </button>
 
+            <button className="rs-mpop-row" onClick={() => {
+              setToolsOpen(false)
+              setInputText('River, design a 3D printable parametric ')
+              if (inputRef.current) inputRef.current.focus()
+            }}>
+              <span className="material-symbols-rounded rs-mpop-icon">view_in_ar</span>
+              <span className="rs-mpop-body">
+                <span className="rs-mpop-title">3D CAD Model</span>
+                <span className="rs-mpop-sub">Design & compile a 3D part or bracket</span>
+              </span>
+            </button>
+
+            <button className="rs-mpop-row" onClick={() => {
+              setToolsOpen(false)
+              setInputText('River, generate an interactive architecture diagram for ')
+              if (inputRef.current) inputRef.current.focus()
+            }}>
+              <span className="material-symbols-rounded rs-mpop-icon">schema</span>
+              <span className="rs-mpop-body">
+                <span className="rs-mpop-title">System Diagram</span>
+                <span className="rs-mpop-sub">Render a Mermaid flowchart or blueprint</span>
+              </span>
+            </button>
+
+            <button className="rs-mpop-row" onClick={() => {
+              setToolsOpen(false)
+              setInputText('River, run Python code in the sandbox to ')
+              if (inputRef.current) inputRef.current.focus()
+            }}>
+              <span className="material-symbols-rounded rs-mpop-icon">terminal</span>
+              <span className="rs-mpop-body">
+                <span className="rs-mpop-title">Code Sandbox</span>
+                <span className="rs-mpop-sub">Execute & verify Python in sandbox</span>
+              </span>
+            </button>
+
             <button className="rs-mpop-row" onClick={toggleVoiceMode}>
               <span className="material-symbols-rounded rs-mpop-icon">
                 {voiceToggle === 'auto' ? 'volume_up' : voiceToggle === 'always' ? 'record_voice_over' : 'volume_off'}

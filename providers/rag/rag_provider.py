@@ -72,8 +72,9 @@ class RAGProvider:
             return 0
 
         chunks = chunk_text(full_text)
+        doc_id = metadata.get('document_id') or str(uuid.uuid4())
         for i, chunk in enumerate(chunks):
-            chunk_id = f"doc_{metadata.get('document_id', uuid.uuid4())}_{i}"
+            chunk_id = f"doc_{doc_id}_{i}"
             chunk_metadata = {
                 **metadata,
                 "chunk_index": i,

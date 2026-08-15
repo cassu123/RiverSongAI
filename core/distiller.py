@@ -197,7 +197,7 @@ async def _distill_session(app: FastAPI, session: dict):
                 t = _clean(full).strip()
                 if t: title = t
             except Exception as exc:
-                pass
+                logger.debug("Title generation skipped: %s", exc)
 
         return title
 

@@ -646,6 +646,87 @@ TOOL_SCHEMAS = [
             },
             "required": ["command"]
         }
+    },
+    {
+        "name": "design_3d_model",
+        "description": (
+            "Generate, compile, and render a parametric 3D CAD model using OpenSCAD. "
+            "Use this when the user asks to design, 3D print, model, or manufacture a physical object, "
+            "bracket, enclosure, gear, mount, or replacement part. "
+            "Generates an STL mesh, calculates volume, dimensions, and estimated print time, and embeds an interactive 3D viewport in chat."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Snake_case identifier for the part (e.g. sensor_mount, camera_bracket)."
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Brief description of the physical part specifications."
+                },
+                "scad_code": {
+                    "type": "string",
+                    "description": "Complete, valid parametric OpenSCAD source code for the 3D model."
+                }
+            },
+            "required": ["name", "scad_code"]
+        }
+    },
+    {
+        "name": "run_sandbox_code",
+        "description": (
+            "Execute Python code in a resource-limited scratch environment with strict timeout, "
+            "memory limits, and zero host environment access. "
+            "Returns stdout, stderr, execution duration, and structured traceback diagnostics for self-healing."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "description": "The Python script to execute."
+                },
+                "language": {
+                    "type": "string",
+                    "enum": ["python"],
+                    "description": "The language environment (python only)."
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Purpose of the execution run."
+                }
+            },
+            "required": ["code"]
+        }
+    },
+    {
+        "name": "render_diagram",
+        "description": (
+            "Generate and render an interactive architectural diagram, flowchart, sequence diagram, "
+            "or system state machine using Mermaid.js syntax. "
+            "Renders directly inside the chat and document stream."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "Title of the diagram or blueprint."
+                },
+                "diagram_type": {
+                    "type": "string",
+                    "enum": ["flowchart", "sequence", "class", "state", "er", "gantt"],
+                    "description": "The diagram architecture type."
+                },
+                "mermaid_code": {
+                    "type": "string",
+                    "description": "Valid Mermaid.js graph definition."
+                }
+            },
+            "required": ["title", "mermaid_code"]
+        }
     }
 ]
 

@@ -192,9 +192,15 @@ async def notify_admins(
     ]
     if not active_admins:
         return 0
-    counts = await asyncio.gather(
+    results = await asyncio.gather(
         *[notify_user(store, u["id"], title, body, icon=icon)
           for u in active_admins],
-        return_exceptions=False,
+        return_exceptions=True,
     )
-    return sum(counts)
+    delivered_total = 0
+    for res in results:
+        if isinstance(res, int):
+            delivered_total += res
+        elif isinstance(res, Exception):
+            logger.warning("notify_admins: push to admin raised: %s", res)
+    return delivered_total

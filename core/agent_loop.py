@@ -1,5 +1,7 @@
 import logging
 import asyncio
+import json
+import uuid
 from typing import Any, List, Dict, Callable, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -53,10 +55,10 @@ async def run_agent_loop(
             
         tool_name = res["tool_name"]
         tool_input = res["tool_input"]
-        tool_id = res.get("tool_use_id")
+        tool_id = res.get("tool_use_id") or f"toolu_{uuid.uuid4().hex[:12]}"
         
-        # Identical-call-twice breaker
-        call_sig = f"{tool_name}:{tool_input}"
+        # Identical-call-twice breaker (deterministic key serialization)
+        call_sig = f"{tool_name}:{json.dumps(tool_input, sort_keys=True, default=str)}"
         if call_sig in previous_calls:
             logger.warning("Identical tool call detected: %s. Breaking loop.", call_sig)
             if receipts:

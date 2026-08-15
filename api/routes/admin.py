@@ -32,14 +32,24 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
 def _get_store(request: Request):
-    return request.app.state.memory_manager._store
+    if hasattr(request.app.state, "memory_manager") and request.app.state.memory_manager:
+        return request.app.state.memory_manager._store
+    from core.memory import get_memory_manager
+    return get_memory_manager()._store
 
 
 async def _require_admin(request: Request,
                          authorization: Optional[str]) -> dict:
-    if not authorization or not authorization.startswith("Bearer "):
+    token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        parts = authorization.split(" ", 1)
+        if len(parts) > 1:
+            token = parts[1].strip()
+    if not token and request:
+        token = request.cookies.get("access_token")
+    if not token:
         raise unauthorized("Not authenticated.")
-    payload = await decode_token(authorization.removeprefix("Bearer "))
+    payload = await decode_token(token)
     if not payload:
         raise unauthorized("Invalid or expired token.")
     if payload.get("role") != "admin":
@@ -372,6 +382,130 @@ async def get_feature_flags(
     flags.sort(key=lambda x: x["key"])
     
     return {"flags": flags}
+
+
+# =============================================================================
+# Chat & Voice Tools Management Matrix
+# =============================================================================
+
+TOOL_METADATA_MAP = {
+    # 3D & Development
+    "design_3d_model": {"label": "3D CAD Modeler", "category": "3D & Engineering", "icon": "view_in_ar"},
+    "run_sandbox_code": {"label": "Code Sandbox Runner", "category": "Development", "icon": "terminal"},
+    "code_interpreter": {"label": "Local Code Interpreter", "category": "Development", "icon": "code"},
+    "render_diagram": {"label": "Mermaid Diagram Generator", "category": "3D & Engineering", "icon": "schema"},
+    
+    # Search & Intelligence
+    "web_search": {"label": "Real-time Web Search", "category": "Search & Intel", "icon": "public"},
+    "deep_research": {"label": "Autonomous Deep Research", "category": "Search & Intel", "icon": "travel_explore"},
+    "get_weather": {"label": "NWS Weather & Forecasts", "category": "Search & Intel", "icon": "wb_sunny"},
+    "generate_image": {"label": "AI Image Generation", "category": "Media", "icon": "image"},
+    
+    # Memory & Notes (Chronos)
+    "remember_fact": {"label": "Remember User Fact", "category": "Memory & Notes", "icon": "psychology"},
+    "recall_memory": {"label": "Recall Facts & Context", "category": "Memory & Notes", "icon": "saved_search"},
+    "forget_memory": {"label": "Forget / Delete Memory", "category": "Memory & Notes", "icon": "delete_forever"},
+    "save_vault_note": {"label": "Save Chronos Vault Note", "category": "Memory & Notes", "icon": "note_add"},
+    "read_vault_note": {"label": "Read Chronos Vault Note", "category": "Memory & Notes", "icon": "menu_book"},
+    "search_vault": {"label": "Search Chronos Vault", "category": "Memory & Notes", "icon": "search"},
+    "take_note": {"label": "Quick Voice Note", "category": "Memory & Notes", "icon": "mic"},
+    "append_note": {"label": "Append to Note", "category": "Memory & Notes", "icon": "post_add"},
+    "journal": {"label": "Daily Journal Entry", "category": "Memory & Notes", "icon": "book"},
+    "find_notes": {"label": "Find Notes by Keyword", "category": "Memory & Notes", "icon": "find_in_page"},
+    "read_note": {"label": "Read Daily Note", "category": "Memory & Notes", "icon": "description"},
+    
+    # Smart Home & Fleet
+    "mow_command": {"label": "Voyager Mower Robotics & E-Stop", "category": "Fleet & Robotics", "icon": "agriculture"},
+    "home_assistant_command": {"label": "Home Assistant IoT Control", "category": "Smart Home", "icon": "home"},
+    "get_device_state": {"label": "Get IoT Device State", "category": "Smart Home", "icon": "sensors"},
+    "list_vehicles": {"label": "List Garage Vehicles", "category": "Vehicles", "icon": "directions_car"},
+    "record_odometer": {"label": "Record Vehicle Odometer", "category": "Vehicles", "icon": "speed"},
+    "find_parts": {"label": "Find Vehicle Parts", "category": "Vehicles", "icon": "build"},
+    "query_vehicle_manual": {"label": "Query Vehicle Manual RAG", "category": "Vehicles", "icon": "menu_book"},
+    
+    # Inventory & Commerce
+    "add_asset": {"label": "Add Inventory Asset", "category": "Stash & Inventory", "icon": "inventory_2"},
+    "find_asset": {"label": "Find Stash Asset", "category": "Stash & Inventory", "icon": "search"},
+    "asset_summary": {"label": "Asset Valuation Summary", "category": "Stash & Inventory", "icon": "bar_chart"},
+    "registry_health": {"label": "Inventory Registry Health", "category": "Stash & Inventory", "icon": "health_and_safety"},
+    "warranty_check": {"label": "Warranty Expiration Check", "category": "Stash & Inventory", "icon": "verified_user"},
+    "add_shopping_list": {"label": "Add to Shopping List", "category": "Shopping", "icon": "add_shopping_cart"},
+    "read_shopping_list": {"label": "Read Shopping List", "category": "Shopping", "icon": "shopping_cart"},
+    "search_commerce_products": {"label": "Search Store Products", "category": "Commerce", "icon": "storefront"},
+    "create_commerce_sale": {"label": "Create Commerce Order", "category": "Commerce", "icon": "point_of_sale"},
+    "generate_business_report": {"label": "Generate Store Report", "category": "Commerce", "icon": "analytics"},
+    
+    # Google Workspace & Workflows
+    "calendar_event": {"label": "Google Calendar Events", "category": "Google Workspace", "icon": "calendar_month"},
+    "add_google_task": {"label": "Add Google Task", "category": "Google Workspace", "icon": "task_alt"},
+    "list_google_tasks": {"label": "List Google Tasks", "category": "Google Workspace", "icon": "checklist"},
+    "search_emails": {"label": "Gmail Email Triage", "category": "Google Workspace", "icon": "mail"},
+    "search_google_books": {"label": "Google Books Lookup", "category": "Google Workspace", "icon": "menu_book"},
+    "trigger_n8n_workflow": {"label": "n8n Webhook Automations", "category": "Workflows", "icon": "webhook"},
+    
+    # Browser Automation
+    "browser_navigate": {"label": "Browser: Navigate URL", "category": "Browser Automation", "icon": "open_in_browser"},
+    "browser_extract_text": {"label": "Browser: Extract Page Text", "category": "Browser Automation", "icon": "article"},
+    "browser_click": {"label": "Browser: Click Element", "category": "Browser Automation", "icon": "touch_app"},
+    "browser_screenshot": {"label": "Browser: Take Screenshot", "category": "Browser Automation", "icon": "photo_camera"},
+    "browser_vision_on_page": {"label": "Browser: Vision Analysis", "category": "Browser Automation", "icon": "visibility"},
+}
+
+
+class ChatToolsUpdateBody(BaseModel):
+    disabled_tools: list[str] = []
+
+
+@router.get("/chat-tools")
+async def get_chat_tools(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Retrieve all chat and voice tools categorized with current enabled/disabled state."""
+    await _require_admin(request, authorization)
+    from core.tools_schemas import TOOL_SCHEMAS
+    store = _get_store(request)
+    config = await store.get_admin_config()
+    disabled = set(config.get("disabled_tools", []))
+    
+    tools = []
+    for t in TOOL_SCHEMAS:
+        name = t["name"]
+        meta = TOOL_METADATA_MAP.get(name, {
+            "label": name.replace("_", " ").title(),
+            "category": "Other Tools",
+            "icon": "handyman",
+        })
+        tools.append({
+            "name": name,
+            "label": meta["label"],
+            "category": meta["category"],
+            "icon": meta["icon"],
+            "description": t.get("description", ""),
+            "enabled": name not in disabled,
+        })
+        
+    return {
+        "disabled_tools": list(disabled),
+        "tools": tools,
+    }
+
+
+@router.put("/chat-tools")
+async def set_chat_tools(
+    body: ChatToolsUpdateBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Update disabled status for chat & voice tools."""
+    await _require_admin(request, authorization)
+    store = _get_store(request)
+    config = await store.get_admin_config()
+    config["disabled_tools"] = body.disabled_tools
+    await store.set_admin_config(config)
+    logger.info("Admin updated chat tools: %d tools disabled", len(body.disabled_tools))
+    return {"disabled_tools": body.disabled_tools}
+
 
 
 # =============================================================================

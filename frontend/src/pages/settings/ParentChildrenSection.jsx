@@ -21,12 +21,14 @@ export default function ParentChildrenSection({ data, token, onChanged }) {
     setSaving(child.id)
 
     try {
-      await fetch(`/api/parent/children/${child.id}/features`, {
+      const res = await fetch(`/api/parent/children/${child.id}/features`, {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify({ enabled_features: updated }),
       })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
     } catch (e) {
+      console.error('Failed to update child features:', e)
       onChanged(data)
     } finally {
       setSaving(null)

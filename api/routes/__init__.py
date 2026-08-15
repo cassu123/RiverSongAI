@@ -55,8 +55,10 @@ from .chat_sessions import router as chat_sessions_router
 from .proactive import router as proactive_router
 from .sweeps import router as sweeps_router
 from .briefing import router as briefing_router
+from .cad import router as cad_router
 
 __all__ = [
+    "cad_router",
     "health_router",
     "auth_router",
     "conversation_router",
