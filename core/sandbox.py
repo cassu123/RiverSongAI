@@ -225,6 +225,12 @@ class SandboxRunner:
             exit_code = proc.returncode
         except subprocess.TimeoutExpired:
             timed_out = True
+            # Kill the process group FIRST so pipes close immediately and communicate returns partial output without blocking
+            if proc is not None:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
             try:
                 out_bytes, err_bytes = proc.communicate(timeout=2.0)
                 stdout = out_bytes or ""

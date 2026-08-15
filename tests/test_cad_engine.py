@@ -136,13 +136,16 @@ async def test_sandbox_runner_timeout():
     settings.sandbox_enabled = True
     runner = get_sandbox_runner()
     code = """
-import time
+import time, sys
+print("Step 1: In progress...")
+sys.stdout.flush()
 time.sleep(10)
 """
     res = await runner.execute_code(code=code, language="python", timeout=1.0, user_id="test_user")
     assert res.success is False
     assert res.exit_code == -1
     assert "TimeoutExpired" in (res.error_summary or "")
+    assert "Step 1: In progress..." in res.stdout
     settings.sandbox_enabled = False
 
 
