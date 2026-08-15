@@ -191,6 +191,15 @@ async def execute_tool(
         elif tool_name == "mow_command":
             return await _exec_mow_command(tool_input, user_id)
 
+        elif tool_name == "design_3d_model":
+            return await _exec_design_3d_model(tool_input, user_id)
+
+        elif tool_name == "run_sandbox_code":
+            return await _exec_run_sandbox_code(tool_input, user_id)
+
+        elif tool_name == "render_diagram":
+            return await _exec_render_diagram(tool_input, user_id)
+
         else:
             return f"Unknown tool '{tool_name}' requested."
 
@@ -1415,6 +1424,56 @@ async def _exec_find_parts(args: dict, user_id: str) -> str:
     # AI lookup verified pipeline
     from core.tools import _exec_web_search
     return await _exec_web_search({"query": f"{args.get('vehicle')} {args.get('job')} OEM part number alternatives price"}, user_id)
+
+
+async def _exec_design_3d_model(args: dict, user_id: str) -> str:
+    from providers.cad.cad_engine import get_cad_engine
+    engine = get_cad_engine()
+    name = args.get("name", "3d_part").strip()
+    scad_code = args.get("scad_code", "")
+    description = args.get("description", "")
+    res = await engine.compile_scad(scad_code=scad_code, name=name, user_id=user_id)
+    if res.error:
+        return f"Error compiling 3D CAD model: {res.error}\n\nSCAD Code:\n```openscad\n{scad_code}\n```"
+    
+    lines = [
+        f"✅ Successfully designed and compiled 3D CAD Model: **{name}**",
+        f"- **Model ID**: `{res.model_id}`",
+        f"- **Bounding Dimensions (X × Y × Z)**: {res.dimensions_mm[0]} mm × {res.dimensions_mm[1]} mm × {res.dimensions_mm[2]} mm",
+        f"- **Volume**: {res.volume_cm3} cm³",
+        f"- **Surface Area**: {res.surface_area_cm2} cm²",
+        f"- **Estimated PLA Mass**: ~{res.estimated_mass_grams} grams",
+        f"- **Estimated 3D Print Time**: ~{res.estimated_print_time_minutes} minutes",
+        f"- **Mesh Watertightness**: {'Yes (Print Ready)' if res.is_watertight else 'No (Inspect Mesh)'}",
+        f"\n```stl\n/api/cad/models/{res.model_id}/stl\n```\n",
+        f"*(Interact with the 3D model above or download the STL file)*",
+    ]
+    return "\n".join(lines)
+
+
+async def _exec_run_sandbox_code(args: dict, user_id: str) -> str:
+    from core.sandbox import get_sandbox_runner
+    runner = get_sandbox_runner()
+    code = args.get("code", "")
+    lang = args.get("language", "python")
+    res = await runner.execute_code(code=code, language=lang, user_id=user_id)
+    status_icon = "✅ Success" if res.success else "❌ Failed"
+    out_lines = [
+        f"{status_icon} (Exit code: {res.exit_code}, Duration: {res.duration_ms}ms)",
+    ]
+    if res.stdout:
+        out_lines.append(f"**Output (stdout)**:\n```\n{res.stdout.strip()}\n```")
+    if res.stderr:
+        out_lines.append(f"**Errors/Traceback (stderr)**:\n```\n{res.stderr.strip()}\n```")
+    if res.artifacts:
+        out_lines.append(f"**Generated Artifacts**: {', '.join(res.artifacts)}")
+    return "\n\n".join(out_lines)
+
+
+async def _exec_render_diagram(args: dict, user_id: str) -> str:
+    title = args.get("title", "Architecture Diagram")
+    mermaid = args.get("mermaid_code", "").strip()
+    return f"### 📊 {title}\n\n```mermaid\n{mermaid}\n```"
 
 
 # Memory + note executors live in core/tools_memory.py (god-file #3);

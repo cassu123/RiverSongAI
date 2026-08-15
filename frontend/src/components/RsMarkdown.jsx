@@ -1,6 +1,8 @@
 import React, { useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import STLViewer from './STLViewer'
+import MermaidDiagram from './MermaidDiagram'
 
 const WIKILINK_RE = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g
 
@@ -46,6 +48,26 @@ export default function RsMarkdown({ children, root = 'personal', onNavigate, cl
         )
       }
       return <a href={href} target="_blank" rel="noreferrer" {...rest}>{c}</a>
+    },
+    code: ({ node, inline: isInline, className: codeClass, children: codeChildren, ...props }) => {
+      const match = /language-(\w+)/.exec(codeClass || '')
+      const lang = match ? match[1].toLowerCase() : ''
+      const codeStr = String(codeChildren || '').replace(/\n$/, '')
+
+      if (!isInline && (lang === 'stl' || lang === 'cad')) {
+        const url = codeStr.trim()
+        return <STLViewer url={url} />
+      }
+
+      if (!isInline && lang === 'mermaid') {
+        return <MermaidDiagram chart={codeStr} />
+      }
+
+      return (
+        <code className={codeClass} {...props}>
+          {codeChildren}
+        </code>
+      )
     },
   }
 

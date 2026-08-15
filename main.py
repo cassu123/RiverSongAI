@@ -494,8 +494,10 @@ def create_app() -> FastAPI:
         proactive_router,
         sweeps_router,
         briefing_router,
+        cad_router,
     )
 
+    app.include_router(cad_router)
     app.include_router(auth_router)
     app.include_router(health_router)
     app.include_router(dashboard_router)

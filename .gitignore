@@ -230,3 +230,5 @@ passover/
 passoff/
 .venv-test/
 backups/
+bin/
+

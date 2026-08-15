@@ -1,0 +1,170 @@
+"""
+api/routes/cad.py
+
+REST API routes for Generative 3D CAD modeling, STL binary asset streaming,
+and sandboxed code execution in River Song AI.
+"""
+
+from __future__ import annotations
+
+import os
+from typing import List, Optional
+
+from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi.responses import FileResponse, Response
+from pydantic import BaseModel, Field
+
+from core.auth import decode_token
+from core.sandbox import get_sandbox_runner
+from providers.cad.cad_engine import CAD_STORAGE_DIR, CADModelResult, get_cad_engine
+
+router = APIRouter(prefix="/api/cad", tags=["cad"])
+
+
+async def _require_user(
+    request: Optional[Request] = None,
+    authorization: Optional[str] = Header(default=None),
+) -> str:
+    token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        parts = authorization.split(" ", 1)
+        if len(parts) > 1:
+            token = parts[1].strip()
+    if not token and request:
+        token = request.cookies.get("access_token")
+    if not token:
+        # Fallback to primary_user if guest access or local development
+        return "primary_user"
+    payload = await decode_token(token)
+    if not payload:
+        return "primary_user"
+    return payload.get("sub", "primary_user")
+
+
+class CADCompileRequest(BaseModel):
+    scad_code: str = Field(..., description="Parametric OpenSCAD source code")
+    name: str = Field("3d_model", description="Model name identifier")
+
+
+class SandboxRunRequest(BaseModel):
+    code: str = Field(..., description="Code to execute")
+    language: str = Field("python", description="Language: python, bash, sh")
+    timeout: float = Field(30.0, ge=1.0, le=120.0, description="Execution timeout in seconds")
+
+
+@router.post("/compile")
+async def compile_cad_model(
+    body: CADCompileRequest,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+) -> dict:
+    """Compile OpenSCAD source code into a 3D STL mesh with physical telemetry."""
+    user_id = await _require_user(request, authorization)
+    engine = get_cad_engine()
+    res: CADModelResult = await engine.compile_scad(
+        scad_code=body.scad_code,
+        name=body.name,
+        user_id=user_id,
+    )
+    data = res.to_dict()
+    data["download_url"] = f"/api/cad/models/{res.model_id}/stl"
+    data["scad_url"] = f"/api/cad/models/{res.model_id}/scad"
+    return data
+
+
+@router.get("/models/{model_id}/stl")
+async def get_model_stl(
+    model_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Stream binary STL file for 3D viewport rendering or slicer download."""
+    user_id = await _require_user(request, authorization)
+    user_dir = os.path.join(CAD_STORAGE_DIR, user_id, model_id)
+    if not os.path.isdir(user_dir):
+        # Check global fallback
+        user_dir = os.path.join(CAD_STORAGE_DIR, "primary_user", model_id)
+        if not os.path.isdir(user_dir):
+            raise HTTPException(status_code=404, detail="CAD Model not found.")
+
+    stl_files = [f for f in os.listdir(user_dir) if f.endswith(".stl")]
+    if not stl_files:
+        raise HTTPException(status_code=404, detail="STL file not generated for this model.")
+
+    file_path = os.path.join(user_dir, stl_files[0])
+    return FileResponse(
+        file_path,
+        media_type="model/stl",
+        filename=stl_files[0],
+    )
+
+
+@router.get("/models/{model_id}/scad")
+async def get_model_scad(
+    model_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Retrieve the OpenSCAD source code for a model."""
+    user_id = await _require_user(request, authorization)
+    user_dir = os.path.join(CAD_STORAGE_DIR, user_id, model_id)
+    if not os.path.isdir(user_dir):
+        user_dir = os.path.join(CAD_STORAGE_DIR, "primary_user", model_id)
+        if not os.path.isdir(user_dir):
+            raise HTTPException(status_code=404, detail="CAD Model not found.")
+
+    scad_files = [f for f in os.listdir(user_dir) if f.endswith(".scad")]
+    if not scad_files:
+        raise HTTPException(status_code=404, detail="SCAD source not found.")
+
+    file_path = os.path.join(user_dir, scad_files[0])
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    return Response(content=content, media_type="text/plain")
+
+
+@router.get("/models")
+async def list_cad_models(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+) -> dict:
+    """List all 3D CAD models generated for this user."""
+    user_id = await _require_user(request, authorization)
+    user_dir = os.path.join(CAD_STORAGE_DIR, user_id)
+    if not os.path.isdir(user_dir):
+        return {"models": []}
+
+    models = []
+    for model_id in os.listdir(user_dir):
+        m_dir = os.path.join(user_dir, model_id)
+        if not os.path.isdir(m_dir):
+            continue
+        stl_files = [f for f in os.listdir(m_dir) if f.endswith(".stl")]
+        scad_files = [f for f in os.listdir(m_dir) if f.endswith(".scad")]
+        if stl_files:
+            name = stl_files[0].removesuffix(".stl")
+            models.append({
+                "model_id": model_id,
+                "name": name,
+                "stl_url": f"/api/cad/models/{model_id}/stl",
+                "scad_url": f"/api/cad/models/{model_id}/scad",
+            })
+    return {"models": models}
+
+
+@router.post("/sandbox/run")
+async def run_sandbox(
+    body: SandboxRunRequest,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+) -> dict:
+    """Execute code in an isolated sandbox environment and return logs/artifacts."""
+    user_id = await _require_user(request, authorization)
+    runner = get_sandbox_runner()
+    res = await runner.execute_code(
+        code=body.code,
+        language=body.language,
+        timeout=body.timeout,
+        user_id=user_id,
+    )
+    return res.to_dict()
