@@ -147,6 +147,34 @@ time.sleep(10)
 
 
 @pytest.mark.asyncio
+async def test_sandbox_runner_reaps_detached_daemon():
+    settings = get_settings()
+    settings.sandbox_enabled = True
+    runner = get_sandbox_runner()
+    # Code that spawns a detached background subprocess and exits 0 immediately
+    code = """
+import subprocess, sys
+p = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+print(f"Spawned:{p.pid}")
+"""
+    res = await runner.execute_code(code=code, language="python", timeout=5.0, user_id="test_user")
+    assert res.success is True
+    assert "Spawned:" in res.stdout
+    spawned_pid = int(res.stdout.split("Spawned:")[1].strip().split()[0])
+    
+    import time, errno
+    time.sleep(0.1)
+    is_alive = False
+    try:
+        os.kill(spawned_pid, 0)
+        is_alive = True
+    except OSError as err:
+        is_alive = (err.errno == errno.EPERM)
+    assert not is_alive, f"Detached daemon PID {spawned_pid} survived success execution path!"
+    settings.sandbox_enabled = False
+
+
+@pytest.mark.asyncio
 async def test_cad_tool_execution():
     context = {"user_id": "test_user"}
     scad_code = "cube([15, 15, 15], center=true);"

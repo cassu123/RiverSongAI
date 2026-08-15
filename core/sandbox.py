@@ -207,6 +207,10 @@ class SandboxRunner:
 
         start_time = time.perf_counter()
         proc: Optional[subprocess.Popen] = None
+        stdout, stderr = "", ""
+        exit_code = -1
+        timed_out = False
+
         try:
             proc = subprocess.Popen(
                 cmd,
@@ -218,53 +222,30 @@ class SandboxRunner:
                 start_new_session=True,  # Creates a distinct process group for clean subtree reaping
             )
             stdout, stderr = proc.communicate(timeout=timeout + 1.0)
-            duration_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
-            stdout = stdout or ""
-            stderr = stderr or ""
             exit_code = proc.returncode
-            success = (exit_code == 0)
-
-            # Discover generated artifacts (excluding script and bootstrap files)
-            artifacts = []
-            for root, _, files in os.walk(run_dir):
-                for fname in files:
-                    if fname not in ("main.py", "_bootstrap.py"):
-                        artifacts.append(os.path.relpath(os.path.join(root, fname), run_dir))
-
-            error_summary = None
-            if not success:
-                lines = [l for l in stderr.splitlines() if l.strip()]
-                error_summary = "\n".join(lines[-5:]) if lines else f"Process exited with code {exit_code}"
-
-            return SandboxExecutionResult(
-                run_id=run_id,
-                language="python",
-                code=code,
-                exit_code=exit_code,
-                stdout=stdout,
-                stderr=stderr,
-                duration_ms=duration_ms,
-                success=success,
-                artifacts=artifacts,
-                error_summary=error_summary,
-            )
         except subprocess.TimeoutExpired:
-            # Kill the entire process group to reap any spawned child processes / threads
+            timed_out = True
+            try:
+                out_bytes, err_bytes = proc.communicate(timeout=2.0)
+                stdout = out_bytes or ""
+                stderr = err_bytes or f"Execution timed out after {timeout} seconds."
+            except Exception:
+                stdout, stderr = "", f"Execution timed out after {timeout} seconds."
+        except Exception as exc:
+            stderr = str(exc)
+        finally:
+            # Symmetrically reap the entire process group across all exit paths (success, timeout, error)
             if proc is not None:
                 try:
                     os.killpg(proc.pid, signal.SIGKILL)
                 except (ProcessLookupError, PermissionError):
                     pass
-                try:
-                    out_bytes, err_bytes = proc.communicate(timeout=2.0)
-                    stdout = out_bytes or ""
-                    stderr = err_bytes or f"Execution timed out after {timeout} seconds."
-                except Exception:
-                    stdout, stderr = "", f"Execution timed out after {timeout} seconds."
-            else:
-                stdout, stderr = "", f"Execution timed out after {timeout} seconds."
 
-            duration_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
+        duration_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
+        stdout = stdout or ""
+        stderr = stderr or ""
+
+        if timed_out:
             return SandboxExecutionResult(
                 run_id=run_id,
                 language="python",
@@ -277,25 +258,33 @@ class SandboxRunner:
                 artifacts=[],
                 error_summary=f"TimeoutExpired: Execution exceeded {timeout}s limit.",
             )
-        except Exception as exc:
-            if proc is not None:
-                try:
-                    os.killpg(proc.pid, signal.SIGKILL)
-                except (ProcessLookupError, PermissionError):
-                    pass
-            duration_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
-            return SandboxExecutionResult(
-                run_id=run_id,
-                language="python",
-                code=code,
-                exit_code=-1,
-                stdout="",
-                stderr=str(exc),
-                duration_ms=duration_ms,
-                success=False,
-                artifacts=[],
-                error_summary=f"Execution error: {exc}",
-            )
+
+        success = (exit_code == 0)
+
+        # Discover generated artifacts (excluding script and bootstrap files)
+        artifacts = []
+        for root, _, files in os.walk(run_dir):
+            for fname in files:
+                if fname not in ("main.py", "_bootstrap.py"):
+                    artifacts.append(os.path.relpath(os.path.join(root, fname), run_dir))
+
+        error_summary = None
+        if not success:
+            lines = [l for l in stderr.splitlines() if l.strip()]
+            error_summary = "\n".join(lines[-5:]) if lines else f"Process exited with code {exit_code}"
+
+        return SandboxExecutionResult(
+            run_id=run_id,
+            language="python",
+            code=code,
+            exit_code=exit_code,
+            stdout=stdout,
+            stderr=stderr,
+            duration_ms=duration_ms,
+            success=success,
+            artifacts=artifacts,
+            error_summary=error_summary,
+        )
 
 
 _DEFAULT_SANDBOX_RUNNER: Optional[SandboxRunner] = None
