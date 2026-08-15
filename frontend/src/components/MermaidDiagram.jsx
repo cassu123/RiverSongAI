@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import mermaid from 'mermaid'
+import DOMPurify from 'dompurify'
 
 mermaid.initialize({
   startOnLoad: false,
   theme: 'dark',
-  securityLevel: 'loose',
+  securityLevel: 'strict',
   fontFamily: 'inherit',
   themeVariables: {
     darkMode: true,
@@ -33,7 +34,8 @@ export default function MermaidDiagram({ chart, className = '' }) {
         const cleanChart = chart.trim()
         const { svg } = await mermaid.render(idRef.current, cleanChart)
         if (isMounted) {
-          setSvgContent(svg)
+          const cleanSvg = DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true } })
+          setSvgContent(cleanSvg)
         }
       } catch (err) {
         if (isMounted) {

@@ -1600,8 +1600,8 @@ class Settings(BaseSettings):
         description="Enable Generative 3D CAD modeling and OpenSCAD to STL compilation.",
     )
     sandbox_enabled: bool = Field(
-        default=True,
-        description="Enable isolated developer sandbox code execution.",
+        default=False,
+        description="Enable resource-limited Python subprocess code execution (Defaults to False).",
     )
 
     # -------------------------------------------------------------------------

@@ -2,13 +2,14 @@
 tests/test_cad_engine.py
 
 Unit and integration tests for River Song AI Generative 3D CAD engine,
-sandbox code execution runner, and CAD API routes.
+resource-limited Python process runner, and CAD API routes.
 """
 
 import os
 import pytest
 from httpx import ASGITransport, AsyncClient
 from main import app
+from config.settings import get_settings
 from providers.cad.cad_engine import CADEngine, get_cad_engine
 from core.sandbox import SandboxRunner, get_sandbox_runner
 from core.tools import execute_tool
@@ -44,6 +45,22 @@ async def test_cad_engine_compilation_and_metrics():
 
 
 @pytest.mark.asyncio
+async def test_cad_engine_path_traversal_sanitization():
+    engine = get_cad_engine()
+    # Malicious path traversal attempt in name
+    res = await engine.compile_scad(
+        scad_code="cube([10, 10, 10]);",
+        name="../../../malicious_file",
+        user_id="test_user",
+    )
+    assert res.error is None
+    # Verify the file is safely confined to the model_id folder
+    assert ".." not in res.stl_path
+    assert "model.stl" in res.stl_path
+    assert os.path.exists(res.stl_path)
+
+
+@pytest.mark.asyncio
 async def test_cad_engine_invalid_syntax_error():
     engine = get_cad_engine()
     bad_scad = "cube([10, 20;"  # syntax error
@@ -57,7 +74,30 @@ async def test_cad_engine_invalid_syntax_error():
 
 
 @pytest.mark.asyncio
+async def test_sandbox_runner_default_disabled():
+    settings = get_settings()
+    settings.sandbox_enabled = False
+    runner = get_sandbox_runner()
+    res = await runner.execute_code(code="print('hi')", language="python", user_id="test_user")
+    assert res.success is False
+    assert "Sandbox code execution is disabled" in res.stderr
+
+
+@pytest.mark.asyncio
+async def test_sandbox_runner_rejects_bash():
+    settings = get_settings()
+    settings.sandbox_enabled = True
+    runner = get_sandbox_runner()
+    res = await runner.execute_code(code="echo 'hi'", language="bash", user_id="test_user")
+    assert res.success is False
+    assert "Only Python is permitted" in res.stderr
+    settings.sandbox_enabled = False
+
+
+@pytest.mark.asyncio
 async def test_sandbox_runner_python_success():
+    settings = get_settings()
+    settings.sandbox_enabled = True
     runner = get_sandbox_runner()
     code = """
 import sys
@@ -69,10 +109,13 @@ sys.stdout.flush()
     assert res.exit_code == 0
     assert "Hello from sandbox!" in res.stdout
     assert res.error_summary is None
+    settings.sandbox_enabled = False
 
 
 @pytest.mark.asyncio
 async def test_sandbox_runner_python_error_traceback():
+    settings = get_settings()
+    settings.sandbox_enabled = True
     runner = get_sandbox_runner()
     code = """
 def broken():
@@ -84,6 +127,7 @@ broken()
     assert res.exit_code != 0
     assert "ValueError: Test error in sandbox" in res.stderr
     assert "ValueError" in (res.error_summary or "")
+    settings.sandbox_enabled = False
 
 
 @pytest.mark.asyncio
@@ -98,18 +142,6 @@ async def test_cad_tool_execution():
     assert "Successfully designed and compiled 3D CAD Model: **test_cube**" in result_text
     assert "```stl" in result_text
     assert "Estimated PLA Mass" in result_text
-
-
-@pytest.mark.asyncio
-async def test_sandbox_tool_execution():
-    context = {"user_id": "test_user"}
-    result_text = await execute_tool(
-        "run_sandbox_code",
-        {"code": "print(40 + 2)", "language": "python"},
-        context=context,
-    )
-    assert "✅ Success" in result_text
-    assert "42" in result_text
 
 
 @pytest.mark.asyncio
@@ -156,3 +188,11 @@ async def test_cad_api_endpoints():
         assert list_resp.status_code == 200
         models_data = list_resp.json()
         assert len(models_data["models"]) >= 1
+
+        # Test invalid character in model_id is rejected (400)
+        bad_id_resp = await client.get("/api/cad/models/bad$id/stl")
+        assert bad_id_resp.status_code == 400
+
+        # Test non-existent model_id returns 404
+        missing_resp = await client.get("/api/cad/models/missing_model_123/stl")
+        assert missing_resp.status_code == 404

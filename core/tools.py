@@ -28,6 +28,17 @@ from core.tools_schemas import TOOL_SCHEMAS  # noqa: E402,F401
 # =============================================================================
 
 
+# Dangerous tools that MUST fail closed if admin policy cannot be verified
+DANGEROUS_TOOLS = {
+    "run_sandbox_code",
+    "code_interpreter",
+    "mow_command",
+    "browser_click",
+    "browser_navigate",
+    "trigger_n8n_workflow",
+}
+
+
 async def execute_tool(
         tool_name: str, tool_input: Dict[str, Any], context: Dict[str, Any]) -> str:
     """
@@ -47,6 +58,28 @@ async def execute_tool(
         tool_name,
         user_id,
         tool_input)
+
+    # -------------------------------------------------------------------------
+    # Hard Choke Point: Admin Tool Toggles & Fail-Closed Policy
+    # -------------------------------------------------------------------------
+    disabled_tools = context.get("disabled_tools")
+    if disabled_tools is None:
+        try:
+            store = context.get("store")
+            if not store:
+                from providers.memory.sqlite_store import SQLiteStore
+                store = SQLiteStore()
+            admin_config = await store.get_admin_config()
+            disabled_tools = set(admin_config.get("disabled_tools", []))
+        except Exception as exc:
+            logger.error("Failed to load admin tool policy in execute_tool: %s", exc)
+            if tool_name in DANGEROUS_TOOLS:
+                return f"Security Error: Tool '{tool_name}' is disabled (failed closed: admin security policy could not be verified)."
+            disabled_tools = set()
+
+    if tool_name in disabled_tools:
+        logger.warning("Blocked execution of disabled tool '%s' for user '%s'", tool_name, user_id)
+        return f"Tool '{tool_name}' is currently disabled by administrative security policy."
 
     try:
         if tool_name == "remember_fact":

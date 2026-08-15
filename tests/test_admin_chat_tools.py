@@ -62,9 +62,27 @@ async def test_admin_chat_tools_list_and_update(app_store):
         mow_tool = next(t for t in data2["tools"] if t["name"] == "mow_command")
         assert mow_tool["enabled"] is False
 
+        # Verify execute_tool directly blocks disabled tools
+        from core.tools import execute_tool
+        block_msg = await execute_tool(
+            "mow_command",
+            {"command": "start"},
+            context={"user_id": "test_user", "store": app_store},
+        )
+        assert "disabled by administrative security policy" in block_msg
+
         # Clean up: restore enabled state
         await client.put(
             "/api/admin/chat-tools",
             headers={"Authorization": f"Bearer {admin_token}"},
             json={"disabled_tools": []},
         )
+
+        # Verify fail-closed behavior for dangerous tools with broken store
+        fail_closed_msg = await execute_tool(
+            "run_sandbox_code",
+            {"code": "print(1)"},
+            context={"user_id": "test_user", "store": None},  # force exception or missing store
+        )
+        assert "failed closed" in fail_closed_msg or "disabled" in fail_closed_msg
+

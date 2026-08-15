@@ -677,8 +677,8 @@ TOOL_SCHEMAS = [
     {
         "name": "run_sandbox_code",
         "description": (
-            "Execute Python or Bash code inside an isolated developer sandbox environment. "
-            "Use this to test algorithms, run simulations, parse data, or verify multi-file code builds. "
+            "Execute Python code in a resource-limited scratch environment with strict timeout, "
+            "memory limits, and zero host environment access. "
             "Returns stdout, stderr, execution duration, and structured traceback diagnostics for self-healing."
         ),
         "input_schema": {
@@ -686,12 +686,12 @@ TOOL_SCHEMAS = [
             "properties": {
                 "code": {
                     "type": "string",
-                    "description": "The code script to execute."
+                    "description": "The Python script to execute."
                 },
                 "language": {
                     "type": "string",
-                    "enum": ["python", "bash"],
-                    "description": "The language environment (default: python)."
+                    "enum": ["python"],
+                    "description": "The language environment (python only)."
                 },
                 "description": {
                     "type": "string",

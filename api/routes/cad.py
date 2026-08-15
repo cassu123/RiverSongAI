@@ -8,6 +8,7 @@ and sandboxed code execution in River Song AI.
 from __future__ import annotations
 
 import os
+import re
 from typing import List, Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request
@@ -79,23 +80,29 @@ async def get_model_stl(
     authorization: Optional[str] = Header(default=None),
 ):
     """Stream binary STL file for 3D viewport rendering or slicer download."""
+    if not re.match(r"^[a-zA-Z0-9_-]{1,64}$", model_id):
+        raise HTTPException(status_code=400, detail="Invalid model ID format.")
     user_id = await _require_user(request, authorization)
-    user_dir = os.path.join(CAD_STORAGE_DIR, user_id, model_id)
+    safe_user_id = re.sub(r"[^a-zA-Z0-9_-]", "", user_id) or "primary_user"
+    user_dir = os.path.join(CAD_STORAGE_DIR, safe_user_id, model_id)
     if not os.path.isdir(user_dir):
-        # Check global fallback
+        # Check primary_user fallback
         user_dir = os.path.join(CAD_STORAGE_DIR, "primary_user", model_id)
         if not os.path.isdir(user_dir):
             raise HTTPException(status_code=404, detail="CAD Model not found.")
 
-    stl_files = [f for f in os.listdir(user_dir) if f.endswith(".stl")]
-    if not stl_files:
-        raise HTTPException(status_code=404, detail="STL file not generated for this model.")
+    stl_path = os.path.join(user_dir, "model.stl")
+    if not os.path.isfile(stl_path):
+        # Fallback to any .stl
+        stl_files = [f for f in os.listdir(user_dir) if f.endswith(".stl")]
+        if not stl_files:
+            raise HTTPException(status_code=404, detail="STL file not generated for this model.")
+        stl_path = os.path.join(user_dir, stl_files[0])
 
-    file_path = os.path.join(user_dir, stl_files[0])
     return FileResponse(
-        file_path,
+        stl_path,
         media_type="model/stl",
-        filename=stl_files[0],
+        filename=f"model_{model_id}.stl",
     )
 
 
@@ -106,19 +113,24 @@ async def get_model_scad(
     authorization: Optional[str] = Header(default=None),
 ):
     """Retrieve the OpenSCAD source code for a model."""
+    if not re.match(r"^[a-zA-Z0-9_-]{1,64}$", model_id):
+        raise HTTPException(status_code=400, detail="Invalid model ID format.")
     user_id = await _require_user(request, authorization)
-    user_dir = os.path.join(CAD_STORAGE_DIR, user_id, model_id)
+    safe_user_id = re.sub(r"[^a-zA-Z0-9_-]", "", user_id) or "primary_user"
+    user_dir = os.path.join(CAD_STORAGE_DIR, safe_user_id, model_id)
     if not os.path.isdir(user_dir):
         user_dir = os.path.join(CAD_STORAGE_DIR, "primary_user", model_id)
         if not os.path.isdir(user_dir):
             raise HTTPException(status_code=404, detail="CAD Model not found.")
 
-    scad_files = [f for f in os.listdir(user_dir) if f.endswith(".scad")]
-    if not scad_files:
-        raise HTTPException(status_code=404, detail="SCAD source not found.")
+    scad_path = os.path.join(user_dir, "model.scad")
+    if not os.path.isfile(scad_path):
+        scad_files = [f for f in os.listdir(user_dir) if f.endswith(".scad")]
+        if not scad_files:
+            raise HTTPException(status_code=404, detail="SCAD source not found.")
+        scad_path = os.path.join(user_dir, scad_files[0])
 
-    file_path = os.path.join(user_dir, scad_files[0])
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(scad_path, "r", encoding="utf-8") as f:
         content = f.read()
     return Response(content=content, media_type="text/plain")
 
@@ -129,26 +141,35 @@ async def list_cad_models(
     authorization: Optional[str] = Header(default=None),
 ) -> dict:
     """List all 3D CAD models generated for this user."""
+    import json
     user_id = await _require_user(request, authorization)
-    user_dir = os.path.join(CAD_STORAGE_DIR, user_id)
+    safe_user_id = re.sub(r"[^a-zA-Z0-9_-]", "", user_id) or "primary_user"
+    user_dir = os.path.join(CAD_STORAGE_DIR, safe_user_id)
     if not os.path.isdir(user_dir):
         return {"models": []}
 
     models = []
     for model_id in os.listdir(user_dir):
+        if not re.match(r"^[a-zA-Z0-9_-]{1,64}$", model_id):
+            continue
         m_dir = os.path.join(user_dir, model_id)
         if not os.path.isdir(m_dir):
             continue
-        stl_files = [f for f in os.listdir(m_dir) if f.endswith(".stl")]
-        scad_files = [f for f in os.listdir(m_dir) if f.endswith(".scad")]
-        if stl_files:
-            name = stl_files[0].removesuffix(".stl")
-            models.append({
-                "model_id": model_id,
-                "name": name,
-                "stl_url": f"/api/cad/models/{model_id}/stl",
-                "scad_url": f"/api/cad/models/{model_id}/scad",
-            })
+        name = model_id
+        meta_file = os.path.join(m_dir, "meta.json")
+        if os.path.isfile(meta_file):
+            try:
+                with open(meta_file, "r", encoding="utf-8") as f:
+                    meta = json.load(f)
+                    name = meta.get("name", model_id)
+            except Exception:
+                pass
+        models.append({
+            "model_id": model_id,
+            "name": name,
+            "stl_url": f"/api/cad/models/{model_id}/stl",
+            "scad_url": f"/api/cad/models/{model_id}/scad",
+        })
     return {"models": models}
 
 

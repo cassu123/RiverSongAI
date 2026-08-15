@@ -92,24 +92,35 @@ class CADEngine:
         model_id: str,
     ) -> CADModelResult:
         from datetime import datetime, timezone
+        import json
+        import re
+
+        # Clean model_id and user_id to prevent any directory traversal
+        safe_model_id = re.sub(r"[^a-zA-Z0-9_-]", "", model_id) or uuid.uuid4().hex[:10]
+        safe_user_id = re.sub(r"[^a-zA-Z0-9_-]", "", user_id) or "primary_user"
+        clean_name = re.sub(r"[^a-zA-Z0-9_\- ]", "", name).strip() or "3d_part"
 
         now_iso = datetime.now(timezone.utc).isoformat()
-        user_cad_dir = os.path.join(self._storage_dir, user_id, model_id)
+        user_cad_dir = os.path.join(self._storage_dir, safe_user_id, safe_model_id)
         os.makedirs(user_cad_dir, exist_ok=True)
 
-        scad_path = os.path.join(user_cad_dir, f"{name}.scad")
-        stl_path = os.path.join(user_cad_dir, f"{name}.stl")
+        scad_path = os.path.join(user_cad_dir, "model.scad")
+        stl_path = os.path.join(user_cad_dir, "model.stl")
+        meta_path = os.path.join(user_cad_dir, "meta.json")
 
         with open(scad_path, "w", encoding="utf-8") as f:
             f.write(scad_code)
+
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump({"model_id": safe_model_id, "name": clean_name, "created_at": now_iso}, f)
 
         if not self._openscad_bin:
             self._openscad_bin = _find_openscad_binary()
 
         if not self._openscad_bin:
             return CADModelResult(
-                model_id=model_id,
-                name=name,
+                model_id=safe_model_id,
+                name=clean_name,
                 scad_code=scad_code,
                 stl_path="",
                 scad_path=scad_path,
@@ -128,10 +139,10 @@ class CADEngine:
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
             if res.returncode != 0:
                 err_msg = res.stderr or res.stdout or "OpenSCAD compilation failed."
-                logger.error("OpenSCAD error for %s: %s", name, err_msg)
+                logger.error("OpenSCAD error for %s: %s", clean_name, err_msg)
                 return CADModelResult(
-                    model_id=model_id,
-                    name=name,
+                    model_id=safe_model_id,
+                    name=clean_name,
                     scad_code=scad_code,
                     stl_path="",
                     scad_path=scad_path,
@@ -146,8 +157,8 @@ class CADEngine:
                 )
         except subprocess.TimeoutExpired:
             return CADModelResult(
-                model_id=model_id,
-                name=name,
+                model_id=safe_model_id,
+                name=clean_name,
                 scad_code=scad_code,
                 stl_path="",
                 scad_path=scad_path,
@@ -162,8 +173,8 @@ class CADEngine:
             )
         except Exception as exc:
             return CADModelResult(
-                model_id=model_id,
-                name=name,
+                model_id=safe_model_id,
+                name=clean_name,
                 scad_code=scad_code,
                 stl_path="",
                 scad_path=scad_path,
@@ -209,8 +220,8 @@ class CADEngine:
                 logger.warning("Could not analyze 3D STL mesh with trimesh: %s", exc)
 
         return CADModelResult(
-            model_id=model_id,
-            name=name,
+            model_id=safe_model_id,
+            name=clean_name,
             scad_code=scad_code,
             stl_path=stl_path,
             scad_path=scad_path,

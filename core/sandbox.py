@@ -1,10 +1,15 @@
 """
 core/sandbox.py
 
-Autonomous Sandboxed Execution Runner for River Song AI.
-Executes generated Python / shell code in an isolated scratch environment,
-captures stdout/stderr, execution time, and provides structured traceback
-diagnostics for multi-turn agent self-healing loops.
+Resource-Limited Python Process Runner for River Song AI.
+
+Executes generated Python code in an isolated temporary directory with:
+  1. Strict Environment Allowlist — ZERO inheritance from server os.environ.
+     Secrets, tokens, API keys, and database credentials are never accessible.
+  2. POSIX Resource Limits (rlimits) — CPU time, virtual memory, process count,
+     file sizes, and open descriptors are hard-capped per execution.
+  3. Python-Only Execution — Shell/bash scripts are rejected.
+  4. Hard Safety Gate — SANDBOX_ENABLED env flag (defaults to False).
 """
 
 from __future__ import annotations
@@ -12,16 +17,29 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
+import resource
 import subprocess
-import tempfile
+import sys
 import time
 import uuid
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional
 
+from config.settings import get_settings
+
 logger = logging.getLogger(__name__)
 
 SANDBOX_ROOT_DIR = "data/sandbox_runs"
+MAX_TIMEOUT_SECONDS = 30.0
+MAX_MEMORY_MB = 256
+MAX_FILE_SIZE_MB = 5
+
+
+def _is_enabled() -> bool:
+    """Hard kill switch. Defaults to False."""
+    settings = get_settings()
+    return bool(getattr(settings, "sandbox_enabled", False))
 
 
 @dataclass
@@ -42,7 +60,7 @@ class SandboxExecutionResult:
 
 
 class SandboxRunner:
-    """Safe execution sandbox with timeout, resource controls, and artifact capture."""
+    """Resource-limited Python subprocess runner with strict environment scrubbing."""
 
     def __init__(self, sandbox_root: str = SANDBOX_ROOT_DIR) -> None:
         self._sandbox_root = sandbox_root
@@ -52,21 +70,57 @@ class SandboxRunner:
         self,
         code: str,
         language: str = "python",
-        timeout: float = 30.0,
+        timeout: float = 10.0,
         user_id: str = "primary_user",
         run_id: Optional[str] = None,
     ) -> SandboxExecutionResult:
-        """Executes code in a sandbox directory and returns structured output."""
-        run_id = run_id or uuid.uuid4().hex[:10]
+        """Executes Python code under rlimits and clean environment."""
+        if not _is_enabled():
+            return SandboxExecutionResult(
+                run_id=run_id or uuid.uuid4().hex[:10],
+                language=language,
+                code=code,
+                exit_code=-1,
+                stdout="",
+                stderr="Sandbox code execution is disabled. Set SANDBOX_ENABLED=true in .env or Admin Settings to enable.",
+                duration_ms=0.0,
+                success=False,
+                artifacts=[],
+                error_summary="Sandbox execution disabled by administrator policy.",
+            )
+
+        lang = language.lower().strip()
+        if lang not in ("python", "python3", "py"):
+            return SandboxExecutionResult(
+                run_id=run_id or uuid.uuid4().hex[:10],
+                language=language,
+                code=code,
+                exit_code=-1,
+                stdout="",
+                stderr=f"Unsupported language '{language}'. Only Python is permitted under resource controls.",
+                duration_ms=0.0,
+                success=False,
+                artifacts=[],
+                error_summary="Rejected: non-Python execution not permitted.",
+            )
+
+        safe_run_id = re.sub(r"[^a-zA-Z0-9_-]", "", run_id or uuid.uuid4().hex[:10])
+        safe_user_id = re.sub(r"[^a-zA-Z0-9_-]", "", user_id) or "primary_user"
+        bounded_timeout = max(1.0, min(float(timeout), MAX_TIMEOUT_SECONDS))
+
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
-            None, self._run_blocking, code, language, timeout, user_id, run_id
+            None,
+            self._run_blocking,
+            code,
+            bounded_timeout,
+            safe_user_id,
+            safe_run_id,
         )
 
     def _run_blocking(
         self,
         code: str,
-        language: str,
         timeout: float,
         user_id: str,
         run_id: str,
@@ -74,56 +128,81 @@ class SandboxRunner:
         run_dir = os.path.join(self._sandbox_root, user_id, run_id)
         os.makedirs(run_dir, exist_ok=True)
 
-        lang = language.lower().strip()
-        ext = ".py" if lang == "python" else ".sh" if lang in ("bash", "sh") else ".txt"
-        script_file = os.path.join(run_dir, f"main{ext}")
-
+        script_file = os.path.join(run_dir, "main.py")
         with open(script_file, "w", encoding="utf-8") as f:
             f.write(code)
 
-        if lang in ("bash", "sh"):
-            cmd = ["bash", f"main{ext}"]
-        else:
-            # Use current venv python
-            import sys
-            cmd = [sys.executable, f"main{ext}"]
+        # ---------------------------------------------------------------------
+        # 1. Environment Scrubbing (Strict Allowlist — ZERO host secrets)
+        # ---------------------------------------------------------------------
+        clean_env = {
+            "PATH": "/usr/local/bin:/usr/bin:/bin",
+            "LANG": "en_US.UTF-8",
+            "LC_ALL": "en_US.UTF-8",
+            "TMPDIR": run_dir,
+            "HOME": run_dir,
+            "PYTHONUNBUFFERED": "1",
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "RIVER_SANDBOX_RUN_ID": run_id,
+        }
+
+        # ---------------------------------------------------------------------
+        # 2. POSIX Resource Limits (rlimits)
+        # ---------------------------------------------------------------------
+        def _apply_rlimits():
+            try:
+                # CPU time limit in seconds
+                cpu_sec = max(1, int(timeout))
+                resource.setrlimit(resource.RLIMIT_CPU, (cpu_sec, cpu_sec + 1))
+                
+                # Max virtual memory (Address Space)
+                mem_bytes = MAX_MEMORY_MB * 1024 * 1024
+                resource.setrlimit(resource.RLIMIT_AS, (mem_bytes, mem_bytes))
+                
+                # Max output file size
+                fsize_bytes = MAX_FILE_SIZE_MB * 1024 * 1024
+                resource.setrlimit(resource.RLIMIT_FSIZE, (fsize_bytes, fsize_bytes))
+                
+                # Max open file descriptors
+                resource.setrlimit(resource.RLIMIT_NOFILE, (32, 32))
+                
+                # Max child processes / threads
+                resource.setrlimit(resource.RLIMIT_NPROC, (16, 16))
+            except Exception as e:
+                logger.warning("Could not set rlimits for sandbox run %s: %s", run_id, e)
 
         start_time = time.perf_counter()
         try:
-            env = os.environ.copy()
-            env["PYTHONUNBUFFERED"] = "1"
-            env["RIVER_SANDBOX_RUN_ID"] = run_id
-            
             proc = subprocess.run(
-                cmd,
+                [sys.executable, "main.py"],
                 cwd=run_dir,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
-                env=env,
+                env=clean_env,
+                preexec_fn=_apply_rlimits,
             )
             duration_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
             stdout = proc.stdout or ""
             stderr = proc.stderr or ""
             exit_code = proc.returncode
             success = (exit_code == 0)
-            
-            # Find any artifacts generated in the sandbox folder
+
+            # Discover generated artifacts (excluding script file)
             artifacts = []
             for root, _, files in os.walk(run_dir):
                 for fname in files:
-                    if fname != f"main{ext}":
+                    if fname != "main.py":
                         artifacts.append(os.path.relpath(os.path.join(root, fname), run_dir))
 
             error_summary = None
             if not success:
-                # Extract the last few lines of stderr or traceback
                 lines = [l for l in stderr.splitlines() if l.strip()]
                 error_summary = "\n".join(lines[-5:]) if lines else f"Process exited with code {exit_code}"
 
             return SandboxExecutionResult(
                 run_id=run_id,
-                language=lang,
+                language="python",
                 code=code,
                 exit_code=exit_code,
                 stdout=stdout,
@@ -137,7 +216,7 @@ class SandboxRunner:
             duration_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
             return SandboxExecutionResult(
                 run_id=run_id,
-                language=lang,
+                language="python",
                 code=code,
                 exit_code=-1,
                 stdout=exc.stdout or "",
@@ -151,7 +230,7 @@ class SandboxRunner:
             duration_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
             return SandboxExecutionResult(
                 run_id=run_id,
-                language=lang,
+                language="python",
                 code=code,
                 exit_code=-1,
                 stdout="",
