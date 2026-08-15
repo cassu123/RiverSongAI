@@ -36,6 +36,7 @@ torch>=2.12.0                    # security floor: multiple CVEs in older versio
 numpy>=2.1.0                    # 2.x required for Python 3.13+
 scipy>=1.18.0                   # Resampling browser audio to 16 kHz for Whisper
 soundfile==0.13.1               # WAV decode (bytes -> numpy array)
+trimesh>=4.5.0                  # STL mesh analysis for the CAD engine
 
 
 # -----------------------------------------------------------------------------

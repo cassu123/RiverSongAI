@@ -19,7 +19,17 @@ import uuid
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional
 
-import trimesh
+try:
+    import trimesh
+except ImportError:                                  # pragma: no cover
+    # Optional. It is used for mesh *analysis* — volume, extents, print time —
+    # and nothing here needs it to compile a model.
+    #
+    # Guarded because this module is imported by api/routes/__init__.py at
+    # startup, so a bare import made one optional dependency fatal to the
+    # entire application: a missing 3D mesh library took down auth, culinary,
+    # CSRF and eleven other unrelated test modules with it.
+    trimesh = None
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +206,11 @@ class CADEngine:
         estimated_print_mins = 0
         watertight = False
 
-        if os.path.exists(stl_path) and os.path.getsize(stl_path) > 0:
+        if trimesh is None:
+            logger.info(
+                "trimesh is not installed; the STL compiled but its volume, "
+                "dimensions and print estimate are unavailable.")
+        elif os.path.exists(stl_path) and os.path.getsize(stl_path) > 0:
             try:
                 mesh = trimesh.load(stl_path)
                 if isinstance(mesh, trimesh.Scene):
