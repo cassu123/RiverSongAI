@@ -4,12 +4,19 @@ core/sandbox.py
 Resource-Limited Python Process Runner for River Song AI.
 
 Executes generated Python code in an isolated temporary directory with:
-  1. Strict Environment Allowlist — ZERO inheritance from server os.environ.
-     Secrets, tokens, API keys, and database credentials are never accessible.
-  2. POSIX Resource Limits (rlimits) — CPU time, virtual memory, process count,
-     file sizes, and open descriptors are hard-capped per execution.
+  1. Strict Environment Allowlist — Zero leakage via environment variables.
+     Host process secrets, tokens, API keys, and database credentials are
+     never present in the child environment.
+  2. POSIX Resource Limits (rlimits) — CPU time, virtual memory, file sizes,
+     and open descriptors are hard-capped via a child bootstrap before user code runs.
+     If limit setup fails, execution fails closed immediately.
   3. Python-Only Execution — Shell/bash scripts are rejected.
   4. Hard Safety Gate — SANDBOX_ENABLED env flag (defaults to False).
+
+⚠️ Security Boundary Note:
+  Subprocesses execute as the host server's OS user. While environment secrets
+  are scrubbed and CPU/RAM/file sizes are restricted, this runner does NOT provide
+  kernel containerization, filesystem jail, or network namespace isolation.
 """
 
 from __future__ import annotations
@@ -18,7 +25,6 @@ import asyncio
 import logging
 import os
 import re
-import resource
 import subprocess
 import sys
 import time
@@ -32,8 +38,40 @@ logger = logging.getLogger(__name__)
 
 SANDBOX_ROOT_DIR = "data/sandbox_runs"
 MAX_TIMEOUT_SECONDS = 30.0
-MAX_MEMORY_MB = 256
-MAX_FILE_SIZE_MB = 5
+MAX_MEMORY_MB = 512
+MAX_FILE_SIZE_MB = 10
+
+_BOOTSTRAP_CODE = """# Auto-generated resource-limiting bootstrap
+import resource
+import runpy
+import sys
+
+# 1. Parse and apply hard resource limits.
+# If any call fails, this script raises and terminates immediately (fail closed).
+cpu_sec = int(sys.argv[1])
+mem_mb = int(sys.argv[2])
+fsize_mb = int(sys.argv[3])
+
+# CPU time limit (seconds)
+resource.setrlimit(resource.RLIMIT_CPU, (cpu_sec, cpu_sec + 1))
+
+# Virtual memory limit (Address Space)
+mem_bytes = mem_mb * 1024 * 1024
+resource.setrlimit(resource.RLIMIT_AS, (mem_bytes, mem_bytes))
+
+# Max output file size (bytes)
+fsize_bytes = fsize_mb * 1024 * 1024
+resource.setrlimit(resource.RLIMIT_FSIZE, (fsize_bytes, fsize_bytes))
+
+# Max open file descriptors
+resource.setrlimit(resource.RLIMIT_NOFILE, (32, 32))
+
+# 2. Shift sys.argv so user script sees clean arguments
+sys.argv = ["main.py"]
+
+# 3. Execute target script
+runpy.run_path("main.py", run_name="__main__")
+"""
 
 
 def _is_enabled() -> bool:
@@ -74,7 +112,7 @@ class SandboxRunner:
         user_id: str = "primary_user",
         run_id: Optional[str] = None,
     ) -> SandboxExecutionResult:
-        """Executes Python code under rlimits and clean environment."""
+        """Executes Python code under child-enforced rlimits and clean environment."""
         if not _is_enabled():
             return SandboxExecutionResult(
                 run_id=run_id or uuid.uuid4().hex[:10],
@@ -129,8 +167,13 @@ class SandboxRunner:
         os.makedirs(run_dir, exist_ok=True)
 
         script_file = os.path.join(run_dir, "main.py")
+        bootstrap_file = os.path.join(run_dir, "_bootstrap.py")
+
         with open(script_file, "w", encoding="utf-8") as f:
             f.write(code)
+
+        with open(bootstrap_file, "w", encoding="utf-8") as f:
+            f.write(_BOOTSTRAP_CODE)
 
         # ---------------------------------------------------------------------
         # 1. Environment Scrubbing (Strict Allowlist — ZERO host secrets)
@@ -147,40 +190,25 @@ class SandboxRunner:
         }
 
         # ---------------------------------------------------------------------
-        # 2. POSIX Resource Limits (rlimits)
+        # 2. Child Bootstrap Execution (Thread-Safe & Fails Closed)
         # ---------------------------------------------------------------------
-        def _apply_rlimits():
-            try:
-                # CPU time limit in seconds
-                cpu_sec = max(1, int(timeout))
-                resource.setrlimit(resource.RLIMIT_CPU, (cpu_sec, cpu_sec + 1))
-                
-                # Max virtual memory (Address Space)
-                mem_bytes = MAX_MEMORY_MB * 1024 * 1024
-                resource.setrlimit(resource.RLIMIT_AS, (mem_bytes, mem_bytes))
-                
-                # Max output file size
-                fsize_bytes = MAX_FILE_SIZE_MB * 1024 * 1024
-                resource.setrlimit(resource.RLIMIT_FSIZE, (fsize_bytes, fsize_bytes))
-                
-                # Max open file descriptors
-                resource.setrlimit(resource.RLIMIT_NOFILE, (32, 32))
-                
-                # Max child processes / threads
-                resource.setrlimit(resource.RLIMIT_NPROC, (16, 16))
-            except Exception as e:
-                logger.warning("Could not set rlimits for sandbox run %s: %s", run_id, e)
+        cmd = [
+            sys.executable,
+            "_bootstrap.py",
+            str(max(1, int(timeout))),
+            str(MAX_MEMORY_MB),
+            str(MAX_FILE_SIZE_MB),
+        ]
 
         start_time = time.perf_counter()
         try:
             proc = subprocess.run(
-                [sys.executable, "main.py"],
+                cmd,
                 cwd=run_dir,
                 capture_output=True,
                 text=True,
-                timeout=timeout,
+                timeout=timeout + 1.0,
                 env=clean_env,
-                preexec_fn=_apply_rlimits,
             )
             duration_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
             stdout = proc.stdout or ""
@@ -188,11 +216,11 @@ class SandboxRunner:
             exit_code = proc.returncode
             success = (exit_code == 0)
 
-            # Discover generated artifacts (excluding script file)
+            # Discover generated artifacts (excluding script and bootstrap files)
             artifacts = []
             for root, _, files in os.walk(run_dir):
                 for fname in files:
-                    if fname != "main.py":
+                    if fname not in ("main.py", "_bootstrap.py"):
                         artifacts.append(os.path.relpath(os.path.join(root, fname), run_dir))
 
             error_summary = None
