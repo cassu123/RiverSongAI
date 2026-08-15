@@ -10,13 +10,17 @@ Executes generated Python code in an isolated temporary directory with:
   2. POSIX Resource Limits (rlimits) — CPU time, virtual memory, file sizes,
      and open descriptors are hard-capped via a child bootstrap before user code runs.
      If limit setup fails, execution fails closed immediately.
-  3. Python-Only Execution — Shell/bash scripts are rejected.
-  4. Hard Safety Gate — SANDBOX_ENABLED env flag (defaults to False).
+  3. Process Group Isolation & Orphan Reaping — Child processes are launched in
+     their own session/process group (`start_new_session=True`). On timeout,
+     `os.killpg` reaps the entire process group to prevent background orphans.
+  4. Python-Only Execution — Shell/bash scripts are rejected.
+  5. Hard Safety Gate — SANDBOX_ENABLED env flag (defaults to False).
 
 ⚠️ Security Boundary Note:
   Subprocesses execute as the host server's OS user. While environment secrets
-  are scrubbed and CPU/RAM/file sizes are restricted, this runner does NOT provide
-  kernel containerization, filesystem jail, or network namespace isolation.
+  are scrubbed, CPU/RAM/file sizes are restricted, and process groups are reaped,
+  this runner does NOT provide kernel containerization, filesystem jail, or
+  network namespace isolation.
 """
 
 from __future__ import annotations
@@ -25,6 +29,7 @@ import asyncio
 import logging
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -190,7 +195,7 @@ class SandboxRunner:
         }
 
         # ---------------------------------------------------------------------
-        # 2. Child Bootstrap Execution (Thread-Safe & Fails Closed)
+        # 2. Child Bootstrap Execution (Process Group Leader + Timeout Reaping)
         # ---------------------------------------------------------------------
         cmd = [
             sys.executable,
@@ -201,18 +206,21 @@ class SandboxRunner:
         ]
 
         start_time = time.perf_counter()
+        proc: Optional[subprocess.Popen] = None
         try:
-            proc = subprocess.run(
+            proc = subprocess.Popen(
                 cmd,
                 cwd=run_dir,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=timeout + 1.0,
                 env=clean_env,
+                start_new_session=True,  # Creates a distinct process group for clean subtree reaping
             )
+            stdout, stderr = proc.communicate(timeout=timeout + 1.0)
             duration_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
-            stdout = proc.stdout or ""
-            stderr = proc.stderr or ""
+            stdout = stdout or ""
+            stderr = stderr or ""
             exit_code = proc.returncode
             success = (exit_code == 0)
 
@@ -240,21 +248,41 @@ class SandboxRunner:
                 artifacts=artifacts,
                 error_summary=error_summary,
             )
-        except subprocess.TimeoutExpired as exc:
+        except subprocess.TimeoutExpired:
+            # Kill the entire process group to reap any spawned child processes / threads
+            if proc is not None:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
+                try:
+                    out_bytes, err_bytes = proc.communicate(timeout=2.0)
+                    stdout = out_bytes or ""
+                    stderr = err_bytes or f"Execution timed out after {timeout} seconds."
+                except Exception:
+                    stdout, stderr = "", f"Execution timed out after {timeout} seconds."
+            else:
+                stdout, stderr = "", f"Execution timed out after {timeout} seconds."
+
             duration_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
             return SandboxExecutionResult(
                 run_id=run_id,
                 language="python",
                 code=code,
                 exit_code=-1,
-                stdout=exc.stdout or "",
-                stderr=exc.stderr or f"Execution timed out after {timeout} seconds.",
+                stdout=stdout,
+                stderr=stderr,
                 duration_ms=duration_ms,
                 success=False,
                 artifacts=[],
                 error_summary=f"TimeoutExpired: Execution exceeded {timeout}s limit.",
             )
         except Exception as exc:
+            if proc is not None:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
             duration_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
             return SandboxExecutionResult(
                 run_id=run_id,

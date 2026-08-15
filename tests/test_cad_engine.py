@@ -131,6 +131,22 @@ broken()
 
 
 @pytest.mark.asyncio
+async def test_sandbox_runner_timeout():
+    settings = get_settings()
+    settings.sandbox_enabled = True
+    runner = get_sandbox_runner()
+    code = """
+import time
+time.sleep(10)
+"""
+    res = await runner.execute_code(code=code, language="python", timeout=1.0, user_id="test_user")
+    assert res.success is False
+    assert res.exit_code == -1
+    assert "TimeoutExpired" in (res.error_summary or "")
+    settings.sandbox_enabled = False
+
+
+@pytest.mark.asyncio
 async def test_cad_tool_execution():
     context = {"user_id": "test_user"}
     scad_code = "cube([15, 15, 15], center=true);"
