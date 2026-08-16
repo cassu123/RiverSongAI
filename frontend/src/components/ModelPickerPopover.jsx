@@ -220,7 +220,7 @@ export default function ModelPickerPopover({
               key={`${m.provider}::${m.model_id}`}
               icon="cloud"
               title={m.display_name}
-              sub={m.available ? (m.cost_per_1k_input_usd != null ? fmtCost(m.cost_per_1k_input_usd) : m.notes || null) : 'Not configured (add API key)'}
+              sub={m.available ? (m.cost_per_1k_input_usd != null ? fmtCost(m.cost_per_1k_input_usd) : m.notes || null) : (m.unavailable_reason || 'Not configured — add an API key in Settings')}
               active={selectedModel?.model_id === m.model_id && selectedModel?.provider === m.provider}
               disabled={!m.available}
               onClick={() => pick(m.provider, m.model_id)}

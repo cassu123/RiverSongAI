@@ -10,20 +10,39 @@ from core.tools import _exec_add_shopping_list, _exec_read_shopping_list
 def client():
     return TestClient(app)
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def test_user_household():
+    """Household for the test shopper, emptied before and after each test.
+
+    autouse, because these tests run against the configured database rather
+    than a throwaway one. Without the teardown every run left its rows behind,
+    so the suite's own history became test input -- and the fixture only
+    cleaned up for tests that asked for it by name, which none of them did.
+    """
+    user_id = "test_shopper_123"
+
+    def _purge(db, household_id):
+        db.query(ShoppingListItem).filter_by(household_id=household_id).delete()
+        db.query(StoreMapping).filter_by(household_id=household_id).delete()
+        db.query(WalmartMapping).filter_by(household_id=household_id).delete()
+        db.commit()
+
     db = _Session()
     try:
-        user_id = "test_shopper_123"
         hh = db.query(Household).filter_by(owner_id=user_id).first()
         if not hh:
             hh = Household(owner_id=user_id)
             db.add(hh)
             db.commit()
             db.refresh(hh)
-        yield user_id, hh.id
+        household_id = hh.id
+        _purge(db, household_id)
+        yield user_id, household_id
     finally:
-        db.close()
+        try:
+            _purge(db, household_id)
+        finally:
+            db.close()
 
 def test_add_shopping_item_with_store(client, monkeypatch):
     monkeypatch.setattr("api.routes.culinary._get_user_id", AsyncMock(return_value="test_shopper_123"))
@@ -90,13 +109,22 @@ def test_store_mappings_and_cart_export(client, monkeypatch):
     assert res.status_code == 200
     assert res.json()["store"] == "Amazon"
 
-    # 4. Export Amazon Cart
+    # 4. Export Amazon. There is no Amazon cart URL to build -- the old
+    # /gp/aws/cart/add.html Associates endpoint is retired, and a link that
+    # always errors is worse than none. The mapped item still comes back with
+    # a working per-item search link.
     export_res = client.post("/api/culinary/store/export?store=amazon&source=list", json={})
     assert export_res.status_code == 200
     exp_data = export_res.json()
     assert exp_data["store"] == "amazon"
-    assert exp_data["cart_url"] is not None
-    assert "ASIN.1=B00NTCH52W" in exp_data["cart_url"]
+    assert exp_data["cart_url"] is None
+    batteries = next(
+        (link for link in exp_data["search_links"] if link["name"] == "AA Batteries"),
+        None,
+    )
+    assert batteries is not None
+    assert batteries["mapped"] is True
+    assert "amazon.com" in batteries["url"]
 
     # 5. Export Walmart Cart
     client.post("/api/culinary/grocery", json={"name": "Eggs", "qty": "2"})
