@@ -240,9 +240,13 @@ async def scrutiny_webhook(
     status_str = data.get("status", "Unknown")
 
     title = f"DISK WARNING: {device.get('device_name', 'Unknown')}"
-    body = (f"SMART Status: {status_str}\n"
-            f"Device: {device.get('device_model', 'Unknown')}\n"
-            f"Serial: {device.get('serial_number', 'Unknown')}")
+    body = f"SMART Status: {status_str}\nDevice: {
+        device.get(
+            'device_model',
+            'Unknown')}\nSerial: {
+        device.get(
+            'serial_number',
+            'Unknown')}"
 
     await apprise_provider.push(title=title, body=body, tag="critical")
 

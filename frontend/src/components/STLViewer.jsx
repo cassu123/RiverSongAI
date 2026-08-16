@@ -24,11 +24,8 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
     if (!url && !scadCode) return
 
     let cancelled = false
-    let createdBlobUrl = null
     setLoading(true)
     setError(null)
-    // Clear previous blob URL before starting new load
-    setBlobUrl(null)
 
     const width = container.clientWidth || 400
     const currentHeight = height
@@ -119,22 +116,12 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
           resolvedDownloadUrl = compileData.download_url || `/api/cad/models/${compileData.model_id}/stl`
         }
 
-        // 2. Fetch the binary STL
-        let fetchUrl = resolvedDownloadUrl
-        let fetchHeaders = {}
-
-        // Resolve relative URLs against current origin
-        if (!fetchUrl.startsWith('http')) {
-          fetchUrl = new URL(fetchUrl, window.location.origin).href
-        }
-
-        // Only include Authorization header for same-origin requests
-        const isSameOrigin = new URL(fetchUrl).origin === window.location.origin
-        if (isSameOrigin && token) {
-          fetchHeaders['Authorization'] = `Bearer ${token}`
-        }
-
-        const res = await fetch(fetchUrl, { headers: fetchHeaders })
+        // 2. Fetch the binary STL. The Bearer header above carries the
+        // credential; the URL never does. Same-origin requests also send the
+        // access_token cookie, which the server accepts as a fallback. A
+        // ?token= would leak into access logs, history and Referer for a
+        // route family that includes the sandbox executor.
+        const res = await fetch(resolvedDownloadUrl, { headers })
         if (!res.ok) {
           throw new Error(`Failed to load STL (HTTP ${res.status})`)
         }
@@ -145,7 +132,6 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
         // Create Blob URL for downloading
         const blob = new Blob([arrayBuffer], { type: 'model/stl' })
         const objectUrl = URL.createObjectURL(blob)
-        createdBlobUrl = objectUrl
         setBlobUrl(objectUrl)
 
         // Parse with Three.js STLLoader
@@ -235,12 +221,17 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
       if (container && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement)
       }
-      // Revoke blob URL created in this effect
-      if (createdBlobUrl) {
-        URL.revokeObjectURL(createdBlobUrl)
-      }
     }
   }, [url, scadCode, height])
+
+  // The object URL backing the download button holds the whole STL in memory
+  // until it is revoked. Without this, every re-render that reloads a mesh
+  // (new url, recompiled scad, height change) strands the previous buffer for
+  // the life of the document.
+  useEffect(() => {
+    if (!blobUrl) return
+    return () => URL.revokeObjectURL(blobUrl)
+  }, [blobUrl])
 
   // Update wireframe state
   useEffect(() => {

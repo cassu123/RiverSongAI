@@ -2357,17 +2357,39 @@ def _normalize_store_name(store: Optional[str]) -> str:
     return s.replace(" ", "_")
 
 
-def _display_store_name(store: Optional[str]) -> Optional[str]:
-    """Normalize store name for display, removing underscores."""
-    if not store:
+# Canonical display spelling per normalized key. ShoppingListItem.store holds
+# the *display* form -- the store filter tabs group on it verbatim and render
+# it next to POPULAR_STORES -- so every writer has to agree on the spelling or
+# "Walmart", "walmart" and "Trader Joe'S" show up as three separate tabs for
+# the same shop.
+#
+# str.title() is not a substitute: it renders "trader joe's" as "Trader Joe'S"
+# and the normalized key "trader_joes" as "Trader_Joes".
+_STORE_DISPLAY_NAMES: Dict[str, str] = {
+    "walmart": "Walmart",
+    "amazon": "Amazon",
+    "target": "Target",
+    "costco": "Costco",
+    "kroger": "Kroger",
+    "trader_joes": "Trader Joe's",
+    "aldi": "Aldi",
+    "homedepot": "Home Depot",
+}
+
+
+def store_display_name(store: Optional[str]) -> Optional[str]:
+    """Canonical display spelling for a free-text or normalized store name.
+
+    Returns None for blank input, so an untagged item stays untagged rather
+    than defaulting to Walmart the way _normalize_store_name does.
+    """
+    if not store or not store.strip():
         return None
-    s = store.strip()
-    if not s:
-        return None
-    # Replace underscores with spaces and title-case, except for special cases
-    if s.lower() == "trader_joes":
-        return "Trader Joes"
-    return s.replace("_", " ").title()
+    norm = _normalize_store_name(store)
+    if norm in _STORE_DISPLAY_NAMES:
+        return _STORE_DISPLAY_NAMES[norm]
+    # Unknown store: keep the user's own words, just tidied.
+    return " ".join(w.capitalize() for w in store.strip().replace("_", " ").split())
 
 
 def _extract_store_item_id(store: str, raw_id_or_url: str) -> str:
@@ -2378,28 +2400,20 @@ def _extract_store_item_id(store: str, raw_id_or_url: str) -> str:
             match = re.search(r"/(\d+)(\?|$)", val)
             if match:
                 return match.group(1)
-            return ""
         if re.match(r"^\d+$", val):
             return val
-        return ""
     elif norm_store == "amazon":
         if "amazon.com" in val:
             match = re.search(r"/(?:dp|gp/product)/([A-Z0-9]{10})", val, re.IGNORECASE)
             if match:
                 return match.group(1).upper()
-            return ""
         if re.match(r"^[A-Z0-9]{10}$", val, re.IGNORECASE):
             return val.upper()
-        return ""
     elif norm_store == "target":
         if "target.com" in val:
             match = re.search(r"/A-(\d+)", val)
             if match:
                 return match.group(1)
-            return ""
-        if re.match(r"^(\d+|A-\d+)$", val):
-            return val
-        return ""
     return val
 
 
@@ -2600,6 +2614,9 @@ async def store_export(
     if mapped_items:
         if norm_store == "walmart":
             cart_url = "https://www.walmart.com/sc/cart/addToCart?items=" + ",".join([f"{it['id']}_{it['qty']}" for it in mapped_items])
+        elif norm_store == "amazon":
+            params = [f"ASIN.{idx}={it['id']}&Quantity.{idx}={it['qty']}" for idx, it in enumerate(mapped_items, start=1)]
+            cart_url = "https://www.amazon.com/gp/aws/cart/add.html?" + "&".join(params)
 
     return {
         "store": norm_store,
@@ -2739,23 +2756,18 @@ async def add_shopping_item(
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
 
-    resolved_store = _display_store_name(body.store) if body.store else None
+    resolved_store = store_display_name(body.store)
     resolved_store_item_id = body.store_item_id.strip() if body.store_item_id else None
 
     # Auto-resolve store and store_item_id if omitted
     if not resolved_store or not resolved_store_item_id:
-        query = db.query(StoreMapping).filter_by(
+        mapping = db.query(StoreMapping).filter_by(
             household_id=hh.id,
             ingredient_name=body.name.lower().strip()
-        )
-        # If a store is specified, also filter by that store
-        if resolved_store:
-            norm_store_filter = _normalize_store_name(resolved_store)
-            query = query.filter_by(store=norm_store_filter)
-        mapping = query.first()
+        ).first()
         if mapping:
             if not resolved_store and mapping.store:
-                resolved_store = _display_store_name(mapping.store)
+                resolved_store = store_display_name(mapping.store)
             if not resolved_store_item_id and mapping.store_item_id:
                 resolved_store_item_id = mapping.store_item_id
 
@@ -2800,8 +2812,7 @@ async def update_shopping_item(
     if body.category is not None:
         item.category = body.category
     if body.store is not None:
-        trimmed = body.store.strip() if body.store else ""
-        item.store = None if trimmed == "" else trimmed
+        item.store = store_display_name(body.store)
     if body.store_item_id is not None:
         item.store_item_id = body.store_item_id.strip() if body.store_item_id else None
     if body.checked is not None:

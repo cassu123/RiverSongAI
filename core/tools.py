@@ -12,7 +12,7 @@ import sqlite3
 import os
 import asyncio
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Tuple
 
 from config.settings import get_settings
 
@@ -557,8 +557,55 @@ async def _exec_warranty_check(args: dict, user_id: str) -> str:
     return await loop.run_in_executor(None, _sync_work)
 
 
+# Stores we are willing to strip off the end of a spoken item. Matching has to
+# be against a known name and nothing else: an earlier version also accepted
+# "any trailing phrase of two words or fewer", which turned "flour for baking"
+# into flour @ Baking, "batteries for the remote" into batteries @ The Remote,
+# and "chips for the party" into chips @ The Party -- truncating the item name
+# on the way through. A shopping list that quietly renames what you asked for
+# is worse than one that never guesses the store.
+_SPOKEN_STORE_NAMES = frozenset({
+    "walmart", "wal-mart", "costco", "target", "amazon", "kroger",
+    "trader joe's", "trader joes", "aldi", "home depot", "homedepot",
+    "sams club", "sam's club", "whole foods", "safeway", "publix",
+    "heb", "h-e-b", "meijer", "walgreens", "cvs", "lowes", "lowe's",
+    "wegmans", "winco", "food lion", "giant", "harris teeter",
+})
+
+# Longest known store name, in words -- bounds how much of the tail we even
+# look at.
+_MAX_STORE_WORDS = max(len(s.split()) for s in _SPOKEN_STORE_NAMES)
+
+
+def _split_trailing_store(text: str) -> Tuple[str, Optional[str]]:
+    """Split "milk at Costco" into ("milk", "Costco").
+
+    Returns the text unchanged with None when the trailing phrase is not a
+    store we recognise.
+    """
+    import re
+
+    m = re.search(
+        r"\s+(?:at|from)\s+(?:the\s+)?([A-Za-z0-9\s'\.\-]+?)(?:\s+(?:store|market))?$",
+        text,
+        re.IGNORECASE,
+    )
+    if not m:
+        return text, None
+    candidate = m.group(1).strip()
+    if len(candidate.split()) > _MAX_STORE_WORDS:
+        return text, None
+    if candidate.lower().rstrip(".") not in _SPOKEN_STORE_NAMES:
+        return text, None
+    remainder = text[:m.start()].strip()
+    # "at Costco" on its own is a store, not an item -- keep the original.
+    if not remainder:
+        return text, None
+    return remainder, candidate
+
+
 async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
-    from api.routes.culinary import _Session as SessionLocal
+    from api.routes.culinary import _Session as SessionLocal, store_display_name
     from culinary.models import Household, ShoppingListItem, ListSource, StoreMapping
     item = args.get("item")
     qty = args.get("quantity")
@@ -571,49 +618,55 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
     def _sync_work():
         from core.family import resolve_module_owner
         from sqlalchemy.exc import IntegrityError
-        import re
 
         db = SessionLocal()
         try:
+            # The shopping list is household data, and in a shared house the
+            # household is owned by "family:<group_id>", not by the speaker.
+            # Looking it up by the raw user_id found nothing -- and unlike the
+            # HTTP path this one does not create on miss -- so every voice add
+            # in a shared household answered "Error: Household not found."
+            # The one place the list is easiest to reach was the one place it
+            # did not work.
             owner_id = resolve_module_owner(user_id, "culinary")
             hh = db.query(Household).filter(
                 Household.owner_id == owner_id).first()
             if not hh:
+                # Matches _get_household in api/routes/culinary.py, which
+                # creates on miss. Saying "not found" to someone who has
+                # simply never opened the Culinary page is a dead end they
+                # cannot act on.
                 try:
                     hh = Household(owner_id=owner_id)
                     db.add(hh)
                     db.commit()
                     db.refresh(hh)
                 except IntegrityError:
+                    # Concurrent insert - re-query to get the existing record
                     db.rollback()
                     hh = db.query(Household).filter(
                         Household.owner_id == owner_id).first()
                     if not hh:
-                        raise
+                        raise  # Something else went wrong
 
             # Detect store from text if not explicitly provided
-            resolved_store = store.strip() if store else None
+            resolved_store = store_display_name(store)
             clean_item = item.strip()
             if not resolved_store:
-                m = re.search(r'\b(?:at|from|for|in)\s+([A-Za-z0-9\s\'\.]+?)(?:\s+(?:store|market))?$', clean_item, re.IGNORECASE)
-                if m:
-                    candidate = m.group(1).strip()
-                    known_stores = {"walmart", "costco", "target", "amazon", "kroger", "trader joe's", "trader joes", "aldi", "home depot", "sams club", "sam's club", "whole foods", "safeway", "publix", "heb", "h-e-b", "meijer", "walgreens", "cvs"}
-                    if candidate.lower() in known_stores:
-                        resolved_store = candidate.title()
-                        clean_item = clean_item[:m.start()].strip()
+                clean_item, spoken_store = _split_trailing_store(clean_item)
+                resolved_store = store_display_name(spoken_store)
 
             # Check store mapping if still no store
             if not resolved_store:
                 mapping = db.query(StoreMapping).filter_by(
                     household_id=hh.id, ingredient_name=clean_item.lower()).first()
                 if mapping and mapping.store:
-                    resolved_store = mapping.store.title()
+                    resolved_store = store_display_name(mapping.store)
 
             sl_item = ShoppingListItem(
                 household_id=hh.id,
                 name=clean_item,
-                qty=str(qty) if qty else None,
+                qty=str(qty) if qty not in (None, "") else None,
                 unit=unit if unit else None,
                 store=resolved_store,
                 category="grocery",
@@ -629,6 +682,10 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
     loop = asyncio.get_running_loop()
     household_id, clean_item, resolved_store = await loop.run_in_executor(None, _sync_work)
 
+    # Everyone else's screen has to learn about it. The HTTP routes broadcast
+    # on every mutation; this path wrote straight to the database, so a spoken
+    # item sat invisible until someone reloaded -- which for a list whose
+    # whole point is being shared is most of the value gone.
     try:
         from api.routes.culinary import _ws_manager
         await _ws_manager.broadcast(household_id, "grocery_updated", {})
@@ -662,7 +719,15 @@ async def _exec_read_shopping_list(args: dict, user_id: str) -> str:
             )
             if store_filter:
                 q = q.filter(ShoppingListItem.store.ilike(f"%{store_filter}%"))
-            return [(i.name, i.qty, i.unit, i.store) for i in q.order_by(ShoppingListItem.store.asc(), ShoppingListItem.created_at.desc()).all()]
+            # Sort untagged items last explicitly. Bare `store.asc()` puts
+            # NULLs first on SQLite and last on Postgres, so the spoken
+            # readback changed order with the backend.
+            rows = q.order_by(
+                ShoppingListItem.store.is_(None).asc(),
+                ShoppingListItem.store.asc(),
+                ShoppingListItem.created_at.desc(),
+            ).all()
+            return [(i.name, i.qty, i.unit, i.store) for i in rows]
         finally:
             db.close()
 

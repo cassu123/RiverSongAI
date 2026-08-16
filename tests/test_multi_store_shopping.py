@@ -23,11 +23,6 @@ def test_user_household():
             db.refresh(hh)
         yield user_id, hh.id
     finally:
-        # Clean up test data
-        db.query(ShoppingListItem).filter_by(household_id=hh.id).delete()
-        db.query(StoreMapping).filter_by(household_id=hh.id).delete()
-        db.query(WalmartMapping).filter_by(household_id=hh.id).delete()
-        db.commit()
         db.close()
 
 def test_add_shopping_item_with_store(client, monkeypatch):

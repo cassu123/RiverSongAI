@@ -123,7 +123,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
     }
   }
 
-  const effectiveStore = selectedStore === 'custom' ? customStore.trim() : (selectedStore || (activeStoreFilter !== 'all' && activeStoreFilter !== 'Unassigned' ? activeStoreFilter : ''))
+  const effectiveStore = selectedStore === 'custom' ? customStore.trim() : (selectedStore || (activeStoreFilter !== 'all' ? activeStoreFilter : ''))
 
   const add = async (e) => {
     e.preventDefault()
@@ -143,16 +143,12 @@ export default function ShoppingListTab({ api, refreshKey }) {
 
   const handleQuickStoreChange = async (itemId, newStore) => {
     setEditingStoreItemId(null)
-    // Send empty string sentinel when clearing store assignment
-    await mutate(() => api.patch(`/grocery/${itemId}`, { store: newStore === null ? '' : newStore }))
+    await mutate(() => api.patch(`/grocery/${itemId}`, { store: newStore || null }))
   }
 
   // Filter items based on active store filter
   const filteredItems = useMemo(() => {
     if (activeStoreFilter === 'all') return items
-    if (activeStoreFilter === 'Unassigned') {
-      return items.filter(i => !i.store)
-    }
     return items.filter(i => (i.store || '').toLowerCase() === activeStoreFilter.toLowerCase())
   }, [items, activeStoreFilter])
 

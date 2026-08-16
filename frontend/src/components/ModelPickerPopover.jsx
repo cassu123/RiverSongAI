@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useBreakpoint } from '../hooks/useBreakpoint';
 import { providerLabel, PROVIDER_ORDER } from '../utils/providers';
 
 /**
@@ -56,11 +55,10 @@ function MpopBack({ label, onClick }) {
 }
 
 /**
- * Renders a model-selection popover or mobile bottom sheet.
+ * Renders the model-selection sheet.
  * @param {Object} props - Component properties.
  * @param {boolean} props.isOpen - Whether the picker is visible.
  * @param {Function} props.onClose - Called when the picker closes.
- * @param {Object} props.pos - Desktop positioning values for the picker.
  * @param {Object} props.selectedModel - Currently selected model.
  * @param {Function} props.onSelect - Called with the selected provider and model ID.
  * @param {Array<Object>} [props.localModels=[]] - Available local models. Defaults to an empty array.
@@ -73,7 +71,6 @@ function MpopBack({ label, onClick }) {
 export default function ModelPickerPopover({
   isOpen,
   onClose,
-  pos,
   onBackToTools,
   selectedModel,
   onSelect,
@@ -85,7 +82,6 @@ export default function ModelPickerPopover({
 }) {
   const [pickerView, setPickerView] = useState('home');
   const [cloudProvider, setCloudProvider] = useState(null);
-  const { isPhone } = useBreakpoint();
 
   useEffect(() => {
     if (isOpen) {
@@ -138,12 +134,11 @@ export default function ModelPickerPopover({
 
   if (!isOpen) return null;
 
-  // Center bottom-sheet layout ensures full visibility across phones, tablets,
-  // and desktop displays without clipping long model lists.
-  const isExplicitAnchor = Boolean(pos?.isAnchored && (pos?.top != null || pos?.left != null));
-  const panelStyle = (!isExplicitAnchor || isPhone)
-    ? { position: 'fixed', left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto', maxWidth: 480, marginInline: 'auto', maxHeight: '78vh', overflowY: 'auto' }
-    : { bottom: pos.bottom, right: pos.right, top: pos.top, left: pos.left, maxWidth: 480 };
+  // One centred bottom sheet on every viewport. The old anchored variant
+  // positioned the panel off the model button's right edge, which slid
+  // off-screen on phones because the button sits on the left. Sizing lives in
+  // .rs-mpop so the class and the inline style cannot disagree about it.
+  const panelStyle = { left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto', marginInline: 'auto' };
 
   const closeModelPicker = () => {
     setPickerView('home');
@@ -204,7 +199,7 @@ export default function ModelPickerPopover({
               key={g.provider}
               icon="cloud"
               title={providerLabel(g.provider)}
-              sub={g.availableCount > 0 ? `${g.availableCount} ready` : 'Unavailable — check Settings'}
+              sub={g.availableCount > 0 ? `${g.availableCount} ready` : 'Setup in Settings'}
               badge={g.availableCount === 0 ? 'SETUP' : undefined}
               active={selectedModel?.provider === g.provider}
               chevron
@@ -217,7 +212,7 @@ export default function ModelPickerPopover({
           <MpopBack label={providerLabel(cloudProvider)} onClick={() => { setCloudProvider(null); setPickerView('cloud'); }} />
           {activeGroup?.availableCount === 0 && (
             <div style={{ padding: '10px 14px', margin: '4px 8px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.78rem', color: 'var(--md-outline)' }}>
-              {providerLabel(cloudProvider)} is not configured. Configure in Settings &gt; Admin Settings to enable these models.
+              API key is not configured for {providerLabel(cloudProvider)}. Configure keys in Settings &gt; Admin Settings to enable these models.
             </div>
           )}
           {(activeGroup?.models || []).map(m => (
@@ -225,7 +220,7 @@ export default function ModelPickerPopover({
               key={`${m.provider}::${m.model_id}`}
               icon="cloud"
               title={m.display_name}
-              sub={m.available ? (m.cost_per_1k_input_usd != null ? fmtCost(m.cost_per_1k_input_usd) : m.notes || null) : (m.reason || 'Unavailable — check Settings')}
+              sub={m.available ? (m.cost_per_1k_input_usd != null ? fmtCost(m.cost_per_1k_input_usd) : m.notes || null) : 'Not configured (add API key)'}
               active={selectedModel?.model_id === m.model_id && selectedModel?.provider === m.provider}
               disabled={!m.available}
               onClick={() => pick(m.provider, m.model_id)}
