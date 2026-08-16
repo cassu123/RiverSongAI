@@ -33,8 +33,6 @@ async def _require_user(
             token = parts[1].strip()
     if not token and request:
         token = request.cookies.get("access_token")
-    if not token and request:
-        token = request.query_params.get("token")
     if not token:
         raise HTTPException(status_code=401, detail="Authentication required.")
     payload = await decode_token(token)
@@ -103,8 +101,8 @@ async def get_model_stl(
         raise HTTPException(status_code=400, detail="Invalid model ID format.")
     user_id = await _require_user(request, authorization)
     safe_user_id = re.sub(r"[^a-zA-Z0-9_-]", "", user_id) or "primary_user"
-    user_dir = os.path.join(CAD_STORAGE_DIR, safe_user_id, model_id)
-    if not os.path.isdir(user_dir):
+    user_dir = _find_model_dir(safe_user_id, model_id)
+    if not user_dir:
         raise HTTPException(status_code=404, detail="CAD Model not found.")
 
     stl_path = os.path.join(user_dir, "model.stl")

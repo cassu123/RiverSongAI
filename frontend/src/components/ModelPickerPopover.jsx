@@ -204,7 +204,7 @@ export default function ModelPickerPopover({
               key={g.provider}
               icon="cloud"
               title={providerLabel(g.provider)}
-              sub={g.availableCount > 0 ? `${g.availableCount} ready` : 'Setup in Settings'}
+              sub={g.availableCount > 0 ? `${g.availableCount} ready` : 'Unavailable — check Settings'}
               badge={g.availableCount === 0 ? 'SETUP' : undefined}
               active={selectedModel?.provider === g.provider}
               chevron
@@ -217,7 +217,7 @@ export default function ModelPickerPopover({
           <MpopBack label={providerLabel(cloudProvider)} onClick={() => { setCloudProvider(null); setPickerView('cloud'); }} />
           {activeGroup?.availableCount === 0 && (
             <div style={{ padding: '10px 14px', margin: '4px 8px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.78rem', color: 'var(--md-outline)' }}>
-              API key is not configured for {providerLabel(cloudProvider)}. Configure keys in Settings &gt; Admin Settings to enable these models.
+              {providerLabel(cloudProvider)} is not configured. Configure in Settings &gt; Admin Settings to enable these models.
             </div>
           )}
           {(activeGroup?.models || []).map(m => (
@@ -225,7 +225,7 @@ export default function ModelPickerPopover({
               key={`${m.provider}::${m.model_id}`}
               icon="cloud"
               title={m.display_name}
-              sub={m.available ? (m.cost_per_1k_input_usd != null ? fmtCost(m.cost_per_1k_input_usd) : m.notes || null) : 'Not configured (add API key)'}
+              sub={m.available ? (m.cost_per_1k_input_usd != null ? fmtCost(m.cost_per_1k_input_usd) : m.notes || null) : (m.reason || 'Unavailable — check Settings')}
               active={selectedModel?.model_id === m.model_id && selectedModel?.provider === m.provider}
               disabled={!m.available}
               onClick={() => pick(m.provider, m.model_id)}

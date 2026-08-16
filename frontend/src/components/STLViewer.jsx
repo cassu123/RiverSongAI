@@ -24,8 +24,11 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
     if (!url && !scadCode) return
 
     let cancelled = false
+    let createdBlobUrl = null
     setLoading(true)
     setError(null)
+    // Clear previous blob URL before starting new load
+    setBlobUrl(null)
 
     const width = container.clientWidth || 400
     const currentHeight = height
@@ -117,11 +120,21 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
         }
 
         // 2. Fetch the binary STL
-        const fetchUrl = resolvedDownloadUrl.startsWith('http')
-          ? resolvedDownloadUrl
-          : `${resolvedDownloadUrl}${token && !resolvedDownloadUrl.includes('token=') ? (resolvedDownloadUrl.includes('?') ? `&token=${encodeURIComponent(token)}` : `?token=${encodeURIComponent(token)}`) : ''}`
+        let fetchUrl = resolvedDownloadUrl
+        let fetchHeaders = {}
 
-        const res = await fetch(fetchUrl, { headers })
+        // Resolve relative URLs against current origin
+        if (!fetchUrl.startsWith('http')) {
+          fetchUrl = new URL(fetchUrl, window.location.origin).href
+        }
+
+        // Only include Authorization header for same-origin requests
+        const isSameOrigin = new URL(fetchUrl).origin === window.location.origin
+        if (isSameOrigin && token) {
+          fetchHeaders['Authorization'] = `Bearer ${token}`
+        }
+
+        const res = await fetch(fetchUrl, { headers: fetchHeaders })
         if (!res.ok) {
           throw new Error(`Failed to load STL (HTTP ${res.status})`)
         }
@@ -132,6 +145,7 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
         // Create Blob URL for downloading
         const blob = new Blob([arrayBuffer], { type: 'model/stl' })
         const objectUrl = URL.createObjectURL(blob)
+        createdBlobUrl = objectUrl
         setBlobUrl(objectUrl)
 
         // Parse with Three.js STLLoader
@@ -220,6 +234,10 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
       renderer.dispose()
       if (container && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement)
+      }
+      // Revoke blob URL created in this effect
+      if (createdBlobUrl) {
+        URL.revokeObjectURL(createdBlobUrl)
       }
     }
   }, [url, scadCode, height])

@@ -599,7 +599,7 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
                 if m:
                     candidate = m.group(1).strip()
                     known_stores = {"walmart", "costco", "target", "amazon", "kroger", "trader joe's", "trader joes", "aldi", "home depot", "sams club", "sam's club", "whole foods", "safeway", "publix", "heb", "h-e-b", "meijer", "walgreens", "cvs"}
-                    if candidate.lower() in known_stores or len(candidate.split()) <= 2:
+                    if candidate.lower() in known_stores:
                         resolved_store = candidate.title()
                         clean_item = clean_item[:m.start()].strip()
 
