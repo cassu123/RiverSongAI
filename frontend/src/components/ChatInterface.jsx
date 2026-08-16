@@ -483,7 +483,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       {toolsOpen && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 9990 }} onClick={() => setToolsOpen(false)} />
-          <div className="rs-mpop" style={{ position: 'fixed', left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto', maxWidth: 480, marginInline: 'auto', maxHeight: '78vh', overflowY: 'auto' }}>
+          <div className="rs-mpop" style={{ position: 'fixed', left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto', maxWidth: 480, marginInline: 'auto', overflowY: 'auto' }}>
             <label className="rs-mpop-row">
               <span className="material-symbols-rounded rs-mpop-icon">attach_file</span>
               <span className="rs-mpop-body">

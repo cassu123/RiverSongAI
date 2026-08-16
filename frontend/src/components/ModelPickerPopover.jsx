@@ -138,9 +138,9 @@ export default function ModelPickerPopover({
 
   // Center bottom-sheet layout ensures full visibility across phones, tablets,
   // and desktop displays without clipping long model lists.
-  const isExplicitAnchor = Boolean(pos?.isAnchored && (pos?.top != null || pos?.left != null));
+  const isExplicitAnchor = Boolean(pos?.bottom != null || pos?.right != null || pos?.top != null || pos?.left != null);
   const panelStyle = (!isExplicitAnchor || isPhone)
-    ? { position: 'fixed', left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto', maxWidth: 480, marginInline: 'auto', maxHeight: '78vh', overflowY: 'auto' }
+    ? { position: 'fixed', left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto', maxWidth: 480, marginInline: 'auto', overflowY: 'auto' }
     : { bottom: pos.bottom, right: pos.right, top: pos.top, left: pos.left, maxWidth: 480 };
 
   const closeModelPicker = () => {
