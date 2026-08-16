@@ -26,6 +26,10 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
     let cancelled = false
     setLoading(true)
     setError(null)
+    // Drop the previous mesh's blob before loading the next one, so the
+    // download button cannot hand back the old model while the new one is
+    // still in flight. The revoke effect below frees it.
+    setBlobUrl(null)
 
     const width = container.clientWidth || 400
     const currentHeight = height
@@ -116,12 +120,19 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
           resolvedDownloadUrl = compileData.download_url || `/api/cad/models/${compileData.model_id}/stl`
         }
 
-        // 2. Fetch the binary STL. The Bearer header above carries the
-        // credential; the URL never does. Same-origin requests also send the
-        // access_token cookie, which the server accepts as a fallback. A
-        // ?token= would leak into access logs, history and Referer for a
-        // route family that includes the sandbox executor.
-        const res = await fetch(resolvedDownloadUrl, { headers })
+        // 2. Fetch the binary STL. The Bearer header carries the credential;
+        // the URL never does. Same-origin requests also send the access_token
+        // cookie, which the server accepts as a fallback. A ?token= would leak
+        // into access logs, history and Referer for a route family that
+        // includes the sandbox executor.
+        //
+        // The header goes out only when the target is our own origin. `url` is
+        // a prop and download_url comes off a response body, so neither is
+        // guaranteed relative -- an absolute URL elsewhere would otherwise
+        // hand that host the token.
+        const absoluteUrl = new URL(resolvedDownloadUrl, window.location.origin)
+        const sameOrigin = absoluteUrl.origin === window.location.origin
+        const res = await fetch(absoluteUrl.href, { headers: sameOrigin ? headers : {} })
         if (!res.ok) {
           throw new Error(`Failed to load STL (HTTP ${res.status})`)
         }
