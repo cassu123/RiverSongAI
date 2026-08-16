@@ -65,20 +65,7 @@ export default function GooglePage() {
   const [tasks, setTasks] = useState({ list: [], loading: false })
   const [error, setError] = useState('')
 
-  const loadStatus = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/status`, { headers: authHeaders() })
-      const data = await res.json()
-      setStatus({ ...data, loading: false })
-      if (data.connected) {
-        loadData()
-      }
-    } catch (err) {
-      setStatus({ connected: false, loading: false })
-    }
-  }, [])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setCalendar(prev => ({ ...prev, loading: true }))
     setGmail(prev => ({ ...prev, loading: true }))
     setBooks(prev => ({ ...prev, loading: true }))
@@ -119,7 +106,20 @@ export default function GooglePage() {
         console.error('Failed to load Google Tasks:', err)
         setTasks(prev => ({ ...prev, loading: false }))
       })
-  }
+  }, [])
+
+  const loadStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/status`, { headers: authHeaders() })
+      const data = await res.json()
+      setStatus({ ...data, loading: false })
+      if (data.connected) {
+        loadData()
+      }
+    } catch (err) {
+      setStatus({ connected: false, loading: false })
+    }
+  }, [loadData])
 
   useEffect(() => {
     loadStatus()

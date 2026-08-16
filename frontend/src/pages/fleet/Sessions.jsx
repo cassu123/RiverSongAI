@@ -15,12 +15,6 @@ export default function Sessions() {
   const [selectedSession, setSelectedSession] = useState(null)
   const [sessionDetails, setSessionDetails] = useState(null)
 
-  useEffect(() => {
-    fetchSessions()
-    fetchUnits()
-    fetchPrograms()
-  }, [])
-
   const fetchSessions = async () => {
     try {
       const res = await fetch('/api/vector/sessions', { headers: { Authorization: `Bearer ${token}` } })
@@ -39,6 +33,12 @@ export default function Sessions() {
       if (res.ok) setPrograms(await res.json())
     } catch (err) { console.error(err) }
   }
+
+  useEffect(() => {
+    fetchSessions()
+    fetchUnits()
+    fetchPrograms()
+  }, [token])
 
   const openSessionDetail = async (session) => {
     setSelectedSession(session)

@@ -4,6 +4,7 @@ from fastapi import Request, HTTPException
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import inspect
 import uuid
 import jwt
 
@@ -85,28 +86,39 @@ async def decode_token(token: str) -> Optional[dict]:
         from main import get_app
         app = get_app()
         if app and hasattr(app.state, "memory_manager"):
-            store = app.state.memory_manager._store
-            if jti and await store.is_token_revoked(jti):
-                return None
-
-            if user_id:
-                user = await store.get_user_by_id(user_id)
-                if user:
-                    if user.get("is_suspended"):
+            store = getattr(app.state.memory_manager, "_store", None)
+            if store:
+                rev_fn = getattr(store, "is_token_revoked", None)
+                if jti and callable(rev_fn):
+                    rev_res = rev_fn(jti)
+                    if inspect.isawaitable(rev_res):
+                        rev_res = await rev_res
+                    if rev_res:
                         return None
 
-                    tokens_valid_after = user.get("tokens_valid_after")
-                    iat = payload.get("iat")
-                    if tokens_valid_after and iat:
-                        # Convert isoformat to UTC timestamp
-                        try:
-                            # handle trailing 'Z' if present
-                            ts_str = tokens_valid_after.replace("Z", "+00:00")
-                            cutoff_dt = datetime.fromisoformat(ts_str)
-                            if iat < cutoff_dt.timestamp():
-                                return None
-                        except ValueError:
-                            pass
+                user_fn = getattr(store, "get_user_by_id", None)
+                if user_id and callable(user_fn):
+                    user_res = user_fn(user_id)
+                    if inspect.isawaitable(user_res):
+                        user = await user_res
+                    else:
+                        user = user_res
+                    if user:
+                        if user.get("is_suspended"):
+                            return None
+
+                        tokens_valid_after = user.get("tokens_valid_after")
+                        iat = payload.get("iat")
+                        if tokens_valid_after and iat:
+                            # Convert isoformat to UTC timestamp
+                            try:
+                                # handle trailing 'Z' if present
+                                ts_str = tokens_valid_after.replace("Z", "+00:00")
+                                cutoff_dt = datetime.fromisoformat(ts_str)
+                                if iat < cutoff_dt.timestamp():
+                                    return None
+                            except ValueError:
+                                pass
 
         return payload
     except jwt.PyJWTError:

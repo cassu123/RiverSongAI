@@ -19,12 +19,6 @@ export default function Programs() {
     obstacle_clearance_m: 0.20, speed_profile: 'normal'
   })
 
-  useEffect(() => {
-    fetchPrograms()
-    fetchUnits()
-    fetchZones()
-  }, [])
-
   const fetchPrograms = async () => {
     try {
       const res = await fetch('/api/vector/programs', { headers: { Authorization: `Bearer ${token}` } })
@@ -43,6 +37,12 @@ export default function Programs() {
       if (res.ok) setZones(await res.json())
     } catch (err) { console.error(err) }
   }
+
+  useEffect(() => {
+    fetchPrograms()
+    fetchUnits()
+    fetchZones()
+  }, [token])
 
   const handleSave = async () => {
     // Client-side validation for obstacle clearance

@@ -593,6 +593,7 @@ def create_app() -> FastAPI:
 
 # Module-level app instance -- referenced by Uvicorn as "main:app"
 app: FastAPI = create_app()
+_app_instance = app
 
 
 if __name__ == "__main__":
