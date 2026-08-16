@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useBreakpoint } from '../hooks/useBreakpoint';
 import { providerLabel, PROVIDER_ORDER } from '../utils/providers';
 
 /**
@@ -56,11 +55,10 @@ function MpopBack({ label, onClick }) {
 }
 
 /**
- * Renders a model-selection popover or mobile bottom sheet.
+ * Renders the model-selection sheet.
  * @param {Object} props - Component properties.
  * @param {boolean} props.isOpen - Whether the picker is visible.
  * @param {Function} props.onClose - Called when the picker closes.
- * @param {Object} props.pos - Desktop positioning values for the picker.
  * @param {Object} props.selectedModel - Currently selected model.
  * @param {Function} props.onSelect - Called with the selected provider and model ID.
  * @param {Array<Object>} [props.localModels=[]] - Available local models. Defaults to an empty array.
@@ -73,7 +71,6 @@ function MpopBack({ label, onClick }) {
 export default function ModelPickerPopover({
   isOpen,
   onClose,
-  pos,
   onBackToTools,
   selectedModel,
   onSelect,
@@ -85,7 +82,6 @@ export default function ModelPickerPopover({
 }) {
   const [pickerView, setPickerView] = useState('home');
   const [cloudProvider, setCloudProvider] = useState(null);
-  const { isPhone } = useBreakpoint();
 
   useEffect(() => {
     if (isOpen) {
@@ -138,12 +134,11 @@ export default function ModelPickerPopover({
 
   if (!isOpen) return null;
 
-  // Center bottom-sheet layout ensures full visibility across phones, tablets,
-  // and desktop displays without clipping long model lists.
-  const isExplicitAnchor = Boolean(pos?.isAnchored && (pos?.top != null || pos?.left != null));
-  const panelStyle = (!isExplicitAnchor || isPhone)
-    ? { position: 'fixed', left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto', maxWidth: 480, marginInline: 'auto', maxHeight: '78vh', overflowY: 'auto' }
-    : { bottom: pos.bottom, right: pos.right, top: pos.top, left: pos.left, maxWidth: 480 };
+  // One centred bottom sheet on every viewport. The old anchored variant
+  // positioned the panel off the model button's right edge, which slid
+  // off-screen on phones because the button sits on the left. Sizing lives in
+  // .rs-mpop so the class and the inline style cannot disagree about it.
+  const panelStyle = { left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto', marginInline: 'auto' };
 
   const closeModelPicker = () => {
     setPickerView('home');

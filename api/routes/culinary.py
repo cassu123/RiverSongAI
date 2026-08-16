@@ -2357,6 +2357,41 @@ def _normalize_store_name(store: Optional[str]) -> str:
     return s.replace(" ", "_")
 
 
+# Canonical display spelling per normalized key. ShoppingListItem.store holds
+# the *display* form -- the store filter tabs group on it verbatim and render
+# it next to POPULAR_STORES -- so every writer has to agree on the spelling or
+# "Walmart", "walmart" and "Trader Joe'S" show up as three separate tabs for
+# the same shop.
+#
+# str.title() is not a substitute: it renders "trader joe's" as "Trader Joe'S"
+# and the normalized key "trader_joes" as "Trader_Joes".
+_STORE_DISPLAY_NAMES: Dict[str, str] = {
+    "walmart": "Walmart",
+    "amazon": "Amazon",
+    "target": "Target",
+    "costco": "Costco",
+    "kroger": "Kroger",
+    "trader_joes": "Trader Joe's",
+    "aldi": "Aldi",
+    "homedepot": "Home Depot",
+}
+
+
+def store_display_name(store: Optional[str]) -> Optional[str]:
+    """Canonical display spelling for a free-text or normalized store name.
+
+    Returns None for blank input, so an untagged item stays untagged rather
+    than defaulting to Walmart the way _normalize_store_name does.
+    """
+    if not store or not store.strip():
+        return None
+    norm = _normalize_store_name(store)
+    if norm in _STORE_DISPLAY_NAMES:
+        return _STORE_DISPLAY_NAMES[norm]
+    # Unknown store: keep the user's own words, just tidied.
+    return " ".join(w.capitalize() for w in store.strip().replace("_", " ").split())
+
+
 def _extract_store_item_id(store: str, raw_id_or_url: str) -> str:
     norm_store = _normalize_store_name(store)
     val = raw_id_or_url.strip()
@@ -2721,7 +2756,7 @@ async def add_shopping_item(
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
 
-    resolved_store = body.store.strip() if body.store else None
+    resolved_store = store_display_name(body.store)
     resolved_store_item_id = body.store_item_id.strip() if body.store_item_id else None
 
     # Auto-resolve store and store_item_id if omitted
@@ -2732,7 +2767,7 @@ async def add_shopping_item(
         ).first()
         if mapping:
             if not resolved_store and mapping.store:
-                resolved_store = mapping.store.title()
+                resolved_store = store_display_name(mapping.store)
             if not resolved_store_item_id and mapping.store_item_id:
                 resolved_store_item_id = mapping.store_item_id
 
@@ -2777,7 +2812,7 @@ async def update_shopping_item(
     if body.category is not None:
         item.category = body.category
     if body.store is not None:
-        item.store = body.store.strip() if body.store else None
+        item.store = store_display_name(body.store)
     if body.store_item_id is not None:
         item.store_item_id = body.store_item_id.strip() if body.store_item_id else None
     if body.checked is not None:

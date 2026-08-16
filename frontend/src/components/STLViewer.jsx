@@ -116,12 +116,12 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
           resolvedDownloadUrl = compileData.download_url || `/api/cad/models/${compileData.model_id}/stl`
         }
 
-        // 2. Fetch the binary STL
-        const fetchUrl = resolvedDownloadUrl.startsWith('http')
-          ? resolvedDownloadUrl
-          : `${resolvedDownloadUrl}${token && !resolvedDownloadUrl.includes('token=') ? (resolvedDownloadUrl.includes('?') ? `&token=${encodeURIComponent(token)}` : `?token=${encodeURIComponent(token)}`) : ''}`
-
-        const res = await fetch(fetchUrl, { headers })
+        // 2. Fetch the binary STL. The Bearer header above carries the
+        // credential; the URL never does. Same-origin requests also send the
+        // access_token cookie, which the server accepts as a fallback. A
+        // ?token= would leak into access logs, history and Referer for a
+        // route family that includes the sandbox executor.
+        const res = await fetch(resolvedDownloadUrl, { headers })
         if (!res.ok) {
           throw new Error(`Failed to load STL (HTTP ${res.status})`)
         }
@@ -223,6 +223,15 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
       }
     }
   }, [url, scadCode, height])
+
+  // The object URL backing the download button holds the whole STL in memory
+  // until it is revoked. Without this, every re-render that reloads a mesh
+  // (new url, recompiled scad, height change) strands the previous buffer for
+  // the life of the document.
+  useEffect(() => {
+    if (!blobUrl) return
+    return () => URL.revokeObjectURL(blobUrl)
+  }, [blobUrl])
 
   // Update wireframe state
   useEffect(() => {

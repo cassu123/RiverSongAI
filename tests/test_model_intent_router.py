@@ -204,12 +204,50 @@ def test_cad_routes_to_local_model_first():
     """CAD design queries must route to a local model (Ollama) when available."""
     decision = route("Design a 3d printable parametric bracket in openscad", ALL_ENABLED)
     assert decision.intent == "cad"
+    assert (decision.provider, decision.model_id) == ("ollama", "qwen2.5-coder:7b")
+
+
+def test_cad_stays_local_when_every_cloud_provider_is_on():
+    """Local-first means local-first, not 'local unless something better exists'."""
+    decision = route("model an enclosure for the pi in scad", ALL_ENABLED)
     assert decision.provider == "ollama"
-    assert "coder" in decision.model_id or "llama" in decision.model_id or "qwen" in decision.model_id
 
 
-def test_code_routes_properly():
-    """Programming queries classify as code and route to capable coding models."""
+@pytest.mark.parametrize("text", [
+    # Generic build verbs plus a generic noun are not CAD. Each of these
+    # scored as 'cad' when the pattern accepted design|make|create within
+    # 25 characters of part|gear|mount, and cad leads the tie-break order.
+    "create a shopping list part for dinner",
+    "make a gear change plan for the mower",
+    "my engine has a bad cylinder what do I do",
+    "can you model the gear ratios on my bike",
+])
+def test_everyday_phrasing_is_not_mistaken_for_cad(text):
+    intent, _ = classify_intent(text)
+    assert intent != "cad"
+
+
+@pytest.mark.parametrize("text", [
+    # Call syntax the trailing \b used to make unmatchable.
+    "difference() { cube(10); cylinder(r=3); }",
+    "rotate([0,0,90]) translate([1,2,3]) cube(5);",
+    "union() of two shapes",
+])
+def test_openscad_call_syntax_is_recognised(text):
+    intent, score = classify_intent(text)
+    assert intent == "cad", f"{text!r} scored {score}"
+
+
+def test_code_prefers_local_coder_then_free_cloud():
+    """Programming goes to the local coder first, and never past the free
+    cloud tier into a paid provider while a free one is available."""
     decision = route("Write a python script with a function to parse json", ALL_ENABLED)
     assert decision.intent == "code"
-    assert decision.provider in ("ollama", "nvidia_nim", "anthropic", "openai", "deepseek", "gemini")
+    assert (decision.provider, decision.model_id) == ("ollama", "qwen2.5-coder:7b")
+
+    no_local = {k: v for k, v in ALL_ENABLED.items() if k != "ollama"}
+    cloud = route("Write a python script with a function to parse json", no_local)
+    assert LLMRegistry.is_free(cloud.provider, cloud.model_id), (
+        f"code fell through to paid {cloud.provider}/{cloud.model_id} "
+        "while a free option was enabled"
+    )
