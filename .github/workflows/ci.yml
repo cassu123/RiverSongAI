@@ -21,6 +21,20 @@ jobs:
       - name: Run tests
         run: pytest -q
 
+  # Parse-only, no dependencies, no tests. An autoformatter once wrapped
+  # expressions inside f-string braces -- PEP 701 syntax that only parses on
+  # 3.12+ -- and silently made 25 modules unimportable on anything older.
+  # Nothing needed that syntax, and the tests all run on 3.13, so the breakage
+  # was invisible. This catches it coming back.
+  syntax-floor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m compileall -q -x '(node_modules|frontend|__pycache__)' .
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

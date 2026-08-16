@@ -281,9 +281,7 @@ async def google_authorize(
     store = _get_store(request)
     await store.put_oauth_nonce(state_nonce, str(user_id), "google", ttl_seconds=600)
 
-    redirect_uri = f"{
-        request.url.scheme}://{
-        request.url.netloc}/api/integrations/google/callback"
+    redirect_uri = f"{request.url.scheme}://{request.url.netloc}/api/integrations/google/callback"
     params = urllib.parse.urlencode({
         "client_id": client_id,
         "redirect_uri": redirect_uri,
@@ -315,9 +313,7 @@ async def google_callback(
         return RedirectResponse("/profile?error=state_validation_failed")
 
     client = _load_google_client()
-    redirect_uri = f"{
-        request.url.scheme}://{
-        request.url.netloc}/api/integrations/google/callback"
+    redirect_uri = f"{request.url.scheme}://{request.url.netloc}/api/integrations/google/callback"
     token_uri = client.get("token_uri", "https://oauth2.googleapis.com/token")
 
     async with httpx.AsyncClient(timeout=10.0) as http:

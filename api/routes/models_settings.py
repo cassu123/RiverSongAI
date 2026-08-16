@@ -88,8 +88,7 @@ def _probe_ollama_models() -> Set[str]:
         parsed = urlparse(base)
         if parsed.scheme == "http" and parsed.hostname not in _OLLAMA_LOCAL_HOSTS:
             raise ValueError(
-                f"Insecure HTTP connection to remote Ollama host '{
-                    parsed.hostname}' is not allowed. "
+                f"Insecure HTTP connection to remote Ollama host '{parsed.hostname}' is not allowed. "
                 "Use HTTPS or restrict OLLAMA_BASE_URL to localhost."
             )
         req = urllib.request.Request(
@@ -1137,9 +1136,7 @@ async def save_memory_settings(
     user_id = await _require_user(authorization)
     if not TTLOption.is_valid(body.default_ttl):
         raise bad_request(
-            f"Invalid TTL '{
-                body.default_ttl}'. Valid options: {
-                TTLOption.ALL}")
+            f"Invalid TTL '{body.default_ttl}'. Valid options: {TTLOption.ALL}")
 
     memory = request.app.state.memory_manager
     settings = MemorySettings(

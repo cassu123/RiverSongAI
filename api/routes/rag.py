@@ -66,8 +66,7 @@ async def ingest_document(
         logger.error("RAG ingestion failed: %s", e)
         raise HTTPException(
             status_code=500,
-            detail=f"Ingestion failed: {
-                str(e)}")
+            detail=f"Ingestion failed: {str(e)}")
 
 
 @router.post("/query")

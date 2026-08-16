@@ -106,8 +106,7 @@ async def _resolve_llm(provider: str, model: str, request: Request):
             rig = rigs[0] if rigs else None
         if rig is None:
             raise RuntimeError(
-                f"No active remote rig matches '{
-                    rig_ref or '(default)'}'.")
+                f"No active remote rig matches '{rig_ref or '(default)'}'.")
         return build_remote_llm_from_rig(rig, model)
     from core.conversation_loop import _instantiate_llm
     return _instantiate_llm(provider, model)

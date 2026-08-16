@@ -150,8 +150,7 @@ class PiperTTS(TTSProvider):
         if result.returncode != 0:
             stderr = result.stderr.decode("utf-8", errors="replace")
             raise RuntimeError(
-                f"Piper exited with code {
-                    result.returncode}: {stderr}")
+                f"Piper exited with code {result.returncode}: {stderr}")
 
         logger.debug("Piper synthesis complete -> '%s'.", output_wav_path)
 

@@ -196,16 +196,13 @@ def _score_one(vram_gb: Optional[float], gpu_free: float,
 
     if gpu_total > 0 and vram_gb <= gpu_total * _SAFETY_MARGIN:
         return "tight", (
-            f"GPU has {
-                gpu_total:.1f} GB total but only {
-                gpu_free:.1f} GB free; "
+            f"GPU has {gpu_total:.1f} GB total but only {gpu_free:.1f} GB free; "
             "another process must release VRAM first."
         )
 
     if vram_gb <= ram_avail * _SAFETY_MARGIN:
         return "ram_fallback", (
-            f"Too large for GPU; will run on CPU+RAM ({
-                ram_avail:.1f} GB available). "
+            f"Too large for GPU; will run on CPU+RAM ({ram_avail:.1f} GB available). "
             "Expect ~2–10 tokens/s."
         )
 

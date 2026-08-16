@@ -429,13 +429,10 @@ class YouTubeMusicProvider:
             duration = r.get("duration", "")
             if artists:
                 lines.append(
-                    f"{i}. {title} by {artists}{
-                        ', ' + duration if duration else ''}.")
+                    f"{i}. {title} by {artists}{', ' + duration if duration else ''}.")
             else:
                 lines.append(
-                    f"{i}. {title}{
-                        ', ' +
-                        duration if duration else ''}.")
+                    f"{i}. {title}{', ' + duration if duration else ''}.")
 
         return " ".join(lines)
 

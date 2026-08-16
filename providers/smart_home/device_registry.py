@@ -99,13 +99,11 @@ class DeviceRegistry:
 
         if not isinstance(devices, dict):
             raise ValueError(
-                f"Device registry 'devices' must be an object (dict), got {
-                    type(devices)}"
+                f"Device registry 'devices' must be an object (dict), got {type(devices)}"
             )
         if not isinstance(groups, dict):
             raise ValueError(
-                f"Device registry 'groups' must be an object (dict), got {
-                    type(groups)}"
+                f"Device registry 'groups' must be an object (dict), got {type(groups)}"
             )
 
         self._devices = {k.lower(): v for k, v in devices.items()}
