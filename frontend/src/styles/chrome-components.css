@@ -450,7 +450,10 @@
    ─────────────────────────────────────────────────────────────────────────── */
 .rs-mpop {
   position: fixed;
-  width: min(480px, calc(100vw - 24px));
+  /* max-width, not width, so a sheet pinned with left/right can centre itself
+     with margin-inline while still capping at 480px. Callers that want a
+     fixed width (the store switcher in ShoppingListTab) set one inline. */
+  max-width: min(480px, calc(100vw - 24px));
   max-height: min(78vh, 640px);
   overflow-y: auto;
   overscroll-behavior: contain;

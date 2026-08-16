@@ -81,6 +81,7 @@ class Household(Base):  # type: ignore
     stockroom_items   = relationship("StockroomItem",    back_populates="household", cascade="all, delete-orphan")
     prep_sessions     = relationship("PrepSession",      back_populates="household", cascade="all, delete-orphan")
     walmart_mappings  = relationship("WalmartMapping",   back_populates="household", cascade="all, delete-orphan")
+    store_mappings    = relationship("StoreMapping",     back_populates="household", cascade="all, delete-orphan")
     equipment_items   = relationship("KitchenEquipment", back_populates="household", cascade="all, delete-orphan")
     dinner_proposals  = relationship("DinnerProposal",   back_populates="household", cascade="all, delete-orphan")
     banned_ingredients = relationship("BannedIngredient", back_populates="household", cascade="all, delete-orphan")
@@ -257,6 +258,23 @@ class WalmartMapping(Base):  # type: ignore
     household = relationship("Household", back_populates="walmart_mappings")
 
 
+class StoreMapping(Base):  # type: ignore
+    """Maps an ingredient or product name to a specific store item ID or product link."""
+    __tablename__ = "cul_store_mappings"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    household_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("cul_households.id"), nullable=True, index=True)
+
+    ingredient_name: Mapped[str] = mapped_column(String, nullable=False, index=True)# lowercase, normalized
+    store: Mapped[str] = mapped_column(String, default="walmart", nullable=False, index=True)# walmart, target, amazon, costco, kroger, trader_joes, homedepot, etc.
+    store_item_id: Mapped[str] = mapped_column(String, nullable=False)# item ID, ASIN, TCIN, or direct URL
+    notes: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+    household = relationship("Household", back_populates="store_mappings")
+
+
 class DinnerProposal(Base):  # type: ignore
     """
     A household-scoped dinner suggestion. Multiple proposals can coexist.
@@ -288,6 +306,8 @@ class ShoppingListItem(Base):  # type: ignore
     qty: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     unit: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     category: Mapped[str] = mapped_column(String, default="grocery", nullable=False)
+    store: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    store_item_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     source: Mapped[ListSource] = mapped_column(Enum(ListSource), default=ListSource.MANUAL, nullable=False)
     source_ref: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     added_by: Mapped[Optional[str]] = mapped_column(String, nullable=True)

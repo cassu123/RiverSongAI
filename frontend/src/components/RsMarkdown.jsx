@@ -54,9 +54,12 @@ export default function RsMarkdown({ children, root = 'personal', onNavigate, cl
       const lang = match ? match[1].toLowerCase() : ''
       const codeStr = String(codeChildren || '').replace(/\n$/, '')
 
-      if (!isInline && (lang === 'stl' || lang === 'cad')) {
-        const url = codeStr.trim()
-        return <STLViewer url={url} />
+      if (!isInline && (lang === 'stl' || lang === 'cad' || lang === 'openscad' || lang === 'scad')) {
+        const trimmed = codeStr.trim()
+        if (trimmed.startsWith('/') || trimmed.startsWith('http') || trimmed.endsWith('.stl')) {
+          return <STLViewer url={trimmed} />
+        }
+        return <STLViewer scadCode={trimmed} />
       }
 
       if (!isInline && lang === 'mermaid') {
