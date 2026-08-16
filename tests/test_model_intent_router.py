@@ -198,3 +198,18 @@ def test_every_intent_chain_contains_at_least_one_free_model():
         assert any(LLMRegistry.is_free(p, m) for p, m in chain), (
             f"{intent} has no free option"
         )
+
+
+def test_cad_routes_to_local_model_first():
+    """CAD design queries must route to a local model (Ollama) when available."""
+    decision = route("Design a 3d printable parametric bracket in openscad", ALL_ENABLED)
+    assert decision.intent == "cad"
+    assert decision.provider == "ollama"
+    assert "coder" in decision.model_id or "llama" in decision.model_id or "qwen" in decision.model_id
+
+
+def test_code_routes_properly():
+    """Programming queries classify as code and route to capable coding models."""
+    decision = route("Write a python script with a function to parse json", ALL_ENABLED)
+    assert decision.intent == "code"
+    assert decision.provider in ("ollama", "nvidia_nim", "anthropic", "openai", "deepseek", "gemini")
