@@ -3,13 +3,14 @@ import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-export default function STLViewer({ url, className = '', height = 360 }) {
+export default function STLViewer({ url, scadCode, className = '', height = 360 }) {
   const mountRef = useRef(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [wireframe, setWireframe] = useState(false)
   const [autoRotate, setAutoRotate] = useState(false)
   const [dimensions, setDimensions] = useState(null)
+  const [blobUrl, setBlobUrl] = useState(null)
   
   const sceneRef = useRef(null)
   const meshRef = useRef(null)
@@ -19,8 +20,10 @@ export default function STLViewer({ url, className = '', height = 360 }) {
 
   useEffect(() => {
     const container = mountRef.current
-    if (!container || !url) return
+    if (!container) return
+    if (!url && !scadCode) return
 
+    let cancelled = false
     setLoading(true)
     setError(null)
 
@@ -29,7 +32,7 @@ export default function STLViewer({ url, className = '', height = 360 }) {
 
     // Scene
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color(0x0f172a) // Slate-900
+    scene.background = new THREE.Color(0x0a0f1d) // Slate deep
     sceneRef.current = scene
 
     // Camera
@@ -54,14 +57,14 @@ export default function STLViewer({ url, className = '', height = 360 }) {
     controlsRef.current = controls
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75)
     scene.add(ambientLight)
 
-    const dirLight1 = new THREE.DirectionalLight(0x38bdf8, 1.2) // Sky cyan
+    const dirLight1 = new THREE.DirectionalLight(0x38bdf8, 1.3) // Sky cyan
     dirLight1.position.set(60, 100, 80)
     scene.add(dirLight1)
 
-    const dirLight2 = new THREE.DirectionalLight(0xf43f5e, 0.6) // Rose rim
+    const dirLight2 = new THREE.DirectionalLight(0xf43f5e, 0.7) // Rose rim
     dirLight2.position.set(-60, -50, -80)
     scene.add(dirLight2)
 
@@ -79,11 +82,61 @@ export default function STLViewer({ url, className = '', height = 360 }) {
     })
     materialRef.current = material
 
-    // Load STL
-    const loader = new STLLoader()
-    loader.load(
-      url,
-      (geometry) => {
+    // Authenticated load helper
+    const loadMesh = async () => {
+      try {
+        const token = localStorage.getItem('rs-auth-token') || localStorage.getItem('token')
+        const headers = {}
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`
+        }
+
+        let arrayBuffer = null
+        let resolvedDownloadUrl = url
+
+        // 1. If scadCode or raw code is provided, compile it first
+        const rawCode = scadCode || (url && !url.startsWith('/') && !url.startsWith('http') && !url.endsWith('.stl') ? url : null)
+        if (rawCode) {
+          const compileRes = await fetch('/api/cad/compile', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...headers,
+            },
+            body: JSON.stringify({ scad_code: rawCode, name: 'custom_part' }),
+          })
+          if (!compileRes.ok) {
+            const errJson = await compileRes.json().catch(() => ({}))
+            throw new Error(errJson.detail || `Compilation failed (HTTP ${compileRes.status})`)
+          }
+          const compileData = await compileRes.json()
+          if (compileData.error) {
+            throw new Error(compileData.error)
+          }
+          resolvedDownloadUrl = compileData.download_url || `/api/cad/models/${compileData.model_id}/stl`
+        }
+
+        // 2. Fetch the binary STL
+        const fetchUrl = resolvedDownloadUrl.startsWith('http')
+          ? resolvedDownloadUrl
+          : `${resolvedDownloadUrl}${token && !resolvedDownloadUrl.includes('token=') ? (resolvedDownloadUrl.includes('?') ? `&token=${encodeURIComponent(token)}` : `?token=${encodeURIComponent(token)}`) : ''}`
+
+        const res = await fetch(fetchUrl, { headers })
+        if (!res.ok) {
+          throw new Error(`Failed to load STL (HTTP ${res.status})`)
+        }
+        arrayBuffer = await res.arrayBuffer()
+
+        if (cancelled) return
+
+        // Create Blob URL for downloading
+        const blob = new Blob([arrayBuffer], { type: 'model/stl' })
+        const objectUrl = URL.createObjectURL(blob)
+        setBlobUrl(objectUrl)
+
+        // Parse with Three.js STLLoader
+        const loader = new STLLoader()
+        const geometry = loader.parse(arrayBuffer)
         geometry.computeVertexNormals()
         geometry.center()
 
@@ -120,14 +173,16 @@ export default function STLViewer({ url, className = '', height = 360 }) {
         }
 
         setLoading(false)
-      },
-      undefined,
-      (err) => {
-        console.error('Error loading STL mesh:', err)
-        setError('Could not load 3D mesh.')
-        setLoading(false)
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error loading/compiling STL mesh:', err)
+          setError(err.message || 'Could not load 3D mesh.')
+          setLoading(false)
+        }
       }
-    )
+    }
+
+    loadMesh()
 
     // Animation Loop
     let animationId
@@ -149,6 +204,7 @@ export default function STLViewer({ url, className = '', height = 360 }) {
     window.addEventListener('resize', handleResize)
 
     return () => {
+      cancelled = true
       cancelAnimationFrame(animationId)
       window.removeEventListener('resize', handleResize)
       if (controlsRef.current) {
@@ -166,7 +222,7 @@ export default function STLViewer({ url, className = '', height = 360 }) {
         container.removeChild(renderer.domElement)
       }
     }
-  }, [url, height])
+  }, [url, scadCode, height])
 
   // Update wireframe state
   useEffect(() => {
@@ -189,6 +245,8 @@ export default function STLViewer({ url, className = '', height = 360 }) {
       controlsRef.current.update()
     }
   }
+
+  const effectiveDownloadUrl = blobUrl || url
 
   return (
     <div className={`relative my-4 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950 shadow-2xl ${className}`}>
@@ -236,14 +294,16 @@ export default function STLViewer({ url, className = '', height = 360 }) {
           >
             🎯 Center
           </button>
-          <a
-            href={url}
-            download
-            className="px-2.5 py-1 text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded transition-colors flex items-center gap-1 shadow-sm"
-            title="Download STL Binary for 3D Printing"
-          >
-            💾 STL
-          </a>
+          {effectiveDownloadUrl && (
+            <a
+              href={effectiveDownloadUrl}
+              download="model.stl"
+              className="px-2.5 py-1 text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded transition-colors flex items-center gap-1 shadow-sm"
+              title="Download STL Binary for 3D Printing"
+            >
+              💾 STL
+            </a>
+          )}
         </div>
       </div>
 
@@ -263,13 +323,15 @@ export default function STLViewer({ url, className = '', height = 360 }) {
         <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-4 text-center">
           <span className="text-sm text-red-400 font-semibold mb-1">⚠️ 3D Mesh Render Failed</span>
           <span className="text-xs text-slate-400 font-mono mb-3">{error}</span>
-          <a
-            href={url}
-            download
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700"
-          >
-            Download Raw STL
-          </a>
+          {effectiveDownloadUrl && (
+            <a
+              href={effectiveDownloadUrl}
+              download="model.stl"
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700"
+            >
+              Download Raw STL
+            </a>
+          )}
         </div>
       )}
 
@@ -280,3 +342,4 @@ export default function STLViewer({ url, className = '', height = 360 }) {
     </div>
   )
 }
+

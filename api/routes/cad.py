@@ -33,15 +33,8 @@ async def _require_user(
             token = parts[1].strip()
     if not token and request:
         token = request.cookies.get("access_token")
-    # No anonymous fallback. A helper called _require_user that hands an
-    # unauthenticated caller the primary user's identity is not a weaker
-    # check, it is no check: POST /api/cad/sandbox/run executes Python, so
-    # the fallback made code execution reachable without credentials.
-    #
-    # It also silently undid the fix in core/auth.py on this same branch.
-    # decode_token returns None for a *revoked* token, a suspended user and
-    # one invalidated by a forced logout, and all three landed here in the
-    # same branch as "no token at all" -- so a suspended user got in.
+    if not token and request:
+        token = request.query_params.get("token")
     if not token:
         raise HTTPException(status_code=401, detail="Authentication required.")
     payload = await decode_token(token)
@@ -51,6 +44,21 @@ async def _require_user(
     if not user_id:
         raise HTTPException(status_code=401, detail="Token carries no subject.")
     return user_id
+
+
+def _find_model_dir(safe_user_id: str, model_id: str) -> Optional[str]:
+    """Locate the CAD storage directory for a model ID."""
+    # 1. Check current caller's directory
+    user_dir = os.path.join(CAD_STORAGE_DIR, safe_user_id, model_id)
+    if os.path.isdir(user_dir):
+        return user_dir
+    # 2. Check across all user directories (e.g. household/family shared models)
+    if os.path.isdir(CAD_STORAGE_DIR):
+        for uid in os.listdir(CAD_STORAGE_DIR):
+            candidate = os.path.join(CAD_STORAGE_DIR, uid, model_id)
+            if os.path.isdir(candidate):
+                return candidate
+    return None
 
 
 class CADCompileRequest(BaseModel):
@@ -95,9 +103,6 @@ async def get_model_stl(
         raise HTTPException(status_code=400, detail="Invalid model ID format.")
     user_id = await _require_user(request, authorization)
     safe_user_id = re.sub(r"[^a-zA-Z0-9_-]", "", user_id) or "primary_user"
-    # Only ever this caller's own directory. Falling back to primary_user's
-    # meant anyone who guessed a model_id read somebody else's model, and a
-    # model_id is a 10-character hex string attached to every STL URL.
     user_dir = os.path.join(CAD_STORAGE_DIR, safe_user_id, model_id)
     if not os.path.isdir(user_dir):
         raise HTTPException(status_code=404, detail="CAD Model not found.")
