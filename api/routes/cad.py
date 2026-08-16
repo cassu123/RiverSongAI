@@ -33,15 +33,20 @@ async def _require_user(
             token = parts[1].strip()
     if not token and request:
         token = request.cookies.get("access_token")
-    # No anonymous fallback. A helper called _require_user that hands an
-    # unauthenticated caller the primary user's identity is not a weaker
-    # check, it is no check: POST /api/cad/sandbox/run executes Python, so
-    # the fallback made code execution reachable without credentials.
+    # No token in the query string. A ?token= fallback here would cover every
+    # route on this router, including POST /api/cad/sandbox/run, which
+    # executes Python -- and query strings land in access logs, browser
+    # history and Referer headers. The viewer does not need it: the STL URL
+    # is same-origin, login sets access_token as a cookie, and STLViewer
+    # sends a Bearer header and downloads through a Blob it already fetched.
     #
-    # It also silently undid the fix in core/auth.py on this same branch.
+    # No anonymous fallback either. A helper called _require_user that hands
+    # an unauthenticated caller the primary user's identity is not a weaker
+    # check, it is no check.
+    #
     # decode_token returns None for a *revoked* token, a suspended user and
-    # one invalidated by a forced logout, and all three landed here in the
-    # same branch as "no token at all" -- so a suspended user got in.
+    # one invalidated by a forced logout. All three must land here, not in
+    # the same branch as "no token at all", or a suspended user gets in.
     if not token:
         raise HTTPException(status_code=401, detail="Authentication required.")
     payload = await decode_token(token)
@@ -51,6 +56,14 @@ async def _require_user(
     if not user_id:
         raise HTTPException(status_code=401, detail="Token carries no subject.")
     return user_id
+
+
+# Deliberately absent: a helper that searches every user's directory for a
+# model_id. Model dirs are resolved from the caller's own id and nowhere else.
+# A model_id is a short hex string that appears in every STL URL the assistant
+# emits, so a cross-user lookup means anyone who has seen (or guessed) one
+# reads somebody else's model. If shared household models are wanted, they
+# need an explicit sharing record, not a directory scan.
 
 
 class CADCompileRequest(BaseModel):
@@ -95,9 +108,8 @@ async def get_model_stl(
         raise HTTPException(status_code=400, detail="Invalid model ID format.")
     user_id = await _require_user(request, authorization)
     safe_user_id = re.sub(r"[^a-zA-Z0-9_-]", "", user_id) or "primary_user"
-    # Only ever this caller's own directory. Falling back to primary_user's
-    # meant anyone who guessed a model_id read somebody else's model, and a
-    # model_id is a 10-character hex string attached to every STL URL.
+    # Only ever this caller's own directory -- 404 rather than reaching into
+    # anyone else's. See the note above _find_model_dir's former home.
     user_dir = os.path.join(CAD_STORAGE_DIR, safe_user_id, model_id)
     if not os.path.isdir(user_dir):
         raise HTTPException(status_code=404, detail="CAD Model not found.")
@@ -128,6 +140,8 @@ async def get_model_scad(
         raise HTTPException(status_code=400, detail="Invalid model ID format.")
     user_id = await _require_user(request, authorization)
     safe_user_id = re.sub(r"[^a-zA-Z0-9_-]", "", user_id) or "primary_user"
+    # Only ever this caller's own directory -- 404 rather than reaching into
+    # anyone else's. See the note above _find_model_dir's former home.
     user_dir = os.path.join(CAD_STORAGE_DIR, safe_user_id, model_id)
     if not os.path.isdir(user_dir):
         raise HTTPException(status_code=404, detail="CAD Model not found.")

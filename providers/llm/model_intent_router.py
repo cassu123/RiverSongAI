@@ -65,7 +65,13 @@ LONG_INPUT_CHARS = 1500
 # commands: those carry action verbs worth 3, so they win outright rather than
 # tying.
 # ---------------------------------------------------------------------------
+#
+# cad leads because its patterns require a word that means CAD and nothing
+# else (openscad, stl, 3d print, bracket...). That specificity is what earns
+# the position -- keep the patterns narrow, or this slot starts stealing from
+# code and commerce on ties.
 _TIE_BREAK_ORDER: Tuple[str, ...] = (
+    "cad",
     "code",
     "commerce",
     "creative",
@@ -99,6 +105,21 @@ _RECENT_YEARS = _recent_years_pattern()
 # Weight lets important signals count more (e.g. device names = 2 hits)
 # ---------------------------------------------------------------------------
 _INTENT_PATTERNS: dict[str, List[Tuple[str, int]]] = {
+    # CAD needs a CAD-specific token, not a generic verb plus a generic noun.
+    # "make a gear change plan for the mower", "create a shopping list part for
+    # dinner" and "my engine has a bad cylinder" all scored as cad when the
+    # second pattern accepted any of design|model|make|create|generate within
+    # 25 characters of part|gear|mount|3d. The build verbs now only count
+    # alongside a word that means CAD and nothing else.
+    "cad": [
+        (r"\b(3d\s*(print|printer|printing|model|cad)|openscad|scad|stl|parametric\s+(model|part|design)|freecad|fusion\s*360)\b", 3),
+        (r"\b(design|model|make|create|generate|print)\b.{0,25}\b(bracket|enclosure|mount|hinge|standoff|spacer|adapter|jig|fixture|gasket|knob)\b", 3),
+        # Trailing \b after an alternative ending in "(" or ")" can never match
+        # -- \b needs a word character on the far side, and ")" or end-of-input
+        # is not one. difference(), union() and rotate([0,0,90]) all silently
+        # scored zero. The call-syntax alternatives carry their own boundary.
+        (r"(\b(extrude|linear_extrude|rotate_extrude|polyhedron|openscad)\b|\b(difference|union|intersection|translate|rotate|cylinder|cube|sphere)\s*\()", 2),
+    ],
     "home_control": [
         (r"\b(turn on|turn off|switch on|switch off)\b", 3),
         (r"\b(lights?|lamp|bulb)\b", 2),
@@ -181,6 +202,18 @@ _COMPILED: dict[str, List[Tuple[re.Pattern, int]]] = {
 # First available provider wins.
 # ---------------------------------------------------------------------------
 _INTENT_ROUTES: dict[str, List[Tuple[str, str]]] = {
+    "cad": [
+        # CAD is local-first: routes to local Ollama coding or general models
+        ("ollama", "qwen2.5-coder:7b"),
+        ("ollama", "qwen2.5-coder:14b"),
+        ("ollama", "qwen2.5:7b"),
+        ("ollama", "llama3.1:8b"),
+        ("ollama", "deepseek-r1:14b"),
+        ("ollama", "llama3.2:3b"),
+        ("ollama", "llama3.2:1b"),
+        ("nvidia_nim", "zhipuai/glm-5.1"),
+        ("anthropic", "claude-sonnet-4-6"),
+    ],
     "home_control": [
         ("ollama", "llama3.2:1b"),
         ("ollama", "llama3.2:3b"),
@@ -210,10 +243,18 @@ _INTENT_ROUTES: dict[str, List[Tuple[str, str]]] = {
         ("ollama", "qwen2.5-coder:14b"),
         # GLM 5.1 is free on NIM and built for agentic coding + tool use, so
         # it sits ahead of the paid options: a free-only user still gets a
-        # capable model here rather than dropping to the local default.
+        # capable model here rather than dropping to the local default. The
+        # other free option, llama-3.1-70b, stays ahead of the paid tier for
+        # the same reason -- paid providers are the fallback, not the default.
         ("nvidia_nim", "zhipuai/glm-5.1"),
-        ("anthropic", "claude-sonnet-4-6"),
         ("nvidia_nim", "meta/llama-3.1-70b-instruct"),
+        ("anthropic", "claude-sonnet-4-6"),
+        ("openai", "gpt-4o"),
+        ("deepseek", "deepseek-chat"),
+        ("gemini", "gemini-2.0-flash"),
+        ("ollama", "deepseek-r1:14b"),
+        ("ollama", "llama3.1:8b"),
+        ("ollama", "llama3.2:3b"),
     ],
     "commerce": [
         ("anthropic", "claude-sonnet-4-6"),

@@ -12,7 +12,7 @@ import sqlite3
 import os
 import asyncio
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Tuple
 
 from config.settings import get_settings
 
@@ -120,6 +120,9 @@ async def execute_tool(
 
         elif tool_name == "add_shopping_list_item":
             return await _exec_add_shopping_list(tool_input, user_id)
+
+        elif tool_name in ("read_shopping_list", "get_shopping_list"):
+            return await _exec_read_shopping_list(tool_input, user_id)
 
         elif tool_name == "set_reminder":
             return await _exec_set_reminder(tool_input, user_id)
@@ -554,11 +557,60 @@ async def _exec_warranty_check(args: dict, user_id: str) -> str:
     return await loop.run_in_executor(None, _sync_work)
 
 
+# Stores we are willing to strip off the end of a spoken item. Matching has to
+# be against a known name and nothing else: an earlier version also accepted
+# "any trailing phrase of two words or fewer", which turned "flour for baking"
+# into flour @ Baking, "batteries for the remote" into batteries @ The Remote,
+# and "chips for the party" into chips @ The Party -- truncating the item name
+# on the way through. A shopping list that quietly renames what you asked for
+# is worse than one that never guesses the store.
+_SPOKEN_STORE_NAMES = frozenset({
+    "walmart", "wal-mart", "costco", "target", "amazon", "kroger",
+    "trader joe's", "trader joes", "aldi", "home depot", "homedepot",
+    "sams club", "sam's club", "whole foods", "safeway", "publix",
+    "heb", "h-e-b", "meijer", "walgreens", "cvs", "lowes", "lowe's",
+    "wegmans", "winco", "food lion", "giant", "harris teeter",
+})
+
+# Longest known store name, in words -- bounds how much of the tail we even
+# look at.
+_MAX_STORE_WORDS = max(len(s.split()) for s in _SPOKEN_STORE_NAMES)
+
+
+def _split_trailing_store(text: str) -> Tuple[str, Optional[str]]:
+    """Split "milk at Costco" into ("milk", "Costco").
+
+    Returns the text unchanged with None when the trailing phrase is not a
+    store we recognise.
+    """
+    import re
+
+    m = re.search(
+        r"\s+(?:at|from)\s+(?:the\s+)?([A-Za-z0-9\s'\.\-]+?)(?:\s+(?:store|market))?$",
+        text,
+        re.IGNORECASE,
+    )
+    if not m:
+        return text, None
+    candidate = m.group(1).strip()
+    if len(candidate.split()) > _MAX_STORE_WORDS:
+        return text, None
+    if candidate.lower().rstrip(".") not in _SPOKEN_STORE_NAMES:
+        return text, None
+    remainder = text[:m.start()].strip()
+    # "at Costco" on its own is a store, not an item -- keep the original.
+    if not remainder:
+        return text, None
+    return remainder, candidate
+
+
 async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
-    from db.database import SessionLocal
-    from culinary.models import Household, ShoppingListItem, ListSource
+    from api.routes.culinary import _Session as SessionLocal, store_display_name
+    from culinary.models import Household, ShoppingListItem, ListSource, StoreMapping
     item = args.get("item")
     qty = args.get("quantity")
+    unit = args.get("unit")
+    store = args.get("store")
 
     if not item:
         return "Error: item is required."
@@ -596,22 +648,39 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
                         Household.owner_id == owner_id).first()
                     if not hh:
                         raise  # Something else went wrong
+
+            # Detect store from text if not explicitly provided
+            resolved_store = store_display_name(store)
+            clean_item = item.strip()
+            if not resolved_store:
+                clean_item, spoken_store = _split_trailing_store(clean_item)
+                resolved_store = store_display_name(spoken_store)
+
+            # Check store mapping if still no store
+            if not resolved_store:
+                mapping = db.query(StoreMapping).filter_by(
+                    household_id=hh.id, ingredient_name=clean_item.lower()).first()
+                if mapping and mapping.store:
+                    resolved_store = store_display_name(mapping.store)
+
             sl_item = ShoppingListItem(
                 household_id=hh.id,
-                name=item,
-                qty=str(qty) if qty else None,
+                name=clean_item,
+                qty=str(qty) if qty not in (None, "") else None,
+                unit=unit if unit else None,
+                store=resolved_store,
                 category="grocery",
                 source=ListSource.CHAT,
                 added_by=user_id
             )
             db.add(sl_item)
             db.commit()
-            return hh.id
+            return hh.id, clean_item, resolved_store
         finally:
             db.close()
 
     loop = asyncio.get_running_loop()
-    household_id = await loop.run_in_executor(None, _sync_work)
+    household_id, clean_item, resolved_store = await loop.run_in_executor(None, _sync_work)
 
     # Everyone else's screen has to learn about it. The HTTP routes broadcast
     # on every mutation; this path wrote straight to the database, so a spoken
@@ -625,7 +694,66 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
             "Shopping list item saved but the household was not notified: %s",
             exc)
 
-    return f"Added '{item}' to your shopping list."
+    if resolved_store:
+        return f"Added '{clean_item}' to your {resolved_store} shopping list."
+    return f"Added '{clean_item}' to your shopping list."
+
+
+async def _exec_read_shopping_list(args: dict, user_id: str) -> str:
+    from api.routes.culinary import _Session as SessionLocal
+    from culinary.models import Household, ShoppingListItem
+
+    store_filter = (args.get("store") or "").strip()
+
+    def _sync_work():
+        from core.family import resolve_module_owner
+        db = SessionLocal()
+        try:
+            owner_id = resolve_module_owner(user_id, "culinary")
+            hh = db.query(Household).filter(Household.owner_id == owner_id).first()
+            if not hh:
+                return []
+            q = db.query(ShoppingListItem).filter(
+                ShoppingListItem.household_id == hh.id,
+                ShoppingListItem.checked_at.is_(None)
+            )
+            if store_filter:
+                q = q.filter(ShoppingListItem.store.ilike(f"%{store_filter}%"))
+            # Sort untagged items last explicitly. Bare `store.asc()` puts
+            # NULLs first on SQLite and last on Postgres, so the spoken
+            # readback changed order with the backend.
+            rows = q.order_by(
+                ShoppingListItem.store.is_(None).asc(),
+                ShoppingListItem.store.asc(),
+                ShoppingListItem.created_at.desc(),
+            ).all()
+            return [(i.name, i.qty, i.unit, i.store) for i in rows]
+        finally:
+            db.close()
+
+    loop = asyncio.get_running_loop()
+    items = await loop.run_in_executor(None, _sync_work)
+
+    if not items:
+        if store_filter:
+            return f"Your {store_filter} shopping list is currently empty."
+        return "Your shopping list is currently empty."
+
+    if store_filter:
+        lines = [f"- {qty + ' ' if qty else ''}{unit + ' ' if unit else ''}{name}" for name, qty, unit, _ in items]
+        return f"Items on your {store_filter} shopping list:\n" + "\n".join(lines)
+
+    by_store = {}
+    for name, qty, unit, st in items:
+        st_key = st if st else "General / Any Store"
+        by_store.setdefault(st_key, []).append(f"{qty + ' ' if qty else ''}{unit + ' ' if unit else ''}{name}")
+
+    out = ["Your current shopping list:"]
+    for st_name, it_list in by_store.items():
+        out.append(f"\n**{st_name}**:")
+        for it in it_list:
+            out.append(f"  • {it}")
+    return "\n".join(out)
 
 
 async def _exec_set_reminder(args: dict, user_id: str) -> str:

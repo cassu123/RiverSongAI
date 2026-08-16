@@ -30,8 +30,8 @@ from core.family_migration import _household_scoped_tables, _migrate_culinary
 SCOPED_TABLES = [
     "cul_recipes", "cul_banned_ingredients", "cul_stockroom",
     "cul_prep_sessions", "cul_kitchen_equipment", "cul_walmart_mappings",
-    "cul_active_vote", "cul_shopping_list", "cul_meal_plan",
-    "cul_cooking_sessions",
+    "cul_store_mappings", "cul_active_vote", "cul_shopping_list",
+    "cul_meal_plan", "cul_cooking_sessions",
 ]
 
 
