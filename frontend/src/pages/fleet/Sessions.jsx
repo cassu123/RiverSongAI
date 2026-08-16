@@ -38,7 +38,7 @@ export default function Sessions() {
     fetchSessions()
     fetchUnits()
     fetchPrograms()
-  }, [])
+  }, [token])
 
   const openSessionDetail = async (session) => {
     setSelectedSession(session)

@@ -28,7 +28,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
 
   useEffect(() => {
     fetchActiveAudit();
-  }, [homeId]);
+  }, [homeId, token]);
 
   const startAudit = async () => {
     setError('');

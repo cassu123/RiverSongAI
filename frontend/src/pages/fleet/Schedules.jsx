@@ -32,7 +32,7 @@ export default function Schedules() {
   useEffect(() => {
     fetchSchedules()
     fetchPrograms()
-  }, [])
+  }, [token])
 
   const handleSave = async () => {
     try {

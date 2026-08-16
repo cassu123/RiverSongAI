@@ -42,7 +42,7 @@ export default function Programs() {
     fetchPrograms()
     fetchUnits()
     fetchZones()
-  }, [])
+  }, [token])
 
   const handleSave = async () => {
     // Client-side validation for obstacle clearance

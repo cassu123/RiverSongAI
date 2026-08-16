@@ -4,6 +4,7 @@ from fastapi import Request, HTTPException
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import inspect
 import uuid
 import jwt
 
@@ -87,11 +88,21 @@ async def decode_token(token: str) -> Optional[dict]:
         if app and hasattr(app.state, "memory_manager"):
             store = getattr(app.state.memory_manager, "_store", None)
             if store:
-                if jti and hasattr(store, "is_token_revoked") and await store.is_token_revoked(jti):
-                    return None
+                rev_fn = getattr(store, "is_token_revoked", None)
+                if jti and callable(rev_fn):
+                    rev_res = rev_fn(jti)
+                    if inspect.isawaitable(rev_res):
+                        rev_res = await rev_res
+                    if rev_res:
+                        return None
 
-                if user_id and hasattr(store, "get_user_by_id"):
-                    user = await store.get_user_by_id(user_id)
+                user_fn = getattr(store, "get_user_by_id", None)
+                if user_id and callable(user_fn):
+                    user_res = user_fn(user_id)
+                    if inspect.isawaitable(user_res):
+                        user = await user_res
+                    else:
+                        user = user_res
                     if user:
                         if user.get("is_suspended"):
                             return None

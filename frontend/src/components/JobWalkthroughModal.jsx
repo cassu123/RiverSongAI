@@ -53,7 +53,7 @@ export default function JobWalkthroughModal({ vehicle, checkpoint, onClose, onLo
 
   useEffect(() => {
     loadData();
-  }, [checkpoint.id]);
+  }, [vehicle?.id, checkpoint?.id, checkpoint?.description, token]);
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];

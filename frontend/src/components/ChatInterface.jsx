@@ -247,13 +247,24 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
     })
   }, [inputText, isThinking, sendText, selectedModel, webSearch, forgetMemory, systemPrompt, activeDocId, deepResearch, voiceToggle, setMessages, token, setError])
 
+  const handleSendRef = useRef(handleSend)
+  handleSendRef.current = handleSend
+  const processedIntentRef = useRef(null)
+
   useEffect(() => {
-    if (initialIntent) {
-      setInputText(initialIntent.text || '')
-      setTimeout(() => handleSend(initialIntent.text, initialIntent.docId), 50)
-      if (onIntentConsumed) onIntentConsumed()
-    }
-  }, [initialIntent, handleSend, onIntentConsumed])
+    if (!initialIntent) return
+    const intentKey = `${initialIntent.text || ''}::${initialIntent.docId || ''}`
+    if (processedIntentRef.current === intentKey) return
+    processedIntentRef.current = intentKey
+
+    setInputText(initialIntent.text || '')
+    const timer = setTimeout(() => {
+      handleSendRef.current(initialIntent.text, initialIntent.docId)
+    }, 50)
+    if (onIntentConsumed) onIntentConsumed()
+
+    return () => clearTimeout(timer)
+  }, [initialIntent, onIntentConsumed])
 
   const handleReset = useCallback(() => {
     resetSession()

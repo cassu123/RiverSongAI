@@ -91,10 +91,11 @@ export default function ChronosPage({ setAction }) {
     }
   }, [token])
 
-  const createNote = useCallback(async (suggestedName = null) => {
+  const createNote = useCallback(async (suggestedName = null, targetRoot = null) => {
     const name = suggestedName || window.prompt('NOTE NAME:')
     if (!name) return
-    const path = `${activeRoot}/${name.endsWith('.md') ? name : name + '.md'}`
+    const root = targetRoot || activeRoot
+    const path = `${root}/${name.endsWith('.md') ? name : name + '.md'}`
     try {
       const res = await fetch('/api/vault/note', {
         method: 'PUT',
@@ -102,7 +103,7 @@ export default function ChronosPage({ setAction }) {
         body: JSON.stringify({ path, content: '# ' + name.replace('.md', '') + '\n\n' })
       })
       if (!res.ok) throw new Error('Failed to create')
-      await fetchTree(activeRoot)
+      await fetchTree(root)
       loadNote(path)
       setEditMode(true)
     } catch {
@@ -121,17 +122,17 @@ export default function ChronosPage({ setAction }) {
     try { payload = JSON.parse(raw) } catch { return }
     if (!payload?.title) return
     const root = payload.root || 'personal'
-    if (root !== activeRoot) setActiveRoot(root)
+    setActiveRoot(prev => (prev === root ? prev : root))
     const path = `${root}/${payload.title.endsWith('.md') ? payload.title : payload.title + '.md'}`
     ;(async () => {
       const exists = await loadNote(path)
       if (!exists) {
         if (window.confirm(`Note "${payload.title}" does not exist. Create it?`)) {
-          await createNote(payload.title)
+          await createNote(payload.title, root)
         }
       }
     })()
-  }, [token, activeRoot, loadNote, createNote])
+  }, [token, loadNote, createNote])
 
   const deleteNote = async () => {
     if (!activeNote || !window.confirm(`Purge "${activeNote.path}"?`)) return

@@ -75,7 +75,7 @@ export default function Zones() {
   useEffect(() => {
     fetchZones()
     fetchUnits()
-  }, [])
+  }, [token])
 
   const handleCreated = async (e) => {
     const layer = e.layer
