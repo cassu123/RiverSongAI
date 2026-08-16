@@ -121,6 +121,9 @@ async def execute_tool(
         elif tool_name == "add_shopping_list_item":
             return await _exec_add_shopping_list(tool_input, user_id)
 
+        elif tool_name in ("read_shopping_list", "get_shopping_list"):
+            return await _exec_read_shopping_list(tool_input, user_id)
+
         elif tool_name == "set_reminder":
             return await _exec_set_reminder(tool_input, user_id)
             
@@ -555,10 +558,12 @@ async def _exec_warranty_check(args: dict, user_id: str) -> str:
 
 
 async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
-    from db.database import SessionLocal
-    from culinary.models import Household, ShoppingListItem, ListSource
+    from api.routes.culinary import _Session as SessionLocal
+    from culinary.models import Household, ShoppingListItem, ListSource, StoreMapping
     item = args.get("item")
     qty = args.get("quantity")
+    unit = args.get("unit")
+    store = args.get("store")
 
     if not item:
         return "Error: item is required."
@@ -566,57 +571,64 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
     def _sync_work():
         from core.family import resolve_module_owner
         from sqlalchemy.exc import IntegrityError
+        import re
 
         db = SessionLocal()
         try:
-            # The shopping list is household data, and in a shared house the
-            # household is owned by "family:<group_id>", not by the speaker.
-            # Looking it up by the raw user_id found nothing -- and unlike the
-            # HTTP path this one does not create on miss -- so every voice add
-            # in a shared household answered "Error: Household not found."
-            # The one place the list is easiest to reach was the one place it
-            # did not work.
             owner_id = resolve_module_owner(user_id, "culinary")
             hh = db.query(Household).filter(
                 Household.owner_id == owner_id).first()
             if not hh:
-                # Matches _get_household in api/routes/culinary.py, which
-                # creates on miss. Saying "not found" to someone who has
-                # simply never opened the Culinary page is a dead end they
-                # cannot act on.
                 try:
                     hh = Household(owner_id=owner_id)
                     db.add(hh)
                     db.commit()
                     db.refresh(hh)
                 except IntegrityError:
-                    # Concurrent insert - re-query to get the existing record
                     db.rollback()
                     hh = db.query(Household).filter(
                         Household.owner_id == owner_id).first()
                     if not hh:
-                        raise  # Something else went wrong
+                        raise
+
+            # Detect store from text if not explicitly provided
+            resolved_store = store.strip() if store else None
+            clean_item = item.strip()
+            if not resolved_store:
+                m = re.search(r'\b(?:at|from|for|in)\s+([A-Za-z0-9\s\'\.]+?)(?:\s+(?:store|market))?$', clean_item, re.IGNORECASE)
+                if m:
+                    candidate = m.group(1).strip()
+                    known_stores = {"walmart", "costco", "target", "amazon", "kroger", "trader joe's", "trader joes", "aldi", "home depot", "sams club", "sam's club", "whole foods", "safeway", "publix", "heb", "h-e-b", "meijer", "walgreens", "cvs"}
+                    if candidate.lower() in known_stores or len(candidate.split()) <= 2:
+                        resolved_store = candidate.title()
+                        clean_item = clean_item[:m.start()].strip()
+
+            # Check store mapping if still no store
+            if not resolved_store:
+                mapping = db.query(StoreMapping).filter_by(
+                    household_id=hh.id, ingredient_name=clean_item.lower()).first()
+                if mapping and mapping.store:
+                    resolved_store = mapping.store.title()
+
             sl_item = ShoppingListItem(
                 household_id=hh.id,
-                name=item,
+                name=clean_item,
                 qty=str(qty) if qty else None,
+                unit=unit if unit else None,
+                store=resolved_store,
                 category="grocery",
                 source=ListSource.CHAT,
                 added_by=user_id
             )
             db.add(sl_item)
             db.commit()
-            return hh.id
+            return hh.id, clean_item, resolved_store
         finally:
             db.close()
 
     loop = asyncio.get_running_loop()
-    household_id = await loop.run_in_executor(None, _sync_work)
+    household_id, clean_item, resolved_store = await loop.run_in_executor(None, _sync_work)
 
-    # Everyone else's screen has to learn about it. The HTTP routes broadcast
-    # on every mutation; this path wrote straight to the database, so a spoken
-    # item sat invisible until someone reloaded -- which for a list whose
-    # whole point is being shared is most of the value gone.
     try:
         from api.routes.culinary import _ws_manager
         await _ws_manager.broadcast(household_id, "grocery_updated", {})
@@ -625,7 +637,58 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
             "Shopping list item saved but the household was not notified: %s",
             exc)
 
-    return f"Added '{item}' to your shopping list."
+    if resolved_store:
+        return f"Added '{clean_item}' to your {resolved_store} shopping list."
+    return f"Added '{clean_item}' to your shopping list."
+
+
+async def _exec_read_shopping_list(args: dict, user_id: str) -> str:
+    from api.routes.culinary import _Session as SessionLocal
+    from culinary.models import Household, ShoppingListItem
+
+    store_filter = (args.get("store") or "").strip()
+
+    def _sync_work():
+        from core.family import resolve_module_owner
+        db = SessionLocal()
+        try:
+            owner_id = resolve_module_owner(user_id, "culinary")
+            hh = db.query(Household).filter(Household.owner_id == owner_id).first()
+            if not hh:
+                return []
+            q = db.query(ShoppingListItem).filter(
+                ShoppingListItem.household_id == hh.id,
+                ShoppingListItem.checked_at.is_(None)
+            )
+            if store_filter:
+                q = q.filter(ShoppingListItem.store.ilike(f"%{store_filter}%"))
+            return [(i.name, i.qty, i.unit, i.store) for i in q.order_by(ShoppingListItem.store.asc(), ShoppingListItem.created_at.desc()).all()]
+        finally:
+            db.close()
+
+    loop = asyncio.get_running_loop()
+    items = await loop.run_in_executor(None, _sync_work)
+
+    if not items:
+        if store_filter:
+            return f"Your {store_filter} shopping list is currently empty."
+        return "Your shopping list is currently empty."
+
+    if store_filter:
+        lines = [f"- {qty + ' ' if qty else ''}{unit + ' ' if unit else ''}{name}" for name, qty, unit, _ in items]
+        return f"Items on your {store_filter} shopping list:\n" + "\n".join(lines)
+
+    by_store = {}
+    for name, qty, unit, st in items:
+        st_key = st if st else "General / Any Store"
+        by_store.setdefault(st_key, []).append(f"{qty + ' ' if qty else ''}{unit + ' ' if unit else ''}{name}")
+
+    out = ["Your current shopping list:"]
+    for st_name, it_list in by_store.items():
+        out.append(f"\n**{st_name}**:")
+        for it in it_list:
+            out.append(f"  • {it}")
+    return "\n".join(out)
 
 
 async def _exec_set_reminder(args: dict, user_id: str) -> str:

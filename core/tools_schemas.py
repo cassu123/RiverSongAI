@@ -286,14 +286,26 @@ TOOL_SCHEMAS = [
     },
     {
         "name": "add_shopping_list_item",
-        "description": "Add an item to the user's grocery or shopping list.",
+        "description": "Add an item to the user's grocery or shopping list, optionally tagged with a specific store (e.g. Walmart, Target, Costco, Amazon, Trader Joe's, Home Depot).",
         "input_schema": {
             "type": "object",
             "properties": {
-                "item": {"type": "string", "description": "The item to buy."},
-                "quantity": {"type": "integer", "description": "Quantity to purchase."},
+                "item": {"type": "string", "description": "The item or ingredient to buy."},
+                "quantity": {"type": "string", "description": "Quantity to purchase."},
+                "unit": {"type": "string", "description": "Unit of measurement (e.g. lbs, boxes, gallons, oz)."},
+                "store": {"type": "string", "description": "Specific store or merchant to buy this item from (e.g. Walmart, Target, Costco, Amazon, Trader Joe's, Kroger, Home Depot)."},
             },
             "required": ["item"]
+        }
+    },
+    {
+        "name": "read_shopping_list",
+        "description": "View active unchecked items on the user's shopping list, optionally filtered by store.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "store": {"type": "string", "description": "Optional store name to filter items (e.g. Walmart, Costco, Target, Amazon). If omitted, returns all items grouped by store."}
+            }
         }
     },
     {

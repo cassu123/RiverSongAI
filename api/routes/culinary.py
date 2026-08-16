@@ -135,6 +135,7 @@ from culinary.models import (
     StockroomItem,
     StockState,
     WalmartMapping,
+    StoreMapping,
     MealPlanEntry,
 )
 
@@ -288,11 +289,35 @@ def _migrate_culinary_schema() -> None:
             conn.commit()
         except Exception:
             pass
+
+        # Multi-store shopping list columns
+        _add_column(conn, "cul_shopping_list", "store", "TEXT")
+        _add_column(conn, "cul_shopping_list", "store_item_id", "TEXT")
+
+        # Multi-store item mappings table
         try:
-            conn.execute(sqlalchemy.text(
-                "ALTER TABLE cul_stockroom ADD COLUMN min_quantity FLOAT NOT NULL DEFAULT 0.25"
-            ))
+            conn.execute(sqlalchemy.text("""
+                CREATE TABLE IF NOT EXISTS cul_store_mappings (
+                    id TEXT PRIMARY KEY,
+                    household_id TEXT,
+                    ingredient_name TEXT NOT NULL,
+                    store TEXT NOT NULL DEFAULT 'walmart',
+                    store_item_id TEXT NOT NULL,
+                    notes TEXT,
+                    created_at DATETIME
+                )
+            """))
             conn.commit()
+            # Copy over legacy walmart mappings if they exist
+            try:
+                conn.execute(sqlalchemy.text("""
+                    INSERT OR IGNORE INTO cul_store_mappings (id, household_id, ingredient_name, store, store_item_id, created_at)
+                    SELECT id, household_id, ingredient_name, 'walmart', walmart_item_id, created_at
+                    FROM cul_walmart_mappings
+                """))
+                conn.commit()
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -2306,117 +2331,181 @@ async def complete_prep_session(
 
 
 # ---------------------------------------------------------------------------
-# Walmart Cart Export
+# Multi-Store Item Mappings & Cart Export
 # ---------------------------------------------------------------------------
 
-@router.get("/walmart/mappings")
-async def list_walmart_mappings(
-        request: Request, db: Session = Depends(get_db)):
+def _normalize_store_name(store: Optional[str]) -> str:
+    if not store:
+        return "walmart"
+    s = store.strip().lower()
+    if "walmart" in s:
+        return "walmart"
+    if "amazon" in s:
+        return "amazon"
+    if "target" in s:
+        return "target"
+    if "costco" in s:
+        return "costco"
+    if "kroger" in s:
+        return "kroger"
+    if "trader" in s:
+        return "trader_joes"
+    if "aldi" in s:
+        return "aldi"
+    if "home depot" in s or "homedepot" in s:
+        return "homedepot"
+    return s.replace(" ", "_")
+
+
+def _extract_store_item_id(store: str, raw_id_or_url: str) -> str:
+    norm_store = _normalize_store_name(store)
+    val = raw_id_or_url.strip()
+    if norm_store == "walmart":
+        if "walmart.com" in val:
+            match = re.search(r"/(\d+)(\?|$)", val)
+            if match:
+                return match.group(1)
+        if re.match(r"^\d+$", val):
+            return val
+    elif norm_store == "amazon":
+        if "amazon.com" in val:
+            match = re.search(r"/(?:dp|gp/product)/([A-Z0-9]{10})", val, re.IGNORECASE)
+            if match:
+                return match.group(1).upper()
+        if re.match(r"^[A-Z0-9]{10}$", val, re.IGNORECASE):
+            return val.upper()
+    elif norm_store == "target":
+        if "target.com" in val:
+            match = re.search(r"/A-(\d+)", val)
+            if match:
+                return match.group(1)
+    return val
+
+
+class StoreMappingCreate(BaseModel):
+    ingredient_name: str
+    store: Optional[str] = "walmart"
+    store_item_id: str
+    notes: Optional[str] = None
+
+
+@router.get("/store/mappings")
+async def list_store_mappings(
+    request: Request,
+    store: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    mappings = db.query(WalmartMapping).filter_by(household_id=hh.id).all()
+    q = db.query(StoreMapping).filter_by(household_id=hh.id)
+    if store and store.lower() not in ("all", ""):
+        q = q.filter_by(store=_normalize_store_name(store))
+    mappings = q.all()
     return [
-        {"id": m.id, "ingredient_name": m.ingredient_name,
-            "walmart_item_id": m.walmart_item_id}
+        {
+            "id": m.id,
+            "ingredient_name": m.ingredient_name,
+            "store": m.store,
+            "store_item_id": m.store_item_id,
+            "notes": m.notes,
+            "created_at": m.created_at.isoformat() if m.created_at else None
+        }
         for m in mappings
     ]
 
 
-@router.post("/walmart/mappings", status_code=status.HTTP_201_CREATED)
-async def create_walmart_mapping(
-    body: WalmartMappingCreate,
+@router.post("/store/mappings", status_code=status.HTTP_201_CREATED)
+async def create_store_mapping(
+    body: StoreMappingCreate,
     request: Request,
     db: Session = Depends(get_db),
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
     name_norm = body.ingredient_name.lower().strip()
-    item_id = body.walmart_item_id.strip()
+    norm_store = _normalize_store_name(body.store)
+    clean_item_id = _extract_store_item_id(norm_store, body.store_item_id)
+    if not clean_item_id:
+        raise bad_request("Invalid Store Item ID or URL.")
 
-    # 1. Backend URL Extraction
-    if "walmart.com" in item_id:
-        match = re.search(r"/(\d+)(\?|$)", item_id)
-        if match:
-            item_id = match.group(1)
-        else:
-            raise bad_request("Invalid Walmart URL. Could not find Item ID.")
-
-    # 2. Validation: Must be numeric
-    if not item_id.isdigit():
-        raise bad_request("Invalid Walmart Item ID. Must be a number.")
-
-    existing = db.query(WalmartMapping).filter_by(
-        household_id=hh.id, ingredient_name=name_norm).first()
+    existing = db.query(StoreMapping).filter_by(
+        household_id=hh.id, ingredient_name=name_norm, store=norm_store).first()
     if existing:
-        existing.walmart_item_id = item_id
+        existing.store_item_id = clean_item_id
+        if body.notes is not None:
+            existing.notes = body.notes
         db.commit()
+        if norm_store == "walmart":
+            w_existing = db.query(WalmartMapping).filter_by(household_id=hh.id, ingredient_name=name_norm).first()
+            if w_existing:
+                w_existing.walmart_item_id = clean_item_id
+                db.commit()
         return {"id": existing.id, "ingredient_name": existing.ingredient_name,
-                "walmart_item_id": existing.walmart_item_id}
-    m = WalmartMapping(
+                "store": existing.store, "store_item_id": existing.store_item_id, "notes": existing.notes}
+
+    m = StoreMapping(
         household_id=hh.id,
         ingredient_name=name_norm,
-        walmart_item_id=item_id,
+        store=norm_store,
+        store_item_id=clean_item_id,
+        notes=body.notes,
     )
     db.add(m)
+    if norm_store == "walmart":
+        w_existing = db.query(WalmartMapping).filter_by(household_id=hh.id, ingredient_name=name_norm).first()
+        if not w_existing:
+            db.add(WalmartMapping(household_id=hh.id, ingredient_name=name_norm, walmart_item_id=clean_item_id))
     db.commit()
     db.refresh(m)
     return {"id": m.id, "ingredient_name": m.ingredient_name,
-            "walmart_item_id": m.walmart_item_id}
+            "store": m.store, "store_item_id": m.store_item_id, "notes": m.notes}
 
 
-@router.delete("/walmart/mappings/{mapping_id}",
-               status_code=status.HTTP_204_NO_CONTENT)
-async def delete_walmart_mapping(
-        mapping_id: str, request: Request, db: Session = Depends(get_db)):
+@router.delete("/store/mappings/{mapping_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_store_mapping(
+    mapping_id: str, request: Request, db: Session = Depends(get_db)
+):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    m = db.query(WalmartMapping).filter_by(
-        id=mapping_id, household_id=hh.id).first()
+    m = db.query(StoreMapping).filter_by(id=mapping_id, household_id=hh.id).first()
     if not m:
         raise not_found("Mapping not found")
     db.delete(m)
     db.commit()
 
 
-@router.post("/walmart/export")
-async def walmart_export(
+@router.post("/store/export")
+async def store_export(
     request: Request,
     db: Session = Depends(get_db),
+    store: Optional[str] = "walmart",
     session_id: Optional[str] = None,
-    source: str = "prep",
+    source: str = "list",
 ):
-    """
-    Generate a Walmart Add-To-Cart URL.
-
-    source="prep" (default) reads the active or specified prep session,
-    skipping anything the stockroom says is in GOOD supply. source="list"
-    reads the household's master shopping list instead — the unchecked
-    items, which is what somebody standing in the kitchen has actually
-    decided they need. The list is already the union of voice adds, low
-    stock and prep, so it does not get filtered against the stockroom a
-    second time.
-
-    Returns mapped items as a URL and unmapped items as an alert list.
-    """
+    import urllib.parse
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
+    norm_store = _normalize_store_name(store)
 
     all_ingredients: List[dict] = []
-
     if source == "list":
-        for item in db.query(ShoppingListItem).filter(
+        q = db.query(ShoppingListItem).filter(
             ShoppingListItem.household_id == hh.id,
             ShoppingListItem.checked_at.is_(None),
-        ).all():
-            all_ingredients.append({"name": item.name, "qty": item.qty or 1})
+        )
+        if store and store.lower() != "all":
+            for item in q.all():
+                item_store = _normalize_store_name(item.store) if item.store else None
+                if item_store is None or item_store == norm_store:
+                    all_ingredients.append({"name": item.name, "qty": item.qty or 1, "unit": item.unit, "store": item.store, "store_item_id": item.store_item_id})
+        else:
+            for item in q.all():
+                all_ingredients.append({"name": item.name, "qty": item.qty or 1, "unit": item.unit, "store": item.store, "store_item_id": item.store_item_id})
     else:
         if session_id:
-            session = db.query(PrepSession).filter_by(
-                id=session_id, household_id=hh.id).first()
+            session = db.query(PrepSession).filter_by(id=session_id, household_id=hh.id).first()
         else:
-            session = db.query(PrepSession).filter_by(
-                household_id=hh.id, is_active=True).first()
-
+            session = db.query(PrepSession).filter_by(household_id=hh.id, is_active=True).first()
         if not session:
             raise not_found("No prep session found")
 
@@ -2433,14 +2522,19 @@ async def walmart_export(
                 if ing.get("name", "").lower().strip() not in good_stock:
                     all_ingredients.append(ing)
 
-    # Load mappings
+    # Load store mappings
     mappings = {
-        m.ingredient_name: m.walmart_item_id
-        for m in db.query(WalmartMapping).filter_by(household_id=hh.id).all()
+        m.ingredient_name: m.store_item_id
+        for m in db.query(StoreMapping).filter_by(household_id=hh.id, store=norm_store).all()
     }
+    if norm_store == "walmart":
+        for wm in db.query(WalmartMapping).filter_by(household_id=hh.id).all():
+            if wm.ingredient_name not in mappings:
+                mappings[wm.ingredient_name] = wm.walmart_item_id
 
-    cart_items = []
+    mapped_items = []
     unmapped = []
+    search_links = []
     seen = set()
 
     for ing in all_ingredients:
@@ -2448,27 +2542,77 @@ async def walmart_export(
         if name_key in seen:
             continue
         seen.add(name_key)
-        item_id = mappings.get(name_key)
+        item_id = ing.get("store_item_id") or mappings.get(name_key)
+        try:
+            qty = max(1, int(_parse_qty(str(ing.get("qty", 1)))))
+        except (ValueError, TypeError):
+            qty = 1
+
         if item_id:
-            try:
-                qty = max(1, int(_parse_qty(str(ing.get("qty", 1)))))
-            except (ValueError, TypeError):
-                qty = 1
-            cart_items.append(f"{item_id}_{qty}")
+            mapped_items.append({"name": ing.get("name", name_key), "id": item_id, "qty": qty})
         else:
             unmapped.append(ing.get("name", name_key))
 
-    if cart_items:
-        cart_url = "https://www.walmart.com/sc/cart/addToCart?items=" + \
-            ",".join(cart_items)
-    else:
-        cart_url = None
+        encoded_name = urllib.parse.quote_plus(ing.get("name", name_key))
+        if norm_store == "walmart":
+            search_url = f"https://www.walmart.com/search?q={encoded_name}"
+        elif norm_store == "amazon":
+            search_url = f"https://www.amazon.com/s?k={encoded_name}"
+        elif norm_store == "target":
+            search_url = f"https://www.target.com/s?searchTerm={encoded_name}"
+        elif norm_store == "costco":
+            search_url = f"https://www.costco.com/CatalogSearch?dept=All&keyword={encoded_name}"
+        elif norm_store == "kroger":
+            search_url = f"https://www.kroger.com/search?query={encoded_name}"
+        elif norm_store == "trader_joes":
+            search_url = f"https://www.traderjoes.com/home/search?q={encoded_name}"
+        elif norm_store == "aldi":
+            search_url = f"https://www.aldi.us/results/?q={encoded_name}"
+        elif norm_store == "homedepot":
+            search_url = f"https://www.homedepot.com/s/{encoded_name}"
+        else:
+            search_url = f"https://www.google.com/search?q={encoded_name}+{norm_store}"
+
+        search_links.append({"name": ing.get("name", name_key), "url": search_url, "mapped": bool(item_id)})
+
+    cart_url = None
+    if mapped_items:
+        if norm_store == "walmart":
+            cart_url = "https://www.walmart.com/sc/cart/addToCart?items=" + ",".join([f"{it['id']}_{it['qty']}" for it in mapped_items])
+        elif norm_store == "amazon":
+            params = [f"ASIN.{idx}={it['id']}&Quantity.{idx}={it['qty']}" for idx, it in enumerate(mapped_items, start=1)]
+            cart_url = "https://www.amazon.com/gp/aws/cart/add.html?" + "&".join(params)
 
     return {
+        "store": norm_store,
         "cart_url": cart_url,
-        "mapped_count": len(cart_items),
+        "mapped_count": len(mapped_items),
         "unmapped": unmapped,
+        "search_links": search_links,
     }
+
+
+# Backwards-compatible Walmart endpoints
+@router.get("/walmart/mappings")
+async def list_walmart_mappings(request: Request, db: Session = Depends(get_db)):
+    return await list_store_mappings(request=request, store="walmart", db=db)
+
+@router.post("/walmart/mappings", status_code=status.HTTP_201_CREATED)
+async def create_walmart_mapping(body: WalmartMappingCreate, request: Request, db: Session = Depends(get_db)):
+    return await create_store_mapping(body=StoreMappingCreate(ingredient_name=body.ingredient_name, store="walmart", store_item_id=body.walmart_item_id), request=request, db=db)
+
+@router.delete("/walmart/mappings/{mapping_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_walmart_mapping(mapping_id: str, request: Request, db: Session = Depends(get_db)):
+    return await delete_store_mapping(mapping_id=mapping_id, request=request, db=db)
+
+@router.post("/walmart/export")
+async def walmart_export(request: Request, db: Session = Depends(get_db), session_id: Optional[str] = None, source: str = "prep"):
+    return await store_export(request=request, db=db, store="walmart", session_id=session_id, source=source)
+
+
+# ---------------------------------------------------------------------------
+# Grocery Shopping List Endpoints
+# ---------------------------------------------------------------------------
 
 from pydantic import BaseModel
 from typing import List, Optional
@@ -2478,6 +2622,8 @@ class ShoppingItemCreate(BaseModel):
     qty: Optional[str] = None
     unit: Optional[str] = None
     category: Optional[str] = "grocery"
+    store: Optional[str] = None
+    store_item_id: Optional[str] = None
 
 class ShoppingItemUpdate(BaseModel):
     name: Optional[str] = None
@@ -2485,16 +2631,11 @@ class ShoppingItemUpdate(BaseModel):
     unit: Optional[str] = None
     category: Optional[str] = None
     checked: Optional[bool] = None
+    store: Optional[str] = None
+    store_item_id: Optional[str] = None
 
 
 async def _display_names(request: Request, user_ids) -> Dict[str, str]:
-    """Map user ids to display names for the shopping list byline.
-
-    The household is shared, so `added_by` is whichever member put the item
-    there — a raw user id, not the household owner. Showing the id would be
-    worse than showing nothing, so anything that fails to resolve is simply
-    left out and the UI falls back to no byline.
-    """
     wanted = {u for u in user_ids if u}
     if not wanted:
         return {}
@@ -2513,15 +2654,39 @@ async def _display_names(request: Request, user_ids) -> Dict[str, str]:
     return names
 
 
-@router.get("/grocery")
-async def get_grocery_list(request: Request, db: Session = Depends(get_db)):
+@router.get("/grocery/stores")
+async def get_grocery_stores(request: Request, db: Session = Depends(get_db)):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
 
-    items = db.query(ShoppingListItem).filter(
+    rows = db.query(ShoppingListItem.store).filter(
+        ShoppingListItem.household_id == hh.id,
+        ShoppingListItem.store.isnot(None),
+        ShoppingListItem.store != ""
+    ).distinct().all()
+    used_stores = [r[0] for r in rows if r[0]]
+    defaults = ["Walmart", "Target", "Costco", "Amazon", "Trader Joe's", "Kroger", "Aldi", "Home Depot"]
+    combined = list(dict.fromkeys(used_stores + defaults))
+    return combined
+
+
+@router.get("/grocery")
+async def get_grocery_list(
+    request: Request,
+    store: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    uid = await _get_user_id(request)
+    hh = _get_household(db, uid)
+
+    q = db.query(ShoppingListItem).filter(
         ShoppingListItem.household_id == hh.id
-    ).order_by(
-        ShoppingListItem.checked_at.is_(None).desc(), # Unchecked first
+    )
+    if store and store.lower() not in ("all", ""):
+        q = q.filter(ShoppingListItem.store.ilike(f"%{store.strip()}%"))
+
+    items = q.order_by(
+        ShoppingListItem.checked_at.is_(None).desc(),
         ShoppingListItem.created_at.desc()
     ).all()
 
@@ -2534,6 +2699,8 @@ async def get_grocery_list(request: Request, db: Session = Depends(get_db)):
             "qty": i.qty,
             "unit": i.unit,
             "category": i.category,
+            "store": i.store,
+            "store_item_id": i.store_item_id,
             "source": i.source.value if i.source else "manual",
             "added_by": i.added_by,
             "added_by_name": names.get(i.added_by),
@@ -2544,6 +2711,7 @@ async def get_grocery_list(request: Request, db: Session = Depends(get_db)):
         for i in items
     ]
 
+
 @router.post("/grocery")
 async def add_shopping_item(
     body: ShoppingItemCreate,
@@ -2552,21 +2720,39 @@ async def add_shopping_item(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    
+
+    resolved_store = body.store.strip() if body.store else None
+    resolved_store_item_id = body.store_item_id.strip() if body.store_item_id else None
+
+    # Auto-resolve store and store_item_id if omitted
+    if not resolved_store or not resolved_store_item_id:
+        mapping = db.query(StoreMapping).filter_by(
+            household_id=hh.id,
+            ingredient_name=body.name.lower().strip()
+        ).first()
+        if mapping:
+            if not resolved_store and mapping.store:
+                resolved_store = mapping.store.title()
+            if not resolved_store_item_id and mapping.store_item_id:
+                resolved_store_item_id = mapping.store_item_id
+
     item = ShoppingListItem(
         household_id=hh.id,
         name=body.name,
         qty=body.qty,
         unit=body.unit,
         category=body.category or "grocery",
+        store=resolved_store,
+        store_item_id=resolved_store_item_id,
         source=ListSource.MANUAL,
         added_by=uid
     )
     db.add(item)
     db.commit()
-    
+
     await _ws_manager.broadcast(hh.id, "grocery_updated", {})
-    return {"status": "ok", "id": item.id}
+    return {"status": "ok", "id": item.id, "store": item.store}
+
 
 @router.patch("/grocery/{item_id}")
 async def update_shopping_item(
@@ -2577,11 +2763,11 @@ async def update_shopping_item(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    
+
     item = db.query(ShoppingListItem).filter_by(id=item_id, household_id=hh.id).first()
     if not item:
         raise not_found("Item not found")
-        
+
     if body.name is not None:
         item.name = body.name
     if body.qty is not None:
@@ -2590,15 +2776,20 @@ async def update_shopping_item(
         item.unit = body.unit
     if body.category is not None:
         item.category = body.category
+    if body.store is not None:
+        item.store = body.store.strip() if body.store else None
+    if body.store_item_id is not None:
+        item.store_item_id = body.store_item_id.strip() if body.store_item_id else None
     if body.checked is not None:
         if body.checked and not item.checked_at:
             item.checked_at = _now()
         elif not body.checked and item.checked_at:
             item.checked_at = None
-            
+
     db.commit()
     await _ws_manager.broadcast(hh.id, "grocery_updated", {})
     return {"status": "ok"}
+
 
 @router.delete("/grocery/{item_id}")
 async def delete_shopping_item(
@@ -2608,13 +2799,14 @@ async def delete_shopping_item(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    
+
     item = db.query(ShoppingListItem).filter_by(id=item_id, household_id=hh.id).first()
     if item:
         db.delete(item)
         db.commit()
         await _ws_manager.broadcast(hh.id, "grocery_updated", {})
     return {"status": "ok"}
+
 
 @router.post("/grocery/clear")
 async def clear_checked_items(
@@ -2623,15 +2815,15 @@ async def clear_checked_items(
 ):
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
-    
+
     items = db.query(ShoppingListItem).filter(
         ShoppingListItem.household_id == hh.id,
         ShoppingListItem.checked_at.isnot(None)
     ).all()
-    
+
     for item in items:
         db.delete(item)
-        
+
     db.commit()
     await _ws_manager.broadcast(hh.id, "grocery_updated", {})
     return {"status": "ok", "cleared": len(items)}
