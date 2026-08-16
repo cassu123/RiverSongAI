@@ -450,19 +450,32 @@
    ─────────────────────────────────────────────────────────────────────────── */
 .rs-mpop {
   position: fixed;
-  width: min(300px, calc(100vw - 36px));
-  max-height: 60vh;
+  width: min(480px, calc(100vw - 24px));
+  max-height: min(78vh, 640px);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
   z-index: 9991;
   border-radius: 18px;
-  background: color-mix(in srgb, var(--bg-base) 78%, rgba(255,255,255,0.14));
+  background: color-mix(in srgb, var(--bg-base) 85%, rgba(255,255,255,0.14));
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow:
     0 2px 0 rgba(255,255,255,0.08) inset,
     0 16px 48px rgba(0, 0, 0, 0.65),
     0 0 0 1px rgba(0,0,0,0.3);
-  padding: 6px;
+  padding: 8px;
   animation: rs-mpop-in 160ms var(--rs-motion-curve) both;
+}
+.rs-mpop::-webkit-scrollbar {
+  width: 6px;
+}
+.rs-mpop::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+}
+.rs-mpop::-webkit-scrollbar-track {
+  background: transparent;
 }
 @keyframes rs-mpop-in {
   from { opacity: 0; transform: translateY(8px) scale(0.97); }

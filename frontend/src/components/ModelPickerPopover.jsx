@@ -74,6 +74,7 @@ export default function ModelPickerPopover({
   isOpen,
   onClose,
   pos,
+  onBackToTools,
   selectedModel,
   onSelect,
   localModels = [],
@@ -135,13 +136,12 @@ export default function ModelPickerPopover({
 
   if (!isOpen) return null;
 
-  // The anchored popover (positioned by the model button's right edge) slides
-  // off-screen on phones because the button sits on the left. On phones, render
-  // it as a full-width bottom sheet that's always fully on-screen; keep the
-  // anchored popover on desktop.
-  const panelStyle = isPhone
-    ? { left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto' }
-    : { bottom: pos.bottom, right: pos.right, top: pos.top, left: pos.left };
+  // Center bottom-sheet layout ensures full visibility across phones, tablets,
+  // and desktop displays without clipping long model lists.
+  const isExplicitAnchor = Boolean(pos?.isAnchored && (pos?.top != null || pos?.left != null));
+  const panelStyle = (!isExplicitAnchor || isPhone)
+    ? { position: 'fixed', left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto', maxWidth: 480, marginInline: 'auto', maxHeight: '78vh', overflowY: 'auto' }
+    : { bottom: pos.bottom, right: pos.right, top: pos.top, left: pos.left, maxWidth: 480 };
 
   const closeModelPicker = () => {
     setPickerView('home');
@@ -167,6 +167,9 @@ export default function ModelPickerPopover({
       <div style={{ position: 'fixed', inset: 0, zIndex: 9990 }} onClick={closeModelPicker} />
       <div className="rs-mpop" style={panelStyle}>
         {pickerView === 'home' && <>
+          {onBackToTools && (
+            <MpopBack label="Tools & Attachments" onClick={onBackToTools} />
+          )}
           {/* With the intent router off, provider="auto" does not route — it
               resolves to the local default. The row claimed automatic model
               choice either way, which is a promise the server was not

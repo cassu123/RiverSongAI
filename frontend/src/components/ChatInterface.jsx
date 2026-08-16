@@ -470,6 +470,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
         isOpen={modelPickerOpen}
         onClose={closeModelPicker}
         pos={popoverPos}
+        onBackToTools={() => { setModelPickerOpen(false); setToolsOpen(true); }}
         selectedModel={selectedModel}
         onSelect={(p, m) => { handleModelSelect(p, m); closeModelPicker(); }}
         localModels={localModels}
@@ -482,7 +483,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       {toolsOpen && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 9990 }} onClick={() => setToolsOpen(false)} />
-          <div className="rs-mpop" style={{ position: 'fixed', left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto', maxWidth: 460, marginInline: 'auto', maxHeight: '70vh', overflowY: 'auto' }}>
+          <div className="rs-mpop" style={{ position: 'fixed', left: 12, right: 12, bottom: 12, top: 'auto', width: 'auto', maxWidth: 480, marginInline: 'auto', maxHeight: '78vh', overflowY: 'auto' }}>
             <label className="rs-mpop-row">
               <span className="material-symbols-rounded rs-mpop-icon">attach_file</span>
               <span className="rs-mpop-body">
@@ -501,7 +502,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
               }} />
             </label>
 
-            <button className="rs-mpop-row" onClick={() => { setToolsOpen(false); openModelPicker() }}>
+            <button className="rs-mpop-row" onClick={() => { setToolsOpen(false); setModelPickerOpen(true); }}>
               <span className="material-symbols-rounded rs-mpop-icon">
                 {selectedModel?.provider === 'auto' ? 'auto_awesome' : selectedModel?.provider === 'nvidia_nim' ? 'memory_alt' : selectedModel?.provider === 'ollama' ? 'memory' : 'cloud'}
               </span>
