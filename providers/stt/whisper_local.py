@@ -96,8 +96,7 @@ class WhisperLocalSTT(STTProvider):
                         self._model_size, device, compute_type)
         except Exception as exc:
             raise RuntimeError(
-                f"Failed to load Faster-Whisper model '{
-                    self._model_size}': {exc}"
+                f"Failed to load Faster-Whisper model '{self._model_size}': {exc}"
             ) from exc
 
     async def transcribe(self, audio_bytes: bytes) -> str:

@@ -296,9 +296,7 @@ class AudibleProvider:
         )
         h, m = divmod(book.duration_minutes, 60)
         duration = (
-            f"{h} hour{
-                's' if h != 1 else ''} and {m} minute{
-                's' if m != 1 else ''}."
+            f"{h} hour{'s' if h != 1 else ''} and {m} minute{'s' if m != 1 else ''}."
             if h
             else f"{m} minute{'s' if m != 1 else ''}."
         )

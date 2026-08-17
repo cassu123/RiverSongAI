@@ -134,8 +134,7 @@ class OllamaLLM(LLMProvider):
             ) from exc
         except Exception as exc:
             raise RuntimeError(
-                f"Failed to communicate with Ollama at '{
-                    self._base_url}': {exc}"
+                f"Failed to communicate with Ollama at '{self._base_url}': {exc}"
             ) from exc
 
     async def stream_chat(

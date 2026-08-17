@@ -160,9 +160,7 @@ class SDProvider:
 
                 if resp.status_code != 200:
                     raise RuntimeError(
-                        f"Stable Diffusion API returned error {
-                            resp.status_code}: {
-                            resp.text}")
+                        f"Stable Diffusion API returned error {resp.status_code}: {resp.text}")
 
                 result = resp.json()
                 img_b64 = result["images"][0]

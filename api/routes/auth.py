@@ -940,23 +940,18 @@ async def update_profile(body: ProfilePatch, request: Request,
     if body.universe is not None:
         if body.universe not in VALID_UNIVERSES:
             raise bad_request(
-                f"Invalid universe. Valid: {
-                    ', '.join(
-                        sorted(VALID_UNIVERSES))}")
+                f"Invalid universe. Valid: {', '.join(sorted(VALID_UNIVERSES))}")
         await store.update_user_universe(user_id, body.universe)
 
     if body.environment is not None:
         if body.environment not in VALID_ENVIRONMENTS:
             raise bad_request(
-                f"Invalid environment. Valid: {
-                    ', '.join(
-                        sorted(VALID_ENVIRONMENTS))}")
+                f"Invalid environment. Valid: {', '.join(sorted(VALID_ENVIRONMENTS))}")
         current_universe = body.universe or user_record.get("universe", "dune")
         if body.environment not in UNIVERSE_ENV_PAIRS.get(
                 current_universe, set()):
             raise bad_request(
-                f"environment '{
-                    body.environment}' is not valid under universe '{current_universe}'")
+                f"environment '{body.environment}' is not valid under universe '{current_universe}'")
         await store.update_user_environment(user_id, body.environment)
 
     if body.mood is not None:
@@ -964,8 +959,7 @@ async def update_profile(body: ProfilePatch, request: Request,
             "environment", "atreides")
         if body.mood not in ENV_MOOD_PAIRS.get(current_env, set()):
             raise bad_request(
-                f"mood '{
-                    body.mood}' is not valid under environment '{current_env}'")
+                f"mood '{body.mood}' is not valid under environment '{current_env}'")
         await store.update_user_mood(user_id, body.mood)
 
     user = await store.get_user_by_id(user_id)

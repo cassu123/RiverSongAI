@@ -88,8 +88,7 @@ async def get_business_report(
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate report: {
-                str(exc)}")
+            detail=f"Failed to generate report: {str(exc)}")
 
 
 @router.get("/platforms")
@@ -150,8 +149,7 @@ async def get_platform_summary(
     if platform not in allowed_platforms:
         raise HTTPException(
             status_code=400,
-            detail=f"Platform '{platform}' not supported for AI summary. Use one of: {
-                ', '.join(allowed_platforms)}"
+            detail=f"Platform '{platform}' not supported for AI summary. Use one of: {', '.join(allowed_platforms)}"
         )
 
     user_id = await _require_user(authorization)

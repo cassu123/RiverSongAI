@@ -122,9 +122,7 @@ async def run_routine(routine_id: str, request: Request,
             async with httpx.AsyncClient() as client:
                 res = await client.post(routine["webhook_url"], json={"routine_name": routine["name"], "user_id": user_id}, timeout=30.0)
                 if res.status_code >= 400:
-                    output_text = f"Webhook failed with status {
-                        res.status_code}: {
-                        res.text}"
+                    output_text = f"Webhook failed with status {res.status_code}: {res.text}"
                 else:
                     output_text = f"Webhook triggered successfully. Response: {res.text[:200]}"
         except Exception as e:

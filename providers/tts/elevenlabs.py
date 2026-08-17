@@ -61,14 +61,10 @@ class ElevenLabsTTS(TTSProvider):
             resp = await client.post(url, json=payload, headers=headers, params=params, timeout=30.0)
             if resp.status_code in (401, 422):
                 raise RuntimeError(
-                    f"ElevenLabs API error {
-                        resp.status_code}: {
-                        resp.text}")
+                    f"ElevenLabs API error {resp.status_code}: {resp.text}")
             elif resp.status_code != 200:
                 raise RuntimeError(
-                    f"ElevenLabs API error {
-                        resp.status_code}: {
-                        resp.text}")
+                    f"ElevenLabs API error {resp.status_code}: {resp.text}")
 
             return resp.content
 
@@ -99,15 +95,11 @@ class ElevenLabsTTS(TTSProvider):
                 if resp.status_code in (401, 422):
                     err_text = await resp.aread()
                     raise RuntimeError(
-                        f"ElevenLabs streaming error {
-                            resp.status_code}: {
-                            err_text.decode()}")
+                        f"ElevenLabs streaming error {resp.status_code}: {err_text.decode()}")
                 elif resp.status_code != 200:
                     err_text = await resp.aread()
                     raise RuntimeError(
-                        f"ElevenLabs streaming error {
-                            resp.status_code}: {
-                            err_text.decode()}")
+                        f"ElevenLabs streaming error {resp.status_code}: {err_text.decode()}")
 
                 async for chunk in resp.aiter_bytes(chunk_size=4096):
                     yield chunk

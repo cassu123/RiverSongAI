@@ -466,8 +466,7 @@ class MemoryManager:
         effective_ttl = ttl_setting or mem_settings.default_ttl
         if not TTLOption.is_valid(effective_ttl):
             raise ValueError(
-                f"Invalid TTL setting '{effective_ttl}'. Valid: {
-                    TTLOption.ALL}"
+                f"Invalid TTL setting '{effective_ttl}'. Valid: {TTLOption.ALL}"
             )
 
         expires_at = calculate_expires_at(effective_ttl)

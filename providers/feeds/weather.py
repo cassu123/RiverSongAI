@@ -219,20 +219,12 @@ async def get_weather_report(lat: float, lon: float,
     curr = data["current"]
     unit_sym = curr["unit"]
 
-    report = f"The current weather is {
-        curr['condition'].lower()} at {
-        curr['temperature']}{unit_sym}. "
-    report += f"Wind speed is {
-        curr['wind_speed']} {
-        curr.get(
-            'wind_unit',
-            'km/h')}."
+    report = f"The current weather is {curr['condition'].lower()} at {curr['temperature']}{unit_sym}. "
+    report += f"Wind speed is {curr['wind_speed']} {curr.get('wind_unit', 'km/h')}."
 
     if data["daily"]:
         today = data["daily"][0]
-        report += f" Expect a high of {
-            today['temp_max']}{unit_sym} and a low of {
-            today['temp_min']}{unit_sym} today."
+        report += f" Expect a high of {today['temp_max']}{unit_sym} and a low of {today['temp_min']}{unit_sym} today."
 
     return report
 

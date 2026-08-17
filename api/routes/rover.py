@@ -91,8 +91,7 @@ async def send_rover_command(
     if body.action not in valid_actions:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid action: {
-                body.action}")
+            detail=f"Invalid action: {body.action}")
 
     result = await call_daemon("mechanic", body.action, body.payload)
     if not result:

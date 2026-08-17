@@ -183,14 +183,10 @@ async def add_book(
 
     if body.service not in VALID_SERVICES:
         raise bad_request(
-            f"Invalid service. Must be one of: {
-                ', '.join(
-                    sorted(VALID_SERVICES))}")
+            f"Invalid service. Must be one of: {', '.join(sorted(VALID_SERVICES))}")
     if body.status not in VALID_STATUSES:
         raise bad_request(
-            f"Invalid status. Must be one of: {
-                ', '.join(
-                    sorted(VALID_STATUSES))}")
+            f"Invalid status. Must be one of: {', '.join(sorted(VALID_STATUSES))}")
 
     store = _store(request)
     book = await store.create_book({
@@ -703,8 +699,7 @@ async def sync_kindle(
             skipped += 1
             continue
         author = book.authors[0] if book.authors else ""
-        launch_url = f"https://read.amazon.com/?asin={
-            book.asin}" if book.asin else ""
+        launch_url = f"https://read.amazon.com/?asin={book.asin}" if book.asin else ""
         await store.create_book({
             "user_id": user_id,
             "service": "kindle",
@@ -768,8 +763,7 @@ async def sync_google_play(
 
     added = skipped = 0
     for book in books:
-        info_link = book.info_link or f"https://play.google.com/books/reader?id={
-            book.volume_id}"
+        info_link = book.info_link or f"https://play.google.com/books/reader?id={book.volume_id}"
 
         if info_link in existing_by_vid:
             # Update progress and status in place

@@ -350,10 +350,7 @@ class AmazonProvider:
             )
         if low:
             names = ", ".join(
-                f"{
-                    self._short_name(
-                        i.product_name)} ({
-                    i.fulfillable_quantity} left)"
+                f"{self._short_name(i.product_name)} ({i.fulfillable_quantity} left)"
                 for i in low[:5]
             )
             parts.append(
@@ -361,9 +358,7 @@ class AmazonProvider:
             )
         if len(items) > 5:
             parts.append(
-                f"There are {
-                    len(items) -
-                    5} more low-stock items in total.")
+                f"There are {len(items) - 5} more low-stock items in total.")
         return " ".join(parts)
 
     @staticmethod
@@ -375,12 +370,10 @@ class AmazonProvider:
         parts = []
         if pending:
             parts.append(
-                f"{pending} pending order{
-                    's' if pending != 1 else ''}")
+                f"{pending} pending order{'s' if pending != 1 else ''}")
         if unshipped:
             parts.append(
-                f"{unshipped} unshipped order{
-                    's' if unshipped != 1 else ''}")
+                f"{unshipped} unshipped order{'s' if unshipped != 1 else ''}")
         summary = " and ".join(parts) if parts else f"{len(orders)} orders"
         return f"You have {summary} that need attention."
 

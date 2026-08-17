@@ -2393,27 +2393,36 @@ def store_display_name(store: Optional[str]) -> Optional[str]:
 
 
 def _extract_store_item_id(store: str, raw_id_or_url: str) -> str:
+    """Pull the store's product id out of a pasted URL or bare id.
+
+    Returns "" when the input is not a recognisable id for that store, which
+    create_store_mapping turns into a 400. Falling through to `return val`
+    instead stored the entire unparsed URL as the item id, and that only
+    surfaced later as a cart link the store rejected.
+    """
     norm_store = _normalize_store_name(store)
     val = raw_id_or_url.strip()
     if norm_store == "walmart":
         if "walmart.com" in val:
             match = re.search(r"/(\d+)(\?|$)", val)
-            if match:
-                return match.group(1)
+            return match.group(1) if match else ""
         if re.match(r"^\d+$", val):
             return val
+        return ""
     elif norm_store == "amazon":
         if "amazon.com" in val:
             match = re.search(r"/(?:dp|gp/product)/([A-Z0-9]{10})", val, re.IGNORECASE)
-            if match:
-                return match.group(1).upper()
+            return match.group(1).upper() if match else ""
         if re.match(r"^[A-Z0-9]{10}$", val, re.IGNORECASE):
             return val.upper()
+        return ""
     elif norm_store == "target":
         if "target.com" in val:
             match = re.search(r"/A-(\d+)", val)
-            if match:
-                return match.group(1)
+            return match.group(1) if match else ""
+        if re.match(r"^A-?(\d+)$", val, re.IGNORECASE):
+            return re.sub(r"^A-?", "", val, flags=re.IGNORECASE)
+        return ""
     return val
 
 
@@ -2614,9 +2623,10 @@ async def store_export(
     if mapped_items:
         if norm_store == "walmart":
             cart_url = "https://www.walmart.com/sc/cart/addToCart?items=" + ",".join([f"{it['id']}_{it['qty']}" for it in mapped_items])
-        elif norm_store == "amazon":
-            params = [f"ASIN.{idx}={it['id']}&Quantity.{idx}={it['qty']}" for idx, it in enumerate(mapped_items, start=1)]
-            cart_url = "https://www.amazon.com/gp/aws/cart/add.html?" + "&".join(params)
+        # No Amazon cart URL. /gp/aws/cart/add.html was the old Associates
+        # cart API and has been retired -- it produced a link that always
+        # errored. Amazon still gets a per-item search link in search_links,
+        # which is the working path.
 
     return {
         "store": norm_store,
@@ -2761,10 +2771,17 @@ async def add_shopping_item(
 
     # Auto-resolve store and store_item_id if omitted
     if not resolved_store or not resolved_store_item_id:
-        mapping = db.query(StoreMapping).filter_by(
+        query = db.query(StoreMapping).filter_by(
             household_id=hh.id,
             ingredient_name=body.name.lower().strip()
-        ).first()
+        )
+        # With a store already chosen, only that store's mapping is relevant.
+        # An unfiltered .first() handed a Costco item the Walmart item id
+        # whenever both mappings existed, and the cart export then built a
+        # Costco link around a Walmart product.
+        if resolved_store:
+            query = query.filter_by(store=_normalize_store_name(resolved_store))
+        mapping = query.first()
         if mapping:
             if not resolved_store and mapping.store:
                 resolved_store = store_display_name(mapping.store)

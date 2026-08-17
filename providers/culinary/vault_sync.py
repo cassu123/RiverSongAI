@@ -57,9 +57,7 @@ def _recipe_to_markdown(r: Recipe) -> str:
         "kind: recipe",
         f"recipe_id: {_yaml_str(r.id)}",
         f"title: {_yaml_str(r.title)}",
-        f"meal_type: {
-            _yaml_str(
-                r.meal_type.value if r.meal_type else 'Other')}",
+        f"meal_type: {_yaml_str(r.meal_type.value if r.meal_type else 'Other')}",
         f"primary_protein: {_yaml_str(r.primary_protein or '')}",
         f"servings: {r.servings or 0}",
         f"rating: {r.rating if r.rating is not None else 'null'}",

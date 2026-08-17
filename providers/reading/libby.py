@@ -281,9 +281,7 @@ class LibbyProvider:
         for i, loan in enumerate(loans[:5], 1):
             author = loan.author
             due = (
-                f"due in {
-                    loan.days_remaining} day{
-                    's' if loan.days_remaining != 1 else ''}"
+                f"due in {loan.days_remaining} day{'s' if loan.days_remaining != 1 else ''}"
                 if loan.days_remaining >= 0
                 else "expiry unknown"
             )
@@ -312,16 +310,12 @@ class LibbyProvider:
                 else "position unknown"
             )
             wait = (
-                f", about {
-                    hold.estimated_wait_days} day{
-                    's' if hold.estimated_wait_days != 1 else ''} wait"
+                f", about {hold.estimated_wait_days} day{'s' if hold.estimated_wait_days != 1 else ''} wait"
                 if hold.estimated_wait_days >= 0
                 else ""
             )
             lines.append(
-                f"{i}. {
-                    hold.title} by {
-                    hold.author}, {position}{wait}.")
+                f"{i}. {hold.title} by {hold.author}, {position}{wait}.")
         suffix = (
             f" And {len(holds) - 5} more."
             if len(holds) > 5
@@ -391,10 +385,7 @@ async def _register_chip(user_id: str, chip_base: str) -> None:
 
     _save_chip(chip_base, user_id, chip)
     print(
-        f"\nSetup complete. Chip saved to {
-            _chip_file_for(
-                chip_base,
-                user_id)}")
+        f"\nSetup complete. Chip saved to {_chip_file_for(chip_base, user_id)}")
 
 
 if __name__ == "__main__":

@@ -72,5 +72,4 @@ async def generate_image(
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Image generation failed: {
-                str(exc)}")
+            detail=f"Image generation failed: {str(exc)}")

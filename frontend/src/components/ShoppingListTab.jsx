@@ -123,7 +123,9 @@ export default function ShoppingListTab({ api, refreshKey }) {
     }
   }
 
-  const effectiveStore = selectedStore === 'custom' ? customStore.trim() : (selectedStore || (activeStoreFilter !== 'all' ? activeStoreFilter : ''))
+  // "Unassigned" is a display bucket, not a store -- adding while it is the
+  // active tab must not tag the new item with the literal word.
+  const effectiveStore = selectedStore === 'custom' ? customStore.trim() : (selectedStore || (activeStoreFilter !== 'all' && activeStoreFilter !== 'Unassigned' ? activeStoreFilter : ''))
 
   const add = async (e) => {
     e.preventDefault()
@@ -143,12 +145,19 @@ export default function ShoppingListTab({ api, refreshKey }) {
 
   const handleQuickStoreChange = async (itemId, newStore) => {
     setEditingStoreItemId(null)
-    await mutate(() => api.patch(`/grocery/${itemId}`, { store: newStore || null }))
+    // Clearing sends "", not null: the PATCH handler skips any field that
+    // arrives as None, so `store: null` left the old store in place and the
+    // "no store" option silently did nothing.
+    await mutate(() => api.patch(`/grocery/${itemId}`, { store: newStore || '' }))
   }
 
   // Filter items based on active store filter
   const filteredItems = useMemo(() => {
     if (activeStoreFilter === 'all') return items
+    // storeCounts buckets untagged items under "Unassigned", so the tab
+    // exists; without this branch it matched items whose store is literally
+    // "unassigned" and always came back empty.
+    if (activeStoreFilter === 'Unassigned') return items.filter(i => !i.store)
     return items.filter(i => (i.store || '').toLowerCase() === activeStoreFilter.toLowerCase())
   }, [items, activeStoreFilter])
 

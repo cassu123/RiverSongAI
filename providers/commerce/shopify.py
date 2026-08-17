@@ -82,8 +82,7 @@ class ShopifySyncWrapper:
             local_customer_id = None
 
             if customer_data:
-                shopify_cust_id = f"gid://shopify/Customer/{
-                    customer_data.get('id')}"
+                shopify_cust_id = f"gid://shopify/Customer/{customer_data.get('id')}"
                 cur = conn.execute(
                     "SELECT id FROM customers WHERE workspace_id = ? AND shopify_customer_id = ?",
                     (self.workspace_id, shopify_cust_id)
@@ -102,11 +101,7 @@ class ShopifySyncWrapper:
                         (
                             local_customer_id,
                             self.workspace_id,
-                            f"{
-                                customer_data.get(
-                                    'first_name', '')} {
-                                customer_data.get(
-                                    'last_name', '')}".strip(),
+                            f"{customer_data.get('first_name', '')} {customer_data.get('last_name', '')}".strip(),
                             customer_data.get("email", ""),
                             customer_data.get("phone", ""),
                             "Auto-synced from Shopify Order",
