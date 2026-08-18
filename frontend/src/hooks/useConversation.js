@@ -6,6 +6,20 @@ import { API_BASE } from '../utils/useApi.js'
 
 const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 
+/**
+ * Safety net for a turn that dies mid-stream without the server ever sending
+ * `stream_done`. It is NOT how a normal turn ends — `stream_done` and
+ * `response_complete` do that — so it should be long enough never to fire on a
+ * turn that is merely slow.
+ *
+ * It used to be 30s, rearmed only by `token`. A turn that paused longer than
+ * that while a tool ran got finalised early, and the tokens that arrived
+ * afterwards opened a second message: one reply, split in two, with no
+ * indication why. On a home server doing local inference, a 30s gap around a
+ * tool call is ordinary.
+ */
+const STREAM_WATCHDOG_MS = 180000
+
 export function useConversation({ token, user, sessionId, onSessionId, extraQueryParams = {} }) {
   const backendHost = API_BASE ? new URL(API_BASE).host : window.location.host;
   const wsProtocol = API_BASE ? (API_BASE.startsWith('https') ? 'wss:' : 'ws:') : WS_PROTOCOL;
@@ -41,6 +55,16 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     }
   }, [])
 
+  /**
+   * (Re)arm the watchdog. Anything that proves the turn is still alive should
+   * call this — not just tokens. A tool call in flight is a live turn even
+   * though nothing is being emitted.
+   */
+  const armStreamWatchdog = useCallback(() => {
+    if (streamTimeoutRef.current) clearTimeout(streamTimeoutRef.current)
+    streamTimeoutRef.current = setTimeout(finalizeStream, STREAM_WATCHDOG_MS)
+  }, [finalizeStream])
+
   const audioPlayer = useMemo(() => new AudioPlayer((isPlaying) => {
     if (!isPlaying) {
       setConvState(s => (s === 'speaking' ? 'idle' : s))
@@ -54,16 +78,24 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
       case 'listening':       setConvState('listening');  setStreamingContent(''); setError(null); break
       case 'transcribing':    setConvState('transcribing'); break
       case 'transcript':      if (text) setMessages(p => [...p, { role: 'user', text }]); break
-      case 'thinking':        setConvState('thinking');   setStreamingContent(''); break
-      case 'response_chunk':  setStreamingContent(p => p + (text || '')); break
+      case 'thinking':
+        setConvState('thinking')
+        setStreamingContent('')
+        armStreamWatchdog()
+        break
+      case 'response_chunk':
+        setStreamingContent(p => p + (text || ''))
+        armStreamWatchdog()
+        break
       case 'token':
         setStreamingContent(p => p + (content || ''))
-        if (streamTimeoutRef.current) clearTimeout(streamTimeoutRef.current)
-        streamTimeoutRef.current = setTimeout(finalizeStream, 30000)
+        armStreamWatchdog()
         break
       case 'tool_use':
       case 'tool_result':
         setToolEvents(p => [...p, event])
+        // A tool running is the commonest reason for a long silence mid-turn.
+        armStreamWatchdog()
         break
       case 'stream_done':
         finalizeStream()
@@ -111,7 +143,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
         break
       default: break
     }
-  }, [audioPlayer, finalizeStream])
+  }, [audioPlayer, finalizeStream, armStreamWatchdog])
 
   const { sendMessage, connectionStatus, authError } = useWebSocket(wsUrl, handleMessage, { token })
 
