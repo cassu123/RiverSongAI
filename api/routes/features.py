@@ -21,7 +21,10 @@ from core.auth import decode_token
 
 router = APIRouter(prefix="/api", tags=["features"])
 
-# Canonical feature catalog — keys must match nav item keys in Sidebar.jsx
+# Canonical feature catalog — keys must match the nav item keys in
+# frontend/src/utils/constants.js (NAV_GROUPS). A drawer entry whose key is
+# absent here AND absent from ALWAYS_VISIBLE can never be enabled for a
+# non-admin, so the two lists have to be kept in step.
 ALL_FEATURES = [
     {"key": "speak", "label": "Speaking"},
     {"key": "chat", "label": "Chat"},
@@ -38,6 +41,8 @@ ALL_FEATURES = [
     {"key": "routines", "label": "Routines"},
     {"key": "home", "label": "Home Node"},
     {"key": "analytics", "label": "Analytics"},
+    {"key": "reading", "label": "Reading"},
+    {"key": "environment", "label": "Environment"},
 ]
 ALL_FEATURE_KEYS = [f["key"] for f in ALL_FEATURES]
 
@@ -94,9 +99,19 @@ async def get_features(
         for key, attr in AI_FEATURE_MAP.items()
     }
 
+    # "catalog" is every key this endpoint knows how to gate, regardless of
+    # whether it is on for this user. The client needs it to tell "disabled"
+    # apart from "not a gated page at all" — without it, an uncatalogued page
+    # is indistinguishable from a switched-off one.
+    catalog = list(ALL_FEATURE_KEYS)
+
     # Admin always sees everything
     if role == "admin":
-        return {"features": ALL_FEATURE_KEYS, "ai_features": ai_features}
+        return {
+            "features": ALL_FEATURE_KEYS,
+            "catalog": catalog,
+            "ai_features": ai_features,
+        }
 
     store = request.app.state.memory_manager._store
     config = await store.get_admin_config()
@@ -106,11 +121,18 @@ async def get_features(
     if role == "child":
         child_features = await store.get_child_features(user_id)
         allowed = set(globally_on) & set(child_features)
-        return {"features": [
-            k for k in ALL_FEATURE_KEYS if k in allowed], "ai_features": ai_features}
+        return {
+            "features": [k for k in ALL_FEATURE_KEYS if k in allowed],
+            "catalog": catalog,
+            "ai_features": ai_features,
+        }
 
     # parent or user
-    return {"features": globally_on, "ai_features": ai_features}
+    return {
+        "features": globally_on,
+        "catalog": catalog,
+        "ai_features": ai_features,
+    }
 
 
 @router.put("/features/{flag_name}")

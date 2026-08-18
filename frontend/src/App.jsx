@@ -105,14 +105,26 @@ const PAGE_TO_PATH = {
   reading_callback: '/reading-oauth-callback',
 }
 
+// Reverse index, longest path first. Order matters: '/admin/settings' has to
+// be tested before '/admin/slae' etc. could ever shadow it, and every
+// multi-segment admin path has to be tested before any single-segment one.
+const PATH_TO_PAGE = Object.entries(PAGE_TO_PATH)
+  .sort(([, a], [, b]) => b.length - a.length)
+
+// Pages that must never be bounced by the gate below — they exist purely to
+// finish an OAuth handshake and are rendered before any gating runs.
+const OAUTH_PAGES = new Set(['google_callback', 'reading_callback', 'preview'])
+
 function pageKeyFromPath(pathname) {
   if (!pathname || pathname === '/' || pathname === '') return 'briefing'
-  if (pathname === '/callback')                return 'google_callback'
-  if (pathname === '/reading-oauth-callback')  return 'reading_callback'
-  if (pathname.startsWith('/admin/settings'))  return 'admin_settings'
-  // /feeds, /feeds/sports/boxscore/123 → 'feeds'
-  const top = pathname.split('/').filter(Boolean)[0] || 'briefing'
-  return top
+  // Exact match, or a nested route beneath a page:
+  //   /feeds                        → 'feeds'
+  //   /feeds/sports/boxscore/123    → 'feeds'
+  //   /admin/remote-ollama          → 'remote_ollama'
+  const hit = PATH_TO_PAGE.find(([, path]) =>
+    pathname === path || pathname.startsWith(`${path}/`)
+  )
+  return hit ? hit[0] : 'briefing'
 }
 
 // Environment display names — used as header context outside of dashboard/briefing.
@@ -164,12 +176,30 @@ const ENV_MOODS = {
   pacifica:   ['glitch-street', 'smoke'],
 }
 
+// Both the initial load and the refresh path parse /api/features the same way,
+// so the shape lives in one place. `features` is what this user may see;
+// `catalog` is every key the server gates at all — a page absent from the
+// catalog is simply not a gated page, which is different from a disabled one.
+function parseFeatures(d) {
+  const features = new Set()
+  if (d) {
+    if (Array.isArray(d.features)) d.features.forEach(f => features.add(f))
+    if (d.ai_features) {
+      Object.entries(d.ai_features).forEach(([k, v]) => {
+        if (v) features.add(k.toLowerCase().replace('_enabled', ''))
+      })
+    }
+  }
+  return { features, catalog: new Set(Array.isArray(d?.catalog) ? d.catalog : []) }
+}
+
 export default function App() {
   const { user, token, loading, logout, setupRequired, isAdminImpersonating, revertImpersonation } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [authView,      setAuthView]      = useState('login')
   const [enabledFeatures, setEnabledFeatures] = useState(null)
+  const [featureCatalog,  setFeatureCatalog]  = useState(null)
 
   // currentPage is now URL-derived. setCurrentPage is a navigate() wrapper so
   // every existing call site keeps working without churn. URLs are the source
@@ -192,7 +222,11 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const [adminMode,     setAdminMode]     = useState(false)
+  // Restored, not just saved. The save below has always been here; without a
+  // matching load, admin mode silently reset on every reload — which the
+  // render gate further down would then turn into a bounce off the admin page
+  // the admin was actually looking at.
+  const [adminMode,     setAdminMode]     = useState(() => load('rs-admin', false))
   const [drawerOpen,    setDrawerOpen]    = useState(false)
   const [pageAction,    setPageAction]    = useState(null)
   const [sidebarOpen,   setSidebarOpen]   = useState(() => load('rs-sidebar-open', true))
@@ -254,23 +288,17 @@ export default function App() {
   }, [mood, moodKey, user?.id, token])
 
   useEffect(() => {
-    if (!token) { setEnabledFeatures(null); return }
+    if (!token) { setEnabledFeatures(null); setFeatureCatalog(null); return }
     apiFetch('/api/features')
       .then(d => {
-        const feats = new Set()
-        if (d) {
-          if (Array.isArray(d.features)) d.features.forEach(f => feats.add(f))
-          if (d.ai_features) {
-            Object.entries(d.ai_features).forEach(([k, v]) => {
-              if (v) feats.add(k.toLowerCase().replace('_enabled', ''))
-            })
-          }
-        }
-        setEnabledFeatures(feats)
+        const { features, catalog } = parseFeatures(d)
+        setEnabledFeatures(features)
+        setFeatureCatalog(catalog)
       })
       .catch(err => {
         console.warn('[App] features load failed:', err)
         setEnabledFeatures(new Set())
+        setFeatureCatalog(new Set())
       })
   }, [token])
 
@@ -278,16 +306,9 @@ export default function App() {
     if (!token) return
     apiFetch('/api/features', { silent: true })
       .then(d => {
-        const feats = new Set()
-        if (d) {
-          if (Array.isArray(d.features)) d.features.forEach(f => feats.add(f))
-          if (d.ai_features) {
-            Object.entries(d.ai_features).forEach(([k, v]) => {
-              if (v) feats.add(k.toLowerCase().replace('_enabled', ''))
-            })
-          }
-        }
-        setEnabledFeatures(feats)
+        const { features, catalog } = parseFeatures(d)
+        setEnabledFeatures(features)
+        setFeatureCatalog(catalog)
       })
       .catch(err => console.warn('[App] features refresh failed:', err))
   }, [token])
@@ -303,6 +324,36 @@ export default function App() {
     if (!enabledFeatures) return false
     return enabledFeatures.has(page)
   }
+
+  // The drawer's gate in handleNavigate() only covers clicks. currentPage is
+  // derived from the URL, so typing or bookmarking a path walked straight past
+  // it and rendered the page anyway. Re-check on render and bounce.
+  //
+  // NB this is a PRESENTATION gate, not authorisation. /api/features decides
+  // what to show; it does not decide what a user may do. Anything that
+  // actually needs protecting is enforced server-side on the route itself.
+  // A restored 'rs-admin' is only a UI preference, and localStorage is the
+  // user's to edit. Anyone who is not actually an admin gets it cleared;
+  // the server is what enforces this, but the client should not pretend.
+  useEffect(() => {
+    if (user && !userIsAdmin && adminMode) setAdminMode(false)
+  }, [user, userIsAdmin, adminMode])
+
+  useEffect(() => {
+    if (!user) return
+    if (enabledFeatures === null) return          // still loading — don't bounce
+    if (OAUTH_PAGES.has(currentPage)) return      // callbacks must run to completion
+    if (currentPage === 'briefing') return        // the bounce target itself
+
+    const adminBlocked = ADMIN_PAGES.has(currentPage) && !adminMode
+    // Only enforce the flag for pages the server actually gates. A page absent
+    // from the catalog is ungated, not disabled — bouncing it would remove
+    // access that exists today (e.g. /fleet, /presets, /compare).
+    const flagBlocked = featureCatalog?.has(currentPage) && !featureEnabled(currentPage)
+
+    if (adminBlocked || flagBlocked) navigate('/briefing', { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, adminMode, enabledFeatures, featureCatalog, user, navigate])
 
   useEffect(() => {
     window.addEventListener('rs-features-changed', refreshFeatures)
