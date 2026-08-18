@@ -318,7 +318,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {edited.steps?.map((step, i) => (
                         <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                          <span style={{ marginTop: 12, fontFamily: 'var(--font-mono)', opacity: 0.4, fontWeight: 900 }}>{String(i+1).padStart(2, '0')}</span>
+                          <span style={{ marginTop: 12, fontFamily: 'var(--font-mono)', opacity: 0.7, fontWeight: 900 }}>{String(i+1).padStart(2, '0')}</span>
                           <textarea 
                             className="rs-pill" 
                             style={{ flex: 1, minHeight: 60, borderRadius: 16, background: 'var(--md-surface-container-low)', border: 'none', padding: '12px 16px', lineHeight: 1.7, resize: 'vertical' }} 
@@ -370,7 +370,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                                  <span style={{ color: 'var(--md-error)', fontWeight: 700 }}>{b.name}</span>
                                  {b.substitute && (
                                    <>
-                                     <span style={{ opacity: 0.5 }}>→</span>
+                                     <span style={{ opacity: 0.7 }}>→</span>
                                      <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{b.substitute}</span>
                                      <button className="rs-pill" style={{ padding: '2px 10px', fontSize: '0.85rem' }} onClick={() => applySubstitute(b.name, b.substitute)}>APPLY SUBSTITUTE</button>
                                    </>
@@ -399,7 +399,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                        {recipe.steps.map((s, i) => (
                          <div key={i} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                            <span style={{ fontFamily: 'var(--font-mono)', opacity: 0.4, fontWeight: 900, marginTop: 4 }}>{String(i+1).padStart(2, '0')}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', opacity: 0.7, fontWeight: 900, marginTop: 4 }}>{String(i+1).padStart(2, '0')}</span>
                             <div style={{ flex: 1, lineHeight: 1.6 }}>{s}</div>
                          </div>
                        ))}
@@ -630,7 +630,7 @@ export default function CulinaryPage({ setAction }) {
        <div className="rs-card is-wide" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)' }}>
           <div className="rs-card-inner" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
              <div className="rs-chat-input-container" style={{ flex: 2, minWidth: 200, padding: '4px 16px', background: 'rgba(0,0,0,0.2)' }}>
-                <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
+                <span className="material-symbols-rounded" style={{ opacity: 0.7 }}>search</span>
                 <input style={{ all: 'unset', width: '100%', fontSize: '1.05rem' }} placeholder="SEARCH ARCHIVES..." value={search} onChange={e => setSearch(e.target.value)} />
              </div>
              <div style={{ display: 'flex', gap: 8 }}>
@@ -702,7 +702,7 @@ export default function CulinaryPage({ setAction }) {
                 <span className="rs-card-label" style={{ opacity: 1, color: item.quantity <= item.min_quantity ? '#f87171' : '#4ade80', fontWeight: 900 }}>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.05rem' }}>{item.quantity.toFixed(2)}</span> IN STOCK
                 </span>
-                <span className="rs-card-label" style={{ opacity: 0.4 }}>{item.brand?.toUpperCase()}</span>
+                <span className="rs-card-label" style={{ opacity: 0.7 }}>{item.brand?.toUpperCase()}</span>
              </div>
              <div className="rs-card-value" style={{ fontSize: '1.75rem' }}>{item.name}</div>
              <div style={{ marginTop: 24, display: 'flex', gap: 12 }}>
