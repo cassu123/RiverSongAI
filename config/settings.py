@@ -234,6 +234,15 @@ class Settings(BaseSettings):
     )
 
     # Cloud provider enable flags (cost control -- disabled by default)
+    home_triggers_enabled: bool = Field(
+        default=True,
+        description=(
+            "Fire routines from Home Assistant device events, and create the "
+            "built-in safety rules (leak, smoke, door left open, unlocked "
+            "late) on startup. Turning this off leaves the rules in place "
+            "but stops the engine listening."
+        ),
+    )
     anthropic_enabled: bool = Field(
         default=False,
         description="Allow Anthropic Claude as a selectable LLM provider.",

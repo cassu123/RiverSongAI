@@ -900,6 +900,8 @@ class SQLiteStore(
             "ALTER TABLE routines ADD COLUMN severity TEXT NOT NULL DEFAULT 'info'",
             "ALTER TABLE routines ADD COLUMN webhook_url TEXT",
             "ALTER TABLE routines ADD COLUMN last_output TEXT",
+            "ALTER TABLE routines ADD COLUMN trigger_config TEXT NOT NULL DEFAULT '{}'",
+            "ALTER TABLE routines ADD COLUMN builtin INTEGER NOT NULL DEFAULT 0",
             "INSERT OR IGNORE INTO admin_config (key, value) VALUES ('__global__', '{}')",
             "CREATE TABLE IF NOT EXISTS vault_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, owner_kind TEXT NOT NULL, owner_id TEXT NOT NULL, virtual_path TEXT NOT NULL UNIQUE, title TEXT, size INTEGER, mtime REAL, indexed_at REAL)",
             "CREATE TABLE IF NOT EXISTS vault_links (id INTEGER PRIMARY KEY AUTOINCREMENT, src_note_id INTEGER NOT NULL, target_title TEXT NOT NULL, FOREIGN KEY(src_note_id) REFERENCES vault_notes(id) ON DELETE CASCADE)",
