@@ -200,7 +200,14 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     setMessages(p => [...p, { role: 'user', text }])
     setStreamingContent('')
     setToolEvents([])
-    sendMessage({ type: 'text', text: JSON.stringify({ type: 'text_input', text, ...overrides }) })
+    // The server switches on the top-level `type` and has no "text" branch:
+    // `elif msg_type == "text_input"` is the only thing that reads typed
+    // input. This used to send {type:'text', text:'{"type":"text_input",...}'}
+    // — a JSON string nested inside a field the server never parses — so
+    // every typed message fell through the dispatch chain and was dropped.
+    // The user saw their own message appear (it is added optimistically just
+    // above) and River never answered.
+    sendMessage({ type: 'text_input', text, ...overrides })
   }, [sendMessage])
 
   const resetSession = useCallback(() => {
