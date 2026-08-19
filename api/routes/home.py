@@ -94,13 +94,46 @@ def _shape_device(state: dict) -> dict:
     return device_info
 
 
-async def collect_devices() -> list:
+async def _entity_meta() -> dict:
+    """entity_id -> {area, hidden} from the synced ha_entities table.
+
+    Home Assistant is the single source of truth for which room a device is
+    in, but the raw state objects it returns over REST carry no area at all --
+    areas live in the entity/device/area registries, which is what the sync
+    job pulls into ha_entities. Without this join the Home page can only group
+    by domain, which is how it ended up listing every light in the house
+    together regardless of which room they are in.
+
+    Returns an empty map on any failure, so the page degrades to ungrouped
+    devices rather than an error.
+    """
+    try:
+        from main import get_app
+        app = get_app()
+        if not app:
+            return {}
+        store = app.state.memory_manager._store
+        rows = await store.execute_read_async(
+            "SELECT entity_id, area, hidden FROM ha_entities")
+        return {
+            r["entity_id"]: {"area": r["area"], "hidden": bool(r["hidden"])}
+            for r in rows
+        }
+    except Exception as e:
+        logger.warning("ha_entities lookup failed, areas unavailable: %s", e)
+        return {}
+
+
+async def collect_devices(include_hidden: bool = False) -> list:
     """
     Fetch and shape the household's controllable entities.
 
     Shared by GET /api/home/devices and the River Vortex replica, so a unit's
     device grid and the web UI render from byte-identical data and neither
     needs Home Assistant credentials of its own (Vortex invariant 3).
+
+    Each device carries the `area` it belongs to, and entities the owner
+    hid via PATCH /api/home/entities/{id} are dropped unless asked for.
     """
     if not _is_configured():
         return []
@@ -108,10 +141,18 @@ async def collect_devices() -> list:
         client = _get_client()
         all_states = await client.get_all_states()
         await client.close()
-        return [
-            _shape_device(s) for s in all_states
-            if s["entity_id"].split(".")[0] in VISIBLE_DOMAINS
-        ]
+        meta = await _entity_meta()
+        out = []
+        for s in all_states:
+            if s["entity_id"].split(".")[0] not in VISIBLE_DOMAINS:
+                continue
+            m = meta.get(s["entity_id"], {})
+            if m.get("hidden") and not include_hidden:
+                continue
+            d = _shape_device(s)
+            d["area"] = m.get("area")
+            out.append(d)
+        return out
     except Exception as e:
         logger.error("HA collect_devices failed: %s", e)
         return []
@@ -138,10 +179,15 @@ async def get_devices(authorization: Optional[str] = Header(default=None)):
 
 
 class ActionBody(BaseModel):
+    # `action` is passed straight through as the Home Assistant service name,
+    # so anything the entity's domain exposes works: turn_on/turn_off/toggle,
+    # lock/unlock, open_cover/close_cover/stop_cover, media_play/media_pause/
+    # media_next_track, volume_set, set_temperature.
     entity_id: str
-    action: str        # turn_on | turn_off | toggle | activate | lock | unlock
+    action: str
     brightness_pct: int | None = None
     temperature: float | None = None
+    volume_level: float | None = None   # media_player.volume_set, 0.0-1.0
 
 
 @router.post("/action")
@@ -159,6 +205,8 @@ async def call_action(body: ActionBody,
             kwargs["brightness_pct"] = body.brightness_pct
         if body.temperature is not None:
             kwargs["temperature"] = body.temperature
+        if body.volume_level is not None:
+            kwargs["volume_level"] = max(0.0, min(1.0, body.volume_level))
         if domain == "scene":
             service = "turn_on"
         await client.call_service(domain, service, **kwargs)
@@ -246,7 +294,20 @@ async def stream_home_events(token: Optional[str] = None):
 
         async def _on_event(entity_id: str, new_state: dict, old_state: dict):
             try:
-                queue.put_nowait({"entity_id": entity_id, "state": new_state})
+                # Send the same shape GET /devices returns, not Home
+                # Assistant's raw state object. The raw object nests the
+                # state string under a "state" key alongside attributes, so
+                # clients merging it straight onto a device replaced the
+                # state string with a dict -- every live event turned the
+                # card's state into an object and isOn() went false.
+                # `area` is deliberately absent: the client already has it
+                # and a spread merge keeps its copy.
+                payload = {"entity_id": entity_id, "state": new_state.get("state")}
+                try:
+                    payload["device"] = _shape_device(new_state)
+                except Exception:
+                    pass
+                queue.put_nowait(payload)
             except asyncio.QueueFull:
                 logger.warning(
                     "Home event stream queue full; dropping event for %s",
