@@ -85,11 +85,11 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
         // Refresh session list
         if (token) {
           // API_BASE is '' whenever VITE_API_URL is unset — the local dev setup,
-      // where vite proxies /api. `new URL('/api/...')` with no base throws a
-      // synchronous TypeError, which lands outside the fetch chain's .catch
-      // and takes the whole effect down with it. The base is ignored when
-      // API_BASE is absolute.
-      const url = new URL(`${API_BASE}/api/chat/sessions`, window.location.origin)
+          // where vite proxies /api. `new URL('/api/...')` with no base throws
+          // a synchronous TypeError, which lands outside the fetch chain's
+          // .catch and takes the whole effect down with it. The base is
+          // ignored when API_BASE is absolute.
+          const url = new URL(`${API_BASE}/api/chat/sessions`, window.location.origin)
           if (vehicleId) url.searchParams.append('scope', `vehicle:${vehicleId}`)
           fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } })
             .then(r => r.json())
