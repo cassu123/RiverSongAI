@@ -93,7 +93,7 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
                   <div key={idx} className="rs-pill" style={{ justifyContent: 'flex-start', background: it._from_stockroom ? 'rgba(255,184,108,0.1)' : 'var(--md-surface-container-low)' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, minWidth: 60, color: 'var(--primary)' }}>{it.qty} {it.unit}</span>
                     <span style={{ flex: 1 }}>{it.name}</span>
-                    {it._from_stockroom && <span className="rs-card-label" style={{ fontSize: '0.6rem', color: '#FFB86C' }}>STOCK LOW</span>}
+                    {it._from_stockroom && <span className="rs-card-label" style={{ fontSize: '0.85rem', color: '#FFB86C' }}>STOCK LOW</span>}
                   </div>
                 ))}
              </div>
@@ -114,7 +114,7 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
                         <div>No items were mapped to Walmart products.</div>
                      )}
                      {exportResult.unmapped?.length > 0 && (
-                        <div style={{ marginTop: 12, fontSize: '0.8rem', color: '#f87171' }}>Unmapped: {exportResult.unmapped.join(', ')}</div>
+                        <div style={{ marginTop: 12, fontSize: '0.95rem', color: '#f87171' }}>Unmapped: {exportResult.unmapped.join(', ')}</div>
                      )}
                    </div>
                  ) : (
@@ -155,7 +155,7 @@ function PrepAdjuster({ entry, recipe, api, onUpdate }) {
           <option value="imperial">IMPERIAL</option>
           <option value="metric">METRIC</option>
        </select>
-       <button className="rs-btn-primary" style={{ height: 32, fontSize: '0.7rem' }} onClick={handleScale} disabled={scaling}>{scaling ? 'SCALING...' : 'APPLY'}</button>
+       <button className="rs-btn-primary" style={{ height: 32, fontSize: '0.85rem' }} onClick={handleScale} disabled={scaling}>{scaling ? 'SCALING...' : 'APPLY'}</button>
     </div>
   )
 }
@@ -296,7 +296,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                   <div>
                     <div className="rs-card-label" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
                       PROVISIONS
-                      <button className="rs-pill" style={{ fontSize: '0.65rem' }} onClick={addIngredient}>ADD PROVISION</button>
+                      <button className="rs-pill" style={{ fontSize: '0.85rem' }} onClick={addIngredient}>ADD PROVISION</button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {edited.ingredients?.map((ing, i) => (
@@ -313,12 +313,12 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                   <div>
                     <div className="rs-card-label" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
                       EXECUTION SEQUENCE
-                      <button className="rs-pill" style={{ fontSize: '0.65rem' }} onClick={addStep}>ADD STEP</button>
+                      <button className="rs-pill" style={{ fontSize: '0.85rem' }} onClick={addStep}>ADD STEP</button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {edited.steps?.map((step, i) => (
                         <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                          <span style={{ marginTop: 12, fontFamily: 'var(--font-mono)', opacity: 0.4, fontWeight: 900 }}>{String(i+1).padStart(2, '0')}</span>
+                          <span style={{ marginTop: 12, fontFamily: 'var(--font-mono)', opacity: 0.7, fontWeight: 900 }}>{String(i+1).padStart(2, '0')}</span>
                           <textarea 
                             className="rs-pill" 
                             style={{ flex: 1, minHeight: 60, borderRadius: 16, background: 'var(--md-surface-container-low)', border: 'none', padding: '12px 16px', lineHeight: 1.7, resize: 'vertical' }} 
@@ -349,7 +349,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                </div>
              ) : (
                <>
-                 <div className="rs-card-value" style={{ fontSize: '2rem', fontWeight: 800, marginBottom: 8 }}>{recipe.title}</div>
+                 <div className="rs-card-value" style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 8 }}>{recipe.title}</div>
                  {recipe.tags && recipe.tags.length > 0 && (
                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
                      {recipe.tags.map((t, i) => <span key={i} className="rs-card-label" style={{ background: 'var(--primary)', color: 'var(--bg-base)', padding: '4px 8px', borderRadius: 4 }}>{t.toUpperCase()}</span>)}
@@ -366,13 +366,13 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                          <div className="rs-card-label" style={{ color: 'var(--md-error)', marginBottom: 12 }}>BANNED INGREDIENTS DETECTED</div>
                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {recipe.blacklisted.map((b, i) => (
-                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: '0.88rem' }}>
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: '1.05rem' }}>
                                  <span style={{ color: 'var(--md-error)', fontWeight: 700 }}>{b.name}</span>
                                  {b.substitute && (
                                    <>
-                                     <span style={{ opacity: 0.5 }}>→</span>
+                                     <span style={{ opacity: 0.7 }}>→</span>
                                      <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{b.substitute}</span>
-                                     <button className="rs-pill" style={{ padding: '2px 10px', fontSize: '0.6rem' }} onClick={() => applySubstitute(b.name, b.substitute)}>APPLY SUBSTITUTE</button>
+                                     <button className="rs-pill" style={{ padding: '2px 10px', fontSize: '0.85rem' }} onClick={() => applySubstitute(b.name, b.substitute)}>APPLY SUBSTITUTE</button>
                                    </>
                                  )}
                               </div>
@@ -399,7 +399,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                        {recipe.steps.map((s, i) => (
                          <div key={i} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                            <span style={{ fontFamily: 'var(--font-mono)', opacity: 0.4, fontWeight: 900, marginTop: 4 }}>{String(i+1).padStart(2, '0')}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', opacity: 0.7, fontWeight: 900, marginTop: 4 }}>{String(i+1).padStart(2, '0')}</span>
                             <div style={{ flex: 1, lineHeight: 1.6 }}>{s}</div>
                          </div>
                        ))}
@@ -630,18 +630,18 @@ export default function CulinaryPage({ setAction }) {
        <div className="rs-card is-wide" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)' }}>
           <div className="rs-card-inner" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
              <div className="rs-chat-input-container" style={{ flex: 2, minWidth: 200, padding: '4px 16px', background: 'rgba(0,0,0,0.2)' }}>
-                <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
-                <input style={{ all: 'unset', width: '100%', fontSize: '0.85rem' }} placeholder="SEARCH ARCHIVES..." value={search} onChange={e => setSearch(e.target.value)} />
+                <span className="material-symbols-rounded" style={{ opacity: 0.7 }}>search</span>
+                <input style={{ all: 'unset', width: '100%', fontSize: '1.05rem' }} placeholder="SEARCH ARCHIVES..." value={search} onChange={e => setSearch(e.target.value)} />
              </div>
              <div style={{ display: 'flex', gap: 8 }}>
-                <select className="rs-pill" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ border: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.75rem' }}>
+                <select className="rs-pill" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ border: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.95rem' }}>
                   <option value="ALL">ALL MEALS</option>
                   {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'].map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                 </select>
-                <select className="rs-pill" value={filterProtein} onChange={e => setFilterProtein(e.target.value)} style={{ border: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.75rem' }}>
+                <select className="rs-pill" value={filterProtein} onChange={e => setFilterProtein(e.target.value)} style={{ border: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.95rem' }}>
                   {uniqueProteins.map(p => <option key={p} value={p}>{p === 'ALL' ? 'ALL PROTEINS' : p.toUpperCase()}</option>)}
                 </select>
-                <select className="rs-pill" value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ border: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.75rem' }}>
+                <select className="rs-pill" value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ border: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.95rem' }}>
                    <option value="NEWEST">NEWEST</option>
                    <option value="RATING">TOP RATED</option>
                 </select>
@@ -673,7 +673,7 @@ export default function CulinaryPage({ setAction }) {
                </div>
                <div style={{ padding: 24 }}>
                  <div className="rs-card-label" style={{ color: 'var(--primary)', fontWeight: 900, marginBottom: 12 }}>{r.meal_type.toUpperCase()}</div>
-                 <div className="rs-card-value" style={{ fontSize: '1.25rem', fontWeight: 800 }}>{r.title}</div>
+                 <div className="rs-card-value" style={{ fontSize: '1.3rem', fontWeight: 800 }}>{r.title}</div>
                  <div className="rs-card-meta" style={{ marginTop: 16, display: 'flex', gap: 16 }}>
                     <span>{r.primary_protein?.toUpperCase()}</span>
                     <span>·</span>
@@ -700,11 +700,11 @@ export default function CulinaryPage({ setAction }) {
            <div className="rs-card-inner">
              <div className="rs-card-head">
                 <span className="rs-card-label" style={{ opacity: 1, color: item.quantity <= item.min_quantity ? '#f87171' : '#4ade80', fontWeight: 900 }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem' }}>{item.quantity.toFixed(2)}</span> IN STOCK
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.05rem' }}>{item.quantity.toFixed(2)}</span> IN STOCK
                 </span>
-                <span className="rs-card-label" style={{ opacity: 0.4 }}>{item.brand?.toUpperCase()}</span>
+                <span className="rs-card-label" style={{ opacity: 0.7 }}>{item.brand?.toUpperCase()}</span>
              </div>
-             <div className="rs-card-value" style={{ fontSize: '1.4rem' }}>{item.name}</div>
+             <div className="rs-card-value" style={{ fontSize: '1.75rem' }}>{item.name}</div>
              <div style={{ marginTop: 24, display: 'flex', gap: 12 }}>
                 <button className="rs-pill is-active" style={{ flex: 1 }} onClick={() => setAdjustItem(item)}>ADJUST</button>
                 <button className="rs-pill" onClick={() => {
@@ -761,14 +761,14 @@ export default function CulinaryPage({ setAction }) {
                    background: w.entry ? 'var(--md-surface-container-high)' : 'var(--md-surface-container)', 
                    borderRadius: 16, padding: 16, border: '1px solid var(--md-outline-variant)' 
                  }}>
-                   <div style={{ fontSize: '0.8rem', fontWeight: 800, opacity: 0.5, marginBottom: 8 }}>{w.dayName.toUpperCase()}</div>
+                   <div style={{ fontSize: '0.95rem', fontWeight: 800, opacity: 0.7, marginBottom: 8 }}>{w.dayName.toUpperCase()}</div>
                    {w.entry ? (
                      <>
-                       <div style={{ fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.3 }}>{w.entry.recipe_title || w.entry.label || 'Planned'}</div>
-                       <div style={{ fontSize: '0.7rem', color: w.entry.status === 'cooked' ? '#4ade80' : 'var(--primary)', marginTop: 8, fontWeight: 800 }}>{w.entry.status.toUpperCase()}</div>
+                       <div style={{ fontWeight: 700, fontSize: '1.05rem', lineHeight: 1.3 }}>{w.entry.recipe_title || w.entry.label || 'Planned'}</div>
+                       <div style={{ fontSize: '0.85rem', color: w.entry.status === 'cooked' ? '#4ade80' : 'var(--primary)', marginTop: 8, fontWeight: 800 }}>{w.entry.status.toUpperCase()}</div>
                      </>
                    ) : (
-                     <div style={{ opacity: 0.3, fontSize: '0.8rem', fontStyle: 'italic' }}>Open</div>
+                     <div style={{ opacity: 0.7, fontSize: '0.95rem', fontStyle: 'italic' }}>Open</div>
                    )}
                  </div>
                ))}
@@ -793,7 +793,7 @@ export default function CulinaryPage({ setAction }) {
                         <span className="rs-pill" style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171' }}>{p.votes_no.length} NO</span>
                      </div>
                   </div>
-                  <div className="rs-card-value" style={{ fontSize: '1.5rem', marginBottom: 20 }}>{p.recipe?.title}</div>
+                  <div className="rs-card-value" style={{ fontSize: '1.75rem', marginBottom: 20 }}>{p.recipe?.title}</div>
                   <div style={{ display: 'flex', gap: 12 }}>
                      <button className="rs-btn-primary" style={{ flex: 1 }} onClick={async () => {
                         await api.post(`/dinner/${p.id}/vote`, { vote: 'yes' });
@@ -843,7 +843,7 @@ export default function CulinaryPage({ setAction }) {
                     <div key={i} className="rs-card" style={{ background: 'rgba(0,0,0,0.1)', border: '1px solid var(--md-outline-variant)' }}>
                        <div className="rs-card-inner">
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                             <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{pr.recipe_title}</div>
+                             <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{pr.recipe_title}</div>
                              <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={async () => {
                                 await api.delete(`/prep/${activePrep.id}/recipes/${pr.entry_id}`);
                                 fetchData('prep');
@@ -1010,20 +1010,20 @@ export default function CulinaryPage({ setAction }) {
                        <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>{(eq.equipment_type || 'HARDWARE').toUpperCase()}</span>
                        <span className="material-symbols-rounded" style={{ opacity: 0.2 }}>settings_input_component</span>
                      </div>
-                     <div className="rs-card-value" style={{ fontSize: '1.2rem', fontWeight: 800 }}>{eq.make}</div>
+                     <div className="rs-card-value" style={{ fontSize: '1.3rem', fontWeight: 800 }}>{eq.make}</div>
                      <div className="rs-card-meta" style={{ marginTop: 6 }}>{eq.model}</div>
                      {eq.profile_summary && (
-                       <div className="rs-card-meta" style={{ marginTop: 10, fontSize: '0.75rem' }}>
+                       <div className="rs-card-meta" style={{ marginTop: 10, fontSize: '0.95rem' }}>
                          {eq.profile_summary}
                        </div>
                      )}
                      {eq.profile && eq.profile.confident === false && (
-                       <div className="rs-card-meta" style={{ marginTop: 6, fontSize: '0.72rem', color: 'var(--rs-status-warning)' }}>
+                       <div className="rs-card-meta" style={{ marginTop: 6, fontSize: '0.95rem', color: 'var(--rs-status-warning)' }}>
                          Not certain of this model — the general limits for the type apply.
                        </div>
                      )}
                      {!eq.panel_confirmed && panelFor !== eq.id && (
-                       <div className="rs-card-meta" style={{ marginTop: 6, fontSize: '0.72rem', color: 'var(--rs-status-warning)' }}>
+                       <div className="rs-card-meta" style={{ marginTop: 6, fontSize: '0.95rem', color: 'var(--rs-status-warning)' }}>
                          Guessed from the name, not checked against the machine.
                        </div>
                      )}
@@ -1066,7 +1066,7 @@ export default function CulinaryPage({ setAction }) {
                            </button>
                         </div>
                       </div>
-                      <div className="rs-card-value" style={{ fontSize: '1.8rem' }}>{item.name}</div>
+                      <div className="rs-card-value" style={{ fontSize: '1.75rem' }}>{item.name}</div>
                       {item.substitute && <div className="rs-card-meta" style={{ marginTop: 8 }}>PREFEERED SUBSTITUTE: <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{item.substitute.toUpperCase()}</span></div>}
                       
                       {recommendations[item.id] && (
@@ -1078,7 +1078,7 @@ export default function CulinaryPage({ setAction }) {
                                 fetchData('banned');
                              }}>
                                 <span style={{ fontWeight: 700, color: 'var(--primary)', marginRight: 12 }}>{rec.name}</span>
-                                <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>{rec.reason}</span>
+                                <span style={{ fontSize: '0.95rem', opacity: 0.7 }}>{rec.reason}</span>
                              </div>
                            ))}
                         </div>
@@ -1105,7 +1105,7 @@ export default function CulinaryPage({ setAction }) {
             <div className="rs-card-label" style={{ marginBottom: 16 }}>ADJUST STOCK: {adjustItem.name.toUpperCase()}</div>
             <div style={{ display: 'flex', gap: 12, marginBottom: 24, alignItems: 'center', justifyContent: 'center' }}>
               <button className="rs-pill" onClick={() => setAdjustItem({...adjustItem, quantity: Math.max(0, adjustItem.quantity - 0.25)})}>-</button>
-              <div style={{ flex: 1, textAlign: 'center', fontSize: '2rem', fontWeight: 800 }}>{adjustItem.quantity.toFixed(2)}</div>
+              <div style={{ flex: 1, textAlign: 'center', fontSize: '1.75rem', fontWeight: 800 }}>{adjustItem.quantity.toFixed(2)}</div>
               <button className="rs-pill" onClick={() => setAdjustItem({...adjustItem, quantity: adjustItem.quantity + 0.25})}>+</button>
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
