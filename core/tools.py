@@ -121,6 +121,18 @@ async def execute_tool(
         elif tool_name == "add_shopping_list_item":
             return await _exec_add_shopping_list(tool_input, user_id)
 
+        elif tool_name == "create_device_alert":
+            from core.tools_home import _exec_create_device_alert
+            return await _exec_create_device_alert(tool_input, user_id)
+
+        elif tool_name == "list_device_alerts":
+            from core.tools_home import _exec_list_device_alerts
+            return await _exec_list_device_alerts(tool_input, user_id)
+
+        elif tool_name == "set_device_alert":
+            from core.tools_home import _exec_set_device_alert
+            return await _exec_set_device_alert(tool_input, user_id)
+
         elif tool_name == "play_media":
             return await _exec_play_media(tool_input, user_id)
 
