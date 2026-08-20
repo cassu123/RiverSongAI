@@ -5,7 +5,7 @@
 //
 // Features:
 //   - Auto-reconnect on unclean close (up to MAX_RECONNECT_ATTEMPTS)
-//   - Exponential-ish backoff via RECONNECT_DELAY_MS
+//   - Exponential backoff with full jitter, capped at RECONNECT_MAX_MS
 //   - Exposes connectionStatus: 'connected'|'disconnected'|'reconnecting'|'error'
 //   - sendMessage() serializes a JS object to JSON and sends it
 //   - Cleans up cleanly on component unmount
@@ -18,8 +18,20 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { Network } from '@capacitor/network'
 
-const RECONNECT_DELAY_MS       = 3000
-const MAX_RECONNECT_ATTEMPTS   = 5
+const RECONNECT_BASE_MS        = 1000
+const RECONNECT_MAX_MS         = 30000
+const MAX_RECONNECT_ATTEMPTS   = 8
+
+/**
+ * Exponential backoff with full jitter: 1s, 2s, 4s ... capped at 30s, each
+ * delay randomised across its whole range. The jitter matters when the server
+ * restarts — without it every client that dropped together comes back in the
+ * same instant and knocks it over again.
+ */
+function reconnectDelay(attempt) {
+  const ceiling = Math.min(RECONNECT_BASE_MS * 2 ** attempt, RECONNECT_MAX_MS)
+  return Math.round(Math.random() * ceiling)
+}
 
 export function useWebSocket(baseUrl, onMessage, options = {}) {
   const { token, kioskToken } = options
@@ -146,9 +158,10 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
           reconnectCountRef.current < MAX_RECONNECT_ATTEMPTS
 
         if (shouldReconnect) {
+          const delay = reconnectDelay(reconnectCountRef.current)
           reconnectCountRef.current += 1
           setConnectionStatus('reconnecting')
-          reconnectTimerRef.current = setTimeout(connect, RECONNECT_DELAY_MS)
+          reconnectTimerRef.current = setTimeout(connect, delay)
         }
       }
 

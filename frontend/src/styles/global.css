@@ -127,7 +127,12 @@
 body {
   /* Text aliases */
   --text-dim:    var(--md-on-surface-variant);
-  --text-muted:  color-mix(in srgb, var(--md-on-surface-variant) 55%, transparent);
+  /* Derived from --fg directly, not from --md-on-surface-variant. Stacking
+     55% on top of that token's own 80% left muted text at 44% opacity --
+     2.94:1 on the darkest mood, 3.76:1 on the lightest, so it failed the
+     4.5:1 floor on all 19. 60% is the point where every mood passes; 65%
+     keeps a margin (5.25:1 worst case, on smoke). */
+  --text-muted:  color-mix(in srgb, var(--fg, #BFC8CE) 65%, transparent);
 
   /* Background aliases */
   --bg:          var(--bg-base);

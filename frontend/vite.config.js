@@ -40,6 +40,16 @@ export default defineConfig({
     },
   },
 
+  // Vitest. The two component tests were committed long before a runner was;
+  // jsdom + globals is what they were written against.
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./vitest.setup.js'],
+    include: ['src/**/*.test.{js,jsx}'],
+    restoreMocks: true,
+  },
+
   server: {
     port: 5173,
     allowedHosts: ['app.riversongai.com'],

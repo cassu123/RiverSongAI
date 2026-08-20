@@ -36,6 +36,28 @@ export function AuthProvider({ children }) {
           const u = await res.json()
           setUser(u)
           localStorage.setItem(USER_KEY, JSON.stringify(u))
+
+          // Slide the session forward on every app open. Harmless in a browser
+          // tab; the point is the native shell, which can sit backgrounded for
+          // days and would otherwise come back to an expired token and a
+          // conversation socket that closes 4001 with no explanation.
+          // Best-effort — the token we already validated stays usable if this
+          // fails, so a refresh error must never log anyone out.
+          try {
+            const r = await fetch(`${API_BASE}/api/auth/refresh`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+            })
+            if (r.ok) {
+              const data = await r.json()
+              if (data?.token) {
+                setToken(data.token)
+                localStorage.setItem(TOKEN_KEY, data.token)
+              }
+            }
+          } catch (err) {
+            console.warn('[auth] session refresh failed; keeping existing token:', err)
+          }
         } else {
           setToken(null); setUser(null)
           localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY)

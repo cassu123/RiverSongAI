@@ -267,7 +267,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
             className="rs-pill"
             style={{
               padding: '2px 8px',
-              fontSize: '0.72rem',
+              fontSize: '0.95rem',
               fontWeight: 700,
               gap: 4,
               border: `1px solid ${storeMeta ? storeMeta.color : 'rgba(255,255,255,0.18)'}`,
@@ -300,7 +300,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
             >
               <button
                 className="rs-mpop-row"
-                style={{ padding: '6px 8px', fontSize: '0.78rem' }}
+                style={{ padding: '6px 8px', fontSize: '0.95rem' }}
                 onClick={() => handleQuickStoreChange(item.id, null)}
               >
                 <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>remove_circle_outline</span>
@@ -312,7 +312,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
                   <button
                     key={st}
                     className="rs-mpop-row"
-                    style={{ padding: '6px 8px', fontSize: '0.78rem' }}
+                    style={{ padding: '6px 8px', fontSize: '0.95rem' }}
                     onClick={() => handleQuickStoreChange(item.id, st)}
                   >
                     <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', color: meta.color }}>
@@ -328,7 +328,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
 
         <span
           className="rs-card-label"
-          style={{ fontSize: '0.6rem', whiteSpace: 'nowrap', color: SOURCE_COLORS[item.source] || 'inherit', opacity: 0.85 }}
+          style={{ fontSize: '0.85rem', whiteSpace: 'nowrap', color: SOURCE_COLORS[item.source] || 'inherit', opacity: 0.85 }}
         >
           {SOURCE_LABELS[item.source] || item.source?.toUpperCase()}
           {item.added_by_name && !item.is_mine ? ` · ${item.added_by_name}` : ''}
@@ -356,7 +356,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
         <button
           className="rs-pill"
           style={{
-            fontSize: '0.75rem',
+            fontSize: '0.95rem',
             padding: '6px 12px',
             background: activeStoreFilter === 'all' ? 'var(--primary)' : 'var(--md-surface-container-low)',
             color: activeStoreFilter === 'all' ? '#000' : 'inherit',
@@ -375,7 +375,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
               key={st}
               className="rs-pill"
               style={{
-                fontSize: '0.75rem',
+                fontSize: '0.95rem',
                 padding: '6px 12px',
                 gap: 5,
                 background: isActive ? (meta ? meta.color : 'var(--primary)') : 'var(--md-surface-container-low)',
@@ -609,7 +609,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
                     key={st}
                     className="rs-pill"
                     style={{
-                      fontSize: '0.72rem',
+                      fontSize: '0.95rem',
                       padding: '4px 10px',
                       background: isSelected ? meta.color : 'var(--md-surface-container-low)',
                       color: isSelected ? '#fff' : 'inherit',
@@ -658,7 +658,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
                       {meta?.icon || 'store'}
                     </span>
                     <span style={{ flex: 1, fontWeight: 600 }}>{m.ingredient_name}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', opacity: 0.6, fontSize: '0.8rem' }}>{m.store_item_id}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', opacity: 0.6, fontSize: '0.95rem' }}>{m.store_item_id}</span>
                     <button
                       className="rs-pill"
                       aria-label={`Unlink ${m.ingredient_name}`}
