@@ -534,6 +534,59 @@ async def me(request: Request,
     return user
 
 
+@router.post("/refresh")
+@limiter.limit(get_settings().rate_limit_auth_login)
+async def refresh(request: Request, response: Response,
+                  authorization: Optional[str] = Header(default=None)):
+    """Exchange a still-valid access token for a fresh one (sliding session).
+
+    Browsers get away without this: a tab that is open when the token expires
+    is usually a tab someone is looking at, and a re-login is a minor
+    annoyance. A phone is different — the app is backgrounded for days, and
+    the only symptom of an expired token is that the conversation socket
+    closes with 4001 and everything silently stops working.
+
+    This is deliberately NOT a refresh-token pair. There is no second,
+    longer-lived credential to store or rotate; the caller simply presents a
+    token that has not expired yet and gets one with a later expiry. Role,
+    email, suspension and forced-logout are all re-read from the user record,
+    so a demoted or suspended account cannot refresh its way past the change.
+
+    The old token is left alone rather than revoked: requests already in
+    flight when the client refreshes would otherwise start failing, and the
+    old token expires on its own schedule anyway.
+    """
+    payload = await _get_auth_payload(request, authorization)
+
+    store = _get_store(request)
+    user = await store.get_user_by_id(payload["sub"])
+    if not user:
+        raise unauthorized("User not found.")
+    if user.get("is_suspended"):
+        raise unauthorized("Account suspended.")
+
+    # Carried through so refreshing mid-impersonation stays an impersonation
+    # rather than quietly becoming a real session as that user.
+    token = create_access_token(
+        user["id"],
+        user["email"],
+        user["role"],
+        impersonator_id=payload.get("impersonator_id"),
+    )
+    _issue_session(response, token)
+    return {
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "display_name": user["display_name"],
+            "role": user["role"],
+            "is_approved": user["is_approved"],
+            "force_password_change": user.get("force_password_change", False),
+        },
+    }
+
+
 @router.patch("/password")
 async def change_password(body: ChangePasswordBody, request: Request,
                           authorization: Optional[str] = Header(default=None)):

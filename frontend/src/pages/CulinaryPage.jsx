@@ -507,7 +507,13 @@ export default function CulinaryPage({ setAction }) {
   const fetchData = useCallback(async (tab) => {
     setLoading(true)
     try {
-      if (tab === 'library') setRecipes(await api.get('/recipes'))
+      // Guard the shape: uniqueProteins maps over this during render, so a
+      // non-array response takes the page down rather than showing an empty
+      // library.
+      if (tab === 'library') {
+        const data = await api.get('/recipes')
+        setRecipes(Array.isArray(data) ? data : [])
+      }
       if (tab === 'stockroom') setStock(await api.get('/stockroom'))
       if (tab === 'dinner') {
         setProposals(await api.get('/dinner'));
