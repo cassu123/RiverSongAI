@@ -121,6 +121,15 @@ async def execute_tool(
         elif tool_name == "add_shopping_list_item":
             return await _exec_add_shopping_list(tool_input, user_id)
 
+        elif tool_name == "play_media":
+            return await _exec_play_media(tool_input, user_id)
+
+        elif tool_name == "media_control":
+            return await _exec_media_control(tool_input, user_id)
+
+        elif tool_name == "announce":
+            return await _exec_announce(tool_input, user_id)
+
         elif tool_name in ("read_shopping_list", "get_shopping_list"):
             return await _exec_read_shopping_list(tool_input, user_id)
 
@@ -1651,3 +1660,148 @@ from core.tools_memory import (  # noqa: E402
     _exec_find_notes,
     _exec_read_note,
 )
+
+
+# ---------------------------------------------------------------------------
+# Media and announcements — phase H4 of docs/smart-home-plan.md.
+#
+# Home Assistant owns the speakers; these resolve a spoken room or player name
+# through the same ha_entities sync the rest of the home code uses, so "play
+# music in the kitchen" needs no second registry of its own.
+# ---------------------------------------------------------------------------
+
+async def _media_players_in(target: Optional[str]) -> list:
+    """media_player entity ids matching a room or player name.
+
+    An empty or "everywhere" target means every player in the house, which is
+    what an announcement usually wants.
+    """
+    from main import get_app
+    app = get_app()
+    if not app:
+        return []
+    store = app.state.memory_manager._store
+    try:
+        rows = await store.execute_read_async(
+            "SELECT entity_id, name, area FROM ha_entities "
+            "WHERE domain = 'media_player' AND hidden = 0")
+    except Exception as e:
+        logger.error("Could not read media players: %s", e)
+        return []
+
+    if not target or target.strip().lower() in ("all", "everywhere", "house"):
+        return [r["entity_id"] for r in rows]
+
+    t = target.strip().lower()
+    exact = [r["entity_id"] for r in rows
+             if (r["area"] or "").lower() == t or (r["name"] or "").lower() == t]
+    if exact:
+        return exact
+    # Fall back to a loose contains match so "kitchen speaker" finds the
+    # kitchen, rather than failing on a word the user did not know mattered.
+    return [r["entity_id"] for r in rows
+            if t in (r["name"] or "").lower() or t in (r["area"] or "").lower()]
+
+
+async def _exec_play_media(args: dict, user_id: str) -> str:
+    from core.family import is_feature_enabled_for
+    if not await is_feature_enabled_for(user_id, "home"):
+        return "Home control isn't enabled for you."
+
+    target = args.get("room") or args.get("player")
+    query = (args.get("query") or "").strip()
+    players = await _media_players_in(target)
+    if not players:
+        where = f" in the {target}" if target else ""
+        return f"I couldn't find a speaker{where}."
+
+    from providers.smart_home.home_assistant import build_ha_client
+    try:
+        async with build_ha_client() as client:
+            for eid in players:
+                if query:
+                    # search_media is what HA exposes for "play this by name";
+                    # without a query this is a plain resume.
+                    await client.call_service(
+                        "media_player", "play_media", entity_id=eid,
+                        media_content_id=query, media_content_type="music")
+                else:
+                    await client.call_service(
+                        "media_player", "media_play", entity_id=eid)
+    except Exception:
+        return ("Home Assistant isn't reachable right now — I couldn't start "
+                "playback.")
+
+    where = f" in the {target}" if target else ""
+    what = f" '{query}'" if query else ""
+    return f"Playing{what}{where}."
+
+
+async def _exec_media_control(args: dict, user_id: str) -> str:
+    from core.family import is_feature_enabled_for
+    if not await is_feature_enabled_for(user_id, "home"):
+        return "Home control isn't enabled for you."
+
+    action = (args.get("action") or "").lower()
+    target = args.get("room") or args.get("player")
+    players = await _media_players_in(target)
+    if not players:
+        return f"I couldn't find a speaker{f' in the {target}' if target else ''}."
+
+    service_for = {"pause": "media_pause", "stop": "media_stop",
+                   "resume": "media_play", "play": "media_play",
+                   "next": "media_next_track", "previous": "media_previous_track"}
+    from providers.smart_home.home_assistant import build_ha_client
+    try:
+        async with build_ha_client() as client:
+            if action == "volume":
+                level = args.get("level")
+                if level is None:
+                    return "Tell me what volume to set, from 0 to 100."
+                level = max(0.0, min(1.0, float(level) / 100.0))
+                for eid in players:
+                    await client.call_service("media_player", "volume_set",
+                                              entity_id=eid, volume_level=level)
+                return f"Volume set to {int(level * 100)}%."
+            service = service_for.get(action)
+            if not service:
+                return f"I don't know how to '{action}' a speaker."
+            for eid in players:
+                await client.call_service("media_player", service, entity_id=eid)
+    except Exception:
+        return "Home Assistant isn't reachable right now."
+    return f"Done — {action}."
+
+
+async def _exec_announce(args: dict, user_id: str) -> str:
+    """Speak a message through the house speakers.
+
+    Uses Home Assistant's own tts service rather than River's TTS pool: the
+    audio has to reach a speaker HA owns, and handing HA the text is one hop
+    instead of rendering a clip here and serving it back over the network.
+    """
+    from core.family import is_feature_enabled_for
+    if not await is_feature_enabled_for(user_id, "home"):
+        return "Home control isn't enabled for you."
+
+    message = (args.get("message") or "").strip()
+    if not message:
+        return "Tell me what to announce."
+    target = args.get("room")
+    players = await _media_players_in(target)
+    if not players:
+        where = f" in the {target}" if target else ""
+        return f"I couldn't find a speaker{where} to announce on."
+
+    from providers.smart_home.home_assistant import build_ha_client
+    try:
+        async with build_ha_client() as client:
+            for eid in players:
+                await client.call_service(
+                    "tts", "speak", entity_id=eid, message=message)
+    except Exception:
+        return ("Home Assistant isn't reachable right now — the announcement "
+                "didn't play.")
+
+    where = f" in the {target}" if target else " everywhere"
+    return f"Announced{where}."

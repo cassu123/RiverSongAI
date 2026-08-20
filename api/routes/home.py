@@ -329,3 +329,172 @@ async def stream_home_events(token: Optional[str] = None):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+
+
+# ---------------------------------------------------------------------------
+# Device triggers — the safety pack and anything authored on top of it.
+#
+# These live here rather than under /api/routines because they are what the
+# Home page shows and edits; a routine with trigger="device" is the same row
+# either way.
+# ---------------------------------------------------------------------------
+
+def _rule_view(r: dict) -> dict:
+    """A trigger routine as the Home settings section renders it."""
+    cfg = r.get("trigger_config") or {}
+    return {
+        "id": r["id"],
+        "name": r["name"],
+        "enabled": bool(r.get("enabled")),
+        "builtin": bool(r.get("builtin")),
+        "severity": r.get("severity") or "info",
+        "watches": {
+            "entity_id": cfg.get("entity_id"),
+            "area": cfg.get("area"),
+            "device_class": cfg.get("device_class"),
+            "domain": cfg.get("domain"),
+            "to_state": cfg.get("to_state"),
+        },
+        "for_seconds": cfg.get("for_seconds") or 0,
+        "time_window": cfg.get("time_window"),
+        "last_run": r.get("last_run"),
+    }
+
+
+@router.get("/triggers")
+async def list_triggers(request: Request,
+                        authorization: Optional[str] = Header(default=None)):
+    """Every device-triggered rule for this user, builtin ones included."""
+    user_id = await _require_user(authorization)
+    store = request.app.state.memory_manager._store
+    rows = await store.list_routines(user_id)
+    return [_rule_view(r) for r in rows if r.get("trigger") == "device"]
+
+
+class TriggerPatch(BaseModel):
+    enabled: Optional[bool] = None
+    severity: Optional[str] = None
+    for_seconds: Optional[float] = None
+    time_window: Optional[dict] = None
+
+
+@router.patch("/triggers/{rule_id}")
+async def patch_trigger(rule_id: str, body: TriggerPatch, request: Request,
+                        authorization: Optional[str] = Header(default=None)):
+    """Mute a rule, or retune its hold time / quiet window.
+
+    The selectors themselves are not editable here: a builtin's whole point is
+    that it watches a device_class rather than a device someone has to pick.
+    """
+    user_id = await _require_user(authorization)
+    store = request.app.state.memory_manager._store
+    current = next((r for r in await store.list_routines(user_id)
+                    if r["id"] == rule_id), None)
+    if not current:
+        raise HTTPException(status_code=404, detail="Rule not found.")
+
+    fields: dict = {}
+    if body.enabled is not None:
+        fields["enabled"] = body.enabled
+    if body.severity is not None:
+        if body.severity not in ("info", "warning", "critical"):
+            raise HTTPException(status_code=400, detail="Unknown severity.")
+        fields["severity"] = body.severity
+
+    cfg = dict(current.get("trigger_config") or {})
+    if body.for_seconds is not None:
+        cfg["for_seconds"] = max(0.0, float(body.for_seconds))
+    if body.time_window is not None:
+        cfg["time_window"] = body.time_window or None
+    if body.for_seconds is not None or body.time_window is not None:
+        fields["trigger_config"] = cfg
+
+    if not fields:
+        return _rule_view(current)
+    updated = await store.update_routine(rule_id, user_id, fields)
+    return _rule_view(updated or current)
+
+
+class TriggerTest(BaseModel):
+    entity_id: str
+    state: str
+    device_class: Optional[str] = None
+    area: Optional[str] = None
+    friendly_name: Optional[str] = None
+    # False: report what would happen and change nothing. True: put the event
+    # on the bus for real, so delivery — push, TTS, quiet hours — is exercised.
+    deliver: bool = False
+
+
+@router.post("/triggers/test")
+async def test_trigger(body: TriggerTest, request: Request,
+                       authorization: Optional[str] = Header(default=None)):
+    """Answer "would this fire, and why" without staging the real condition.
+
+    Checking the leak alarm should not require wetting a floor. The synthetic
+    event has the same shape Home Assistant sends, so a dry run exercises the
+    real selectors and the real clock, and `deliver` exercises the real
+    delivery path on top.
+    """
+    import zoneinfo
+    from datetime import datetime
+    from core.home_triggers import explain
+
+    user_id = await _require_user(authorization)
+    store = request.app.state.memory_manager._store
+
+    attrs: dict = {"friendly_name": body.friendly_name or body.entity_id}
+    if body.device_class:
+        attrs["device_class"] = body.device_class
+    new_state = {"entity_id": body.entity_id, "state": body.state,
+                 "attributes": attrs}
+
+    area = body.area
+    if area is None:
+        try:
+            row = await store.execute_read_one_async(
+                "SELECT area FROM ha_entities WHERE entity_id = ?",
+                (body.entity_id,))
+            area = row["area"] if row else None
+        except Exception:
+            area = None
+
+    try:
+        settings = await store.get_llm_settings(user_id)
+        tz_name = (settings.get("timezone") if isinstance(settings, dict)
+                   else getattr(settings, "timezone", None)) or "UTC"
+        tz = zoneinfo.ZoneInfo(tz_name)
+    except Exception:
+        tz = zoneinfo.ZoneInfo("UTC")
+    now_local = datetime.now(tz)
+
+    results = []
+    for r in await store.list_routines(user_id):
+        if r.get("trigger") != "device":
+            continue
+        verdict = explain(r.get("trigger_config") or {}, body.entity_id,
+                          new_state, area, now_local)
+        if not r.get("enabled"):
+            verdict = {"would_fire": False, "reason": "rule is muted"}
+        results.append({"id": r["id"], "name": r["name"], **verdict})
+
+    delivered = False
+    if body.deliver:
+        # The real path: onto the bus, through the evaluator, out via the
+        # DeliveryRouter. Quiet hours and cooldowns apply exactly as they
+        # would at three in the morning.
+        from core.home_events import get_home_bus
+        old_state = {"entity_id": body.entity_id, "state": "__test_previous__",
+                     "attributes": attrs}
+        await get_home_bus().emit(body.entity_id, new_state, old_state)
+        delivered = True
+
+    return {
+        "entity_id": body.entity_id,
+        "state": body.state,
+        "area": area,
+        "local_time": now_local.strftime("%H:%M"),
+        "delivered": delivered,
+        "rules": results,
+        "would_fire": [r["name"] for r in results if r.get("would_fire")],
+    }

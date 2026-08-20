@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
+import SafetyRules from '../components/SafetyRules.jsx'
 
 const DOMAIN_ICON = {
   light: '◎', switch: '◉', fan: '◈', cover: '▣', lock: '◆', climate: '◇',
@@ -276,6 +277,8 @@ export default function HomeNodePage({ setAction }) {
             {visibleRooms.map(r => (
               <RoomCard key={r.name} room={r} acting={acting} onAction={callAction} />
             ))}
+
+            <SafetyRules />
 
             {operable.length === 0 && (
               <div className="rs-card is-wide" style={{ textAlign: 'center' }}>

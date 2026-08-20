@@ -293,3 +293,77 @@ async def test_a_disabled_builtin_is_not_recreated():
     created = await ensure_builtin_safety_routines(store, "u1")
     assert created == 0
     assert all(r["enabled"] is False for r in store._routines)
+
+
+# ---------------------------------------------------------------------------
+# explain() — the dry run behind POST /api/home/triggers/test
+# ---------------------------------------------------------------------------
+
+from core.home_triggers import explain
+
+
+def test_explain_matches_a_leak():
+    v = explain({"device_class": "moisture", "to_state": "on"},
+                "binary_sensor.leak", state("on", device_class="moisture"),
+                None, at(3))
+    assert v["would_fire"] is True
+    assert v["delay_seconds"] == 0.0
+
+
+def test_explain_names_the_selector_that_failed():
+    v = explain({"device_class": "smoke", "to_state": "on"},
+                "binary_sensor.leak", state("on", device_class="moisture"),
+                None, at(3))
+    assert v["would_fire"] is False
+    assert "device_class" in v["reason"]
+
+
+def test_explain_reports_the_hold_rather_than_pretending_it_fired():
+    v = explain({"device_class": "door", "to_state": "on", "for_seconds": 600},
+                "binary_sensor.door", state("on", device_class="door"),
+                None, at(12))
+    assert v["would_fire"] is True
+    assert v["delay_seconds"] == 600.0
+    assert "600" in v["reason"]
+
+
+def test_explain_explains_a_closed_time_window():
+    cfg = {"domain": "lock", "to_state": "unlocked",
+           "time_window": {"start": "22:00", "end": "06:00"}}
+    midday = explain(cfg, "lock.front", state("unlocked"), None, at(12))
+    assert midday["would_fire"] is False
+    assert "window" in midday["reason"]
+    night = explain(cfg, "lock.front", state("unlocked"), None, at(23))
+    assert night["would_fire"] is True
+
+
+def test_explain_refuses_a_selectorless_rule():
+    v = explain({"to_state": "on"}, "light.any", state("on"), None, at(12))
+    assert v["would_fire"] is False
+    assert "selector" in v["reason"]
+
+
+def test_explain_checks_area():
+    cfg = {"area": "Kitchen", "to_state": "on"}
+    assert explain(cfg, "light.k", state("on"), "Kitchen", at(12))["would_fire"] is True
+    v = explain(cfg, "light.g", state("on"), "Garage", at(12))
+    assert v["would_fire"] is False and "area" in v["reason"]
+
+
+def test_every_builtin_can_be_tripped_by_a_synthetic_event():
+    """The safety pack has to be reachable from the test endpoint, or the
+    only way to verify it is to stage a real emergency."""
+    samples = {
+        "builtin_leak": ("binary_sensor.x", "on", "moisture", 12),
+        "builtin_smoke": ("binary_sensor.x", "on", "smoke", 12),
+        "builtin_gas": ("binary_sensor.x", "on", "gas", 12),
+        "builtin_co": ("binary_sensor.x", "on", "carbon_monoxide", 12),
+        "builtin_door_open": ("binary_sensor.x", "on", "door", 12),
+        "builtin_garage_open": ("binary_sensor.x", "on", "garage_door", 12),
+        "builtin_unlocked_late": ("lock.x", "unlocked", None, 23),
+    }
+    for rule in BUILTIN_SAFETY_RULES:
+        eid, val, dc, hour = samples[rule["key"]]
+        st = state(val, **({"device_class": dc} if dc else {}))
+        v = explain(rule["trigger_config"], eid, st, None, at(hour))
+        assert v["would_fire"] is True, f"{rule['name']}: {v['reason']}"

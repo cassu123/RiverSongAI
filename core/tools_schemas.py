@@ -309,6 +309,43 @@ TOOL_SCHEMAS = [
         }
     },
     {
+        "name": "play_media",
+        "description": "Play music or media on the speakers in a room, or everywhere.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "room": {"type": "string", "description": "Room or speaker name, e.g. 'kitchen'. Omit for the whole house."},
+                "query": {"type": "string", "description": "What to play. Omit to resume whatever was paused."},
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "media_control",
+        "description": "Pause, resume, skip, or set the volume on the speakers in a room.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "enum": ["pause", "resume", "stop", "next", "previous", "volume"], "description": "What to do."},
+                "room": {"type": "string", "description": "Room or speaker name. Omit for the whole house."},
+                "level": {"type": "integer", "description": "Volume 0-100. Only for action='volume'."},
+            },
+            "required": ["action"]
+        }
+    },
+    {
+        "name": "announce",
+        "description": "Speak a message aloud through the house speakers in a room, or everywhere.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string", "description": "What to say."},
+                "room": {"type": "string", "description": "Room to announce in. Omit for every speaker."},
+            },
+            "required": ["message"]
+        }
+    },
+    {
         "name": "set_reminder",
         "description": "Schedule a personal reminder for a specific date and time.",
         "input_schema": {

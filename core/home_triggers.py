@@ -96,6 +96,48 @@ def has_selector(config: dict) -> bool:
                ("entity_id", "area", "device_class", "domain"))
 
 
+def explain(config: dict, entity_id: str, new_state: dict,
+            area: Optional[str], now_local: datetime) -> dict:
+    """Why a rule would or would not fire for this event — without firing it.
+
+    Exists so a rule can be checked without staging the real-world condition.
+    Nobody should have to flood a bathroom to find out whether the leak alert
+    is wired up correctly.
+    """
+    if not has_selector(config):
+        return {"would_fire": False,
+                "reason": "no selector — the rule matches nothing on purpose"}
+
+    for label, ok in (
+        ("entity_id", not config.get("entity_id")
+                      or config["entity_id"] == entity_id),
+        ("area", not config.get("area") or (
+            area and area.lower() == str(config["area"]).lower())),
+        ("device_class", not config.get("device_class") or (
+            (new_state.get("attributes") or {}).get("device_class")
+            == config["device_class"])),
+        ("domain", not config.get("domain")
+                   or entity_id.split(".")[0] == config["domain"]),
+        ("to_state", config.get("to_state") is None
+                     or str(new_state.get("state")) == str(config["to_state"])),
+    ):
+        if not ok:
+            return {"would_fire": False, "reason": f"{label} does not match"}
+
+    if not in_time_window(now_local, config.get("time_window")):
+        w = config["time_window"]
+        return {"would_fire": False,
+                "reason": (f"outside the {w.get('start')}-{w.get('end')} "
+                           f"window (local time is "
+                           f"{now_local.strftime('%H:%M')})")}
+
+    hold = config.get("for_seconds") or 0
+    if hold:
+        return {"would_fire": True, "delay_seconds": float(hold),
+                "reason": f"matches; fires if it holds for {hold}s"}
+    return {"would_fire": True, "delay_seconds": 0.0, "reason": "matches"}
+
+
 class HomeTriggerEngine:
     """Watches the HA event bus and fires device-triggered routines."""
 
