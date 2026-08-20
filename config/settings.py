@@ -562,6 +562,14 @@ class Settings(BaseSettings):
         default="http://homeassistant.local:8123",
         description="Base URL of your Home Assistant instance.",
     )
+    home_assistant_tts_entity: str = Field(
+        default="",
+        description=(
+            "tts.* entity to speak announcements through, e.g. "
+            "tts.piper. Leave blank to use the first TTS entity found "
+            "during the Home Assistant sync."
+        ),
+    )
     home_assistant_token: str = Field(
         default="",
         description=(

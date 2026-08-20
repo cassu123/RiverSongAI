@@ -316,7 +316,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 except Exception as e:
                     logger.warning("Could not seed safety rules: %s", e)
 
-            asyncio.create_task(_seed_safety_rules())
+            # Held on app.state: a bare create_task is only weakly
+            # referenced by the loop and can be collected mid-flight.
+            app.state.home_safety_seed_task = asyncio.create_task(
+                _seed_safety_rules())
         
     await start_sweeps(app)
 

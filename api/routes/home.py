@@ -13,11 +13,12 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from config.settings import get_settings
 from core.auth import decode_token
+from core.home_triggers import parse_hhmm
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/home", tags=["home"])
@@ -36,6 +37,23 @@ VISIBLE_DOMAINS = {
     "sensor",
     "binary_sensor"
 }
+
+async def _require_admin(authorization: Optional[str]) -> str:
+    """Caller must be an admin. Used where an action reaches other people.
+
+    The trigger bus is process-wide and the evaluator loads every enabled
+    routine in the database, not just the caller's, so a synthetic event is
+    not a private thing — it lands on whoever those rules belong to.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    payload = await decode_token(authorization.removeprefix("Bearer "))
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    if payload.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admins only.")
+    return payload["sub"]
+
 
 async def _require_user(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
@@ -277,13 +295,23 @@ import asyncio
 from core.home_events import get_home_bus
 
 @router.get("/stream")
-async def stream_home_events(token: Optional[str] = None):
-    # Quick auth check using token param since EventSource doesn't easily send Headers
+async def stream_home_events(request: Request):
+    """Authenticated by the session cookie, never by a token in the URL.
+
+    EventSource cannot set headers, and the previous answer was ?token=,
+    which puts a bearer token into server logs, proxy logs and browser
+    history. The stream is same-origin, so the access_token cookie login
+    already sets travels with it. useWebSocket.js reached the same
+    conclusion for the socket: "Never fall back to ?token= — it leaks."
+    """
+    token = request.cookies.get("access_token")
     if not token:
-        raise HTTPException(status_code=401, detail="Missing token")
+        raise HTTPException(
+            status_code=401,
+            detail="No session cookie. Sign in again to receive live updates.")
     payload = await decode_token(token)
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid or expired session.")
 
     if not _is_configured():
         raise HTTPException(status_code=400, detail="HA not configured")
@@ -405,6 +433,14 @@ async def patch_trigger(rule_id: str, body: TriggerPatch, request: Request,
     if body.for_seconds is not None:
         cfg["for_seconds"] = max(0.0, float(body.for_seconds))
     if body.time_window is not None:
+        # An unparseable edge makes in_time_window() return True, which turns
+        # a night-only rule into an all-day one with nothing said. Refuse it.
+        if body.time_window:
+            for edge in ("start", "end"):
+                if parse_hhmm(str(body.time_window.get(edge, ""))) is None:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"time_window.{edge} must be HH:MM.")
         cfg["time_window"] = body.time_window or None
     if body.for_seconds is not None or body.time_window is not None:
         fields["trigger_config"] = cfg
@@ -480,6 +516,10 @@ async def test_trigger(body: TriggerTest, request: Request,
 
     delivered = False
     if body.deliver:
+        # Emitting reaches every user's rules and their push targets, so a
+        # non-admin must not be able to send the household a critical "Smoke
+        # detected". Dry runs above stay open to anyone — they fire nothing.
+        await _require_admin(authorization)
         # The real path: onto the bus, through the evaluator, out via the
         # DeliveryRouter. Quiet hours and cooldowns apply exactly as they
         # would at three in the morning.

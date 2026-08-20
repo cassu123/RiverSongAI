@@ -367,3 +367,34 @@ def test_every_builtin_can_be_tripped_by_a_synthetic_event():
         st = state(val, **({"device_class": dc} if dc else {}))
         v = explain(rule["trigger_config"], eid, st, None, at(hour))
         assert v["would_fire"] is True, f"{rule['name']}: {v['reason']}"
+
+
+def test_parse_hhmm_is_public_for_the_api_layer():
+    """api/routes/home.py validates PATCHed windows with it."""
+    from core.home_triggers import parse_hhmm
+    assert parse_hhmm("22:00") is not None
+    assert parse_hhmm("10pm") is None, "the API takes HH:MM only"
+    assert parse_hhmm("nonsense") is None
+
+
+@pytest.mark.asyncio
+async def test_a_replacement_timer_survives_the_cancelled_one(monkeypatch):
+    """open -> close -> open on the same entity.
+
+    The cancelled task's finally runs on a later loop iteration. Popping the
+    key blindly there removed the *replacement* timer, so the following close
+    had nothing to cancel and the alert fired with the door shut.
+    """
+    engine, fired = make_engine([rule(
+        trigger_config={"device_class": "door", "to_state": "on",
+                        "for_seconds": 0.08})])
+    on = state("on", device_class="door")
+    off = state("off", device_class="door")
+
+    await engine.on_event("binary_sensor.door", on, off)    # arm
+    await engine.on_event("binary_sensor.door", off, on)    # cancel
+    await engine.on_event("binary_sensor.door", on, off)    # re-arm
+    await asyncio.sleep(0.02)
+    await engine.on_event("binary_sensor.door", off, on)    # cancel again
+    await asyncio.sleep(0.15)
+    assert fired == [], "a timer outlived the close that should have cancelled it"

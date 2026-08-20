@@ -32,7 +32,7 @@ import logging
 import time
 import zoneinfo
 from datetime import datetime, time as dtime
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 _PendingKey = tuple
 
 
-def _parse_hhmm(value: str) -> Optional[dtime]:
+def parse_hhmm(value: str) -> Optional[dtime]:
     try:
         hh, mm = value.split(":")
         return dtime(int(hh), int(mm))
@@ -57,8 +57,8 @@ def in_time_window(now_local: datetime, window: Optional[dict]) -> bool:
     """
     if not window:
         return True
-    start = _parse_hhmm(window.get("start", ""))
-    end = _parse_hhmm(window.get("end", ""))
+    start = parse_hhmm(window.get("start", ""))
+    end = parse_hhmm(window.get("end", ""))
     if not start or not end:
         return True
     now_t = now_local.time()
@@ -272,9 +272,16 @@ class HomeTriggerEngine:
             except asyncio.CancelledError:
                 pass
             finally:
-                self._pending.pop(key, None)
+                # Only clear our own entry. A cancelled task's finally runs on
+                # a later loop iteration, by which point _schedule may have
+                # registered a replacement under this key — popping blindly
+                # would orphan that timer, so the next close event would find
+                # nothing to cancel and the door alert would fire anyway.
+                if self._pending.get(key) is task:
+                    self._pending.pop(key, None)
 
-        self._pending[key] = asyncio.create_task(_later())
+        task = asyncio.create_task(_later())
+        self._pending[key] = task
 
     async def _fire(self, routine: dict, entity_id: str, new_state: dict,
                     area: Optional[str]) -> None:

@@ -93,7 +93,8 @@ export default function HomeNodePage({ setAction }) {
   // sits in survives the update.
   useEffect(() => {
     if (!status?.reachable || !token) return
-    const es = new EventSource(`/api/home/stream?token=${token}`)
+    // No token in the URL — the same-origin session cookie carries it.
+    const es = new EventSource('/api/home/stream', { withCredentials: true })
     es.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data)
@@ -129,15 +130,28 @@ export default function HomeNodePage({ setAction }) {
         ? { ...d, ...extra } : d))
     }
     try {
-      await fetch('/api/home/action', {
+      // fetch resolves on 4xx/5xx. Without this the card shows the state the
+      // user asked for while the device never moved, and no SSE event ever
+      // arrives to contradict it — because nothing actually changed.
+      const res = await fetch('/api/home/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ entity_id, action, ...extra }),
       })
+      let ok = res.ok
+      if (ok) {
+        // The route answers 200 with {ok:false} when Home Assistant refuses.
+        const body = await res.json().catch(() => ({}))
+        if (body && body.ok === false) ok = false
+      }
+      if (!ok) throw new Error(`HTTP ${res.status}`)
+    } catch {
+      // Re-read the truth rather than guessing what to undo.
+      await fetchAll(true)
     } finally {
       setActing(null)
     }
-  }, [token])
+  }, [token, fetchAll])
 
   const runSync = useCallback(async () => {
     setSyncing(true)

@@ -56,11 +56,17 @@ export default function SafetyRules() {
   }), [token])
 
   const load = useCallback(async () => {
+    // An empty list and a failed load look identical to a reader, and one of
+    // them means the safety rules might not be running at all. Keep them apart.
+    setError(null)
     try {
       const r = await fetch('/api/home/triggers', { headers: headers() })
-      setRules(r.ok ? await r.json() : [])
-    } catch {
-      setRules([])
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      const data = await r.json()
+      setRules(Array.isArray(data) ? data : [])
+    } catch (e) {
+      setRules(null)
+      setError(`Couldn't load your alert rules (${e.message}).`)
     }
   }, [headers])
 
@@ -71,11 +77,19 @@ export default function SafetyRules() {
     setRules(prev => prev.map(r =>
       r.id === rule.id ? { ...r, enabled: !r.enabled } : r))
     try {
-      await fetch(`/api/home/triggers/${encodeURIComponent(rule.id)}`, {
+      // fetch resolves on 4xx/5xx, so without this check a refused mute looks
+      // exactly like a successful one — and nothing arrives later to correct
+      // it, because rules have no event stream.
+      const r = await fetch(`/api/home/triggers/${encodeURIComponent(rule.id)}`, {
         method: 'PATCH',
         headers: headers(),
         body: JSON.stringify({ enabled: !rule.enabled }),
       })
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    } catch (e) {
+      setRules(prev => prev && prev.map(x =>
+        x.id === rule.id ? { ...x, enabled: rule.enabled } : x))
+      setError(`Couldn't change '${rule.name}' (${e.message}).`)
     } finally {
       setBusy(null)
     }
@@ -110,7 +124,7 @@ export default function SafetyRules() {
     }
   }
 
-  if (!rules) return null
+  if (!rules && !error) return null
 
   return (
     <div className="rs-card is-wide">
@@ -118,7 +132,7 @@ export default function SafetyRules() {
         <span className="rs-card-label">SAFETY &amp; ALERTS</span>
       </div>
 
-      {rules.length === 0 && (
+      {rules && rules.length === 0 && (
         <p className="rs-card-meta" style={{ fontSize: '0.95rem' }}>
           No alert rules yet. The built-in pack is created on startup once
           Home Assistant is configured.
@@ -126,7 +140,7 @@ export default function SafetyRules() {
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
-        {rules.map(rule => {
+        {(rules || []).map(rule => {
           const tone = SEVERITY_TONE[rule.severity] || SEVERITY_TONE.info
           const showing = result && result.ruleId === rule.id
           return (
@@ -204,8 +218,13 @@ export default function SafetyRules() {
       </div>
 
       {error && (
-        <div className="rs-card-meta" style={{ fontSize: '0.95rem', color: 'var(--md-error)', marginTop: 10 }}>
-          {error}
+        <div style={{ marginTop: 12, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span className="rs-card-meta" style={{ fontSize: '0.95rem', color: 'var(--md-error)' }}>
+            {error}
+          </span>
+          <button className="rs-pill" style={{ fontSize: '0.85rem' }} onClick={load}>
+            RETRY
+          </button>
         </div>
       )}
     </div>

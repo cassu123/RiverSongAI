@@ -85,8 +85,15 @@ def describe(config: dict, name: str = "", severity: str = "") -> str:
     if config.get("to_state"):
         parts.append(f"turns {config['to_state']}")
     if config.get("for_seconds"):
-        mins = round(config["for_seconds"] / 60)
-        parts.append(f"and stays that way for {mins} minute{'s' if mins != 1 else ''}")
+        secs = config["for_seconds"]
+        if secs < 60:
+            # round() would confirm a 30-second hold as "0 minutes".
+            n = int(secs)
+            held = f"{n} second{'s' if n != 1 else ''}"
+        else:
+            mins = round(secs / 60)
+            held = f"{mins} minute{'s' if mins != 1 else ''}"
+        parts.append(f"and stays that way for {held}")
     w = config.get("time_window")
     if w:
         parts.append(f"between {w['start']} and {w['end']}")
@@ -231,6 +238,14 @@ async def _exec_set_device_alert(args: dict, user_id: str) -> str:
         await store.delete_routine(rule["id"], user_id)
         return f"Deleted '{rule['name']}'."
 
-    enable = action in ("enable", "unmute", "on")
+    # An unrecognised action used to fall through to enabled=False, so a typo
+    # silently muted the alert — the one outcome nobody asks for by accident.
+    if action in ("enable", "unmute", "on"):
+        enable = True
+    elif action in ("mute", "disable", "off"):
+        enable = False
+    else:
+        return (f"I don't know how to '{action}' an alert. I can mute, "
+                f"unmute, or delete it.")
     await store.update_routine(rule["id"], user_id, {"enabled": enable})
     return f"'{rule['name']}' is {'on' if enable else 'muted'}."

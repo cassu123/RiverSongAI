@@ -107,13 +107,16 @@ class FakeStore:
         return [r for r in self._routines if r["user_id"] == user_id]
 
     async def create_routine(self, r):
-        self.created.append(r); self._routines.append(r); return r
+        self.created.append(r)
+        self._routines.append(r)
+        return r
 
     async def update_routine(self, rid, user_id, fields):
         self.updated.append((rid, fields))
         for r in self._routines:
             if r["id"] == rid:
-                r.update(fields); return r
+                r.update(fields)
+                return r
         return None
 
     async def delete_routine(self, rid, user_id):
@@ -221,3 +224,44 @@ async def test_listing_answers_what_happens_when_the_garage_opens(wired):
     reply = await _exec_list_device_alerts({"about": "garage"}, "u1")
     assert "Garage open late" in reply
     assert "nothing" not in reply.lower()
+
+
+# ---------------------------------------------------------------------------
+# Review follow-ups (PR #190)
+# ---------------------------------------------------------------------------
+
+def test_sub_minute_holds_are_not_confirmed_as_zero_minutes():
+    """round(30/60) is 0, so a 30-second hold used to read as '0 minutes'."""
+    got = describe({"device_class": "door", "to_state": "on", "for_seconds": 30})
+    assert "30 seconds" in got
+    assert "0 minute" not in got
+
+
+def test_singular_second_reads_correctly():
+    got = describe({"device_class": "door", "to_state": "on", "for_seconds": 1})
+    assert "1 second" in got and "1 seconds" not in got
+
+
+@pytest.mark.asyncio
+async def test_an_unknown_action_does_not_silently_mute(wired):
+    """Falling through to enabled=False meant a typo muted a safety alert."""
+    from core.tools_home import _exec_set_device_alert
+    wired._routines.append({"id": "a1", "user_id": "u1", "name": "Garage",
+                            "trigger": "device", "builtin": False,
+                            "enabled": True, "trigger_config": {}})
+    reply = await _exec_set_device_alert({"name": "garage", "action": "snooze"}, "u1")
+    assert wired.updated == []
+    assert wired.deleted == []
+    assert "don't know how" in reply
+
+
+@pytest.mark.asyncio
+async def test_mute_and_unmute_both_work(wired):
+    from core.tools_home import _exec_set_device_alert
+    wired._routines.append({"id": "a1", "user_id": "u1", "name": "Garage",
+                            "trigger": "device", "builtin": False,
+                            "enabled": True, "trigger_config": {}})
+    await _exec_set_device_alert({"name": "garage", "action": "mute"}, "u1")
+    assert wired.updated[-1] == ("a1", {"enabled": False})
+    await _exec_set_device_alert({"name": "garage", "action": "unmute"}, "u1")
+    assert wired.updated[-1] == ("a1", {"enabled": True})

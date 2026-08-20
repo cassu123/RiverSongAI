@@ -1715,6 +1715,29 @@ async def _media_players_in(target: Optional[str]) -> list:
             if t in (r["name"] or "").lower() or t in (r["area"] or "").lower()]
 
 
+async def _tts_engine_entity() -> Optional[str]:
+    """The tts.* entity to speak through.
+
+    Configured value wins; otherwise take the first synced tts entity, so a
+    house that already has one in Home Assistant needs no extra setup.
+    """
+    from config.settings import get_settings
+    configured = getattr(get_settings(), "home_assistant_tts_entity", "") or ""
+    if configured.strip():
+        return configured.strip()
+    from main import get_app
+    app = get_app()
+    if not app:
+        return None
+    try:
+        row = await app.state.memory_manager._store.execute_read_one_async(
+            "SELECT entity_id FROM ha_entities WHERE domain = 'tts' "
+            "ORDER BY entity_id LIMIT 1")
+        return row["entity_id"] if row else None
+    except Exception:
+        return None
+
+
 async def _exec_play_media(args: dict, user_id: str) -> str:
     from core.family import is_feature_enabled_for
     if not await is_feature_enabled_for(user_id, "home"):
@@ -1727,16 +1750,33 @@ async def _exec_play_media(args: dict, user_id: str) -> str:
         where = f" in the {target}" if target else ""
         return f"I couldn't find a speaker{where}."
 
+    # media_content_id is a provider-specific identifier, not a search term:
+    # "some jazz" is meaningless to a speaker. Resolving a name needs
+    # media_player.search_media, which returns data and so needs the REST
+    # call to ask for a response — something call_service cannot do yet.
+    # Rather than post a payload that fails quietly inside Home Assistant,
+    # only pass through what is already an identifier and say so otherwise.
+    media_id = None
+    content_type = "music"
+    if query:
+        looks_like_id = ("://" in query) or query.startswith(
+            ("http", "spotify:", "media-source://", "library://"))
+        if looks_like_id:
+            media_id = query
+        else:
+            return (f"I can't look up '{query}' by name yet — that needs "
+                    f"Home Assistant's media search. Give me a link or a "
+                    f"media id, or say 'resume' to restart what was playing.")
+
     from providers.smart_home.home_assistant import build_ha_client
     try:
         async with build_ha_client() as client:
             for eid in players:
-                if query:
-                    # search_media is what HA exposes for "play this by name";
-                    # without a query this is a plain resume.
+                if media_id:
                     await client.call_service(
                         "media_player", "play_media", entity_id=eid,
-                        media_content_id=query, media_content_type="music")
+                        media_content_id=media_id,
+                        media_content_type=content_type)
                 else:
                     await client.call_service(
                         "media_player", "media_play", entity_id=eid)
@@ -1805,12 +1845,23 @@ async def _exec_announce(args: dict, user_id: str) -> str:
         where = f" in the {target}" if target else ""
         return f"I couldn't find a speaker{where} to announce on."
 
+    # tts.speak targets the TTS *engine* entity and names the speaker
+    # separately in media_player_entity_id. Passing the speaker as entity_id
+    # addresses the service at something that is not a TTS engine, and Home
+    # Assistant rejects it.
+    engine = await _tts_engine_entity()
+    if not engine:
+        return ("I don't have a Home Assistant text-to-speech engine to speak "
+                "through. Set HOME_ASSISTANT_TTS_ENTITY, or add a TTS "
+                "integration in Home Assistant and re-sync.")
+
     from providers.smart_home.home_assistant import build_ha_client
     try:
         async with build_ha_client() as client:
             for eid in players:
                 await client.call_service(
-                    "tts", "speak", entity_id=eid, message=message)
+                    "tts", "speak", entity_id=engine,
+                    media_player_entity_id=eid, message=message)
     except Exception:
         return ("Home Assistant isn't reachable right now — the announcement "
                 "didn't play.")
