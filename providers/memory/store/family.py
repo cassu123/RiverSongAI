@@ -224,6 +224,14 @@ class FamilyStoreMixin(StoreProtocol):
             "enabled": bool(row["enabled"]),
             "last_run": row["last_run"],
             "last_output": row["last_output"] if "last_output" in row.keys() else None,
+            # Device-trigger payload: {entity/area/device_class, to_state,
+            # for_seconds, time_window}. Empty for schedule and manual
+            # routines. Guarded like severity so a store predating the
+            # migration still maps.
+            "trigger_config": json.loads(
+                row["trigger_config"] or "{}"
+            ) if "trigger_config" in row.keys() else {},
+            "builtin": bool(row["builtin"]) if "builtin" in row.keys() else False,
             "created_at": row["created_at"],
             "updated_at": row["updated_at"],
         }
@@ -249,8 +257,8 @@ class FamilyStoreMixin(StoreProtocol):
         conn.execute(
             """
             INSERT INTO routines
-                (id, user_id, name, trigger, time, days, prompt, type, severity, webhook_url, enabled, created_at, updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                (id, user_id, name, trigger, time, days, prompt, type, severity, webhook_url, enabled, created_at, updated_at, trigger_config, builtin)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (rid, routine["user_id"], routine["name"], routine.get("trigger", "manual"),
              routine.get("time"), json.dumps(
@@ -259,7 +267,9 @@ class FamilyStoreMixin(StoreProtocol):
                 "prompt", ""),
                 routine.get("type", "simple"),
                 routine.get("severity", "info"), routine.get("webhook_url"),
-                int(routine.get("enabled", True)), now, now),
+                int(routine.get("enabled", True)), now, now,
+                json.dumps(routine.get("trigger_config") or {}),
+                int(routine.get("builtin", False))),
         )
         conn.commit()
         row = conn.execute(
@@ -284,15 +294,19 @@ class FamilyStoreMixin(StoreProtocol):
             "webhook_url",
             "enabled",
             "last_run",
-            "last_output"}
+            "last_output",
+            "trigger_config",
+            "builtin"}
         set_parts, vals = [], []
         for k, v in fields.items():
             if k not in allowed:
                 continue
             if k == "days":
                 v = json.dumps(v)
-            elif k == "enabled":
+            elif k in ("enabled", "builtin"):
                 v = int(v)
+            elif k == "trigger_config":
+                v = json.dumps(v or {})
             set_parts.append(f"{k} = ?")
             vals.append(v)
         if not set_parts:

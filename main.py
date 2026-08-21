@@ -295,6 +295,31 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             await ctx.update_from_ha_sensor(entity_id, new_state.get("state", ""), new_state.get("attributes", {}))
             
         bus.subscribe(on_home_event)
+
+        # Device-triggered routines (H4) and the built-in safety pack (H5).
+        # The engine subscribes to the same bus; the safety rules are created
+        # once per admin and then owned by them.
+        if settings.home_triggers_enabled:
+            from core.home_triggers import (
+                get_trigger_engine, ensure_builtin_safety_routines)
+            engine = get_trigger_engine(app)
+            engine.start()
+            app.state.home_trigger_engine = engine
+
+            async def _seed_safety_rules():
+                try:
+                    store = app.state.memory_manager._store
+                    for u in await store.list_users():
+                        # Safety alerts belong to whoever runs the house.
+                        if u.get("role") == "admin" and not u.get("is_suspended"):
+                            await ensure_builtin_safety_routines(store, u["id"])
+                except Exception as e:
+                    logger.warning("Could not seed safety rules: %s", e)
+
+            # Held on app.state: a bare create_task is only weakly
+            # referenced by the loop and can be collected mid-flight.
+            app.state.home_safety_seed_task = asyncio.create_task(
+                _seed_safety_rules())
         
     await start_sweeps(app)
 

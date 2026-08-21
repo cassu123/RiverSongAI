@@ -309,6 +309,93 @@ TOOL_SCHEMAS = [
         }
     },
     {
+        "name": "create_device_alert",
+        "description": (
+            "Set up an alert that fires when something in the house changes state — "
+            "'tell me when the garage opens after 10pm', 'let me know if the basement "
+            "gets wet'. Fill in whichever selectors the request implies: device_class "
+            "for a kind of sensor, entity_id for one named device, area for a room. "
+            "At least one is required."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Short name, e.g. 'Garage open late'."},
+                "device_class": {"type": "string", "description": "Kind of sensor: leak, smoke, gas, co, door, garage, window, motion, lock, temperature."},
+                "entity_id": {"type": "string", "description": "One specific Home Assistant entity, if the user named a device."},
+                "area": {"type": "string", "description": "Room name, if the user asked about a room."},
+                "domain": {"type": "string", "description": "Entity domain such as lock or cover, when the kind matters but the sensor class does not."},
+                "to_state": {"type": "string", "description": "State that triggers it. 'on' for sensors, 'unlocked' for locks, 'open' for covers. Defaults to 'on'."},
+                "for_minutes": {"type": "number", "description": "Only alert if it stays that way this long, e.g. 10 for 'left open'."},
+                "between_start": {"type": "string", "description": "Start of the time window, e.g. '22:00' or '10pm'. Both ends required if either is given."},
+                "between_end": {"type": "string", "description": "End of the time window, e.g. '06:00'."},
+                "severity": {"type": "string", "enum": ["info", "warning", "critical"], "description": "critical bypasses quiet hours. Use it for leak, smoke and gas."},
+                "action": {"type": "string", "description": "Optional: what River should do beyond alerting, in plain language."},
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "list_device_alerts",
+        "description": "List the device alerts that are set up, optionally filtered — answers 'what happens when the garage opens?'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "about": {"type": "string", "description": "Optional filter, e.g. 'garage', 'leak', 'kitchen'."}
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "set_device_alert",
+        "description": "Mute, unmute, or delete an existing device alert by name.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "The alert's name, or part of it."},
+                "action": {"type": "string", "enum": ["mute", "unmute", "delete"], "description": "What to do with it."},
+            },
+            "required": ["name", "action"]
+        }
+    },
+    {
+        "name": "play_media",
+        "description": "Play music or media on the speakers in a room, or everywhere.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "room": {"type": "string", "description": "Room or speaker name, e.g. 'kitchen'. Omit for the whole house."},
+                "query": {"type": "string", "description": "What to play. Omit to resume whatever was paused."},
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "media_control",
+        "description": "Pause, resume, skip, or set the volume on the speakers in a room.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "enum": ["pause", "resume", "stop", "next", "previous", "volume"], "description": "What to do."},
+                "room": {"type": "string", "description": "Room or speaker name. Omit for the whole house."},
+                "level": {"type": "integer", "description": "Volume 0-100. Only for action='volume'."},
+            },
+            "required": ["action"]
+        }
+    },
+    {
+        "name": "announce",
+        "description": "Speak a message aloud through the house speakers in a room, or everywhere.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string", "description": "What to say."},
+                "room": {"type": "string", "description": "Room to announce in. Omit for every speaker."},
+            },
+            "required": ["message"]
+        }
+    },
+    {
         "name": "set_reminder",
         "description": "Schedule a personal reminder for a specific date and time.",
         "input_schema": {

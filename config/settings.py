@@ -234,6 +234,15 @@ class Settings(BaseSettings):
     )
 
     # Cloud provider enable flags (cost control -- disabled by default)
+    home_triggers_enabled: bool = Field(
+        default=True,
+        description=(
+            "Fire routines from Home Assistant device events, and create the "
+            "built-in safety rules (leak, smoke, door left open, unlocked "
+            "late) on startup. Turning this off leaves the rules in place "
+            "but stops the engine listening."
+        ),
+    )
     anthropic_enabled: bool = Field(
         default=False,
         description="Allow Anthropic Claude as a selectable LLM provider.",
@@ -552,6 +561,14 @@ class Settings(BaseSettings):
     home_assistant_url: str = Field(
         default="http://homeassistant.local:8123",
         description="Base URL of your Home Assistant instance.",
+    )
+    home_assistant_tts_entity: str = Field(
+        default="",
+        description=(
+            "tts.* entity to speak announcements through, e.g. "
+            "tts.piper. Leave blank to use the first TTS entity found "
+            "during the Home Assistant sync."
+        ),
     )
     home_assistant_token: str = Field(
         default="",
