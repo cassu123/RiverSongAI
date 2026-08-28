@@ -30,7 +30,7 @@
     "dompurify": "^3.4.13",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
-    "mermaid": "^11.16.1",
+    "mermaid": "^11.17.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-is": "^19.2.8",
