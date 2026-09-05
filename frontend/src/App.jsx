@@ -89,7 +89,7 @@ const PAGE_TO_PATH = {
   inventory:        '/inventory',
   chronos:          '/chronos',
   vehicles:         '/vehicles',
-  environment:      '/environment',
+  environment:      '/home',
   culinary:         '/culinary',
   fleet:            '/fleet',
   documents:        '/documents',
@@ -117,6 +117,7 @@ const OAUTH_PAGES = new Set(['google_callback', 'reading_callback', 'preview'])
 
 function pageKeyFromPath(pathname) {
   if (!pathname || pathname === '/' || pathname === '') return 'briefing'
+  if (pathname === '/environment' || pathname.startsWith('/environment/')) return 'home'
   // Exact match, or a nested route beneath a page:
   //   /feeds                        → 'feeds'
   //   /feeds/sports/boxscore/123    → 'feeds'
@@ -222,11 +223,13 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Restored, not just saved. The save below has always been here; without a
-  // matching load, admin mode silently reset on every reload — which the
-  // render gate further down would then turn into a bounce off the admin page
-  // the admin was actually looking at.
-  const [adminMode,     setAdminMode]     = useState(() => load('rs-admin', false))
+  // Restored, not just saved. If the user has an admin role and has never explicitly
+  // saved an 'rs-admin' preference in localStorage, adminMode defaults to true.
+  const [adminMode,     setAdminMode]     = useState(() => {
+    const saved = load('rs-admin', null)
+    if (saved !== null) return Boolean(saved)
+    return user?.role === 'admin'
+  })
   const [drawerOpen,    setDrawerOpen]    = useState(false)
   const [pageAction,    setPageAction]    = useState(null)
   const [sidebarOpen,   setSidebarOpen]   = useState(() => load('rs-sidebar-open', true))
@@ -335,8 +338,19 @@ export default function App() {
   // A restored 'rs-admin' is only a UI preference, and localStorage is the
   // user's to edit. Anyone who is not actually an admin gets it cleared;
   // the server is what enforces this, but the client should not pretend.
+  // Phase H3 retirement: /environment URLs redirect to Home Node (/home)
   useEffect(() => {
-    if (user && !userIsAdmin && adminMode) setAdminMode(false)
+    if (location.pathname === '/environment' || location.pathname.startsWith('/environment/')) {
+      navigate('/home', { replace: true })
+    }
+  }, [location.pathname, navigate])
+
+  useEffect(() => {
+    if (user && userIsAdmin && load('rs-admin', null) === null) {
+      setAdminMode(true)
+    } else if (user && !userIsAdmin && adminMode) {
+      setAdminMode(false)
+    }
   }, [user, userIsAdmin, adminMode])
 
   useEffect(() => {

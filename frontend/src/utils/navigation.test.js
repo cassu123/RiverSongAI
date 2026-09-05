@@ -8,7 +8,7 @@ describe('Navigation Constants & Access Gating', () => {
   })
 
   it('keeps genuine system administration screens in ADMIN_PAGES', () => {
-    const expectedAdmin = ['dashboard', 'users', 'killswitch', 'admin_settings', 'remote_ollama', 'webhook_tokens', 'slae']
+    const expectedAdmin = ['dashboard', 'fleet', 'users', 'killswitch', 'admin_settings', 'remote_ollama', 'webhook_tokens', 'slae']
     expectedAdmin.forEach(page => {
       expect(ADMIN_PAGES.has(page)).toBe(true)
     })
@@ -22,12 +22,27 @@ describe('Navigation Constants & Access Gating', () => {
     expect(homeItem.label).toBe('Home Node')
   })
 
-  it('places Routines in More navigation group', () => {
+  it('places Routines and Notes in More navigation group, and retires Environment', () => {
     const more = NAV_GROUPS.find(g => g.label === 'More')
     expect(more).toBeDefined()
     const routinesItem = more.items.find(i => i.key === 'routines')
     expect(routinesItem).toBeDefined()
     expect(routinesItem.label).toBe('Routines')
+
+    const notesItem = more.items.find(i => i.key === 'chronos')
+    expect(notesItem).toBeDefined()
+    expect(notesItem.label).toBe('Notes')
+
+    const envItem = more.items.find(i => i.key === 'environment')
+    expect(envItem).toBeUndefined()
+  })
+
+  it('places Fleet Console in Admin navigation group', () => {
+    const admin = NAV_GROUPS.find(g => g.label === 'Admin')
+    expect(admin).toBeDefined()
+    const fleetItem = admin.items.find(i => i.key === 'fleet')
+    expect(fleetItem).toBeDefined()
+    expect(fleetItem.label).toBe('Fleet Console')
   })
 
   it('preserves core utility pages in ALWAYS_VISIBLE', () => {
@@ -35,5 +50,7 @@ describe('Navigation Constants & Access Gating', () => {
     expect(ALWAYS_VISIBLE.has('briefing')).toBe(true)
     expect(ALWAYS_VISIBLE.has('speak')).toBe(true)
     expect(ALWAYS_VISIBLE.has('chat')).toBe(true)
+    expect(ALWAYS_VISIBLE.has('chronos')).toBe(true)
+    expect(ALWAYS_VISIBLE.has('documents')).toBe(true)
   })
 })
