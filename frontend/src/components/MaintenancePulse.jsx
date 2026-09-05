@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { API_BASE } from '../lib/api';
 import './MaintenancePulse.css';
 
 function authHeaders(token) {
@@ -7,10 +8,8 @@ function authHeaders(token) {
 }
 
 async function apiFetch(path, token, opts = {}) {
-  if (/^https?:\/\//i.test(path)) {
-    throw new Error(`Blocked absolute URL in apiFetch: ${path}`);
-  }
-  const res = await fetch(path, { headers: authHeaders(token), ...opts });
+  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  const res = await fetch(url, { headers: authHeaders(token), ...opts });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || 'API error');

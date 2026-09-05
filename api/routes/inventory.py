@@ -25,7 +25,7 @@ from typing import Generator, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, event
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -92,6 +92,16 @@ _engine = create_engine(
     _DB_URL,
     connect_args={"check_same_thread": False} if "sqlite" in _DB_URL else {},
 )
+
+if "sqlite" in _DB_URL:
+    @event.listens_for(_engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON;")
+        cursor.execute("PRAGMA journal_mode=WAL;")
+        cursor.execute("PRAGMA busy_timeout=10000;")
+        cursor.close()
+
 _Session = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
 Base.metadata.create_all(_engine)
 with _engine.begin() as conn:
@@ -154,9 +164,9 @@ def get_db() -> Generator[Session, None, None]:
 async def get_current_inv_user(
         request: Request, db: Session = Depends(get_db)) -> InvUser:
     auth = request.headers.get("Authorization", "")
-    token = auth.removeprefix("Bearer ").strip()
+    token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
     if not token:
-        token = request.query_params.get("token", "").strip()
+        token = request.cookies.get("access_token", "").strip()
     if not token:
         raise unauthorized("Missing Bearer token")
     payload = await decode_token(token)

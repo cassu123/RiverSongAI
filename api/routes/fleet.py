@@ -53,6 +53,22 @@ from providers.memory.sqlite_store import SQLiteStore
 
 logger = logging.getLogger(__name__)
 
+_shared_store: Optional[SQLiteStore] = None
+
+
+def _get_store(request: Optional[Request] = None) -> SQLiteStore:
+    if request and hasattr(request.app.state, "memory_manager") and request.app.state.memory_manager:
+        return request.app.state.memory_manager._store
+    from main import get_app
+    app = get_app()
+    if app and hasattr(app.state, "memory_manager") and app.state.memory_manager:
+        return app.state.memory_manager._store
+    global _shared_store
+    if _shared_store is None:
+        _shared_store = SQLiteStore()
+    return _shared_store
+
+
 FLEET_PROGRAMS = ("horizon", "kova", "sentinel", "vortex", "vexa")
 
 _MAX_TELEMETRY_BATCH = 50
@@ -243,7 +259,7 @@ def build_fleet_router(program: str) -> APIRouter:
 
     @router.post("/units/claim", dependencies=[Depends(require_role("admin"))])
     async def claim_unit(body: ClaimBody, request: Request):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         unit_id = uuid.uuid4().hex[:12]
         # The plaintext token is returned once, here, and never stored.
@@ -263,7 +279,7 @@ def build_fleet_router(program: str) -> APIRouter:
 
     @router.get("/units", dependencies=[Depends(require_role("admin"))])
     async def list_units():
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         rows = await store.execute_read_async(
             "SELECT program, unit_id, name, metadata, online, registered_at, last_seen "
@@ -279,7 +295,7 @@ def build_fleet_router(program: str) -> APIRouter:
 
     @router.get("/units/{unit_id}", dependencies=[Depends(require_role("admin"))])
     async def get_unit(unit_id: str):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         row = await store.execute_read_one_async(
             "SELECT program, unit_id, name, metadata, online, registered_at, last_seen "
@@ -297,7 +313,7 @@ def build_fleet_router(program: str) -> APIRouter:
     @router.get("/units/{unit_id}/telemetry",
                 dependencies=[Depends(require_role("admin"))])
     async def unit_telemetry(unit_id: str, limit: int = 100):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         limit = max(1, min(limit, 1000))
         rows = await store.execute_read_async(
@@ -319,7 +335,7 @@ def build_fleet_router(program: str) -> APIRouter:
     @router.get("/units/{unit_id}/alerts",
                 dependencies=[Depends(require_role("admin"))])
     async def unit_alerts(unit_id: str, limit: int = 50):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         limit = max(1, min(limit, 500))
         rows = await store.execute_read_async(
@@ -332,7 +348,7 @@ def build_fleet_router(program: str) -> APIRouter:
     @router.get("/units/{unit_id}/commands",
                 dependencies=[Depends(require_role("admin"))])
     async def unit_commands(unit_id: str, limit: int = 50):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         limit = max(1, min(limit, 500))
         rows = await store.execute_read_async(
@@ -351,7 +367,7 @@ def build_fleet_router(program: str) -> APIRouter:
     @router.post("/units/{unit_id}/alerts/{alert_id}/ack",
                  dependencies=[Depends(require_role("admin"))])
     async def ack_alert(unit_id: str, alert_id: int):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         await store.execute_write_async(
             "DELETE FROM fleet_alerts WHERE program=? AND unit_id=? AND id=?",
@@ -362,7 +378,7 @@ def build_fleet_router(program: str) -> APIRouter:
     @router.post("/units/{unit_id}/rotate-token",
                  dependencies=[Depends(require_role("admin"))])
     async def rotate_token(unit_id: str):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         unit = await store.execute_read_one_async(
             "SELECT unit_id FROM fleet_units WHERE program=? AND unit_id=?",
@@ -379,7 +395,7 @@ def build_fleet_router(program: str) -> APIRouter:
 
     @router.delete("/units/{unit_id}", dependencies=[Depends(require_role("admin"))])
     async def delete_unit(unit_id: str):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         from core.fleet_simulator import stop_sim
         await stop_sim(unit_id)
@@ -394,7 +410,7 @@ def build_fleet_router(program: str) -> APIRouter:
     @router.post("/units/simulate",
                  dependencies=[Depends(require_role("admin"))])
     async def simulate_unit(body: SimulateBody = SimulateBody()):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         unit_id = "sim-" + uuid.uuid4().hex[:8]
         unit_token = mint_unit_token()
@@ -416,7 +432,7 @@ def build_fleet_router(program: str) -> APIRouter:
     async def stop_simulated_unit(unit_id: str):
         from core.fleet_simulator import stop_sim
         await stop_sim(unit_id)
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         await store.execute_write_async(
             "DELETE FROM fleet_units WHERE program=? AND unit_id=?",
@@ -427,7 +443,7 @@ def build_fleet_router(program: str) -> APIRouter:
     @router.post("/units/{unit_id}/command",
                  dependencies=[Depends(require_role("admin"))])
     async def queue_command(unit_id: str, body: CommandBody):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         unit = await store.execute_read_one_async(
             "SELECT unit_id FROM fleet_units WHERE program=? AND unit_id=?",
@@ -449,7 +465,7 @@ def build_fleet_router(program: str) -> APIRouter:
     @router.post("/register")
     async def register(body: RegisterBody,
                        x_unit_token: Optional[str] = Header(default=None)):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         await _verify_unit(store, program, body.unit_id, x_unit_token)
         await store.execute_write_async(
@@ -462,7 +478,7 @@ def build_fleet_router(program: str) -> APIRouter:
     @router.post("/heartbeat")
     async def heartbeat(body: HeartbeatBody,
                         x_unit_token: Optional[str] = Header(default=None)):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         await _verify_unit(store, program, body.unit_id, x_unit_token)
         await store.execute_write_async(
@@ -474,19 +490,21 @@ def build_fleet_router(program: str) -> APIRouter:
     @router.post("/telemetry")
     async def telemetry(body: TelemetryBody,
                         x_unit_token: Optional[str] = Header(default=None)):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         await _verify_unit(store, program, body.unit_id, x_unit_token)
         if len(body.snapshots) > _MAX_TELEMETRY_BATCH:
             raise HTTPException(status_code=413,
                                 detail=f"Batch size limit exceeded (max {_MAX_TELEMETRY_BATCH})")
         now = _now()
-        for snap in body.snapshots:
-            ts = str(snap.get("timestamp") or now)
-            await store.execute_write_async(
-                "INSERT INTO fleet_telemetry (program, unit_id, timestamp, payload) "
-                "VALUES (?, ?, ?, ?)",
-                (program, body.unit_id, ts, json.dumps(snap)),
+        records = [
+            (program, body.unit_id, str(snap.get("timestamp") or now), json.dumps(snap))
+            for snap in body.snapshots
+        ]
+        if records:
+            await store.execute_write_many_async(
+                "INSERT INTO fleet_telemetry (program, unit_id, timestamp, payload) VALUES (?, ?, ?, ?)",
+                records,
             )
         await store.execute_write_async(
             "UPDATE fleet_units SET online=1, last_seen=? WHERE program=? AND unit_id=?",
@@ -497,7 +515,7 @@ def build_fleet_router(program: str) -> APIRouter:
     @router.post("/alerts")
     async def alert(body: AlertBody,
                     x_unit_token: Optional[str] = Header(default=None)):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         await _verify_unit(store, program, body.unit_id, x_unit_token)
         await store.execute_write_async(
@@ -520,7 +538,7 @@ def build_fleet_router(program: str) -> APIRouter:
     @router.get("/commands")
     async def poll_commands(unit_id: str,
                             x_unit_token: Optional[str] = Header(default=None)):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         await _verify_unit(store, program, unit_id, x_unit_token)
         row = await store.execute_read_one_async(
@@ -540,7 +558,7 @@ def build_fleet_router(program: str) -> APIRouter:
     @router.post("/commands/{command_id}/ack")
     async def ack_command(command_id: str, body: AckBody,
                           x_unit_token: Optional[str] = Header(default=None)):
-        store = SQLiteStore()
+        store = _get_store()
         await _ensure_schema(store)
         cmd = await store.execute_read_one_async(
             "SELECT unit_id FROM fleet_commands WHERE program=? AND command_id=?",

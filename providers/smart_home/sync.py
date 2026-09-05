@@ -50,7 +50,7 @@ async def sync_ha_entities() -> int:
             
         now = datetime.now(timezone.utc).isoformat()
         
-        count = 0
+        records = []
         for ent in entities:
             entity_id = ent.get("entity_id")
             if not entity_id or "." not in entity_id:
@@ -59,9 +59,10 @@ async def sync_ha_entities() -> int:
             name = ent.get("name") or entity_id
             area = ent.get("area")
             device_class = ent.get("device_class")
-            
-            # Use SQLite UPSERT
-            await store.execute_write_async("""
+            records.append((entity_id, domain, name, area, device_class, now))
+
+        if records:
+            await store.execute_write_many_async("""
                 INSERT INTO ha_entities (entity_id, domain, name, area, device_class, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT(entity_id) DO UPDATE SET
@@ -70,9 +71,9 @@ async def sync_ha_entities() -> int:
                     area=excluded.area,
                     device_class=excluded.device_class,
                     updated_at=excluded.updated_at
-            """, (entity_id, domain, name, area, device_class, now))
-            count += 1
-            
+            """, records)
+
+        count = len(records)
         logger.info(f"Synced {count} entities from Home Assistant.")
         return count
     except Exception as e:

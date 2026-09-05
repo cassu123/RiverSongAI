@@ -55,16 +55,15 @@ class ScribeDaemon(BaseDaemon):
         try:
             from main import get_app
             app = get_app()
-            if not app: 
-                logger.warning("Scribe: app not available yet.")
-                return
+            store = None
+            if app:
+                memory_manager = getattr(app.state, "memory_manager", None)
+                if memory_manager:
+                    store = getattr(memory_manager, "_store", None)
             
-            memory_manager = getattr(app.state, "memory_manager", None)
-            if not memory_manager: 
-                logger.warning("Scribe: memory_manager not available.")
-                return
-            
-            store = memory_manager._store
+            if not store:
+                from providers.memory.sqlite_store import SQLiteStore
+                store = SQLiteStore(self.settings.db_path)
             
             # 1. Find stale notes (mtime > indexed_at)
             # indexed_at is stored in vault_notes table

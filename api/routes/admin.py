@@ -121,6 +121,8 @@ async def update_user(
         body.free_models_only)
 
     updated = await store.get_user_by_id(user_id)
+    if updated:
+        updated.pop("password_hash", None)
     return updated
 
 
@@ -223,6 +225,8 @@ async def impersonate_user(
         admin_id,
         user_id)
 
+    if target:
+        target.pop("password_hash", None)
     return {"access_token": token, "token_type": "bearer",
             "impersonated_user": target}
 

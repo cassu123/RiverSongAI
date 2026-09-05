@@ -48,8 +48,13 @@ token.pickle
 *credentials*.json
 *secrets*.json
 
+# Allow example configs and schemas
+!*.example.json
+!*client_secrets.example.json
+
 # Device registry (user-specific entity IDs -- commit only the .example version)
 config_files/device_registry.json
+!config_files/device_registry.example.json
 
 
 # -----------------------------------------------------------------------------
@@ -85,10 +90,11 @@ nosetests.xml
 coverage.xml
 *.cover
 
-# Type checkers
+# Type checkers and linters
 .mypy_cache/
 .dmypy.json
 .pyright/
+.ruff_cache/
 
 # Databases
 *.sqlite
@@ -130,6 +136,8 @@ pnpm-debug.log*
 # Vite build output and cache
 frontend/dist/
 frontend/.vite/
+frontend/.eslintcache
+.eslintcache
 
 
 # -----------------------------------------------------------------------------
@@ -146,6 +154,8 @@ logs/kill_switch_state.txt
 # -----------------------------------------------------------------------------
 data/*
 !data/.gitkeep
+!data/assets/
+!data/assets/**
 data/*.db
 data/*.sqlite
 data/*.sqlite3
@@ -232,4 +242,15 @@ passoff/
 .venv-test/
 backups/
 bin/
+
+# Scratch and agent artifacts
+scratch/
+.claude/
+
+# Editor swap, merge backup, and reject files
+*.swp
+*.swo
+*~
+*.orig
+*.rej
 

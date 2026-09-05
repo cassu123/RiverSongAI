@@ -1071,6 +1071,11 @@ class SQLiteStore(
         conn.execute(sql, params)
         conn.commit()
 
+    def _execute_write_many(self, sql: str, seq_of_params: list[tuple]) -> None:
+        conn = self._get_conn()
+        conn.executemany(sql, seq_of_params)
+        conn.commit()
+
     def _execute_read(self, sql: str, params: tuple = ()) -> list[dict]:
         conn = self._get_conn()
         rows = conn.execute(sql, params).fetchall()
@@ -1084,6 +1089,9 @@ class SQLiteStore(
 
     async def execute_write_async(self, sql: str, params: tuple) -> None:
         await self._run(self._execute_write, sql, params)
+
+    async def execute_write_many_async(self, sql: str, seq_of_params: list[tuple]) -> None:
+        await self._run(self._execute_write_many, sql, seq_of_params)
 
     async def execute_read_async(
             self, sql: str, params: tuple = ()) -> list[dict]:

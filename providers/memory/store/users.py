@@ -133,10 +133,10 @@ class UsersStoreMixin(StoreProtocol):
             for row in cursor.fetchall()
         ]
 
-    async def get_user_by_id(self, user_id: str) -> Optional[dict]:
-        return await self._run(self._sync_get_user_by_id, user_id)
+    async def get_user_by_id(self, user_id: str, include_password_hash: bool = False) -> Optional[dict]:
+        return await self._run(self._sync_get_user_by_id, user_id, include_password_hash)
 
-    def _sync_get_user_by_id(self, user_id: str) -> Optional[dict]:
+    def _sync_get_user_by_id(self, user_id: str, include_password_hash: bool = False) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(
             "SELECT id, email, display_name, role, is_approved, created_at, password_hash, theme, palette, environment, universe, mood, force_password_change, free_models_only FROM users WHERE id=?",
@@ -144,14 +144,13 @@ class UsersStoreMixin(StoreProtocol):
         ).fetchone()
         if row is None:
             return None
-        return {
+        data = {
             "id": row[0],
             "email": row[1],
             "display_name": row[2],
             "role": row[3],
             "is_approved": bool(row[4]),
             "created_at": row[5],
-            "password_hash": row[6],
             "theme": row[7] or "halo",
             "palette": row[8] or "spice",
             "environment": row[9] or "atreides",
@@ -160,6 +159,9 @@ class UsersStoreMixin(StoreProtocol):
             "force_password_change": bool(row[12]),
             "free_models_only": bool(row[13]),
         }
+        if include_password_hash:
+            data["password_hash"] = row[6]
+        return data
 
     async def update_user_theme(self, user_id: str, theme: str) -> None:
         await self._run(self._sync_update_user_theme, user_id, theme)
