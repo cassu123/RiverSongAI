@@ -19,6 +19,7 @@
 .env
 .env.local
 .env.*.local
+.env.bak*
 .flaskenv
 instance/
 
