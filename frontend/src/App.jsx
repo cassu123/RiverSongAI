@@ -376,7 +376,7 @@ export default function App() {
 
   const handleNavigate = (page) => {
     if (ADMIN_PAGES.has(page) && !adminMode) return
-    if (!featureEnabled(page)) return
+    if (featureCatalog?.has(page) && !featureEnabled(page)) return
     setCurrentPage(page)
     window.scrollTo(0, 0)
     setDrawerOpen(false)
@@ -477,7 +477,7 @@ export default function App() {
         mode={shellMode}
         onOpenDrawer={() => setDrawerOpen(true)}
         onOpenSpeak={() => handleNavigate('speak')}
-        onHome={() => handleNavigate('dashboard')}
+        onHome={() => handleNavigate(adminMode ? 'dashboard' : 'briefing')}
         action={pageAction}
         chatSidebar={chatSidebar}
         onShowSidebar={showChatSidebar && !sidebarOpen ? () => setSidebarOpen(true) : null}

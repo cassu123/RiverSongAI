@@ -343,8 +343,8 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
 
             {expandedCard === 'integrity' && (
               <div className="flex justify-end mt-6 animate-fade-in">
-                <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('pulse'); }}>
-                  <span>Open Pulse Panel</span>
+                <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('fleet'); }}>
+                  <span>Open Fleet Panel</span>
                   <span className="material-symbols-rounded">arrow_forward</span>
                 </button>
               </div>

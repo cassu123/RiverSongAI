@@ -5,7 +5,7 @@
  * Extracted here to prevent circular dependencies between components.
  */
 
-export const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'admin_settings', 'remote_ollama', 'webhook_tokens', 'slae'])
+export const ADMIN_PAGES = new Set(['dashboard', 'users', 'killswitch', 'admin_settings', 'remote_ollama', 'webhook_tokens', 'slae'])
 
 export const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings', 'chronos', 'briefing', 'documents', 'skills'])
 

@@ -1,7 +1,7 @@
 import React from 'react'
 import RsMark from '../components/RsMark.jsx'
 import EnvIcon from './EnvIcon.jsx'
-import { NAV_GROUPS } from '../utils/constants.js'
+import { NAV_GROUPS, ALWAYS_VISIBLE } from '../utils/constants.js'
 import { useMediaQuery, BREAKPOINTS } from '../hooks/useBreakpoint.js'
 
 /**
@@ -48,7 +48,7 @@ export default function Drawer({
     return true
   }).map(g => {
     const filteredItems = g.items.filter(it => {
-      if (userIsAdmin || !enabledFeatures) return true
+      if (userIsAdmin || !enabledFeatures || ALWAYS_VISIBLE.has(it.key)) return true
       return enabledFeatures.has(it.key)
     })
     return { ...g, items: filteredItems }
