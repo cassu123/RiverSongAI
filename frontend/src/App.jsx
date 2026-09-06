@@ -488,6 +488,8 @@ export default function App() {
 
       <Shell
         context={headerContext}
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
         mode={shellMode}
         onOpenDrawer={() => setDrawerOpen(true)}
         onOpenSpeak={() => handleNavigate('speak')}

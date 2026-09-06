@@ -111,19 +111,19 @@
 }
 
 .rs-drawer-item.is-active {
-  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
   color: var(--primary);
+  box-shadow: 0 0 16px -4px var(--primary);
 }
 .rs-drawer-item.is-active::before {
   content: '';
   position: absolute;
-  inset-block: 8px;
-  inset-inline-start: 0;
-  inline-size: 2px;
-  background: var(--primary);
-  border-radius: 2px;
+  inset: 0;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  pointer-events: none;
 }
-.rs-drawer-item.is-active .rs-icon { opacity: 1; }
+.rs-drawer-item.is-active .rs-icon { opacity: 1; filter: drop-shadow(0 0 6px var(--primary)); }
 
 .rs-drawer-item.is-danger { color: var(--md-error); }
 .rs-drawer-item.is-danger:hover {
@@ -146,7 +146,9 @@
   }
 }
 .rs-drawer-cell.is-active {
-  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  box-shadow: 0 0 16px -4px var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
 }
 .rs-drawer-cell .rs-card-label { color: var(--md-on-surface-variant); }
 .rs-drawer-cell.is-active .rs-card-label { color: var(--primary); }
