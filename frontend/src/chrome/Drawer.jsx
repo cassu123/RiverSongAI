@@ -2,19 +2,13 @@ import React from 'react'
 import RsMark from '../components/RsMark.jsx'
 import EnvIcon from './EnvIcon.jsx'
 import { NAV_GROUPS, ALWAYS_VISIBLE } from '../utils/constants.js'
-import { useMediaQuery, BREAKPOINTS } from '../hooks/useBreakpoint.js'
 
 /**
- * Drawer — primary navigation.
+ * Drawer — Google Spaces & Services Launcher Sheet
  *
- * Renders the same markup at every size; CSS decides the shape:
- *   < 768px   off-canvas overlay drawer behind the hamburger
- *   768–1199  persistent 88px icon+label rail
- *   >= 1200   persistent 260px drawer
- *
- * The `open` prop only means anything in the overlay case. From 768px up the
- * nav is always on screen, so it must not be marked aria-hidden and must not
- * trap the page behind a scrim.
+ * Provides instant access to all hubs and capabilities (Kitchen, Garage, Stash,
+ * Notes, Reading, Feeds, Store, Routines, Analytics, etc.) in a tactile
+ * Material 3 grid sheet, with quick account and admin controls at the base.
  */
 export default function Drawer({
   open,
@@ -32,17 +26,13 @@ export default function Drawer({
     ? displayName.trim().split(/\s+/).map(w => w ? w[0] : '').join('').slice(0, 2).toUpperCase()
     : 'RS'
 
-  // Off-canvas drawer on all screen sizes (Google Home layout).
-  // The persistent rail is removed in favor of the floating pill navigation bar.
-  const isPersistent = false
-
   function navigate(key) {
     onNavigate(key)
     onClose()
   }
 
-  // Filter NAV_GROUPS based on admin mode and enabled features
-  const groups = NAV_GROUPS.filter(g => {
+  // Filter groups based on admin mode and enabled features
+  const allGroups = NAV_GROUPS.filter(g => {
     if (g.isAdmin && !adminMode) return false
     return true
   }).map(g => {
@@ -53,6 +43,16 @@ export default function Drawer({
     return { ...g, items: filteredItems }
   }).filter(g => g.items.length > 0)
 
+  // Primary spaces to display in the launcher grid
+  const spacesList = []
+  allGroups.forEach(g => {
+    g.items.forEach(it => {
+      // Exclude primary bottom dock buttons from main spaces grid to keep it focused
+      if (['home', 'briefing', 'chat', 'speak'].includes(it.key)) return
+      spacesList.push(it)
+    })
+  })
+
   return (
     <>
       <div
@@ -62,120 +62,99 @@ export default function Drawer({
       />
       <nav
         className={`rs-drawer ${open ? 'is-open' : ''}`}
-        aria-label="Primary"
+        aria-label="Spaces & Services"
         aria-hidden={!open}
       >
         <div className="rs-drawer-head">
-          <span className="rs-drawer-title">
-            <RsMark mark="mono" size={28} />
-            <span>River Song</span>
-          </span>
-          <button className="rs-drawer-close" onClick={onClose} aria-label="Close">
-            <EnvIcon name="close" />
-          </button>
-        </div>
-
-        {/* Grouped nav sections — Primary (list) · More (grid) · Admin (list) */}
-        <div className="rs-drawer-scroll-area">
-          {groups.map(group => {
-            const isGrid = group.layout === 'grid'
-            const isPrimary = group.label === 'Primary'
-            return (
-              <div key={group.label} className={`rs-drawer-section ${isGrid ? 'is-grid' : ''}`}>
-                {/* Primary group renders without a label; others get a divider/label */}
-                {!isPrimary && (
-                  <h3 className="rs-drawer-section-label">— {group.label} —</h3>
-                )}
-                <div className={isGrid ? 'rs-drawer-grid' : 'rs-drawer-list'}>
-                  {group.items.map(it => {
-                    const danger = it.key === 'killswitch'
-                    const itemKey = `${group.label}:${it.key}`
-                    if (isGrid) {
-                      return (
-                        <button
-                          key={itemKey}
-                          className={`rs-drawer-cell ${currentPage === it.key ? 'is-active' : ''}`}
-                          onClick={() => navigate(it.key)}
-                          title={it.label}
-                          aria-current={currentPage === it.key ? 'page' : undefined}
-                        >
-                          <div className="rs-card-inner" style={{ padding: '12px 8px', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                            <EnvIcon name={it.icon || it.key} className="rs-icon" />
-                            <span className="rs-card-label" style={{ fontSize: '0.6rem', opacity: 1 }}>{it.label}</span>
-                          </div>
-                        </button>
-                      )
-                    }
-                    return (
-                      <button
-                        key={itemKey}
-                        className={`rs-drawer-item ${currentPage === it.key ? 'is-active' : ''} ${danger ? 'is-danger' : ''}`}
-                        onClick={() => navigate(it.key)}
-                        title={it.label}
-                        aria-current={currentPage === it.key ? 'page' : undefined}
-                      >
-                        <EnvIcon name={it.icon || it.key} className="rs-icon" />
-                        <span style={{ fontWeight: 700, letterSpacing: '-0.01em' }}>{it.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Account footer */}
-        <div className="rs-drawer-section rs-drawer-footer">
-          <h3 className="rs-drawer-section-label">Account</h3>
-
-          {/* Profile row */}
-          <button
-            className={`rs-drawer-profile ${currentPage === 'profile' ? 'is-active' : ''}`}
-            onClick={() => navigate('profile')}
-            aria-current={currentPage === 'profile' ? 'page' : undefined}
-          >
-            <span className="rs-drawer-avatar" aria-hidden="true">{initials}</span>
-            <span className="rs-drawer-profile-body">
-              <span className="rs-drawer-profile-name">{displayName || 'User'}</span>
-              <span className="rs-drawer-profile-sub">Profile</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <RsMark mark="mono" size={26} />
+            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>
+              Spaces & Services
             </span>
+          </div>
+          <button className="rs-drawer-close" onClick={onClose} aria-label="Close">
+            <span className="material-symbols-rounded">close</span>
           </button>
+        </div>
 
-          {/* Admin toggle — only when current user has admin role */}
-          {userIsAdmin && (
+        <div className="rs-drawer-scroll-area">
+          <div className="rs-spaces-grid">
+            {spacesList.map(it => {
+              const isActive = currentPage === it.key
+              const danger = it.key === 'killswitch'
+              return (
+                <button
+                  key={it.key}
+                  className={`rs-space-tile ${isActive ? 'is-active' : ''} ${danger ? 'is-danger' : ''}`}
+                  onClick={() => navigate(it.key)}
+                  title={it.label}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <div className="rs-space-icon-wrap">
+                    <EnvIcon name={it.icon || it.key} className="rs-icon" />
+                  </div>
+                  <span className="rs-space-label">{it.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Account & Quick Controls Footer */}
+        <div className="rs-drawer-footer" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 14, marginTop: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <button
-              className={`rs-drawer-toggle ${adminMode ? 'is-on' : ''}`}
-              onClick={() => onAdminToggle(!adminMode)}
-              aria-pressed={adminMode}
-              title="Admin mode"
+              className={`rs-drawer-profile ${currentPage === 'profile' ? 'is-active' : ''}`}
+              onClick={() => navigate('profile')}
+              aria-current={currentPage === 'profile' ? 'page' : undefined}
+              style={{ flex: 1, padding: '8px 10px', borderRadius: 16 }}
             >
-              <span>Admin mode</span>
-              <span className="rs-toggle-track" aria-hidden="true">
-                <span className="rs-toggle-thumb" />
+              <span className="rs-drawer-avatar" aria-hidden="true">{initials}</span>
+              <span className="rs-drawer-profile-body">
+                <span className="rs-drawer-profile-name">{displayName || 'User'}</span>
+                <span className="rs-drawer-profile-sub">Account & Profile</span>
               </span>
             </button>
-          )}
 
-          {/* Settings + Logout pair */}
-          <div className="rs-drawer-list">
             <button
-              className={`rs-drawer-item ${currentPage === 'settings' ? 'is-active' : ''}`}
+              className="rs-icon-btn"
               onClick={() => navigate('settings')}
+              title="Settings"
+              aria-label="Settings"
+              style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }}
             >
               <EnvIcon name="settings" className="rs-icon" />
-              <span>Settings</span>
             </button>
+
             {onLogout && (
               <button
-                className="rs-drawer-item is-danger"
+                className="rs-icon-btn"
                 onClick={() => { onClose(); onLogout() }}
+                title="Sign out"
+                aria-label="Sign out"
+                style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}
               >
                 <EnvIcon name="logout" className="rs-icon" />
-                <span>Sign out</span>
               </button>
             )}
           </div>
+
+          {userIsAdmin && (
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)' }}>
+              <span style={{ fontSize: '0.8rem', color: 'rgba(220, 230, 245, 0.7)', fontWeight: 500 }}>Admin Mode</span>
+              <button
+                className={`rs-drawer-toggle ${adminMode ? 'is-on' : ''}`}
+                onClick={() => onAdminToggle(!adminMode)}
+                aria-pressed={adminMode}
+                title="Admin mode"
+                style={{ padding: 0 }}
+              >
+                <span className="rs-toggle-track" aria-hidden="true">
+                  <span className="rs-toggle-thumb" />
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       </nav>
     </>

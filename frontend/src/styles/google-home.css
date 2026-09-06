@@ -340,37 +340,40 @@
 
 .gh-tile-slider {
   flex: 1;
-  height: 8px;
+  height: 10px;
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 999px;
   outline: none;
   transition: background 0.2s;
+  cursor: pointer;
 }
 
 .gh-tile-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: #fff;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-  border: 2px solid #004a77;
-  transition: transform 0.15s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  border: 2px solid #00e5ff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .gh-tile-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+  transform: scale(1.18);
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.8);
 }
 
 .gh-tile-slider-pct {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.85);
-  min-width: 38px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  min-width: 42px;
   text-align: right;
 }
 
@@ -379,14 +382,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .gh-temp-large {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 2rem;
+  font-size: 2.2rem;
   font-weight: 700;
   color: #fff;
   line-height: 1;
@@ -395,23 +398,36 @@
 .gh-temp-btns {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .gh-temp-step-btn {
   all: unset;
   cursor: pointer;
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: #fff;
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   font-weight: 700;
   transition: all 0.15s ease;
+  user-select: none;
+}
+
+.gh-temp-step-btn:hover {
+  background: rgba(0, 229, 255, 0.3);
+  border-color: rgba(0, 229, 255, 0.6);
+  transform: scale(1.08);
+}
+
+.gh-temp-step-btn:active {
+  transform: scale(0.92);
+  background: rgba(0, 229, 255, 0.45);
 }
 
 .gh-temp-step-btn:hover {

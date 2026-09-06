@@ -621,3 +621,80 @@
   opacity: 0.45;
   line-height: 1.7;
 }
+
+/* ── Google Spaces Launcher Sheet ────────────────────────────────────────── */
+.rs-spaces-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-block: 10px;
+}
+@media (min-width: 480px) {
+  .rs-spaces-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+}
+
+.rs-space-tile {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 6px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  text-align: center;
+  user-select: none;
+}
+.rs-space-tile:hover {
+  background: rgba(0, 229, 255, 0.12);
+  border-color: rgba(0, 229, 255, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(0, 229, 255, 0.2);
+}
+.rs-space-tile:active {
+  transform: scale(0.95);
+}
+.rs-space-tile.is-active {
+  background: rgba(0, 74, 119, 0.5);
+  border-color: rgba(0, 229, 255, 0.5);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
+}
+
+.rs-space-icon-wrap {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbe6ff;
+  transition: all 0.2s ease;
+}
+.rs-space-tile:hover .rs-space-icon-wrap {
+  background: #00e5ff;
+  color: #00363a;
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.5);
+}
+.rs-space-tile.is-active .rs-space-icon-wrap {
+  background: #00e5ff;
+  color: #00363a;
+}
+.rs-space-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
