@@ -17,6 +17,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { Network } from '@capacitor/network'
+import { API_BASE } from '../lib/api'
 
 const RECONNECT_BASE_MS        = 1000
 const RECONNECT_MAX_MS         = 30000
@@ -51,7 +52,7 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
     try {
       // 1. Exchange token for ticket if needed
       if (token) {
-        const res = await fetch('/api/auth/ws-ticket', {
+        const res = await fetch(`${API_BASE}/api/auth/ws-ticket`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         })
@@ -60,7 +61,7 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
           ticket = data.ticket
         }
       } else if (kioskToken) {
-        const res = await fetch('/api/auth/ws-ticket/kiosk', {
+        const res = await fetch(`${API_BASE}/api/auth/ws-ticket/kiosk`, {
           method: 'POST',
           headers: { 'X-Kiosk-Token': kioskToken }
         })

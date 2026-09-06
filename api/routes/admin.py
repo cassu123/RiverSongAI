@@ -121,6 +121,8 @@ async def update_user(
         body.free_models_only)
 
     updated = await store.get_user_by_id(user_id)
+    if updated:
+        updated.pop("password_hash", None)
     return updated
 
 
@@ -223,6 +225,8 @@ async def impersonate_user(
         admin_id,
         user_id)
 
+    if target:
+        target.pop("password_hash", None)
     return {"access_token": token, "token_type": "bearer",
             "impersonated_user": target}
 
@@ -344,13 +348,14 @@ async def set_feature_visibility(
     authorization: Optional[str] = Header(default=None),
 ):
     await _require_admin(request, authorization)
-    # Validate keys
-    invalid = [k for k in body.hidden_features if k not in ALL_FEATURE_KEYS]
+    # Validate keys, allowing retired keys like environment without error
+    invalid = [k for k in body.hidden_features if k not in ALL_FEATURE_KEYS and k != "environment"]
     if invalid:
         raise bad_request(f"Unknown feature keys: {invalid}")
+    sanitized = [k for k in body.hidden_features if k in ALL_FEATURE_KEYS]
     store = _get_store(request)
     config = await store.get_admin_config()
-    config["hidden_features"] = body.hidden_features
+    config["hidden_features"] = sanitized
     await store.set_admin_config(config)
     logger.info(
         "Admin updated feature visibility: %d features hidden", len(

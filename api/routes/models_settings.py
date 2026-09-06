@@ -1841,7 +1841,7 @@ async def save_elevenlabs_settings(
     # Update live settings singleton
     s = get_settings()
     # If the user passed a masked key, don't overwrite with it
-    if not body.api_key.startswith("..."):
+    if not body.api_key.startswith("...") and body.api_key != "XXXXXXXX":
         s.elevenlabs_api_key = body.api_key
     s.elevenlabs_voice_id = body.voice_id
     s.elevenlabs_model_id = body.model_id
@@ -1850,7 +1850,12 @@ async def save_elevenlabs_settings(
     try:
         store = request.app.state.memory_manager._store
         config = await store.get_admin_config()
-        config["elevenlabs_config"] = body.model_dump()
+        el_dump = body.model_dump()
+        if body.api_key.startswith("...") or body.api_key == "XXXXXXXX":
+            existing_key = config.get("elevenlabs_config", {}).get("api_key") or s.elevenlabs_api_key
+            if existing_key and not existing_key.startswith("...") and existing_key != "XXXXXXXX":
+                el_dump["api_key"] = existing_key
+        config["elevenlabs_config"] = el_dump
         await store.set_admin_config(config)
     except Exception as e:
         logger.warning("Failed to persist ElevenLabs settings to DB: %s", e)

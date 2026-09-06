@@ -159,6 +159,12 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     }
   }, [connectionStatus])
 
+  useEffect(() => {
+    return () => {
+      audioPlayer.close()
+    }
+  }, [audioPlayer])
+
   const { startRecording, stopRecording, isRecording, audioLevel } = useAudioRecorder({
     onComplete: pcm => {
       setConvState('thinking')

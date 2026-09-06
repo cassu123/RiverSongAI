@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react'
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth }        from './context/AuthContext.jsx'
 import { setupFcm }       from './utils/fcm.js'
@@ -21,6 +21,7 @@ import './styles/feeds.css'
 import './styles/fleet.css'
 import './styles/white-pages.css'
 import './styles/responsive.css'
+import './styles/google-home.css'
 
 // Lazy load pages
 const LoginPage          = lazy(() => import('./pages/LoginPage.jsx'))
@@ -89,7 +90,7 @@ const PAGE_TO_PATH = {
   inventory:        '/inventory',
   chronos:          '/chronos',
   vehicles:         '/vehicles',
-  environment:      '/environment',
+  environment:      '/home',
   culinary:         '/culinary',
   fleet:            '/fleet',
   documents:        '/documents',
@@ -117,6 +118,7 @@ const OAUTH_PAGES = new Set(['google_callback', 'reading_callback', 'preview'])
 
 function pageKeyFromPath(pathname) {
   if (!pathname || pathname === '/' || pathname === '') return 'briefing'
+  if (pathname === '/environment' || pathname.startsWith('/environment/')) return 'home'
   // Exact match, or a nested route beneath a page:
   //   /feeds                        → 'feeds'
   //   /feeds/sports/boxscore/123    → 'feeds'
@@ -222,11 +224,13 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Restored, not just saved. The save below has always been here; without a
-  // matching load, admin mode silently reset on every reload — which the
-  // render gate further down would then turn into a bounce off the admin page
-  // the admin was actually looking at.
-  const [adminMode,     setAdminMode]     = useState(() => load('rs-admin', false))
+  // Restored, not just saved. If the user has an admin role and has never explicitly
+  // saved an 'rs-admin' preference in localStorage, adminMode defaults to true.
+  const [adminMode,     setAdminMode]     = useState(() => {
+    const saved = load('rs-admin', null)
+    if (saved !== null) return Boolean(saved)
+    return user?.role === 'admin'
+  })
   const [drawerOpen,    setDrawerOpen]    = useState(false)
   const [pageAction,    setPageAction]    = useState(null)
   const [sidebarOpen,   setSidebarOpen]   = useState(() => load('rs-sidebar-open', true))
@@ -335,8 +339,23 @@ export default function App() {
   // A restored 'rs-admin' is only a UI preference, and localStorage is the
   // user's to edit. Anyone who is not actually an admin gets it cleared;
   // the server is what enforces this, but the client should not pretend.
+  // Phase H3 retirement: /environment URLs redirect to Home Node (/home)
   useEffect(() => {
-    if (user && !userIsAdmin && adminMode) setAdminMode(false)
+    if (location.pathname === '/environment' || location.pathname.startsWith('/environment/')) {
+      navigate('/home', { replace: true })
+    }
+  }, [location.pathname, navigate])
+
+  // Captured before any effect writes the key, so the "never saved" case survives.
+  const adminPrefWasSaved = useRef(load('rs-admin', null) !== null)
+
+  useEffect(() => {
+    if (user && userIsAdmin && !adminPrefWasSaved.current) {
+      adminPrefWasSaved.current = true
+      setAdminMode(true)
+    } else if (user && !userIsAdmin && adminMode) {
+      setAdminMode(false)
+    }
   }, [user, userIsAdmin, adminMode])
 
   useEffect(() => {
@@ -376,7 +395,7 @@ export default function App() {
 
   const handleNavigate = (page) => {
     if (ADMIN_PAGES.has(page) && !adminMode) return
-    if (!featureEnabled(page)) return
+    if (featureCatalog?.has(page) && !featureEnabled(page)) return
     setCurrentPage(page)
     window.scrollTo(0, 0)
     setDrawerOpen(false)
@@ -474,10 +493,12 @@ export default function App() {
 
       <Shell
         context={headerContext}
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
         mode={shellMode}
         onOpenDrawer={() => setDrawerOpen(true)}
         onOpenSpeak={() => handleNavigate('speak')}
-        onHome={() => handleNavigate('dashboard')}
+        onHome={() => handleNavigate(adminMode ? 'dashboard' : 'briefing')}
         action={pageAction}
         chatSidebar={chatSidebar}
         onShowSidebar={showChatSidebar && !sidebarOpen ? () => setSidebarOpen(true) : null}

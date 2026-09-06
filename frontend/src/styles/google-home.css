@@ -1,0 +1,724 @@
+/* =============================================================================
+   google-home.css — Google Home / Material 3 Expressive Tactile Home Canvas
+   ============================================================================= */
+
+/* ── 1. Living AI Glance Bar ─────────────────────────────────────────────── */
+.gh-glance-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(16, 22, 34, 0.75);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 28px;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.gh-glance-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.8), rgba(150, 203, 255, 0.9), transparent);
+  border-radius: 999px;
+  opacity: 0.8;
+}
+
+.gh-glance-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.gh-glance-orb-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 229, 255, 0.12);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  box-shadow: 0 0 16px -2px rgba(0, 229, 255, 0.25);
+  flex-shrink: 0;
+}
+
+.gh-glance-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gh-glance-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gh-glance-sub {
+  font-size: 0.78rem;
+  color: rgba(220, 230, 245, 0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gh-glance-action {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(0, 229, 255, 0.15);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  color: #96cbff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.gh-glance-action:hover {
+  background: rgba(0, 229, 255, 0.25);
+  border-color: rgba(0, 229, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.gh-glance-action:focus-visible,
+.gh-chip:focus-visible,
+.gh-tile-toggle-btn:focus-visible,
+.gh-temp-step-btn:focus-visible,
+.gh-attention-chip:focus-visible,
+.gh-scene-chip:focus-visible,
+.gh-media-play-btn:focus-visible {
+  outline: 2px solid #00e5ff;
+  outline-offset: 3px;
+}
+
+/* ── 2. Material 3 Filter Chips ─────────────────────────────────────────── */
+.gh-chips-bar {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+  scrollbar-width: none;
+}
+.gh-chips-bar::-webkit-scrollbar { display: none; }
+
+.gh-chip {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(18, 24, 36, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: rgba(220, 230, 245, 0.75);
+  font-size: 0.84rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  user-select: none;
+}
+
+.gh-chip:hover {
+  background: rgba(26, 34, 52, 0.8);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.gh-chip.is-active {
+  background: #004a77;
+  color: #cbe6ff;
+  border-color: rgba(0, 229, 255, 0.4);
+  font-weight: 700;
+  box-shadow: 0 4px 16px -2px rgba(0, 74, 119, 0.5);
+}
+
+.gh-chip-icon {
+  font-size: 1.1rem;
+}
+
+/* ── 3. Tactile Device Grid ──────────────────────────────────────────────── */
+.gh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 480px) {
+  .gh-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* ── 4. Tactile Device Tile ──────────────────────────────────────────────── */
+.gh-tile {
+  position: relative;
+  border-radius: 24px;
+  background: rgba(15, 20, 30, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px;
+  box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  transition: all 0.22s cubic-bezier(0.2, 0, 0, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 140px;
+  overflow: hidden;
+}
+
+.gh-tile:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px -8px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+}
+
+/* Light Active State: Warm Golden Illumination */
+.gh-tile.is-light-on {
+  background: rgba(45, 34, 12, 0.75);
+  border-color: rgba(250, 204, 21, 0.4);
+  box-shadow: 0 12px 36px -6px rgba(250, 204, 21, 0.2), inset 0 1px 0 0 rgba(255, 240, 180, 0.3);
+}
+
+.gh-tile.is-light-on .gh-tile-icon-wrap {
+  background: #facc15;
+  color: #422006;
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.5);
+}
+
+.gh-tile.is-light-on .gh-tile-title {
+  color: #fff;
+}
+
+.gh-tile.is-light-on .gh-tile-status {
+  color: #fde047;
+}
+
+/* Climate Active State: Crisp Cyan Illumination */
+.gh-tile.is-climate {
+  border-color: rgba(0, 229, 255, 0.25);
+}
+
+.gh-tile.is-climate.is-cooling {
+  background: rgba(8, 32, 48, 0.75);
+  border-color: rgba(0, 229, 255, 0.45);
+  box-shadow: 0 12px 36px -6px rgba(0, 229, 255, 0.2), inset 0 1px 0 0 rgba(180, 245, 255, 0.3);
+}
+
+.gh-tile.is-climate.is-cooling .gh-tile-icon-wrap {
+  background: #00e5ff;
+  color: #00363a;
+  box-shadow: 0 0 18px rgba(0, 229, 255, 0.5);
+}
+
+.gh-tile.is-climate.is-heating {
+  background: rgba(45, 26, 12, 0.75);
+  border-color: rgba(251, 146, 60, 0.45);
+  box-shadow: 0 12px 36px -6px rgba(251, 146, 60, 0.2), inset 0 1px 0 0 rgba(255, 230, 200, 0.3);
+}
+
+.gh-tile.is-climate.is-heating .gh-tile-icon-wrap {
+  background: #fb923c;
+  color: #431407;
+  box-shadow: 0 0 18px rgba(251, 146, 60, 0.5);
+}
+
+/* Lock Active State: Emerald Secured */
+.gh-tile.is-locked {
+  border-color: rgba(52, 211, 153, 0.3);
+}
+.gh-tile.is-locked .gh-tile-icon-wrap {
+  background: rgba(52, 211, 153, 0.2);
+  color: #34d399;
+}
+
+.gh-tile.is-unlocked {
+  background: rgba(45, 26, 12, 0.75);
+  border-color: rgba(251, 146, 60, 0.5);
+  box-shadow: 0 12px 36px -6px rgba(251, 146, 60, 0.25);
+}
+.gh-tile.is-unlocked .gh-tile-icon-wrap {
+  background: #fb923c;
+  color: #431407;
+  box-shadow: 0 0 18px rgba(251, 146, 60, 0.5);
+}
+
+/* Tile Header (Icon + Toggle Button) */
+.gh-tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.gh-tile-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(220, 230, 245, 0.8);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.gh-tile-icon-wrap span.material-symbols-rounded {
+  font-size: 24px;
+}
+
+.gh-tile-toggle-btn {
+  all: unset;
+  cursor: pointer;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(220, 230, 245, 0.7);
+  transition: all 0.18s ease;
+}
+
+.gh-tile-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.gh-tile-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+/* Tile Body (Name + State text) */
+.gh-tile-body {
+  margin-bottom: 12px;
+}
+
+.gh-tile-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 3px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gh-tile-status {
+  font-size: 0.8rem;
+  color: rgba(220, 230, 245, 0.55);
+  font-weight: 500;
+}
+
+/* Integrated Dimmer Slider */
+.gh-tile-slider-wrap {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gh-tile-slider {
+  flex: 1;
+  height: 10px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  outline: none;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.gh-tile-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  border: 2px solid #00e5ff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gh-tile-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.18);
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.8);
+}
+
+.gh-tile-slider-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  min-width: 42px;
+  text-align: right;
+}
+
+/* Climate Temperature Dial/Controls */
+.gh-climate-ctrls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gh-temp-large {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+.gh-temp-btns {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gh-temp-step-btn {
+  all: unset;
+  cursor: pointer;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.gh-temp-step-btn:hover {
+  background: rgba(0, 229, 255, 0.3);
+  border-color: rgba(0, 229, 255, 0.6);
+  transform: scale(1.08);
+}
+
+.gh-temp-step-btn:active {
+  transform: scale(0.92);
+  background: rgba(0, 229, 255, 0.45);
+}
+
+.gh-temp-step-btn:hover {
+  background: rgba(0, 229, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.gh-temp-step-btn:active {
+  transform: scale(0.92);
+}
+
+/* ── 5. Room Sections & Headers ─────────────────────────────────────────── */
+.gh-room-section {
+  margin-bottom: 32px;
+}
+
+.gh-room-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 14px 4px;
+}
+
+.gh-room-head-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gh-room-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.gh-room-temp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  color: #96cbff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.gh-room-count {
+  font-size: 0.78rem;
+  color: rgba(220, 230, 245, 0.5);
+  font-weight: 500;
+}
+
+/* ── 6. Needs Attention Banner ──────────────────────────────────────────── */
+.gh-attention-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 20px;
+  border-radius: 20px;
+  background: rgba(45, 26, 12, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  box-shadow: 0 8px 24px -4px rgba(251, 146, 60, 0.15);
+  margin-bottom: 24px;
+}
+
+.gh-attention-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fb923c;
+}
+
+.gh-attention-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gh-attention-chip {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(251, 146, 60, 0.15);
+  border: 1px solid rgba(251, 146, 60, 0.3);
+  color: #fed7aa;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.gh-attention-chip:hover {
+  background: rgba(251, 146, 60, 0.25);
+  border-color: rgba(251, 146, 60, 0.6);
+  transform: translateY(-1px);
+}
+
+.gh-attention-chip.is-critical {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+/* ── 7. Quick Scenes Bar ─────────────────────────────────────────────────── */
+.gh-scenes-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+  scrollbar-width: none;
+}
+.gh-scenes-row::-webkit-scrollbar { display: none; }
+
+.gh-scene-chip {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(220, 230, 245, 0.85);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.gh-scene-chip:hover {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: rgba(0, 229, 255, 0.4);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.gh-scene-chip:active {
+  transform: scale(0.96);
+}
+
+/* ── 8. Media Player Tile ────────────────────────────────────────────────── */
+.gh-media-tile {
+  grid-column: 1 / -1;
+  background: rgba(18, 24, 38, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 20px;
+  margin-top: 12px;
+  box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+}
+
+.gh-media-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.gh-media-art {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #004a77, #00e5ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 26px;
+  flex-shrink: 0;
+  box-shadow: 0 6px 18px rgba(0, 229, 255, 0.3);
+}
+
+.gh-media-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.gh-media-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gh-media-artist {
+  font-size: 0.85rem;
+  color: rgba(220, 230, 245, 0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.gh-media-play-btn {
+  all: unset;
+  cursor: pointer;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #00e5ff;
+  color: #00363a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.gh-media-play-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 26px rgba(0, 229, 255, 0.6);
+}
+
+.gh-media-play-btn:active {
+  transform: scale(0.95);
+}
+
+.gh-media-vol-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── 9. Sensor Readings Bar ─────────────────────────────────────────────── */
+.gh-sensor-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.gh-sensor-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.8rem;
+  color: rgba(220, 230, 245, 0.75);
+}
+
+.gh-sensor-pill strong {
+  font-family: 'JetBrains Mono', monospace;
+  color: #fff;
+  font-weight: 600;
+}
+
+.gh-sensor-pill.is-alarm {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+.gh-sensor-pill.is-alarm strong {
+  color: #ef4444;
+}
+

@@ -244,7 +244,8 @@ def _migrate_inventory(profile_id: str, family_owner: str,
             conn.close()
             return {"moved": 0}
 
-        puid = str(personal_inv["id"]).replace("-", "")
+        puid_raw = str(personal_inv["id"])
+        puid_hex = puid_raw.replace("-", "")
 
         family_inv = conn.execute(
             "SELECT id FROM inv_users WHERE external_user_id=?", (
@@ -274,16 +275,20 @@ def _migrate_inventory(profile_id: str, family_owner: str,
                 ),
             )
             conn.commit()
-            fuid = new_uid
+            fuid_raw = new_uid
+            fuid_hex = new_uid
         else:
-            fuid = str(family_inv["id"]).replace("-", "")
+            fuid_raw = str(family_inv["id"])
+            fuid_hex = fuid_raw.replace("-", "")
 
-        if puid == fuid:
+        if puid_hex == fuid_hex:
             conn.close()
             return {"moved": 0}
 
+        target_fuid = fuid_raw
+
         cur = conn.execute(
-            "UPDATE inv_homes SET owner_id=? WHERE owner_id=?", (fuid, puid)
+            "UPDATE inv_homes SET owner_id=? WHERE owner_id=? OR owner_id=?", (target_fuid, puid_raw, puid_hex)
         )
         moved = cur.rowcount
         conn.commit()

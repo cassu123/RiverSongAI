@@ -59,6 +59,8 @@ export default function BarcodeScanner({ onDetected, onClose, formats, continuou
     const reader = new BrowserMultiFormatReader(hints)
     readerRef.current = reader
 
+    let cancelled = false
+
     const start = async () => {
       try {
         const constraints = {
@@ -69,8 +71,11 @@ export default function BarcodeScanner({ onDetected, onClose, formats, continuou
           }
         }
 
+        if (cancelled) return
+
         // Try constraints first
         await reader.decodeFromConstraints(constraints, videoRef.current, (result, err) => {
+          if (cancelled) return
           if (result) {
             const value = result.getText()
             const format = result.getBarcodeFormat()
@@ -84,27 +89,36 @@ export default function BarcodeScanner({ onDetected, onClose, formats, continuou
           }
         })
       } catch (e) {
+        if (cancelled) return
         console.warn('decodeFromConstraints failed, falling back to default device:', e)
         try {
           // Fallback to default device
           await reader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
+             if (cancelled) return
              if (result) {
                 const value = result.getText()
-                onDetected(value, result.getBarcodeFormat())
-                if (!continuous) handleClose()
+                const format = result.getBarcodeFormat()
+                const now = Date.now()
+                if (value === lastValueRef.current && now - lastSeenRef.current < 1500) return
+                lastValueRef.current = value
+                lastSeenRef.current = now
+                try { navigator.vibrate?.(80) } catch {}
+                onDetectedRef.current(value, format)
+                if (!continuousRef.current) setTimeout(() => handleCloseRef.current(), 300)
              }
           })
         } catch (e2) {
-          setError('Camera initialization failed. Please ensure permissions are granted.')
+          if (!cancelled) {
+            setError('Camera initialization failed. Please ensure permissions are granted.')
+          }
         }
       }
     }
 
-
-
     start()
 
     return () => {
+      cancelled = true
       // Fully release the stream
       try {
         reader.reset()

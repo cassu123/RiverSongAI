@@ -67,7 +67,7 @@ from pydantic import BaseModel, Field
 # Reused rather than reimplemented: fleet.py owns the fleet_units schema and
 # the token check, and a second copy of either would be a second place for the
 # constant-time comparison to drift out of.
-from api.routes.fleet import _ensure_schema, _now, _verify_unit
+from api.routes.fleet import _ensure_schema, _now, _verify_unit, _get_store
 from core.auth import decode_token
 from core.vortex_hub import PRESENCE_STATES, get_vortex_hub
 from core.vortex_replica import get_replica_service
@@ -129,7 +129,7 @@ async def _require_unit(unit_id: str, token: Optional[str]) -> Dict[str, Any]:
     The owner comes from the pairing record written when a logged-in user
     approved this unit — never from the request (invariant 4).
     """
-    store = SQLiteStore()
+    store = _get_store()
     await _ensure_schema(store)
     await ensure_unit_schema(store)
     unit = await _verify_unit(store, PROGRAM, unit_id, token)
@@ -404,7 +404,7 @@ async def vortex_websocket(websocket: WebSocket) -> None:
     thirty frames a second. The `/commands` poll stays for slow,
     offline-tolerant operations.
     """
-    store = SQLiteStore()
+    store = _get_store()
     try:
         await _ensure_schema(store)
         await ensure_unit_schema(store)
@@ -1647,7 +1647,7 @@ async def adopt_unit(unit_id: str, body: UnitProfileBody,
     """
     user_id = await _require_user(authorization)
 
-    store = SQLiteStore()
+    store = _get_store()
     await _ensure_schema(store)
     await ensure_unit_schema(store)
     unit = await store.execute_read_one_async(

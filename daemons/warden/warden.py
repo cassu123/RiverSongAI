@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import threading
 from daemons.base_daemon import BaseDaemon
 from config.settings import get_settings
 
@@ -29,6 +30,7 @@ class WardenDaemon(BaseDaemon):
             logger.error(f"Failed to parse warden_rtsp_cameras: {e}")
         
         self.model = None
+        self._model_lock = threading.Lock()
 
     async def _setup(self):
         if not self.settings.warden_enabled:
@@ -53,8 +55,9 @@ class WardenDaemon(BaseDaemon):
             return
 
         try:
-            # We run YOLO inference
-            results = self.model(frame, conf=self.yolo_confidence, device=self.yolo_device, verbose=False)
+            # We run YOLO inference with thread lock protection
+            with self._model_lock:
+                results = self.model(frame, conf=self.yolo_confidence, device=self.yolo_device, verbose=False)
             for result in results:
                 for box in result.boxes:
                     class_id = int(box.cls[0])

@@ -94,8 +94,15 @@ async def run_agent_loop(
             await append_history_fn("assistant", [{"type": "tool_use", "id": tool_id, "name": tool_name, "input": tool_input}])
             await append_history_fn("user", [{"type": "tool_result", "tool_use_id": tool_id, "content": result_text}])
         else:
-            await append_history_fn("assistant", "", {"tool_calls": [{"function": {"name": tool_name, "arguments": tool_input}}]})
-            await append_history_fn("tool", result_text)
+            args_str = json.dumps(tool_input) if isinstance(tool_input, dict) else str(tool_input)
+            await append_history_fn("assistant", "", {
+                "tool_calls": [{
+                    "id": tool_id,
+                    "type": "function",
+                    "function": {"name": tool_name, "arguments": args_str}
+                }]
+            })
+            await append_history_fn("tool", result_text, {"tool_call_id": tool_id, "name": tool_name})
             
         receipts.append({"tool": tool_name, "summary": str(result_text)[:100], "ok": ok})
 

@@ -5,7 +5,7 @@
  * Extracted here to prevent circular dependencies between components.
  */
 
-export const ADMIN_PAGES = new Set(['dashboard', 'routines', 'home', 'users', 'killswitch', 'admin_settings', 'remote_ollama', 'webhook_tokens', 'slae'])
+export const ADMIN_PAGES = new Set(['dashboard', 'users', 'killswitch', 'admin_settings', 'remote_ollama', 'webhook_tokens', 'slae', 'fleet'])
 
 export const ALWAYS_VISIBLE = new Set(['speak', 'chat', 'profile', 'settings', 'chronos', 'briefing', 'documents', 'skills'])
 
@@ -37,6 +37,7 @@ export const NAV_GROUPS = [
     layout: 'grid',
     items: [
       { key: 'memory',      label: 'Memory',      icon: 'memory' },
+      { key: 'chronos',     label: 'Notes',       icon: 'chronos' },
       { key: 'skills',      label: 'About You',   icon: 'skills' },
       { key: 'routines',    label: 'Routines',    icon: 'routines' },
       { key: 'inventory',   label: 'Stash',       icon: 'inventory' },
@@ -46,7 +47,6 @@ export const NAV_GROUPS = [
       { key: 'analytics',   label: 'Analytics',   icon: 'analytics' },
       { key: 'reading',     label: 'Reading',     icon: 'reading' },
       { key: 'google',      label: 'Google',      icon: 'google' },
-      { key: 'environment', label: 'Environment', icon: 'environment' }
     ]
   },
   {
@@ -55,6 +55,7 @@ export const NAV_GROUPS = [
     isAdmin: true,
     items: [
       { key: 'dashboard',      label: 'System Hub',     icon: 'dashboard' },
+      { key: 'fleet',          label: 'Fleet Console',  icon: 'fleet' },
       { key: 'users',          label: 'Users',          icon: 'users' },
       { key: 'admin_settings', label: 'Admin Settings', icon: 'admin_settings' },
       { key: 'remote_ollama',  label: 'Remote Ollama',  icon: 'remote_ollama' },

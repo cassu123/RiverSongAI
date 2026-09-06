@@ -42,7 +42,7 @@ ALL_FEATURES = [
     {"key": "home", "label": "Home Node"},
     {"key": "analytics", "label": "Analytics"},
     {"key": "reading", "label": "Reading"},
-    {"key": "environment", "label": "Environment"},
+    {"key": "skills", "label": "About You"},
 ]
 ALL_FEATURE_KEYS = [f["key"] for f in ALL_FEATURES]
 

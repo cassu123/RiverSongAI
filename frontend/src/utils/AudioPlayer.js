@@ -77,4 +77,18 @@ export class AudioPlayer {
   stop() {
     this.interrupt()
   }
+
+  async close() {
+    this.interrupt()
+    if (this.ctx && this.ctx.state !== 'closed') {
+      try {
+        await this.ctx.close()
+      } catch (err) {
+        console.warn('[AudioPlayer] Error closing AudioContext:', err)
+      }
+    }
+    this.ctx = null
+    this.worklet = null
+    this.initPromise = null
+  }
 }

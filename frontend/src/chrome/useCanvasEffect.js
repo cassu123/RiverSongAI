@@ -1,14 +1,17 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 /**
  * Shared boilerplate for every Stage scene's particle field.
  *
  * Caller passes an init(ctx, w, h) that returns a step() function.
  * The hook handles ResizeObserver, devicePixelRatio cap (1.5 — S24 Ultra
- * sweet spot), RAF loop, and cleanup. Each scene only writes its particle
- * logic; the engine plumbing lives here.
+ * sweet spot), RAF loop, visibility pause, and cleanup. Each scene only
+ * writes its particle logic; the engine plumbing lives here.
  */
 export default function useCanvasEffect(canvasRef, init) {
+  const initRef = useRef(init)
+  initRef.current = init
+
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -25,7 +28,9 @@ export default function useCanvasEffect(canvasRef, init) {
       canvas.width  = Math.floor(w * dpr)
       canvas.height = Math.floor(h * dpr)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      step = init(ctx, w, h)
+      if (initRef.current) {
+        step = initRef.current(ctx, w, h)
+      }
     }
 
     const ro = new ResizeObserver(resize)
@@ -33,11 +38,16 @@ export default function useCanvasEffect(canvasRef, init) {
     resize()
 
     function loop() {
-      if (step) step()
+      if (!document.hidden && step) {
+        step()
+      }
       raf = requestAnimationFrame(loop)
     }
     raf = requestAnimationFrame(loop)
 
-    return () => { cancelAnimationFrame(raf); ro.disconnect() }
-  }, [init, canvasRef])
+    return () => {
+      cancelAnimationFrame(raf)
+      ro.disconnect()
+    }
+  }, [canvasRef])
 }

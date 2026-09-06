@@ -121,8 +121,8 @@ class ContextEngine:
     def get_rooms(self) -> Dict[str, dict]:
         # Return aggregate view per room
         res = {}
-        for name, r in self._rooms.items():
-            active_lights = sum(1 for k, v in r._entities.items() if k.startswith("light.") and v == "on")
+        for name, r in list(self._rooms.items()):
+            active_lights = sum(1 for k, v in list(r._entities.items()) if k.startswith("light.") and v == "on")
             d = r.to_dict()
             d["active_lights"] = active_lights
             res[name] = d
@@ -131,10 +131,10 @@ class ContextEngine:
     def build_context_block(self) -> str:
         """Generates a text block for injection into the system prompt."""
         active_rooms = []
-        for name, r in self._rooms.items():
+        for name, r in list(self._rooms.items()):
             if r.is_stale():
                 continue
-            active_lights = sum(1 for k, v in r._entities.items() if k.startswith("light.") and v == "on")
+            active_lights = sum(1 for k, v in list(r._entities.items()) if k.startswith("light.") and v == "on")
             active_rooms.append(
                 f"- {name.replace('_', ' ').title()}: {r.persons} person(s) present, {r.activity}. "
                 f"Temp: {r.temperature if r.temperature else '??'}°F. Lights: {'On' if r.lights_on else 'Off'} ({active_lights} active)."

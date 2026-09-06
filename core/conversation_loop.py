@@ -80,9 +80,8 @@ UserAccess.UNKNOWN = UserAccess(is_admin=False, free_models_only=True)
 
 class FallbackLLMProvider(LLMProvider):
     """
-    Wraps two LLM providers. If the primary provider fails during streaming,
-    it automatically falls back to the secondary provider for the remainder
-    of the request.
+    Wraps two LLM providers. If the primary provider fails before or during streaming,
+    it automatically falls back to the secondary provider for the request.
     """
 
     def __init__(self, primary: LLMProvider, secondary: LLMProvider):
@@ -91,25 +90,52 @@ class FallbackLLMProvider(LLMProvider):
 
     async def stream_response(
             self, messages: List[dict]) -> AsyncGenerator[str, None]:
+        yielded_any = False
         try:
             async for chunk in self.primary.stream_response(messages):
+                yielded_any = True
                 yield chunk
         except Exception as exc:
             logger.warning(
-                "Primary LLM failed, falling back to secondary: %s", exc)
-            async for chunk in self.secondary.stream_response(messages):
-                yield chunk
+                "Primary LLM failed, falling back to secondary (yielded_any=%s): %s",
+                yielded_any, exc)
+            if not yielded_any:
+                async for chunk in self.secondary.stream_response(messages):
+                    yield chunk
+            else:
+                yield "\n[Primary connection interrupted.]\n"
 
     async def stream_response_thinking(
             self, messages: List[dict]) -> AsyncGenerator[str, None]:
+        yielded_any = False
         try:
             async for chunk in self.primary.stream_response_thinking(messages):
+                yielded_any = True
                 yield chunk
         except Exception as exc:
             logger.warning(
-                "Primary LLM (thinking) failed, falling back to secondary: %s", exc)
-            async for chunk in self.secondary.stream_response_thinking(messages):
-                yield chunk
+                "Primary LLM (thinking) failed, falling back to secondary (yielded_any=%s): %s",
+                yielded_any, exc)
+            if not yielded_any:
+                async for chunk in self.secondary.stream_response_thinking(messages):
+                    yield chunk
+            else:
+                yield "\n[Primary connection interrupted.]\n"
+
+    async def chat_with_tools(
+            self, messages: List[dict], tools: List[dict], system: str = "") -> dict:
+        try:
+            return await self.primary.chat_with_tools(messages, tools, system=system)
+        except Exception as exc:
+            logger.warning("Primary LLM chat_with_tools failed, falling back to secondary: %s", exc)
+            return await self.secondary.chat_with_tools(messages, tools, system=system)
+
+    async def chat(self, messages: List[dict]) -> str:
+        try:
+            return await self.primary.chat(messages)
+        except Exception as exc:
+            logger.warning("Primary LLM chat failed, falling back to secondary: %s", exc)
+            return await self.secondary.chat(messages)
 
 
 # -----------------------------------------------------------------------------
@@ -929,13 +955,22 @@ class ConversationLoop:
         # (session-scoped)
         self._flush_memory = False
 
-    async def _append_history(self, role: str, content: Any, meta: Dict[str, Any] = None) -> None:
+    async def _append_history(self, role: str, content: Any, meta: Dict[str, Any] = None) -> Optional[int]:
         """Append to in-memory history and persist to DB if enabled."""
-        self._history.append({"role": role, "content": content})
+        msg: Dict[str, Any] = {"role": role, "content": content}
+        if meta:
+            if "tool_calls" in meta:
+                msg["tool_calls"] = meta["tool_calls"]
+            if "tool_call_id" in meta:
+                msg["tool_call_id"] = meta["tool_call_id"]
+            if "name" in meta:
+                msg["name"] = meta["name"]
+        self._history.append(msg)
+        msg_id: Optional[int] = None
         if self._memory and self._session_id and hasattr(self._memory._store, 'add_chat_message'):
             try:
                 content_str = str(content) if not isinstance(content, str) else content
-                await self._memory._store.add_chat_message(
+                msg_id = await self._memory._store.add_chat_message(
                     self._session_id,
                     role,
                     content_str,
@@ -943,6 +978,9 @@ class ConversationLoop:
                 )
             except Exception as e:
                 logger.error("Failed to persist message to DB: %s", e)
+        if hasattr(self, "_current_turn_msg_ids") and msg_id is not None:
+            self._current_turn_msg_ids.append(msg_id)
+        return msg_id
 
     async def _stream_sentences(self, stream: AsyncGenerator[str, None], on_token: Callable[[
                                 str], Coroutine[Any, Any, None]]) -> AsyncGenerator[str, None]:
@@ -1443,6 +1481,8 @@ class ConversationLoop:
             await on_event({"type": "idle"})
             return
 
+        history_len_before_turn = len(self._history)
+        self._current_turn_msg_ids: list[int] = []
         await self._append_history("user", text, {"input_mode": "text"})
 
         # Let River Decide: re-resolve the engine for this message.
@@ -1524,7 +1564,15 @@ class ConversationLoop:
                     await on_event({"type": "response_chunk", "text": chunk})
 
         except Exception as exc:
-            self._history.pop()
+            if len(self._history) > history_len_before_turn:
+                del self._history[history_len_before_turn:]
+            if hasattr(self, "_current_turn_msg_ids") and self._current_turn_msg_ids:
+                if self._memory and hasattr(self._memory._store, "delete_chat_messages_by_ids"):
+                    try:
+                        await self._memory._store.delete_chat_messages_by_ids(self._current_turn_msg_ids)
+                    except Exception as del_err:
+                        logger.warning("Failed to roll back persisted turn messages: %s", del_err)
+                self._current_turn_msg_ids = []
             logger.error("LLM streaming failed: %s", exc)
             await on_event({"type": "error", "message": f"LLM error: {exc}"})
             await on_event({"type": "idle"})
@@ -1542,6 +1590,7 @@ class ConversationLoop:
         if receipts:
             meta["receipts"] = receipts
         await self._append_history("assistant", full_response, meta)
+        self._current_turn_msg_ids = []
         
         evt = {"type": "response_complete", "text": full_response}
         if receipts:

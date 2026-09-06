@@ -24,6 +24,8 @@ class MechanicDaemon(BaseDaemon):
             "last_heartbeat": None,
         }
         self._mav = None
+        self._last_push_time: float = 0.0
+        self._http_client: Optional[object] = None
 
     async def _main_loop(self) -> None:
         if not self.settings.mechanic_enabled:
@@ -103,18 +105,48 @@ class MechanicDaemon(BaseDaemon):
         }
         return ROVER_MODES.get(custom_mode, f"MODE_{custom_mode}")
 
+    async def _async_shutdown(self) -> None:
+        await self._close_http_client()
+
+    async def _close_http_client(self) -> None:
+        client = self._http_client
+        self._http_client = None
+        if client and not getattr(client, "is_closed", True):
+            try:
+                await client.aclose()
+            except Exception as e:
+                logger.debug("Mechanic: error closing HTTP client: %s", e)
+
+    def stop(self) -> None:
+        super().stop()
+        if self._http_client and not getattr(self._http_client, "is_closed", True):
+            try:
+                loop = asyncio.get_running_loop()
+                self._cleanup_task = loop.create_task(self._close_http_client())
+            except RuntimeError:
+                try:
+                    asyncio.run(self._close_http_client())
+                except Exception:
+                    pass
+
     async def _push_telemetry(self) -> None:
-        """POST current telemetry to River Song's internal telemetry endpoint."""
+        """POST current telemetry to River Song's internal telemetry endpoint throttled to 2 Hz."""
+        now = asyncio.get_running_loop().time()
+        if now - self._last_push_time < 0.5:
+            return
+        self._last_push_time = now
+
         import httpx
+        if self._http_client is None or getattr(self._http_client, "is_closed", True):
+            self._http_client = httpx.AsyncClient(timeout=3.0)
+
         headers = {"Authorization": f"Bearer {self.settings.daemon_internal_secret}"}
         try:
-            async with httpx.AsyncClient() as client:
-                await client.post(
-                    f"http://127.0.0.1:{self.settings.app_port}/api/rover/telemetry",
-                    json=self._telemetry,
-                    headers=headers,
-                    timeout=3.0,
-                )
+            await self._http_client.post(
+                f"http://127.0.0.1:{self.settings.app_port}/api/rover/telemetry",
+                json=self._telemetry,
+                headers=headers,
+            )
         except Exception:
             pass  # Never crash on telemetry push failure
 

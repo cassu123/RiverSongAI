@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 import httpx
+import secrets
 from croniter import croniter
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -27,6 +28,21 @@ router = APIRouter(prefix="/api/vector", tags=["vector-fleet"])
 _COMMAND_EVENTS: Dict[str, asyncio.Event] = {}
 _TELEMETRY_EVENTS: Dict[str, asyncio.Event] = {}
 _FLEET_UPDATE_EVENT = asyncio.Event()
+
+_shared_store: Optional[SQLiteStore] = None
+
+
+def _get_store(request: Optional[Request] = None) -> SQLiteStore:
+    if request and hasattr(request.app.state, "memory_manager") and request.app.state.memory_manager:
+        return request.app.state.memory_manager._store
+    from main import get_app
+    app = get_app()
+    if app and hasattr(app.state, "memory_manager") and app.state.memory_manager:
+        return app.state.memory_manager._store
+    global _shared_store
+    if _shared_store is None:
+        _shared_store = SQLiteStore()
+    return _shared_store
 
 
 def _get_command_event(unit_id: str) -> asyncio.Event:
@@ -49,9 +65,9 @@ async def _verify_unit_token(
         unit_id: str, x_unit_token: Optional[str] = Header(default=None)):
     if not x_unit_token:
         raise HTTPException(status_code=401, detail="Missing X-Unit-Token")
-    store = SQLiteStore()
+    store = _get_store()
     unit = await store.get_vector_unit(unit_id)
-    if not unit or unit.get("unit_token") != x_unit_token:
+    if not unit or not secrets.compare_digest(unit.get("unit_token") or "", x_unit_token):
         raise HTTPException(status_code=401, detail="Invalid token")
     return unit
 
@@ -86,7 +102,7 @@ class RegisterBody(BaseModel):
 
 @router.post("/register")
 async def register_unit(body: RegisterBody, request: Request):
-    store = SQLiteStore()
+    store = _get_store()
     unit = await store.get_vector_unit(body.unit_id)
     if not unit:
         raise HTTPException(status_code=401, detail="Unit not claimed")
@@ -109,7 +125,7 @@ async def register_unit(body: RegisterBody, request: Request):
 @router.get("/config/{unit_id}")
 async def get_config(unit_id: str, x_unit_token: str = Header(default=None)):
     await _verify_unit_token(unit_id, x_unit_token)
-    store = SQLiteStore()
+    store = _get_store()
     unit = await store.get_vector_unit(unit_id)
     if not unit:
         raise HTTPException(status_code=404, detail="Unit not found")
@@ -174,7 +190,7 @@ async def get_config(unit_id: str, x_unit_token: str = Header(default=None)):
 async def command_stream(
         unit_id: str, x_unit_token: str = Header(default=None)):
     await _verify_unit_token(unit_id, x_unit_token)
-    store = SQLiteStore()
+    store = _get_store()
 
     revision_row = await store.execute_read_one_async("SELECT revision FROM vector_config_revisions WHERE unit_id=?", (unit_id,))
     revision = revision_row["revision"] if revision_row else 1
@@ -207,7 +223,7 @@ class AckBody(BaseModel):
 @router.post("/command/{command_id}/ack")
 async def command_ack(command_id: str, body: AckBody,
                       x_unit_token: str = Header(default=None)):
-    store = SQLiteStore()
+    store = _get_store()
     cmd = await store.execute_read_one_async("SELECT unit_id FROM vector_commands WHERE command_id=?", (command_id,))
     if not cmd:
         raise HTTPException(404)
@@ -227,7 +243,7 @@ class ResultBody(BaseModel):
 @router.post("/command/{command_id}/complete")
 async def command_complete(
         command_id: str, body: ResultBody, x_unit_token: str = Header(default=None)):
-    store = SQLiteStore()
+    store = _get_store()
     cmd = await store.execute_read_one_async("SELECT unit_id FROM vector_commands WHERE command_id=?", (command_id,))
     if not cmd:
         raise HTTPException(404)
@@ -248,7 +264,7 @@ class StatusBody(BaseModel):
 async def post_status(body: StatusBody,
                       x_unit_token: str = Header(default=None)):
     await _verify_unit_token(body.unit_id, x_unit_token)
-    store = SQLiteStore()
+    store = _get_store()
     now = datetime.now(timezone.utc).isoformat()
     await store.update_vector_unit(body.unit_id, {
         "operating_mode": body.operating_mode,
@@ -273,7 +289,7 @@ class SessionStartBody(BaseModel):
 async def session_start(body: SessionStartBody,
                         x_unit_token: str = Header(default=None)):
     await _verify_unit_token(body.unit_id, x_unit_token)
-    store = SQLiteStore()
+    store = _get_store()
     session_id = uuid.uuid4().hex
     sql = """
     INSERT INTO vector_sessions (session_id, unit_id, program_id, config_version, started_at, status)
@@ -298,7 +314,7 @@ class SessionEndBody(BaseModel):
 async def session_end(body: SessionEndBody,
                       x_unit_token: str = Header(default=None)):
     await _verify_unit_token(body.unit_id, x_unit_token)
-    store = SQLiteStore()
+    store = _get_store()
     sql = """
     UPDATE vector_sessions
     SET ended_at=?, status=?, area_mowed_sqm=?, battery_used_pct=?, fuel_used_pct=?, abort_reason=?
@@ -327,7 +343,7 @@ async def zones_teach(body: TeachBody,
     _TEACH_WAYPOINTS[key].extend(body.waypoints)
 
     if body.finalize:
-        store = SQLiteStore()
+        store = _get_store()
         zone_id = uuid.uuid4().hex
         boundary = _TEACH_WAYPOINTS.pop(key, [])
         now = datetime.now(timezone.utc).isoformat()
@@ -375,7 +391,7 @@ async def post_telemetry(body: TelemetryBatchBody,
         raise HTTPException(status_code=413,
                             detail="Batch size limit exceeded (max 50)")
 
-    store = SQLiteStore()
+    store = _get_store()
     now = datetime.now(timezone.utc).isoformat()
 
     latest_mode = None
@@ -424,7 +440,7 @@ class AlertBody(BaseModel):
 async def post_alert(body: AlertBody,
                      x_unit_token: str = Header(default=None)):
     await _verify_unit_token(body.unit_id, x_unit_token)
-    store = SQLiteStore()
+    store = _get_store()
     now = datetime.now(timezone.utc).isoformat()
     fields = body.model_dump()
     fields["timestamp"] = now
@@ -476,7 +492,7 @@ class EventBody(BaseModel):
 async def post_event(body: EventBody,
                      x_unit_token: str = Header(default=None)):
     await _verify_unit_token(body.unit_id, x_unit_token)
-    store = SQLiteStore()
+    store = _get_store()
     await store.insert_session_event(body.session_id, body.unit_id, body.event, json.dumps(body.data))
     return {"status": "ok"}
 
@@ -488,7 +504,7 @@ async def post_event(body: EventBody,
 @router.get("/units",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def list_units():
-    return await SQLiteStore().get_vector_units()
+    return await _get_store().get_vector_units()
 
 
 @router.get("/units/discovered", dependencies=[Depends(require_role("admin"))])
@@ -548,7 +564,7 @@ async def claim_unit(unit_id: str, body: ClaimBody):
                             detail="Failed to reach device claim server")
 
     # 4. Insert into DB
-    store = SQLiteStore()
+    store = _get_store()
     now = datetime.now(timezone.utc).isoformat()
     # insert_vector_unit needs unit_id, name, platform, unit_token,
     # registered_at, claimed_at
@@ -569,7 +585,7 @@ async def claim_unit(unit_id: str, body: ClaimBody):
 @router.get("/units/{id}",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_unit(id: str):
-    unit = await SQLiteStore().get_vector_unit(id)
+    unit = await _get_store().get_vector_unit(id)
     if not unit:
         raise HTTPException(404)
     return unit
@@ -578,7 +594,7 @@ async def get_unit(id: str):
 @router.get("/units/{id}/stream")
 async def unit_sse_stream(id: str, request: Request, user: dict = Depends(
         require_role("operator", "viewer"))):
-    store = SQLiteStore()
+    store = _get_store()
     event = _get_telemetry_event(id)
 
     async def event_generator():
@@ -598,7 +614,7 @@ async def unit_sse_stream(id: str, request: Request, user: dict = Depends(
 
 def queue_command(unit_id: str, action: str, params: dict):
     cmd_id = uuid.uuid4().hex
-    store = SQLiteStore()
+    store = _get_store()
     now = datetime.now(timezone.utc).isoformat()
     sql = "INSERT INTO vector_commands (command_id, unit_id, issued_by, issued_at, action, params) VALUES (?, ?, 'system', ?, ?, ?)"
     # A background task could execute this, but since queue_command is
@@ -611,25 +627,25 @@ def queue_command(unit_id: str, action: str, params: dict):
 @router.get("/zones",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_zones():
-    return await SQLiteStore().get_zones()
+    return await _get_store().get_zones()
 
 
 @router.get("/programs",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_programs():
-    return await SQLiteStore().get_programs()
+    return await _get_store().get_programs()
 
 
 @router.get("/schedules",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_schedules():
-    return await SQLiteStore().get_schedules()
+    return await _get_store().get_schedules()
 
 
 @router.get("/sessions",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_sessions():
-    return await SQLiteStore().get_sessions()
+    return await _get_store().get_sessions()
 
 
 class CommandBody(BaseModel):
@@ -641,7 +657,7 @@ class CommandBody(BaseModel):
 @router.post("/units/{unit_id}/command",
              dependencies=[Depends(require_role("operator", "admin"))])
 async def post_command(unit_id: str, body: CommandBody, request: Request):
-    store = SQLiteStore()
+    store = _get_store()
     user = getattr(request.state, "user", None)
     user_id = user["sub"] if user else "system"
 
@@ -680,7 +696,7 @@ class UnitPatchBody(BaseModel):
 @router.patch("/units/{id}",
               dependencies=[Depends(require_role("operator", "admin"))])
 async def patch_unit(id: str, body: UnitPatchBody):
-    store = SQLiteStore()
+    store = _get_store()
     unit = await store.get_vector_unit(id)
     if not unit:
         raise HTTPException(404)
@@ -736,7 +752,7 @@ async def patch_unit(id: str, body: UnitPatchBody):
 
 @router.delete("/units/{id}", dependencies=[Depends(require_role("admin"))])
 async def delete_unit(id: str):
-    store = SQLiteStore()
+    store = _get_store()
     await store.execute_write_async("DELETE FROM vector_units WHERE unit_id=?", (id,))
     return {"status": "ok"}
 
@@ -745,7 +761,7 @@ async def delete_unit(id: str):
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def fleet_stream(request: Request):
     async def event_generator():
-        store = SQLiteStore()
+        store = _get_store()
         # Send initial state immediately
         units = await store.get_vector_units()
         yield {"event": "update", "data": json.dumps(units)}
@@ -775,7 +791,7 @@ async def fleet_stream(request: Request):
 async def rotate_token(id: str):
     import secrets
     import base64
-    store = SQLiteStore()
+    store = _get_store()
     new_token = base64.urlsafe_b64encode(
         secrets.token_bytes(32)).decode("utf-8").rstrip("=")
     await store.execute_write_async("UPDATE vector_units SET unit_token=? WHERE unit_id=?", (new_token, id))
@@ -785,14 +801,14 @@ async def rotate_token(id: str):
 @router.get("/units/{id}/telemetry",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_unit_telemetry(id: str, limit: int = 100):
-    store = SQLiteStore()
+    store = _get_store()
     return await store.execute_read_async("SELECT * FROM vector_telemetry WHERE unit_id=? ORDER BY timestamp DESC LIMIT ?", (id, limit))
 
 
 @router.get("/units/{id}/alerts",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_unit_alerts(id: str, limit: int = 100):
-    store = SQLiteStore()
+    store = _get_store()
     return await store.execute_read_async("SELECT * FROM vector_alerts WHERE unit_id=? ORDER BY timestamp DESC LIMIT ?", (id, limit))
 
 
@@ -800,7 +816,7 @@ async def get_unit_alerts(id: str, limit: int = 100):
 async def ack_unit_alert(id: str, alert_id: int, user: dict = Depends(
         require_role("operator", "admin"))):
     user_id = user["sub"]
-    store = SQLiteStore()
+    store = _get_store()
     now = datetime.now(timezone.utc).isoformat()
     await store.execute_write_async("UPDATE vector_alerts SET acknowledged=1, acknowledged_at=?, acknowledged_by=? WHERE id=? AND unit_id=?", (now, user_id, alert_id, id))
     return {"status": "ok"}
@@ -809,14 +825,14 @@ async def ack_unit_alert(id: str, alert_id: int, user: dict = Depends(
 @router.get("/units/{id}/events",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_unit_events(id: str, limit: int = 100):
-    store = SQLiteStore()
+    store = _get_store()
     return await store.execute_read_async("SELECT * FROM vector_session_events WHERE unit_id=? ORDER BY timestamp DESC LIMIT ?", (id, limit))
 
 
 @router.get("/units/{id}/sessions",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_unit_sessions(id: str, limit: int = 100):
-    store = SQLiteStore()
+    store = _get_store()
     return await store.execute_read_async("SELECT * FROM vector_sessions WHERE unit_id=? ORDER BY started_at DESC LIMIT ?", (id, limit))
 
 
@@ -829,7 +845,7 @@ async def get_unit_snapshot(id: str, camera_name: str):
 @router.get("/sessions/{id}",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_session(id: str):
-    store = SQLiteStore()
+    store = _get_store()
     session = await store.execute_read_one_async("SELECT * FROM vector_sessions WHERE session_id=?", (id,))
     if not session:
         raise HTTPException(404)
@@ -860,7 +876,7 @@ async def create_zone(body: ZoneBody, user: dict = Depends(
         require_role("operator", "admin"))):
     user_id = user["sub"]
     now = datetime.now(timezone.utc).isoformat()
-    store = SQLiteStore()
+    store = _get_store()
     zone_id = uuid.uuid4().hex
     await store.execute_write_async("INSERT INTO vector_zones (zone_id, name, created_by, created_at, updated_at, boundary, no_go_areas, area_sqm, capture_method) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (zone_id, body.name, user_id, now, now, json.dumps(body.boundary), json.dumps(body.no_go_areas), body.area_sqm, body.capture_method))
     return {"zone_id": zone_id}
@@ -869,7 +885,7 @@ async def create_zone(body: ZoneBody, user: dict = Depends(
 @router.get("/zones/{id}",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_zone(id: str):
-    res = await SQLiteStore().execute_read_one_async("SELECT * FROM vector_zones WHERE zone_id=?", (id,))
+    res = await _get_store().execute_read_one_async("SELECT * FROM vector_zones WHERE zone_id=?", (id,))
     if not res:
         raise HTTPException(404)
     return res
@@ -892,13 +908,13 @@ async def patch_zone(id: str, body: dict):
         return {"status": "ok"}
     cols = ", ".join([f"{k}=?" for k in _safe_cols(updates.keys())])
     params = list(updates.values()) + [id]
-    await SQLiteStore().execute_write_async(f"UPDATE vector_zones SET {cols} WHERE zone_id=?", tuple(params))
+    await _get_store().execute_write_async(f"UPDATE vector_zones SET {cols} WHERE zone_id=?", tuple(params))
     return {"status": "ok"}
 
 
 @router.delete("/zones/{id}", dependencies=[Depends(require_role("admin"))])
 async def delete_zone(id: str):
-    await SQLiteStore().execute_write_async("DELETE FROM vector_zones WHERE zone_id=?", (id,))
+    await _get_store().execute_write_async("DELETE FROM vector_zones WHERE zone_id=?", (id,))
     return {"status": "ok"}
 
 
@@ -917,7 +933,7 @@ class ProgramBody(BaseModel):
 @router.post("/programs",
              dependencies=[Depends(require_role("operator", "admin"))])
 async def create_program(body: ProgramBody):
-    store = SQLiteStore()
+    store = _get_store()
     if body.assigned_unit_id:
         unit = await store.get_vector_unit(body.assigned_unit_id)
         if unit:
@@ -935,7 +951,7 @@ async def create_program(body: ProgramBody):
 @router.get("/programs/{id}",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_program(id: str):
-    res = await SQLiteStore().execute_read_one_async("SELECT * FROM vector_programs WHERE program_id=?", (id,))
+    res = await _get_store().execute_read_one_async("SELECT * FROM vector_programs WHERE program_id=?", (id,))
     if not res:
         raise HTTPException(404)
     return res
@@ -944,7 +960,7 @@ async def get_program(id: str):
 @router.patch("/programs/{id}",
               dependencies=[Depends(require_role("operator", "admin"))])
 async def patch_program(id: str, body: dict):
-    store = SQLiteStore()
+    store = _get_store()
     prog = await store.execute_read_one_async("SELECT * FROM vector_programs WHERE program_id=?", (id,))
     if not prog:
         raise HTTPException(404)
@@ -988,7 +1004,7 @@ async def patch_program(id: str, body: dict):
 
 @router.delete("/programs/{id}", dependencies=[Depends(require_role("admin"))])
 async def delete_program(id: str):
-    await SQLiteStore().execute_write_async("DELETE FROM vector_programs WHERE program_id=?", (id,))
+    await _get_store().execute_write_async("DELETE FROM vector_programs WHERE program_id=?", (id,))
     return {"status": "ok"}
 
 
@@ -996,7 +1012,7 @@ async def delete_program(id: str):
 async def run_program(id: str, user: dict = Depends(
         require_role("operator", "admin"))):
     user_id = user["sub"]
-    store = SQLiteStore()
+    store = _get_store()
     prog = await store.execute_read_one_async("SELECT * FROM vector_programs WHERE program_id=?", (id,))
     if not prog or not prog["assigned_unit_id"]:
         raise HTTPException(400, "Program not found or has no assigned unit")
@@ -1028,14 +1044,14 @@ async def create_schedule(body: ScheduleBody):
     sid = uuid.uuid4().hex
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     first_run = croniter(body.cron_utc, now).get_next(datetime).isoformat()
-    await SQLiteStore().execute_write_async("INSERT INTO vector_schedules (schedule_id, name, program_id, cron_utc, timezone_display, missed_run_policy, enabled, created_at, next_run) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (sid, body.name, body.program_id, body.cron_utc, body.timezone_display, body.missed_run_policy, body.enabled, now.isoformat(), first_run))
+    await _get_store().execute_write_async("INSERT INTO vector_schedules (schedule_id, name, program_id, cron_utc, timezone_display, missed_run_policy, enabled, created_at, next_run) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (sid, body.name, body.program_id, body.cron_utc, body.timezone_display, body.missed_run_policy, body.enabled, now.isoformat(), first_run))
     return {"schedule_id": sid}
 
 
 @router.get("/schedules/{id}",
             dependencies=[Depends(require_role("operator", "viewer"))])
 async def get_schedule(id: str):
-    res = await SQLiteStore().execute_read_one_async("SELECT * FROM vector_schedules WHERE schedule_id=?", (id,))
+    res = await _get_store().execute_read_one_async("SELECT * FROM vector_schedules WHERE schedule_id=?", (id,))
     if not res:
         raise HTTPException(404)
     return res
@@ -1060,14 +1076,14 @@ async def patch_schedule(id: str, body: dict):
                 updates["cron_utc"], now).get_next(datetime).isoformat()
         cols = ", ".join([f"{k}=?" for k in _safe_cols(updates.keys())])
         params = list(updates.values()) + [id]
-        await SQLiteStore().execute_write_async(f"UPDATE vector_schedules SET {cols} WHERE schedule_id=?", tuple(params))
+        await _get_store().execute_write_async(f"UPDATE vector_schedules SET {cols} WHERE schedule_id=?", tuple(params))
     return {"status": "ok"}
 
 
 @router.delete("/schedules/{id}",
                dependencies=[Depends(require_role("admin"))])
 async def delete_schedule(id: str):
-    await SQLiteStore().execute_write_async("DELETE FROM vector_schedules WHERE schedule_id=?", (id,))
+    await _get_store().execute_write_async("DELETE FROM vector_schedules WHERE schedule_id=?", (id,))
     return {"status": "ok"}
 
 

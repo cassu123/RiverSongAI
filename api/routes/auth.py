@@ -447,7 +447,7 @@ async def twofa_disable(body: TotpDisableBody, request: Request,
     payload = await _get_auth_payload(request, authorization)
 
     store = _get_store(request)
-    user = await store.get_user_by_id(payload["sub"])
+    user = await store.get_user_by_id(payload["sub"], include_password_hash=True)
     if not user:
         raise unauthorized("User not found.")
 
@@ -531,6 +531,7 @@ async def me(request: Request,
     if not user:
         raise unauthorized("User not found.")
 
+    user.pop("password_hash", None)
     return user
 
 
@@ -593,7 +594,7 @@ async def change_password(body: ChangePasswordBody, request: Request,
     payload = await _get_auth_payload(request, authorization)
 
     store = _get_store(request)
-    user = await store.get_user_by_id(payload["sub"])
+    user = await store.get_user_by_id(payload["sub"], include_password_hash=True)
     if not user:
         raise unauthorized("User not found.")
 

@@ -114,7 +114,7 @@ from fastapi import (
     status,
 )
 from pydantic import BaseModel, Field
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from core.auth import decode_token
@@ -151,6 +151,16 @@ _engine = create_engine(
     _DB_URL,
     connect_args={"check_same_thread": False} if "sqlite" in _DB_URL else {},
 )
+
+if "sqlite" in _DB_URL:
+    @event.listens_for(_engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON;")
+        cursor.execute("PRAGMA journal_mode=WAL;")
+        cursor.execute("PRAGMA busy_timeout=10000;")
+        cursor.close()
+
 _Session = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
 Base.metadata.create_all(_engine)
 
