@@ -714,8 +714,8 @@ export default function CulinaryPage({ setAction }) {
                         <span>Cook</span>
                       </button>
                     </div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff' }}>{r.title}</div>
-                    <div style={{ marginTop: 12, display: 'flex', gap: 14, fontSize: '0.8rem', color: 'rgba(220,230,245,0.65)' }}>
+                    <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', lineHeight: 1.3 }}>{r.title}</div>
+                    <div style={{ marginTop: 14, display: 'flex', gap: 14, fontSize: '0.95rem', color: 'rgba(220,230,245,0.8)' }}>
                       <span>{r.primary_protein?.toUpperCase() || 'NO PROTEIN'}</span>
                       <span>·</span>
                       <span style={{ fontFamily: 'var(--font-mono)' }}>{r.servings} SERVINGS</span>
@@ -854,12 +854,12 @@ export default function CulinaryPage({ setAction }) {
                       display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 120
                     }}>
                       <div>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: isToday ? '#00e5ff' : 'rgba(220,230,245,0.6)', marginBottom: 6 }}>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 800, color: isToday ? '#00e5ff' : 'rgba(220,230,245,0.75)', marginBottom: 8 }}>
                           {w.dayName.toUpperCase()} {isToday && '· TODAY'}
                         </div>
                         {w.entry ? (
                           <>
-                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff', lineHeight: 1.3 }}>
+                            <div style={{ fontWeight: 750, fontSize: '1.15rem', color: '#fff', lineHeight: 1.35 }}>
                               {w.entry.recipe_title || w.entry.label || 'Planned'}
                             </div>
                             <div style={{ fontSize: '0.75rem', color: w.entry.status === 'cooked' ? '#4ade80' : '#00e5ff', marginTop: 6, fontWeight: 700 }}>
@@ -1075,11 +1075,11 @@ export default function CulinaryPage({ setAction }) {
               <div className="rs-card-inner">
                 <div className="rs-card-head">
                   <span className="rs-card-label" style={{ color: item.quantity <= item.min_quantity ? '#f87171' : '#4ade80', fontWeight: 900 }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.05rem' }}>{item.quantity.toFixed(2)}</span> IN STOCK
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.2rem', fontWeight: 800 }}>{item.quantity.toFixed(2)}</span> IN STOCK
                   </span>
                   <span className="rs-card-label" style={{ opacity: 0.7 }}>{item.brand?.toUpperCase()}</span>
                 </div>
-                <div className="rs-card-value" style={{ fontSize: '1.4rem', color: '#fff' }}>{item.name}</div>
+                <div className="rs-card-value" style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff' }}>{item.name}</div>
                 <div style={{ marginTop: 18, display: 'flex', gap: 10 }}>
                   <button className="rs-pill is-active" style={{ flex: 1 }} onClick={() => setAdjustItem(item)}>ADJUST</button>
                   <button className="rs-pill" onClick={() => {
@@ -1099,11 +1099,11 @@ export default function CulinaryPage({ setAction }) {
   // MAIN RENDER CONTAINER
   // ---------------------------------------------------------------------------
   return (
-    <div className="rs-foyer">
+    <div className="rs-foyer gh-kitchen-stage">
       {/* Header */}
-      <div className="rs-foyer-head" style={{ marginBottom: 16 }}>
-        <h1 className="rs-greeting">Kitchen</h1>
-        <div className="rs-greeting-sub">Cookbook, meal plans, autonomous cooking guides & groceries.</div>
+      <div className="rs-foyer-head" style={{ marginBottom: 20 }}>
+        <h1 className="rs-greeting" style={{ fontSize: '2.5rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Kitchen</h1>
+        <div className="rs-greeting-sub" style={{ fontSize: '1.15rem', color: 'rgba(220, 230, 245, 0.85)', marginTop: 6 }}>Cookbook, meal plans, autonomous cooking guides & groceries.</div>
       </div>
 
       {/* Top Google Home Category Nav Bar (Sub-navigation) */}

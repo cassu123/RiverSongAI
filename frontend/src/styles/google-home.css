@@ -711,18 +711,40 @@
   color: #ef4444;
 }
 
-/* ── 10. Kitchen Navigation & Guided Cook Mode ──────────────────────────── */
+/* ── 10. Kitchen Navigation & Guided Cook Mode (Solid Grounding & Legibility) ── */
+.gh-kitchen-stage {
+  /* Solid, opaque dark foundation with zero particle bleed-through */
+  background: #0d1219;
+  border-radius: 28px;
+  padding: 24px;
+  margin: -8px -8px 80px -8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  min-height: calc(100vh - 120px);
+}
+
+@media (min-width: 768px) {
+  .gh-kitchen-stage {
+    padding: 32px;
+  }
+}
+
+/* Force solid surfaces in the kitchen stage */
+.gh-kitchen-stage .gh-card,
+.gh-kitchen-stage .rs-card {
+  background: #151c27 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.6) !important;
+}
+
 .gh-kitchen-nav-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(16, 22, 34, 0.85);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 10px;
+  padding: 10px 14px;
+  background: #151c27;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
-  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.6);
   margin-bottom: 24px;
   overflow-x: auto;
   scrollbar-width: none;
@@ -737,12 +759,12 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
+  gap: 10px;
+  padding: 12px 22px;
   border-radius: 999px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: rgba(220, 230, 245, 0.7);
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: rgba(220, 230, 245, 0.75);
   background: transparent;
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   white-space: nowrap;
@@ -751,27 +773,27 @@
 }
 
 .gh-kitchen-nav-btn .material-symbols-rounded {
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .gh-kitchen-nav-btn:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .gh-kitchen-nav-btn.is-active {
-  background: rgba(0, 229, 255, 0.16);
-  border: 1px solid rgba(0, 229, 255, 0.4);
+  background: rgba(0, 229, 255, 0.18);
+  border: 1px solid rgba(0, 229, 255, 0.45);
   color: #96cbff;
-  box-shadow: 0 0 16px -4px rgba(0, 229, 255, 0.3);
+  box-shadow: 0 0 18px -4px rgba(0, 229, 255, 0.35);
 }
 
 .gh-live-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: #00e5ff;
-  box-shadow: 0 0 8px #00e5ff;
+  box-shadow: 0 0 10px #00e5ff;
   animation: gh-pulse 2s infinite;
 }
 
@@ -780,8 +802,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 22px;
 }
 
 .gh-cook-flow-step {
@@ -789,31 +811,29 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
+  gap: 8px;
+  padding: 8px 18px;
   border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: rgba(220, 230, 245, 0.6);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: rgba(220, 230, 245, 0.7);
+  background: #1b2330;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.2s ease;
 }
 
 .gh-cook-flow-step.is-active {
-  background: rgba(0, 229, 255, 0.15);
-  border-color: rgba(0, 229, 255, 0.4);
+  background: rgba(0, 229, 255, 0.2);
+  border-color: rgba(0, 229, 255, 0.5);
   color: #96cbff;
 }
 
 .gh-cook-hero-card {
-  background: rgba(18, 26, 40, 0.85);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #151c27 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
   border-radius: 28px;
-  padding: 28px;
-  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+  padding: 32px 28px;
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.7) !important;
   position: relative;
   overflow: hidden;
 }
@@ -823,17 +843,17 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 14px;
+  margin-bottom: 18px;
 }
 
 .gh-cook-progress-bar {
   width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 999px;
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .gh-cook-progress-fill {
@@ -843,13 +863,14 @@
   transition: width 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* Large legible step text */
 .gh-cook-step-text {
-  font-size: 1.35rem;
-  font-weight: 700;
-  line-height: 1.45;
-  color: #fff;
-  letter-spacing: -0.01em;
-  margin-bottom: 24px;
+  font-size: 1.65rem;
+  font-weight: 750;
+  line-height: 1.5;
+  color: #ffffff;
+  letter-spacing: -0.015em;
+  margin-bottom: 28px;
 }
 
 .gh-cook-timer-widget {
@@ -857,17 +878,17 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 16px;
-  padding: 18px 24px;
-  border-radius: 20px;
-  background: rgba(0, 229, 255, 0.08);
-  border: 1px solid rgba(0, 229, 255, 0.25);
-  margin-bottom: 24px;
+  gap: 18px;
+  padding: 22px 28px;
+  border-radius: 22px;
+  background: #1b2432;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  margin-bottom: 28px;
 }
 
 .gh-cook-timer-display {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 2.4rem;
+  font-size: 3.2rem;
   font-weight: 800;
   color: #00e5ff;
   letter-spacing: 0.02em;
@@ -876,7 +897,7 @@
 .gh-cook-touch-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .gh-cook-btn-prev {
@@ -886,14 +907,14 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 56px;
+  height: 64px;
   padding: 0 24px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(220, 230, 245, 0.85);
-  font-size: 1rem;
-  font-weight: 600;
+  border-radius: 20px;
+  background: #1f2837;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(220, 230, 245, 0.9);
+  font-size: 1.15rem;
+  font-weight: 700;
   transition: all 0.2s ease;
   flex: 1;
 }
@@ -904,27 +925,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  height: 56px;
-  padding: 0 28px;
-  border-radius: 18px;
+  gap: 12px;
+  height: 64px;
+  padding: 0 32px;
+  border-radius: 20px;
   background: linear-gradient(135deg, #0071dc, #00e5ff);
-  color: #002236;
-  font-size: 1.05rem;
-  font-weight: 700;
-  box-shadow: 0 8px 24px -4px rgba(0, 229, 255, 0.4);
+  color: #002033;
+  font-size: 1.25rem;
+  font-weight: 800;
+  box-shadow: 0 8px 24px -4px rgba(0, 229, 255, 0.45);
   transition: all 0.2s ease;
   flex: 2;
 }
 
 .gh-cook-btn-next:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 28px -4px rgba(0, 229, 255, 0.55);
+  box-shadow: 0 12px 28px -4px rgba(0, 229, 255, 0.6);
 }
 
 .gh-cook-btn-next:active,
 .gh-cook-btn-prev:active {
   transform: scale(0.98);
 }
+
 
 

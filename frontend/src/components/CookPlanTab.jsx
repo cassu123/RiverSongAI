@@ -647,20 +647,20 @@ export default function CookPlanTab({
                         display: 'flex',
                         alignItems: 'center',
                         gap: 12,
-                        padding: '10px 14px',
+                        padding: '12px 18px',
                         borderRadius: 14,
-                        background: isDone ? 'rgba(74, 222, 128, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                        background: isDone ? 'rgba(74, 222, 128, 0.12)' : '#1a2230',
                         border: isDone ? '1px solid rgba(74, 222, 128, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      <span className="material-symbols-rounded" style={{ fontSize: 20, color: isDone ? '#4ade80' : 'rgba(220, 230, 245, 0.4)' }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: 26, color: isDone ? '#4ade80' : 'rgba(220, 230, 245, 0.5)' }}>
                         {isDone ? 'check_circle' : 'radio_button_unchecked'}
                       </span>
-                      <span style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, color: '#00e5ff', fontSize: '0.85rem', minWidth: 60 }}>
+                      <span style={{ fontFamily: 'JetBrains Mono', fontWeight: 800, color: '#00e5ff', fontSize: '1.05rem', minWidth: 70 }}>
                         {[ing.qty, ing.unit].filter(Boolean).join(' ') || '—'}
                       </span>
-                      <span style={{ flex: 1, fontSize: '0.9rem', color: isDone ? 'rgba(220, 230, 245, 0.5)' : '#fff', textDecoration: isDone ? 'line-through' : 'none' }}>
+                      <span style={{ flex: 1, fontSize: '1.1rem', fontWeight: 600, color: isDone ? 'rgba(220, 230, 245, 0.5)' : '#fff', textDecoration: isDone ? 'line-through' : 'none' }}>
                         {ing.name}
                       </span>
                     </div>
@@ -690,7 +690,7 @@ export default function CookPlanTab({
                         gap: 12,
                         padding: '12px 16px',
                         borderRadius: 14,
-                        background: isDone ? 'rgba(74, 222, 128, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                        background: isDone ? 'rgba(74, 222, 128, 0.12)' : '#1a2230',
                         border: isDone ? '1px solid rgba(74, 222, 128, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
                       }}
                     >
@@ -822,7 +822,7 @@ export default function CookPlanTab({
                   </span>
                 </div>
 
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '0.85rem', fontWeight: 800, color: '#00e5ff' }}>
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '1.05rem', fontWeight: 800, color: '#00e5ff' }}>
                   STEP {activeStepIdx + 1} OF {cookSteps.length} · {timeLabel(currentStep.start_min)}
                 </span>
               </div>
@@ -1018,10 +1018,10 @@ export default function CookPlanTab({
             </span>
           </div>
 
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', margin: '0 0 8px 0' }}>
+          <h2 style={{ fontSize: '2.3rem', fontWeight: 800, color: '#fff', margin: '0 0 10px 0' }}>
             Dinner is Served!
           </h2>
-          <p style={{ fontSize: '0.95rem', color: 'rgba(220, 230, 245, 0.8)', maxWidth: 480, margin: '0 auto 28px' }}>
+          <p style={{ fontSize: '1.15rem', color: 'rgba(220, 230, 245, 0.85)', maxWidth: 520, margin: '0 auto 32px', lineHeight: 1.45 }}>
             All dishes are synchronized and complete. Allow hot roasted proteins to rest 5 minutes before carving to retain moisture.
           </p>
 
