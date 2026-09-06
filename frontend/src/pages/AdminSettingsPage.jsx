@@ -16,6 +16,6 @@ import SettingsPage from './SettingsPage.jsx'
  * User-facing settings (model picker, voice, memory, notifications) live in the
  * regular Settings page.
  */
-export default function AdminSettingsPage({ onFeaturesChanged }) {
-  return <SettingsPage viewMode="admin" onFeaturesChanged={onFeaturesChanged} />
+export default function AdminSettingsPage(props) {
+  return <SettingsPage initialHubTab="admin" viewMode="admin" {...props} />
 }

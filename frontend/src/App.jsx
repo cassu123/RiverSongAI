@@ -525,11 +525,68 @@ export default function App() {
               {currentPage === 'routines'   && <RoutinesPage  setAction={setPageAction} />}
               {currentPage === 'proactive'  && <ProactivePage />}
               {currentPage === 'home'       && <HomeNodePage setAction={setPageAction} />}
-              {currentPage === 'users'      && <UsersPage setAction={setPageAction} />}
+              {currentPage === 'users'      && (
+                <SettingsPage
+                  initialHubTab="users"
+                  onFeaturesChanged={refreshFeatures}
+                  setAction={setPageAction}
+                  profile={profile}
+                  onSaveProfile={setProfile}
+                  universe={universe}
+                  environment={environment}
+                  mood={mood}
+                  onUniverseChange={setUniverseSafe}
+                  onEnvironmentChange={setEnvironmentSafe}
+                  onMoodChange={setMood}
+                />
+              )}
               {currentPage === 'killswitch' && <KillSwitchPage setAction={setPageAction} />}
-              {currentPage === 'profile'    && <ProfilePage profile={profile} onSave={setProfile} universe={universe} environment={environment} mood={mood} onUniverseChange={setUniverseSafe} onEnvironmentChange={setEnvironmentSafe} onMoodChange={setMood} setAction={setPageAction} />}
-              {currentPage === 'settings'   && <SettingsPage onFeaturesChanged={refreshFeatures} setAction={setPageAction} />}
-              {currentPage === 'admin_settings' && <AdminSettingsPage onFeaturesChanged={refreshFeatures} />}
+              {currentPage === 'profile'    && (
+                <SettingsPage
+                  initialHubTab="profile"
+                  onFeaturesChanged={refreshFeatures}
+                  setAction={setPageAction}
+                  profile={profile}
+                  onSaveProfile={setProfile}
+                  universe={universe}
+                  environment={environment}
+                  mood={mood}
+                  onUniverseChange={setUniverseSafe}
+                  onEnvironmentChange={setEnvironmentSafe}
+                  onMoodChange={setMood}
+                />
+              )}
+              {currentPage === 'settings'   && (
+                <SettingsPage
+                  initialHubTab="assistant"
+                  onFeaturesChanged={refreshFeatures}
+                  setAction={setPageAction}
+                  profile={profile}
+                  onSaveProfile={setProfile}
+                  universe={universe}
+                  environment={environment}
+                  mood={mood}
+                  onUniverseChange={setUniverseSafe}
+                  onEnvironmentChange={setEnvironmentSafe}
+                  onMoodChange={setMood}
+                />
+              )}
+              {currentPage === 'admin_settings' && (
+                <SettingsPage
+                  initialHubTab="admin"
+                  viewMode="admin"
+                  onFeaturesChanged={refreshFeatures}
+                  setAction={setPageAction}
+                  profile={profile}
+                  onSaveProfile={setProfile}
+                  universe={universe}
+                  environment={environment}
+                  mood={mood}
+                  onUniverseChange={setUniverseSafe}
+                  onEnvironmentChange={setEnvironmentSafe}
+                  onMoodChange={setMood}
+                />
+              )}
               {currentPage === 'feeds'      && <FeedsPage setAction={setPageAction} />}
               {currentPage === 'google'     && <GooglePage setAction={setPageAction} />}
               {currentPage === 'commerce'   && <CommercePage setAction={setPageAction} />}

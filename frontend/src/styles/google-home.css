@@ -948,5 +948,153 @@
   transform: scale(0.98);
 }
 
+/* ── 11. Settings & Account Hub (Solid Grounding & Legibility) ────────── */
+.gh-settings-stage {
+  background: #0d1219;
+  border-radius: 28px;
+  padding: 24px;
+  margin: -8px -8px 80px -8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  min-height: calc(100vh - 120px);
+}
+
+@media (min-width: 768px) {
+  .gh-settings-stage {
+    padding: 32px;
+  }
+}
+
+.gh-settings-stage .gh-card,
+.gh-settings-stage .rs-card {
+  background: #151c27 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.6) !important;
+}
+
+.gh-settings-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #151c27;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.6);
+  margin-bottom: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.gh-settings-nav-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.gh-settings-nav-btn {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: rgba(220, 230, 245, 0.75);
+  background: transparent;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.gh-settings-nav-btn .material-symbols-rounded {
+  font-size: 22px;
+}
+
+.gh-settings-nav-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.gh-settings-nav-btn.is-active {
+  background: rgba(0, 229, 255, 0.18);
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  color: #96cbff;
+  box-shadow: 0 0 18px -4px rgba(0, 229, 255, 0.35);
+}
+
+/* Tablet tactile form controls & larger readability inside Settings Hub */
+.gh-settings-stage input[type="text"],
+.gh-settings-stage input[type="password"],
+.gh-settings-stage select,
+.gh-settings-stage textarea,
+.gh-settings-stage .settings-select {
+  font-size: 1.05rem !important;
+  min-height: 48px !important;
+  background: #1b2432 !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  color: #fff !important;
+  border-radius: 12px !important;
+  padding: 10px 16px !important;
+  outline: none !important;
+}
+
+.gh-settings-stage input:focus,
+.gh-settings-stage select:focus,
+.gh-settings-stage textarea:focus {
+  border-color: rgba(0, 229, 255, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.25) !important;
+}
+
+.gh-settings-stage .rs-card-label {
+  font-size: 0.82rem !important;
+  letter-spacing: 0.07em !important;
+  font-weight: 700 !important;
+  color: rgba(150, 203, 255, 0.9) !important;
+}
+
+.gh-settings-stage .rs-card-title,
+.gh-settings-stage h2,
+.gh-settings-stage h3 {
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+}
+
+.gh-settings-stage .rs-card-meta,
+.gh-settings-stage p {
+  font-size: 0.98rem !important;
+  line-height: 1.55 !important;
+  color: rgba(220, 230, 245, 0.75) !important;
+}
+
+.gh-settings-stage .rs-pill {
+  font-size: 0.92rem !important;
+  min-height: 40px !important;
+  padding: 8px 18px !important;
+  border-radius: 999px !important;
+}
+
+.gh-settings-stage .rs-btn-primary {
+  font-size: 0.95rem !important;
+  min-height: 44px !important;
+  padding: 10px 22px !important;
+  font-weight: 650 !important;
+}
+
+/* Embedded components inside hub */
+.embedded-profile,
+.embedded-users {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  background: transparent !important;
+}
+
+.embedded-profile .rs-foyer-head,
+.embedded-users .rs-foyer-head {
+  display: none !important;
+}
+
+
 
 

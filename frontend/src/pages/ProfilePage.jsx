@@ -327,12 +327,13 @@ function TwoFactorCard({ token }) {
 
 
 export default function ProfilePage({
-  profile, onSave,
-  universe, environment, mood,
-  onUniverseChange, onEnvironmentChange, onMoodChange
+  profile = {}, onSave = () => {},
+  universe = 'dune', environment = 'atreides', mood = 'caladan',
+  onUniverseChange = () => {}, onEnvironmentChange = () => {}, onMoodChange = () => {},
+  embedded = false,
 }) {
   const { user, token } = useAuth()
-  const [displayName, setDisplayName] = useState(profile.displayName || '')
+  const [displayName, setDisplayName] = useState(profile?.displayName || user?.display_name || '')
   const [pushStatus, setPushStatus] = useState('idle')
   const [saveStatus, setSaveStatus] = useState(null)
   
@@ -428,43 +429,47 @@ export default function ProfilePage({
   }
 
   return (
-    <div className="rs-foyer animate-fade-in">
+    <div className={`rs-foyer animate-fade-in ${embedded ? 'embedded-profile' : ''}`}>
       
-      {/* Header */}
-      <div className="rs-foyer-head">
-        <h1 className="rs-greeting">Identity & Context</h1>
-        <div className="rs-greeting-sub">Define your presence and calibrate the visual stage.</div>
-      </div>
+      {/* Header (only shown if not embedded in Settings Hub) */}
+      {!embedded && (
+        <div className="rs-foyer-head">
+          <h1 className="rs-greeting">Identity & Context</h1>
+          <div className="rs-greeting-sub">Define your presence and calibrate the visual stage.</div>
+        </div>
+      )}
 
       <div className="rs-card-flow">
 
         {/* Identity Card */}
         <div className="rs-card is-wide">
           <div className="rs-card-head">
-             <span className="rs-card-label">PRIMARY IDENTITY</span>
+             <span className="rs-card-label">PROFILE IDENTITY</span>
              {saveStatus && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1 }}>{saveStatus}</span>}
           </div>
           <div style={{ display: 'flex', gap: 20, alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 240 }}>
-              <div className="rs-card-label" style={{ fontSize: '0.6rem', marginBottom: 8 }}>CALL-SIGN</div>
+              <div className="rs-card-label" style={{ fontSize: '0.75rem', marginBottom: 8 }}>DISPLAY NAME</div>
               <input 
                 type="text" 
                 className="rs-pill" 
-                style={{ width: '100%', padding: '12px 16px', background: 'var(--md-surface-container)' }}
+                style={{ width: '100%', padding: '12px 18px', fontSize: '1.05rem', background: 'var(--md-surface-container)' }}
                 value={displayName} 
                 onChange={e => setDisplayName(e.target.value)} 
               />
             </div>
-            <button className="rs-btn-primary" onClick={handleSaveProfile}>UPDATE</button>
+            <button className="rs-btn-primary" style={{ padding: '12px 24px', fontSize: '0.95rem' }} onClick={handleSaveProfile}>SAVE CHANGES</button>
           </div>
           <div className="rs-card-meta" style={{ marginTop: 20, display: 'flex', gap: 32 }}>
             <div>
-              <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>IDENTIFIER</div>
-              <div style={{ fontSize: '0.9rem', marginTop: 4 }}>{user?.email}</div>
+              <div className="rs-card-label" style={{ fontSize: '0.7rem' }}>ACCOUNT EMAIL</div>
+              <div style={{ fontSize: '1rem', marginTop: 4 }}>{user?.email}</div>
             </div>
             <div>
-              <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>CLEARANCE</div>
-              <div style={{ fontSize: '0.9rem', marginTop: 4, color: 'var(--primary)' }}>LEVEL 01 ADMIN</div>
+              <div className="rs-card-label" style={{ fontSize: '0.7rem' }}>ROLE & CLEARANCE</div>
+              <div style={{ fontSize: '1rem', marginTop: 4, color: user?.role === 'admin' ? '#96cbff' : 'var(--primary)', fontWeight: 700 }}>
+                {user?.role ? user.role.toUpperCase() : 'USER'}
+              </div>
             </div>
           </div>
         </div>
@@ -472,7 +477,7 @@ export default function ProfilePage({
         {/* Universe Selector */}
         <div className="rs-card is-wide">
           <div className="rs-card-head">
-            <span className="rs-card-label">COSMOS SELECTION</span>
+            <span className="rs-card-label">VISUAL THEME</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
             {UNIVERSES.map(u => (
@@ -482,8 +487,8 @@ export default function ProfilePage({
                 style={{ borderColor: universe === u.key ? 'var(--primary)' : undefined }}
                 onClick={() => onUniverseChange(u.key)}
               >
-                <div className="rs-card-value" style={{ fontSize: '1rem', letterSpacing: '0.1em' }}>{u.label}</div>
-                <div className="rs-card-meta" style={{ fontSize: '0.75rem' }}>{u.hint}</div>
+                <div className="rs-card-value" style={{ fontSize: '1.1rem', letterSpacing: '0.06em' }}>{u.label}</div>
+                <div className="rs-card-meta" style={{ fontSize: '0.85rem' }}>{u.hint}</div>
               </div>
             ))}
           </div>
@@ -500,10 +505,10 @@ export default function ProfilePage({
                 key={e.key} 
                 className={`rs-pill ${environment === e.key ? 'is-active' : ''}`}
                 onClick={() => onEnvironmentChange(e.key)}
-                style={{ justifyContent: 'space-between' }}
+                style={{ justifyContent: 'space-between', padding: '10px 16px', fontSize: '0.95rem' }}
               >
                 <span>{e.label}</span>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: e.primary }} />
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: e.primary }} />
               </button>
             ))}
           </div>
@@ -519,29 +524,30 @@ export default function ProfilePage({
                 key={m.key} 
                 className={`rs-pill ${mood === m.key ? 'is-active' : ''}`}
                 onClick={() => onMoodChange(m.key)}
-                style={{ justifyContent: 'space-between' }}
+                style={{ justifyContent: 'space-between', padding: '10px 16px', fontSize: '0.95rem' }}
               >
                 <span>{m.label}</span>
-                {mood === m.key && <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>check</span>}
+                {mood === m.key && <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>check</span>}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Neural Link / Push */}
+        {/* Device Push Notifications */}
         <div className="rs-card is-wide">
           <div className="rs-card-head">
-            <span className="rs-card-label">NEURAL LINK (NOTIFICATIONS)</span>
+            <span className="rs-card-label">PUSH NOTIFICATIONS</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
             <div style={{ flex: 1 }}>
-              <div className="rs-card-value">External Alerts</div>
-              <div className="rs-card-meta">Enable push telemetry to receive system briefings and urgent alerts directly on your device.</div>
+              <div className="rs-card-value" style={{ fontSize: '1.15rem' }}>Device Push Alerts</div>
+              <div className="rs-card-meta" style={{ fontSize: '0.95rem' }}>Enable push notifications to receive system briefings, alerts, and smart home events directly on this device.</div>
             </div>
             <button 
               className={`rs-btn-primary ${pushStatus === 'linked' ? 'is-active' : ''}`} 
               disabled={pushStatus === 'linked'}
               onClick={handlePushEnable}
+              style={{ padding: '12px 24px', fontSize: '0.95rem' }}
             >
               {pushStatus === 'linked' ? 'LINK ESTABLISHED' : 'AUTHORIZE LINK'}
             </button>

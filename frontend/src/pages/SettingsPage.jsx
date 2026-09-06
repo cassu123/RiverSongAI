@@ -39,6 +39,8 @@ import TokenUsageSection from './settings/TokenUsageSection.jsx'
 import VoiceIDSection from './settings/VoiceIDSection.jsx'
 import CapabilityFlagsSection from './settings/CapabilityFlagsSection.jsx'
 import ChatToolsSection from './settings/ChatToolsSection.jsx'
+import ProfilePage from './ProfilePage.jsx'
+import UsersPage from './UsersPage.jsx'
 
 const TTL_LABELS = {
   short:    '7 days',
@@ -83,21 +85,21 @@ function SectionStatusWrapper({ status, children }) {
 // below test against, so adding a section means tagging it, not rewiring it.
 // ---------------------------------------------------------------------------
 
-const USER_GROUPS = [
-  { id: 'model',   icon: 'neurology',      label: 'MODEL' },
-  { id: 'voice',   icon: 'record_voice_over', label: 'VOICE' },
-  { id: 'memory',  icon: 'psychology',     label: 'MEMORY' },
-  { id: 'alerts',  icon: 'notifications',  label: 'ALERTS' },
-  { id: 'general', icon: 'tune',           label: 'GENERAL' },
+const ASSISTANT_GROUPS = [
+  { id: 'model',   icon: 'neurology',         label: 'AI MODEL' },
+  { id: 'voice',   icon: 'record_voice_over', label: 'VOICE & SPEECH' },
+  { id: 'memory',  icon: 'psychology',        label: 'MEMORY & RETENTION' },
+  { id: 'alerts',  icon: 'notifications',     label: 'ALERTS & PROACTIVE' },
+  { id: 'general', icon: 'tune',              label: 'GENERAL' },
 ]
 
 const ADMIN_GROUPS = [
+  { id: 'system',    icon: 'memory',       label: 'SYSTEM & DAEMONS' },
   { id: 'providers', icon: 'cloud',        label: 'PROVIDERS' },
-  { id: 'models',    icon: 'neurology',    label: 'MODELS' },
+  { id: 'models',    icon: 'neurology',    label: 'MODELS & ROUTING' },
   { id: 'tools',     icon: 'build_circle', label: 'CHAT & VOICE TOOLS' },
-  { id: 'people',    icon: 'group',        label: 'PEOPLE' },
-  { id: 'persona',   icon: 'face',         label: 'PERSONA' },
-  { id: 'system',    icon: 'memory',       label: 'SYSTEM' },
+  { id: 'persona',   icon: 'face',         label: 'PERSONA & PROMPT' },
+  { id: 'people',    icon: 'group',        label: 'FAMILY & FLAGS' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -105,19 +107,67 @@ const ADMIN_GROUPS = [
 // ---------------------------------------------------------------------------
 
 export default function SettingsPage({
-  onFeaturesChanged,
+  initialHubTab = 'assistant',
   viewMode = 'user',  // 'user' or 'admin'
+  onFeaturesChanged,
+  profile,
+  onSaveProfile,
+  universe,
+  environment,
+  mood,
+  onUniverseChange,
+  onEnvironmentChange,
+  onMoodChange,
+  setAction,
 }) {
   const { user, token } = useAuth()
-  const showUser = viewMode === 'user'
-  const showAdmin = viewMode === 'admin' && user?.role === 'admin'
+  const isAdmin = user?.role === 'admin'
 
-  const groups = showAdmin ? ADMIN_GROUPS : USER_GROUPS
-  const [group, setGroup] = useState(groups[0].id)
-  // Switching between the user and admin views swaps the whole group list, so
-  // the previously selected id would match nothing and the page would render
-  // empty.
-  useEffect(() => { setGroup(groups[0].id) }, [viewMode])  // eslint-disable-line react-hooks/exhaustive-deps
+  const [activeHubTab, setActiveHubTab] = useState(() => {
+    if (initialHubTab === 'users' || initialHubTab === 'admin') {
+      return isAdmin ? initialHubTab : 'profile'
+    }
+    if (viewMode === 'admin') {
+      return isAdmin ? 'admin' : 'profile'
+    }
+    return initialHubTab || 'assistant'
+  })
+
+  // Synchronize with external navigation changes
+  useEffect(() => {
+    if (initialHubTab === 'users' || initialHubTab === 'admin') {
+      setActiveHubTab(isAdmin ? initialHubTab : 'profile')
+    } else if (initialHubTab) {
+      setActiveHubTab(initialHubTab)
+    }
+  }, [initialHubTab, isAdmin])
+
+  useEffect(() => {
+    if (viewMode === 'admin') {
+      setActiveHubTab(isAdmin ? 'admin' : 'profile')
+    }
+  }, [viewMode, isAdmin])
+
+  // STRICT SECURITY GUARD: non-admin can NEVER access admin or users tabs
+  useEffect(() => {
+    if (!isAdmin && (activeHubTab === 'users' || activeHubTab === 'admin')) {
+      setActiveHubTab('profile')
+    }
+  }, [isAdmin, activeHubTab])
+
+  const showUser = activeHubTab === 'assistant'
+  const showAdmin = activeHubTab === 'admin' && isAdmin
+
+  const currentSubGroups = showAdmin ? ADMIN_GROUPS : ASSISTANT_GROUPS
+  const [group, setGroup] = useState(currentSubGroups[0].id)
+
+  useEffect(() => {
+    if (activeHubTab === 'admin') {
+      setGroup(ADMIN_GROUPS[0].id)
+    } else if (activeHubTab === 'assistant') {
+      setGroup(ASSISTANT_GROUPS[0].id)
+    }
+  }, [activeHubTab])
 
   // Shows its children only in the active group. Sections keep their existing
   // conditions inside -- this wraps, it does not replace showUser/showAdmin.
@@ -629,8 +679,17 @@ export default function SettingsPage({
   const currentProvider = llmSettings?.provider || 'ollama'
   const currentModel    = llmSettings?.model    || ''
 
+  const HUB_TABS = [
+    { id: 'profile',   label: 'Profile & Account', icon: 'account_circle' },
+    { id: 'assistant', label: 'Assistant & Voice', icon: 'auto_awesome' },
+    ...(isAdmin ? [
+      { id: 'users',   label: 'Family & Users',    icon: 'group' },
+      { id: 'admin',   label: 'Admin & System',    icon: 'shield_person' },
+    ] : []),
+  ]
+
   return (
-    <div className="rs-foyer animate-fade-in">
+    <div className="rs-foyer gh-settings-stage animate-fade-in">
       {/* CSS for recommended strip and persona textarea */}
       <style>{`
         .model-recommended-strip {
@@ -654,44 +713,67 @@ export default function SettingsPage({
         }
       `}</style>
 
-      <header className="rs-foyer-head">
-        <div className="rs-card-label" style={{ marginBottom: 8 }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>
-            {showAdmin ? 'shield_person' : 'settings'}
+      <header className="rs-foyer-head" style={{ marginBottom: 20 }}>
+        <div className="rs-card-label" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)' }}>
+          <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>
+            {activeHubTab === 'admin' ? 'shield_person' : activeHubTab === 'users' ? 'group' : activeHubTab === 'profile' ? 'account_circle' : 'tune'}
           </span>
-          {showAdmin ? 'SYSTEM / ADMIN' : 'PERSONAL / CONFIGURATION'}
+          {activeHubTab === 'admin' ? 'ADMINISTRATOR CONSOLE' : activeHubTab === 'users' ? 'HOUSEHOLD MANAGEMENT' : activeHubTab === 'profile' ? 'PERSONAL IDENTITY' : 'ASSISTANT & HARDWARE'}
         </div>
-        <h1 className="rs-greeting">{showAdmin ? 'Admin Settings' : 'Settings'}</h1>
-        <div className="rs-greeting-sub">
-          {showAdmin
-            ? 'Global controls, daemons, visibility, families. API credentials live in .env.'
-            : 'Your model, voice, memory, and notifications.'}
+        <h1 className="rs-greeting" style={{ fontSize: '2.2rem', fontWeight: 700, margin: '0 0 6px' }}>
+          {activeHubTab === 'admin' ? 'Admin & System Control' : activeHubTab === 'users' ? 'Family & Household' : activeHubTab === 'profile' ? 'Identity & Account' : 'Assistant & Voice Settings'}
+        </h1>
+        <div className="rs-greeting-sub" style={{ fontSize: '1.05rem', color: 'rgba(220, 230, 245, 0.75)' }}>
+          {activeHubTab === 'admin'
+            ? 'Global backend daemons, provider API routing, tool gating, and capability flags.'
+            : activeHubTab === 'users'
+            ? 'Household member roster, access clearances, model quotas, and session controls.'
+            : activeHubTab === 'profile'
+            ? 'Your display name, visual theme calibration, push alerts, and two-factor authentication.'
+            : 'Select your preferred local or cloud AI models, speech synthesis, and retention.'}
         </div>
       </header>
 
-      {/* Group rail. Horizontally scrollable so it survives a narrow phone
-          without wrapping into two rows and pushing the content down. */}
-      <nav
-        aria-label="Settings sections"
-        style={{
-          display: 'flex', gap: 8, marginBottom: 16,
-          overflowX: 'auto', paddingBottom: 4,
-          scrollbarWidth: 'none',
-        }}
-      >
-        {groups.map(g => (
+      {/* 4-Pillar Hub Navigation Bar */}
+      <nav className="gh-settings-nav-bar" aria-label="Settings Hub Sections">
+        {HUB_TABS.map(tab => (
           <button
-            key={g.id}
-            className={`rs-pill ${group === g.id ? 'is-active' : ''}`}
-            aria-current={group === g.id ? 'page' : undefined}
-            style={{ flexShrink: 0 }}
-            onClick={() => setGroup(g.id)}
+            key={tab.id}
+            className={`gh-settings-nav-btn ${activeHubTab === tab.id ? 'is-active' : ''}`}
+            onClick={() => setActiveHubTab(tab.id)}
+            type="button"
           >
-            <span className="material-symbols-rounded">{g.icon}</span>
-            {g.label}
+            <span className="material-symbols-rounded">{tab.icon}</span>
+            <span>{tab.label}</span>
           </button>
         ))}
       </nav>
+
+      {/* Sub-group category rail for Assistant and Admin */}
+      {(activeHubTab === 'assistant' || activeHubTab === 'admin') && (
+        <nav
+          aria-label="Settings sub-categories"
+          style={{
+            display: 'flex', gap: 8, marginBottom: 20,
+            overflowX: 'auto', paddingBottom: 4,
+            scrollbarWidth: 'none',
+          }}
+        >
+          {currentSubGroups.map(g => (
+            <button
+              key={g.id}
+              className={`rs-pill ${group === g.id ? 'is-active' : ''}`}
+              aria-current={group === g.id ? 'page' : undefined}
+              style={{ flexShrink: 0, padding: '8px 18px', fontSize: '0.95rem' }}
+              onClick={() => setGroup(g.id)}
+              type="button"
+            >
+              <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>{g.icon}</span>
+              {g.label}
+            </button>
+          ))}
+        </nav>
+      )}
 
       {/* Reload-pending banner for LLM routing flag changes */}
       {reloadPending && (
@@ -751,7 +833,26 @@ export default function SettingsPage({
         </div>
       )}
 
-      <div className="rs-card-flow">
+      {activeHubTab === 'profile' && (
+        <ProfilePage
+          embedded={true}
+          profile={profile}
+          onSave={onSaveProfile}
+          universe={universe}
+          environment={environment}
+          mood={mood}
+          onUniverseChange={onUniverseChange}
+          onEnvironmentChange={onEnvironmentChange}
+          onMoodChange={onMoodChange}
+        />
+      )}
+
+      {activeHubTab === 'users' && (
+        <UsersPage embedded={true} />
+      )}
+
+      {(activeHubTab === 'assistant' || activeHubTab === 'admin') && (
+        <div className="rs-card-flow">
       
       <G id="system">
       {/* ================================================================ */}
@@ -1310,7 +1411,8 @@ export default function SettingsPage({
 
       </G>
 
-      </div>
+        </div>
+      )}
     </div>
   )
 }

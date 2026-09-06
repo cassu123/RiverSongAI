@@ -6,7 +6,7 @@ import Sheet from '../chrome/Sheet'
  * UsersPage — Admin user management
  */
 
-export default function UsersPage() {
+export default function UsersPage({ embedded = false }) {
   const { token, user: currentUser, impersonate } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -203,29 +203,47 @@ export default function UsersPage() {
     }
   }
 
-  return (
-    <div className="rs-foyer animate-fade-in">
-      <div className="rs-foyer-head">
-        <h1 className="rs-greeting">Personnel</h1>
-        <div className="rs-greeting-sub">Manage authorized operators and identity profiles.</div>
+  if (currentUser?.role !== 'admin') {
+    return (
+      <div className="rs-card" style={{ textAlign: 'center', padding: '48px 24px', background: '#151c27', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 24 }}>
+        <span className="material-symbols-rounded" style={{ fontSize: '3.2rem', color: '#f87171', marginBottom: 16, display: 'block' }}>
+          admin_panel_settings
+        </span>
+        <h3 style={{ margin: '0 0 10px', fontSize: '1.4rem', color: '#fff' }}>Administrator Clearance Required</h3>
+        <p style={{ color: 'rgba(220, 230, 245, 0.75)', fontSize: '1.05rem', margin: 0, maxWidth: 500, marginInline: 'auto' }}>
+          Household member and user account administration is strictly restricted to administrator profiles.
+        </p>
       </div>
+    )
+  }
+
+  return (
+    <div className={`rs-foyer animate-fade-in ${embedded ? 'embedded-users' : ''}`}>
+      {!embedded && (
+        <div className="rs-foyer-head">
+          <h1 className="rs-greeting">Family & Household</h1>
+          <div className="rs-greeting-sub">Manage authorized members, security clearances, and model permissions.</div>
+        </div>
+      )}
 
       <div className="rs-card-flow">
         {loading ? (
-          <div className="rs-card-meta">QUERYING DIRECTORY...</div>
+          <div className="rs-card-meta" style={{ fontSize: '1rem', padding: '24px 0' }}>LOADING DIRECTORY...</div>
         ) : (
           users.map(u => (
             <div key={u.id} className="rs-card">
-              <div className="rs-card-head">
-                <span className="rs-card-label">OPERATOR {u.is_suspended && <span style={{color: 'var(--md-error)'}}>(SUSPENDED)</span>}</span>
+              <div className="rs-card-head" style={{ marginBottom: 16 }}>
+                <span className="rs-card-label" style={{ fontSize: '0.8rem', letterSpacing: '0.08em' }}>
+                  MEMBER {u.is_suspended && <span style={{ color: 'var(--md-error)', fontWeight: 700 }}>(SUSPENDED)</span>}
+                </span>
                 {u.id === currentUser.id ? (
-                  <span className={`rs-pill ${u.role === 'admin' ? 'is-active' : ''}`} style={{ fontSize: '0.6rem' }}>
-                    {u.role.toUpperCase()}
+                  <span className={`rs-pill ${u.role === 'admin' ? 'is-active' : ''}`} style={{ fontSize: '0.8rem', padding: '6px 14px' }}>
+                    {u.role.toUpperCase()} (YOU)
                   </span>
                 ) : (
                   <select 
                     className={`rs-pill ${u.role === 'admin' ? 'is-active' : ''}`}
-                    style={{ fontSize: '0.6rem', padding: '4px 12px', outline: 'none', border: '1px solid var(--md-outline-variant)', cursor: 'pointer', textAlign: 'center' }}
+                    style={{ fontSize: '0.85rem', padding: '6px 14px', outline: 'none', border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer', textAlign: 'center', background: '#1b2432', color: '#fff' }}
                     value={u.role}
                     onChange={(e) => updateRole(u, e.target.value)}
                   >
@@ -238,61 +256,69 @@ export default function UsersPage() {
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div className="rs-status-dot" style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary)', color: 'var(--bg-base)', fontWeight: 900, fontSize: '1rem', animation: 'none' }}>
-                  {u.display_name?.[0] || '?'}
+                <div className="rs-status-dot" style={{ width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary)', color: '#0d1219', fontWeight: 900, fontSize: '1.2rem', animation: 'none' }}>
+                  {u.display_name?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div>
-                  <div className="rs-card-value" style={{ fontSize: '1.2rem' }}>{u.display_name}</div>
-                  <div className="rs-card-meta">{u.email}</div>
+                  <div className="rs-card-value" style={{ fontSize: '1.3rem', fontWeight: 700 }}>{u.display_name}</div>
+                  <div className="rs-card-meta" style={{ fontSize: '0.95rem', color: 'rgba(220, 230, 245, 0.75)' }}>{u.email}</div>
                 </div>
               </div>
               
-              <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="rs-card-label" style={{ opacity: 0.8 }}>FORCE PASSWORD CHANGE</span>
+              <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div>
+                    <span className="rs-card-label" style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.9)' }}>FORCE PASSWORD CHANGE</span>
+                    <span style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(220, 230, 245, 0.55)', marginTop: 2 }}>Requires changing password on next sign-in</span>
+                  </div>
                   <button 
                     className={`rs-pill ${u.force_password_change ? 'is-active' : ''}`}
                     onClick={() => toggleForceChange(u)}
-                    style={{ minWidth: 60, justifyContent: 'center' }}
+                    style={{ minWidth: 70, justifyContent: 'center', padding: '8px 16px', fontSize: '0.9rem' }}
                   >
                     {u.force_password_change ? 'ON' : 'OFF'}
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="rs-card-label" style={{ opacity: 0.8 }}>SUSPEND ACCOUNT</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div>
+                    <span className="rs-card-label" style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.9)' }}>SUSPEND ACCOUNT</span>
+                    <span style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(220, 230, 245, 0.55)', marginTop: 2 }}>Block sign-in and API access immediately</span>
+                  </div>
                   <button 
                     className={`rs-pill ${u.is_suspended ? 'is-active' : ''}`}
                     onClick={() => toggleSuspend(u)}
-                    style={{ minWidth: 60, justifyContent: 'center' }}
+                    style={{ minWidth: 70, justifyContent: 'center', padding: '8px 16px', fontSize: '0.9rem' }}
                   >
                     {u.is_suspended ? 'ON' : 'OFF'}
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="rs-card-label" style={{ opacity: 0.8 }}>
-                    FREE MODELS ONLY
-                    <span style={{ display: 'block', fontSize: '0.7rem', opacity: 0.6, textTransform: 'none', letterSpacing: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div>
+                    <span className="rs-card-label" style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.9)' }}>
+                      FREE MODELS ONLY
+                    </span>
+                    <span style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(220, 230, 245, 0.55)', marginTop: 2 }}>
                       Restricts "Let River Decide" to local + free-tier models
                     </span>
-                  </span>
+                  </div>
                   <button
                     className={`rs-pill ${u.free_models_only ? 'is-active' : ''}`}
                     onClick={() => toggleFreeModelsOnly(u)}
-                    style={{ minWidth: 60, justifyContent: 'center' }}
+                    style={{ minWidth: 70, justifyContent: 'center', padding: '8px 16px', fontSize: '0.9rem' }}
                   >
                     {u.free_models_only ? 'ON' : 'OFF'}
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button className="rs-pill" onClick={() => { setResetTarget(u); setNewPassword(''); setResetError(''); }}>SET TEMPORARY PASSWORD</button>
-                  <button className="rs-pill" onClick={() => handleForceLogout(u)}>FORCE LOGOUT</button>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+                  <button className="rs-pill" style={{ padding: '8px 16px', fontSize: '0.85rem' }} onClick={() => { setResetTarget(u); setNewPassword(''); setResetError(''); }}>RESET PASSWORD</button>
+                  <button className="rs-pill" style={{ padding: '8px 16px', fontSize: '0.85rem' }} onClick={() => handleForceLogout(u)}>REVOKE SESSIONS</button>
                   {u.id !== currentUser.id && (
                     <>
-                      <button className="rs-pill" onClick={() => handleImpersonate(u)}>LOGIN AS</button>
-                      <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={() => handleTerminate(u)}>TERMINATE</button>
+                      <button className="rs-pill" style={{ padding: '8px 16px', fontSize: '0.85rem' }} onClick={() => handleImpersonate(u)}>IMPERSONATE</button>
+                      <button className="rs-pill" style={{ color: 'var(--md-error)', padding: '8px 16px', fontSize: '0.85rem' }} onClick={() => handleTerminate(u)}>DELETE USER</button>
                     </>
                   )}
                 </div>
