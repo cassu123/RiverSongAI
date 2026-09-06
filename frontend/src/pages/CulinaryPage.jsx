@@ -7,10 +7,13 @@ import CookPlanTab from '../components/CookPlanTab.jsx'
 import AppliancePanel from '../components/AppliancePanel.jsx'
 
 /**
- * CulinaryPage — Spatial Intelligence v2.0
+ * CulinaryPage — Google Home / AI-First Kitchen Hub
  * -----------------------------------------------------------------------------
- * Gourmet Logistics & Recipe Archives.
- * Full Double-Bezel and Cockpit density transformation.
+ * 4 Consolidated Pillars:
+ * 1. Cookbook: Recipe library, dietary tags, AI substitutions, one-tap "Cook Now".
+ * 2. Meal Plan: 7-day dinner calendar, household proposals/voting, and batch prep staging.
+ * 3. Cook Guide: Start-to-finish guided cooking companion (mise en place, active timers, focus mode).
+ * 4. Pantry & Groceries: Multi-store shopping list, stockroom inventory, and barcode scanning.
  */
 
 // -- Helpers --
@@ -37,15 +40,6 @@ function StarRating({ value, size = 14, onChange }) {
   )
 }
 
-// One prep session's ingredients, aggregated. Not the household's standing
-// shopping list -- that is the LIST tab, and PUSH TO LIST copies this onto it.
-// This used to be labelled "MASTER SHOPPING LIST", which is the name the other
-// one actually deserves.
-// Inline, not a modal. A floating sheet over a full page is awkward on a
-// phone: it is semi-transparent so the page behind bleeds through it, it
-// clips at the bottom of the viewport so the export result falls off screen,
-// and it hides the tab rail you would use to leave. The COOK tab shows its
-// sub-views inline and reads far better, so these match it.
 function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
   const [exporting, setExporting] = useState(false);
   const [exportResult, setExportResult] = useState(null);
@@ -69,8 +63,6 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
     try {
       const res = await api.post(`/prep/${sessionId}/shopping-list/push`, {});
       setPushed(res.added);
-      // Nothing new means everything was already there; jumping to the list
-      // would look like the button did nothing, so stay put and say so.
       if (res.added > 0) onPushed?.();
     } catch (err) {
       alert(err.message);
@@ -88,7 +80,7 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
           <div>
              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {items.length === 0 ? (
-                  <div className="rs-card-meta">No provisions required. Stock nominal.</div>
+                  <div className="rs-card-meta">All provisions available in pantry.</div>
                 ) : items.map((it, idx) => (
                   <div key={idx} className="rs-pill" style={{ justifyContent: 'flex-start', background: it._from_stockroom ? 'rgba(255,184,108,0.1)' : 'var(--md-surface-container-low)' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, minWidth: 60, color: 'var(--primary)' }}>{it.qty} {it.unit}</span>
@@ -99,33 +91,33 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
              </div>
              
              <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                 <button className="rs-pill" style={{ width: '100%', justifyContent: 'center' }} onClick={handlePush} disabled={pushing || !sessionId || items.length === 0 || pushed !== null}>
-                   <span className="material-symbols-rounded">playlist_add</span>
-                   {pushed !== null
-                     ? (pushed === 0 ? 'ALREADY ON THE LIST' : `ADDED ${pushed} TO THE LIST`)
-                     : (pushing ? 'ADDING...' : 'PUSH TO SHOPPING LIST')}
-                 </button>
-                 {exportResult ? (
-                   <div style={{ padding: 16, background: 'rgba(74,222,128,0.1)', border: '1px solid #4ade80', borderRadius: 8 }}>
-                     <div style={{ color: '#4ade80', fontWeight: 800, marginBottom: 8 }}>EXPORT SUCCESSFUL</div>
-                     {exportResult.cart_url ? (
-                        <a href={exportResult.cart_url} target="_blank" rel="noreferrer" className="rs-btn-primary" style={{ display: 'inline-flex', textDecoration: 'none' }}>OPEN WALMART CART</a>
-                     ) : (
-                        <div>No items were mapped to Walmart products.</div>
-                     )}
-                     {exportResult.unmapped?.length > 0 && (
-                        <div style={{ marginTop: 12, fontSize: '0.95rem', color: '#f87171' }}>Unmapped: {exportResult.unmapped.join(', ')}</div>
-                     )}
-                   </div>
-                 ) : (
-                   <button className="rs-btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleWalmartExport} disabled={exporting || items.length === 0}>
-                     <span className="material-symbols-rounded">shopping_cart_checkout</span>
-                     {exporting ? 'EXPORTING...' : 'EXPORT TO WALMART CART'}
-                   </button>
-                 )}
-              </div>
-          </div>
-       </div>
+                  <button className="rs-pill" style={{ width: '100%', justifyContent: 'center' }} onClick={handlePush} disabled={pushing || !sessionId || items.length === 0 || pushed !== null}>
+                    <span className="material-symbols-rounded">playlist_add</span>
+                    {pushed !== null
+                      ? (pushed === 0 ? 'ALREADY ON THE LIST' : `ADDED ${pushed} TO THE LIST`)
+                      : (pushing ? 'ADDING...' : 'PUSH TO SHOPPING LIST')}
+                  </button>
+                  {exportResult ? (
+                    <div style={{ padding: 16, background: 'rgba(74,222,128,0.1)', border: '1px solid #4ade80', borderRadius: 8 }}>
+                      <div style={{ color: '#4ade80', fontWeight: 800, marginBottom: 8 }}>EXPORT SUCCESSFUL</div>
+                      {exportResult.cart_url ? (
+                         <a href={exportResult.cart_url} target="_blank" rel="noreferrer" className="rs-btn-primary" style={{ display: 'inline-flex', textDecoration: 'none' }}>OPEN WALMART CART</a>
+                      ) : (
+                         <div>No items were mapped to Walmart products.</div>
+                      )}
+                      {exportResult.unmapped?.length > 0 && (
+                         <div style={{ marginTop: 12, fontSize: '0.95rem', color: '#f87171' }}>Unmapped: {exportResult.unmapped.join(', ')}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <button className="rs-btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleWalmartExport} disabled={exporting || items.length === 0}>
+                      <span className="material-symbols-rounded">shopping_cart_checkout</span>
+                      {exporting ? 'EXPORTING...' : 'EXPORT TO WALMART CART'}
+                    </button>
+                  )}
+               </div>
+           </div>
+        </div>
     </div>
   )
 }
@@ -160,7 +152,7 @@ function PrepAdjuster({ entry, recipe, api, onUpdate }) {
   )
 }
 
-function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
+function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
   const [isEditing, setIsEditing] = useState(false)
   const [edited, setEdited] = useState({ ...recipe, tags_str: (recipe.tags || []).join(', ') })
   const [saving, setSaving] = useState(false)
@@ -265,7 +257,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
        <div ref={modalRef} tabIndex="-1" className="rs-card is-elev animate-page-in" style={{ width: 'min(95%, 720px)', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', animationDuration: '250ms', transformOrigin: 'center' }} onClick={e => e.stopPropagation()}>
           <div className="rs-card-inner" style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
              <div className="rs-card-head" style={{ marginBottom: 24, padding: '8px 8px 0 8px' }}>
-                <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>{isEditing ? 'EDITING ARCHIVE' : recipe.meal_type.toUpperCase()}</span>
+                <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>{isEditing ? 'EDIT RECIPE' : recipe.meal_type.toUpperCase()}</span>
                 <div style={{ display: 'flex', gap: 12 }}>
                    <button className="rs-pill" onClick={() => setIsEditing(!isEditing)}>
                       <span className="material-symbols-rounded">{isEditing ? 'close' : 'edit'}</span>
@@ -283,7 +275,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                      <input className="rs-chat-input" value={edited.title} onChange={e => setEdited({ ...edited, title: e.target.value })} placeholder="RECIPE TITLE" style={{ lineHeight: 1.7 }} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                     <input className="rs-pill" value={edited.tags_str || ''} onChange={e => setEdited({ ...edited, tags_str: e.target.value, tags: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) })} placeholder="DIETARY TAGS (comma separated, e.g. keto, low-sodium)" style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: '12px 16px', gridColumn: '1 / -1' }} />
+                     <input className="rs-pill" value={edited.tags_str || ''} onChange={e => setEdited({ ...edited, tags_str: e.target.value, tags: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) })} placeholder="DIETARY TAGS (e.g. keto, low-sodium)" style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: '12px 16px', gridColumn: '1 / -1' }} />
                      <select className="rs-pill" value={edited.meal_type} onChange={e => setEdited({ ...edited, meal_type: e.target.value })} style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: '12px 16px' }}>
                         {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert', 'Other'].map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                      </select>
@@ -343,8 +335,8 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                   </div>
 
                   <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-                     <button className="rs-btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={saving}>{saving ? 'PERSISTING...' : 'SAVE CHANGES'}</button>
-                     <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={() => { if(confirm('Erase this archive?')) onDelete(recipe.id) }}>DELETE</button>
+                     <button className="rs-btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={saving}>{saving ? 'SAVING...' : 'SAVE CHANGES'}</button>
+                     <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={() => { if(confirm('Delete this recipe?')) onDelete(recipe.id) }}>DELETE</button>
                   </div>
                </div>
              ) : (
@@ -407,26 +399,22 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, api }) {
                    </div>
                  </div>
                  
-                 <div style={{ marginTop: 48, display: 'flex', gap: 12 }}>
-                    <button className="rs-btn-primary" style={{ flex: 1 }} onClick={async () => {
-                       try {
-                         const session = await api.get('/prep')
-                         await api.post(`/prep/${session.id}/add-recipe`, { recipe_id: recipe.id })
-                       } catch {
-                         const session = await api.post('/prep', { label: `Prep: ${recipe.title}` })
-                         await api.post(`/prep/${session.id}/add-recipe`, { recipe_id: recipe.id })
-                       }
-                       onClose();
-                    }}>INITIATE PREP</button>
-                    <button className="rs-pill" onClick={() => {
-                       localStorage.setItem('rs-chronos-open', JSON.stringify({ title: `Recipes/${recipe.title}`, root: 'household' }));
-                       window.dispatchEvent(new CustomEvent('rs-navigate', { detail: { page: 'chronos' } }));
-                       onClose();
-                    }}>ARCHIVE</button>
-                    <button className="rs-pill" onClick={async () => {
+                 <div style={{ marginTop: 48, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <button
+                      className="gh-cook-btn-next"
+                      style={{ flex: 2, height: 48, justifyContent: 'center' }}
+                      onClick={() => {
+                        onClose();
+                        onCook(recipe);
+                      }}
+                    >
+                      <span className="material-symbols-rounded">skillet</span>
+                      <span>COOK NOW IN GUIDE</span>
+                    </button>
+                    <button className="rs-pill" style={{ flex: 1 }} onClick={async () => {
                        await api.post('/dinner/suggest', { recipe_id: recipe.id });
                        alert('Suggestion broadcast to household.');
-                    }}>SUGGEST FOR DINNER</button>
+                    }}>SUGGEST DINNER</button>
                  </div>
                </>
              )}
@@ -458,7 +446,12 @@ export default function CulinaryPage({ setAction }) {
   const { token } = useAuth()
   const api = useApi(token)
   
-  const [activeTab, setActiveTab] = useState('library')
+  // 4 Consolidated Pillars: 'cookbook' | 'plan' | 'cook' | 'pantry'
+  const [activeTab, setActiveTab] = useState('cookbook')
+  const [cookbookSubTab, setCookbookSubTab] = useState('recipes') // 'recipes' | 'banned'
+  const [planSubTab, setPlanSubTab] = useState('dinner')         // 'dinner' | 'prep'
+  const [pantrySubTab, setPantrySubTab] = useState('list')       // 'list' | 'stockroom'
+  
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   
@@ -471,32 +464,26 @@ export default function CulinaryPage({ setAction }) {
   const [mealPlan, setMealPlan] = useState([])
   const [proposals, setProposals] = useState([])
   const [activePrep, setActivePrep] = useState(null)
-  // Bumped on grocery_updated and by the sync pill; ShoppingListTab reloads
-  // when it changes. The list is shared across the household, so it moves
-  // without this tab having touched it.
   const [groceryNonce, setGroceryNonce] = useState(0)
-  // Bumped when the active meal cook changes; CookPlanTab reloads to reflect
-  // the new state or cleared activePrep.
   const [mealCookNonce, setMealCookNonce] = useState(0)
 
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState('ALL')
   const [filterProtein, setFilterProtein] = useState('ALL')
-  const [sortMode, setSortMode] = useState('NEWEST') // NEWEST, RATING
+  const [sortMode, setSortMode] = useState('NEWEST')
   
   const [activeRecipe, setActiveRecipe] = useState(null)
-  const [eqMake,  setEqMake]  = useState('')
-  const [eqModel, setEqModel] = useState('')
-  const [eqBusy,  setEqBusy]  = useState(false)
-  // Which appliance has its panel checklist open. One at a time: it is read
-  // side by side with the machine, and two open at once is two machines.
-  const [panelFor, setPanelFor] = useState(null)
-  const [prepView,  setPrepView]  = useState('recipes')
-  const [prepList,  setPrepList]  = useState(null)   // this session's needs
+  const [prepView, setPrepView] = useState('recipes')
+  const [prepList, setPrepList] = useState(null)
   const [adjustItem, setAdjustItem] = useState(null)
 
-  const [recommendations, setRecommendations] = useState({}) // bannedId -> recs[]
-  const [recLoading, setRecLoading] = useState({}) // bannedId -> bool
+  const [recommendations, setRecommendations] = useState({})
+  const [recLoading, setRecLoading] = useState({})
+
+  // Ensure bottom action bar is not hijacking the global floating dock!
+  useEffect(() => {
+    if (setAction) setAction(null);
+  }, [setAction])
 
   // Dynamic Proteins
   const uniqueProteins = useMemo(() => {
@@ -507,48 +494,46 @@ export default function CulinaryPage({ setAction }) {
   const fetchData = useCallback(async (tab) => {
     setLoading(true)
     try {
-      // Guard the shape: uniqueProteins maps over this during render, so a
-      // non-array response takes the page down rather than showing an empty
-      // library.
-      if (tab === 'library') {
+      if (tab === 'cookbook' || tab === 'library') {
         const data = await api.get('/recipes')
         setRecipes(Array.isArray(data) ? data : [])
+        setBanned(await api.get('/household/banned'))
       }
-      if (tab === 'stockroom') setStock(await api.get('/stockroom'))
-      if (tab === 'dinner') {
+      if (tab === 'pantry' || tab === 'stockroom') {
+        setStock(await api.get('/stockroom'))
+      }
+      if (tab === 'plan' || tab === 'dinner' || tab === 'prep') {
         setProposals(await api.get('/dinner'));
         const d = new Date();
         const d2 = new Date(d);
-        d2.setDate(d.getDate() - d.getDay()); // Start of week (Sunday)
+        d2.setDate(d.getDate() - d.getDay()); // Sunday start
+        const start = d2.toISOString().split('T')[0];
+        setMealPlan(await api.get(`/meal-plan?start=${start}`));
+        try { setActivePrep(await api.get('/prep')) } catch { setActivePrep(null) }
+      }
+      if (tab === 'cook') {
+        try { setActivePrep(await api.get('/prep')) } catch { setActivePrep(null) }
+        const recData = await api.get('/recipes')
+        setRecipes(Array.isArray(recData) ? recData : [])
+        const d = new Date();
+        const d2 = new Date(d);
+        d2.setDate(d.getDate() - d.getDay());
         const start = d2.toISOString().split('T')[0];
         setMealPlan(await api.get(`/meal-plan?start=${start}`));
       }
-      if (tab === 'prep' || tab === 'cook') {
-        try { setActivePrep(await api.get('/prep')) } catch { setActivePrep(null) }
-        // Both panels derive from the staged recipes, so they are dropped
-        // with the session rather than fetched once when a modal opened --
-        // scaling a recipe used to leave a stale list behind the button.
-        setPrepList(null); setPrepPiles(null)
-      }
-      if (tab === 'equipment') setEquipment(await api.get('/household/equipment'))
-      if (tab === 'banned') setBanned(await api.get('/household/banned'))
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [api, token])
+  }, [api])
 
   useEffect(() => { fetchData(activeTab) }, [activeTab, fetchData])
 
-  // Fetched when the panel is first opened rather than up front: both are
-  // derived server-side from the staged recipes, and most visits to PREP are
-  // to add or scale a dish, not to read the list.
   useEffect(() => {
     if (!activePrep) return
     if (prepView !== 'list' || prepList) return
     let live = true
-
     api.get(`/prep/${activePrep.id}/shopping-list`)
       .then(res => { if (live) setPrepList(res.shopping_list || []) })
       .catch(err => { if (live) setError(err.message) })
@@ -563,18 +548,16 @@ export default function CulinaryPage({ setAction }) {
       try {
         const msg = JSON.parse(event.data);
         if (['stockroom_updated', 'stockroom_deleted', 'stockroom_created'].includes(msg.event)) {
-          if (activeTab === 'stockroom') fetchData('stockroom');
+          if (activeTab === 'pantry') fetchData('pantry');
         }
         if (msg.event === 'meal_plan_updated' || msg.event === 'dinner_updated') {
-          if (activeTab === 'dinner') fetchData('dinner');
+          if (activeTab === 'plan') fetchData('plan');
         }
         if (msg.event === 'grocery_updated') {
           setGroceryNonce(n => n + 1);
         }
         if (msg.event === 'meal_cook_updated') {
-          // Two people cooking the same meal tick steps off on two phones.
           if (activeTab === 'cook') fetchData('cook');
-          // Increment the nonce to trigger CookPlanTab reload
           setMealCookNonce(n => n + 1);
         }
       } catch (e) {}
@@ -592,139 +575,204 @@ export default function CulinaryPage({ setAction }) {
     }
   }
 
-  // Contextual Action Bar
-  useEffect(() => {
-    setAction(
-      <div className="rs-chat-input-controls" style={{ width: '100%' }}>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
-          {[
-            { key: 'library', icon: 'menu_book', label: 'MENU' },
-            { key: 'dinner', icon: 'dinner_dining', label: 'DINNER' },
-            { key: 'list', icon: 'shopping_cart', label: 'LIST' },
-            { key: 'stockroom', icon: 'warehouse', label: 'STOCK' },
-            { key: 'prep', icon: 'set_meal', label: 'STAGE' },
-            { key: 'cook', icon: 'skillet', label: 'COOK' },
-            { key: 'equipment', icon: 'kitchen', label: 'HARDWARE' },
-            { key: 'banned', icon: 'block', label: 'BANNED' }
-          ].map(t => (
-            <button key={t.key} className={`rs-pill ${activeTab === t.key ? 'is-active' : ''}`} onClick={() => setActiveTab(t.key)}>
-              <span className="material-symbols-rounded">{t.icon}</span>
-              <span className="rs-speak-actions-label">{t.label}</span>
-            </button>
-          ))}
-          <button className="rs-pill" onClick={() => { fetchData(activeTab); setGroceryNonce(n => n + 1) }}>
-            <span className="material-symbols-rounded">sync</span>
+  // Quick Action: Stage recipe and jump directly to Cook Guide
+  const handleCookRecipe = async (recipe) => {
+    try {
+      let session = activePrep
+      if (!session) {
+        session = await api.post('/prep', { label: `Cook: ${recipe.title}` })
+        setActivePrep(session)
+      }
+      await api.post(`/prep/${session.id}/add-recipe`, { recipe_id: recipe.id, servings: recipe.servings || 4 })
+      setActiveTab('cook')
+      setMealCookNonce(n => n + 1)
+    } catch (err) {
+      alert('Could not start cook guide: ' + err.message)
+    }
+  }
+
+  // Quick Action: Cook today's planned dinner
+  const handleCookTodayDinner = async (entry) => {
+    if (!entry?.recipe_id) return
+    try {
+      const res = await api.post('/meal-plan/create-prep-session', { entry_ids: [entry.id] })
+      if (res.status === 'ok') {
+        setActivePrep(await api.get('/prep'))
+        setActiveTab('cook')
+        setMealCookNonce(n => n + 1)
+      }
+    } catch (err) {
+      alert('Could not start dinner cook: ' + err.message)
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // PILLAR 1: COOKBOOK RENDERER
+  // ---------------------------------------------------------------------------
+  const renderCookbook = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Sub-toggle: Recipes vs Dietary Rules */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className={`gh-kitchen-nav-btn ${cookbookSubTab === 'recipes' ? 'is-active' : ''}`}
+            style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+            onClick={() => setCookbookSubTab('recipes')}
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 18 }}>menu_book</span>
+            <span>All Recipes ({recipes.length})</span>
+          </button>
+          <button
+            className={`gh-kitchen-nav-btn ${cookbookSubTab === 'banned' ? 'is-active' : ''}`}
+            style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+            onClick={() => setCookbookSubTab('banned')}
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 18 }}>block</span>
+            <span>Dietary Rules ({banned.length})</span>
           </button>
         </div>
+
+        {cookbookSubTab === 'recipes' && (
+          <button
+            className="gh-cook-btn-next"
+            style={{ flex: 'none', height: 42, padding: '0 20px', fontSize: '0.88rem' }}
+            onClick={() => setShowAddRecipe(true)}
+          >
+            <span className="material-symbols-rounded">add</span>
+            <span>Add Recipe</span>
+          </button>
+        )}
       </div>
-    )
-    return () => setAction(null)
-  }, [activeTab, setAction, fetchData])
 
-  const renderLibrary = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-       <button
-         className="rs-btn-primary"
-         style={{ width: '100%', height: 48, justifyContent: 'center' }}
-         onClick={() => setShowAddRecipe(true)}
-       >
-         <span className="material-symbols-rounded">add</span>
-         ADD RECIPE
-       </button>
-
-       {/* Structured Filter Bar */}
-       <div className="rs-card is-wide" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)' }}>
-          <div className="rs-card-inner" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-             <div className="rs-chat-input-container" style={{ flex: 2, minWidth: 200, padding: '4px 16px', background: 'rgba(0,0,0,0.2)' }}>
-                <span className="material-symbols-rounded" style={{ opacity: 0.7 }}>search</span>
-                <input style={{ all: 'unset', width: '100%', fontSize: '1.05rem' }} placeholder="SEARCH ARCHIVES..." value={search} onChange={e => setSearch(e.target.value)} />
-             </div>
-             <div style={{ display: 'flex', gap: 8 }}>
-                <select className="rs-pill" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ border: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.95rem' }}>
+      {cookbookSubTab === 'recipes' ? (
+        <>
+          {/* Search & Filter Bar */}
+          <div className="gh-card" style={{ padding: '14px 20px' }}>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ flex: 2, minWidth: 220, display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.06)', padding: '6px 16px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.1)' }}>
+                <span className="material-symbols-rounded" style={{ fontSize: 20, color: 'rgba(220,230,245,0.6)' }}>search</span>
+                <input
+                  style={{ all: 'unset', width: '100%', fontSize: '0.95rem', color: '#fff' }}
+                  placeholder="Search recipes, ingredients..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <select className="rs-pill" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '0.85rem' }}>
                   <option value="ALL">ALL MEALS</option>
                   {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'].map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                 </select>
-                <select className="rs-pill" value={filterProtein} onChange={e => setFilterProtein(e.target.value)} style={{ border: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.95rem' }}>
+                <select className="rs-pill" value={filterProtein} onChange={e => setFilterProtein(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '0.85rem' }}>
                   {uniqueProteins.map(p => <option key={p} value={p}>{p === 'ALL' ? 'ALL PROTEINS' : p.toUpperCase()}</option>)}
                 </select>
-                <select className="rs-pill" value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ border: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.95rem' }}>
-                   <option value="NEWEST">NEWEST</option>
-                   <option value="RATING">TOP RATED</option>
+                <select className="rs-pill" value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '0.85rem' }}>
+                  <option value="NEWEST">NEWEST</option>
+                  <option value="RATING">TOP RATED</option>
                 </select>
-             </div>
+              </div>
+            </div>
           </div>
-       </div>
 
-       <div className="rs-card-flow" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))' }}>
-        {recipes
-          .filter(r => r.title.toLowerCase().includes(search.toLowerCase()))
-          .filter(r => filterType === 'ALL' || r.meal_type === filterType)
-          .filter(r => filterProtein === 'ALL' || r.primary_protein === filterProtein)
-          .sort((a, b) => sortMode === 'RATING' ? (b.rating || 0) - (a.rating || 0) : new Date(b.created_at || 0) - new Date(a.created_at || 0))
-          .map(r => (
-          <div key={r.id} className="rs-card is-tappable animate-page-in" style={{ padding: 0, overflow: 'hidden', animationDuration: '400ms' }} onClick={() => setActiveRecipe(r)}>
-             <div className="rs-card-inner" style={{ padding: 0, border: 'none', background: 'transparent' }}>
-               <div style={{ position: 'relative', width: '100%', aspectRatio: '16/10', overflow: 'hidden', background: 'var(--md-surface-container-highest)' }}>
-                  {r.image_url ? (
-                    <img src={r.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.1 }}>
-                       <span className="material-symbols-rounded" style={{ fontSize: '4rem' }}>restaurant</span>
+          {/* Recipes Tactile Cards Grid */}
+          <div className="rs-card-flow" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))' }}>
+            {recipes
+              .filter(r => r.title.toLowerCase().includes(search.toLowerCase()))
+              .filter(r => filterType === 'ALL' || r.meal_type === filterType)
+              .filter(r => filterProtein === 'ALL' || r.primary_protein === filterProtein)
+              .sort((a, b) => sortMode === 'RATING' ? (b.rating || 0) - (a.rating || 0) : new Date(b.created_at || 0) - new Date(a.created_at || 0))
+              .map(r => (
+              <div key={r.id} className="rs-card is-tappable animate-page-in" style={{ padding: 0, overflow: 'hidden', animationDuration: '300ms' }} onClick={() => setActiveRecipe(r)}>
+                <div className="rs-card-inner" style={{ padding: 0, border: 'none', background: 'transparent' }}>
+                  <div style={{ position: 'relative', width: '100%', aspectRatio: '16/10', overflow: 'hidden', background: 'var(--md-surface-container-highest)' }}>
+                    {r.image_url ? (
+                      <img src={r.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.15 }}>
+                        <span className="material-symbols-rounded" style={{ fontSize: '4.5rem' }}>restaurant</span>
+                      </div>
+                    )}
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, var(--bg-base) 0%, transparent 65%)' }} />
+                    <div style={{ position: 'absolute', bottom: 14, left: 16 }}>
+                      <StarRating value={r.rating} size={16} />
                     </div>
-                  )}
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, var(--bg-base) 0%, transparent 60%)' }} />
-                  <div style={{ position: 'absolute', bottom: 16, left: 16 }}>
-                    <StarRating value={r.rating} size={16} />
                   </div>
-               </div>
-               <div style={{ padding: 24 }}>
-                 <div className="rs-card-label" style={{ color: 'var(--primary)', fontWeight: 900, marginBottom: 12 }}>{r.meal_type.toUpperCase()}</div>
-                 <div className="rs-card-value" style={{ fontSize: '1.3rem', fontWeight: 800 }}>{r.title}</div>
-                 <div className="rs-card-meta" style={{ marginTop: 16, display: 'flex', gap: 16 }}>
-                    <span>{r.primary_protein?.toUpperCase()}</span>
-                    <span>·</span>
-                    <span style={{ fontFamily: 'var(--font-mono)' }}>{r.servings} SERVINGS</span>
-                 </div>
-               </div>
-             </div>
+                  <div style={{ padding: 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#00e5ff', textTransform: 'uppercase' }}>
+                        {r.meal_type}
+                      </span>
+                      <button
+                        className="gh-glance-action"
+                        style={{ padding: '4px 12px', fontSize: '0.78rem' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCookRecipe(r);
+                        }}
+                      >
+                        <span className="material-symbols-rounded" style={{ fontSize: 16 }}>skillet</span>
+                        <span>Cook</span>
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff' }}>{r.title}</div>
+                    <div style={{ marginTop: 12, display: 'flex', gap: 14, fontSize: '0.8rem', color: 'rgba(220,230,245,0.65)' }}>
+                      <span>{r.primary_protein?.toUpperCase() || 'NO PROTEIN'}</span>
+                      <span>·</span>
+                      <span style={{ fontFamily: 'var(--font-mono)' }}>{r.servings} SERVINGS</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-    </div>
-  )
-
-  const renderStockroom = () => (
-    <div className="rs-card-flow">
-      <div style={{ marginBottom: 16 }}>
-        <button className="rs-btn-primary" style={{ width: '100%', height: 48, justifyContent: 'center', background: 'rgba(248,113,113,0.1)', color: '#f87171' }} onClick={() => setScannerMode('deplete')}>
-          <span className="material-symbols-rounded">delete_sweep</span>
-          DEPLETE ITEM SCAN
-        </button>
-      </div>
-      {stock.filter(i => i.name.toLowerCase().includes(search.toLowerCase())).map(item => (
-        <div key={item.id} className="rs-card is-wide animate-page-in" style={{ animationDuration: '400ms' }}>
-           <div className="rs-card-inner">
-             <div className="rs-card-head">
-                <span className="rs-card-label" style={{ opacity: 1, color: item.quantity <= item.min_quantity ? '#f87171' : '#4ade80', fontWeight: 900 }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.05rem' }}>{item.quantity.toFixed(2)}</span> IN STOCK
-                </span>
-                <span className="rs-card-label" style={{ opacity: 0.7 }}>{item.brand?.toUpperCase()}</span>
-             </div>
-             <div className="rs-card-value" style={{ fontSize: '1.75rem' }}>{item.name}</div>
-             <div style={{ marginTop: 24, display: 'flex', gap: 12 }}>
-                <button className="rs-pill is-active" style={{ flex: 1 }} onClick={() => setAdjustItem(item)}>ADJUST</button>
-                <button className="rs-pill" onClick={() => {
-                     localStorage.setItem('rs-chat-intent', JSON.stringify({ text: `River, status on ${item.name} levels.`, docId: null }));
-                     window.dispatchEvent(new Event('rs-navigate-chat'));
-                }}>ASK</button>
-             </div>
-           </div>
+        </>
+      ) : (
+        /* Dietary Restrictions & AI Substitutes View */
+        <div className="rs-card-flow">
+          {banned.map(item => (
+            <div key={item.id} className="rs-card animate-page-in" style={{ animationDuration: '300ms', padding: 24 }}>
+              <div className="rs-card-inner">
+                <div className="rs-card-head" style={{ marginBottom: 12 }}>
+                  <span className="rs-card-label" style={{ color: 'var(--md-error)', fontWeight: 900 }}>RESTRICTION</span>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="rs-pill" onClick={() => getRecommendations(item.id, item.name)} disabled={recLoading[item.id]}>
+                      <span className="material-symbols-rounded">psychology</span>
+                      {recLoading[item.id] ? 'Thinking...' : 'AI Recommend'}
+                    </button>
+                    <button className="rs-pill" onClick={async () => { await api.delete(`/household/banned/${item.id}`); fetchData('cookbook'); }}>
+                      <span className="material-symbols-rounded">delete</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="rs-card-value" style={{ fontSize: '1.5rem' }}>{item.name}</div>
+                {item.substitute && <div className="rs-card-meta" style={{ marginTop: 8 }}>PREFERRED SUBSTITUTE: <span style={{ color: '#00e5ff', fontWeight: 800 }}>{item.substitute.toUpperCase()}</span></div>}
+                
+                {recommendations[item.id] && (
+                  <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div className="rs-card-label">AI SUGGESTIONS</div>
+                    {recommendations[item.id].map((rec, idx) => (
+                      <div key={idx} className="rs-pill" style={{ justifyContent: 'flex-start', background: 'rgba(255,255,255,0.04)', cursor: 'pointer' }} onClick={async () => {
+                        await api.patch(`/household/banned/${item.id}`, { substitute: rec.name });
+                        fetchData('cookbook');
+                      }}>
+                        <span style={{ fontWeight: 700, color: '#00e5ff', marginRight: 10 }}>{rec.name}</span>
+                        <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>{rec.reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   )
 
-  const renderDinner = () => {
+  // ---------------------------------------------------------------------------
+  // PILLAR 2: MEAL PLAN RENDERER (Weekly Dinners & Batch Prep)
+  // ---------------------------------------------------------------------------
+  const renderMealPlan = () => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const d = new Date();
     d.setDate(d.getDate() - d.getDay()); // Sunday
@@ -737,188 +785,366 @@ export default function CulinaryPage({ setAction }) {
        const entry = mealPlan.find(m => m.plan_date.startsWith(dateStr));
        week.push({ dayName: days[i], dateStr, entry });
     }
-    
+
     return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-       <div className="rs-card is-wide is-elev" style={{ border: '1px solid var(--primary)', background: 'color-mix(in srgb, var(--primary) 4%, var(--bg-base))' }}>
-          <div className="rs-card-inner">
-             <div className="rs-card-head">
-                <span className="rs-card-label" style={{ color: 'var(--primary)', fontWeight: 900 }}>THIS WEEK</span>
-                <button className="rs-pill" style={{ color: '#0071ce' }} onClick={async () => {
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* Sub-toggle: Dinner Calendar vs Batch Prep */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className={`gh-kitchen-nav-btn ${planSubTab === 'dinner' ? 'is-active' : ''}`}
+            style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+            onClick={() => setPlanSubTab('dinner')}
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 18 }}>calendar_month</span>
+            <span>7-Day Dinners</span>
+          </button>
+          <button
+            className={`gh-kitchen-nav-btn ${planSubTab === 'prep' ? 'is-active' : ''}`}
+            style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+            onClick={() => setPlanSubTab('prep')}
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 18 }}>set_meal</span>
+            <span>Batch Prep Staging</span>
+            {activePrep && <span className="gh-live-dot" />}
+          </button>
+        </div>
+
+        {planSubTab === 'dinner' ? (
+          <>
+            {/* Week Schedule Card */}
+            <div className="gh-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>This Week's Dinner Menu</h3>
+                  <div style={{ fontSize: '0.8rem', color: 'rgba(220,230,245,0.65)' }}>Household dinner calendar and ingredient procurement</div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="gh-glance-action" onClick={async () => {
                     await api.post('/meal-plan/shop-this-week');
-                    alert('Added missing ingredients to Procurement List!');
-                }}><span className="material-symbols-rounded">shopping_cart</span> SHOP THIS WEEK</button>
-                <button className="rs-pill" onClick={async () => {
+                    alert('Added missing ingredients to Shopping List!');
+                    setGroceryNonce(n => n + 1);
+                  }}>
+                    <span className="material-symbols-rounded">shopping_cart</span>
+                    <span>Shop This Week</span>
+                  </button>
+                  <button className="gh-glance-action" onClick={async () => {
                     const entryIds = mealPlan.filter(e => e.status === 'planned' && e.recipe_id).map(e => e.id);
                     if (entryIds.length === 0) return alert('No planned recipes this week.');
                     const res = await api.post('/meal-plan/create-prep-session', { entry_ids: entryIds });
                     if (res.status === 'ok') {
-                        fetchData('prep');
-                        setActiveTab('prep');
+                      fetchData('plan');
+                      setPlanSubTab('prep');
                     }
-                }}><span className="material-symbols-rounded">kitchen</span> BATCH PREP</button>
+                  }}>
+                    <span className="material-symbols-rounded">kitchen</span>
+                    <span>Stage Batch Prep</span>
+                  </button>
+                </div>
+              </div>
 
-             </div>
-             
-             <div style={{ display: 'flex', gap: 12, marginTop: 24, overflowX: 'auto', paddingBottom: 16 }}>
-               {week.map(w => (
-                 <div key={w.dateStr} style={{ 
-                   flex: '0 0 auto', minWidth: 160, 
-                   background: w.entry ? 'var(--md-surface-container-high)' : 'var(--md-surface-container)', 
-                   borderRadius: 16, padding: 16, border: '1px solid var(--md-outline-variant)' 
-                 }}>
-                   <div style={{ fontSize: '0.95rem', fontWeight: 800, opacity: 0.7, marginBottom: 8 }}>{w.dayName.toUpperCase()}</div>
-                   {w.entry ? (
-                     <>
-                       <div style={{ fontWeight: 700, fontSize: '1.05rem', lineHeight: 1.3 }}>{w.entry.recipe_title || w.entry.label || 'Planned'}</div>
-                       <div style={{ fontSize: '0.85rem', color: w.entry.status === 'cooked' ? '#4ade80' : 'var(--primary)', marginTop: 8, fontWeight: 800 }}>{w.entry.status.toUpperCase()}</div>
-                     </>
-                   ) : (
-                     <div style={{ opacity: 0.7, fontSize: '0.95rem', fontStyle: 'italic' }}>Open</div>
-                   )}
-                 </div>
-               ))}
-             </div>
-          </div>
-       </div>
-       
-       {proposals.length > 0 && (
-         <div className="rs-card-head" style={{ marginTop: 16 }}>
-            <span className="rs-card-label" style={{ fontWeight: 900 }}>DINNER PROPOSALS</span>
-         </div>
-       )}
-       
-       <div className="rs-card-flow">
-          {proposals.map(p => (
-            <div key={p.id} className={`rs-card is-wide animate-page-in ${p.status === 'approved' ? 'is-elev' : ''}`} style={{ borderColor: p.status === 'approved' ? 'var(--primary)' : 'var(--md-outline)', animationDuration: '400ms' }}>
-               <div className="rs-card-inner">
-                  <div className="rs-card-head">
-                     <span className="rs-card-label" style={{ color: p.status === 'approved' ? 'var(--primary)' : 'inherit', fontWeight: 900 }}>{p.status.toUpperCase()} PROPOSAL</span>
-                     <div style={{ display: 'flex', gap: 8 }}>
-                        <span className="rs-pill" style={{ background: 'rgba(74,222,128,0.1)', color: '#4ade80' }}>{p.votes_yes.length} YES</span>
-                        <span className="rs-pill" style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171' }}>{p.votes_no.length} NO</span>
-                     </div>
-                  </div>
-                  <div className="rs-card-value" style={{ fontSize: '1.75rem', marginBottom: 20 }}>{p.recipe?.title}</div>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                     <button className="rs-btn-primary" style={{ flex: 1 }} onClick={async () => {
-                        await api.post(`/dinner/${p.id}/vote`, { vote: 'yes' });
-                        fetchData('dinner');
-                     }}>APPROVE</button>
-                     <button className="rs-pill" style={{ flex: 1, color: 'var(--md-error)' }} onClick={async () => {
-                        await api.post(`/dinner/${p.id}/vote`, { vote: 'no' });
-                        fetchData('dinner');
-                     }}>VETO</button>
-                     <button className="rs-pill" onClick={async () => {
-                        await api.delete(`/dinner/${p.id}`);
-                        fetchData('dinner');
-                     }}><span className="material-symbols-rounded">close</span></button>
-                  </div>
-               </div>
+              {/* 7 Days Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+                {week.map(w => {
+                  const isToday = w.dateStr === new Date().toISOString().split('T')[0];
+                  return (
+                    <div key={w.dateStr} style={{ 
+                      background: isToday ? 'rgba(0, 229, 255, 0.08)' : (w.entry ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)'), 
+                      borderRadius: 16, padding: 14, 
+                      border: isToday ? '1px solid rgba(0, 229, 255, 0.4)' : '1px solid rgba(255,255,255,0.08)',
+                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 120
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: isToday ? '#00e5ff' : 'rgba(220,230,245,0.6)', marginBottom: 6 }}>
+                          {w.dayName.toUpperCase()} {isToday && '· TODAY'}
+                        </div>
+                        {w.entry ? (
+                          <>
+                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff', lineHeight: 1.3 }}>
+                              {w.entry.recipe_title || w.entry.label || 'Planned'}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: w.entry.status === 'cooked' ? '#4ade80' : '#00e5ff', marginTop: 6, fontWeight: 700 }}>
+                              {w.entry.status.toUpperCase()}
+                            </div>
+                          </>
+                        ) : (
+                          <div style={{ opacity: 0.4, fontSize: '0.85rem', fontStyle: 'italic' }}>Open</div>
+                        )}
+                      </div>
+
+                      {isToday && w.entry?.recipe_id && (
+                        <button
+                          className="gh-cook-btn-next"
+                          style={{ marginTop: 10, height: 34, fontSize: '0.78rem', width: '100%', justifyContent: 'center' }}
+                          onClick={() => handleCookTodayDinner(w.entry)}
+                        >
+                          <span className="material-symbols-rounded" style={{ fontSize: 15 }}>skillet</span>
+                          <span>Cook Today</span>
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          ))}
-       </div>
-    </div>
+
+            {/* Dinner Proposals & Voting */}
+            {proposals.length > 0 && (
+              <div className="gh-card">
+                <h3 style={{ margin: '0 0 14px 0', fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>
+                  Household Dinner Proposals
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                  {proposals.map(p => (
+                    <div key={p.id} className="rs-card animate-page-in" style={{ padding: 18, border: p.status === 'approved' ? '1px solid #00e5ff' : '1px solid rgba(255,255,255,0.1)' }}>
+                      <div className="rs-card-inner">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: p.status === 'approved' ? '#00e5ff' : 'inherit' }}>
+                            {p.status.toUpperCase()} PROPOSAL
+                          </span>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <span className="rs-pill" style={{ padding: '2px 8px', fontSize: '0.75rem', color: '#4ade80', background: 'rgba(74,222,128,0.1)' }}>{p.votes_yes.length} YES</span>
+                            <span className="rs-pill" style={{ padding: '2px 8px', fontSize: '0.75rem', color: '#f87171', background: 'rgba(248,113,113,0.1)' }}>{p.votes_no.length} NO</span>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginBottom: 14 }}>
+                          {p.recipe?.title}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button className="rs-btn-primary" style={{ flex: 1, height: 36, fontSize: '0.82rem' }} onClick={async () => {
+                            await api.post(`/dinner/${p.id}/vote`, { vote: 'yes' });
+                            fetchData('plan');
+                          }}>APPROVE</button>
+                          <button className="rs-pill" style={{ flex: 1, height: 36, fontSize: '0.82rem', color: 'var(--md-error)' }} onClick={async () => {
+                            await api.post(`/dinner/${p.id}/vote`, { vote: 'no' });
+                            fetchData('plan');
+                          }}>VETO</button>
+                          <button className="rs-pill" style={{ height: 36, padding: '0 10px' }} onClick={async () => {
+                            await api.delete(`/dinner/${p.id}`);
+                            fetchData('plan');
+                          }}><span className="material-symbols-rounded">close</span></button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          /* Batch Prep Staging View */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {!activePrep ? (
+              <div className="gh-card" style={{ textAlign: 'center', padding: 48 }}>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', color: '#fff' }}>No Active Prep Session</h3>
+                <p style={{ color: 'rgba(220,230,245,0.7)', fontSize: '0.9rem', marginBottom: 20 }}>
+                  Stage multiple dishes to cook concurrently with synchronized timing.
+                </p>
+                <button className="gh-cook-btn-next" style={{ display: 'inline-flex', padding: '0 24px' }} onClick={async () => {
+                  await api.post('/prep', { label: 'New Session' });
+                  fetchData('plan');
+                }}>Start Prep Session</button>
+              </div>
+            ) : (
+              <div className="gh-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#fff' }}>
+                      Active Prep: {activePrep.label || 'Multi-Dish Meal'}
+                    </h3>
+                    <div style={{ fontSize: '0.82rem', color: 'rgba(220,230,245,0.65)' }}>
+                      {activePrep.recipes?.length || 0} dishes staged
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button
+                      className="gh-cook-btn-next"
+                      style={{ height: 42, padding: '0 20px', fontSize: '0.88rem' }}
+                      onClick={() => setActiveTab('cook')}
+                    >
+                      <span className="material-symbols-rounded">skillet</span>
+                      <span>Start Cook Guide</span>
+                    </button>
+                    <button className="rs-pill" onClick={async () => {
+                      if (confirm('Complete and clear this prep session?')) {
+                        await api.post(`/prep/${activePrep.id}/complete`);
+                        fetchData('plan');
+                      }
+                    }}>Finish Session</button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {(activePrep.recipes || []).map((pr, i) => (
+                    <div key={i} style={{ padding: 16, background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>{pr.recipe_title}</div>
+                        <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={async () => {
+                          await api.delete(`/prep/${activePrep.id}/recipes/${pr.entry_id}`);
+                          fetchData('plan');
+                        }}><span className="material-symbols-rounded">remove_circle</span></button>
+                      </div>
+                      <PrepAdjuster entry={pr} api={api} onUpdate={() => fetchData('plan')} />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Staged vs Needs inline toggle */}
+                <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+                  <button
+                    className={`gh-kitchen-nav-btn ${prepView === 'recipes' ? 'is-active' : ''}`}
+                    style={{ padding: '6px 14px', fontSize: '0.82rem' }}
+                    onClick={() => setPrepView('recipes')}
+                  >
+                    <span className="material-symbols-rounded">list_alt</span>
+                    <span>Staged Recipes</span>
+                  </button>
+                  <button
+                    className={`gh-kitchen-nav-btn ${prepView === 'list' ? 'is-active' : ''}`}
+                    style={{ padding: '6px 14px', fontSize: '0.82rem' }}
+                    onClick={() => setPrepView('list')}
+                  >
+                    <span className="material-symbols-rounded">shopping_cart</span>
+                    <span>Needed Ingredients</span>
+                  </button>
+                </div>
+
+                {prepView === 'list' && (
+                  <div style={{ marginTop: 16 }}>
+                    {prepList ? (
+                      <PrepShoppingListPanel
+                        items={prepList}
+                        sessionId={activePrep.id}
+                        api={api}
+                        onPushed={() => { setGroceryNonce(n => n + 1); setActiveTab('pantry') }}
+                      />
+                    ) : (
+                      <div className="rs-card-meta" style={{ padding: 24, textAlign: 'center' }}>Calculating ingredient requirements…</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     )
   }
 
-  const renderPrep = () => (
-    <div className="rs-card-flow">
-       {!activePrep ? (
-         <div className="rs-card is-wide" style={{ textAlign: 'center', padding: 64 }}>
-            <div className="rs-card-label" style={{ marginBottom: 16 }}>STAGING CLEAR</div>
-            <button className="rs-btn-primary" onClick={async () => {
-               await api.post('/prep', { label: 'New Session' });
-               fetchData('prep');
-            }}>START PREP SESSION</button>
-         </div>
-       ) : (
-         <div className="rs-card is-wide animate-page-in" style={{ border: '1px solid var(--primary)', animationDuration: '400ms' }}>
-            <div className="rs-card-inner">
-               <div className="rs-card-head">
-                  <span className="rs-card-label" style={{ color: 'var(--primary)', fontWeight: 900 }}>ACTIVE PREP: {activePrep.label?.toUpperCase()}</span>
-                  <button className="rs-pill" onClick={async () => {
-                     if(confirm('Complete this session?')) {
-                       await api.post(`/prep/${activePrep.id}/complete`);
-                       fetchData('prep');
-                     }
-                  }}>FINISH</button>
-               </div>
-               <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 24 }}>
-                  {activePrep.recipes.map((pr, i) => (
-                    <div key={i} className="rs-card" style={{ background: 'rgba(0,0,0,0.1)', border: '1px solid var(--md-outline-variant)' }}>
-                       <div className="rs-card-inner">
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                             <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{pr.recipe_title}</div>
-                             <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={async () => {
-                                await api.delete(`/prep/${activePrep.id}/recipes/${pr.entry_id}`);
-                                fetchData('prep');
-                             }}><span className="material-symbols-rounded">remove_circle</span></button>
-                          </div>
-                          <PrepAdjuster entry={pr} api={api} onUpdate={() => fetchData('prep')} />
-                       </div>
-                    </div>
-                  ))}
-               </div>
+  // ---------------------------------------------------------------------------
+  // PILLAR 4: PANTRY & GROCERIES RENDERER
+  // ---------------------------------------------------------------------------
+  const renderPantry = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Sub-toggle: Groceries vs Stockroom */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className={`gh-kitchen-nav-btn ${pantrySubTab === 'list' ? 'is-active' : ''}`}
+            style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+            onClick={() => setPantrySubTab('list')}
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 18 }}>shopping_cart</span>
+            <span>Grocery List</span>
+          </button>
+          <button
+            className={`gh-kitchen-nav-btn ${pantrySubTab === 'stockroom' ? 'is-active' : ''}`}
+            style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+            onClick={() => setPantrySubTab('stockroom')}
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 18 }}>inventory_2</span>
+            <span>Pantry Stockroom ({stock.length})</span>
+          </button>
+        </div>
+
+        <button
+          className="gh-glance-action"
+          onClick={() => setScannerMode('deplete')}
+        >
+          <span className="material-symbols-rounded">barcode_scanner</span>
+          <span>Scan Barcode</span>
+        </button>
+      </div>
+
+      {pantrySubTab === 'list' ? (
+        <ShoppingListTab api={api} refreshKey={groceryNonce} />
+      ) : (
+        /* Stockroom Inventory Cards */
+        <div className="rs-card-flow" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+          {stock.map(item => (
+            <div key={item.id} className="rs-card is-wide animate-page-in" style={{ animationDuration: '300ms' }}>
+              <div className="rs-card-inner">
+                <div className="rs-card-head">
+                  <span className="rs-card-label" style={{ color: item.quantity <= item.min_quantity ? '#f87171' : '#4ade80', fontWeight: 900 }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.05rem' }}>{item.quantity.toFixed(2)}</span> IN STOCK
+                  </span>
+                  <span className="rs-card-label" style={{ opacity: 0.7 }}>{item.brand?.toUpperCase()}</span>
+                </div>
+                <div className="rs-card-value" style={{ fontSize: '1.4rem', color: '#fff' }}>{item.name}</div>
+                <div style={{ marginTop: 18, display: 'flex', gap: 10 }}>
+                  <button className="rs-pill is-active" style={{ flex: 1 }} onClick={() => setAdjustItem(item)}>ADJUST</button>
+                  <button className="rs-pill" onClick={() => {
+                    localStorage.setItem('rs-chat-intent', JSON.stringify({ text: `River, what is our stock level for ${item.name}?`, docId: null }));
+                    window.dispatchEvent(new Event('rs-navigate-chat'));
+                  }}>ASK RIVER</button>
+                </div>
+              </div>
             </div>
-         </div>
-       )}
-
-       {/* The list and the piles show inline below the session rather than in
-           a sheet over it. Same rail idiom as the COOK tab. */}
-       {activePrep && (
-         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-           {[
-             { id: 'recipes', icon: 'list_alt',      label: 'STAGED' },
-             { id: 'list',    icon: 'shopping_cart', label: 'NEEDS' },
-           ].map(v => (
-             <button
-               key={v.id}
-               className={`rs-pill ${prepView === v.id ? 'is-active' : ''}`}
-               onClick={() => setPrepView(v.id)}
-             >
-               <span className="material-symbols-rounded">{v.icon}</span>
-               {v.label}
-             </button>
-           ))}
-           {/* The piles used to be a third view here, showing the same
-               ingredients this tab already lists. They belong with the
-               cooking: COOK > PREP splits them by dish and lets each one be
-               ticked off as it hits the counter, which is what the pile is
-               for. */}
-           <button className="rs-pill" onClick={() => setActiveTab('cook')}>
-             <span className="material-symbols-rounded">skillet</span>
-             MEASURE OUT
-           </button>
-         </div>
-       )}
-
-       {activePrep && prepView === 'list' && (
-         prepList
-           ? <PrepShoppingListPanel
-               items={prepList}
-               sessionId={activePrep.id}
-               api={api}
-               onPushed={() => { setGroceryNonce(n => n + 1); setActiveTab('list') }}
-             />
-           : <div className="rs-card-meta" style={{ padding: 32, textAlign: 'center' }}>WORKING OUT WHAT IS NEEDED…</div>
-       )}
-
+          ))}
+        </div>
+      )}
     </div>
   )
 
+  // ---------------------------------------------------------------------------
+  // MAIN RENDER CONTAINER
+  // ---------------------------------------------------------------------------
   return (
     <div className="rs-foyer">
-      <div className="rs-foyer-head">
-        <h1 className="rs-greeting">Culinary</h1>
-        <div className="rs-greeting-sub">Sector provisioning and autonomous culinary archives.</div>
+      {/* Header */}
+      <div className="rs-foyer-head" style={{ marginBottom: 16 }}>
+        <h1 className="rs-greeting">Kitchen</h1>
+        <div className="rs-greeting-sub">Cookbook, meal plans, autonomous cooking guides & groceries.</div>
       </div>
 
+      {/* Top Google Home Category Nav Bar (Sub-navigation) */}
+      <div className="gh-kitchen-nav-bar">
+        <button
+          className={`gh-kitchen-nav-btn ${activeTab === 'cookbook' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('cookbook')}
+        >
+          <span className="material-symbols-rounded">menu_book</span>
+          <span>Cookbook</span>
+        </button>
+        <button
+          className={`gh-kitchen-nav-btn ${activeTab === 'plan' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('plan')}
+        >
+          <span className="material-symbols-rounded">calendar_month</span>
+          <span>Meal Plan</span>
+        </button>
+        <button
+          className={`gh-kitchen-nav-btn ${activeTab === 'cook' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('cook')}
+        >
+          <span className="material-symbols-rounded">skillet</span>
+          <span>Cook Guide</span>
+          {activePrep && <span className="gh-live-dot" />}
+        </button>
+        <button
+          className={`gh-kitchen-nav-btn ${activeTab === 'pantry' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('pantry')}
+        >
+          <span className="material-symbols-rounded">local_grocery_store</span>
+          <span>Pantry & Groceries</span>
+        </button>
+      </div>
+
+      {/* Modals */}
       {showAddRecipe && (
         <AddRecipeModal
           token={token}
           onClose={() => setShowAddRecipe(false)}
-          onSaved={() => fetchData('library')}
+          onSaved={() => fetchData('cookbook')}
         />
       )}
 
@@ -946,165 +1172,47 @@ export default function CulinaryPage({ setAction }) {
       {error ? (
         <div className="rs-card is-wide" style={{ borderColor: 'var(--md-error)' }}>
           <div className="rs-card-inner">
-            <div className="rs-card-label" style={{ color: 'var(--md-error)' }}>SECTOR ERROR</div>
+            <div className="rs-card-label" style={{ color: 'var(--md-error)' }}>KITCHEN ERROR</div>
             <div className="rs-card-meta">{error}</div>
           </div>
         </div>
-      ) : loading && !['equipment', 'prep', 'dinner', 'library', 'banned', 'list', 'cook'].includes(activeTab) ? (
-        <div className="rs-card-meta" style={{ padding: 64, textAlign: 'center' }}>ACCESSING {activeTab.toUpperCase()} ARCHIVES...</div>
       ) : (
-        <div className="animate-page-in" style={{ animationDuration: '400ms' }}>
-          {activeTab === 'library' && renderLibrary()}
-          {/* The tab owns its own fetch; refreshKey is how the sync pill and
-              an incoming grocery_updated ask it to reload. Bumping a prop
-              rather than the key so a half-typed item survives someone
-              else's edit. */}
-          {activeTab === 'list' && <ShoppingListTab api={api} refreshKey={groceryNonce} />}
-          {/* The cook plan needs the staged recipes, so it reads the same
-              activePrep the prep tab does rather than fetching its own. */}
-          {activeTab === 'cook' && <CookPlanTab api={api} activePrep={activePrep} refreshNonce={mealCookNonce} />}
-          {activeTab === 'stockroom' && renderStockroom()}
-          {activeTab === 'dinner' && renderDinner()}
-          {activeTab === 'prep' && renderPrep()}
-          {activeTab === 'equipment' && (
-            <div className="rs-card" style={{ maxWidth: 620, margin: '0 auto 20px' }}>
-              <div className="rs-card-inner">
-                <div className="rs-card-label" style={{ marginBottom: 4 }}>ADD AN APPLIANCE</div>
-                <p className="rs-card-meta" style={{ marginTop: 0 }}>
-                  Make and model is enough. It works out what the machine does, how hot
-                  it goes and what its modes are called — an Instant Dutch Oven is four
-                  different stations, not one.
-                </p>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-                  <input
-                    className="rs-pill" style={{ flex: '1 1 140px', minWidth: 0, background: 'var(--md-surface-container-low)', border: 'none' }}
-                    placeholder="Make (e.g. Instant)" aria-label="Make"
-                    value={eqMake} onChange={e => setEqMake(e.target.value)} />
-                  <input
-                    className="rs-pill" style={{ flex: '2 1 200px', minWidth: 0, background: 'var(--md-surface-container-low)', border: 'none' }}
-                    placeholder="Model (e.g. Dutch Oven)" aria-label="Model"
-                    value={eqModel} onChange={e => setEqModel(e.target.value)} />
-                  <button
-                    className="rs-btn-primary"
-                    disabled={eqBusy || !eqMake.trim()}
-                    onClick={async () => {
-                      setEqBusy(true)
-                      try {
-                        await api.post('/household/equipment', { make: eqMake.trim(), model: eqModel.trim() })
-                        setEqMake(''); setEqModel('')
-                        fetchData('equipment')
-                      } catch (err) { setError(err.message) }
-                      finally { setEqBusy(false) }
-                    }}
-                  >{eqBusy ? 'WORKING IT OUT…' : 'ADD'}</button>
-                </div>
-              </div>
-            </div>
+        <div className="animate-page-in" style={{ animationDuration: '300ms' }}>
+          {activeTab === 'cookbook' && renderCookbook()}
+          {activeTab === 'plan' && renderMealPlan()}
+          {activeTab === 'cook' && (
+            <CookPlanTab
+              api={api}
+              activePrep={activePrep}
+              refreshNonce={mealCookNonce}
+              recipes={recipes}
+              mealPlan={mealPlan}
+              onRefreshPrep={() => fetchData('plan')}
+              setActiveTab={setActiveTab}
+            />
           )}
-          {activeTab === 'equipment' && equipment.length === 0 && (
-            <div className="rs-card-meta" style={{ padding: 32, textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
-              Nothing recorded yet. What you add here is what lets the cook plan know
-              whether two dishes can share the air fryer, or have to queue for it.
-            </div>
-          )}
-          {activeTab === 'equipment' && equipment.length > 0 && (
-             <div className="rs-card-flow">
-               {equipment.map((eq, i) => (
-                 <div key={i} className="rs-card animate-page-in" style={{ animationDuration: '400ms' }}>
-                   <div className="rs-card-inner">
-                     <div className="rs-card-head">
-                       <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>{(eq.equipment_type || 'HARDWARE').toUpperCase()}</span>
-                       <span className="material-symbols-rounded" style={{ opacity: 0.2 }}>settings_input_component</span>
-                     </div>
-                     <div className="rs-card-value" style={{ fontSize: '1.3rem', fontWeight: 800 }}>{eq.make}</div>
-                     <div className="rs-card-meta" style={{ marginTop: 6 }}>{eq.model}</div>
-                     {eq.profile_summary && (
-                       <div className="rs-card-meta" style={{ marginTop: 10, fontSize: '0.95rem' }}>
-                         {eq.profile_summary}
-                       </div>
-                     )}
-                     {eq.profile && eq.profile.confident === false && (
-                       <div className="rs-card-meta" style={{ marginTop: 6, fontSize: '0.95rem', color: 'var(--rs-status-warning)' }}>
-                         Not certain of this model — the general limits for the type apply.
-                       </div>
-                     )}
-                     {!eq.panel_confirmed && panelFor !== eq.id && (
-                       <div className="rs-card-meta" style={{ marginTop: 6, fontSize: '0.95rem', color: 'var(--rs-status-warning)' }}>
-                         Guessed from the name, not checked against the machine.
-                       </div>
-                     )}
-                     {panelFor === eq.id ? (
-                       <AppliancePanel
-                         api={api}
-                         equipmentId={eq.id}
-                         onClose={() => setPanelFor(null)}
-                         onSaved={() => { setPanelFor(null); fetchData('equipment') }}
-                       />
-                     ) : (
-                       <button
-                         className="rs-pill"
-                         style={{ marginTop: 12 }}
-                         onClick={() => setPanelFor(eq.id)}
-                       >
-                         <span className="material-symbols-rounded">checklist</span>
-                         {eq.panel_confirmed ? 'PANEL' : 'CHECK THE PANEL'}
-                       </button>
-                     )}
-                   </div>
-                 </div>
-               ))}
-             </div>
-          )}
-          {activeTab === 'banned' && (
-            <div className="rs-card-flow">
-               {banned.map(item => (
-                 <div key={item.id} className="rs-card animate-page-in" style={{ animationDuration: '400ms', padding: 32 }}>
-                    <div className="rs-card-inner">
-                      <div className="rs-card-head">
-                        <span className="rs-card-label" style={{ color: 'var(--md-error)', fontWeight: 900 }}>BANNED</span>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                           <button className="rs-pill" onClick={() => getRecommendations(item.id, item.name)} disabled={recLoading[item.id]}>
-                             <span className="material-symbols-rounded">psychology</span>
-                             {recLoading[item.id] ? 'REASONING...' : 'AI RECOMMEND'}
-                           </button>
-                           <button className="rs-pill" onClick={async () => { await api.delete(`/household/banned/${item.id}`); fetchData('banned'); }}>
-                             <span className="material-symbols-rounded">delete</span>
-                           </button>
-                        </div>
-                      </div>
-                      <div className="rs-card-value" style={{ fontSize: '1.75rem' }}>{item.name}</div>
-                      {item.substitute && <div className="rs-card-meta" style={{ marginTop: 8 }}>PREFEERED SUBSTITUTE: <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{item.substitute.toUpperCase()}</span></div>}
-                      
-                      {recommendations[item.id] && (
-                        <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                           <div className="rs-card-label">AI RECOMMENDATIONS</div>
-                           {recommendations[item.id].map((rec, idx) => (
-                             <div key={idx} className="rs-pill" style={{ justifyContent: 'flex-start', background: 'rgba(0,0,0,0.1)', cursor: 'pointer' }} onClick={async () => {
-                                await api.patch(`/household/banned/${item.id}`, { substitute: rec.name });
-                                fetchData('banned');
-                             }}>
-                                <span style={{ fontWeight: 700, color: 'var(--primary)', marginRight: 12 }}>{rec.name}</span>
-                                <span style={{ fontSize: '0.95rem', opacity: 0.7 }}>{rec.reason}</span>
-                             </div>
-                           ))}
-                        </div>
-                      )}
-                    </div>
-                 </div>
-               ))}
-            </div>
-          )}
+          {activeTab === 'pantry' && renderPantry()}
         </div>
       )}
 
-      {activeRecipe && <RecipeDetailModal recipe={activeRecipe} onClose={() => setActiveRecipe(null)} onSave={(updated) => {
-         setRecipes(recipes.map(r => r.id === updated.id ? updated : r))
-         setActiveRecipe(updated)
-      }} onDelete={async (id) => {
-         await api.delete(`/recipes/${id}`)
-         setRecipes(recipes.filter(r => r.id !== id))
-         setActiveRecipe(null)
-      }} api={api} />}
+      {activeRecipe && (
+        <RecipeDetailModal
+          recipe={activeRecipe}
+          onClose={() => setActiveRecipe(null)}
+          onSave={(updated) => {
+            setRecipes(recipes.map(r => r.id === updated.id ? updated : r))
+            setActiveRecipe(updated)
+          }}
+          onDelete={async (id) => {
+            await api.delete(`/recipes/${id}`)
+            setRecipes(recipes.filter(r => r.id !== id))
+            setActiveRecipe(null)
+          }}
+          onCook={handleCookRecipe}
+          api={api}
+        />
+      )}
+
       {adjustItem && (
         <div className="rs-modal-overlay">
           <div className="rs-modal" style={{ maxWidth: 400 }}>
@@ -1118,7 +1226,7 @@ export default function CulinaryPage({ setAction }) {
               <button className="rs-btn-primary" style={{ flex: 1 }} onClick={async () => {
                 await api.put(`/stockroom/${adjustItem.id}`, { quantity: adjustItem.quantity });
                 setAdjustItem(null);
-                fetchData('stockroom');
+                fetchData('pantry');
               }}>SAVE</button>
               <button className="rs-pill" onClick={() => setAdjustItem(null)}>CANCEL</button>
             </div>

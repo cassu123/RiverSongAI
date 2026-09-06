@@ -711,3 +711,220 @@
   color: #ef4444;
 }
 
+/* ── 10. Kitchen Navigation & Guided Cook Mode ──────────────────────────── */
+.gh-kitchen-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(16, 22, 34, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.5);
+  margin-bottom: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.gh-kitchen-nav-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.gh-kitchen-nav-btn {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(220, 230, 245, 0.7);
+  background: transparent;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  white-space: nowrap;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.gh-kitchen-nav-btn .material-symbols-rounded {
+  font-size: 20px;
+}
+
+.gh-kitchen-nav-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.gh-kitchen-nav-btn.is-active {
+  background: rgba(0, 229, 255, 0.16);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  color: #96cbff;
+  box-shadow: 0 0 16px -4px rgba(0, 229, 255, 0.3);
+}
+
+.gh-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00e5ff;
+  box-shadow: 0 0 8px #00e5ff;
+  animation: gh-pulse 2s infinite;
+}
+
+/* Guided Cook Hero & Progress Stepper */
+.gh-cook-flow-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.gh-cook-flow-step {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(220, 230, 245, 0.6);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease;
+}
+
+.gh-cook-flow-step.is-active {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: rgba(0, 229, 255, 0.4);
+  color: #96cbff;
+}
+
+.gh-cook-hero-card {
+  background: rgba(18, 26, 40, 0.85);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+.gh-cook-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.gh-cook-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.gh-cook-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0071dc, #00e5ff);
+  border-radius: 999px;
+  transition: width 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.gh-cook-step-text {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #fff;
+  letter-spacing: -0.01em;
+  margin-bottom: 24px;
+}
+
+.gh-cook-timer-widget {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 18px 24px;
+  border-radius: 20px;
+  background: rgba(0, 229, 255, 0.08);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  margin-bottom: 24px;
+}
+
+.gh-cook-timer-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #00e5ff;
+  letter-spacing: 0.02em;
+}
+
+.gh-cook-touch-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.gh-cook-btn-prev {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 24px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(220, 230, 245, 0.85);
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.gh-cook-btn-next {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 56px;
+  padding: 0 28px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #0071dc, #00e5ff);
+  color: #002236;
+  font-size: 1.05rem;
+  font-weight: 700;
+  box-shadow: 0 8px 24px -4px rgba(0, 229, 255, 0.4);
+  transition: all 0.2s ease;
+  flex: 2;
+}
+
+.gh-cook-btn-next:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px -4px rgba(0, 229, 255, 0.55);
+}
+
+.gh-cook-btn-next:active,
+.gh-cook-btn-prev:active {
+  transform: scale(0.98);
+}
+
+
