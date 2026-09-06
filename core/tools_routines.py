@@ -20,6 +20,16 @@ _background_tasks: set = set()
 
 
 async def _exec_create_routine(args: dict, user_id: str) -> str:
+    """
+    Create an enabled simple routine for a user.
+    
+    Parameters:
+    	args (dict): Routine configuration, including its name, trigger, action description, days, and severity.
+    	user_id (str): Identifier of the user who owns the routine.
+    
+    Returns:
+    	str: A confirmation message containing the routine name and generated ID.
+    """
     name = args.get("name", "Untitled Routine")
     trigger = args.get("trigger", "manual")
     prompt = args.get("action_description", "")
@@ -49,6 +59,15 @@ async def _exec_create_routine(args: dict, user_id: str) -> str:
 
 
 async def _exec_list_routines(user_id: str) -> str:
+    """
+    List the user's configured routines in a human-readable format.
+    
+    Parameters:
+    	user_id (str): Identifier of the user whose routines to list
+    
+    Returns:
+    	str: A formatted routine list, or a message indicating that no routines are configured
+    """
     store = get_shared_store()
     routines = await store.list_routines(user_id)
     if not routines:
@@ -69,6 +88,16 @@ async def _exec_list_routines(user_id: str) -> str:
 
 
 async def _exec_update_routine(args: dict, user_id: str) -> str:
+    """
+    Update the specified routine with the provided fields.
+    
+    Parameters:
+    	args (dict): Contains the routine ID and any fields to update.
+    	user_id (str): Identifies the routine owner.
+    
+    Returns:
+    	str: A status message indicating whether the routine was updated or why the request could not be completed.
+    """
     rid = args.get("routine_id")
     if not rid:
         return "routine_id is required."
@@ -100,6 +129,16 @@ async def _exec_update_routine(args: dict, user_id: str) -> str:
 
 
 async def _exec_delete_routine(args: dict, user_id: str) -> str:
+    """
+    Delete a user's routine by its identifier.
+    
+    Parameters:
+        args (dict): Arguments containing the required ``routine_id``.
+        user_id (str): Identifier of the routine owner.
+    
+    Returns:
+        str: A message indicating whether the routine was deleted or not found.
+    """
     rid = args.get("routine_id")
     if not rid:
         return "routine_id is required."
@@ -111,6 +150,16 @@ async def _exec_delete_routine(args: dict, user_id: str) -> str:
 
 
 async def _exec_run_routine_now(args: dict, user_id: str) -> str:
+    """
+    Trigger a user's simple routine for immediate background execution.
+    
+    Parameters:
+    	args (dict): Arguments containing the routine identifier under `"routine_id"`.
+    	user_id (str): Identifier of the routine owner.
+    
+    Returns:
+    	str: A status message indicating whether the routine was triggered or why it could not be triggered.
+    """
     rid = args.get("routine_id")
     if not rid:
         return "routine_id is required."

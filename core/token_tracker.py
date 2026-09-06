@@ -127,12 +127,10 @@ def _db_path() -> Path:
 
 def _connect() -> sqlite3.Connection:
     """
-    Return a thread-local SQLite connection with WAL enabled.
-
-    Held for the life of the thread so the per-call open/close cost
-    (and the per-connection mutex contention that comes with it) is
-    paid only once. WAL lets readers run while a writer holds the lock,
-    which matters under concurrent LLM-call bursts.
+    Provide a thread-local SQLite connection configured for concurrent access.
+    
+    Returns:
+    	sqlite3.Connection: The cached connection for the current thread.
     """
     conn = getattr(_local, "conn", None)
     if conn is not None:

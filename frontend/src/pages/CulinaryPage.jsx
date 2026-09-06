@@ -17,7 +17,13 @@ import { API_BASE } from '../lib/api.js'
  * 4. Pantry & Groceries: Multi-store shopping list, stockroom inventory, and barcode scanning.
  */
 
-// -- Helpers --
+/**
+ * Display a five-star rating with optional interactive selection.
+ * @param {number} value - The current rating.
+ * @param {number} [size=14] - The star font size in pixels.
+ * @param {(rating: number) => void} [onChange] - Callback invoked with the selected rating.
+ * @return {JSX.Element} The rendered star rating.
+ */
 function StarRating({ value, size = 14, onChange }) {
   const [hover, setHover] = useState(0)
   const filled = hover || value || 0
@@ -41,6 +47,13 @@ function StarRating({ value, size = 14, onChange }) {
   )
 }
 
+/**
+ * Display the ingredients required for a preparation session and provide shopping-list and Walmart export actions.
+ * @param {Array} items - Ingredients required for the session.
+ * @param {string|number} sessionId - Identifier of the preparation session.
+ * @param {Function} onPushed - Callback invoked when items are added to the shopping list.
+ * @param {Object} api - Authenticated API client used for shopping-list and Walmart requests.
+ */
 function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
   const [exporting, setExporting] = useState(false);
   const [exportResult, setExportResult] = useState(null);
@@ -123,6 +136,13 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
   )
 }
 
+/**
+ * Provides controls for scaling a staged recipe and selecting its measurement system.
+ * @param {Object} props - Component properties.
+ * @param {Object} props.entry - Staged recipe entry containing its session and recipe identifiers.
+ * @param {Object} props.recipe - Recipe providing the default serving count.
+ * @param {Function} props.onUpdate - Callback invoked after scaling is applied.
+ */
 function PrepAdjuster({ entry, recipe, api, onUpdate }) {
   const [scaling, setScaling] = useState(false)
   const [target, setTarget] = useState(entry.servings_target || recipe?.servings || 4)
@@ -153,6 +173,14 @@ function PrepAdjuster({ entry, recipe, api, onUpdate }) {
   )
 }
 
+/**
+ * Displays recipe details with options to edit, rate, adapt, delete, or cook the recipe.
+ * @param {Object} recipe - Recipe data displayed or edited in the modal.
+ * @param {Function} onClose - Closes the modal.
+ * @param {Function} onSave - Receives the updated recipe after a successful change.
+ * @param {Function} onDelete - Deletes the recipe by its identifier.
+ * @param {Function} onCook - Starts cooking the recipe in the Cook Guide.
+ */
 function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
   const [isEditing, setIsEditing] = useState(false)
   const [edited, setEdited] = useState({ ...recipe, tags_str: (recipe.tags || []).join(', ') })
@@ -443,6 +471,11 @@ function useApi(token) {
   }), [headers])
 }
 
+/**
+ * Provides the kitchen hub for recipes, meal planning, cooking guidance, and pantry management.
+ * @param {Function} setAction - Callback used to control the global action bar.
+ * @return {JSX.Element} The rendered kitchen hub.
+ */
 export default function CulinaryPage({ setAction }) {
   const { token } = useAuth()
   const api = useApi(token)

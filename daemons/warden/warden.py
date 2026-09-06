@@ -51,6 +51,13 @@ class WardenDaemon(BaseDaemon):
             return False
 
     def _process_frame(self, frame, camera_name: str):
+        """
+        Process a camera frame and log detected objects with their confidence scores.
+        
+        Parameters:
+            frame: The image frame to analyze.
+            camera_name (str): The name used to identify the camera in detection logs.
+        """
         if self.model is None:
             return
 
@@ -73,6 +80,13 @@ class WardenDaemon(BaseDaemon):
             logger.error(f"Inference error on camera {camera_name}: {e}")
 
     def _camera_loop_sync(self, name: str, url: str):
+        """
+        Continuously captures frames from an RTSP camera and processes periodic frames while the daemon is running.
+        
+        Parameters:
+            name (str): Name used to identify the camera in logs and detection processing.
+            url (str): RTSP stream URL.
+        """
         logger.info(f"Starting capture loop for camera '{name}' at URL: {url}")
         cap = cv2.VideoCapture(url)
         
@@ -110,6 +124,7 @@ class WardenDaemon(BaseDaemon):
             logger.info(f"Camera loop for '{name}' terminating.")
 
     async def _camera_task(self, name: str, url: str):
+        """Runs a camera processing loop without blocking the asynchronous event loop."""
         loop = asyncio.get_running_loop()
         # Run blocking cv2/YOLO code in an executor thread
         await loop.run_in_executor(None, self._camera_loop_sync, name, url)

@@ -300,6 +300,15 @@ class CommandBody(BaseModel):
 
 @router.post("/units/claim", dependencies=[Depends(require_role("admin"))])
 async def claim_unit(body: ClaimBody):
+    """
+    Register a Vexa driving unit and issue its one-time authentication token.
+    
+    Parameters:
+    	body (ClaimBody): Unit name and optional rider assignment.
+    
+    Returns:
+    	dict: The generated unit identifier and plaintext authentication token.
+    """
     store = get_shared_store()
     await _ensure_schema(store)
     unit_id = uuid.uuid4().hex[:12]
@@ -317,6 +326,12 @@ async def claim_unit(body: ClaimBody):
 
 @router.get("/units", dependencies=[Depends(require_role("admin"))])
 async def list_units():
+    """
+    List registered driving units in registration order.
+    
+    Returns:
+    	dict: A mapping containing the unit records under the `"units"` key.
+    """
     store = get_shared_store()
     await _ensure_schema(store)
     rows = await store.execute_read_async(
@@ -330,7 +345,18 @@ async def list_units():
 @router.put("/units/{unit_id}/rider",
             dependencies=[Depends(require_role("admin"))])
 async def assign_rider(unit_id: str, body: RiderAssignBody):
-    """Bind the rider a unit acts for. Admin-only — see session_start."""
+    """Assign a rider to a driving unit.
+    
+    Parameters:
+        unit_id (str): Identifier of the unit to update.
+        body (RiderAssignBody): Rider assignment details.
+    
+    Returns:
+        dict: A status response confirming the assignment.
+    
+    Raises:
+        HTTPException: If the unit does not exist.
+    """
     store = get_shared_store()
     await _ensure_schema(store)
     unit = await store.execute_read_one_async(
@@ -346,6 +372,15 @@ async def assign_rider(unit_id: str, body: RiderAssignBody):
 @router.delete("/units/{unit_id}",
                dependencies=[Depends(require_role("admin"))])
 async def delete_unit(unit_id: str):
+    """
+    Delete a registered driving unit.
+    
+    Parameters:
+    	unit_id (str): Identifier of the unit to delete.
+    
+    Returns:
+    	dict: A status response indicating that the deletion completed.
+    """
     store = get_shared_store()
     await _ensure_schema(store)
     await store.execute_write_async(
@@ -356,6 +391,19 @@ async def delete_unit(unit_id: str):
 @router.post("/units/{unit_id}/command",
              dependencies=[Depends(require_role("admin"))])
 async def queue_command(unit_id: str, body: CommandBody):
+    """
+    Queue a command for a registered driving unit.
+    
+    Parameters:
+        unit_id (str): Identifier of the target unit.
+        body (CommandBody): Command type and payload to queue.
+    
+    Returns:
+        dict: A mapping containing the queued command identifier.
+    
+    Raises:
+        HTTPException: If the unit does not exist.
+    """
     store = get_shared_store()
     await _ensure_schema(store)
     unit = await store.execute_read_one_async(
@@ -369,6 +417,16 @@ async def queue_command(unit_id: str, body: CommandBody):
 @router.get("/units/{unit_id}/sessions",
             dependencies=[Depends(require_role("admin"))])
 async def list_sessions(unit_id: str, limit: int = 20):
+    """
+    List recent driving sessions for a unit.
+    
+    Parameters:
+    	unit_id (str): Identifier of the unit whose sessions are requested.
+    	limit (int): Maximum number of sessions to include, bounded between 1 and 200.
+    
+    Returns:
+    	dict: A mapping containing the sessions, with stored summaries decoded from JSON when valid.
+    """
     store = get_shared_store()
     await _ensure_schema(store)
     rows = await store.execute_read_async(
@@ -391,7 +449,23 @@ async def list_sessions(unit_id: str, limit: int = 20):
 @router.post("/session/start")
 async def session_start(body: SessionStartBody,
                         x_unit_token: Optional[str] = Header(default=None)):
-    store = get_shared_store()
+    """
+                        Start a driving session for the unit's assigned rider.
+                        
+                        Parameters:
+                            body (SessionStartBody): Session details, including the unit, vehicle type,
+                                and optional rider identifier.
+                            x_unit_token (Optional[str]): Unit authentication token from the request
+                                header.
+                        
+                        Returns:
+                            dict: The new session identifier and its start timestamp.
+                        
+                        Raises:
+                            HTTPException: If the unit is unauthenticated, has no assigned rider, or
+                                the supplied rider does not match the unit's assigned rider.
+                        """
+                        store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_unit(store, body.unit_id, x_unit_token)
 
@@ -428,7 +502,19 @@ async def session_start(body: SessionStartBody,
 @router.post("/session/end")
 async def session_end(body: SessionEndBody,
                       x_unit_token: Optional[str] = Header(default=None)):
-    store = get_shared_store()
+    """
+                      Complete a driving session and finalize its telemetry summary.
+                      
+                      Parameters:
+                          body (SessionEndBody): Contains the session identifier to complete.
+                      
+                      Returns:
+                          dict: The completion timestamp and whether a telemetry summary was created.
+                      
+                      Raises:
+                          HTTPException: If the session does not exist or the unit token is invalid.
+                      """
+                      store = get_shared_store()
     await _ensure_schema(store)
     session = await store.execute_read_one_async(
         "SELECT * FROM vexa_sessions WHERE session_id=?", (body.session_id,))
@@ -478,7 +564,20 @@ async def session_end(body: SessionEndBody,
 @router.post("/telemetry")
 async def post_telemetry(body: TelemetryBody,
                          x_unit_token: Optional[str] = Header(default=None)):
-    store = get_shared_store()
+    """
+                         Store telemetry samples for an authenticated driving session, including samples submitted after the session has ended.
+                         
+                         Parameters:
+                             body (TelemetryBody): The session identifier and telemetry samples to store.
+                             x_unit_token (Optional[str]): Authentication token for the unit.
+                         
+                         Returns:
+                             dict: The number of accepted samples.
+                         
+                         Raises:
+                             HTTPException: If the session is not found, unit authentication fails, or the batch exceeds the maximum size.
+                         """
+                         store = get_shared_store()
     await _ensure_schema(store)
     session = await store.execute_read_one_async(
         "SELECT unit_id FROM vexa_sessions WHERE session_id=?",
@@ -507,7 +606,17 @@ async def post_telemetry(body: TelemetryBody,
 @router.get("/commands/poll")
 async def poll_commands(unit_id: str,
                         x_unit_token: Optional[str] = Header(default=None)):
-    store = get_shared_store()
+    """
+                        Retrieve pending commands for a driving unit and mark them as delivered.
+                        
+                        Parameters:
+                            unit_id (str): Identifier of the driving unit.
+                            x_unit_token (Optional[str]): Unit authentication token.
+                        
+                        Returns:
+                            dict: A mapping containing the unit's commands in issue order.
+                        """
+                        store = get_shared_store()
     await _ensure_schema(store)
     await _verify_unit(store, unit_id, x_unit_token)
     rows = await store.execute_read_async(
@@ -537,7 +646,17 @@ async def poll_commands(unit_id: str,
 @router.post("/event")
 async def post_event(body: EventBody,
                      x_unit_token: Optional[str] = Header(default=None)):
-    store = get_shared_store()
+    """
+                     Record a device event and process supported voice-task or safety-alert requests.
+                     
+                     Parameters:
+                         body (EventBody): Event details, including the unit identifier, event type, and payload.
+                         x_unit_token (Optional[str]): Unit authentication token supplied in the request header.
+                     
+                     Returns:
+                         dict: An acknowledgement indicating that the event was received.
+                     """
+                     store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_unit(store, body.unit_id, x_unit_token)
     await store.execute_write_async(
@@ -583,7 +702,19 @@ def _get_tts():
 @router.post("/tts")
 async def tts(body: TtsBody,
               x_unit_token: Optional[str] = Header(default=None)):
-    store = get_shared_store()
+    """
+              Synthesize the requested text into WAV audio for an authenticated unit.
+              
+              Parameters:
+              	body (TtsBody): The unit identifier and text to synthesize.
+              
+              Returns:
+              	HTTP response containing the synthesized WAV audio.
+              
+              Raises:
+              	HTTPException: With status 503 if the TTS engine is unavailable or synthesis fails.
+              """
+              store = get_shared_store()
     await _ensure_schema(store)
     await _verify_unit(store, body.unit_id, x_unit_token)
     try:

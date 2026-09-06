@@ -3,24 +3,9 @@ import Grade from './Grade.jsx'
 import useCanvasEffect from './useCanvasEffect.js'
 
 /**
- * Stage — fixed full-viewport photographic backdrop, swaps by environment.
- *
- * Each scene is a photographic engine: a base landscape image (fallback
- * gradient if the image file is absent) + atmospheric overlays + a small
- * Canvas 2D particle field tuned to that world.
- *
- * Drop base images into frontend/public/ as:
- *   caladan_base.jpg     atreides
- *   giedi_base.jpg       harkonnen
- *   arrakis_base.jpg     arrakis
- *   forerunner_base.jpg  forerunner
- *   unsc_base.jpg        unsc
- *   spires_base.jpg      spires
- *   garden_base.jpg      garden
- *   corpo_base.jpg       corpo
- *   pacifica_base.jpg    pacifica
- *
- * See public/PREVIEW_IMAGE_PROMPTS.md for the generation prompts.
+ * Render the photographic environment backdrop and grading overlay.
+ * @param {string} environment - The environment identifier used to select the scene.
+ * @param {boolean} [paused=false] - Whether to hide the selected scene.
  */
 export default function Stage({ environment, paused = false }) {
   const Scene = SCENES[environment] || SCENES.atreides

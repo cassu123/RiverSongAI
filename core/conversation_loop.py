@@ -134,7 +134,18 @@ class FallbackLLMProvider(LLMProvider):
 
     async def chat_with_tools(
             self, messages: List[dict], tools: List[dict], system: str = "") -> dict:
-        try:
+        """
+            Generate a tool-enabled response using the primary provider with secondary-provider fallback.
+            
+            Parameters:
+            	messages (List[dict]): Conversation messages to provide to the model.
+            	tools (List[dict]): Tools available to the model.
+            	system (str): Optional system instruction.
+            
+            Returns:
+            	dict: The provider's tool response, or an empty dictionary when neither provider can respond.
+            """
+            try:
             if hasattr(self.primary, "chat_with_tools"):
                 res = await self.primary.chat_with_tools(messages, tools, system=system)
                 if res:
@@ -150,6 +161,15 @@ class FallbackLLMProvider(LLMProvider):
         return {}
 
     async def chat(self, messages: List[dict]) -> str:
+        """
+        Generate a response for the conversation messages using the available language model providers.
+        
+        Parameters:
+        	messages (List[dict]): Conversation messages to provide to the language model.
+        
+        Returns:
+        	str: Generated response text.
+        """
         try:
             return await self.primary.chat(messages)
         except Exception as exc:

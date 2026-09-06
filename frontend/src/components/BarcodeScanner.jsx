@@ -33,6 +33,14 @@ const DEFAULT_FORMATS = [
   BarcodeFormat.QR_CODE,
 ]
 
+/**
+ * Render a full-screen modal that scans barcodes using the device camera.
+ * @param {Function} onDetected - Called with the decoded barcode value and format.
+ * @param {Function} [onClose] - Called when the scanner is closed.
+ * @param {Array} [formats] - Barcode formats to scan for.
+ * @param {boolean} [continuous=false] - Keeps scanning open after a barcode is detected.
+ * @return {JSX.Element} The barcode scanner modal.
+ */
 export default function BarcodeScanner({ onDetected, onClose, formats, continuous = false }) {
   const videoRef = useRef(null)
   const readerRef = useRef(null)

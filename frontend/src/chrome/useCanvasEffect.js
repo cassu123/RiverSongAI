@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react'
 
 /**
- * Shared boilerplate for every Stage scene's particle field.
+ * Manage a responsive, animated canvas particle field.
  *
- * Caller passes an init(ctx, w, h) that returns a step() function.
- * The hook handles ResizeObserver, devicePixelRatio cap (1.5 — S24 Ultra
- * sweet spot), RAF loop, visibility pause, and cleanup. Each scene only
- * writes its particle logic; the engine plumbing lives here.
+ * Reinitializes the field when the canvas size changes, caps the device pixel
+ * ratio at 1.5, and pauses animation while the document is hidden.
+ *
+ * @param {React.RefObject<HTMLCanvasElement>} canvasRef - Ref to the canvas element.
+ * @param {function(CanvasRenderingContext2D, number, number): function} init - Initializes the particle field and returns a frame-step function.
  */
 export default function useCanvasEffect(canvasRef, init) {
   const initRef = useRef(init)
@@ -37,6 +38,9 @@ export default function useCanvasEffect(canvasRef, init) {
     ro.observe(canvas)
     resize()
 
+    /**
+     * Advances the canvas animation while the document is visible.
+     */
     function loop() {
       if (document.hidden) {
         raf = 0

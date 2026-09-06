@@ -200,6 +200,20 @@ async def signup(request: Request, body: SignupBody):
 @router.post("/login")
 @limiter.limit(get_settings().rate_limit_auth_login)
 async def login(request: Request, response: Response, body: LoginBody):
+    """
+    Authenticate a user and begin a session or issue a two-factor authentication challenge.
+    
+    Parameters:
+    	request (Request): The incoming request containing the application store.
+    	response (Response): The response used to set session cookies.
+    	body (LoginBody): Login credentials containing the user's email and password.
+    
+    Returns:
+    	dict: A two-factor challenge token when 2FA is enabled, or an access token and user details for a completed login.
+    
+    Raises:
+    	HTTPException: If the credentials are invalid or the account is pending approval.
+    """
     store = _get_store(request)
     user = await store.get_user_by_email(body.email.lower(), include_password_hash=True)
 

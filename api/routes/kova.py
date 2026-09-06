@@ -161,13 +161,24 @@ async def dispatch_chore(chore_type: str,
                          robot_id: Optional[str] = None,
                          ) -> Tuple[Optional[str], Optional[dict]]:
     """
-    Queue a chore for a Kova unit. Used by the admin task endpoint and the
-    kova_chores voice intent (core/intent_router.py).
-
-    Picks the target unit when robot_id is not given: online units first,
-    then most recently seen. Returns (task_id, unit) or (None, None) when
-    no unit is available.
-    """
+                         Queue a chore for a Kova unit.
+                         
+                         Parameters:
+                             chore_type (str): Supported chore category to queue.
+                             room (Optional[str]): Room where the chore should be performed.
+                             priority (int): Task priority, clamped to the range 1–10.
+                             source (str): Origin of the task request.
+                             requested_by (str): Identifier of the requester.
+                             robot_id (Optional[str]): Target unit identifier. If omitted, selects the
+                                 online unit with the most recent heartbeat.
+                         
+                         Returns:
+                             Tuple[Optional[str], Optional[dict]]: The task ID and target unit, or
+                             (None, None) when no unit is available.
+                         
+                         Raises:
+                             ValueError: If `chore_type` is not supported.
+                         """
     if chore_type not in CHORE_TYPES:
         raise ValueError(f"Unknown chore type '{chore_type}'")
     store = get_shared_store()
@@ -253,6 +264,15 @@ class QueueTaskBody(BaseModel):
 
 @router.post("/units/claim", dependencies=[Depends(require_role("admin"))])
 async def claim_unit(body: ClaimBody):
+    """
+    Claims a Kova unit and generates credentials for device authentication.
+    
+    Parameters:
+    	body (ClaimBody): Unit identifier and optional display name.
+    
+    Returns:
+    	dict: The claimed unit's identifier and generated API key.
+    """
     store = get_shared_store()
     await _ensure_schema(store)
     existing = await store.execute_read_one_async(
@@ -271,6 +291,12 @@ async def claim_unit(body: ClaimBody):
 
 @router.get("/units", dependencies=[Depends(require_role("admin"))])
 async def list_units():
+    """
+    List registered Kova units with their current status and heartbeat information.
+    
+    Returns:
+    	dict: A mapping containing the units ordered by claim time.
+    """
     store = get_shared_store()
     await _ensure_schema(store)
     rows = await store.execute_read_async(
@@ -290,6 +316,14 @@ async def list_units():
 @router.delete("/units/{robot_id}",
                dependencies=[Depends(require_role("admin"))])
 async def delete_unit(robot_id: str):
+    """Delete the registered unit identified by the robot ID.
+    
+    Parameters:
+    	robot_id (str): Identifier of the unit to delete.
+    
+    Returns:
+    	dict: A status response indicating that the operation completed.
+    """
     store = get_shared_store()
     await _ensure_schema(store)
     await store.execute_write_async(
@@ -316,6 +350,16 @@ async def queue_task(robot_id: str, body: QueueTaskBody):
 @router.get("/units/{robot_id}/alerts",
             dependencies=[Depends(require_role("admin"))])
 async def list_alerts(robot_id: str, limit: int = 50):
+    """
+    List recent alerts reported by a Kova robot.
+    
+    Parameters:
+    	robot_id (str): Identifier of the robot whose alerts are requested.
+    	limit (int): Maximum number of alerts to return, capped at 500.
+    
+    Returns:
+    	dict: A mapping containing the robot's alerts ordered from newest to oldest.
+    """
     store = get_shared_store()
     await _ensure_schema(store)
     rows = await store.execute_read_async(
@@ -334,7 +378,16 @@ async def list_alerts(robot_id: str, limit: int = 50):
 async def register_unit(body: RegisterBody,
                         x_kova_unit: Optional[str] = Header(default=None),
                         authorization: Optional[str] = Header(default=None)):
-    store = get_shared_store()
+    """
+                        Register an authenticated Kova unit and mark it as starting up.
+                        
+                        Parameters:
+                            body (RegisterBody): Registration data containing the unit's robot ID.
+                        
+                        Returns:
+                            dict: A success status and the registered robot ID.
+                        """
+                        store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, body.robot_id)
@@ -352,7 +405,16 @@ async def register_unit(body: RegisterBody,
 async def deregister_unit(body: RegisterBody,
                           x_kova_unit: Optional[str] = Header(default=None),
                           authorization: Optional[str] = Header(default=None)):
-    store = get_shared_store()
+    """
+                          Mark an authenticated Kova unit as offline and shut down.
+                          
+                          Parameters:
+                              body (RegisterBody): Request containing the robot identifier to deregister.
+                          
+                          Returns:
+                              dict: A status response indicating successful deregistration.
+                          """
+                          store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, body.robot_id)
@@ -369,7 +431,16 @@ async def deregister_unit(body: RegisterBody,
 async def heartbeat(body: HeartbeatBody,
                     x_kova_unit: Optional[str] = Header(default=None),
                     authorization: Optional[str] = Header(default=None)):
-    store = get_shared_store()
+    """
+                    Record a device heartbeat and update the unit's current status.
+                    
+                    Parameters:
+                        body (HeartbeatBody): Heartbeat data containing the robot ID, state, safety level, battery percentage, timestamp, and optional extra fields.
+                    
+                    Returns:
+                        dict: A status response indicating that the heartbeat was accepted.
+                    """
+                    store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, body.robot_id)
@@ -388,7 +459,14 @@ async def heartbeat(body: HeartbeatBody,
 async def poll_tasks(robot_id: str,
                      x_kova_unit: Optional[str] = Header(default=None),
                      authorization: Optional[str] = Header(default=None)):
-    store = get_shared_store()
+    """
+                     Retrieve queued tasks for the authenticated robot and mark them as sent.
+                     
+                     Returns:
+                     	dict: A mapping containing the robot's queued tasks, ordered by descending
+                     	priority and ascending creation time.
+                     """
+                     store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, robot_id)
@@ -429,7 +507,17 @@ async def poll_tasks(robot_id: str,
 async def report_task_status(task_id: str, body: TaskStatusBody,
                              x_kova_unit: Optional[str] = Header(default=None),
                              authorization: Optional[str] = Header(default=None)):
-    store = get_shared_store()
+    """
+                             Update the status and message for a task owned by the authenticated unit.
+                             
+                             Parameters:
+                                 task_id (str): Identifier of the task to update.
+                                 body (TaskStatusBody): Task status report containing the robot ID, status, and message.
+                             
+                             Returns:
+                                 dict: Acknowledgment indicating that the task status was updated.
+                             """
+                             store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, body.robot_id)
@@ -457,7 +545,16 @@ async def report_task_status(task_id: str, body: TaskStatusBody,
 async def post_telemetry(body: TelemetryBody,
                          x_kova_unit: Optional[str] = Header(default=None),
                          authorization: Optional[str] = Header(default=None)):
-    store = get_shared_store()
+    """
+                         Record telemetry metrics for an authenticated Kova unit.
+                         
+                         Parameters:
+                         	body (TelemetryBody): Telemetry data containing the unit identifier and metrics.
+                         
+                         Returns:
+                         	dict: A status response indicating that the telemetry was recorded.
+                         """
+                         store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, body.robot_id)
@@ -478,7 +575,16 @@ async def post_telemetry(body: TelemetryBody,
 async def post_alert(body: AlertBody,
                      x_kova_unit: Optional[str] = Header(default=None),
                      authorization: Optional[str] = Header(default=None)):
-    store = get_shared_store()
+    """
+                     Record a device alert and notify the appropriate monitoring systems.
+                     
+                     Parameters:
+                         body (AlertBody): Alert details, including the unit identifier, severity, and message.
+                     
+                     Returns:
+                         dict: A status response indicating that the alert was recorded.
+                     """
+                     store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, body.robot_id)

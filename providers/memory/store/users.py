@@ -72,7 +72,8 @@ class UsersStoreMixin(StoreProtocol):
 
     def _sync_create_user(self, id: str, email: str, password_hash: str,
                           display_name: str, role: str, is_approved: bool) -> None:
-        conn = self._get_conn()
+        """Create a user account with the supplied identity, credentials, role, approval state, and timestamps."""
+                          conn = self._get_conn()
         now = _now_str()
         conn.execute(
             "INSERT INTO users (id, email, password_hash, display_name, role, is_approved, force_password_change, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
@@ -82,9 +83,28 @@ class UsersStoreMixin(StoreProtocol):
         conn.commit()
 
     async def get_user_by_email(self, email: str, include_password_hash: bool = False) -> Optional[dict]:
+        """Retrieve a user account by email address.
+        
+        Parameters:
+        	email (str): The email address to search for.
+        	include_password_hash (bool): Whether to include the stored password hash in the result.
+        
+        Returns:
+        	Optional[dict]: The matching user account, or None if no account has that email address.
+        """
         return await self._run(self._sync_get_user_by_email, email, include_password_hash)
 
     def _sync_get_user_by_email(self, email: str, include_password_hash: bool = False) -> Optional[dict]:
+        """
+        Retrieve a user by email address.
+        
+        Parameters:
+        	email (str): The email address to search for.
+        	include_password_hash (bool): Whether to include the user's password hash in the result.
+        
+        Returns:
+        	Optional[dict]: The user's account details, or None if no matching user exists.
+        """
         conn = self._get_conn()
         row = conn.execute(
             "SELECT id, email, password_hash, display_name, role, is_approved, force_password_change, created_at FROM users WHERE email=?",
@@ -106,6 +126,11 @@ class UsersStoreMixin(StoreProtocol):
         return data
         
     async def get_all_users(self) -> list[dict]:
+        """Retrieve all users with normalized account status and profile fields.
+        
+        Returns:
+        	list[dict]: The users and their normalized display-name, active-state, approval, and password-change fields.
+        """
         return await self._run(self._sync_get_all_users)
 
     def _sync_get_all_users(self) -> list[dict]:
@@ -423,6 +448,15 @@ class UsersStoreMixin(StoreProtocol):
         return await self._run(self._sync_get_user_by_google_id, google_id)
 
     def _sync_get_user_by_google_id(self, google_id: str) -> Optional[dict]:
+        """
+        Retrieve a user linked to the specified Google account.
+        
+        Parameters:
+        	google_id (str): Google account identifier.
+        
+        Returns:
+        	dict or None: User account details, or None if no linked user exists.
+        """
         conn = self._get_conn()
         row = conn.execute(
             "SELECT id, email, display_name, role, is_approved, created_at, google_id, google_email FROM users WHERE google_id=?",
@@ -435,7 +469,14 @@ class UsersStoreMixin(StoreProtocol):
 
     async def link_google_account(
             self, user_id: str, google_id: str, google_email: str) -> None:
-        await self._run(self._sync_link_google_account, user_id, google_id, google_email)
+        """Associate a user's account with Google identity information.
+            
+            Parameters:
+            	user_id (str): Identifier of the user to link.
+            	google_id (str): Google account identifier.
+            	google_email (str): Email address associated with the Google account.
+            """
+            await self._run(self._sync_link_google_account, user_id, google_id, google_email)
 
     def _sync_link_google_account(
             self, user_id: str, google_id: str, google_email: str) -> None:

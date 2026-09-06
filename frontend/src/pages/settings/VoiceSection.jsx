@@ -13,6 +13,12 @@ const ACCENT_ORDER   = ['American', 'British', 'British (Northern)']
 const ENGINE_LABELS  = { piper: 'Piper', kokoro: 'Kokoro · CPU' }
 const ENGINE_COLORS  = { piper: 'var(--md-outline)', kokoro: 'var(--md-tertiary)' }
 
+/**
+ * Play the audio preview for a voice.
+ * @param {string} voice_id - The voice identifier.
+ * @param {string} [token] - Optional bearer token for authentication.
+ * @throws {Error} If the preview request or audio playback fails.
+ */
 async function playVoicePreview(voice_id, token) {
   const res = await fetch(`/api/tts/preview/${voice_id}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -45,6 +51,15 @@ async function playVoicePreview(voice_id, token) {
   }
 }
 
+/**
+ * Renders voice provider status, filtering controls, previews, and voice selection controls.
+ * @param {Object} voiceSettings - Voice provider configuration, available voices, and active voice.
+ * @param {string} [token] - Optional bearer token for authenticated voice requests.
+ * @param {Object} [user] - Current user, used to determine administrative access.
+ * @param {Object} [elevenLabsSettings] - ElevenLabs configuration and API key status.
+ * @param {Function} onSwitched - Callback invoked after successfully switching voices.
+ * @return {JSX.Element} The voice settings interface or a message indicating that TTS is disabled.
+ */
 export default function VoiceSection({ voiceSettings, token, user, elevenLabsSettings, onSaveElevenLabs, onSwitched }) {
   const [switching, setSwitching] = useState(null)
   const [switchMsg, setSwitchMsg] = useState('')

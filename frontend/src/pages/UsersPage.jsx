@@ -3,7 +3,10 @@ import { useAuth } from '../context/AuthContext'
 import Sheet from '../chrome/Sheet'
 
 /**
- * UsersPage — Admin user management
+ * Manage household users and administrator account controls.
+ * @param {Object} props - Component properties.
+ * @param {boolean} [props.embedded=false] - Hides the page heading when the component is embedded in another view.
+ * @return {JSX.Element} The user management interface or an administrator-clearance notice.
  */
 
 export default function UsersPage({ embedded = false }) {

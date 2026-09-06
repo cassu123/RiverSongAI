@@ -1103,6 +1103,14 @@ class SQLiteStore(
         return await self._run(self._execute_read_one, sql, params)
 
     async def get_chat_sessions(self, user_id: str, scope: Optional[str] = None) -> List[dict]:
+        """Retrieve a user's non-archived chat sessions ordered by most recent update.
+        
+        Parameters:
+        	user_id (str): Identifier of the user whose sessions to retrieve.
+        
+        Returns:
+        	List[dict]: Session records with message counts.
+        """
         rows = await self._run(self._execute_read,
             "SELECT id, title, updated_at, (SELECT count(*) FROM chat_messages WHERE session_id=chat_sessions.id) as message_count FROM chat_sessions WHERE user_id = ? AND archived = 0 ORDER BY updated_at DESC",
             (user_id,)
@@ -1128,10 +1136,14 @@ atexit.register(close_shared_store)
 
 
 def get_shared_store(request: Optional[object] = None) -> SQLiteStore:
-    """Return the shared SQLiteStore instance.
-
-    Checks request.app.state, the active application instance on main.app,
-    then falls back to a process-level singleton with registered shutdown cleanup.
+    """
+    Retrieve the shared SQLite store associated with the current application context.
+    
+    Parameters:
+    	request (Optional[object]): An optional request whose application state may provide the store.
+    
+    Returns:
+    	SQLiteStore: The application-managed store, or a process-level shared store when no application-managed store is available.
     """
     if request is not None and hasattr(request, "app") and hasattr(request.app.state, "memory_manager") and request.app.state.memory_manager:
         return request.app.state.memory_manager._store

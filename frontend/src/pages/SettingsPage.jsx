@@ -104,7 +104,22 @@ const ADMIN_GROUPS = [
 
 // ---------------------------------------------------------------------------
 // Main settings page
-// ---------------------------------------------------------------------------
+/**
+ * Render the settings hub with profile, assistant, household, and administrator sections.
+ * @param {string} initialHubTab - The settings hub tab to activate initially.
+ * @param {string} viewMode - The settings view mode, either `user` or `admin`.
+ * @param {Function} onFeaturesChanged - Callback invoked when feature-related data changes.
+ * @param {Object} profile - Current profile data.
+ * @param {Function} onSaveProfile - Callback for saving profile changes.
+ * @param {*} universe - Current universe preference.
+ * @param {string} environment - Current environment preference.
+ * @param {*} mood - Current mood preference.
+ * @param {Function} onUniverseChange - Callback for changing the universe preference.
+ * @param {Function} onEnvironmentChange - Callback for changing the environment preference.
+ * @param {Function} onMoodChange - Callback for changing the mood preference.
+ * @param {Function} setAction - Callback for updating the current action.
+ * @returns {JSX.Element} The settings hub interface.
+ */
 
 export default function SettingsPage({
   initialHubTab = 'assistant',

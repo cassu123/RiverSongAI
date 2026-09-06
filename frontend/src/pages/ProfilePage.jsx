@@ -326,6 +326,20 @@ function TwoFactorCard({ token }) {
 }
 
 
+/**
+ * Render profile identity, visual preferences, notifications, and account integrations.
+ * @param {Object} props - Profile page configuration.
+ * @param {Object} props.profile - Current profile data.
+ * @param {Function} props.onSave - Called with the updated profile after saving.
+ * @param {string} props.universe - Selected visual universe.
+ * @param {string} props.environment - Selected environment.
+ * @param {string} props.mood - Selected atmospheric mood.
+ * @param {Function} props.onUniverseChange - Called when the visual universe changes.
+ * @param {Function} props.onEnvironmentChange - Called when the environment changes.
+ * @param {Function} props.onMoodChange - Called when the atmospheric mood changes.
+ * @param {boolean} props.embedded - Whether to omit the page header.
+ * @returns {JSX.Element} The profile page interface.
+ */
 export default function ProfilePage({
   profile = {}, onSave = () => {},
   universe = 'dune', environment = 'atreides', mood = 'caladan',

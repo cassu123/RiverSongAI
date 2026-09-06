@@ -32,6 +32,9 @@ def _db_path() -> str:
 
 
 def _get_conn() -> sqlite3.Connection:
+    """
+    Return the SQLite connection associated with the current thread, creating it when needed.
+    """
     conn = getattr(_local, "conn", None)
     if conn is not None:
         return conn

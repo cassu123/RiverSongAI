@@ -28,6 +28,9 @@ class MechanicDaemon(BaseDaemon):
         self._http_client: Optional[object] = None
 
     async def _main_loop(self) -> None:
+        """
+        Run the daemon's MAVLink processing loop while it is active and close the HTTP client when the loop exits.
+        """
         if not self.settings.mechanic_enabled:
             logger.info("Mechanic: disabled in settings. Idle loop started.")
             while self._running:
@@ -53,6 +56,7 @@ class MechanicDaemon(BaseDaemon):
                 self._http_client = None
 
     async def _mavlink_loop(self) -> None:
+        """Connect to the configured MAVLink endpoint and process incoming telemetry messages."""
         from pymavlink import mavutil
         import asyncio
         

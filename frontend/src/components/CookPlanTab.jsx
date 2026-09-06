@@ -31,6 +31,17 @@ const stationIcon = s => STATION_ICONS[s] || 'restaurant'
 const timerSeconds = (s) => (s.passive_min > 0 ? s.passive_min : s.active_min) * 60
 const RECIPE_COLORS = ['#38bdf8', '#f87171', '#a78bfa', '#fbbf24', '#4ade80', '#f472b6']
 
+/**
+ * Provides a three-phase guided cooking workflow for preparing, cooking, and completing meal plans.
+ * @param {Object} api - API client used to load and update cooking data.
+ * @param {Object|null} activePrep - Active preparation session used to build the cook plan.
+ * @param {number} refreshNonce - Value that triggers a plan reload when changed.
+ * @param {Array<Object>} recipes - Cookbook recipes available for quick-start cooking.
+ * @param {Array<Object>} mealPlan - Meal-plan entries used to identify and update today's dinner.
+ * @param {Array<Object>} equipment - Registered kitchen equipment available for appliance controls.
+ * @param {Function} [onRefreshPrep] - Callback invoked after preparation data changes.
+ * @param {Function} [setActiveTab] - Callback used to navigate to another application tab.
+ */
 export default function CookPlanTab({
   api,
   activePrep,

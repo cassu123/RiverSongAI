@@ -69,14 +69,11 @@ def _configure_logging(log_level: str) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
-    FastAPI lifespan handler.
-
-    Code before yield runs at application startup.
-    Code after yield runs at application shutdown.
-
-    Initializes the SQLiteStore and MemoryManager once at startup and stores
-    them on app.state so WebSocket routes can access the shared instances.
-    LLM/STT/TTS providers are still initialized lazily per-connection.
+    Manage application startup and shutdown resources.
+    
+    Initializes shared memory and application state before yielding control to the
+    running application, then stops background services and closes shared storage
+    during shutdown.
     """
     import os
     import main as _main_module
