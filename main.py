@@ -347,6 +347,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     await stop_sweeps()
     store.close()
+    try:
+        from providers.memory.sqlite_store import close_shared_store
+        close_shared_store()
+    except Exception:
+        pass
     logger.info("River Song AI shutting down.")
 
 

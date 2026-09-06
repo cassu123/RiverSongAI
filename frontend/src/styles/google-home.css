@@ -1022,6 +1022,15 @@
   box-shadow: 0 0 18px -4px rgba(0, 229, 255, 0.35);
 }
 
+.gh-kitchen-nav-btn:focus-visible,
+.gh-cook-flow-step:focus-visible,
+.gh-cook-btn-prev:focus-visible,
+.gh-cook-btn-next:focus-visible,
+.gh-settings-nav-btn:focus-visible {
+  outline: 2px solid #00e5ff;
+  outline-offset: 2px;
+}
+
 /* Tablet tactile form controls & larger readability inside Settings Hub */
 .gh-settings-stage input[type="text"],
 .gh-settings-stage input[type="password"],
@@ -1030,12 +1039,12 @@
 .gh-settings-stage .settings-select {
   font-size: 1.05rem !important;
   min-height: 48px !important;
-  background: #1b2432 !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  background: #1b2432;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   color: #fff !important;
   border-radius: 12px !important;
-  padding: 10px 16px !important;
-  outline: none !important;
+  padding: 10px 16px;
+  outline: none;
 }
 
 .gh-settings-stage input:focus,

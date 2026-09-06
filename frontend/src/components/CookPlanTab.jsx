@@ -37,6 +37,7 @@ export default function CookPlanTab({
   refreshNonce,
   recipes = [],
   mealPlan = [],
+  equipment = [],
   onRefreshPrep,
   setActiveTab,
 }) {
@@ -56,6 +57,21 @@ export default function CookPlanTab({
   const [showAppliances, setShowAppliances] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [completionNotice, setCompletionNotice] = useState(null)
+  const [internalEquipment, setInternalEquipment] = useState([])
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState(null)
+
+  useEffect(() => {
+    if (equipment && equipment.length > 0) return
+    let active = true
+    api.get('/household/equipment')
+      .then(data => { if (active && Array.isArray(data)) setInternalEquipment(data) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [api, equipment])
+
+  const allEquipment = equipment?.length > 0 ? equipment : internalEquipment
+  const availableEquipment = (plan?.appliances?.length ? plan.appliances : allEquipment) || []
+  const activeEquipmentId = selectedEquipmentId || availableEquipment[0]?.id
 
   // Minute clock tick
   useEffect(() => {
@@ -292,34 +308,21 @@ export default function CookPlanTab({
     }
   }
 
-  const handleDepleteStockroom = async () => {
-    if (!plan?.recipes) return
-    try {
-      let count = 0
-      plan.recipes.forEach(r => {
-        count += (r.ingredients || []).length
-      })
-      setCompletionNotice(`Provisions noted. ${count} ingredients checked for stock depletion.`)
-    } catch (err) {
-      setError('Failed to deplete stockroom: ' + err.message)
-    }
-  }
-
   // Cooking Steps Filtering
   const prepSteps = useMemo(() => (plan?.steps || []).filter(s => s.phase === 'prep'), [plan])
   const cookSteps = useMemo(() => (plan?.steps || []).filter(s => s.phase !== 'prep'), [plan])
   const allSteps = useMemo(() => plan?.steps || [], [plan])
 
   // Active step in focus mode
-  const currentStep = cookSteps[activeStepIdx] || cookSteps[0] || allSteps[0]
+  const currentStep = cookSteps.length > 0 ? (cookSteps[activeStepIdx] || cookSteps[0]) : null
   const isCurrentDone = currentStep ? done.has(currentStep.key) : false
-  const nextStep = cookSteps[activeStepIdx + 1] || null
+  const nextStep = cookSteps.length > 0 ? (cookSteps[activeStepIdx + 1] || null) : null
 
   const handleNextStep = async () => {
     if (currentStep && !isCurrentDone) {
       await toggle(currentStep.key)
     }
-    if (activeStepIdx < cookSteps.length - 1) {
+    if (cookSteps.length > 0 && activeStepIdx < cookSteps.length - 1) {
       setActiveStepIdx(idx => idx + 1)
     } else {
       setGuidePhase('done')
@@ -380,7 +383,34 @@ export default function CookPlanTab({
 
           {showAppliances && (
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-              <AppliancePanel api={api} />
+              {availableEquipment.length === 0 ? (
+                <div style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.6)', padding: 12 }}>
+                  No kitchen equipment registered. Add your appliances in settings.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {availableEquipment.length > 1 && (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {availableEquipment.map(eq => (
+                        <button
+                          key={eq.id}
+                          type="button"
+                          className={`gh-kitchen-nav-btn ${activeEquipmentId === eq.id ? 'is-active' : ''}`}
+                          style={{ padding: '6px 14px', fontSize: '0.82rem' }}
+                          onClick={() => setSelectedEquipmentId(eq.id)}
+                        >
+                          <span>{eq.label || eq.make || 'Appliance'}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <AppliancePanel
+                    api={api}
+                    equipmentId={activeEquipmentId}
+                    onClose={() => setShowAppliances(false)}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -727,7 +757,34 @@ export default function CookPlanTab({
 
             {showAppliances && (
               <div style={{ marginBottom: 16 }}>
-                <AppliancePanel api={api} />
+                {availableEquipment.length === 0 ? (
+                  <div style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.6)', padding: 12 }}>
+                    No kitchen equipment registered.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {availableEquipment.length > 1 && (
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {availableEquipment.map(eq => (
+                          <button
+                            key={eq.id}
+                            type="button"
+                            className={`gh-kitchen-nav-btn ${activeEquipmentId === eq.id ? 'is-active' : ''}`}
+                            style={{ padding: '6px 14px', fontSize: '0.82rem' }}
+                            onClick={() => setSelectedEquipmentId(eq.id)}
+                          >
+                            <span>{eq.label || eq.make || 'Appliance'}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <AppliancePanel
+                      api={api}
+                      equipmentId={activeEquipmentId}
+                      onClose={() => setShowAppliances(false)}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -739,6 +796,7 @@ export default function CookPlanTab({
                     className="rs-pill"
                     style={{ background: 'rgba(255, 255, 255, 0.08)', border: 'none', color: '#fff', fontSize: '0.82rem', flex: 1 }}
                     disabled={swapping === r.id}
+                    value={(plan?.swaps || []).find(w => w.recipe_id === r.id)?.pick || ''}
                     onChange={e => swapAppliance(r.id, e.target.value || null)}
                   >
                     <option value="">Cook as written</option>
@@ -792,125 +850,145 @@ export default function CookPlanTab({
           </div>
 
           {/* FOCUS STEP CARD */}
-          {viewMode === 'focus' && currentStep && (
-            <div className="gh-cook-hero-card">
-              {/* Progress Bar */}
-              <div className="gh-cook-progress-bar">
-                <div
-                  className="gh-cook-progress-fill"
-                  style={{ width: `${Math.round(((activeStepIdx + (isCurrentDone ? 1 : 0)) / cookSteps.length) * 100)}%` }}
-                />
-              </div>
+          {viewMode === 'focus' && (
+            cookSteps.length > 0 && currentStep ? (
+              <div className="gh-cook-hero-card">
+                {/* Progress Bar */}
+                <div className="gh-cook-progress-bar">
+                  <div
+                    className="gh-cook-progress-fill"
+                    style={{ width: `${Math.round(((activeStepIdx + (isCurrentDone ? 1 : 0)) / cookSteps.length) * 100)}%` }}
+                  />
+                </div>
 
-              {/* Step Header */}
-              <div className="gh-cook-step-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{
-                    padding: '4px 10px',
-                    borderRadius: 8,
-                    background: colorFor[currentStep.recipe_id] || '#00e5ff',
-                    color: '#001a2c',
-                    fontWeight: 800,
-                    fontSize: '0.78rem',
-                    textTransform: 'uppercase',
+                {/* Step Header */}
+                <div className="gh-cook-step-header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{
+                      padding: '4px 10px',
+                      borderRadius: 8,
+                      background: colorFor[currentStep.recipe_id] || '#00e5ff',
+                      color: '#001a2c',
+                      fontWeight: 800,
+                      fontSize: '0.78rem',
+                      textTransform: 'uppercase',
+                    }}>
+                      {currentStep.recipe_title}
+                    </span>
+                    <span className="gh-sensor-pill" style={{ padding: '4px 10px', fontSize: '0.78rem' }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: 16 }}>{stationIcon(currentStep.station)}</span>
+                      <span>{stationLabel(currentStep.station)}</span>
+                    </span>
+                  </div>
+
+                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '1.05rem', fontWeight: 800, color: '#00e5ff' }}>
+                    STEP {activeStepIdx + 1} OF {cookSteps.length} · {timeLabel(currentStep.start_min)}
+                  </span>
+                </div>
+
+                {/* Large High-Contrast Step Text */}
+                <div className="gh-cook-step-text">
+                  {currentStep.text}
+                </div>
+
+                {/* Integrated Timer Widget */}
+                {timerSeconds(currentStep) > 0 && (
+                  <div className="gh-cook-timer-widget">
+                    <div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(220, 230, 245, 0.7)', textTransform: 'uppercase' }}>
+                        STEP DURATION {currentStep.by_eye && '· JUDGE BY EYE'}
+                      </div>
+                      <div className="gh-cook-timer-display">
+                        {Math.floor(timerSeconds(currentStep) / 60)}:00
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {cook && !(timersFor[currentStep.key] || []).length && (
+                        <button
+                          className="gh-cook-btn-next"
+                          style={{ height: 44, padding: '0 20px', fontSize: '0.88rem' }}
+                          disabled={busy}
+                          onClick={() => startTimer(currentStep, timerSeconds(currentStep))}
+                        >
+                          <span className="material-symbols-rounded">timer</span>
+                          <span>Start Timer</span>
+                        </button>
+                      )}
+                      {(timersFor[currentStep.key] || []).map(t => (
+                        <StepTimer key={t.id} timer={t} api={api} onChanged={reloadTimers} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Big Ergonomic Tablet Touch Buttons */}
+                <div className="gh-cook-touch-actions">
+                  <button
+                    className="gh-cook-btn-prev"
+                    disabled={activeStepIdx === 0}
+                    onClick={handlePrevStep}
+                  >
+                    <span className="material-symbols-rounded">arrow_back</span>
+                    <span>Previous</span>
+                  </button>
+
+                  <button
+                    className="gh-cook-btn-next"
+                    onClick={handleNextStep}
+                  >
+                    <span className="material-symbols-rounded">{isCurrentDone ? 'arrow_forward' : 'check'}</span>
+                    <span>
+                      {isCurrentDone
+                        ? (activeStepIdx === cookSteps.length - 1 ? 'Go to Plating' : 'Next Step')
+                        : 'Mark Done & Next'}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Up Next Preview */}
+                {nextStep && (
+                  <div style={{
+                    marginTop: 20,
+                    padding: '12px 16px',
+                    borderRadius: 16,
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
                   }}>
-                    {currentStep.recipe_title}
-                  </span>
-                  <span className="gh-sensor-pill" style={{ padding: '4px 10px', fontSize: '0.78rem' }}>
-                    <span className="material-symbols-rounded" style={{ fontSize: 16 }}>{stationIcon(currentStep.station)}</span>
-                    <span>{stationLabel(currentStep.station)}</span>
-                  </span>
-                </div>
-
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '1.05rem', fontWeight: 800, color: '#00e5ff' }}>
-                  STEP {activeStepIdx + 1} OF {cookSteps.length} · {timeLabel(currentStep.start_min)}
-                </span>
-              </div>
-
-              {/* Large High-Contrast Step Text */}
-              <div className="gh-cook-step-text">
-                {currentStep.text}
-              </div>
-
-              {/* Integrated Timer Widget */}
-              {timerSeconds(currentStep) > 0 && (
-                <div className="gh-cook-timer-widget">
-                  <div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(220, 230, 245, 0.7)', textTransform: 'uppercase' }}>
-                      STEP DURATION {currentStep.by_eye && '· JUDGE BY EYE'}
-                    </div>
-                    <div className="gh-cook-timer-display">
-                      {Math.floor(timerSeconds(currentStep) / 60)}:00
-                    </div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'rgba(220, 230, 245, 0.5)', textTransform: 'uppercase' }}>
+                      UP NEXT:
+                    </span>
+                    <span style={{ fontSize: '0.88rem', color: 'rgba(220, 230, 245, 0.85)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {nextStep.text}
+                    </span>
+                    <span style={{ fontSize: '0.78rem', color: 'rgba(220, 230, 245, 0.6)' }}>
+                      {stationLabel(nextStep.station)}
+                    </span>
                   </div>
-
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    {cook && !(timersFor[currentStep.key] || []).length && (
-                      <button
-                        className="gh-cook-btn-next"
-                        style={{ height: 44, padding: '0 20px', fontSize: '0.88rem' }}
-                        disabled={busy}
-                        onClick={() => startTimer(currentStep, timerSeconds(currentStep))}
-                      >
-                        <span className="material-symbols-rounded">timer</span>
-                        <span>Start Timer</span>
-                      </button>
-                    )}
-                    {(timersFor[currentStep.key] || []).map(t => (
-                      <StepTimer key={t.id} timer={t} api={api} onChanged={reloadTimers} />
-                    ))}
-                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="gh-card" style={{ padding: 48, textAlign: 'center' }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', marginBottom: 8 }}>
+                  No Active Cooking Steps
                 </div>
-              )}
-
-              {/* Big Ergonomic Tablet Touch Buttons */}
-              <div className="gh-cook-touch-actions">
+                <div style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.7)', marginBottom: 20 }}>
+                  This meal plan only consists of preliminary mise en place. Complete your prep work or advance to plating.
+                </div>
                 <button
-                  className="gh-cook-btn-prev"
-                  disabled={activeStepIdx === 0}
-                  onClick={handlePrevStep}
-                >
-                  <span className="material-symbols-rounded">arrow_back</span>
-                  <span>Previous</span>
-                </button>
-
-                <button
+                  type="button"
                   className="gh-cook-btn-next"
-                  onClick={handleNextStep}
+                  style={{ height: 46, padding: '0 24px', display: 'inline-flex' }}
+                  onClick={() => setGuidePhase('done')}
                 >
-                  <span className="material-symbols-rounded">{isCurrentDone ? 'arrow_forward' : 'check'}</span>
-                  <span>
-                    {isCurrentDone
-                      ? (activeStepIdx === cookSteps.length - 1 ? 'Go to Plating' : 'Next Step')
-                      : 'Mark Done & Next'}
-                  </span>
+                  <span className="material-symbols-rounded">dinner_dining</span>
+                  <span>Proceed to Plating</span>
                 </button>
               </div>
-
-              {/* Up Next Preview */}
-              {nextStep && (
-                <div style={{
-                  marginTop: 20,
-                  padding: '12px 16px',
-                  borderRadius: 16,
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'rgba(220, 230, 245, 0.5)', textTransform: 'uppercase' }}>
-                    UP NEXT:
-                  </span>
-                  <span style={{ fontSize: '0.88rem', color: 'rgba(220, 230, 245, 0.85)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {nextStep.text}
-                  </span>
-                  <span style={{ fontSize: '0.78rem', color: 'rgba(220, 230, 245, 0.6)' }}>
-                    {stationLabel(nextStep.station)}
-                  </span>
-                </div>
-              )}
-            </div>
+            )
           )}
 
           {/* VIEW MODE B: TIMELINE */}
@@ -1052,12 +1130,14 @@ export default function CookPlanTab({
             </button>
 
             <button
+              type="button"
               className="gh-cook-btn-prev"
-              style={{ height: 50, justifyContent: 'center' }}
-              onClick={handleDepleteStockroom}
+              style={{ height: 50, justifyContent: 'center', opacity: 0.6, cursor: 'not-allowed' }}
+              disabled
+              title="Stockroom auto-depletion requires inventory barcode mappings"
             >
               <span className="material-symbols-rounded">inventory</span>
-              <span>Deplete Pantry Stock</span>
+              <span>Deplete Pantry Stock (Coming Soon)</span>
             </button>
 
             <button

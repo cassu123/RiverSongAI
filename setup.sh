@@ -68,7 +68,9 @@ step "Checking prerequisites"
 
 command -v python3 &>/dev/null || die "python3 not found. Install Python 3.11 or later."
 command -v pip3    &>/dev/null || die "pip3 not found."
-command -v node    &>/dev/null || die "node not found. Install Node.js 18+."
+command -v node    &>/dev/null || die "node not found. Install Node.js 20+."
+NODE_MAJOR=$(node -v | sed 's/v//' | cut -d. -f1)
+[[ "$NODE_MAJOR" -ge 20 ]] || die "Node.js 20+ required (found $(node -v))."
 command -v npm     &>/dev/null || die "npm not found."
 command -v curl    &>/dev/null || die "curl not found."
 

@@ -487,7 +487,7 @@ export default function App() {
       {impersonationBanner}
       <Stage
         environment={environment}
-        paused={['kitchen', 'settings', 'admin', 'profile', 'users'].includes(currentPage)}
+        paused={['culinary', 'settings', 'admin_settings', 'profile', 'users'].includes(currentPage)}
       />
 
       <Shell

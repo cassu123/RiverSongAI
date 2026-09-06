@@ -516,6 +516,10 @@ export default function CulinaryPage({ setAction }) {
         try { setActivePrep(await api.get('/prep')) } catch { setActivePrep(null) }
         const recData = await api.get('/recipes')
         setRecipes(Array.isArray(recData) ? recData : [])
+        try {
+          const eqData = await api.get('/household/equipment')
+          setEquipment(Array.isArray(eqData) ? eqData : [])
+        } catch { setEquipment([]) }
         const d = new Date();
         const d2 = new Date(d);
         d2.setDate(d.getDate() - d.getDay());
@@ -1190,6 +1194,7 @@ export default function CulinaryPage({ setAction }) {
               refreshNonce={mealCookNonce}
               recipes={recipes}
               mealPlan={mealPlan}
+              equipment={equipment}
               onRefreshPrep={() => fetchData('plan')}
               setActiveTab={setActiveTab}
             />
