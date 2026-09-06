@@ -25,13 +25,24 @@ async function playVoicePreview(voice_id, token) {
   const binary = atob(audio_b64)
   const bytes  = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-  const ctx    = new AudioContext()
-  const buffer = await ctx.decodeAudioData(bytes.buffer)
-  const source = ctx.createBufferSource()
-  source.buffer = buffer
-  source.connect(ctx.destination)
-  source.start()
-  return new Promise(resolve => { source.onended = () => { ctx.close(); resolve() } })
+  const Ctx = window.AudioContext || window.webkitAudioContext
+  const ctx = new Ctx()
+  try {
+    const buffer = await ctx.decodeAudioData(bytes.buffer)
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    source.connect(ctx.destination)
+    source.start()
+    return new Promise(resolve => {
+      source.onended = () => {
+        ctx.close().catch(() => {})
+        resolve()
+      }
+    })
+  } catch (err) {
+    ctx.close().catch(() => {})
+    throw err
+  }
 }
 
 export default function VoiceSection({ voiceSettings, token, user, elevenLabsSettings, onSaveElevenLabs, onSwitched }) {

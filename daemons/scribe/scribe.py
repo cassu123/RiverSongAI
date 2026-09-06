@@ -53,17 +53,8 @@ class ScribeDaemon(BaseDaemon):
         logger.info("Scribe: performing vault heuristic scan...")
         
         try:
-            from main import get_app
-            app = get_app()
-            store = None
-            if app:
-                memory_manager = getattr(app.state, "memory_manager", None)
-                if memory_manager:
-                    store = getattr(memory_manager, "_store", None)
-            
-            if not store:
-                from providers.memory.sqlite_store import SQLiteStore
-                store = SQLiteStore(self.settings.db_path)
+            from providers.memory.sqlite_store import get_shared_store
+            store = get_shared_store()
             
             # 1. Find stale notes (mtime > indexed_at)
             # indexed_at is stored in vault_notes table

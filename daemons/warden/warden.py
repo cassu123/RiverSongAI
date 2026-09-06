@@ -56,15 +56,19 @@ class WardenDaemon(BaseDaemon):
 
         try:
             # We run YOLO inference with thread lock protection
+            detections = []
             with self._model_lock:
                 results = self.model(frame, conf=self.yolo_confidence, device=self.yolo_device, verbose=False)
-            for result in results:
-                for box in result.boxes:
-                    class_id = int(box.cls[0])
-                    class_name = self.model.names[class_id]
-                    conf = float(box.conf[0])
-                    # Log detections
-                    logger.info(f"[Warden] Camera '{camera_name}' detected {class_name} ({conf:.2f})")
+                names = getattr(self.model, "names", {})
+                for result in results:
+                    for box in result.boxes:
+                        class_id = int(box.cls[0])
+                        class_name = names.get(class_id, str(class_id))
+                        conf = float(box.conf[0])
+                        detections.append((class_name, conf))
+            for class_name, conf in detections:
+                # Log detections
+                logger.info(f"[Warden] Camera '{camera_name}' detected {class_name} ({conf:.2f})")
         except Exception as e:
             logger.error(f"Inference error on camera {camera_name}: {e}")
 
@@ -80,29 +84,30 @@ class WardenDaemon(BaseDaemon):
         frame_skip = 30
         frame_count = 0
 
-        while self._running:
-            ret, frame = cap.read()
-            if not ret:
-                logger.warning(f"Failed to read from camera '{name}', retrying...")
+        try:
+            while self._running:
+                ret, frame = cap.read()
+                if not ret:
+                    logger.warning(f"Failed to read from camera '{name}', retrying...")
+                    import time
+                    time.sleep(5)
+                    # Attempt to reconnect
+                    cap.release()
+                    cap = cv2.VideoCapture(url)
+                    if not cap.isOpened():
+                        logger.error(f"Failed to reconnect camera '{name}'. Stopping loop.")
+                        break
+                    continue
+                
+                frame_count += 1
+                if frame_count % frame_skip == 0:
+                    self._process_frame(frame, name)
+
                 import time
-                time.sleep(5)
-                # Attempt to reconnect
-                cap.release()
-                cap = cv2.VideoCapture(url)
-                if not cap.isOpened():
-                    logger.error(f"Failed to reconnect camera '{name}'. Stopping loop.")
-                    break
-                continue
-            
-            frame_count += 1
-            if frame_count % frame_skip == 0:
-                self._process_frame(frame, name)
-
-            import time
-            time.sleep(0.01) # Yield a tiny bit
-
-        cap.release()
-        logger.info(f"Camera loop for '{name}' terminating.")
+                time.sleep(0.01) # Yield a tiny bit
+        finally:
+            cap.release()
+            logger.info(f"Camera loop for '{name}' terminating.")
 
     async def _camera_task(self, name: str, url: str):
         loop = asyncio.get_running_loop()

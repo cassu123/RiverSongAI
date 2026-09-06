@@ -67,8 +67,8 @@ async def execute_tool(
         try:
             store = context.get("store")
             if not store:
-                from providers.memory.sqlite_store import SQLiteStore
-                store = SQLiteStore()
+                from providers.memory.sqlite_store import get_shared_store
+                store = get_shared_store()
             admin_config = await store.get_admin_config()
             disabled_tools = set(admin_config.get("disabled_tools", []))
         except Exception as exc:

@@ -135,10 +135,19 @@ class FallbackLLMProvider(LLMProvider):
     async def chat_with_tools(
             self, messages: List[dict], tools: List[dict], system: str = "") -> dict:
         try:
-            return await self.primary.chat_with_tools(messages, tools, system=system)
+            if hasattr(self.primary, "chat_with_tools"):
+                res = await self.primary.chat_with_tools(messages, tools, system=system)
+                if res:
+                    return res
         except Exception as exc:
             logger.warning("Primary LLM chat_with_tools failed, falling back to secondary: %s", exc)
-            return await self.secondary.chat_with_tools(messages, tools, system=system)
+
+        if hasattr(self.secondary, "chat_with_tools"):
+            try:
+                return await self.secondary.chat_with_tools(messages, tools, system=system)
+            except Exception as sec_exc:
+                logger.error("Secondary LLM chat_with_tools failed: %s", sec_exc)
+        return {}
 
     async def chat(self, messages: List[dict]) -> str:
         try:

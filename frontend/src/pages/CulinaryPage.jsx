@@ -5,6 +5,7 @@ import AddRecipeModal from '../components/AddRecipeModal.jsx'
 import ShoppingListTab from '../components/ShoppingListTab.jsx'
 import CookPlanTab from '../components/CookPlanTab.jsx'
 import AppliancePanel from '../components/AppliancePanel.jsx'
+import { API_BASE } from '../lib/api.js'
 
 /**
  * CulinaryPage — Google Home / AI-First Kitchen Hub
@@ -542,7 +543,9 @@ export default function CulinaryPage({ setAction }) {
 
   useEffect(() => {
     if (!token) return;
-    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/culinary/ws?token=${token}`;
+    const baseHost = API_BASE ? API_BASE.replace(/^http(s)?:\/\//, '') : window.location.host;
+    const protocol = (API_BASE.startsWith('https://') || window.location.protocol === 'https:') ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${baseHost}/api/culinary/ws?token=${token}`;
     const ws = new WebSocket(wsUrl);
     ws.onmessage = (event) => {
       try {

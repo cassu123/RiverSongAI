@@ -485,7 +485,10 @@ export default function App() {
     <div className="rs-root">
       <ToastHost />
       {impersonationBanner}
-      <Stage environment={environment} />
+      <Stage
+        environment={environment}
+        paused={['kitchen', 'settings', 'admin', 'profile', 'users'].includes(currentPage)}
+      />
 
       <Shell
         context={headerContext}

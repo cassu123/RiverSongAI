@@ -47,7 +47,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from core.auth import require_role
-from providers.memory.sqlite_store import SQLiteStore
+from providers.memory.sqlite_store import SQLiteStore, get_shared_store
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +170,7 @@ async def dispatch_chore(chore_type: str,
     """
     if chore_type not in CHORE_TYPES:
         raise ValueError(f"Unknown chore type '{chore_type}'")
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     if robot_id:
         unit = await store.execute_read_one_async(
@@ -253,7 +253,7 @@ class QueueTaskBody(BaseModel):
 
 @router.post("/units/claim", dependencies=[Depends(require_role("admin"))])
 async def claim_unit(body: ClaimBody):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     existing = await store.execute_read_one_async(
         "SELECT robot_id FROM kova_units WHERE robot_id=?", (body.robot_id,))
@@ -271,7 +271,7 @@ async def claim_unit(body: ClaimBody):
 
 @router.get("/units", dependencies=[Depends(require_role("admin"))])
 async def list_units():
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     rows = await store.execute_read_async(
         "SELECT robot_id, name, online, state, safety_level, battery_pct, "
@@ -290,7 +290,7 @@ async def list_units():
 @router.delete("/units/{robot_id}",
                dependencies=[Depends(require_role("admin"))])
 async def delete_unit(robot_id: str):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     await store.execute_write_async(
         "DELETE FROM kova_units WHERE robot_id=?", (robot_id,))
@@ -316,7 +316,7 @@ async def queue_task(robot_id: str, body: QueueTaskBody):
 @router.get("/units/{robot_id}/alerts",
             dependencies=[Depends(require_role("admin"))])
 async def list_alerts(robot_id: str, limit: int = 50):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     rows = await store.execute_read_async(
         "SELECT robot_id, timestamp, level, message FROM kova_alerts "
@@ -334,7 +334,7 @@ async def list_alerts(robot_id: str, limit: int = 50):
 async def register_unit(body: RegisterBody,
                         x_kova_unit: Optional[str] = Header(default=None),
                         authorization: Optional[str] = Header(default=None)):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, body.robot_id)
@@ -352,7 +352,7 @@ async def register_unit(body: RegisterBody,
 async def deregister_unit(body: RegisterBody,
                           x_kova_unit: Optional[str] = Header(default=None),
                           authorization: Optional[str] = Header(default=None)):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, body.robot_id)
@@ -369,7 +369,7 @@ async def deregister_unit(body: RegisterBody,
 async def heartbeat(body: HeartbeatBody,
                     x_kova_unit: Optional[str] = Header(default=None),
                     authorization: Optional[str] = Header(default=None)):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, body.robot_id)
@@ -388,7 +388,7 @@ async def heartbeat(body: HeartbeatBody,
 async def poll_tasks(robot_id: str,
                      x_kova_unit: Optional[str] = Header(default=None),
                      authorization: Optional[str] = Header(default=None)):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, robot_id)
@@ -429,7 +429,7 @@ async def poll_tasks(robot_id: str,
 async def report_task_status(task_id: str, body: TaskStatusBody,
                              x_kova_unit: Optional[str] = Header(default=None),
                              authorization: Optional[str] = Header(default=None)):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, body.robot_id)
@@ -457,7 +457,7 @@ async def report_task_status(task_id: str, body: TaskStatusBody,
 async def post_telemetry(body: TelemetryBody,
                          x_kova_unit: Optional[str] = Header(default=None),
                          authorization: Optional[str] = Header(default=None)):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, body.robot_id)
@@ -478,7 +478,7 @@ async def post_telemetry(body: TelemetryBody,
 async def post_alert(body: AlertBody,
                      x_kova_unit: Optional[str] = Header(default=None),
                      authorization: Optional[str] = Header(default=None)):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_device(store, x_kova_unit, authorization)
     _require_unit_match(unit, body.robot_id)

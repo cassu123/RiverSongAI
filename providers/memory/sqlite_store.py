@@ -1108,3 +1108,17 @@ class SQLiteStore(
         )
         return rows
 
+
+_shared_store: Optional[SQLiteStore] = None
+
+
+def get_shared_store(request: Optional[object] = None) -> SQLiteStore:
+    """Return the shared SQLiteStore instance, checking request.app.state then falling back to a singleton."""
+    if request is not None and hasattr(request, "app") and hasattr(request.app.state, "memory_manager") and request.app.state.memory_manager:
+        return request.app.state.memory_manager._store
+    global _shared_store
+    if _shared_store is None:
+        _shared_store = SQLiteStore()
+    return _shared_store
+
+

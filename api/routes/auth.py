@@ -201,7 +201,7 @@ async def signup(request: Request, body: SignupBody):
 @limiter.limit(get_settings().rate_limit_auth_login)
 async def login(request: Request, response: Response, body: LoginBody):
     store = _get_store(request)
-    user = await store.get_user_by_email(body.email.lower())
+    user = await store.get_user_by_email(body.email.lower(), include_password_hash=True)
 
     if not user:
         raise unauthorized("Invalid email or password.")

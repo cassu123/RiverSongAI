@@ -22,11 +22,11 @@ import useCanvasEffect from './useCanvasEffect.js'
  *
  * See public/PREVIEW_IMAGE_PROMPTS.md for the generation prompts.
  */
-export default function Stage({ environment }) {
+export default function Stage({ environment, paused = false }) {
   const Scene = SCENES[environment] || SCENES.atreides
   return (
-    <div className="rs-stage" aria-hidden="true">
-      <Scene />
+    <div className={`rs-stage ${paused ? 'rs-stage-paused' : ''}`} aria-hidden="true">
+      {paused ? null : <Scene />}
       <Grade />
     </div>
   )
