@@ -103,12 +103,7 @@ class FallbackLLMProvider(LLMProvider):
                 async for chunk in self.secondary.stream_response(messages):
                     yield chunk
             else:
-                yield "\n[Primary connection interrupted. Continuing with fallback...]\n"
-                try:
-                    async for chunk in self.secondary.stream_response(messages):
-                        yield chunk
-                except Exception as sec_exc:
-                    logger.error("Secondary LLM also failed: %s", sec_exc)
+                yield "\n[Primary connection interrupted.]\n"
 
     async def stream_response_thinking(
             self, messages: List[dict]) -> AsyncGenerator[str, None]:
@@ -125,12 +120,7 @@ class FallbackLLMProvider(LLMProvider):
                 async for chunk in self.secondary.stream_response_thinking(messages):
                     yield chunk
             else:
-                yield "\n[Primary connection interrupted. Continuing with fallback...]\n"
-                try:
-                    async for chunk in self.secondary.stream_response_thinking(messages):
-                        yield chunk
-                except Exception as sec_exc:
-                    logger.error("Secondary LLM (thinking) also failed: %s", sec_exc)
+                yield "\n[Primary connection interrupted.]\n"
 
     async def chat_with_tools(
             self, messages: List[dict], tools: List[dict], system: str = "") -> dict:
@@ -965,7 +955,7 @@ class ConversationLoop:
         # (session-scoped)
         self._flush_memory = False
 
-    async def _append_history(self, role: str, content: Any, meta: Dict[str, Any] = None) -> None:
+    async def _append_history(self, role: str, content: Any, meta: Dict[str, Any] = None) -> Optional[int]:
         """Append to in-memory history and persist to DB if enabled."""
         msg: Dict[str, Any] = {"role": role, "content": content}
         if meta:
@@ -976,10 +966,11 @@ class ConversationLoop:
             if "name" in meta:
                 msg["name"] = meta["name"]
         self._history.append(msg)
+        msg_id: Optional[int] = None
         if self._memory and self._session_id and hasattr(self._memory._store, 'add_chat_message'):
             try:
                 content_str = str(content) if not isinstance(content, str) else content
-                await self._memory._store.add_chat_message(
+                msg_id = await self._memory._store.add_chat_message(
                     self._session_id,
                     role,
                     content_str,
@@ -987,6 +978,9 @@ class ConversationLoop:
                 )
             except Exception as e:
                 logger.error("Failed to persist message to DB: %s", e)
+        if hasattr(self, "_current_turn_msg_ids") and msg_id is not None:
+            self._current_turn_msg_ids.append(msg_id)
+        return msg_id
 
     async def _stream_sentences(self, stream: AsyncGenerator[str, None], on_token: Callable[[
                                 str], Coroutine[Any, Any, None]]) -> AsyncGenerator[str, None]:
@@ -1488,6 +1482,7 @@ class ConversationLoop:
             return
 
         history_len_before_turn = len(self._history)
+        self._current_turn_msg_ids: list[int] = []
         await self._append_history("user", text, {"input_mode": "text"})
 
         # Let River Decide: re-resolve the engine for this message.
@@ -1571,6 +1566,13 @@ class ConversationLoop:
         except Exception as exc:
             if len(self._history) > history_len_before_turn:
                 del self._history[history_len_before_turn:]
+            if hasattr(self, "_current_turn_msg_ids") and self._current_turn_msg_ids:
+                if self._memory and hasattr(self._memory._store, "delete_chat_messages_by_ids"):
+                    try:
+                        await self._memory._store.delete_chat_messages_by_ids(self._current_turn_msg_ids)
+                    except Exception as del_err:
+                        logger.warning("Failed to roll back persisted turn messages: %s", del_err)
+                self._current_turn_msg_ids = []
             logger.error("LLM streaming failed: %s", exc)
             await on_event({"type": "error", "message": f"LLM error: {exc}"})
             await on_event({"type": "idle"})
@@ -1588,6 +1590,7 @@ class ConversationLoop:
         if receipts:
             meta["receipts"] = receipts
         await self._append_history("assistant", full_response, meta)
+        self._current_turn_msg_ids = []
         
         evt = {"type": "response_complete", "text": full_response}
         if receipts:

@@ -56,6 +56,7 @@ class ScribeDaemon(BaseDaemon):
             from main import get_app
             app = get_app()
             store = None
+            memory_manager = None
             if app:
                 memory_manager = getattr(app.state, "memory_manager", None)
                 if memory_manager:
@@ -64,6 +65,10 @@ class ScribeDaemon(BaseDaemon):
             if not store:
                 from providers.memory.sqlite_store import SQLiteStore
                 store = SQLiteStore(self.settings.db_path)
+
+            if not memory_manager:
+                from core.memory_manager import MemoryManager
+                memory_manager = MemoryManager(store=store)
             
             # 1. Find stale notes (mtime > indexed_at)
             # indexed_at is stored in vault_notes table

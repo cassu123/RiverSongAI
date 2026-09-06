@@ -56,7 +56,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: clamp(54px, 7svh, 64px);
+  min-height: calc(clamp(54px, 7svh, 64px) + env(safe-area-inset-top, 0px));
   padding-inline: clamp(16px, 3vw, 32px);
   padding-block: 0;
   padding-block-start: env(safe-area-inset-top, 0px);
@@ -436,13 +436,6 @@
   overflow: hidden;
 }
 
-.rs-shell.has-sidebar {
-  grid-template-columns: 320px 1fr;
-  grid-template-areas:
-    "sidebar header"
-    "sidebar main"
-    "sidebar action";
-}
 
 /* Ensure hamburger and drawer close are always accessible on all screen sizes */
 .rs-hamburger,
@@ -494,6 +487,14 @@
 
 /* Desktop Chat Sidebar support (when inside Chat conversation view) */
 @media (min-width: 1024px) {
+  .rs-shell.has-sidebar {
+    grid-template-columns: 320px 1fr;
+    grid-template-areas:
+      "sidebar header"
+      "sidebar main"
+      "sidebar action";
+  }
+
   .rs-chat-sidebar {
     display: block;
     grid-area: sidebar;
