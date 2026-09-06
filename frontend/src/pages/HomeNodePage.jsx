@@ -2,25 +2,18 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import SafetyRules from '../components/SafetyRules.jsx'
 
-const DOMAIN_ICON = {
-  light: '◎', switch: '◉', fan: '◈', cover: '▣', lock: '◆', climate: '◇',
-  scene: '★', script: '▶', input_boolean: '◉', media_player: '♪',
-  sensor: '▪', binary_sensor: '▫',
-}
-
-// Domains that are read-only readings rather than things you operate.
 const READONLY = new Set(['sensor', 'binary_sensor'])
 const LAUNCHERS = new Set(['scene', 'script'])
 
 const ON_STATES = ['on', 'open', 'unlocked', 'playing', 'active',
                    'heat', 'cool', 'fan_only', 'dry', 'auto']
 
-function isOn(d) { return ON_STATES.includes(String(d.state)) }
+function isOn(d) {
+  return ON_STATES.includes(String(d.state))
+}
 
 const UNASSIGNED = 'Unassigned'
 
-// Home Assistant service names. Covers were being sent 'open'/'close', which
-// are not services -- the calls failed silently and the card never moved.
 function toggleFor(device, on) {
   switch (device.domain) {
     case 'lock':  return on ? 'lock' : 'unlock'
@@ -37,7 +30,6 @@ function toggleLabel(device, on) {
   }
 }
 
-/** Human phrasing for a binary_sensor, driven by its device_class. */
 function binaryLabel(d) {
   const on = String(d.state) === 'on'
   switch (d.device_class) {
@@ -53,11 +45,49 @@ function binaryLabel(d) {
   }
 }
 
-/** A binary_sensor state that deserves attention in the status strip. */
 function isAlarming(d) {
   if (String(d.state) !== 'on') return false
   return ['moisture', 'smoke', 'gas', 'carbon_monoxide', 'safety', 'problem']
     .includes(d.device_class)
+}
+
+function getMaterialIcon(domain, device_class, state) {
+  const on = ON_STATES.includes(String(state))
+  switch (domain) {
+    case 'light':
+      return on ? 'lightbulb' : 'lightbulb_outline'
+    case 'switch':
+    case 'input_boolean':
+      return 'power_settings_new'
+    case 'climate':
+      return 'thermostat'
+    case 'lock':
+      return on ? 'lock' : 'lock_open'
+    case 'cover':
+      return device_class === 'garage' ? 'garage' : 'blinds'
+    case 'fan':
+      return 'mode_fan'
+    case 'media_player':
+      return 'speaker'
+    case 'scene':
+      return 'auto_awesome'
+    case 'script':
+      return 'play_arrow'
+    case 'binary_sensor':
+      if (device_class === 'door' || device_class === 'garage_door') return on ? 'door_open' : 'door_front'
+      if (device_class === 'window') return 'window'
+      if (device_class === 'motion' || device_class === 'occupancy') return 'motion_sensor_active'
+      if (device_class === 'moisture') return 'water_damage'
+      if (device_class === 'smoke' || device_class === 'gas') return 'detector_smoke'
+      return 'sensors'
+    case 'sensor':
+      if (device_class === 'temperature') return 'device_thermostat'
+      if (device_class === 'humidity') return 'humidity_mid'
+      if (device_class === 'battery') return 'battery_full'
+      return 'sensors'
+    default:
+      return 'devices'
+  }
 }
 
 export default function HomeNodePage({ setAction }) {
@@ -66,7 +96,7 @@ export default function HomeNodePage({ setAction }) {
   const [devices, setDevices] = useState([])
   const [loading, setLoading] = useState(true)
   const [acting,  setActing]  = useState(null)
-  const [room,    setRoom]    = useState('all')
+  const [filter,  setFilter]  = useState('all')
   const [syncing, setSyncing] = useState(false)
 
   const fetchAll = useCallback(async (isSilent = false) => {
@@ -88,12 +118,14 @@ export default function HomeNodePage({ setAction }) {
 
   useEffect(() => { if (token) fetchAll() }, [token, fetchAll])
 
-  // Live updates. The server sends the same shape GET /devices returns, so a
-  // spread merge is enough -- and because it omits `area`, the room a card
-  // sits in survives the update.
+  // Clear external actionSlot to keep header clean
+  useEffect(() => {
+    if (setAction) setAction(null)
+  }, [setAction])
+
+  // Live updates via SSE
   useEffect(() => {
     if (!status?.reachable || !token) return
-    // No token in the URL — the same-origin session cookie carries it.
     const es = new EventSource('/api/home/stream', { withCredentials: true })
     es.onmessage = (e) => {
       try {
@@ -102,12 +134,12 @@ export default function HomeNodePage({ setAction }) {
         setDevices(prev => prev.map(d => d.entity_id === msg.entity_id
           ? { ...d, ...(msg.device || {}), state: msg.state ?? d.state }
           : d))
-      } catch { /* a malformed frame should not kill the stream */ }
+      } catch { /* ignore malformed frames */ }
     }
     return () => es.close()
   }, [status?.reachable, token])
 
-  // Fallback poll. SSE carries live changes; this only catches a missed frame.
+  // Fallback poll
   useEffect(() => {
     if (!status?.reachable || !token) return
     const id = setInterval(() => fetchAll(true), 300000)
@@ -116,7 +148,6 @@ export default function HomeNodePage({ setAction }) {
 
   const callAction = useCallback(async (entity_id, action, extra = {}) => {
     setActing(entity_id)
-    // Optimistic flip, reconciled by the SSE event that follows.
     const optimistic = {
       turn_on: 'on', turn_off: 'off', lock: 'locked', unlock: 'unlocked',
       open_cover: 'open', close_cover: 'closed',
@@ -130,9 +161,6 @@ export default function HomeNodePage({ setAction }) {
         ? { ...d, ...extra } : d))
     }
     try {
-      // fetch resolves on 4xx/5xx. Without this the card shows the state the
-      // user asked for while the device never moved, and no SSE event ever
-      // arrives to contradict it — because nothing actually changed.
       const res = await fetch('/api/home/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -140,13 +168,11 @@ export default function HomeNodePage({ setAction }) {
       })
       let ok = res.ok
       if (ok) {
-        // The route answers 200 with {ok:false} when Home Assistant refuses.
         const body = await res.json().catch(() => ({}))
         if (body && body.ok === false) ok = false
       }
       if (!ok) throw new Error(`HTTP ${res.status}`)
     } catch {
-      // Re-read the truth rather than guessing what to undo.
       await fetchAll(true)
     } finally {
       setActing(null)
@@ -163,11 +189,19 @@ export default function HomeNodePage({ setAction }) {
     } finally { setSyncing(false) }
   }, [token, fetchAll])
 
-  const scenes     = useMemo(() => devices.filter(d => LAUNCHERS.has(d.domain)), [devices])
-  const operable   = useMemo(() => devices.filter(d => !LAUNCHERS.has(d.domain)), [devices])
+  const scenes   = useMemo(() => devices.filter(d => LAUNCHERS.has(d.domain)), [devices])
+  const operable = useMemo(() => devices.filter(d => !LAUNCHERS.has(d.domain)), [devices])
 
-  // Rooms come from the area Home Assistant assigns each entity. Anything HA
-  // has not placed collects under "Unassigned" rather than disappearing.
+  // Filter metrics
+  const lights = useMemo(() => operable.filter(d => d.domain === 'light'), [operable])
+  const lightsOnCount = useMemo(() => lights.filter(d => isOn(d)).length, [lights])
+  const climateDevices = useMemo(() => operable.filter(d => d.domain === 'climate'), [operable])
+  const securityDevices = useMemo(() => operable.filter(d =>
+    d.domain === 'lock' || d.domain === 'cover' ||
+    (d.domain === 'binary_sensor' && ['door', 'garage_door', 'window', 'lock', 'motion'].includes(d.device_class))
+  ), [operable])
+
+  // Rooms partition
   const rooms = useMemo(() => {
     const byRoom = {}
     for (const d of operable) {
@@ -179,197 +213,575 @@ export default function HomeNodePage({ setAction }) {
     return names.map(name => ({ name, devices: byRoom[name] }))
   }, [operable])
 
-  const visibleRooms = room === 'all' ? rooms : rooms.filter(r => r.name === room)
+  // Glance summary string
+  const glanceSummary = useMemo(() => {
+    if (operable.length === 0) return 'No devices connected yet'
+    const parts = []
+    if (lightsOnCount > 0) {
+      parts.push(`${lightsOnCount} ${lightsOnCount === 1 ? 'light' : 'lights'} on`)
+    } else if (lights.length > 0) {
+      parts.push('All lights off')
+    }
 
+    const firstClimate = climateDevices[0]
+    if (firstClimate) {
+      const target = firstClimate.temperature || firstClimate.current_temp
+      const mode = String(firstClimate.state).toLowerCase()
+      parts.push(`Climate ${mode} at ${target ? `${target}°` : ''}`)
+    }
+
+    const unlocked = operable.filter(d => d.domain === 'lock' && String(d.state) === 'unlocked')
+    if (unlocked.length > 0) {
+      parts.push(`${unlocked.length} unlocked`)
+    } else if (operable.some(d => d.domain === 'lock')) {
+      parts.push('All doors locked')
+    }
+
+    return parts.length > 0 ? parts.join(' · ') : `${operable.length} devices connected`
+  }, [operable, lightsOnCount, lights.length, climateDevices])
+
+  // Attention alerts
   const attention = useMemo(() => {
     const items = []
     for (const d of operable) {
       if (d.domain === 'lock' && String(d.state) === 'unlocked')
-        items.push({ id: d.entity_id, tone: 'warn', text: `${d.name} unlocked` })
+        items.push({ id: d.entity_id, domain: 'lock', tone: 'warn', text: `${d.name} unlocked` })
       else if (d.domain === 'cover' && String(d.state) === 'open')
-        items.push({ id: d.entity_id, tone: 'warn', text: `${d.name} open` })
+        items.push({ id: d.entity_id, domain: 'cover', tone: 'warn', text: `${d.name} open` })
       else if (d.domain === 'binary_sensor' && isAlarming(d))
-        items.push({ id: d.entity_id, tone: 'critical', text: `${d.name}: ${binaryLabel(d)}` })
+        items.push({ id: d.entity_id, domain: 'binary_sensor', tone: 'critical', text: `${d.name}: ${binaryLabel(d)}` })
     }
     return items.sort((a, b) => (a.tone === 'critical' ? -1 : 1))
   }, [operable])
 
-  const ActionSlot = useMemo(() => (
-    <div className="rs-input-bar">
-      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, width: '100%', alignItems: 'center' }}>
-        <button className={`rs-pill ${room === 'all' ? 'is-active' : ''}`}
-                style={{ fontSize: '0.85rem' }} onClick={() => setRoom('all')}>
-          ALL ROOMS
-        </button>
-        {rooms.map(r => (
-          <button key={r.name}
-                  className={`rs-pill ${room === r.name ? 'is-active' : ''}`}
-                  style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}
-                  onClick={() => setRoom(r.name)}>
-            {r.name.toUpperCase()}
-          </button>
-        ))}
-        <div style={{ flex: 1 }} />
-        <button className="rs-pill" title="Re-read rooms from Home Assistant"
-                onClick={runSync} disabled={syncing}>
-          <span className="material-symbols-rounded">{syncing ? 'hourglass_top' : 'sync'}</span>
-        </button>
-        <button className="rs-pill" title="Refresh" onClick={() => fetchAll()}>
-          <span className="material-symbols-rounded">refresh</span>
-        </button>
-      </div>
-    </div>
-  ), [rooms, room, fetchAll, runSync, syncing])
-
-  useEffect(() => {
-    if (setAction && status?.reachable) setAction(ActionSlot)
-    return () => { if (setAction) setAction(null) }
-  }, [ActionSlot, setAction, status?.reachable])
-
   return (
-    <div className="rs-foyer animate-fade-in">
-      <header className="rs-foyer-head">
-        <div className="rs-card-label">HOME</div>
-        <h1 className="rs-greeting">Your House</h1>
-        <div className="rs-status-strip">
-          <span className="rs-status-dot" style={{
-            background: loading ? undefined : status?.reachable ? 'var(--secondary)' : 'var(--warn)' }} />
-          <span>{loading ? 'CONNECTING…'
-            : status?.reachable
-              ? `${rooms.length} ROOMS · ${operable.length} DEVICES`
-              : 'HOME ASSISTANT NOT REACHABLE'}</span>
-        </div>
-      </header>
-
-      <div className="rs-card-flow">
-
-        {!loading && !status?.configured && <NotConfigured />}
-
-        {!loading && status?.configured && !status?.reachable && (
-          <div className="rs-card is-wide">
-            <div className="rs-card-head"><span className="rs-card-label">UNREACHABLE</span></div>
-            <p className="rs-card-meta" style={{ fontSize: '0.95rem' }}>
-              Home Assistant is configured but not responding. Check that it is
-              running and the URL is right, then refresh.
-            </p>
-            <button className="rs-btn-primary" style={{ marginTop: 16 }} onClick={() => fetchAll()}>↺ RETRY</button>
+    <div className="rs-canvas animate-fade-in" style={{ padding: '24px 20px 80px 20px', maxWidth: 1280, margin: '0 auto' }}>
+      {/* ── 1. Google Home Living Glance Bar ── */}
+      <div className="gh-glance-bar">
+        <div className="gh-glance-left">
+          <div className="gh-glance-orb-wrap">
+            <span className="material-symbols-rounded" style={{ color: '#00e5ff', fontSize: 22 }}>
+              {status?.reachable ? 'home' : 'cloud_off'}
+            </span>
           </div>
+          <div className="gh-glance-text">
+            <div className="gh-glance-title">
+              {loading ? 'Connecting to River Song…' : status?.reachable ? 'River Song Home' : 'Home Assistant Disconnected'}
+            </div>
+            <div className="gh-glance-sub">{glanceSummary}</div>
+          </div>
+        </div>
+        {status?.reachable && (
+          <button
+            className="gh-glance-action"
+            onClick={runSync}
+            disabled={syncing}
+            title="Sync entity states and rooms from Home Assistant"
+          >
+            <span
+              className="material-symbols-rounded"
+              style={{
+                fontSize: 18,
+                animation: syncing ? 'spin 1s linear infinite' : 'none'
+              }}
+            >
+              sync
+            </span>
+            <span>{syncing ? 'Syncing…' : 'Sync'}</span>
+          </button>
         )}
+      </div>
 
-        {!loading && status?.reachable && (
-          <>
-            {attention.length > 0 && (
-              <div className="rs-card is-wide" style={{ borderLeft: '3px solid var(--warn)' }}>
-                <div className="rs-card-head">
-                  <span className="rs-card-label">NEEDS A LOOK</span>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-                  {attention.map(a => (
-                    <span key={a.id} className="rs-pill" style={{
-                      fontSize: '0.85rem',
-                      color: a.tone === 'critical' ? 'var(--md-error)' : 'var(--warn)',
-                    }}>{a.text}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {scenes.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, width: '100%', scrollbarWidth: 'none' }}>
-                {scenes.map(s => (
-                  <button key={s.entity_id}
-                          className={`rs-pill ${acting === s.entity_id ? 'is-active' : ''}`}
-                          style={{ whiteSpace: 'nowrap', fontSize: '0.85rem' }}
-                          onClick={() => callAction(s.entity_id, 'turn_on')}
-                          disabled={acting === s.entity_id}>
-                    {DOMAIN_ICON[s.domain]} {s.name.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {visibleRooms.map(r => (
-              <RoomCard key={r.name} room={r} acting={acting} onAction={callAction} />
-            ))}
-
-            <SafetyRules />
-
-            {operable.length === 0 && (
-              <div className="rs-card is-wide" style={{ textAlign: 'center' }}>
-                <span className="rs-card-meta" style={{ fontSize: '0.95rem' }}>
-                  No devices yet. Tap sync to re-read them from Home Assistant.
+      {/* ── 2. Needs Attention Banner (if any alerts) ── */}
+      {status?.reachable && attention.length > 0 && (
+        <div className="gh-attention-banner animate-fade-in">
+          <div className="gh-attention-title">
+            <span className="material-symbols-rounded" style={{ fontSize: 18 }}>warning</span>
+            <span>Needs Attention ({attention.length})</span>
+          </div>
+          <div className="gh-attention-items">
+            {attention.map(a => (
+              <button
+                key={a.id}
+                className={`gh-attention-chip ${a.tone === 'critical' ? 'is-critical' : ''}`}
+                onClick={() => {
+                  if (a.domain === 'lock') callAction(a.id, 'lock')
+                  if (a.domain === 'cover') callAction(a.id, 'close_cover')
+                }}
+                title={a.domain === 'lock' ? 'Tap to Lock' : a.domain === 'cover' ? 'Tap to Close' : ''}
+              >
+                <span className="material-symbols-rounded" style={{ fontSize: 16 }}>
+                  {a.domain === 'lock' ? 'lock' : a.domain === 'cover' ? 'garage' : 'error'}
                 </span>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
+                <span>{a.text}</span>
+                {(a.domain === 'lock' || a.domain === 'cover') && (
+                  <span style={{ fontSize: '0.72rem', opacity: 0.9, textDecoration: 'underline', marginLeft: 4 }}>
+                    Secure
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-/** One room: its climate summary, its controls, and its readings. */
-function RoomCard({ room, acting, onAction }) {
-  const controls = room.devices.filter(d => !READONLY.has(d.domain) && d.domain !== 'media_player')
-  const media    = room.devices.filter(d => d.domain === 'media_player')
-  const readings = room.devices.filter(d => READONLY.has(d.domain))
-
-  // The room's temperature, if anything in it reports one.
-  const temp = readings.find(d => d.device_class === 'temperature')
-            || room.devices.find(d => d.current_temp != null)
-
-  return (
-    <div className="rs-card is-wide">
-      <div className="rs-card-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span className="rs-card-label">{room.name.toUpperCase()}</span>
-        {temp && (
-          <span style={{ fontSize: '0.95rem', opacity: 0.8, fontFamily: 'var(--font-mono)' }}>
-            {temp.current_temp != null ? `${temp.current_temp}°` : `${temp.state}${temp.unit || '°'}`}
-          </span>
-        )}
-      </div>
-
-      {controls.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginTop: 12 }}>
-          {controls.map(d => (
-            <DeviceCard key={d.entity_id} device={d} busy={acting === d.entity_id} onAction={onAction} />
+      {/* ── 3. Quick Automations & Scenes ── */}
+      {status?.reachable && scenes.length > 0 && (
+        <div className="gh-scenes-row">
+          {scenes.map(s => (
+            <button
+              key={s.entity_id}
+              className="gh-scene-chip"
+              onClick={() => callAction(s.entity_id, 'turn_on')}
+              disabled={acting === s.entity_id}
+            >
+              <span className="material-symbols-rounded" style={{ fontSize: 18, color: '#00e5ff' }}>
+                auto_awesome
+              </span>
+              <span>{s.name}</span>
+            </button>
           ))}
         </div>
       )}
 
-      {media.map(m => (
-        <MediaCard key={m.entity_id} device={m} busy={acting === m.entity_id} onAction={onAction} />
-      ))}
+      {/* ── 4. Material 3 Category & Room Filter Chips ── */}
+      {status?.reachable && (
+        <div className="gh-chips-bar">
+          <button
+            className={`gh-chip ${filter === 'all' ? 'is-active' : ''}`}
+            onClick={() => setFilter('all')}
+          >
+            <span className="material-symbols-rounded gh-chip-icon">grid_view</span>
+            <span>All Devices</span>
+          </button>
+          {lights.length > 0 && (
+            <button
+              className={`gh-chip ${filter === 'lights' ? 'is-active' : ''}`}
+              onClick={() => setFilter('lights')}
+            >
+              <span className="material-symbols-rounded gh-chip-icon">lightbulb</span>
+              <span>Lights ({lightsOnCount} on)</span>
+            </button>
+          )}
+          {climateDevices.length > 0 && (
+            <button
+              className={`gh-chip ${filter === 'climate' ? 'is-active' : ''}`}
+              onClick={() => setFilter('climate')}
+            >
+              <span className="material-symbols-rounded gh-chip-icon">thermostat</span>
+              <span>Climate</span>
+            </button>
+          )}
+          {securityDevices.length > 0 && (
+            <button
+              className={`gh-chip ${filter === 'security' ? 'is-active' : ''}`}
+              onClick={() => setFilter('security')}
+            >
+              <span className="material-symbols-rounded gh-chip-icon">lock</span>
+              <span>Security</span>
+            </button>
+          )}
+          {rooms.map(r => (
+            <button
+              key={r.name}
+              className={`gh-chip ${filter === r.name ? 'is-active' : ''}`}
+              onClick={() => setFilter(r.name)}
+            >
+              <span>{r.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── 5. Main Canvas / States ── */}
+      {!loading && !status?.configured && <NotConfigured />}
+
+      {!loading && status?.configured && !status?.reachable && (
+        <div className="rs-card is-wide animate-fade-in" style={{ padding: 24, textAlign: 'center' }}>
+          <span className="material-symbols-rounded" style={{ fontSize: 48, color: 'var(--warn)', marginBottom: 12 }}>
+            cloud_off
+          </span>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#fff', marginBottom: 8 }}>
+            Home Assistant Unreachable
+          </h2>
+          <p className="rs-card-meta" style={{ maxWidth: 440, margin: '0 auto 20px auto' }}>
+            River Song cannot connect to Home Assistant. Verify that your Home Assistant server is running and the configured URL is accessible.
+          </p>
+          <button className="rs-btn-primary" onClick={() => fetchAll()}>
+            <span className="material-symbols-rounded" style={{ fontSize: 18, marginRight: 6 }}>refresh</span>
+            RETRY CONNECTION
+          </button>
+        </div>
+      )}
+
+      {/* ── 6. Filtered View / Device Grid ── */}
+      {!loading && status?.reachable && (
+        <>
+          {filter === 'all' && (
+            // Room-by-room hierarchy (Google Home standard view)
+            rooms.map(r => (
+              <RoomSection
+                key={r.name}
+                room={r}
+                acting={acting}
+                onAction={callAction}
+              />
+            ))
+          )}
+
+          {filter === 'lights' && (
+            <div className="gh-grid animate-fade-in">
+              {lights.map(d => (
+                <LightTile key={d.entity_id} device={d} busy={acting === d.entity_id} onAction={callAction} />
+              ))}
+            </div>
+          )}
+
+          {filter === 'climate' && (
+            <div className="gh-grid animate-fade-in">
+              {climateDevices.map(d => (
+                <ClimateTile key={d.entity_id} device={d} busy={acting === d.entity_id} onAction={callAction} />
+              ))}
+            </div>
+          )}
+
+          {filter === 'security' && (
+            <div className="gh-grid animate-fade-in">
+              {securityDevices.map(d => (
+                <DeviceTileDispatcher key={d.entity_id} device={d} busy={acting === d.entity_id} onAction={callAction} />
+              ))}
+            </div>
+          )}
+
+          {filter !== 'all' && filter !== 'lights' && filter !== 'climate' && filter !== 'security' && (
+            // Specific single room view
+            (() => {
+              const matchedRoom = rooms.find(r => r.name === filter)
+              return matchedRoom ? (
+                <RoomSection
+                  key={matchedRoom.name}
+                  room={matchedRoom}
+                  acting={acting}
+                  onAction={callAction}
+                />
+              ) : null
+            })()
+          )}
+
+          {operable.length === 0 && (
+            <div className="rs-card is-wide animate-fade-in" style={{ textAlign: 'center', padding: 32 }}>
+              <span className="material-symbols-rounded" style={{ fontSize: 44, color: 'var(--text-muted)', marginBottom: 12 }}>
+                devices
+              </span>
+              <p className="rs-card-meta" style={{ fontSize: '1rem', color: '#fff', marginBottom: 16 }}>
+                No active devices found in Home Assistant.
+              </p>
+              <button className="gh-glance-action" style={{ margin: '0 auto' }} onClick={runSync} disabled={syncing}>
+                <span className="material-symbols-rounded" style={{ fontSize: 18 }}>sync</span>
+                <span>Sync Devices Now</span>
+              </button>
+            </div>
+          )}
+
+          {/* Safety Rules Engine Integration */}
+          <div style={{ marginTop: 40 }}>
+            <SafetyRules />
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+/** Room Section: Room Title, Room Temperature Badge, Tactile Device Grid, and Ambient Sensor Strip */
+function RoomSection({ room, acting, onAction }) {
+  const controls = room.devices.filter(d => !READONLY.has(d.domain) && d.domain !== 'media_player')
+  const media    = room.devices.filter(d => d.domain === 'media_player')
+  const readings = room.devices.filter(d => READONLY.has(d.domain))
+
+  // The room's temperature readout if reported
+  const temp = readings.find(d => d.device_class === 'temperature')
+            || room.devices.find(d => d.current_temp != null)
+
+  if (controls.length === 0 && media.length === 0 && readings.length === 0) return null
+
+  return (
+    <section className="gh-room-section animate-fade-in">
+      <div className="gh-room-head">
+        <div className="gh-room-head-left">
+          <h2 className="gh-room-title">{room.name}</h2>
+          {temp && (
+            <span className="gh-room-temp">
+              <span className="material-symbols-rounded" style={{ fontSize: 16 }}>device_thermostat</span>
+              <span>{temp.current_temp != null ? `${temp.current_temp}°` : `${temp.state}${temp.unit || '°'}`}</span>
+            </span>
+          )}
+        </div>
+        <span className="gh-room-count">{controls.length + media.length} devices</span>
+      </div>
+
+      {controls.length > 0 && (
+        <div className="gh-grid">
+          {controls.map(d => (
+            <DeviceTileDispatcher key={d.entity_id} device={d} busy={acting === d.entity_id} onAction={onAction} />
+          ))}
+        </div>
+      )}
+
+      {media.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
+          {media.map(m => (
+            <MediaTile key={m.entity_id} device={m} busy={acting === m.entity_id} onAction={onAction} />
+          ))}
+        </div>
+      )}
 
       {readings.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
-          {readings.map(s => <SensorChip key={s.entity_id} device={s} />)}
+        <div className="gh-sensor-strip">
+          {readings.map(s => <SensorPill key={s.entity_id} device={s} />)}
+        </div>
+      )}
+    </section>
+  )
+}
+
+/** Route device to the specialized tactile Google Home tile */
+function DeviceTileDispatcher({ device, busy, onAction }) {
+  switch (device.domain) {
+    case 'light':
+      return <LightTile device={device} busy={busy} onAction={onAction} />
+    case 'climate':
+      return <ClimateTile device={device} busy={busy} onAction={onAction} />
+    case 'lock':
+      return <LockTile device={device} busy={busy} onAction={onAction} />
+    default:
+      return <GenericTile device={device} busy={busy} onAction={onAction} />
+  }
+}
+
+/** Google Home / Nest Hub Tactile Light Tile with Golden Glow and Dimmer Slider */
+function LightTile({ device, busy, onAction }) {
+  const on = isOn(device)
+  const [bright, setBright] = useState(Math.round((device.brightness ?? 255) / 255 * 100))
+  const brightTimer = useRef(null)
+
+  useEffect(() => {
+    if (!brightTimer.current && device.brightness != null) {
+      setBright(Math.round((device.brightness ?? 255) / 255 * 100))
+    }
+  }, [device.brightness])
+
+  const onBright = (e) => {
+    const val = parseInt(e.target.value, 10)
+    setBright(val)
+    if (brightTimer.current) clearTimeout(brightTimer.current)
+    brightTimer.current = setTimeout(() => {
+      onAction(device.entity_id, 'turn_on', { brightness_pct: val })
+      brightTimer.current = null
+    }, 350)
+  }
+
+  const handleToggle = () => {
+    onAction(device.entity_id, on ? 'turn_off' : 'turn_on')
+  }
+
+  return (
+    <div className={`gh-tile ${on ? 'is-light-on' : ''}`} style={{ opacity: busy ? 0.65 : 1 }}>
+      <div className="gh-tile-head">
+        <div className="gh-tile-icon-wrap" onClick={handleToggle} title="Tap to toggle">
+          <span className="material-symbols-rounded">{on ? 'lightbulb' : 'lightbulb_outline'}</span>
+        </div>
+        <button
+          className="gh-tile-toggle-btn"
+          onClick={handleToggle}
+          disabled={busy}
+          aria-label={`Toggle ${device.name}`}
+          title={on ? 'Turn Off' : 'Turn On'}
+        >
+          <span className="material-symbols-rounded">
+            {on ? 'power_settings_new' : 'power_off'}
+          </span>
+        </button>
+      </div>
+
+      <div className="gh-tile-body">
+        <div className="gh-tile-title">{device.name}</div>
+        <div className="gh-tile-status">{on ? `${bright}% Brightness` : 'Off'}</div>
+      </div>
+
+      {on && (
+        <div className="gh-tile-slider-wrap">
+          <input
+            type="range"
+            min="1"
+            max="100"
+            value={bright}
+            onChange={onBright}
+            disabled={busy}
+            aria-label={`${device.name} brightness`}
+            className="gh-tile-slider"
+          />
+          <span className="gh-tile-slider-pct">{bright}%</span>
         </div>
       )}
     </div>
   )
 }
 
-/** A reading, not a control. Sensors have no on/off to press. */
-function SensorChip({ device }) {
-  const binary = device.domain === 'binary_sensor'
-  const alarming = binary && isAlarming(device)
-  const value = binary
-    ? binaryLabel(device)
-    : `${device.state}${device.unit ? ` ${device.unit}` : ''}`
+/** Google Home Tactile Climate Tile with Temperature Bump Buttons */
+function ClimateTile({ device, busy, onAction }) {
+  const isCooling = String(device.state) === 'cool' || String(device.hvac_action) === 'cooling'
+  const isHeating = String(device.state) === 'heat' || String(device.hvac_action) === 'heating'
+  const current = device.temperature ?? device.current_temp ?? 70
+  const step = current > 45 ? 1 : 0.5
+
+  const adjustTemp = (delta) => {
+    const next = parseFloat((current + delta).toFixed(1))
+    onAction(device.entity_id, 'set_temperature', { temperature: next })
+  }
+
   return (
-    <span className="rs-pill" style={{
-      fontSize: '0.85rem',
-      color: alarming ? 'var(--md-error)' : undefined,
-      borderColor: alarming ? 'var(--md-error)' : undefined,
-    }}>
-      <span style={{ opacity: 0.75, marginRight: 6 }}>{device.name}</span>
-      <strong style={{ fontFamily: 'var(--font-mono)' }}>{value}</strong>
-    </span>
+    <div
+      className={`gh-tile is-climate ${isCooling ? 'is-cooling' : ''} ${isHeating ? 'is-heating' : ''}`}
+      style={{ opacity: busy ? 0.65 : 1 }}
+    >
+      <div className="gh-tile-head">
+        <div className="gh-tile-icon-wrap">
+          <span className="material-symbols-rounded">{isCooling ? 'ac_unit' : 'thermostat'}</span>
+        </div>
+        <span
+          className="gh-chip"
+          style={{
+            padding: '4px 10px',
+            fontSize: '0.75rem',
+            color: isCooling ? '#96cbff' : isHeating ? '#fed7aa' : 'rgba(255,255,255,0.7)',
+            borderColor: isCooling ? 'rgba(0, 229, 255, 0.4)' : isHeating ? 'rgba(251, 146, 60, 0.4)' : undefined
+          }}
+        >
+          {String(device.state).toUpperCase()}
+        </span>
+      </div>
+
+      <div className="gh-tile-body">
+        <div className="gh-tile-title">{device.name}</div>
+        <div className="gh-tile-status">
+          {device.current_temp != null ? `Current ${device.current_temp}°` : 'Thermostat'}
+        </div>
+      </div>
+
+      <div className="gh-climate-ctrls">
+        <div className="gh-temp-large">
+          {device.temperature != null ? `${device.temperature}°` : device.current_temp != null ? `${device.current_temp}°` : '--'}
+        </div>
+        <div className="gh-temp-btns">
+          <button
+            className="gh-temp-step-btn"
+            onClick={() => adjustTemp(-step)}
+            disabled={busy}
+            aria-label="Decrease temperature"
+            title="Lower temperature"
+          >
+            −
+          </button>
+          <button
+            className="gh-temp-step-btn"
+            onClick={() => adjustTemp(step)}
+            disabled={busy}
+            aria-label="Increase temperature"
+            title="Raise temperature"
+          >
+            +
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
-function MediaCard({ device, busy, onAction }) {
+/** Google Home Tactile Lock Tile with Emerald/Amber Security Aura */
+function LockTile({ device, busy, onAction }) {
+  const locked = String(device.state) === 'locked'
+
+  const handleToggle = () => {
+    onAction(device.entity_id, locked ? 'unlock' : 'lock')
+  }
+
+  return (
+    <div
+      className={`gh-tile ${locked ? 'is-locked' : 'is-unlocked'}`}
+      style={{ opacity: busy ? 0.65 : 1 }}
+    >
+      <div className="gh-tile-head">
+        <div className="gh-tile-icon-wrap" onClick={handleToggle} title="Tap to toggle lock">
+          <span className="material-symbols-rounded">{locked ? 'lock' : 'lock_open'}</span>
+        </div>
+        <button
+          className="gh-tile-toggle-btn"
+          onClick={handleToggle}
+          disabled={busy}
+          aria-label={`Toggle ${device.name}`}
+          title={locked ? 'Unlock' : 'Lock'}
+        >
+          <span className="material-symbols-rounded">{locked ? 'lock' : 'lock_open'}</span>
+        </button>
+      </div>
+
+      <div className="gh-tile-body">
+        <div className="gh-tile-title">{device.name}</div>
+        <div
+          className="gh-tile-status"
+          style={{ color: locked ? '#34d399' : '#fb923c', fontWeight: 600 }}
+        >
+          {locked ? 'LOCKED' : 'UNLOCKED'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Generic Tactile Tile for Switches, Outlets, Fans, Covers */
+function GenericTile({ device, busy, onAction }) {
+  const on = isOn(device)
+  const icon = getMaterialIcon(device.domain, device.device_class, device.state)
+
+  const handleToggle = () => {
+    onAction(device.entity_id, toggleFor(device, on))
+  }
+
+  return (
+    <div
+      className={`gh-tile ${on ? 'is-light-on' : ''}`}
+      style={{ opacity: busy ? 0.65 : 1 }}
+    >
+      <div className="gh-tile-head">
+        <div className="gh-tile-icon-wrap" onClick={handleToggle} title="Tap to toggle">
+          <span className="material-symbols-rounded">{icon}</span>
+        </div>
+        <button
+          className="gh-tile-toggle-btn"
+          onClick={handleToggle}
+          disabled={busy}
+          aria-label={`Toggle ${device.name}`}
+          title={toggleLabel(device, on)}
+        >
+          <span className="material-symbols-rounded">
+            {on ? 'power_settings_new' : 'power_off'}
+          </span>
+        </button>
+      </div>
+
+      <div className="gh-tile-body">
+        <div className="gh-tile-title">{device.name}</div>
+        <div className="gh-tile-status">
+          {toggleLabel(device, on)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Google Home Media Player Card */
+function MediaTile({ device, busy, onAction }) {
   const playing = String(device.state) === 'playing'
   const [vol, setVol] = useState(Math.round((device.volume_level ?? 0.3) * 100))
   const volTimer = useRef(null)
@@ -391,145 +803,103 @@ function MediaCard({ device, busy, onAction }) {
   }
 
   return (
-    <div className="rs-card" style={{ width: '100%', marginTop: 12, opacity: busy ? 0.6 : 1 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ fontSize: '1.3rem', color: playing ? 'var(--secondary)' : 'var(--text-muted)' }}>♪</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '1.05rem', fontWeight: 600 }}>{device.name}</div>
-          <div className="rs-card-meta" style={{ fontSize: '0.95rem' }}>
-            {device.media_title || device.app_name || String(device.state).toUpperCase()}
+    <div className="gh-media-tile" style={{ opacity: busy ? 0.65 : 1 }}>
+      <div className="gh-media-main">
+        <div className="gh-media-art">
+          <span className="material-symbols-rounded">speaker</span>
+        </div>
+        <div className="gh-media-info">
+          <div className="gh-media-title">{device.name}</div>
+          <div className="gh-media-artist">
+            {device.media_title || device.app_name || (playing ? 'Playing' : 'Paused')}
           </div>
         </div>
-        <button className="rs-pill" style={{ fontSize: '0.85rem' }} disabled={busy}
-                onClick={() => onAction(device.entity_id, playing ? 'media_pause' : 'media_play')}>
-          {playing ? 'PAUSE' : 'PLAY'}
+        <button
+          className="gh-media-play-btn"
+          disabled={busy}
+          onClick={() => onAction(device.entity_id, playing ? 'media_pause' : 'media_play')}
+          title={playing ? 'Pause' : 'Play'}
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: 24 }}>
+            {playing ? 'pause' : 'play_arrow'}
+          </span>
         </button>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
-        <span className="material-symbols-rounded" style={{ fontSize: '1.05rem', opacity: 0.7 }}>volume_down</span>
-        <input type="range" min="0" max="100" value={vol} onChange={onVol} disabled={busy}
-               aria-label={`${device.name} volume`}
-               style={{ flex: 1, height: 4, accentColor: 'var(--md-primary)' }} />
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', opacity: 0.75 }}>{vol}%</span>
+
+      <div className="gh-media-vol-row">
+        <span className="material-symbols-rounded" style={{ fontSize: 20, color: 'rgba(255,255,255,0.6)' }}>
+          volume_down
+        </span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={vol}
+          onChange={onVol}
+          disabled={busy}
+          aria-label={`${device.name} volume`}
+          className="gh-tile-slider"
+        />
+        <span className="gh-tile-slider-pct">{vol}%</span>
       </div>
     </div>
   )
 }
 
-function DeviceCard({ device, busy, onAction }) {
-  const on = isOn(device)
-  const isClimate = device.domain === 'climate'
-  const isLight   = device.domain === 'light'
-
-  const [bright, setBright] = useState(Math.round((device.brightness ?? 255) / 255 * 100))
-  const brightTimer = useRef(null)
-
-  useEffect(() => {
-    if (!brightTimer.current) {
-      setBright(Math.round((device.brightness ?? 255) / 255 * 100))
-    }
-  }, [device.brightness])
-
-  const onBright = (e) => {
-    const val = parseInt(e.target.value, 10)
-    setBright(val)
-    if (brightTimer.current) clearTimeout(brightTimer.current)
-    brightTimer.current = setTimeout(() => {
-      onAction(device.entity_id, 'turn_on', { brightness_pct: val })
-      brightTimer.current = null
-    }, 400)
-  }
-
-  const adjustTemp = (delta) => {
-    const next = parseFloat(((device.temperature || 20) + delta).toFixed(1))
-    onAction(device.entity_id, 'set_temperature', { temperature: next })
-  }
+/** Frosted Sensor Chip */
+function SensorPill({ device }) {
+  const binary = device.domain === 'binary_sensor'
+  const alarming = binary && isAlarming(device)
+  const icon = getMaterialIcon(device.domain, device.device_class, device.state)
+  const value = binary
+    ? binaryLabel(device)
+    : `${device.state}${device.unit ? ` ${device.unit}` : ''}`
 
   return (
-    <div className="rs-card" style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-      textAlign: 'center', opacity: busy ? 0.6 : 1, padding: '16px 12px',
-      border: on ? '1px solid color-mix(in srgb, var(--secondary) 30%, transparent)' : undefined,
-      background: on ? 'color-mix(in srgb, var(--secondary) 5%, var(--rs-card-bg))' : undefined,
-    }}>
-      <div style={{ fontSize: '1.3rem', lineHeight: 1, color: on ? 'var(--secondary)' : 'var(--text-muted)' }}>
-        {DOMAIN_ICON[device.domain] || '◦'}
-      </div>
-      <div style={{ fontSize: '0.95rem', fontWeight: 500, lineHeight: 1.3 }}>{device.name}</div>
-
-      {isClimate && (
-        <div style={{ width: '100%', marginTop: 4, padding: 8, background: 'rgba(0,0,0,0.2)',
-                      borderRadius: 'var(--md-shape-xl)', fontSize: '0.85rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.8, marginBottom: 8 }}>
-            <span>{device.current_temp != null ? `${device.current_temp}°` : '--'}</span>
-            <span>Target {device.temperature != null ? `${device.temperature}°` : '--'}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <button className="rs-pill" style={{ width: 30, height: 30, padding: 0, justifyContent: 'center' }}
-                      onClick={() => adjustTemp(-0.5)} disabled={busy} aria-label="Lower target">−</button>
-              <button className="rs-pill" style={{ width: 30, height: 30, padding: 0, justifyContent: 'center' }}
-                      onClick={() => adjustTemp(0.5)} disabled={busy} aria-label="Raise target">+</button>
-            </div>
-            <span style={{ fontSize: '0.85rem', color: 'var(--md-primary)', fontWeight: 600 }}>
-              {String(device.state).toUpperCase()}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {isLight && on && (
-        <div style={{ width: '100%', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input type="range" min="1" max="100" value={bright} onChange={onBright} disabled={busy}
-                 aria-label={`${device.name} brightness`}
-                 style={{ flex: 1, height: 4, accentColor: 'var(--md-primary)' }} />
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', opacity: 0.75 }}>{bright}%</span>
-        </div>
-      )}
-
-      {!isClimate && !isLight && (
-        <div className="rs-card-meta" style={{ fontSize: '0.85rem' }}>
-          {String(device.state).toUpperCase()}
-        </div>
-      )}
-
-      <button className={on ? 'rs-pill is-active' : 'rs-pill'}
-              style={{ marginTop: 8, width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}
-              onClick={() => onAction(device.entity_id, toggleFor(device, on))}
-              disabled={busy}>
-        {busy ? '…' : toggleLabel(device, on)}
-      </button>
-    </div>
+    <span className={`gh-sensor-pill ${alarming ? 'is-alarm' : ''}`}>
+      <span className="material-symbols-rounded" style={{ fontSize: 16, opacity: 0.8 }}>
+        {icon}
+      </span>
+      <span style={{ opacity: 0.75 }}>{device.name}:</span>
+      <strong>{value}</strong>
+    </span>
   )
 }
 
+/** First-time setup instructions */
 function NotConfigured() {
   return (
-    <div className="rs-card is-wide">
-      <div className="rs-card-head">
-        <span className="rs-card-label">HOME ASSISTANT NOT CONFIGURED</span>
+    <div className="rs-card is-wide animate-fade-in" style={{ padding: 28 }}>
+      <div className="rs-card-head" style={{ marginBottom: 12 }}>
+        <span className="rs-card-label">SETUP HOME ASSISTANT</span>
       </div>
-      <p className="rs-card-meta" style={{ fontSize: '0.95rem' }}>
-        Add your Home Assistant URL and a long-lived access token to <code>.env</code> to control devices.
+      <p className="rs-card-meta" style={{ fontSize: '0.95rem', marginBottom: 20 }}>
+        River Song connects directly to your local or remote Home Assistant instance. Add your URL and long-lived access token to <code>.env</code> to activate tactile smart home controls.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16, fontSize: '0.95rem' }}>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <span style={{ opacity: 0.7, fontSize: '0.85rem' }}>01</span>
-          <span>Home Assistant → Profile → Security → Long-lived access tokens → Create token</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <span className="gh-chip" style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }}>1</span>
+          <span>Home Assistant → User Profile → Long-lived access tokens → Create token</span>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <span style={{ opacity: 0.7, fontSize: '0.85rem' }}>02</span>
-          <span>Add to your <code>.env</code>:</span>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <span className="gh-chip" style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }}>2</span>
+          <span>Add to your backend <code>.env</code> file:</span>
         </div>
-        <div style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.2)',
-                      borderRadius: 'var(--md-shape-xl)', fontFamily: 'var(--font-mono)',
-                      fontSize: '0.85rem', color: 'var(--secondary)' }}>
+        <div style={{
+          padding: '14px 18px',
+          background: 'rgba(0,0,0,0.35)',
+          borderRadius: '16px',
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.85rem',
+          color: '#00e5ff',
+          border: '1px solid rgba(0, 229, 255, 0.2)'
+        }}>
           <div>HOME_ASSISTANT_URL=http://homeassistant.local:8123</div>
           <div>HOME_ASSISTANT_TOKEN=your_token_here</div>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <span style={{ opacity: 0.7, fontSize: '0.85rem' }}>03</span>
-          <span>Restart the server, then press sync on this page.</span>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <span className="gh-chip" style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }}>3</span>
+          <span>Restart the service, then tap the Sync button above.</span>
         </div>
       </div>
     </div>

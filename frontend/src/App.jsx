@@ -21,6 +21,7 @@ import './styles/feeds.css'
 import './styles/fleet.css'
 import './styles/white-pages.css'
 import './styles/responsive.css'
+import './styles/google-home.css'
 
 // Lazy load pages
 const LoginPage          = lazy(() => import('./pages/LoginPage.jsx'))
