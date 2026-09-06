@@ -101,6 +101,17 @@
   transform: translateY(-1px);
 }
 
+.gh-glance-action:focus-visible,
+.gh-chip:focus-visible,
+.gh-tile-toggle-btn:focus-visible,
+.gh-temp-step-btn:focus-visible,
+.gh-attention-chip:focus-visible,
+.gh-scene-chip:focus-visible,
+.gh-media-play-btn:focus-visible {
+  outline: 2px solid #00e5ff;
+  outline-offset: 3px;
+}
+
 /* ── 2. Material 3 Filter Chips ─────────────────────────────────────────── */
 .gh-chips-bar {
   display: flex;

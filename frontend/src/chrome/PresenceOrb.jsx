@@ -10,11 +10,11 @@
 
 import PresenceBulb from '../components/PresenceBulb.jsx'
 
-export default function PresenceOrb({ mode, onClick }) {
+export default function PresenceOrb({ mode, onClick, interactive = false }) {
   const large = mode === 'foyer'
   return (
     <PresenceBulb
-      interactive
+      interactive={interactive}
       onClick={onClick}
       size={large ? 34 : 26}
       // Below ~48px the inner veils are sub-pixel noise; skip them.

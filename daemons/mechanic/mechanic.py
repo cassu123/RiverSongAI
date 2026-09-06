@@ -113,14 +113,29 @@ class MechanicDaemon(BaseDaemon):
         }
         return ROVER_MODES.get(custom_mode, f"MODE_{custom_mode}")
 
+    async def _async_shutdown(self) -> None:
+        await self._close_http_client()
+
+    async def _close_http_client(self) -> None:
+        client = self._http_client
+        self._http_client = None
+        if client and not getattr(client, "is_closed", True):
+            try:
+                await client.aclose()
+            except Exception as e:
+                logger.debug("Mechanic: error closing HTTP client: %s", e)
+
     def stop(self) -> None:
         super().stop()
         if self._http_client and not getattr(self._http_client, "is_closed", True):
             try:
                 loop = asyncio.get_running_loop()
-                loop.create_task(self._http_client.aclose())
+                self._cleanup_task = loop.create_task(self._close_http_client())
             except RuntimeError:
-                pass
+                try:
+                    asyncio.run(self._close_http_client())
+                except Exception:
+                    pass
 
     async def _push_telemetry(self) -> None:
         """POST current telemetry to River Song's internal telemetry endpoint throttled to 2 Hz."""

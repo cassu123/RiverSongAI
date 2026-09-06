@@ -632,11 +632,13 @@ function LightTile({ device, busy, onAction }) {
 function ClimateTile({ device, busy, onAction }) {
   const isCooling = String(device.state) === 'cool' || String(device.hvac_action) === 'cooling'
   const isHeating = String(device.state) === 'heat' || String(device.hvac_action) === 'heating'
-  const current = device.temperature ?? device.current_temp ?? 70
-  const step = current > 45 ? 1 : 0.5
+  const setpoint = device.temperature
+  const hasSetpoint = setpoint != null
+  const step = hasSetpoint && setpoint > 45 ? 1 : 0.5
 
   const adjustTemp = (delta) => {
-    const next = parseFloat((current + delta).toFixed(1))
+    if (!hasSetpoint) return
+    const next = parseFloat((setpoint + delta).toFixed(1))
     onAction(device.entity_id, 'set_temperature', { temperature: next })
   }
 
@@ -677,7 +679,7 @@ function ClimateTile({ device, busy, onAction }) {
           <button
             className="gh-temp-step-btn"
             onClick={() => adjustTemp(-step)}
-            disabled={busy}
+            disabled={busy || !hasSetpoint}
             aria-label="Decrease temperature"
             title="Lower temperature"
           >
@@ -686,7 +688,7 @@ function ClimateTile({ device, busy, onAction }) {
           <button
             className="gh-temp-step-btn"
             onClick={() => adjustTemp(step)}
-            disabled={busy}
+            disabled={busy || !hasSetpoint}
             aria-label="Increase temperature"
             title="Raise temperature"
           >

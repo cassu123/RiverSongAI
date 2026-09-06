@@ -46,6 +46,11 @@ class BaseDaemon(ABC):
             logger.info(f"Daemon '{self.name}' shutting down...")
         finally:
             self._running = False
+            await self._async_shutdown()
+
+    async def _async_shutdown(self) -> None:
+        """Async cleanup hook called when start() terminates or is cancelled."""
+        pass
 
     def stop(self):
         """Gracefully stops the daemon."""

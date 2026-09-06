@@ -85,12 +85,12 @@ class ChatStoreMixin(StoreProtocol):
             return dict(row) if row else None
         return await self._run(_get)
 
-    async def add_chat_message(self, session_id: str, role: str, content: str, meta: Optional[Dict[str, Any]] = None) -> None:
+    async def add_chat_message(self, session_id: str, role: str, content: str, meta: Optional[Dict[str, Any]] = None) -> Optional[int]:
         now = datetime.now(timezone.utc).isoformat()
         meta_json = json.dumps(meta) if meta else "{}"
-        def _add() -> None:
+        def _add() -> Optional[int]:
             conn = self._get_conn()
-            conn.execute(
+            cursor = conn.execute(
                 """
                 INSERT INTO chat_messages (session_id, role, content, meta, created_at)
                 VALUES (?, ?, ?, ?, ?)
@@ -102,7 +102,21 @@ class ChatStoreMixin(StoreProtocol):
                 (now, session_id)
             )
             conn.commit()
-        await self._run(_add)
+            return cursor.lastrowid
+        return await self._run(_add)
+
+    async def delete_chat_messages_by_ids(self, message_ids: List[int]) -> None:
+        if not message_ids:
+            return
+        def _delete() -> None:
+            conn = self._get_conn()
+            placeholders = ",".join("?" for _ in message_ids)
+            conn.execute(
+                f"DELETE FROM chat_messages WHERE id IN ({placeholders})",
+                message_ids
+            )
+            conn.commit()
+        await self._run(_delete)
 
     async def archive_chat_session(self, user_id: str, session_id: str) -> None:
         def _archive() -> None:

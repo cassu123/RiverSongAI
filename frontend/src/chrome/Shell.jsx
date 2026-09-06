@@ -83,7 +83,7 @@ export default function Shell({
             aria-label="Activate River Voice"
           >
             <div className="rs-header-voice-orb-wrap">
-              <PresenceOrb mode={mode} />
+              <PresenceOrb mode={mode} interactive={false} />
             </div>
             <span className="rs-header-voice-label">River</span>
           </button>
@@ -142,7 +142,7 @@ export default function Shell({
             title="Talk with River"
           >
             <div className="rs-dock-pulse-halo" />
-            <PresenceOrb mode="workshop" />
+            <PresenceOrb mode="workshop" interactive={false} />
           </button>
           <button
             className={`rs-floating-dock-btn rs-mobile-dock-btn ${currentPage === 'briefing' ? 'is-active' : ''}`}

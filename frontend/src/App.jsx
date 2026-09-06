@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react'
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth }        from './context/AuthContext.jsx'
 import { setupFcm }       from './utils/fcm.js'
@@ -346,8 +346,12 @@ export default function App() {
     }
   }, [location.pathname, navigate])
 
+  // Captured before any effect writes the key, so the "never saved" case survives.
+  const adminPrefWasSaved = useRef(load('rs-admin', null) !== null)
+
   useEffect(() => {
-    if (user && userIsAdmin && load('rs-admin', null) === null) {
+    if (user && userIsAdmin && !adminPrefWasSaved.current) {
+      adminPrefWasSaved.current = true
       setAdminMode(true)
     } else if (user && !userIsAdmin && adminMode) {
       setAdminMode(false)

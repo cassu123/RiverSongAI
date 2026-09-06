@@ -285,7 +285,7 @@ def _migrate_inventory(profile_id: str, family_owner: str,
             conn.close()
             return {"moved": 0}
 
-        target_fuid = fuid_raw if "-" in puid_raw else fuid_hex
+        target_fuid = fuid_raw
 
         cur = conn.execute(
             "UPDATE inv_homes SET owner_id=? WHERE owner_id=? OR owner_id=?", (target_fuid, puid_raw, puid_hex)
