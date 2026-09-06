@@ -32,14 +32,13 @@ export default function Drawer({
     ? displayName.trim().split(/\s+/).map(w => w ? w[0] : '').join('').slice(0, 2).toUpperCase()
     : 'RS'
 
-  // At/above md the nav is permanently visible (rail or full drawer).
-  const isPersistent = useMediaQuery(`(min-width: ${BREAKPOINTS.md}px)`)
+  // Off-canvas drawer on all screen sizes (Google Home layout).
+  // The persistent rail is removed in favor of the floating pill navigation bar.
+  const isPersistent = false
 
   function navigate(key) {
     onNavigate(key)
-    // Closing is meaningless for a persistent rail, and calling it would leave
-    // the shell's `drawerOpen` state out of sync with what's on screen.
-    if (!isPersistent) onClose()
+    onClose()
   }
 
   // Filter NAV_GROUPS based on admin mode and enabled features
@@ -56,19 +55,15 @@ export default function Drawer({
 
   return (
     <>
-      {!isPersistent && (
-        <div
-          className={`rs-drawer-scrim ${open ? 'is-open' : ''}`}
-          onClick={onClose}
-          aria-hidden="true"
-        />
-      )}
+      <div
+        className={`rs-drawer-scrim ${open ? 'is-open' : ''}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
       <nav
         className={`rs-drawer ${open ? 'is-open' : ''}`}
         aria-label="Primary"
-        // Only the off-canvas drawer is hidden when closed. A visible rail
-        // marked aria-hidden would be unreachable to assistive tech.
-        aria-hidden={isPersistent ? undefined : !open}
+        aria-hidden={!open}
       >
         <div className="rs-drawer-head">
           <span className="rs-drawer-title">

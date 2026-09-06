@@ -114,48 +114,53 @@ export default function Shell({
       </div>
       {!action && <div style={{ height: 'env(safe-area-inset-bottom)' }} />}
 
-      {/* ZONE 4: MOBILE FLOATING GLASS DOCK (<768px) */}
+      {/* ZONE 4: FLOATING GLASS NAVIGATION PILL BAR (GOOGLE HOME LAYOUT) */}
       {!action && onNavigate && (
-        <nav className="rs-mobile-dock" aria-label="Mobile Navigation">
+        <nav className="rs-floating-dock rs-mobile-dock" aria-label="Global Navigation">
           <button
-            className={`rs-mobile-dock-btn ${currentPage === 'briefing' ? 'is-active' : ''}`}
-            onClick={() => onNavigate('briefing')}
-            aria-label="Briefing"
-          >
-            <span className="material-symbols-rounded">wb_sunny</span>
-            <span>Brief</span>
-          </button>
-          <button
-            className={`rs-mobile-dock-btn ${currentPage === 'chat' ? 'is-active' : ''}`}
-            onClick={() => onNavigate('chat')}
-            aria-label="Chat"
-          >
-            <span className="material-symbols-rounded">chat</span>
-            <span>Chat</span>
-          </button>
-          <button
-            className={`rs-mobile-dock-btn is-voice-hero ${currentPage === 'speak' ? 'is-active' : ''}`}
-            onClick={onOpenSpeak}
-            aria-label="Voice conversation"
-          >
-            <div className="rs-dock-pulse-halo" />
-            <PresenceOrb mode="workshop" />
-          </button>
-          <button
-            className={`rs-mobile-dock-btn ${currentPage === 'home' ? 'is-active' : ''}`}
+            className={`rs-floating-dock-btn rs-mobile-dock-btn ${currentPage === 'home' ? 'is-active' : ''}`}
             onClick={() => onNavigate('home')}
-            aria-label="Home Node"
+            aria-label="Home"
+            title="Home"
           >
             <span className="material-symbols-rounded">home</span>
             <span>Home</span>
           </button>
           <button
-            className="rs-mobile-dock-btn"
+            className={`rs-floating-dock-btn rs-mobile-dock-btn ${currentPage === 'chat' ? 'is-active' : ''}`}
+            onClick={() => onNavigate('chat')}
+            aria-label="Chat"
+            title="Chat"
+          >
+            <span className="material-symbols-rounded">chat</span>
+            <span>Chat</span>
+          </button>
+          <button
+            className={`rs-floating-dock-btn rs-mobile-dock-btn is-voice-hero ${currentPage === 'speak' ? 'is-active' : ''}`}
+            onClick={onOpenSpeak}
+            aria-label="Voice conversation"
+            title="Talk with River"
+          >
+            <div className="rs-dock-pulse-halo" />
+            <PresenceOrb mode="workshop" />
+          </button>
+          <button
+            className={`rs-floating-dock-btn rs-mobile-dock-btn ${currentPage === 'briefing' ? 'is-active' : ''}`}
+            onClick={() => onNavigate('briefing')}
+            aria-label="Briefing"
+            title="Briefing"
+          >
+            <span className="material-symbols-rounded">wb_sunny</span>
+            <span>Briefing</span>
+          </button>
+          <button
+            className="rs-floating-dock-btn rs-mobile-dock-btn"
             onClick={onOpenDrawer}
-            aria-label="Open Navigation Hubs"
+            aria-label="Spaces"
+            title="Spaces & Apps"
           >
             <span className="material-symbols-rounded">grid_view</span>
-            <span>Hubs</span>
+            <span>Spaces</span>
           </button>
         </nav>
       )}

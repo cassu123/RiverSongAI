@@ -280,6 +280,7 @@
   overscroll-behavior-y: contain;
   padding-inline: var(--rs-content-pad-i);
   padding-block: var(--rs-content-pad-b);
+  padding-bottom: 110px;
   display: flex;
   flex-direction: column;
 }
@@ -287,14 +288,12 @@
 .rs-foyer {
   margin-inline: auto;
   inline-size: 100%;
-  max-inline-size: 1100px;
-  padding-block-end: 100px;
+  max-inline-size: 1380px;
+  padding-block-end: 0;
   overflow: clip; /* Prevent horizontal leakage */
 }
 
-/* The Shell's direct-child foyer is a centering wrapper only.
-   Pages provide their own rs-foyer with the 100px bottom clearance,
-   so the outer wrapper must not double-stack the padding. */
+/* The Shell's direct-child foyer is a centering wrapper only. */
 .rs-content > .rs-foyer {
   padding-block-end: 0;
 }
@@ -418,166 +417,93 @@
    nav becomes a persistent icon-plus-label rail: always visible, no scrim, no
    hamburger, and it costs 88px instead of 260px. The markup is unchanged —
    the same Drawer component simply lays out differently.                     */
-@media (min-width: 768px) and (max-width: 1199px) {
-  :root { --rs-rail-w: 88px; }
+/* ── Google Home App Layout: Full-Width Canvas & Off-Canvas Drawer ────────
+   The persistent rail has been removed so that mobile, tablet, and desktop
+   screens enjoy a 100% full-width immersive canvas without a cramped sidebar.
+   Primary navigation is handled by the floating bottom pill bar, while the
+   drawer acts as an elegant slide-over account/spaces sheet.                 */
 
-  .rs-shell,
-  .rs-shell.has-sidebar {
-    grid-template-columns: var(--rs-rail-w) 1fr;
-    grid-template-areas:
-      "drawer header"
-      "drawer main"
-      "drawer action";
-  }
-
-  .rs-shell > .rs-drawer,
-  .rs-drawer {
-    grid-area: drawer;
-    position: static;
-    inline-size: 100%;
-    /* .is-open toggles this on phones; in rail mode it must never slide out. */
-    transform: none !important;
-    padding: 12px 6px max(12px, env(safe-area-inset-bottom));
-    background: rgba(10, 14, 24, 0.65);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
-    border-inline-end: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 4px 0 24px -4px rgba(0, 0, 0, 0.5), inset -1px 0 0 0 rgba(255, 255, 255, 0.05);
-    z-index: 150;
-    align-items: center;
-  }
-
-  /* Chrome that only makes sense for the overlay drawer.
-     NOTE: every drawer-internal rule below is scoped under `.rs-drawer` on
-     purpose. chrome-drawer.css is imported AFTER this file, so a bare
-     `.rs-drawer-item {...}` here loses the cascade to the equal-specificity
-     rule there and the rail silently stays in its phone layout. */
-  .rs-hamburger,
-  .rs-drawer-scrim,
-  .rs-drawer .rs-drawer-close,
-  .rs-drawer .rs-drawer-section-label,
-  .rs-drawer .rs-drawer-title > span:not(.rs-mark),
-  .rs-drawer .rs-drawer-profile-body { display: none !important; }
-
-  .rs-drawer .rs-drawer-head {
-    justify-content: center;
-    margin-block-end: 18px;
-  }
-
-  .rs-drawer .rs-drawer-section { margin-block-end: 10px; }
-
-  /* One icon-over-label column, whatever the section called for at phone size. */
-  .rs-drawer .rs-drawer-grid { grid-template-columns: 1fr; gap: 2px; }
-
-  .rs-drawer .rs-drawer-item,
-  .rs-drawer .rs-drawer-cell,
-  .rs-drawer .rs-drawer-profile {
-    flex-direction: column;
-    gap: 4px;
-    padding: 9px 2px;
-    text-align: center;
-    justify-content: center;
-    align-items: center;
-    /* Comfortably above the 44px touch minimum. */
-    min-block-size: 58px;
-  }
-
-  .rs-drawer .rs-drawer-item > span:not(.rs-icon),
-  .rs-drawer .rs-drawer-cell .rs-card-label {
-    font-size: 0.58rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    /* The "More" section borrows .rs-card-label, which uppercases. Left alone
-       the rail mixes "Briefing" with "ABOUT YOU" in one column. */
-    text-transform: none;
-    line-height: 1.15;
-    opacity: 0.85;
-    /* A rail label gets one line; truncate rather than shatter the word. */
-    inline-size: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .rs-drawer .rs-drawer-cell .rs-card-inner { padding: 0 !important; }
-
-  .rs-drawer .rs-drawer-item .rs-icon,
-  .rs-drawer .rs-drawer-cell .rs-icon { font-size: 22px; }
-
-  /* Active state reads as a pill behind the icon, not a full-width bar. */
-  .rs-drawer .rs-drawer-item.is-active,
-  .rs-drawer .rs-drawer-cell.is-active { border-radius: 14px; }
-
-  .rs-drawer .rs-drawer-footer { margin-block-start: auto; }
-  .rs-drawer .rs-drawer-avatar { margin-inline: auto; }
-
-  /* The admin switch has no room for its label; keep the control, shrink the
-     text, and let the title attribute carry the meaning. */
-  .rs-drawer .rs-drawer-toggle {
-    flex-direction: column;
-    gap: 5px;
-    padding: 8px 2px;
-    min-block-size: 52px;
-  }
-  .rs-drawer .rs-drawer-toggle > span:first-child {
-    font-size: 0.54rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    opacity: 0.7;
-  }
-
-  .rs-chat-sidebar { display: none; }
+.rs-shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "header"
+    "main"
+    "action";
+  height: 100svh;
+  width: 100vw;
+  overflow: hidden;
 }
 
-/* Desktop (≥ 1200px) */
-@media (min-width: 1200px) {
-  :root {
-    --rs-rail-w: 260px;
-  }
+.rs-shell.has-sidebar {
+  grid-template-columns: 320px 1fr;
+  grid-template-areas:
+    "sidebar header"
+    "sidebar main"
+    "sidebar action";
+}
 
-  .rs-shell {
-    grid-template-columns: var(--rs-rail-w) 1fr;
-    grid-template-areas: 
-      "drawer header"
-      "drawer main"
-      "drawer action";
-  }
+/* Ensure hamburger and drawer close are always accessible on all screen sizes */
+.rs-hamburger,
+.rs-drawer-close,
+.rs-drawer-scrim {
+  display: flex !important;
+}
 
-  .rs-shell.has-sidebar {
-    grid-template-columns: var(--rs-rail-w) 300px 1fr;
-    grid-template-areas: 
-      "drawer sidebar header"
-      "drawer sidebar main"
-      "drawer sidebar action";
-  }
+/* Off-canvas drawer styles for all screen sizes */
+.rs-drawer {
+  position: fixed !important;
+  inset-block: 0 !important;
+  inset-inline-start: 0 !important;
+  z-index: 300 !important;
+  inline-size: min(85vw, 340px) !important;
+  background: rgba(12, 17, 28, 0.88) !important;
+  backdrop-filter: blur(32px) !important;
+  -webkit-backdrop-filter: blur(32px) !important;
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 12px 0 48px rgba(0, 0, 0, 0.8), inset -1px 0 0 0 rgba(255, 255, 255, 0.08) !important;
+  padding: max(env(safe-area-inset-top), 20px) 20px max(env(safe-area-inset-bottom), 20px) !important;
+  transform: translateX(-100%) !important;
+  transition: transform 0.28s cubic-bezier(0.2, 0, 0, 1) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
 
-  .rs-drawer {
-    grid-area: drawer;
-    position: static;
-    inline-size: 100%;
-    transform: none !important;
-    background: rgba(10, 14, 24, 0.65);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
-    border-inline-end: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 4px 0 24px -4px rgba(0, 0, 0, 0.5), inset -1px 0 0 0 rgba(255, 255, 255, 0.05);
-    z-index: 150;
-  }
+.rs-drawer.is-open {
+  transform: translateX(0) !important;
+}
 
+.rs-drawer-scrim {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 290 !important;
+  background: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.28s ease !important;
+}
+
+.rs-drawer-scrim.is-open {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Desktop Chat Sidebar support (when inside Chat conversation view) */
+@media (min-width: 1024px) {
   .rs-chat-sidebar {
     display: block;
     grid-area: sidebar;
     background: color-mix(in srgb, var(--bg-base) 45%, transparent);
     backdrop-filter: var(--glass-blur);
-    border-inline-end: 1px solid rgba(255, 255, 255, 0.08); /* Whisper border */
-    box-shadow: 20px 0 60px -20px rgba(0, 0, 0, 0.7); /* Heavy shadow casting into main */
+    border-inline-end: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 20px 0 60px -20px rgba(0, 0, 0, 0.7);
     z-index: 140;
     padding-top: var(--rs-header-h);
     overflow-y: auto;
-  }
-
-  .rs-hamburger, .rs-drawer-close, .rs-drawer-scrim {
-    display: none !important;
   }
 }
 
@@ -643,84 +569,95 @@
 .rs-sidebar-reopen:hover { opacity: 1; background: rgba(255,255,255,0.08); }
 .rs-sidebar-reopen .material-symbols-rounded { font-size: 1.2rem; }
 
-/* --- Floating Mobile Glass Dock (< 768px) ---------------------------------- */
+/* --- Floating Glass Navigation Pill Bar (All Devices) -------------------- */
+.rs-floating-dock,
 .rs-mobile-dock {
-  display: none;
+  position: fixed;
+  bottom: max(18px, env(safe-area-inset-bottom, 18px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 480px;
+  height: 64px;
+  background: rgba(12, 17, 28, 0.82);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 44px -8px rgba(0, 0, 0, 0.85), inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 8px;
 }
 
-@media (max-width: 767.98px) {
-  .rs-mobile-dock {
-    position: fixed;
-    bottom: max(16px, env(safe-area-inset-bottom, 16px));
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100% - 32px);
-    max-width: 400px;
-    height: 62px;
-    background: rgba(10, 14, 22, 0.75);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
-    border-radius: 999px;
-    z-index: 200;
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    padding: 0 6px;
-  }
-
-  .rs-mobile-dock-btn {
-    all: unset;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    flex: 1;
-    height: 100%;
-    color: rgba(220, 230, 245, 0.6);
-    font-size: 0.62rem;
-    font-weight: 500;
-    transition: all var(--rs-motion-fast);
-  }
-
-  .rs-mobile-dock-btn span.material-symbols-rounded {
-    font-size: 22px;
-    transition: transform var(--rs-motion-fast);
-  }
-
-  .rs-mobile-dock-btn.is-active {
-    color: var(--md-primary, #96cbff);
-    font-weight: 700;
-  }
-
-  .rs-mobile-dock-btn.is-active span.material-symbols-rounded {
-    transform: translateY(-2px);
-  }
-
-  .rs-mobile-dock-btn.is-voice-hero {
-    position: relative;
-    color: #fff;
-  }
-
-  .rs-dock-pulse-halo {
-    position: absolute;
-    inset: -2px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(0, 229, 255, 0.25) 0%, transparent 70%);
-    animation: rs-dock-halo-pulse 2.5s ease-in-out infinite;
-    pointer-events: none;
-  }
-
-  @keyframes rs-dock-halo-pulse {
-    0%, 100% { transform: scale(0.9); opacity: 0.4; }
-    50% { transform: scale(1.2); opacity: 0.8; }
-  }
-
-  /* Leave bottom room for dock on mobile when there is no action bar */
-  .rs-shell:not(.has-action) .rs-content {
-    padding-bottom: 96px;
-  }
+.rs-floating-dock-btn,
+.rs-mobile-dock-btn {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  height: 82%;
+  border-radius: 999px;
+  color: rgba(220, 230, 245, 0.65);
+  font-size: 0.68rem;
+  font-weight: 500;
+  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  user-select: none;
 }
+
+.rs-floating-dock-btn:hover,
+.rs-mobile-dock-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.rs-floating-dock-btn span.material-symbols-rounded,
+.rs-mobile-dock-btn span.material-symbols-rounded {
+  font-size: 22px;
+  transition: transform 0.18s ease;
+}
+
+.rs-floating-dock-btn.is-active,
+.rs-mobile-dock-btn.is-active {
+  color: #96cbff;
+  font-weight: 700;
+  background: rgba(0, 229, 255, 0.12);
+}
+
+.rs-floating-dock-btn.is-active span.material-symbols-rounded,
+.rs-mobile-dock-btn.is-active span.material-symbols-rounded {
+  transform: translateY(-1px);
+}
+
+.rs-floating-dock-btn.is-voice-hero,
+.rs-mobile-dock-btn.is-voice-hero {
+  position: relative;
+  color: #fff;
+  padding: 4px;
+}
+
+.rs-dock-pulse-halo {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 229, 255, 0.3) 0%, transparent 70%);
+  animation: rs-dock-halo-pulse 2.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes rs-dock-halo-pulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.4; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+}
+
+/* Leave bottom room for floating dock when there is no action bar */
+.rs-shell:not(.has-action) .rs-content {
+  padding-bottom: 110px;
+}
+
