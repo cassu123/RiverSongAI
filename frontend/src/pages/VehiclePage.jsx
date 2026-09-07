@@ -12,13 +12,43 @@ import ChatInterface from '../components/ChatInterface.jsx'
  * Tier 2: Focused Vehicle Telemetry Cockpit (entered on card tap).
  */
 
+// Vehicle types metered in engine hours rather than road miles.
+export const HOUR_METERED_TYPES = new Set(['atv', 'mower', 'tractor', 'generator'])
+
+export const odometerUnit = (vehicleType) =>
+  HOUR_METERED_TYPES.has(vehicleType) ? 'HRS' : 'MI'
+
+// A checkpoint is due once its fixed target is reached, or when the odometer
+// sits within 500 units of an interval multiple.
+export const isServiceDue = (odo, checkPoints) => odo > 0 && checkPoints.some(cp => {
+  if (cp.due_at_miles && odo >= cp.due_at_miles) return true
+  if (cp.interval_miles && odo >= cp.interval_miles) {
+    const past = odo % cp.interval_miles
+    return past <= 500 || past >= cp.interval_miles - 500
+  }
+  return false
+})
+
+/**
+ * Label for a vehicle's next service target. Past the final configured target
+ * there is nothing upcoming — say so rather than pointing at one already gone by.
+ */
+export const nextMilestoneLabel = (odo, checkPoints, unit = 'MI') => {
+  const upcoming = checkPoints
+    .map(cp => cp.due_at_miles || cp.interval_miles)
+    .filter(m => m && m > 0)
+    .sort((a, b) => a - b)
+  if (upcoming.length === 0) return 'NONE SET'
+  const nextVal = upcoming.find(m => m > odo) ?? null
+  return nextVal != null ? `${nextVal.toLocaleString()} ${unit}` : 'ALL PASSED'
+}
+
 export default function VehiclePage({ setAction, onNavigate }) {
   const { token } = useAuth()
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedVehicleId, setSelectedVehicleId] = useState(null)
-  const [activeAskVehicle, setActiveAskVehicle] = useState(null)
   const [showAskRiverAll, setShowAskRiverAll] = useState(false)
 
   // New vehicle form state
@@ -31,6 +61,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
 
   const fetchVehicles = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const res = await fetch('/api/vehicles/', {
         headers: { Authorization: `Bearer ${token}` }
@@ -70,18 +101,13 @@ export default function VehiclePage({ setAction, onNavigate }) {
 
     vehicles.forEach(v => {
       const odo = v.current_odometer ?? (v.usage_readings?.[0]?.value || 0)
-      totalMiles += odo
+      // Hour-metered units (ATV, mower, tractor) don't contribute road miles.
+      if (!HOUR_METERED_TYPES.has(v.vehicle_type)) totalMiles += odo
       if (v.vehicle_type === 'moto') motos++
       else autos++
 
       // Check if any checkpoints are due or overdue (only if vehicle has recorded mileage)
-      const checkPoints = v.check_points || []
-      const hasOverdue = odo > 0 && checkPoints.some(cp => {
-        if (cp.due_at_miles && odo >= cp.due_at_miles) return true
-        if (cp.interval_miles && (odo >= cp.interval_miles && (odo % cp.interval_miles <= 500 || odo % cp.interval_miles >= cp.interval_miles - 500))) return true
-        return false
-      })
-      if (hasOverdue) overdueCount++
+      if (isServiceDue(odo, v.check_points || [])) overdueCount++
     })
 
     return {
@@ -90,7 +116,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
       autos,
       totalMiles,
       overdueCount,
-      indexedCount: vehicles.length // All dossiers stored in RAG
+      checkpointCount: vehicles.reduce((n, v) => n + (v.check_points?.length || 0), 0)
     }
   }, [vehicles])
 
@@ -147,7 +173,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
   // ---------------------------------------------------------------------------
   if (selectedVehicleId === 'NEW') {
     return (
-      <div className="animate-page-in rs-mode-hangar">
+      <div className="rs-hangar-page rs-mode-hangar animate-page-in">
         <div className="rs-foyer-head" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
           <button className="rs-pill" onClick={() => setSelectedVehicleId(null)}>
             <span className="material-symbols-rounded">arrow_back</span>
@@ -317,6 +343,13 @@ export default function VehiclePage({ setAction, onNavigate }) {
         </div>
       </div>
 
+      {error && (
+        <div className="mp-error" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+          <span>Could not load the fleet: {error}</span>
+          <button className="rs-pill" onClick={fetchVehicles}>RETRY</button>
+        </div>
+      )}
+
       {/* Fleet Summary Stat Strip — Balanced Responsive Grid */}
       <div className="cockpit-stats-grid">
         <div className="cockpit-stat-tile">
@@ -339,9 +372,13 @@ export default function VehiclePage({ setAction, onNavigate }) {
             </span>
           </div>
           <div className="stat-num" style={{ color: fleetStats.overdueCount > 0 ? 'var(--rs-status-critical, #ff8b8b)' : 'var(--rs-status-nominal, #4ade80)' }}>
-            {fleetStats.overdueCount > 0 ? `${fleetStats.overdueCount} SERVICE DUE` : 'ALL NOMINAL'}
+            {fleetStats.activeCount === 0 ? 'NO FLEET' : fleetStats.overdueCount > 0 ? `${fleetStats.overdueCount} SERVICE DUE` : 'ALL NOMINAL'}
           </div>
-          <div className="stat-sub">{fleetStats.overdueCount > 0 ? 'Milestone inspection pending' : 'All systems operating nominally'}</div>
+          <div className="stat-sub">
+            {fleetStats.activeCount === 0
+              ? 'Register a vehicle to begin tracking'
+              : fleetStats.overdueCount > 0 ? 'Milestone inspection pending' : 'All systems operating nominally'}
+          </div>
         </div>
 
         <div className="cockpit-stat-tile">
@@ -355,11 +392,11 @@ export default function VehiclePage({ setAction, onNavigate }) {
 
         <div className="cockpit-stat-tile">
           <div className="cockpit-stat-tile-head">
-            <span className="card-metric-label">TECHNICAL DOSSIERS</span>
+            <span className="card-metric-label">TRACKED CHECKPOINTS</span>
             <span className="material-symbols-rounded cockpit-stat-icon">menu_book</span>
           </div>
-          <div className="stat-num">{fleetStats.indexedCount} <span className="stat-unit">INDEXED</span></div>
-          <div className="stat-sub">Service manuals linked to RAG</div>
+          <div className="stat-num">{fleetStats.checkpointCount} <span className="stat-unit">ITEMS</span></div>
+          <div className="stat-sub">Service items configured across the fleet</div>
         </div>
       </div>
 
@@ -380,30 +417,24 @@ export default function VehiclePage({ setAction, onNavigate }) {
           {vehicles.map(v => {
             const odo = v.current_odometer ?? (v.usage_readings?.[0]?.value || 0)
             const checkPoints = v.check_points || []
-            const isDue = odo > 0 && checkPoints.some(cp => {
-              if (cp.due_at_miles && odo >= cp.due_at_miles) return true
-              if (cp.interval_miles && (odo >= cp.interval_miles && (odo % cp.interval_miles <= 500 || odo % cp.interval_miles >= cp.interval_miles - 500))) return true
-              return false
-            })
-
-            // Calculate next milestone label
-            let nextMilestone = 'NOMINAL'
-            const upcoming = checkPoints
-              .map(cp => cp.due_at_miles || cp.interval_miles)
-              .filter(m => m && m > 0)
-              .sort((a, b) => a - b)
-            const nextVal = upcoming.find(m => m > odo) || (upcoming[0] ? upcoming[0] : null)
-            if (nextVal) {
-              nextMilestone = `${nextVal.toLocaleString()} MI`
-            } else if (upcoming.length === 0) {
-              nextMilestone = 'NONE SET'
-            }
+            const isDue = isServiceDue(odo, checkPoints)
+            const unit = odometerUnit(v.vehicle_type)
+            const nextMilestone = nextMilestoneLabel(odo, checkPoints, unit)
 
             return (
               <div
                 key={v.id}
                 className="hangar-vehicle-card"
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedVehicleId(v.id)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setSelectedVehicleId(v.id)
+                  }
+                }}
+                aria-label={`Open ${v.nickname || `${v.make} ${v.model}`} telemetry cockpit`}
                 title={`Open ${v.nickname || v.model} Telemetry Cockpit`}
               >
                 <div className="hangar-card-header">
@@ -441,9 +472,9 @@ export default function VehiclePage({ setAction, onNavigate }) {
                     <span className="card-metric-label">CURRENT ODOMETER</span>
                     <div className="card-metric-val">
                       {odo > 0 ? (
-                        <>{odo.toLocaleString()} <span className="card-metric-unit">MI</span></>
+                        <>{odo.toLocaleString()} <span className="card-metric-unit">{unit}</span></>
                       ) : (
-                        <span style={{ opacity: 0.6, fontSize: '0.95rem' }}>0 mi</span>
+                        <span style={{ opacity: 0.6, fontSize: '0.95rem' }}>Not set</span>
                       )}
                     </div>
                   </div>
@@ -472,7 +503,16 @@ export default function VehiclePage({ setAction, onNavigate }) {
           {/* Register New Asset Card */}
           <div
             className="hangar-vehicle-card add-vehicle-card"
+            role="button"
+            tabIndex={0}
             onClick={() => setSelectedVehicleId('NEW')}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setSelectedVehicleId('NEW')
+              }
+            }}
+            aria-label="Register a new asset"
             title="Register another vehicle to your hangar"
           >
             <div className="add-vehicle-icon-ring">
@@ -494,8 +534,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
               embedded={true}
               onClose={() => setShowAskRiverAll(false)}
               initialIntent={{
-                text: 'River, provide an overview of our entire fleet maintenance readiness and pending service.',
-                docId: 'fleet_overview'
+                text: 'River, provide an overview of our entire fleet maintenance readiness and pending service.'
               }}
             />
           </div>

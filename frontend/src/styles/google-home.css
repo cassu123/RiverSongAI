@@ -724,20 +724,11 @@
 
 /* ── 10. Kitchen Navigation & Guided Cook Mode ── */
 .gh-kitchen-stage {
-  background: transparent !important;
-  border-radius: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  box-shadow: none !important;
-  min-height: auto !important;
-  border: none !important;
+  /* Renders full-bleed on the Shell canvas — no floating window chrome. */
   width: 100%;
-}
-
-@media (min-width: 768px) {
-  .gh-kitchen-stage {
-    padding: 0 !important;
-  }
+  margin-inline: auto;
+  max-inline-size: 1380px;
+  box-sizing: border-box;
 }
 
 /* Force solid surfaces for cards in the kitchen stage */
@@ -964,20 +955,11 @@
 
 /* ── 11. Settings & Account Hub ────────── */
 .gh-settings-stage {
-  background: transparent !important;
-  border-radius: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  box-shadow: none !important;
-  min-height: auto !important;
-  border: none !important;
+  /* Renders full-bleed on the Shell canvas — no floating window chrome. */
   width: 100%;
-}
-
-@media (min-width: 768px) {
-  .gh-settings-stage {
-    padding: 0 !important;
-  }
+  margin-inline: auto;
+  max-inline-size: 1380px;
+  box-sizing: border-box;
 }
 
 .gh-settings-stage .gh-card,

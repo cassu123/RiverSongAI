@@ -7,13 +7,6 @@
    ============================================================================= */
 
 /* Main Cockpit Foyer & Container */
-.pulse-cockpit-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
-  margin: 0 auto;
-}
 
 /* Service Level Badges */
 .cp-svc-badge {
@@ -49,13 +42,6 @@
   color: var(--rs-status-warning, #facc15);
   border-color: color-mix(in srgb, var(--rs-status-warning, #facc15) 30%, transparent);
   background: color-mix(in srgb, var(--rs-status-warning, #facc15) 8%, transparent);
-}
-
-.cp-last-svc {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  color: var(--md-on-surface-variant);
-  opacity: 0.7;
 }
 
 /* Specs Editor & Checkpoint Rows */
@@ -149,15 +135,6 @@
 }
 
 /* RAG / Dossier Query */
-.mp-rag-query {
-  display: flex;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.mp-rag-query input {
-  flex: 1;
-}
 
 .mp-rag-answer {
   border-radius: 14px;

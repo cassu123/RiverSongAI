@@ -274,10 +274,11 @@
 /* --- Main Content Area ---------------------------------------------------- */
 .rs-content {
   grid-area: main;
-  min-height: 0; /* CRITICAL: Enables smooth native scrolling in CSS grid tracks */
+  min-height: 0; /* Grid tracks default to min-height:auto, which broke scrolling */
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   padding-inline: var(--rs-content-pad-i);
   padding-block: var(--rs-content-pad-b);
   padding-bottom: 120px;
