@@ -324,10 +324,16 @@ def _ser_vehicle(v) -> dict:
             _ser_checkpoint(cp)
             for cp in sorted(v.check_points, key=lambda x: x.sort_order)
         ],
+        # datetime.min is only a sort floor for rows with no timestamp; without
+        # it a single null recorded_at makes the whole comparison raise.
         "usage_readings": [
             _ser_usage_reading(ur)
-            for ur in sorted(v.usage_readings, key=lambda x: x.recorded_at, reverse=True)
-        ] if hasattr(v, "usage_readings") and v.usage_readings else [],
+            for ur in sorted(
+                v.usage_readings,
+                key=lambda x: x.recorded_at or datetime.min.replace(tzinfo=timezone.utc),
+                reverse=True,
+            )
+        ] if getattr(v, "usage_readings", None) else [],
         "created_at": v.created_at.isoformat() if v.created_at else None,
         "updated_at": v.updated_at.isoformat() if v.updated_at else None,
     }

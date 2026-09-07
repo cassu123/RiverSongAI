@@ -41,23 +41,34 @@
    AXIS 2 — ENVIRONMENT (Material & Density)
    ============================================================ */
 
-/* Common Environment Rules */
-body {
+/* Common Environment Rules.
+
+   These live on :root, not body. App.jsx sets data-env/data-universe/data-mood
+   on document.documentElement, so the environment overrides below are
+   html[data-env=...] — a body-level default would win over them by owning its
+   own declaration, leaving every environment on the same material. */
+:root {
   --card-radius: 2rem;
   --inner-radius: calc(2rem - 0.5rem);
   --glass-opacity: 0.45;
+  --card-border-alpha: 0.12;
+  --inner-refraction: rgba(255, 255, 255, 0.12);
+  --card-texture: none;
+  --layout-gap: 24px;
 }
 
-/* Ethereal Archedtypes (Garden, Atreides, Spires) */
-body[data-env="atreides"], body[data-env="garden"], body[data-env="spires"] {
+/* Ethereal Archetypes (Garden, Atreides, Spires, Forerunner) */
+html[data-env="atreides"], html[data-env="garden"], html[data-env="spires"],
+html[data-env="forerunner"] {
   --layout-gap: 32px;
   --card-border-alpha: 0.12;
   --inner-refraction: rgba(255, 255, 255, 0.15);
   --glass-opacity: 0.35;
 }
 
-/* Tactical Archetypes (Harkonnen, UNSC, Pacifica) */
-body[data-env="harkonnen"], body[data-env="unsc"], body[data-env="pacifica"] {
+/* Tactical Archetypes (Harkonnen, UNSC, Pacifica, Corpo) */
+html[data-env="harkonnen"], html[data-env="unsc"], html[data-env="pacifica"],
+html[data-env="corpo"] {
   --layout-gap: 16px;
   --card-border-alpha: 0.25;
   --inner-refraction: rgba(255, 255, 255, 0.08);
@@ -66,10 +77,28 @@ body[data-env="harkonnen"], body[data-env="unsc"], body[data-env="pacifica"] {
   --inner-radius: 0.5rem;
 }
 
-/* Specific Backdrop Textures */
-body[data-env="atreides"] { --card-texture: radial-gradient(circle at top right, rgba(255,255,255,0.08), transparent 70%); }
-body[data-env="harkonnen"] { --card-texture: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.15) 100%); }
-body[data-env="unsc"] { --card-texture: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%); }
+/* Specific Backdrop Textures — one per environment, so no environment falls
+   through to a bare surface. */
+html[data-env="atreides"] { --card-texture: radial-gradient(circle at top right, rgba(255,255,255,0.08), transparent 70%); }
+html[data-env="garden"]   { --card-texture: radial-gradient(circle at 20% 0%, rgba(255,255,255,0.07), transparent 65%); }
+html[data-env="spires"]   { --card-texture: linear-gradient(160deg, rgba(255,255,255,0.07) 0%, transparent 60%); }
+html[data-env="harkonnen"] { --card-texture: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.15) 100%); }
+html[data-env="unsc"] { --card-texture: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%); }
+html[data-env="pacifica"] { --card-texture: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.12) 100%); }
+html[data-env="forerunner"] { --card-texture: linear-gradient(200deg, rgba(255,255,255,0.09) 0%, transparent 55%); }
+html[data-env="corpo"] { --card-texture: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, transparent 40%, rgba(0,0,0,0.10) 100%); }
+html[data-env="arrakis"] { --card-texture: radial-gradient(ellipse at 50% 0%, rgba(212,116,56,0.10), transparent 70%); }
+
+/* Arrakis sits between the two archetypes: open desert spacing, but the
+   hard edge of a survival environment. */
+html[data-env="arrakis"] {
+  --layout-gap: 24px;
+  --card-border-alpha: 0.18;
+  --inner-refraction: rgba(255, 214, 170, 0.10);
+  --glass-opacity: 0.45;
+  --card-radius: 1.5rem;
+  --inner-radius: 0.75rem;
+}
 
 /* ============================================================
    AXIS 3 — MOOD (Color Calibration)
