@@ -1106,7 +1106,7 @@ export default function CulinaryPage({ setAction }) {
   // MAIN RENDER CONTAINER
   // ---------------------------------------------------------------------------
   return (
-    <div className="rs-foyer gh-kitchen-stage">
+    <div className="gh-kitchen-stage animate-fade-in">
       {/* Header */}
       <div className="rs-foyer-head" style={{ marginBottom: 20 }}>
         <h1 className="rs-greeting" style={{ fontSize: '2.5rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Kitchen</h1>

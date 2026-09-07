@@ -625,14 +625,16 @@
 /* ── Google Spaces Launcher Sheet ────────────────────────────────────────── */
 .rs-spaces-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   margin-block: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 @media (min-width: 480px) {
   .rs-spaces-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
   }
 }
 
@@ -643,14 +645,18 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 6px;
-  border-radius: 18px;
+  gap: 6px;
+  padding: 10px 4px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   text-align: center;
   user-select: none;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .rs-space-tile:hover {
   background: rgba(0, 229, 255, 0.12);
@@ -672,15 +678,16 @@
 }
 
 .rs-space-icon-wrap {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(255, 255, 255, 0.06);
   color: #cbe6ff;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 .rs-space-tile:hover .rs-space-icon-wrap {
   background: #00e5ff;
@@ -692,7 +699,7 @@
   color: #00363a;
 }
 .rs-space-label {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 600;
   color: #e2e8f0;
   letter-spacing: -0.01em;
@@ -700,5 +707,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  width: 100%;
+  display: block;
+  min-width: 0;
 }
 
