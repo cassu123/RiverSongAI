@@ -18,13 +18,13 @@
 }
 
 .hangar-vehicle-card {
-  background: color-mix(in srgb, var(--md-surface-container-low) 60%, transparent);
+  background: color-mix(in srgb, var(--md-surface-container-low) calc(var(--glass-opacity, 0.45) * 100%), transparent);
   backdrop-filter: var(--glass-blur, blur(24px));
   -webkit-backdrop-filter: var(--glass-blur, blur(24px));
-  border: 1px solid color-mix(in srgb, var(--md-outline-variant) 40%, rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, var(--card-border-alpha, 0.12));
   border-radius: var(--card-radius, 1.25rem);
   padding: 24px;
-  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.55), inset 0 1px 0 var(--inner-refraction, rgba(255, 255, 255, 0.12));
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -32,6 +32,15 @@
   transition: all var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
   position: relative;
   overflow: hidden;
+}
+
+.hangar-vehicle-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--card-texture, none);
+  pointer-events: none;
+  opacity: 0.18;
 }
 
 .hangar-vehicle-card:hover {
