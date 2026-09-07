@@ -2,7 +2,7 @@
    hangar.css — River Song AI Spatial Intelligence v2.0 Hangar & Telemetry
    -----------------------------------------------------------------------------
    Two-Tier Aerospace Garage Cockpit & Fleet Hub.
-   Enforces Double-Bezel frosted glass, Plus Jakarta typography, Material 3 
+   Enforces Double-Bezel frosted glass, Plus Jakarta precision, Material 3 
    tactile chips, and seamless universe/environment/mood theming across all skins.
    ============================================================================= */
 
@@ -10,21 +10,148 @@
    TIER 1: HANGAR HUB / LANDING PAGE
    ----------------------------------------------------------------------------- */
 
+.rs-hangar-page {
+  width: 100%;
+  box-sizing: border-box;
+  padding-bottom: max(160px, calc(120px + env(safe-area-inset-bottom))) !important;
+}
+
+.hangar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-block-end: 24px;
+}
+
+.hangar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* -----------------------------------------------------------------------------
+   STAT TILES (Fleet Summary Strip) — Balanced Responsive Grid
+   ----------------------------------------------------------------------------- */
+
+.cockpit-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-block: 16px 28px;
+}
+
+@media (max-width: 1024px) {
+  .cockpit-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 540px) {
+  .cockpit-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+.cockpit-stat-tile {
+  background: color-mix(in srgb, var(--md-surface-container) calc(var(--glass-opacity, 0.4) * 100%), transparent);
+  backdrop-filter: var(--glass-blur, blur(24px));
+  -webkit-backdrop-filter: var(--glass-blur, blur(24px));
+  border: 1px solid rgba(255, 255, 255, var(--card-border-alpha, 0.1));
+  border-radius: var(--inner-radius, 1rem);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.12));
+  transition: all var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
+  position: relative;
+  overflow: hidden;
+}
+
+.cockpit-stat-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--card-texture, none);
+  pointer-events: none;
+  opacity: 0.12;
+}
+
+.cockpit-stat-tile:hover {
+  background: color-mix(in srgb, var(--md-surface-container-high) 75%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px -6px rgba(0, 0, 0, 0.6), inset 0 1px 0 var(--inner-refraction, rgba(255, 255, 255, 0.18));
+}
+
+.cockpit-stat-tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cockpit-stat-icon {
+  font-size: 1.15rem;
+  color: var(--primary);
+  opacity: 0.85;
+}
+
+.cockpit-stat-tile .stat-num {
+  font-family: var(--font-base);
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--fg);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.cockpit-stat-tile .stat-unit {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--md-on-surface-variant);
+  margin-left: 4px;
+  opacity: 0.8;
+  letter-spacing: 0.05em;
+}
+
+.cockpit-stat-tile .stat-sub {
+  font-size: 0.72rem;
+  color: var(--md-on-surface-variant);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+  opacity: 0.82;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -----------------------------------------------------------------------------
+   FLEET CARDS GRID — Google Staff Bento Standard
+   ----------------------------------------------------------------------------- */
+
 .hangar-fleet-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
   gap: 20px;
-  margin-block: 24px;
+  margin-block: 16px 40px;
 }
 
 .hangar-vehicle-card {
   background: color-mix(in srgb, var(--md-surface-container-low) calc(var(--glass-opacity, 0.45) * 100%), transparent);
-  backdrop-filter: var(--glass-blur, blur(24px));
-  -webkit-backdrop-filter: var(--glass-blur, blur(24px));
+  backdrop-filter: var(--glass-blur, blur(28px));
+  -webkit-backdrop-filter: var(--glass-blur, blur(28px));
   border: 1px solid rgba(255, 255, 255, var(--card-border-alpha, 0.12));
   border-radius: var(--card-radius, 1.25rem);
-  padding: 24px;
-  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.55), inset 0 1px 0 var(--inner-refraction, rgba(255, 255, 255, 0.12));
+  padding: 22px 24px;
+  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.55), inset 0 1px 0 var(--inner-refraction, rgba(255, 255, 255, 0.14));
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -32,6 +159,7 @@
   transition: all var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .hangar-vehicle-card::before {
@@ -40,14 +168,14 @@
   inset: 0;
   background: var(--card-texture, none);
   pointer-events: none;
-  opacity: 0.18;
+  opacity: 0.16;
 }
 
 .hangar-vehicle-card:hover {
-  background: color-mix(in srgb, var(--md-surface-container) 80%, transparent);
-  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
-  transform: translateY(-2px);
-  box-shadow: 0 16px 44px -8px rgba(0, 0, 0, 0.65), 0 0 20px -4px color-mix(in srgb, var(--primary) 20%, transparent);
+  background: color-mix(in srgb, var(--md-surface-container) 82%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  transform: translateY(-3px);
+  box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.7), 0 0 24px -4px color-mix(in srgb, var(--primary) 25%, transparent), inset 0 1px 0 var(--inner-refraction, rgba(255, 255, 255, 0.22));
 }
 
 .hangar-vehicle-card:active {
@@ -56,26 +184,41 @@
 
 .hangar-card-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.hangar-card-left {
+  display: flex;
+  align-items: center;
   gap: 14px;
+  flex: 1;
+  min-width: 0;
 }
 
 .vehicle-icon-badge {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: color-mix(in srgb, var(--primary) 14%, var(--bg-base));
-  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
   color: var(--primary);
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  box-shadow: 0 0 16px -4px color-mix(in srgb, var(--primary) 25%, transparent);
+  box-shadow: 0 0 16px -4px color-mix(in srgb, var(--primary) 25%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
+}
+
+.hangar-vehicle-card:hover .vehicle-icon-badge {
+  transform: scale(1.06);
 }
 
 .vehicle-icon-badge .material-symbols-rounded {
-  font-size: 1.9rem;
+  font-size: 1.85rem;
 }
 
 .vehicle-card-titles {
@@ -87,39 +230,63 @@
 }
 
 .vehicle-card-name {
-  font-family: var(--font-mood, var(--font-base));
-  font-size: 1.35rem;
+  font-family: var(--font-base);
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--fg);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .vehicle-card-sub {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--md-on-surface-variant);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  opacity: 0.8;
+  opacity: 0.85;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* Hardened Zero-Clipping Status Badge */
+.hangar-status-badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 .hangar-card-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  background: rgba(0, 0, 0, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 12px;
-  padding: 12px 16px;
+  gap: 14px;
+  background: color-mix(in srgb, var(--bg-base) 45%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--inner-radius, 12px);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
+  padding: 13px 16px;
 }
 
 .card-metric-col {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .card-metric-label {
@@ -128,15 +295,25 @@
   color: var(--md-on-surface-variant);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 .card-metric-val {
   font-family: var(--font-base);
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: var(--fg);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-metric-unit {
+  font-size: 0.68rem;
+  font-weight: 600;
+  opacity: 0.72;
+  margin-left: 3px;
 }
 
 .hangar-card-footer {
@@ -148,83 +325,80 @@
 }
 
 .hangar-card-scope-hint {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--md-on-surface-variant);
   display: flex;
   align-items: center;
   gap: 6px;
+  opacity: 0.85;
+}
+
+.hangar-card-inspect-btn {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: transform var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
+}
+
+.hangar-vehicle-card:hover .hangar-card-inspect-btn {
+  transform: translateX(4px);
 }
 
 .add-vehicle-card {
-  border: 2px dashed rgba(255, 255, 255, 0.12);
-  background: color-mix(in srgb, var(--md-surface-container-low) 30%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--primary) 30%, rgba(255, 255, 255, 0.15));
+  background: color-mix(in srgb, var(--md-surface-container-low) 25%, transparent);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 40px 24px;
+  gap: 14px;
+  padding: 36px 24px;
   text-align: center;
+  min-height: 200px;
 }
 
 .add-vehicle-card:hover {
   border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.65), 0 0 20px -4px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
-/* -----------------------------------------------------------------------------
-   STAT TILES (Fleet Summary Strip & Cockpit Telemetry)
-   ----------------------------------------------------------------------------- */
-
-.cockpit-stats-grid {
+.add-vehicle-icon-ring {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1px dashed color-mix(in srgb, var(--primary) 50%, transparent);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-block: 20px 24px;
+  place-items: center;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  transition: transform var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
 }
 
-.cockpit-stat-tile {
-  background: color-mix(in srgb, var(--md-surface-container-low) 50%, transparent);
-  backdrop-filter: var(--glass-blur, blur(16px));
-  -webkit-backdrop-filter: var(--glass-blur, blur(16px));
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  transition: all var(--rs-motion-fast, 180ms);
+.add-vehicle-card:hover .add-vehicle-icon-ring {
+  transform: scale(1.1);
+  border-style: solid;
 }
 
-.cockpit-stat-tile:hover {
-  background: color-mix(in srgb, var(--md-surface-container) 65%, transparent);
-  border-color: rgba(255, 255, 255, 0.12);
-  transform: translateY(-1px);
-}
-
-.cockpit-stat-tile .stat-num {
+.add-vehicle-title {
   font-family: var(--font-base);
-  font-size: 1.45rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--fg);
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
 }
 
-.cockpit-stat-tile .stat-unit {
-  font-size: 0.72rem;
-  font-weight: 600;
+.add-vehicle-desc {
+  font-size: 0.75rem;
   color: var(--md-on-surface-variant);
-  margin-left: 4px;
-  opacity: 0.75;
-}
-
-.cockpit-stat-tile .stat-sub {
-  font-size: 0.72rem;
-  color: var(--md-on-surface-variant);
-  font-family: var(--font-mono);
-  margin-top: 2px;
+  max-width: 240px;
+  line-height: 1.5;
   opacity: 0.8;
 }
 
@@ -891,8 +1065,10 @@
   gap: 4px;
 }
 
-/* Bottom Action Clearance to prevent clipping */
+/* Bottom Action Clearance to prevent clipping across all mobile & tablet viewports */
+.rs-hangar-page,
 .rs-mode-hangar,
 .rs-mode-workshop {
-  padding-bottom: 120px !important;
+  padding-bottom: max(160px, calc(120px + env(safe-area-inset-bottom))) !important;
+  box-sizing: border-box;
 }

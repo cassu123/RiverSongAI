@@ -94,25 +94,14 @@ export default function VehiclePage({ setAction, onNavigate }) {
     }
   }, [vehicles])
 
-  // Contextual Action Bar for Landing View
+  // Ensure landing view leaves the global dock clean and unclipped
   useEffect(() => {
-    if (!selectedVehicleId) {
-      setAction(
-        <div className="rs-chat-input-controls" style={{ width: '100%', justifyContent: 'center' }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button className="rs-btn-primary" onClick={() => setSelectedVehicleId('NEW')}>
-              <span className="material-symbols-rounded">add</span>
-              <span className="rs-speak-actions-label">REGISTER VEHICLE</span>
-            </button>
-            <button className="rs-pill is-active" onClick={() => setShowAskRiverAll(true)}>
-              <span className="material-symbols-rounded">psychology</span>
-              <span className="rs-speak-actions-label">ASK RIVER</span>
-            </button>
-          </div>
-        </div>
-      )
+    if (!selectedVehicleId && setAction) {
+      setAction(null)
     }
-    return () => setAction(null)
+    return () => {
+      if (setAction) setAction(null)
+    }
   }, [selectedVehicleId, setAction])
 
   const handleCreateVehicle = async (e) => {
@@ -306,40 +295,69 @@ export default function VehiclePage({ setAction, onNavigate }) {
   // DEFAULT STATE: THE HANGAR LANDING HUB (No vehicle pre-selected)
   // ---------------------------------------------------------------------------
   return (
-    <div className="rs-foyer rs-mode-hangar animate-page-in">
-      {/* Foyer Header */}
-      <div className="rs-foyer-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+    <div className="rs-hangar-page rs-mode-hangar animate-fade-in">
+      {/* Hangar Header with Primary Actions */}
+      <div className="rs-foyer-head hangar-header">
         <div>
+          <div className="rs-card-label" style={{ letterSpacing: '0.2em', marginBottom: 8, color: 'var(--primary)', opacity: 0.9 }}>
+            SECTOR GARAGE · FLEET TELEMETRY
+          </div>
           <h1 className="rs-greeting">The Hangar</h1>
           <div className="rs-greeting-sub">Sector fleet management and maintenance telemetry.</div>
         </div>
-        <button className="rs-pill is-active" onClick={() => setSelectedVehicleId('NEW')} title="Register new asset">
-          <span className="material-symbols-rounded">add</span>
-          <span>REGISTER VEHICLE</span>
-        </button>
+        <div className="hangar-header-actions">
+          <button className="rs-pill" onClick={() => setShowAskRiverAll(true)} title="Ask River about fleet readiness">
+            <span className="material-symbols-rounded">psychology</span>
+            <span>ASK RIVER</span>
+          </button>
+          <button className="rs-btn-primary" onClick={() => setSelectedVehicleId('NEW')} title="Register new asset">
+            <span className="material-symbols-rounded">add</span>
+            <span>REGISTER VEHICLE</span>
+          </button>
+        </div>
       </div>
 
-      {/* Fleet Summary Stat Strip */}
+      {/* Fleet Summary Stat Strip — Balanced Responsive Grid */}
       <div className="cockpit-stats-grid">
         <div className="cockpit-stat-tile">
-          <span className="card-metric-label">ACTIVE UNITS</span>
+          <div className="cockpit-stat-tile-head">
+            <span className="card-metric-label">ACTIVE UNITS</span>
+            <span className="material-symbols-rounded cockpit-stat-icon">garage</span>
+          </div>
           <div className="stat-num">{fleetStats.activeCount} <span className="stat-unit">ASSETS</span></div>
           <div className="stat-sub">{fleetStats.motos} Motos · {fleetStats.autos} Autos</div>
         </div>
+
         <div className="cockpit-stat-tile">
-          <span className="card-metric-label">FLEET HEALTH</span>
+          <div className="cockpit-stat-tile-head">
+            <span className="card-metric-label">FLEET HEALTH</span>
+            <span
+              className="material-symbols-rounded cockpit-stat-icon"
+              style={{ color: fleetStats.overdueCount > 0 ? 'var(--rs-status-critical, #ff8b8b)' : 'var(--rs-status-nominal, #4ade80)' }}
+            >
+              {fleetStats.overdueCount > 0 ? 'warning' : 'verified'}
+            </span>
+          </div>
           <div className="stat-num" style={{ color: fleetStats.overdueCount > 0 ? 'var(--rs-status-critical, #ff8b8b)' : 'var(--rs-status-nominal, #4ade80)' }}>
             {fleetStats.overdueCount > 0 ? `${fleetStats.overdueCount} SERVICE DUE` : 'ALL NOMINAL'}
           </div>
           <div className="stat-sub">{fleetStats.overdueCount > 0 ? 'Milestone inspection pending' : 'All systems operating nominally'}</div>
         </div>
+
         <div className="cockpit-stat-tile">
-          <span className="card-metric-label">CUMULATIVE MILEAGE</span>
+          <div className="cockpit-stat-tile-head">
+            <span className="card-metric-label">CUMULATIVE MILEAGE</span>
+            <span className="material-symbols-rounded cockpit-stat-icon">speed</span>
+          </div>
           <div className="stat-num">{fleetStats.totalMiles.toLocaleString()} <span className="stat-unit">MI</span></div>
           <div className="stat-sub">Combined sector travel</div>
         </div>
+
         <div className="cockpit-stat-tile">
-          <span className="card-metric-label">TECHNICAL DOSSIERS</span>
+          <div className="cockpit-stat-tile-head">
+            <span className="card-metric-label">TECHNICAL DOSSIERS</span>
+            <span className="material-symbols-rounded cockpit-stat-icon">menu_book</span>
+          </div>
           <div className="stat-num">{fleetStats.indexedCount} <span className="stat-unit">INDEXED</span></div>
           <div className="stat-sub">Service manuals linked to RAG</div>
         </div>
@@ -389,7 +407,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
                 title={`Open ${v.nickname || v.model} Telemetry Cockpit`}
               >
                 <div className="hangar-card-header">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div className="hangar-card-left">
                     <div className="vehicle-icon-badge">
                       <span className="material-symbols-rounded">{getTypeIcon(v.vehicle_type)}</span>
                     </div>
@@ -399,7 +417,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
                     </div>
                   </div>
                   <div
-                    className="rs-status-strip"
+                    className="hangar-status-badge"
                     style={isDue ? {
                       color: 'var(--rs-status-critical, #ff8b8b)',
                       borderColor: 'rgba(255,139,139,0.3)',
@@ -414,9 +432,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
                       className="rs-status-dot"
                       style={{ background: isDue ? 'var(--rs-status-critical, #ff8b8b)' : 'var(--rs-status-nominal, #4ade80)' }}
                     />
-                    <span style={{ fontSize: '0.62rem', fontWeight: 900 }}>
-                      {isDue ? 'SERVICE DUE' : 'NOMINAL'}
-                    </span>
+                    <span>{isDue ? 'SERVICE DUE' : 'NOMINAL'}</span>
                   </div>
                 </div>
 
@@ -425,9 +441,9 @@ export default function VehiclePage({ setAction, onNavigate }) {
                     <span className="card-metric-label">CURRENT ODOMETER</span>
                     <div className="card-metric-val">
                       {odo > 0 ? (
-                        <>{odo.toLocaleString()} <span style={{ fontSize: '0.68rem', opacity: 0.7 }}>MI</span></>
+                        <>{odo.toLocaleString()} <span className="card-metric-unit">MI</span></>
                       ) : (
-                        <span style={{ opacity: 0.6, fontSize: '0.88rem' }}>0 mi</span>
+                        <span style={{ opacity: 0.6, fontSize: '0.95rem' }}>0 mi</span>
                       )}
                     </div>
                   </div>
@@ -441,12 +457,12 @@ export default function VehiclePage({ setAction, onNavigate }) {
 
                 <div className="hangar-card-footer">
                   <span className="hangar-card-scope-hint">
-                    <span className="material-symbols-rounded" style={{ fontSize: '0.95rem', color: 'var(--primary)' }}>tune</span>
+                    <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--primary)' }}>tune</span>
                     <span>{checkPoints.length} Checkpoints Configured</span>
                   </span>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span className="hangar-card-inspect-btn">
                     <span>INSPECT</span>
-                    <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>arrow_forward</span>
+                    <span className="material-symbols-rounded">arrow_forward</span>
                   </span>
                 </div>
               </div>
@@ -459,11 +475,11 @@ export default function VehiclePage({ setAction, onNavigate }) {
             onClick={() => setSelectedVehicleId('NEW')}
             title="Register another vehicle to your hangar"
           >
-            <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', color: 'var(--primary)', opacity: 0.8 }}>
-              add_circle
-            </span>
-            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--fg)' }}>REGISTER NEW ASSET</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--md-on-surface-variant)', maxWidth: 220 }}>
+            <div className="add-vehicle-icon-ring">
+              <span className="material-symbols-rounded">add</span>
+            </div>
+            <div className="add-vehicle-title">REGISTER NEW ASSET</div>
+            <div className="add-vehicle-desc">
               Add a motorcycle, car, truck, or recreational unit to your sector hangar.
             </div>
           </div>

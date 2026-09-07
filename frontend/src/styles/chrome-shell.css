@@ -290,7 +290,7 @@
   inline-size: 100%;
   max-inline-size: 1380px;
   padding-block-end: 0;
-  overflow: clip; /* Prevent horizontal leakage */
+  overflow-x: clip; /* Prevent horizontal leakage without truncating vertical scrolling */
 }
 
 /* The Shell's direct-child foyer is a centering wrapper only. */
