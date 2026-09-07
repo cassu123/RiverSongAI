@@ -30,6 +30,21 @@ function fmtDays(d) {
 // ---------------------------------------------------------------------------
 // CheckPoint Row (Specs Tab)
 // ---------------------------------------------------------------------------
+const BLANK_CP = {
+  description: '',
+  service_level: 'inspect',
+  interval_miles: '',
+  interval_days: '',
+  due_at_miles: '',
+  expected_spec: '',
+  volume: '',
+  min_value: '',
+  max_value: '',
+  unit: '',
+  ft_lb: '',
+  nm: '',
+};
+
 function CheckPointRow({ cp, token, vehicleId, onUpdated, isNonRoad }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -109,22 +124,22 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated, isNonRoad }) {
         )}
         {(cp.interval_miles || cp.due_at_miles) && (
           <span className="cp-interval-tag">
-            {cp.due_at_miles ? `Due: ${cp.due_at_miles.toLocaleString()} mi` : `Every ${cp.interval_miles.toLocaleString()} mi`}
+            {cp.due_at_miles ? `Due: ${cp.due_at_miles.toLocaleString()} ${isNonRoad ? 'hrs' : 'mi'}` : `Every ${cp.interval_miles.toLocaleString()} ${isNonRoad ? 'hrs' : 'mi'}`}
           </span>
         )}
         {cp.parts && cp.parts.map(p => (
           <span key={p.id} className="cp-interval-tag" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
-            {p.part_name} {p.part_number ? `(${p.part_number})` : ''}
+            {p.part_name} {p.oem_part_number || p.part_number ? `(${p.oem_part_number || p.part_number})` : ''}
           </span>
         ))}
         <div className="cp-row-actions">
           <button className="rs-pill" onClick={async () => {
-            const partName = window.prompt('Enter Part Name (e.g. Oil Filter, 10W-30, Spark Plug):');
+            const partName = window.prompt('Enter Part Name (e.g. Oil Filter, Spark Plug, Brake Pads):');
             if (!partName) return;
-            const partNum = window.prompt('Enter Part Number (Optional):');
+            const partNum = window.prompt('Enter OEM Part Number (Optional):');
             await apiFetch(`/api/vehicles/${vehicleId}/parts`, token, {
               method: 'POST',
-              body: JSON.stringify({ check_point_id: cp.id, part_name: partName, part_number: partNum || null })
+              body: JSON.stringify({ check_point_id: cp.id, part_name: partName, oem_part_number: partNum || null })
             });
             onUpdated();
           }}>+ PART</button>
@@ -152,23 +167,23 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated, isNonRoad }) {
             </div>
             <div className="cockpit-input-box">
               <span className="card-metric-label">EXPECTED SPEC</span>
-              <input className="cockpit-input-raw" value={form.expected_spec} onChange={set('expected_spec')} placeholder="e.g. 10W-30" />
+              <input className="cockpit-input-raw" value={form.expected_spec} onChange={set('expected_spec')} placeholder="e.g. SAE 5W-30" />
             </div>
             <div className="cockpit-input-box">
               <span className="card-metric-label">CAPACITY / VOLUME</span>
-              <input className="cockpit-input-raw" value={form.volume} onChange={set('volume')} placeholder="e.g. 2.7 Qt" />
+              <input className="cockpit-input-raw" value={form.volume} onChange={set('volume')} placeholder="e.g. 4.5 Qt" />
             </div>
             <div className="cockpit-input-box">
               <span className="card-metric-label">TORQUE (FT-LB)</span>
               <input className="cockpit-input-raw" type="number" value={form.ft_lb} onChange={set('ft_lb')} placeholder="18" />
             </div>
             <div className="cockpit-input-box">
-              <span className="card-metric-label">INTERVAL (MILES)</span>
-              <input className="cockpit-input-raw" type="number" value={form.interval_miles} onChange={set('interval_miles')} placeholder="4000" />
+              <span className="card-metric-label">INTERVAL (${isNonRoad ? 'HOURS' : 'MILES'})</span>
+              <input className="cockpit-input-raw" type="number" value={form.interval_miles} onChange={set('interval_miles')} placeholder="5000" />
             </div>
             <div className="cockpit-input-box">
-              <span className="card-metric-label">NEXT DUE (MILES)</span>
-              <input className="cockpit-input-raw" type="number" value={form.due_at_miles} onChange={set('due_at_miles')} placeholder="4000" />
+              <span className="card-metric-label">NEXT DUE (${isNonRoad ? 'HOURS' : 'MILES'})</span>
+              <input className="cockpit-input-raw" type="number" value={form.due_at_miles} onChange={set('due_at_miles')} placeholder="5000" />
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
@@ -178,6 +193,607 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated, isNonRoad }) {
         </div>
       )}
     </li>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Specs Editor Component
+// ---------------------------------------------------------------------------
+function SpecsEditor({ vehicle, token, onUpdated, isNonRoad }) {
+  const [newPoint, setNewPoint] = useState(BLANK_CP);
+  const [showAdd, setShowAdd] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const setNp = (k) => (e) => setNewPoint(f => ({ ...f, [k]: e.target.value }));
+
+  const addPoint = async () => {
+    if (!newPoint.description.trim()) return;
+    setBusy(true);
+    try {
+      const n = (v) => v !== '' ? Number(v) : null;
+      await apiFetch(`/api/vehicles/${vehicle.id}/specs/checkpoints`, token, {
+        method: 'POST',
+        body: JSON.stringify({
+          description: newPoint.description,
+          service_level: newPoint.service_level,
+          sort_order: (vehicle.check_points || []).length,
+          interval_miles: n(newPoint.interval_miles),
+          interval_days: n(newPoint.interval_days),
+          due_at_miles: n(newPoint.due_at_miles),
+          expected_spec: newPoint.expected_spec || null,
+          volume: newPoint.volume || null,
+          min_value: n(newPoint.min_value),
+          max_value: n(newPoint.max_value),
+          unit: newPoint.unit || null,
+          ft_lb: n(newPoint.ft_lb),
+          nm: n(newPoint.nm),
+        }),
+      });
+      setNewPoint(BLANK_CP);
+      setShowAdd(false);
+      onUpdated();
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="specs-editor">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <span className="card-metric-label" style={{ fontSize: '0.72rem', letterSpacing: '0.12em' }}>
+          CHECKPOINTS &amp; SPECIFICATIONS MASTER ROSTER ({(vehicle.check_points || []).length})
+        </span>
+        {(vehicle.check_points || []).length > 0 && (
+          <button
+            className="rs-pill btn-danger"
+            onClick={async () => {
+              if (!window.confirm(`Clear all ${vehicle.check_points.length} checkpoints? This cannot be undone.`)) return;
+              await apiFetch(`/api/vehicles/${vehicle.id}/specs/checkpoints`, token, { method: 'DELETE' });
+              onUpdated();
+            }}
+          >
+            CLEAR ALL
+          </button>
+        )}
+      </div>
+
+      {(vehicle.check_points || []).length === 0 && !showAdd && (
+        <div className="mp-empty-specs">
+          No checkpoints configured for this vehicle yet. Add items below or import from an owner's manual in Settings.
+        </div>
+      )}
+
+      <ul className="cp-list" style={{ marginBottom: 16 }}>
+        {(vehicle.check_points || []).map((cp) => (
+          <CheckPointRow key={cp.id} cp={cp} token={token} vehicleId={vehicle.id} onUpdated={onUpdated} isNonRoad={isNonRoad} />
+        ))}
+      </ul>
+
+      {!showAdd ? (
+        <button className="rs-pill is-active" onClick={() => setShowAdd(true)}>
+          <span className="material-symbols-rounded">add</span>
+          <span>ADD CHECKPOINT</span>
+        </button>
+      ) : (
+        <div className="rs-card is-wide" style={{ padding: 20 }}>
+          <h4 style={{ margin: '0 0 14px 0', color: 'var(--primary)', fontSize: '0.9rem' }}>&gt; CREATE NEW CHECKPOINT</h4>
+          <div className="cp-edit-grid">
+            <div className="cockpit-input-box" style={{ gridColumn: 'span 2' }}>
+              <span className="card-metric-label">DESCRIPTION *</span>
+              <input className="cockpit-input-raw" value={newPoint.description} onChange={setNp('description')} placeholder="e.g. Engine Oil & Filter" required />
+            </div>
+            <div className="cockpit-input-box">
+              <span className="card-metric-label">SERVICE LEVEL</span>
+              <select className="cockpit-input-raw" value={newPoint.service_level} onChange={setNp('service_level')}>
+                <option value="inspect">Inspect</option>
+                <option value="service">Service</option>
+                <option value="replace">Replace</option>
+              </select>
+            </div>
+            <div className="cockpit-input-box">
+              <span className="card-metric-label">EXPECTED SPEC</span>
+              <input className="cockpit-input-raw" value={newPoint.expected_spec} onChange={setNp('expected_spec')} placeholder="e.g. Dexos1 5W-30" />
+            </div>
+            <div className="cockpit-input-box">
+              <span className="card-metric-label">CAPACITY / VOLUME</span>
+              <input className="cockpit-input-raw" value={newPoint.volume} onChange={setNp('volume')} placeholder="e.g. 5.0 Qt" />
+            </div>
+            <div className="cockpit-input-box">
+              <span className="card-metric-label">UNIT</span>
+              <input className="cockpit-input-raw" value={newPoint.unit} onChange={setNp('unit')} placeholder="PSI / mm" />
+            </div>
+            <div className="cockpit-input-box">
+              <span className="card-metric-label">TORQUE (FT-LB)</span>
+              <input className="cockpit-input-raw" type="number" value={newPoint.ft_lb} onChange={setNp('ft_lb')} placeholder="18" />
+            </div>
+            <div className="cockpit-input-box">
+              <span className="card-metric-label">INTERVAL (${isNonRoad ? 'HOURS' : 'MILES'})</span>
+              <input className="cockpit-input-raw" type="number" value={newPoint.interval_miles} onChange={setNp('interval_miles')} placeholder="5000" />
+            </div>
+            <div className="cockpit-input-box">
+              <span className="card-metric-label">NEXT DUE (${isNonRoad ? 'HOURS' : 'MILES'})</span>
+              <input className="cockpit-input-raw" type="number" value={newPoint.due_at_miles} onChange={setNp('due_at_miles')} placeholder="5000" />
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+            <button className="rs-pill" onClick={() => { setShowAdd(false); setNewPoint(BLANK_CP); }}>CANCEL</button>
+            <button className="rs-btn-primary" onClick={addPoint} disabled={busy || !newPoint.description.trim()}>
+              {busy ? 'SAVING...' : 'CREATE ITEM'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// People Settings Subsystem
+// ---------------------------------------------------------------------------
+function PeopleSettings({ token, people, onRefresh }) {
+  const [emailInput, setEmailInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [error, setError] = useState('');
+
+  const flash = (ok, text) => {
+    if (ok) setMsg(text); else setError(text);
+    setTimeout(() => { setMsg(''); setError(''); }, 4000);
+  };
+
+  const handleAdd = async () => {
+    if (!emailInput.trim()) return;
+    setBusy(true);
+    try {
+      await apiFetch('/api/vehicles/people', token, {
+        method: 'POST',
+        body: JSON.stringify({ email: emailInput.trim().toLowerCase() })
+      });
+      setEmailInput('');
+      flash(true, 'Member added to roster.');
+      onRefresh();
+    } catch (e) {
+      flash(false, e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemove = async (person, force = false) => {
+    setBusy(true);
+    try {
+      const path = force ? `/api/vehicles/people/${person.id}/force` : `/api/vehicles/people/${person.id}`;
+      await apiFetch(path, token, { method: 'DELETE' });
+      flash(true, `${person.display_name || person.email} removed.`);
+      onRefresh();
+    } catch (e) {
+      flash(false, e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rs-card is-wide" style={{ padding: 24 }}>
+      <div className="rs-card-head" style={{ marginBottom: 14 }}>
+        <span className="rs-card-label">&gt; MAINTENANCE CREW ROSTER</span>
+      </div>
+      <p style={{ color: 'var(--md-on-surface-variant)', fontSize: '0.86rem', marginTop: 0, marginBottom: 16 }}>
+        Add authorized crew members by email. Assigned crew will appear in the "Performed By" selector when logging maintenance.
+      </p>
+
+      {msg && <div className="mp-flash--ok" style={{ marginBottom: 14 }}>{msg}</div>}
+      {error && <div className="mp-error" style={{ marginBottom: 14 }}>{error}</div>}
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+        <input
+          className="cockpit-input-raw"
+          style={{ flex: 1, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 14px' }}
+          placeholder="member@example.com"
+          value={emailInput}
+          onChange={e => setEmailInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleAdd()}
+        />
+        <button className="rs-btn-primary" onClick={handleAdd} disabled={busy || !emailInput.trim()}>
+          {busy ? 'ADDING...' : '+ ADD MEMBER'}
+        </button>
+      </div>
+
+      {people.length === 0 ? (
+        <div className="mp-empty-specs">No crew members registered yet.</div>
+      ) : (
+        <ul className="cp-list">
+          {people.map(p => (
+            <li key={p.id} className="cp-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <strong style={{ fontSize: '0.98rem', color: 'var(--fg)' }}>{p.display_name || p.email}</strong>
+                {p.display_name && <div style={{ fontSize: '0.78rem', color: 'var(--md-on-surface-variant)' }}>{p.email}</div>}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {p.vehicle_ids?.length > 0 && (
+                  <span className="cp-spec-tag">{p.vehicle_ids.length} vehicle(s)</span>
+                )}
+                <button className="rs-pill" onClick={() => handleRemove(p)} title="Remove person">✕</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Assignments Settings Subsystem
+// ---------------------------------------------------------------------------
+function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeopleRefresh }) {
+  const [vehicleId, setVehicleId] = useState(selectedVehicleId || vehicles[0]?.id || '');
+  const [assignments, setAssignments] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [error, setError] = useState('');
+
+  const flash = (ok, text) => {
+    if (ok) setMsg(text); else setError(text);
+    setTimeout(() => { setMsg(''); setError(''); }, 3000);
+  };
+
+  const fetchAssignments = useCallback(async () => {
+    if (!vehicleId || !token) return;
+    try {
+      const data = await apiFetch(`/api/vehicles/${vehicleId}/assignments`, token);
+      setAssignments(data || []);
+    } catch { setAssignments([]); }
+  }, [vehicleId, token]);
+
+  useEffect(() => { fetchAssignments(); }, [fetchAssignments]);
+
+  const assignedPersonIds = new Set(assignments.map(a => a.person_id));
+  const unassigned = people.filter(p => !assignedPersonIds.has(p.id));
+
+  const handleAssign = async (personId) => {
+    setBusy(true);
+    try {
+      await apiFetch(`/api/vehicles/${vehicleId}/assignments`, token, {
+        method: 'POST',
+        body: JSON.stringify({ person_id: personId })
+      });
+      flash(true, 'Assigned to vehicle.');
+      fetchAssignments();
+      onPeopleRefresh();
+    } catch (e) { flash(false, e.message); }
+    finally { setBusy(false); }
+  };
+
+  const handleUnassign = async (personId) => {
+    setBusy(true);
+    try {
+      await apiFetch(`/api/vehicles/${vehicleId}/assignments/${personId}`, token, { method: 'DELETE' });
+      flash(true, 'Unassigned.');
+      fetchAssignments();
+      onPeopleRefresh();
+    } catch (e) { flash(false, e.message); }
+    finally { setBusy(false); }
+  };
+
+  const currentV = vehicles.find(v => v.id === vehicleId);
+
+  return (
+    <div className="rs-card is-wide" style={{ padding: 24 }}>
+      <div className="rs-card-head" style={{ marginBottom: 14 }}>
+        <span className="rs-card-label">&gt; VEHICLE ASSIGNMENTS &amp; OPERATORS</span>
+      </div>
+
+      {msg && <div className="mp-flash--ok" style={{ marginBottom: 14 }}>{msg}</div>}
+      {error && <div className="mp-error" style={{ marginBottom: 14 }}>{error}</div>}
+
+      <div className="cockpit-input-box" style={{ maxWidth: 360, marginBottom: 20 }}>
+        <span className="card-metric-label">TARGET VEHICLE</span>
+        <select className="cockpit-input-raw" value={vehicleId} onChange={e => setVehicleId(e.target.value)}>
+          {vehicles.map(v => (
+            <option key={v.id} value={v.id} style={{ background: 'var(--bg-base)' }}>
+              {v.nickname || `${v.year || ''} ${v.make} ${v.model}`}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+        {/* Assigned */}
+        <div style={{ background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="card-metric-label" style={{ marginBottom: 12 }}>
+            ASSIGNED TO {currentV?.nickname?.toUpperCase() || currentV?.model?.toUpperCase() || 'VEHICLE'}
+          </div>
+          {assignments.length === 0 ? (
+            <div className="mp-empty-specs" style={{ padding: 16 }}>No crew assigned to this vehicle yet.</div>
+          ) : (
+            <ul className="cp-list">
+              {assignments.map(a => (
+                <li key={a.person_id} className="cp-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--fg)' }}>{a.person_display_name || a.person_email}</span>
+                  <button className="rs-pill btn-danger" onClick={() => handleUnassign(a.person_id)} disabled={busy}>
+                    UNASSIGN
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Unassigned */}
+        <div style={{ background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="card-metric-label" style={{ marginBottom: 12 }}>AVAILABLE ROSTER MEMBERS</div>
+          {unassigned.length === 0 ? (
+            <div className="mp-empty-specs" style={{ padding: 16 }}>All registered members are assigned.</div>
+          ) : (
+            <ul className="cp-list">
+              {unassigned.map(p => (
+                <li key={p.id} className="cp-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--fg)' }}>{p.display_name || p.email}</span>
+                  <button className="rs-pill is-active" onClick={() => handleAssign(p.id)} disabled={busy}>
+                    + ASSIGN
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Manual Upload Subsystem
+// ---------------------------------------------------------------------------
+function ManualUpload({ token, vehicleId, onUpdated }) {
+  const [file, setFile] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [busyLabel, setBusyLabel] = useState('');
+  const [result, setResult] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [error, setError] = useState('');
+  const fileRef = useRef();
+
+  const postFile = async (endpoint) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Upload failed');
+    return data;
+  };
+
+  const handlePreview = async () => {
+    if (!file) return;
+    setBusy(true); setBusyLabel('Parsing manual text and detecting intervals…'); setError(''); setPreview(null); setResult(null);
+    try {
+      const data = await postFile(`/api/vehicles/${vehicleId}/manual/preview`);
+      setPreview(data.items || []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false); setBusyLabel('');
+    }
+  };
+
+  const handleApply = async () => {
+    if (!file) return;
+    setBusy(true); setBusyLabel('Extracting specs and committing checkpoints…'); setError(''); setResult(null);
+    try {
+      const data = await postFile(`/api/vehicles/${vehicleId}/manual`);
+      setResult(data);
+      setPreview(null);
+      setFile(null);
+      if (fileRef.current) fileRef.current.value = '';
+      onUpdated();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false); setBusyLabel('');
+    }
+  };
+
+  return (
+    <div className="rs-card is-wide" style={{ padding: 24 }}>
+      <div className="rs-card-head" style={{ marginBottom: 14 }}>
+        <span className="rs-card-label">&gt; AUTOMATED MANUAL IMPORT &amp; SPECS EXTRACTION</span>
+      </div>
+      <p style={{ color: 'var(--md-on-surface-variant)', fontSize: '0.86rem', marginTop: 0, marginBottom: 16 }}>
+        Upload a factory service manual or owner's handbook (PDF). Maintenance schedules, fluid capacities, torque specs, and intervals will be parsed and staged.
+      </p>
+
+      {result && (
+        <div className="mp-flash--ok" style={{ marginBottom: 16 }}>
+          Successfully applied! ${result.updated} updated, ${result.created} new checkpoints configured (${result.total} total found).
+        </div>
+      )}
+      {error && <div className="mp-error" style={{ marginBottom: 16 }}>{error}</div>}
+
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
+        <input ref={fileRef} type="file" accept="application/pdf" style={{ display: 'none' }} onChange={e => { setFile(e.target.files?.[0] || null); setPreview(null); }} />
+        <button className="rs-pill" onClick={() => fileRef.current?.click()}>
+          <span className="material-symbols-rounded">upload_file</span>
+          <span>{file ? file.name : 'SELECT PDF MANUAL'}</span>
+        </button>
+        {file && (
+          <>
+            <button className="rs-pill" onClick={handlePreview} disabled={busy}>PREVIEW DETECTED ITEMS</button>
+            <button className="rs-btn-primary" onClick={handleApply} disabled={busy}>EXTRACT &amp; APPLY</button>
+            <button className="rs-pill" onClick={() => { setFile(null); setPreview(null); }}>✕</button>
+          </>
+        )}
+        {busy && <span style={{ fontSize: '0.82rem', color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}>{busyLabel}</span>}
+      </div>
+
+      {preview && (
+        <div style={{ marginTop: 16, background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 12 }}>
+          <div className="card-metric-label" style={{ marginBottom: 12 }}>PREVIEW — ${preview.length} ITEMS DETECTED</div>
+          {preview.length === 0 ? (
+            <div className="mp-empty-specs">No structured maintenance items detected in this document.</div>
+          ) : (
+            <ul className="cp-list">
+              {preview.map((item, i) => (
+                <li key={i} className="cp-row" style={{ padding: '10px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span className="cp-svc-badge">{item.service_level || 'INSPECT'}</span>
+                    <strong style={{ color: 'var(--fg)' }}>{item.description}</strong>
+                    {item.expected_spec && <span className="cp-spec-tag">{item.expected_spec}</span>}
+                    {item.interval_miles && <span className="cp-interval-tag">{item.interval_miles.toLocaleString()} mi</span>}
+                    {item.ft_lb && <span className="cp-torque-tag">{item.ft_lb} ft-lb</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Settings Panel Container
+// ---------------------------------------------------------------------------
+function SettingsPanel({ token, vehicles, people, selectedVehicleId, onPeopleRefresh, onVehicleRefresh }) {
+  const [section, setSection] = useState('people');
+
+  return (
+    <div className="mp-settings-panel">
+      <div className="mp-settings-tabs">
+        <button className={`mp-settings-tab ${section === 'people' ? 'active' : ''}`} onClick={() => setSection('people')}>
+          PEOPLE ROSTER
+        </button>
+        <button className={`mp-settings-tab ${section === 'assignments' ? 'active' : ''}`} onClick={() => setSection('assignments')}>
+          VEHICLE ASSIGNMENTS
+        </button>
+        <button className={`mp-settings-tab ${section === 'manual' ? 'active' : ''}`} onClick={() => setSection('manual')}>
+          MANUAL IMPORT
+        </button>
+      </div>
+
+      {section === 'people' && (
+        <PeopleSettings token={token} people={people} onRefresh={onPeopleRefresh} />
+      )}
+      {section === 'assignments' && (
+        <AssignmentsSettings token={token} vehicles={vehicles} people={people} selectedVehicleId={selectedVehicleId} onPeopleRefresh={onPeopleRefresh} />
+      )}
+      {section === 'manual' && (
+        <ManualUpload token={token} vehicleId={selectedVehicleId} onUpdated={onVehicleRefresh} />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Vehicle RAG Subsystem (Documents Tab)
+// ---------------------------------------------------------------------------
+function VehicleRAG({ token, vehicleId, currentOdometer }) {
+  const [file, setFile] = useState(null);
+  const [ingesting, setIngesting] = useState(false);
+  const [question, setQuestion] = useState('');
+  const [asking, setAsking] = useState(false);
+  const [answer, setAnswer] = useState(null);
+  const [error, setError] = useState('');
+  const fileRef = useRef();
+
+  const handleIngest = async () => {
+    if (!file) return;
+    setIngesting(true); setError('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`/api/vehicles/${vehicleId}/manual`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd
+      });
+      if (!res.ok) throw new Error('Ingestion failed');
+      alert('Document successfully indexed into vehicle knowledgebase!');
+      setFile(null);
+      if (fileRef.current) fileRef.current.value = '';
+    } catch (e) { setError(e.message); }
+    finally { setIngesting(false); }
+  };
+
+  const handleAsk = async (e) => {
+    e.preventDefault();
+    if (!question.trim()) return;
+    setAsking(true); setError(''); setAnswer(null);
+    try {
+      const odo = currentOdometer ? parseInt(currentOdometer, 10) : null;
+      const res = await fetch(`/api/vehicles/${vehicleId}/maintenance-ai`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: question.trim(), current_odometer: isNaN(odo) ? null : odo })
+      });
+      if (!res.ok) throw new Error('AI query failed');
+      const data = await res.json();
+      setAnswer(data);
+      setQuestion('');
+    } catch (e) { setError(e.message); }
+    finally { setAsking(false); }
+  };
+
+  return (
+    <div className="rs-card is-wide" style={{ padding: 24 }}>
+      <div className="rs-card-head" style={{ marginBottom: 14 }}>
+        <span className="rs-card-label">&gt; CONVERSATIONAL TECHNICAL DOSSIER</span>
+      </div>
+      <p style={{ color: 'var(--md-on-surface-variant)', fontSize: '0.86rem', marginTop: 0, marginBottom: 16 }}>
+        Ask River Song about fluid capacities, torque specs, part numbers, or upcoming service schedules grounded in your vehicle's technical manual.
+      </p>
+
+      {error && <div className="mp-error" style={{ marginBottom: 14 }}>{error}</div>}
+
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 18 }}>
+        <input ref={fileRef} type="file" accept=".pdf,.txt" style={{ display: 'none' }} onChange={e => setFile(e.target.files?.[0] || null)} />
+        <button className="rs-pill" onClick={() => fileRef.current?.click()}>
+          <span className="material-symbols-rounded">upload_file</span>
+          <span>{file ? file.name : 'UPLOAD MANUAL / DOSSIER'}</span>
+        </button>
+        {file && (
+          <button className="rs-btn-primary" onClick={handleIngest} disabled={ingesting}>
+            {ingesting ? 'INGESTING...' : 'INGEST FILE'}
+          </button>
+        )}
+      </div>
+
+      <form onSubmit={handleAsk} style={{ display: 'flex', gap: 10 }}>
+        <input
+          className="cockpit-input-raw"
+          style={{ flex: 1, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 14px' }}
+          placeholder="e.g. 'What oil viscosity is recommended?' or 'What is the torque for the oil drain plug?'"
+          value={question}
+          onChange={e => setQuestion(e.target.value)}
+          disabled={asking}
+        />
+        <button className="rs-btn-primary" type="submit" disabled={asking || !question.trim()}>
+          {asking ? 'THINKING...' : 'QUERY'}
+        </button>
+      </form>
+
+      {answer && (
+        <div className="mp-rag-answer animate-fade-in" style={{ marginTop: 20 }}>
+          <div style={{ fontSize: '0.94rem', lineHeight: 1.6, color: 'var(--fg)' }}>
+            {answer.response}
+          </div>
+          {answer.chunks?.length > 0 && (
+            <details style={{ marginTop: 14, opacity: 0.8, fontSize: '0.82rem' }}>
+              <summary style={{ cursor: 'pointer', color: 'var(--primary)' }}>View Citations ({answer.chunks.length})</summary>
+              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {answer.chunks.map((c, idx) => (
+                  <div key={idx} style={{ padding: '6px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 6 }}>
+                    {c.text}
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -206,7 +822,7 @@ export default function MaintenancePulse({
   // Current Odometer & Inline update
   const currentOdometer = useMemo(() => {
     if (!currentVehicle) return 0;
-    return currentVehicle.usage_readings?.[0]?.value ?? 0;
+    return currentVehicle.current_odometer ?? (currentVehicle.usage_readings?.[0]?.value ?? 0);
   }, [currentVehicle]);
 
   const [isUpdatingOdo, setIsUpdatingOdo] = useState(false);
@@ -220,6 +836,73 @@ export default function MaintenancePulse({
   });
   const [savingDetails, setSavingDetails] = useState(false);
 
+  // Service Log Form state
+  const [logForm, setLogForm] = useState({
+    service_date: new Date().toISOString().split('T')[0],
+    service_type: '',
+    odometer: '',
+    performed_by_id: '',
+    service_center: 'Personal Hangar',
+    cost: '',
+    notes: '',
+    is_pro_service: false,
+    receipt_file: null
+  });
+  const [logCheckedPoints, setLogCheckedPoints] = useState({});
+  const [logActualValues, setLogActualValues] = useState({});
+  const [submittingLog, setSubmittingLog] = useState(false);
+
+  // Roster & Assignments & History
+  const [people, setPeople] = useState([]);
+  const [vehicleAssignments, setVehicleAssignments] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+
+  // Fetch People & Assignments
+  const fetchPeople = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await apiFetch('/api/vehicles/people', token);
+      setPeople(data || []);
+    } catch { setPeople([]); }
+  }, [token]);
+
+  const fetchVehicleAssignments = useCallback(async () => {
+    if (!token || !selectedId) {
+      setVehicleAssignments([]);
+      return;
+    }
+    try {
+      const data = await apiFetch(`/api/vehicles/${selectedId}/assignments`, token);
+      setVehicleAssignments(data || []);
+    } catch { setVehicleAssignments([]); }
+  }, [token, selectedId]);
+
+  const fetchLogs = useCallback(async () => {
+    if (!token || !selectedId) return;
+    setLoadingLogs(true);
+    try {
+      const data = await apiFetch(`/api/vehicles/${selectedId}/logs`, token);
+      setLogs(data || []);
+    } catch {
+      setLogs([]);
+    } finally {
+      setLoadingLogs(false);
+    }
+  }, [token, selectedId]);
+
+  useEffect(() => {
+    fetchPeople();
+  }, [fetchPeople]);
+
+  useEffect(() => {
+    fetchVehicleAssignments();
+  }, [fetchVehicleAssignments]);
+
+  useEffect(() => {
+    if (activeTab === 'history') fetchLogs();
+  }, [activeTab, fetchLogs]);
+
   useEffect(() => {
     if (currentVehicle) {
       setEditForm({
@@ -232,7 +915,12 @@ export default function MaintenancePulse({
         color: currentVehicle.color || '',
         vin: currentVehicle.vin || ''
       });
-      setNewOdoInput(String(currentVehicle.usage_readings?.[0]?.value || ''));
+      const odo = currentVehicle.current_odometer ?? (currentVehicle.usage_readings?.[0]?.value ?? '');
+      setNewOdoInput(odo ? String(odo) : '');
+      setLogForm(prev => ({
+        ...prev,
+        odometer: odo ? String(odo) : ''
+      }));
     }
   }, [currentVehicle]);
 
@@ -240,29 +928,9 @@ export default function MaintenancePulse({
   const [selectedMilestone, setSelectedMilestone] = useState(null);
   const [checkStatuses, setCheckStatuses] = useState({});
   const [actualValues, setActualValues] = useState({});
-  const [showFutureDrawer, setShowFutureDrawer] = useState(false);
-
-  // History & logs
-  const [logs, setLogs] = useState([]);
-  const [loadingLogs, setLoadingLogs] = useState(false);
-
-  // Service Log Form state
-  const [logForm, setLogForm] = useState({
-    service_date: new Date().toISOString().split('T')[0],
-    service_type: '',
-    service_center: 'Personal Hangar',
-    cost: '',
-    notes: '',
-    is_pro_service: false
-  });
-  const [submittingLog, setSubmittingLog] = useState(false);
-
-  // RAG / Manual Upload
-  const fileInputRef = useRef(null);
-  const [uploadingManual, setUploadingManual] = useState(false);
 
   // Auto-compute available milestones from checkpoints
-  const { milestones, currentMilestone, activeProcedures, futureProcedures, stagedProvisions, stagedTools, fastenerTorques } = useMemo(() => {
+  const { milestones, currentMilestone, activeProcedures, futureProcedures, stagedProvisions, fastenerTorques } = useMemo(() => {
     const checkPoints = currentVehicle?.check_points || [];
     const setMiles = new Set();
 
@@ -282,11 +950,9 @@ export default function MaintenancePulse({
       sortedMiles.push(1000, 4000, 8000, 12000);
     }
 
-    // Determine the due milestone relative to current odometer
     const dueMilestone = sortedMiles.find(m => m >= currentOdometer) || sortedMiles[sortedMiles.length - 1];
     const activeM = selectedMilestone || dueMilestone;
 
-    // Filter procedures
     const active = [];
     const future = [];
 
@@ -299,13 +965,10 @@ export default function MaintenancePulse({
       }
     });
 
-    // Staged items for active milestone
     const provs = [];
-    const tools = ['Torque Wrench', 'Metric Sockets (8-17mm)', 'Drain Pan', 'Shop Towels'];
-
     active.forEach(cp => {
       if (cp.parts && cp.parts.length > 0) {
-        cp.parts.forEach(p => provs.push(`${p.part_name} ${p.part_number ? `(${p.part_number})` : ''}`));
+        cp.parts.forEach(p => provs.push(`${p.part_name} ${p.oem_part_number || p.part_number ? `(${p.oem_part_number || p.part_number})` : ''}`));
       } else if (cp.volume && cp.expected_spec) {
         provs.push(`${cp.volume} ${cp.expected_spec}`);
       } else if (cp.expected_spec) {
@@ -313,15 +976,10 @@ export default function MaintenancePulse({
       }
     });
 
-    // Fastener torques
     const torques = [];
     checkPoints.forEach(cp => {
       if (cp.ft_lb || cp.nm) {
-        torques.push({
-          item: cp.description,
-          ft_lb: cp.ft_lb,
-          nm: cp.nm
-        });
+        torques.push({ item: cp.description, ft_lb: cp.ft_lb, nm: cp.nm });
       }
     });
     if (currentVehicle?.torque_specs) {
@@ -336,33 +994,14 @@ export default function MaintenancePulse({
       activeProcedures: active,
       futureProcedures: future,
       stagedProvisions: Array.from(new Set(provs)),
-      stagedTools: tools,
       fastenerTorques: torques
     };
   }, [currentVehicle, currentOdometer, selectedMilestone]);
 
-  // Fetch logs on history tab
-  const fetchLogs = useCallback(async () => {
-    if (!token || !selectedId) return;
-    setLoadingLogs(true);
-    try {
-      const data = await apiFetch(`/api/vehicles/${selectedId}/logs`, token);
-      setLogs(data || []);
-    } catch {
-      setLogs([]);
-    } finally {
-      setLoadingLogs(false);
-    }
-  }, [token, selectedId]);
-
-  useEffect(() => {
-    if (activeTab === 'history') fetchLogs();
-  }, [activeTab, fetchLogs]);
-
   // Handle Odometer Update
   const handleSaveOdometer = async () => {
     const val = parseInt(newOdoInput, 10);
-    if (isNaN(val) || val <= 0) return;
+    if (isNaN(val) || val < 0) return;
     setOdoSaving(true);
     try {
       await apiFetch(`/api/vehicles/${selectedId}/usage`, token, {
@@ -411,51 +1050,74 @@ export default function MaintenancePulse({
     }
   };
 
-  // Checkbox status cycle: pending -> nominal -> warn -> crit -> skip
-  const cycleStatus = (cpId) => {
-    setCheckStatuses(prev => {
-      const current = prev[cpId] || 'pending';
-      const map = {
-        pending: 'nominal',
-        nominal: 'warn',
-        warn: 'crit',
-        crit: 'skip',
-        skip: 'pending'
-      };
-      return { ...prev, [cpId]: map[current] };
+  // Quick Start Interval from Walkthrough
+  const handleStartIntervalInLog = () => {
+    const milestoneNum = (selectedMilestone || currentMilestone);
+    const mLabel = milestoneNum ? `${milestoneNum.toLocaleString()}-Mile Scheduled Maintenance` : 'Scheduled Maintenance';
+    
+    const initialStatuses = {};
+    activeProcedures.forEach(cp => {
+      initialStatuses[cp.id] = 'done';
     });
+    setLogCheckedPoints(initialStatuses);
+    
+    setLogForm(prev => ({
+      ...prev,
+      service_type: mLabel,
+      odometer: currentOdometer > 0 ? String(currentOdometer) : String(milestoneNum || ''),
+      notes: `Performed ${mLabel} interval procedures.`
+    }));
+    setActiveTab('log');
   };
 
-  // Quick Log Interval as Completed
-  const handleCompleteInterval = async () => {
-    const completedItems = activeProcedures
-      .filter(cp => checkStatuses[cp.id] === 'nominal' || !checkStatuses[cp.id])
+  // Handle Service Log Submission
+  const handleSubmitServiceLog = async (e) => {
+    if (e) e.preventDefault();
+    if (!currentVehicle) return;
+    setSubmittingLog(true);
+
+    const checkResults = (currentVehicle.check_points || [])
+      .filter(cp => logForm.is_pro_service || logCheckedPoints[cp.id] === 'done')
       .map(cp => ({
         description: cp.description,
         check_point_id: cp.id,
-        actual_value: actualValues[cp.id] || null,
+        actual_value: logActualValues[cp.id] || null,
         status: 'pass',
         passed: true
       }));
 
-    setSubmittingLog(true);
+    const odoNum = logForm.odometer ? parseInt(logForm.odometer, 10) : null;
+
     try {
-      await apiFetch(`/api/vehicles/${selectedId}/logs`, token, {
+      const log = await apiFetch(`/api/vehicles/${selectedId}/logs`, token, {
         method: 'POST',
         body: JSON.stringify({
-          service_date: new Date().toISOString(),
-          odometer: currentOdometer,
-          service_type: `${(selectedMilestone || currentMilestone).toLocaleString()}-Mile Scheduled Maintenance`,
-          service_center: 'Personal Hangar',
-          cost: 0,
-          notes: `Completed ${(selectedMilestone || currentMilestone).toLocaleString()} mi scheduled service interval procedures.`,
-          is_pro_service: false,
-          check_results: completedItems
+          service_date: logForm.service_date ? new Date(logForm.service_date).toISOString() : new Date().toISOString(),
+          odometer: isNaN(odoNum) ? null : odoNum,
+          service_type: logForm.service_type || 'General Maintenance',
+          service_center: logForm.is_pro_service ? logForm.service_center : 'Personal Hangar',
+          cost: logForm.cost ? parseFloat(logForm.cost) : null,
+          notes: logForm.notes || '',
+          is_pro_service: logForm.is_pro_service,
+          performed_by_id: logForm.performed_by_id || null,
+          check_results: checkResults
         })
       });
-      alert(`Service logged for ${(selectedMilestone || currentMilestone).toLocaleString()} mi milestone!`);
-      fetchLogs();
+
+      if (logForm.receipt_file && log?.id) {
+        const fd = new FormData();
+        fd.append('file', logForm.receipt_file);
+        await fetch(`/api/vehicles/logs/${log.id}/receipt`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd
+        });
+      }
+
+      alert('Maintenance successfully recorded!');
       onRefreshVehicles();
+      fetchLogs();
+      setActiveTab('history');
     } catch (err) {
       alert(`Logging failed: ${err.message}`);
     } finally {
@@ -468,17 +1130,13 @@ export default function MaintenancePulse({
     setAction(
       <div className="rs-chat-input-controls" style={{ width: '100%', justifyContent: 'center' }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button className="rs-btn-primary" onClick={handleCompleteInterval} disabled={submittingLog}>
-            <span className="material-symbols-rounded">check_circle</span>
-            <span className="rs-speak-actions-label">{submittingLog ? 'LOGGING...' : 'LOG INTERVAL COMPLETE'}</span>
-          </button>
-          <button className="rs-pill" onClick={() => setActiveTab('log')}>
+          <button className="rs-btn-primary" onClick={() => setActiveTab('log')}>
             <span className="material-symbols-rounded">edit_note</span>
             <span className="rs-speak-actions-label">LOG SERVICE</span>
           </button>
-          <button className="rs-pill" onClick={() => setActiveTab('diagnostics')}>
-            <span className="material-symbols-rounded">monitor_heart</span>
-            <span className="rs-speak-actions-label">DIAGNOSTICS</span>
+          <button className="rs-pill" onClick={() => setIsUpdatingOdo(true)}>
+            <span className="material-symbols-rounded">speed</span>
+            <span className="rs-speak-actions-label">UPDATE ODOMETER</span>
           </button>
           <button className="rs-pill is-active" onClick={() => setShowAskRiver(true)}>
             <span className="material-symbols-rounded">psychology</span>
@@ -488,7 +1146,7 @@ export default function MaintenancePulse({
       </div>
     );
     return () => setAction(null);
-  }, [setAction, handleCompleteInterval, submittingLog]);
+  }, [setAction]);
 
   if (!currentVehicle) {
     return (
@@ -503,7 +1161,16 @@ export default function MaintenancePulse({
   }
 
   const odoDelta = currentOdometer - currentMilestone;
-  const isOverdue = odoDelta >= 0;
+  const isOverdue = currentOdometer > 0 && odoDelta >= 0;
+
+  const TABS = [
+    { id: 'walkthrough', icon: 'route', label: 'WALKTHROUGH' },
+    { id: 'log', icon: 'add_task', label: 'LOG SERVICE' },
+    { id: 'specs', icon: 'tune', label: 'SPECS & CHECKPOINTS' },
+    { id: 'history', icon: 'history', label: 'HISTORY' },
+    { id: 'dossier', icon: 'description', label: 'DOCUMENTS' },
+    { id: 'settings', icon: 'group', label: 'SETTINGS & CREW' },
+  ];
 
   return (
     <div className="rs-foyer rs-mode-workshop animate-page-in">
@@ -533,7 +1200,7 @@ export default function MaintenancePulse({
             >
               {vehicles.map(v => (
                 <option key={v.id} value={v.id} style={{ background: 'var(--bg-base)', color: 'var(--fg)' }}>
-                  {v.vehicle_type === 'moto' ? '🏍️ ' : '🚗 '} {v.nickname || `${v.year} ${v.make} ${v.model}`}
+                  {v.vehicle_type === 'moto' ? '🏍️ ' : '🚗 '} {v.nickname || `${v.year || ''} ${v.make} ${v.model}`}
                 </option>
               ))}
             </select>
@@ -637,8 +1304,8 @@ export default function MaintenancePulse({
           <div className="odometer-stat-display">
             <span className="card-metric-label">CERTIFIED ODOMETER</span>
             <div className="odometer-stat-num">
-              {currentOdometer.toLocaleString()}
-              <span className="odometer-stat-unit">MI</span>
+              {currentOdometer > 0 ? currentOdometer.toLocaleString() : '0'}
+              <span className="odometer-stat-unit">{currentVehicle.vehicle_type === 'atv' ? 'HRS' : 'MI'}</span>
             </div>
           </div>
         </div>
@@ -647,7 +1314,9 @@ export default function MaintenancePulse({
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div className={`odometer-delta-badge ${isOverdue ? 'is-due' : 'is-nominal'}`}>
             <span className="rs-status-dot" style={{ background: isOverdue ? 'var(--rs-status-critical, #ff8b8b)' : 'var(--rs-status-nominal, #4ade80)' }} />
-            <span>{isOverdue ? `${Math.abs(odoDelta).toLocaleString()} MI OVERDUE` : `${Math.abs(odoDelta).toLocaleString()} MI TO NEXT INTERVAL`}</span>
+            <span>
+              {currentOdometer === 0 ? 'ODOMETER NOT INITIALIZED' : isOverdue ? `${Math.abs(odoDelta).toLocaleString()} MI OVERDUE` : `${Math.abs(odoDelta).toLocaleString()} MI TO NEXT INTERVAL`}
+            </span>
           </div>
 
           {!isUpdatingOdo ? (
@@ -665,10 +1334,11 @@ export default function MaintenancePulse({
                   border: '1px solid var(--primary)',
                   borderRadius: 8,
                   padding: '6px 12px',
-                  width: 110
+                  width: 120
                 }}
                 value={newOdoInput}
                 onChange={e => setNewOdoInput(e.target.value)}
+                placeholder="miles"
                 autoFocus
               />
               <button className="rs-btn-primary" onClick={handleSaveOdometer} disabled={odoSaving}>
@@ -682,14 +1352,7 @@ export default function MaintenancePulse({
 
       {/* Pill Navigation Tabs Deck */}
       <div className="hangar-tabs-deck">
-        {[
-          { id: 'walkthrough', icon: 'route', label: 'WALKTHROUGH' },
-          { id: 'log', icon: 'add_task', label: 'LOG SERVICE' },
-          { id: 'specs', icon: 'tune', label: 'SPECS & CHECKPOINTS' },
-          { id: 'history', icon: 'history', label: 'HISTORY' },
-          { id: 'diagnostics', icon: 'monitor_heart', label: 'DIAGNOSTICS' },
-          { id: 'dossier', icon: 'description', label: 'DOSSIER' },
-        ].map(tab => (
+        {TABS.map(tab => (
           <button
             key={tab.id}
             className={`hangar-tab-pill ${activeTab === tab.id ? 'is-active' : ''}`}
@@ -738,7 +1401,7 @@ export default function MaintenancePulse({
               {milestones.map(m => (
                 <button
                   key={m}
-                  className={`interval-chip ${(selectedMilestone || currentMilestone) === m ? 'is-active' : ''} ${currentOdometer >= m ? 'is-overdue' : ''}`}
+                  className={`interval-chip ${(selectedMilestone || currentMilestone) === m ? 'is-active' : ''} ${currentOdometer > 0 && currentOdometer >= m ? 'is-overdue' : ''}`}
                   onClick={() => setSelectedMilestone(m)}
                 >
                   {m.toLocaleString()} MI
@@ -748,240 +1411,171 @@ export default function MaintenancePulse({
                 className={`interval-chip ${selectedMilestone === 'all' ? 'is-active' : ''}`}
                 onClick={() => setSelectedMilestone('all')}
               >
-                ALL MILESTONES
+                VIEW ALL ({(currentVehicle?.check_points || []).length})
               </button>
             </div>
           </div>
 
-          {/* Staged Workshop Provisions & Tools */}
-          <div className="staging-drawer">
-            <div>
-              <div className="staging-col-title">
-                <span className="material-symbols-rounded">inventory_2</span>
-                <span>STAGED PROVISIONS &amp; FLUIDS</span>
+          {/* Staged Required Supplies & Torque Specs */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 20 }}>
+            {/* Required Fluids & Parts */}
+            <div className="staging-card">
+              <div className="staging-card-head">
+                <span className="material-symbols-rounded" style={{ color: 'var(--primary)' }}>inventory_2</span>
+                <span className="card-metric-label">STAGED SUPPLIES &amp; PARTS</span>
               </div>
-              <div>
-                {stagedProvisions.length > 0 ? (
-                  stagedProvisions.map((p, i) => (
-                    <span key={i} className="staging-item-pill">
-                      <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', color: 'var(--primary)' }}>check</span>
-                      <span>{p}</span>
+              {stagedProvisions.length === 0 ? (
+                <div style={{ fontSize: '0.84rem', color: 'var(--md-on-surface-variant)', fontStyle: 'italic' }}>
+                  No replacement fluids or parts specified for this interval.
+                </div>
+              ) : (
+                <div className="staging-tags-flow">
+                  {stagedProvisions.map((item, idx) => (
+                    <span key={idx} className="staging-chip">
+                      <span className="material-symbols-rounded" style={{ fontSize: '0.85rem' }}>check</span>
+                      <span>{item}</span>
                     </span>
-                  ))
-                ) : (
-                  <span style={{ fontSize: '0.8rem', color: 'var(--md-on-surface-variant)' }}>Standard inspection (no consumables required)</span>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <div className="staging-col-title">
-                <span className="material-symbols-rounded">build</span>
-                <span>STAGED TOOLS &amp; HARDWARE</span>
-              </div>
-              <div>
-                {stagedTools.map((t, i) => (
-                  <span key={i} className="staging-item-pill">
-                    <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', color: 'var(--primary)' }}>handyman</span>
-                    <span>{t}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Required Procedures Deck */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span className="card-metric-label" style={{ fontSize: '0.72rem', letterSpacing: '0.12em' }}>
-              REQUIRED INTERVAL PROCEDURES ({activeProcedures.length})
-            </span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--md-on-surface-variant)' }}>
-              Click status icon to toggle: Nominal ✓ / Caution ⚠ / Replace ✕ / Skip —
-            </span>
-          </div>
-
-          <div className="checklist-deck">
-            {activeProcedures.map(cp => {
-              const status = checkStatuses[cp.id] || 'pending';
-              const statusClass = status === 'nominal' ? 'state-nominal' : status === 'warn' ? 'state-warn' : status === 'crit' ? 'state-crit' : status === 'skip' ? 'state-skip' : '';
-              const icon = status === 'nominal' ? 'check' : status === 'warn' ? 'warning' : status === 'crit' ? 'close' : status === 'skip' ? 'remove' : 'radio_button_unchecked';
-
-              return (
-                <div key={cp.id} className={`check-row-card ${statusClass}`}>
-                  <button className="check-status-trigger" onClick={() => cycleStatus(cp.id)} title="Click to cycle status">
-                    <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>{icon}</span>
-                  </button>
-
-                  <div className="check-info-col">
-                    <div className="check-title-row">
-                      <span className="check-name">{cp.description}</span>
-                      <span className={`check-action-tag ${cp.service_level === 'replace' ? 'tag-replace' : cp.service_level === 'service' ? 'tag-service' : 'tag-inspect'}`}>
-                        {cp.service_level || 'INSPECT'}
-                      </span>
-                      {cp.interval_miles && (
-                        <span className="check-interval-tag">
-                          {cp.interval_miles.toLocaleString()} mi
-                        </span>
-                      )}
-                    </div>
-                    <div className="check-spec-sub">
-                      {cp.expected_spec && (
-                        <span>Spec: <strong>{cp.expected_spec} {cp.volume ? `(${cp.volume})` : ''}</strong></span>
-                      )}
-                      {(cp.ft_lb || cp.nm) && (
-                        <span className="check-torque-badge">
-                          {cp.ft_lb ? `${cp.ft_lb} ft-lb` : ''} {cp.nm ? `(${cp.nm} N·m)` : ''}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actual Value / Reading Input */}
-                  <div className="check-actual-wrap">
-                    <input
-                      className="check-actual-input"
-                      placeholder={cp.unit ? `Meas (${cp.unit})` : 'Notes/Val'}
-                      value={actualValues[cp.id] || ''}
-                      onChange={e => setActualValues({ ...actualValues, [cp.id]: e.target.value })}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Future Milestones Collapsible Drawer */}
-          {futureProcedures.length > 0 && (
-            <div className="rs-card is-wide" style={{ marginTop: 24 }}>
-              <div
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '6px 0' }}
-                onClick={() => setShowFutureDrawer(!showFutureDrawer)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span className="material-symbols-rounded" style={{ color: 'var(--primary)' }}>update</span>
-                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--fg)' }}>
-                    FUTURE SERVICE MILESTONES ({futureProcedures.length} DEFERRED ITEMS)
-                  </span>
-                </div>
-                <button className="rs-pill">
-                  <span>{showFutureDrawer ? 'COLLAPSE' : 'INSPECT'}</span>
-                  <span className="material-symbols-rounded">{showFutureDrawer ? 'expand_less' : 'expand_more'}</span>
-                </button>
-              </div>
-
-              {showFutureDrawer && (
-                <div className="checklist-deck" style={{ marginTop: 16 }}>
-                  {futureProcedures.map(cp => (
-                    <div key={cp.id} className="check-row-card is-future">
-                      <span className="material-symbols-rounded" style={{ color: 'var(--md-on-surface-variant)', opacity: 0.6 }}>schedule</span>
-                      <div className="check-info-col">
-                        <div className="check-title-row">
-                          <span className="check-name">{cp.description}</span>
-                          <span className="check-action-tag tag-inspect">{cp.service_level || 'INSPECT'}</span>
-                          <span className="check-interval-tag">Due: {cp.due_at_miles ? `${cp.due_at_miles.toLocaleString()} mi` : `Every ${cp.interval_miles?.toLocaleString()} mi`}</span>
-                        </div>
-                        {cp.expected_spec && (
-                          <div className="check-spec-sub">{cp.expected_spec} {cp.volume ? `· ${cp.volume}` : ''}</div>
-                        )}
-                      </div>
-                    </div>
                   ))}
                 </div>
               )}
             </div>
-          )}
 
-          {/* Critical Fastener Torques Reference Card */}
-          {fastenerTorques.length > 0 && (
-            <div className="rs-card is-wide" style={{ marginTop: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                <span className="material-symbols-rounded" style={{ color: 'var(--rs-status-warning, #facc15)' }}>bolt</span>
-                <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--fg)' }}>CRITICAL FASTENER TORQUES</span>
+            {/* Torque Values */}
+            <div className="staging-card">
+              <div className="staging-card-head">
+                <span className="material-symbols-rounded" style={{ color: 'var(--rs-status-warning, #facc15)' }}>settings_suggest</span>
+                <span className="card-metric-label">FASTENER TORQUE SPECS</span>
               </div>
-              <div className="fasteners-grid">
-                {fastenerTorques.map((t, idx) => (
-                  <div key={idx} className="fastener-tile">
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--fg)' }}>{t.item}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--rs-status-warning, #facc15)' }}>
-                      {t.ft_lb ? `${t.ft_lb} ft-lb` : ''} {t.nm ? `/ ${t.nm} N·m` : ''}
+              {fastenerTorques.length === 0 ? (
+                <div style={{ fontSize: '0.84rem', color: 'var(--md-on-surface-variant)', fontStyle: 'italic' }}>
+                  No fastener torque requirements specified.
+                </div>
+              ) : (
+                <div className="staging-tags-flow">
+                  {fastenerTorques.map((t, idx) => (
+                    <span key={idx} className="staging-chip" style={{ color: 'var(--rs-status-warning, #facc15)', borderColor: 'rgba(250, 204, 21, 0.3)' }}>
+                      <strong>{t.item}:</strong> {t.ft_lb ? `${t.ft_lb} ft-lb` : ''}{t.ft_lb && t.nm ? ' / ' : ''}{t.nm ? `${t.nm} N·m` : ''}
                     </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Active Maintenance Checkpoints */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span className="card-metric-label" style={{ fontSize: '0.72rem', letterSpacing: '0.12em' }}>
+              ACTIVE PROCEDURES FOR THIS INTERVAL ({activeProcedures.length})
+            </span>
+            <button className="rs-btn-primary" onClick={handleStartIntervalInLog}>
+              <span className="material-symbols-rounded">edit_calendar</span>
+              <span>START / LOG THIS INTERVAL</span>
+            </button>
+          </div>
+
+          {activeProcedures.length === 0 ? (
+            <div className="mp-empty-specs">No procedures scheduled for this interval.</div>
+          ) : (
+            <div className="checklist-cards-grid">
+              {activeProcedures.map(cp => {
+                const st = checkStatuses[cp.id] || 'nominal';
+                return (
+                  <div key={cp.id} className="cockpit-item-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <button
+                          className="rs-pill is-active"
+                          style={{ minWidth: 32, height: 32, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          onClick={() => {
+                            setCheckStatuses(prev => ({
+                              ...prev,
+                              [cp.id]: prev[cp.id] === 'nominal' ? 'skip' : 'nominal'
+                            }));
+                          }}
+                        >
+                          <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>
+                            {st === 'nominal' ? 'check' : 'close'}
+                          </span>
+                        </button>
+                        <div>
+                          <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--fg)' }}>{cp.description}</div>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--md-on-surface-variant)', marginTop: 2 }}>
+                            {cp.expected_spec ? `Spec: ${cp.expected_spec}` : ''} {cp.volume ? `· ${cp.volume}` : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="cp-svc-badge">{cp.service_level || 'INSPECT'}</span>
+                    </div>
+
+                    {(cp.min_value != null || cp.unit) && (
+                      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--md-on-surface-variant)' }}>Measured:</span>
+                        <input
+                          className="cockpit-input-raw"
+                          style={{ maxWidth: 140, padding: '4px 8px', fontSize: '0.82rem', background: 'rgba(0,0,0,0.2)', borderRadius: 6 }}
+                          placeholder={cp.unit ? `e.g. 32 ${cp.unit}` : 'Actual value'}
+                          value={actualValues[cp.id] || ''}
+                          onChange={e => setActualValues({ ...actualValues, [cp.id]: e.target.value })}
+                        />
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           )}
-
-          {/* Predictive Service Horizon Roadmap */}
-          <div style={{ marginTop: 28, marginBottom: 12 }}>
-            <span className="card-metric-label" style={{ fontSize: '0.72rem', letterSpacing: '0.12em' }}>
-              PREDICTIVE SERVICE HORIZON
-            </span>
-          </div>
-          <div className="service-horizon-wrap">
-            {milestones.slice(0, 4).map(m => {
-              const delta = m - currentOdometer;
-              const isPast = delta < 0;
-              return (
-                <div key={m} className={`horizon-node ${m === currentMilestone ? 'is-current' : ''} ${isPast ? 'is-overdue' : ''}`}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span className="horizon-mileage">{m.toLocaleString()} MI</span>
-                    <span className="horizon-tag" style={{ color: isPast ? 'var(--rs-status-critical, #ff8b8b)' : 'var(--primary)' }}>
-                      {isPast ? 'OVERDUE' : m === currentMilestone ? 'ACTIVE' : 'UPCOMING'}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--md-on-surface-variant)' }}>
-                    {isPast ? `${Math.abs(delta).toLocaleString()} mi past window` : `in ${delta.toLocaleString()} mi`}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
       )}
 
       {/* =====================================================================
-          TAB 2: LOG SERVICE
+          TAB 2: LOG SERVICE (Clean, Dynamic, Editable Odometer, DIY/Pro)
           ===================================================================== */}
       {activeTab === 'log' && (
         <div className="mp-log-form animate-page-in">
-          <h3 style={{ marginTop: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span className="material-symbols-rounded">edit_calendar</span>
-            <span>LOG COMPLETED MAINTENANCE</span>
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h3 style={{ margin: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span className="material-symbols-rounded">edit_calendar</span>
+              <span>LOG VEHICLE MAINTENANCE</span>
+            </h3>
+            {/* Mode Switcher */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                type="button"
+                className={`rs-pill ${!logForm.is_pro_service ? 'is-active' : ''}`}
+                onClick={() => setLogForm({ ...logForm, is_pro_service: false })}
+              >
+                DIY / WORKSHOP
+              </button>
+              <button
+                type="button"
+                className={`rs-pill ${logForm.is_pro_service ? 'is-active' : ''}`}
+                onClick={() => setLogForm({ ...logForm, is_pro_service: true })}
+              >
+                PRO SERVICE
+              </button>
+            </div>
+          </div>
 
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            setSubmittingLog(true);
-            try {
-              await apiFetch(`/api/vehicles/${selectedId}/logs`, token, {
-                method: 'POST',
-                body: JSON.stringify({
-                  service_date: logForm.service_date,
-                  odometer: currentOdometer,
-                  service_type: logForm.service_type,
-                  service_center: logForm.service_center,
-                  cost: logForm.cost ? parseFloat(logForm.cost) : null,
-                  notes: logForm.notes,
-                  is_pro_service: logForm.is_pro_service
-                })
-              });
-              alert('Maintenance entry logged successfully!');
-              setActiveTab('history');
-              fetchLogs();
-            } catch (err) {
-              alert(`Error: ${err.message}`);
-            } finally {
-              setSubmittingLog(false);
-            }
-          }}>
+          <form onSubmit={handleSubmitServiceLog}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 20 }}>
               <div className="cockpit-input-box">
                 <span className="card-metric-label">SERVICE TYPE / PROCEDURE *</span>
                 <input
                   className="cockpit-input-raw"
-                  placeholder="e.g. Engine Oil &amp; Filter Change"
+                  placeholder="e.g. Engine Oil & Filter Change"
                   value={logForm.service_type}
                   onChange={e => setLogForm({ ...logForm, service_type: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="cockpit-input-box">
+                <span className="card-metric-label">ODOMETER (MILES) *</span>
+                <input
+                  className="cockpit-input-raw"
+                  type="number"
+                  placeholder="e.g. 4000"
+                  value={logForm.odometer}
+                  onChange={e => setLogForm({ ...logForm, odometer: e.target.value })}
                   required
                 />
               </div>
@@ -995,33 +1589,109 @@ export default function MaintenancePulse({
                 />
               </div>
               <div className="cockpit-input-box">
-                <span className="card-metric-label">SERVICE CENTER</span>
-                <input
+                <span className="card-metric-label">PERFORMED BY</span>
+                <select
                   className="cockpit-input-raw"
-                  placeholder="e.g. Personal Hangar, Dealership"
-                  value={logForm.service_center}
-                  onChange={e => setLogForm({ ...logForm, service_center: e.target.value })}
-                />
-              </div>
-              <div className="cockpit-input-box">
-                <span className="card-metric-label">TOTAL COST ($)</span>
-                <input
-                  className="cockpit-input-raw"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={logForm.cost}
-                  onChange={e => setLogForm({ ...logForm, cost: e.target.value })}
-                />
+                  value={logForm.performed_by_id}
+                  onChange={e => setLogForm({ ...logForm, performed_by_id: e.target.value })}
+                >
+                  <option value="">— Primary Owner / Self —</option>
+                  {vehicleAssignments.map(a => (
+                    <option key={a.person_id} value={a.person_id} style={{ background: 'var(--bg-base)' }}>
+                      {a.person_display_name || a.person_email}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            <div className="cockpit-input-box" style={{ marginBottom: 20 }}>
-              <span className="card-metric-label">PROCEDURAL NOTES / PARTS INSTALLED</span>
+            {/* Pro Service Specific Fields */}
+            {logForm.is_pro_service && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 20, padding: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 12 }}>
+                <div className="cockpit-input-box">
+                  <span className="card-metric-label">SERVICE FACILITY / DEALER</span>
+                  <input
+                    className="cockpit-input-raw"
+                    placeholder="e.g. Certified Dealership, Local Shop"
+                    value={logForm.service_center}
+                    onChange={e => setLogForm({ ...logForm, service_center: e.target.value })}
+                  />
+                </div>
+                <div className="cockpit-input-box">
+                  <span className="card-metric-label">TOTAL COST ($)</span>
+                  <input
+                    className="cockpit-input-raw"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={logForm.cost}
+                    onChange={e => setLogForm({ ...logForm, cost: e.target.value })}
+                  />
+                </div>
+                <div className="cockpit-input-box">
+                  <span className="card-metric-label">RECEIPT / INVOICE ATTACHMENT</span>
+                  <input
+                    className="cockpit-input-raw"
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={e => setLogForm({ ...logForm, receipt_file: e.target.files?.[0] || null })}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* DIY Mode: Checkpoints Checklist */}
+            {!logForm.is_pro_service && (currentVehicle?.check_points || []).length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span className="card-metric-label">CHECKPOINTS COMPLETED IN THIS EVENT</span>
+                  <button
+                    type="button"
+                    className="rs-pill"
+                    onClick={() => {
+                      const allDone = {};
+                      (currentVehicle.check_points || []).forEach(cp => { allDone[cp.id] = 'done'; });
+                      setLogCheckedPoints(allDone);
+                    }}
+                  >
+                    SELECT ALL
+                  </button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
+                  {(currentVehicle.check_points || []).map(cp => {
+                    const isDone = logCheckedPoints[cp.id] === 'done';
+                    return (
+                      <div
+                        key={cp.id}
+                        className={`cockpit-item-card ${isDone ? 'is-selected' : ''}`}
+                        style={{ padding: '10px 14px', cursor: 'pointer', borderColor: isDone ? 'var(--primary)' : 'rgba(255,255,255,0.08)' }}
+                        onClick={() => {
+                          setLogCheckedPoints(prev => ({
+                            ...prev,
+                            [cp.id]: prev[cp.id] === 'done' ? undefined : 'done'
+                          }));
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span className="material-symbols-rounded" style={{ color: isDone ? 'var(--primary)' : 'var(--md-on-surface-variant)' }}>
+                            {isDone ? 'check_box' : 'check_box_outline_blank'}
+                          </span>
+                          <span style={{ fontSize: '0.9rem', color: 'var(--fg)', fontWeight: isDone ? 700 : 500 }}>{cp.description}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Generic Observations and Notes */}
+            <div className="cockpit-input-box" style={{ marginBottom: 24 }}>
+              <span className="card-metric-label">PROCEDURAL NOTES / OBSERVATIONS</span>
               <textarea
                 className="cockpit-input-raw"
                 rows="3"
-                placeholder="Installed Honda OEM filter #15410 and 2.7 Qt 10W-30 JASO MA2..."
+                placeholder="Service notes, parts replaced, torque verified, observations..."
                 value={logForm.notes}
                 onChange={e => setLogForm({ ...logForm, notes: e.target.value })}
               />
@@ -1031,7 +1701,7 @@ export default function MaintenancePulse({
               <button type="button" className="rs-pill" onClick={() => setActiveTab('walkthrough')}>CANCEL</button>
               <button type="submit" className="rs-btn-primary" disabled={submittingLog}>
                 <span className="material-symbols-rounded">save</span>
-                <span>{submittingLog ? 'RECORDING...' : 'RECORD ENTRY'}</span>
+                <span>{submittingLog ? 'SAVING RECORD...' : 'COMMIT SERVICE ENTRY'}</span>
               </button>
             </div>
           </form>
@@ -1039,57 +1709,59 @@ export default function MaintenancePulse({
       )}
 
       {/* =====================================================================
-          TAB 3: SPECS & CHECKPOINTS EDITOR
+          TAB 3: SPECS & CHECKPOINTS MASTER ROSTER
           ===================================================================== */}
       {activeTab === 'specs' && (
         <div className="animate-page-in">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <span className="card-metric-label" style={{ fontSize: '0.72rem', letterSpacing: '0.12em' }}>
-              CHECKPOINTS &amp; SPECIFICATIONS MASTER ROSTER
-            </span>
-          </div>
-          <ul className="cp-list">
-            {(currentVehicle.check_points || []).map(cp => (
-              <CheckPointRow
-                key={cp.id}
-                cp={cp}
-                token={token}
-                vehicleId={currentVehicle.id}
-                onUpdated={onRefreshVehicles}
-                isNonRoad={currentVehicle.vehicle_type === 'atv'}
-              />
-            ))}
-          </ul>
+          <SpecsEditor
+            vehicle={currentVehicle}
+            token={token}
+            onUpdated={onRefreshVehicles}
+            isNonRoad={currentVehicle.vehicle_type === 'atv'}
+          />
         </div>
       )}
 
       {/* =====================================================================
-          TAB 4: SERVICE HISTORY
+          TAB 4: SERVICE HISTORY ARCHIVE
           ===================================================================== */}
       {activeTab === 'history' && (
         <div className="animate-page-in">
           {loadingLogs ? (
-            <div className="mp-empty-specs">FETCHING LOG ARCHIVES...</div>
+            <div className="mp-empty-specs">FETCHING SERVICE ARCHIVES...</div>
           ) : logs.length === 0 ? (
-            <div className="mp-empty-specs">No previous maintenance logs recorded yet.</div>
+            <div className="mp-empty-specs">No previous service logs recorded for this vehicle.</div>
           ) : (
             <div className="mp-history-list">
               {logs.map(log => (
                 <div key={log.id} className="mp-history-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--fg)' }}>{log.service_type}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--primary)' }}>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--fg)' }}>{log.service_type || 'Maintenance'}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: 'var(--primary)' }}>
                       {log.service_date ? new Date(log.service_date).toLocaleDateString() : ''}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', gap: 16, fontSize: '0.82rem', color: 'var(--md-on-surface-variant)' }}>
-                    <span>Odometer: <strong>{log.odometer ? `${log.odometer.toLocaleString()} mi` : '—'}</strong></span>
+
+                  <div style={{ display: 'flex', gap: 16, fontSize: '0.82rem', color: 'var(--md-on-surface-variant)', flexWrap: 'wrap' }}>
+                    <span>Odometer: <strong>{log.odometer != null ? `${log.odometer.toLocaleString()} mi` : '—'}</strong></span>
                     <span>Facility: <strong>{log.service_center || 'Personal Hangar'}</strong></span>
-                    {log.cost ? <span>Cost: <strong>${Number(log.cost).toFixed(2)}</strong></span> : null}
+                    {log.cost != null && <span>Cost: <strong>$${Number(log.cost).toFixed(2)}</strong></span>}
+                    {log.performed_by && <span>By: <strong>{log.performed_by.display_name || log.performed_by.email}</strong></span>}
                   </div>
+
                   {log.notes && (
-                    <div style={{ fontSize: '0.85rem', color: 'var(--fg)', opacity: 0.9, marginTop: 4 }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--fg)', opacity: 0.9 }}>
                       {log.notes}
+                    </div>
+                  )}
+
+                  {log.check_results?.length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                      {log.check_results.map(cr => (
+                        <span key={cr.id} className="cp-spec-tag">
+                          ✓ {cr.description} {cr.actual_value ? `(${cr.actual_value})` : ''}
+                        </span>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -1100,103 +1772,44 @@ export default function MaintenancePulse({
       )}
 
       {/* =====================================================================
-          TAB 5: DIAGNOSTICS & OBD
+          TAB 5: DOCUMENTS & DOSSIER (RAG)
           ===================================================================== */}
-      {activeTab === 'diagnostics' && (
-        <div className="rs-card is-wide animate-page-in">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <span className="material-symbols-rounded" style={{ color: 'var(--rs-status-nominal, #4ade80)' }}>check_circle</span>
-            <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--fg)' }}>DIAGNOSTIC TRANSPONDER STATUS</span>
-          </div>
-          <p style={{ color: 'var(--md-on-surface-variant)', fontSize: '0.88rem', lineHeight: 1.5 }}>
-            No active Diagnostic Trouble Codes (DTCs) logged in memory. Powertrain, ABS, and auxiliary sensors report nominal operational parameters.
-          </p>
-          <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
-            <button className="rs-pill is-active" onClick={() => alert('OBD-II Transponder Scan Complete: 0 Faults.')}>
-              <span className="material-symbols-rounded">refresh</span>
-              <span>RUN FULL SCAN</span>
-            </button>
-          </div>
+      {activeTab === 'dossier' && (
+        <div className="animate-page-in">
+          <VehicleRAG
+            token={token}
+            vehicleId={currentVehicle.id}
+            currentOdometer={currentOdometer}
+          />
         </div>
       )}
 
       {/* =====================================================================
-          TAB 6: DOSSIER & MANUAL RAG
+          TAB 6: CREW ROSTER & SETTINGS
           ===================================================================== */}
-      {activeTab === 'dossier' && (
-        <div className="rs-card is-wide animate-page-in">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <span className="material-symbols-rounded" style={{ color: 'var(--primary)' }}>menu_book</span>
-            <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--fg)' }}>TECHNICAL DOSSIER &amp; OWNER'S MANUAL</span>
-          </div>
-          <p style={{ color: 'var(--md-on-surface-variant)', fontSize: '0.88rem', lineHeight: 1.5 }}>
-            Upload an official factory service manual or owner's handbook (PDF) to ground River Song's RAG knowledgebase with torque specs, part numbers, and diagrams.
-          </p>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.txt"
-            style={{ display: 'none' }}
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              setUploadingManual(true);
-              const fd = new FormData();
-              fd.append('file', file);
-              try {
-                const res = await fetch(`/api/vehicles/${currentVehicle.id}/manual`, {
-                  method: 'POST',
-                  headers: { Authorization: `Bearer ${token}` },
-                  body: fd
-                });
-                if (res.ok) {
-                  alert('Manual indexed into River Song RAG engine!');
-                  onRefreshVehicles();
-                } else {
-                  throw new Error('Upload failed');
-                }
-              } catch (err) {
-                alert(`Upload failed: ${err.message}`);
-              } finally {
-                setUploadingManual(false);
-              }
-            }}
+      {activeTab === 'settings' && (
+        <div className="animate-page-in">
+          <SettingsPanel
+            token={token}
+            vehicles={vehicles}
+            people={people}
+            selectedVehicleId={currentVehicle.id}
+            onPeopleRefresh={() => { fetchPeople(); fetchVehicleAssignments(); }}
+            onVehicleRefresh={onRefreshVehicles}
           />
-
-          <div style={{ marginTop: 20, display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button
-              className="rs-pill is-active"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingManual}
-            >
-              <span className="material-symbols-rounded">upload_file</span>
-              <span>{uploadingManual ? 'INDEXING MANUAL...' : 'UPLOAD SERVICE MANUAL (PDF)'}</span>
-            </button>
-            <button className="rs-pill" onClick={() => setShowAskRiver(true)}>
-              <span className="material-symbols-rounded">psychology</span>
-              <span>ASK RIVER ABOUT MANUAL</span>
-            </button>
-          </div>
         </div>
       )}
 
-      {/* Embedded Ask River Drawer */}
-      <Sheet open={showAskRiver} onClose={() => setShowAskRiver(false)}>
-        {showAskRiver && (
-          <div style={{ height: '70vh' }}>
+      {/* RAG Ask River Sheet */}
+      {showAskRiver && (
+        <Sheet isOpen={showAskRiver} onClose={() => setShowAskRiver(false)} title={`River Song // ${currentVehicle.nickname || currentVehicle.model}`}>
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <ChatInterface
-              embedded={true}
-              onClose={() => setShowAskRiver(false)}
-              vehicleId={currentVehicle.id}
-              initialIntent={{
-                text: `River, what is the maintenance status and next recommended procedure for ${currentVehicle.nickname || currentVehicle.model}?`,
-                docId: `vehicle_${currentVehicle.id}`
-              }}
+              initialContext={`Telemetry & maintenance advisor for ${currentVehicle.year || ''} ${currentVehicle.make} ${currentVehicle.model}. Certified odometer: ${currentOdometer} miles.`}
             />
           </div>
-        )}
-      </Sheet>
+        </Sheet>
+      )}
     </div>
   );
 }

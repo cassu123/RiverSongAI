@@ -69,16 +69,16 @@ export default function VehiclePage({ setAction, onNavigate }) {
     let autos = 0
 
     vehicles.forEach(v => {
-      const odo = v.usage_readings?.[0]?.value || 0
+      const odo = v.current_odometer ?? (v.usage_readings?.[0]?.value || 0)
       totalMiles += odo
       if (v.vehicle_type === 'moto') motos++
       else autos++
 
-      // Check if any checkpoints are due or overdue
+      // Check if any checkpoints are due or overdue (only if vehicle has recorded mileage)
       const checkPoints = v.check_points || []
-      const hasOverdue = checkPoints.some(cp => {
+      const hasOverdue = odo > 0 && checkPoints.some(cp => {
         if (cp.due_at_miles && odo >= cp.due_at_miles) return true
-        if (cp.interval_miles && (odo % cp.interval_miles <= 500 && odo >= cp.interval_miles)) return true
+        if (cp.interval_miles && (odo >= cp.interval_miles && (odo % cp.interval_miles <= 500 || odo % cp.interval_miles >= cp.interval_miles - 500))) return true
         return false
       })
       if (hasOverdue) overdueCount++
@@ -360,11 +360,11 @@ export default function VehiclePage({ setAction, onNavigate }) {
       ) : (
         <div className="hangar-fleet-cards-grid">
           {vehicles.map(v => {
-            const odo = v.usage_readings?.[0]?.value || 0
+            const odo = v.current_odometer ?? (v.usage_readings?.[0]?.value || 0)
             const checkPoints = v.check_points || []
-            const isDue = checkPoints.some(cp => {
+            const isDue = odo > 0 && checkPoints.some(cp => {
               if (cp.due_at_miles && odo >= cp.due_at_miles) return true
-              if (cp.interval_miles && (odo >= cp.interval_miles && odo % cp.interval_miles <= 500)) return true
+              if (cp.interval_miles && (odo >= cp.interval_miles && (odo % cp.interval_miles <= 500 || odo % cp.interval_miles >= cp.interval_miles - 500))) return true
               return false
             })
 
@@ -377,6 +377,8 @@ export default function VehiclePage({ setAction, onNavigate }) {
             const nextVal = upcoming.find(m => m > odo) || (upcoming[0] ? upcoming[0] : null)
             if (nextVal) {
               nextMilestone = `${nextVal.toLocaleString()} MI`
+            } else if (upcoming.length === 0) {
+              nextMilestone = 'NONE SET'
             }
 
             return (
@@ -421,7 +423,13 @@ export default function VehiclePage({ setAction, onNavigate }) {
                 <div className="hangar-card-metrics">
                   <div className="card-metric-col">
                     <span className="card-metric-label">CURRENT ODOMETER</span>
-                    <div className="card-metric-val">{odo.toLocaleString()} <span style={{ fontSize: '0.68rem', opacity: 0.7 }}>MI</span></div>
+                    <div className="card-metric-val">
+                      {odo > 0 ? (
+                        <>{odo.toLocaleString()} <span style={{ fontSize: '0.68rem', opacity: 0.7 }}>MI</span></>
+                      ) : (
+                        <span style={{ opacity: 0.6, fontSize: '0.88rem' }}>0 mi</span>
+                      )}
+                    </div>
                   </div>
                   <div className="card-metric-col">
                     <span className="card-metric-label">NEXT MILESTONE</span>

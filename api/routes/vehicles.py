@@ -256,6 +256,16 @@ def _http(e: Exception) -> HTTPException:
 # ---------------------------------------------------------------------------
 
 def _ser_vehicle(v) -> dict:
+    latest_odo = None
+    if hasattr(v, "usage_readings") and v.usage_readings:
+        mile_readings = [ur.value for ur in v.usage_readings if hasattr(ur.unit, "value") and ur.unit.value == "miles"]
+        if mile_readings:
+            latest_odo = sorted(v.usage_readings, key=lambda x: x.recorded_at, reverse=True)[0].value
+    if latest_odo is None and hasattr(v, "service_logs") and v.service_logs:
+        log_odos = [log.odometer for log in v.service_logs if log.odometer is not None]
+        if log_odos:
+            latest_odo = max(log_odos)
+
     return {
         "id": str(v.id),
         "year": v.year,
@@ -268,6 +278,7 @@ def _ser_vehicle(v) -> dict:
         "license_plate": v.license_plate,
         "color": v.color,
         "notes": v.notes,
+        "current_odometer": latest_odo,
         "fluid_specs": [
             {"id": str(f.id),
              "name": f.name,
@@ -449,7 +460,8 @@ class PartLookupQuery(BaseModel):
 
 
 class MaintenanceAIQuery(BaseModel):
-    question: str
+    question: Optional[str] = None
+    message: Optional[str] = None
     current_odometer: Optional[int] = None
 
 class UsageReadingCreate(BaseModel):
@@ -637,10 +649,7 @@ def get_vehicle_route(
     user_id: str = Depends(get_current_user_id),
 ):
     try:
-        vehicles = get_vehicles(db, user_id)
-        v = next((v for v in vehicles if str(v.id) == vehicle_id), None)
-        if not v:
-            raise not_found("Vehicle not found")
+        v = _get_vehicle(db, vehicle_id, user_id)
         return _ser_vehicle(v)
     except HTTPException:
         raise
@@ -655,10 +664,7 @@ def get_vehicle_usage(
     user_id: str = Depends(get_current_user_id),
 ):
     try:
-        vehicles = get_vehicles(db, user_id)
-        v = next((v for v in vehicles if str(v.id) == vehicle_id), None)
-        if not v:
-            raise not_found("Vehicle not found")
+        v = _get_vehicle(db, vehicle_id, user_id)
         return [
             _ser_usage_reading(ur)
             for ur in sorted(v.usage_readings, key=lambda x: x.recorded_at, reverse=True)
@@ -676,16 +682,13 @@ def post_vehicle_usage(
 ):
     from vehicles.models import UsageReading, UsageUnit, UsageSource
     try:
-        vehicles = get_vehicles(db, user_id)
-        v = next((v for v in vehicles if str(v.id) == vehicle_id), None)
-        if not v:
-            raise not_found("Vehicle not found")
+        v = _get_vehicle(db, vehicle_id, user_id)
             
         ur = UsageReading(
             vehicle_id=v.id,
             value=body.value,
-            unit=UsageUnit(body.unit),
-            source=UsageSource(body.source),
+            unit=UsageUnit(body.unit.lower()),
+            source=UsageSource(body.source.lower()),
             recorded_at=datetime.now(timezone.utc)
         )
         db.add(ur)
@@ -705,10 +708,7 @@ def get_maintenance_timeline(
     user_id: str = Depends(get_current_user_id),
 ):
     try:
-        vehicles = get_vehicles(db, user_id)
-        v = next((v for v in vehicles if str(v.id) == vehicle_id), None)
-        if not v:
-            raise not_found("Vehicle not found")
+        v = _get_vehicle(db, vehicle_id, user_id)
 
         today = datetime.fromisoformat(current_date.replace(
             'Z', '+00:00')).date() if current_date else datetime.now(timezone.utc).date()
@@ -1119,16 +1119,14 @@ async def maintenance_ai(
             vehicle_id, body.current_odometer, None, db, user_id)
         next_up = timeline_resp.get("next_up")
 
+        query_text = body.question or body.message or ""
         # Get RAG context
         rag = RAGProvider()
-        chunks = await rag.query_documents(body.question, where={"vehicle_id": vehicle_id}, n_results=5)
+        chunks = await rag.query_documents(query_text, where={"vehicle_id": vehicle_id}, n_results=5)
 
         context_text = "\n".join([f"- {c.get('text', '')}" for c in chunks])
 
-        from vehicles.models import Vehicle
-        v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-        if not v:
-            raise bad_request("Vehicle not found")
+        v = _get_vehicle(db, vehicle_id, user_id)
 
         prompt = f"""Vehicle: {v.year} {v.make} {v.model}
 Current Odometer: {body.current_odometer or 'Unknown'}
@@ -1397,6 +1395,22 @@ def create_log(
             performed_by_id=body.performed_by_id,
             check_results=check_results,
         )
+        if body.odometer is not None:
+            try:
+                from vehicles.models import UsageReading, UsageUnit, UsageSource
+                v = _get_vehicle(db, vehicle_id, user_id)
+                ur = UsageReading(
+                    vehicle_id=v.id,
+                    value=float(body.odometer),
+                    unit=UsageUnit.MILES,
+                    source=UsageSource.SERVICE_LOG,
+                    recorded_at=body.service_date or datetime.now(timezone.utc),
+                )
+                db.add(ur)
+                db.commit()
+            except Exception as odo_err:
+                logger.warning(f"Could not record usage reading from service log: {odo_err}")
+
         return _ser_log(log)
     except Exception as e:
         raise _http(e)

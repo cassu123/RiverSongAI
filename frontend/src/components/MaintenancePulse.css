@@ -226,3 +226,33 @@
   font-size: 0.85rem;
   font-weight: 600;
 }
+
+/* Checklist cards grid & items */
+.checklist-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.cockpit-item-card {
+  background: color-mix(in srgb, var(--md-surface-container-low) 60%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px 18px;
+  transition: all var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
+}
+
+.cockpit-item-card:hover {
+  background: color-mix(in srgb, var(--md-surface-container) 75%, transparent);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.cockpit-item-card.is-selected {
+  background: color-mix(in srgb, var(--primary) 12%, var(--md-surface-container-low));
+  border-color: var(--primary);
+  box-shadow: 0 0 14px -4px var(--primary);
+}
