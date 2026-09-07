@@ -61,10 +61,10 @@ class ScribeDaemon(BaseDaemon):
                 memory_manager = getattr(app.state, "memory_manager", None)
                 if memory_manager:
                     store = getattr(memory_manager, "_store", None)
-            
+
             if not store:
-                from providers.memory.sqlite_store import SQLiteStore
-                store = SQLiteStore(self.settings.db_path)
+                from providers.memory.sqlite_store import get_shared_store
+                store = get_shared_store()
 
             if not memory_manager:
                 from core.memory_manager import MemoryManager

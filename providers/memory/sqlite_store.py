@@ -38,6 +38,7 @@
 from __future__ import annotations
 
 import asyncio
+import atexit
 import json
 import logging
 import os
@@ -1115,4 +1116,48 @@ class SQLiteStore(
             (user_id,)
         )
         return rows
+
+
+_shared_store: Optional[SQLiteStore] = None
+
+
+def close_shared_store() -> None:
+    """Close the process-level fallback SQLiteStore instance if open."""
+    global _shared_store
+    if _shared_store is not None:
+        try:
+            _shared_store.close()
+        except Exception:
+            pass
+        _shared_store = None
+
+
+atexit.register(close_shared_store)
+
+
+def get_shared_store(request: Optional[object] = None) -> SQLiteStore:
+    """Return the shared SQLiteStore instance.
+
+    Checks request.app.state, the active application instance on main.app,
+    then falls back to a process-level singleton with registered shutdown cleanup.
+    """
+    if request is not None and hasattr(request, "app") and hasattr(request.app.state, "memory_manager") and request.app.state.memory_manager:
+        return request.app.state.memory_manager._store
+
+    try:
+        import sys
+        main_mod = sys.modules.get("main")
+        if main_mod and hasattr(main_mod, "app"):
+            app = getattr(main_mod, "app")
+            if hasattr(app, "state") and hasattr(app.state, "memory_manager") and app.state.memory_manager:
+                return app.state.memory_manager._store
+    except Exception:
+        pass
+
+    global _shared_store
+    if _shared_store is None:
+        _shared_store = SQLiteStore()
+    return _shared_store
+
+
 

@@ -46,7 +46,7 @@ from pydantic import BaseModel, Field
 
 from core.auth import require_role
 from core.vortex_security import hash_unit_token, mint_unit_token, verify_unit_token
-from providers.memory.sqlite_store import SQLiteStore
+from providers.memory.sqlite_store import SQLiteStore, get_shared_store
 
 logger = logging.getLogger(__name__)
 
@@ -300,7 +300,7 @@ class CommandBody(BaseModel):
 
 @router.post("/units/claim", dependencies=[Depends(require_role("admin"))])
 async def claim_unit(body: ClaimBody):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     unit_id = uuid.uuid4().hex[:12]
     unit_token = mint_unit_token()
@@ -317,7 +317,7 @@ async def claim_unit(body: ClaimBody):
 
 @router.get("/units", dependencies=[Depends(require_role("admin"))])
 async def list_units():
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     rows = await store.execute_read_async(
         "SELECT unit_id, name, rider_id, presence, active_session_id, online, "
@@ -331,7 +331,7 @@ async def list_units():
             dependencies=[Depends(require_role("admin"))])
 async def assign_rider(unit_id: str, body: RiderAssignBody):
     """Bind the rider a unit acts for. Admin-only — see session_start."""
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     unit = await store.execute_read_one_async(
         "SELECT unit_id FROM vexa_units WHERE unit_id=?", (unit_id,))
@@ -346,7 +346,7 @@ async def assign_rider(unit_id: str, body: RiderAssignBody):
 @router.delete("/units/{unit_id}",
                dependencies=[Depends(require_role("admin"))])
 async def delete_unit(unit_id: str):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     await store.execute_write_async(
         "DELETE FROM vexa_units WHERE unit_id=?", (unit_id,))
@@ -356,7 +356,7 @@ async def delete_unit(unit_id: str):
 @router.post("/units/{unit_id}/command",
              dependencies=[Depends(require_role("admin"))])
 async def queue_command(unit_id: str, body: CommandBody):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     unit = await store.execute_read_one_async(
         "SELECT unit_id FROM vexa_units WHERE unit_id=?", (unit_id,))
@@ -369,7 +369,7 @@ async def queue_command(unit_id: str, body: CommandBody):
 @router.get("/units/{unit_id}/sessions",
             dependencies=[Depends(require_role("admin"))])
 async def list_sessions(unit_id: str, limit: int = 20):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     rows = await store.execute_read_async(
         "SELECT * FROM vexa_sessions WHERE unit_id=? "
@@ -391,7 +391,7 @@ async def list_sessions(unit_id: str, limit: int = 20):
 @router.post("/session/start")
 async def session_start(body: SessionStartBody,
                         x_unit_token: Optional[str] = Header(default=None)):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_unit(store, body.unit_id, x_unit_token)
 
@@ -428,7 +428,7 @@ async def session_start(body: SessionStartBody,
 @router.post("/session/end")
 async def session_end(body: SessionEndBody,
                       x_unit_token: Optional[str] = Header(default=None)):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     session = await store.execute_read_one_async(
         "SELECT * FROM vexa_sessions WHERE session_id=?", (body.session_id,))
@@ -478,7 +478,7 @@ async def session_end(body: SessionEndBody,
 @router.post("/telemetry")
 async def post_telemetry(body: TelemetryBody,
                          x_unit_token: Optional[str] = Header(default=None)):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     session = await store.execute_read_one_async(
         "SELECT unit_id FROM vexa_sessions WHERE session_id=?",
@@ -507,7 +507,7 @@ async def post_telemetry(body: TelemetryBody,
 @router.get("/commands/poll")
 async def poll_commands(unit_id: str,
                         x_unit_token: Optional[str] = Header(default=None)):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     await _verify_unit(store, unit_id, x_unit_token)
     rows = await store.execute_read_async(
@@ -537,7 +537,7 @@ async def poll_commands(unit_id: str,
 @router.post("/event")
 async def post_event(body: EventBody,
                      x_unit_token: Optional[str] = Header(default=None)):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     unit = await _verify_unit(store, body.unit_id, x_unit_token)
     await store.execute_write_async(
@@ -583,7 +583,7 @@ def _get_tts():
 @router.post("/tts")
 async def tts(body: TtsBody,
               x_unit_token: Optional[str] = Header(default=None)):
-    store = SQLiteStore()
+    store = get_shared_store()
     await _ensure_schema(store)
     await _verify_unit(store, body.unit_id, x_unit_token)
     try:

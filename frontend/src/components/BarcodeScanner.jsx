@@ -88,6 +88,14 @@ export default function BarcodeScanner({ onDetected, onClose, formats, continuou
             if (!continuousRef.current) setTimeout(() => handleCloseRef.current(), 300)
           }
         })
+        if (cancelled) {
+          try {
+            reader.reset()
+            const stream = videoRef.current?.srcObject
+            if (stream) stream.getTracks().forEach(t => t.stop())
+          } catch {}
+          return
+        }
       } catch (e) {
         if (cancelled) return
         console.warn('decodeFromConstraints failed, falling back to default device:', e)
@@ -107,6 +115,14 @@ export default function BarcodeScanner({ onDetected, onClose, formats, continuou
                 if (!continuousRef.current) setTimeout(() => handleCloseRef.current(), 300)
              }
           })
+          if (cancelled) {
+            try {
+              reader.reset()
+              const stream = videoRef.current?.srcObject
+              if (stream) stream.getTracks().forEach(t => t.stop())
+            } catch {}
+            return
+          }
         } catch (e2) {
           if (!cancelled) {
             setError('Camera initialization failed. Please ensure permissions are granted.')

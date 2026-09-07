@@ -81,10 +81,10 @@ class UsersStoreMixin(StoreProtocol):
         )
         conn.commit()
 
-    async def get_user_by_email(self, email: str) -> Optional[dict]:
-        return await self._run(self._sync_get_user_by_email, email)
+    async def get_user_by_email(self, email: str, include_password_hash: bool = False) -> Optional[dict]:
+        return await self._run(self._sync_get_user_by_email, email, include_password_hash)
 
-    def _sync_get_user_by_email(self, email: str) -> Optional[dict]:
+    def _sync_get_user_by_email(self, email: str, include_password_hash: bool = False) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(
             "SELECT id, email, password_hash, display_name, role, is_approved, force_password_change, created_at FROM users WHERE email=?",
@@ -92,16 +92,18 @@ class UsersStoreMixin(StoreProtocol):
         ).fetchone()
         if row is None:
             return None
-        return {
+        data = {
             "id": row[0],
             "email": row[1],
-            "password_hash": row[2],
             "display_name": row[3],
             "role": row[4],
             "is_approved": bool(row[5]),
             "force_password_change": bool(row[6]),
             "created_at": row[7]
         }
+        if include_password_hash:
+            data["password_hash"] = row[2]
+        return data
         
     async def get_all_users(self) -> list[dict]:
         return await self._run(self._sync_get_all_users)
@@ -423,13 +425,13 @@ class UsersStoreMixin(StoreProtocol):
     def _sync_get_user_by_google_id(self, google_id: str) -> Optional[dict]:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT id, email, password_hash, display_name, role, is_approved, created_at, google_id, google_email FROM users WHERE google_id=?",
+            "SELECT id, email, display_name, role, is_approved, created_at, google_id, google_email FROM users WHERE google_id=?",
             (google_id,),
         ).fetchone()
         if row is None:
             return None
-        return {"id": row[0], "email": row[1], "password_hash": row[2], "display_name": row[3], "role": row[4],
-                "is_approved": bool(row[5]), "created_at": row[6], "google_id": row[7], "google_email": row[8]}
+        return {"id": row[0], "email": row[1], "display_name": row[2], "role": row[3],
+                "is_approved": bool(row[4]), "created_at": row[5], "google_id": row[6], "google_email": row[7]}
 
     async def link_google_account(
             self, user_id: str, google_id: str, google_email: str) -> None:

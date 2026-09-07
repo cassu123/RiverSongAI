@@ -38,15 +38,30 @@ export default function useCanvasEffect(canvasRef, init) {
     resize()
 
     function loop() {
-      if (!document.hidden && step) {
+      if (document.hidden) {
+        raf = 0
+        return
+      }
+      if (step) {
         step()
       }
       raf = requestAnimationFrame(loop)
     }
-    raf = requestAnimationFrame(loop)
+
+    function onVisibilityChange() {
+      if (!document.hidden && !raf) {
+        raf = requestAnimationFrame(loop)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    if (!document.hidden) {
+      raf = requestAnimationFrame(loop)
+    }
 
     return () => {
-      cancelAnimationFrame(raf)
+      if (raf) cancelAnimationFrame(raf)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
       ro.disconnect()
     }
   }, [canvasRef])

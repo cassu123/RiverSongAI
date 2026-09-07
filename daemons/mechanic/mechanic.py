@@ -37,12 +37,20 @@ class MechanicDaemon(BaseDaemon):
         logger.info("Mechanic: connecting to MAVLink on %s @ %d baud",
                     self.settings.mavlink_serial_port, self.settings.mavlink_baud_rate)
         
-        while self._running:
-            try:
-                await self._mavlink_loop()
-            except Exception as e:
-                logger.warning("Mechanic: MAVLink loop crashed (%s). Reconnecting in 10s.", e)
-                await asyncio.sleep(10)
+        try:
+            while self._running:
+                try:
+                    await self._mavlink_loop()
+                except Exception as e:
+                    logger.warning("Mechanic: MAVLink loop crashed (%s). Reconnecting in 10s.", e)
+                    await asyncio.sleep(10)
+        finally:
+            if self._http_client and not getattr(self._http_client, "is_closed", True):
+                try:
+                    await self._http_client.aclose()
+                except Exception:
+                    pass
+                self._http_client = None
 
     async def _mavlink_loop(self) -> None:
         from pymavlink import mavutil
