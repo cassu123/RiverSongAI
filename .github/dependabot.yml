@@ -4,6 +4,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # websockets is capped <15.0 for Home Assistant proxy compatibility
+      - dependency-name: "websockets"
+        versions: [">= 15.0.0"]
 
   - package-ecosystem: npm
     directory: /frontend
