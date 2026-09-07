@@ -238,6 +238,8 @@ async def get_current_user_role(request: Request) -> str:
 # ---------------------------------------------------------------------------
 
 def _http(e: Exception) -> HTTPException:
+    if isinstance(e, HTTPException):
+        return e
     if isinstance(e, PermissionDeniedError):
         return HTTPException(status_code=403, detail=str(e))
     if isinstance(e, (VehicleNotFoundError,
@@ -255,13 +257,40 @@ def _http(e: Exception) -> HTTPException:
 # Serialisers
 # ---------------------------------------------------------------------------
 
+# Vehicle types metered in engine hours rather than road miles.
+_HOUR_METERED_TYPES = frozenset({"atv", "mower", "tractor", "generator"})
+
+
+def _unit_str(unit) -> str:
+    return unit.value if hasattr(unit, "value") else str(unit)
+
+
+def _is_hour_metered(v) -> bool:
+    return _unit_str(getattr(v, "vehicle_type", "")) in _HOUR_METERED_TYPES
+
+
 def _ser_vehicle(v) -> dict:
+    # Non-road units (ATV/UTV) accrue engine hours; everything else accrues miles.
+    odo_unit = "hours" if _is_hour_metered(v) else "miles"
     latest_odo = None
-    if hasattr(v, "usage_readings") and v.usage_readings:
-        mile_readings = [ur.value for ur in v.usage_readings if hasattr(ur.unit, "value") and ur.unit.value == "miles"]
-        if mile_readings:
-            latest_odo = sorted(v.usage_readings, key=lambda x: x.recorded_at, reverse=True)[0].value
-    if latest_odo is None and hasattr(v, "service_logs") and v.service_logs:
+    if getattr(v, "usage_readings", None):
+        matching = [
+            ur for ur in v.usage_readings
+            if ur.value is not None
+            and ur.recorded_at is not None
+            and _unit_str(ur.unit) == odo_unit
+        ]
+        if not matching:
+            # Older clients posted every reading as "miles"; fall back to the
+            # full set rather than reporting no odometer at all.
+            matching = [
+                ur for ur in v.usage_readings
+                if ur.value is not None and ur.recorded_at is not None
+            ]
+        if matching:
+            # Latest reading in the vehicle's own unit — never mix miles and hours.
+            latest_odo = max(matching, key=lambda ur: ur.recorded_at).value
+    if latest_odo is None and getattr(v, "service_logs", None):
         log_odos = [log.odometer for log in v.service_logs if log.odometer is not None]
         if log_odos:
             latest_odo = max(log_odos)
@@ -279,6 +308,7 @@ def _ser_vehicle(v) -> dict:
         "color": v.color,
         "notes": v.notes,
         "current_odometer": latest_odo,
+        "current_odometer_unit": odo_unit,
         "fluid_specs": [
             {"id": str(f.id),
              "name": f.name,
@@ -294,10 +324,16 @@ def _ser_vehicle(v) -> dict:
             _ser_checkpoint(cp)
             for cp in sorted(v.check_points, key=lambda x: x.sort_order)
         ],
+        # datetime.min is only a sort floor for rows with no timestamp; without
+        # it a single null recorded_at makes the whole comparison raise.
         "usage_readings": [
             _ser_usage_reading(ur)
-            for ur in sorted(v.usage_readings, key=lambda x: x.recorded_at, reverse=True)
-        ] if hasattr(v, "usage_readings") and v.usage_readings else [],
+            for ur in sorted(
+                v.usage_readings,
+                key=lambda x: x.recorded_at or datetime.min.replace(tzinfo=timezone.utc),
+                reverse=True,
+            )
+        ] if getattr(v, "usage_readings", None) else [],
         "created_at": v.created_at.isoformat() if v.created_at else None,
         "updated_at": v.updated_at.isoformat() if v.updated_at else None,
     }
@@ -1119,7 +1155,9 @@ async def maintenance_ai(
             vehicle_id, body.current_odometer, None, db, user_id)
         next_up = timeline_resp.get("next_up")
 
-        query_text = body.question or body.message or ""
+        query_text = (body.question or body.message or "").strip()
+        if not query_text:
+            raise bad_request("A question is required.")
         # Get RAG context
         rag = RAGProvider()
         chunks = await rag.query_documents(query_text, where={"vehicle_id": vehicle_id}, n_results=5)
@@ -1402,7 +1440,7 @@ def create_log(
                 ur = UsageReading(
                     vehicle_id=v.id,
                     value=float(body.odometer),
-                    unit=UsageUnit.MILES,
+                    unit=UsageUnit.HOURS if _is_hour_metered(v) else UsageUnit.MILES,
                     source=UsageSource.SERVICE_LOG,
                     recorded_at=body.service_date or datetime.now(timezone.utc),
                 )

@@ -19,6 +19,10 @@ async function apiFetch(path, token, opts = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+// Vehicle types metered in engine hours rather than road miles.
+const HOUR_METERED_TYPES = new Set(['atv', 'mower', 'tractor', 'generator']);
+const isHourMetered = (v) => HOUR_METERED_TYPES.has(v?.vehicle_type);
+
 function fmtDays(d) {
   if (!d) return null;
   if (d % 365 === 0) return `${d / 365}yr`;
@@ -178,11 +182,11 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated, isNonRoad }) {
               <input className="cockpit-input-raw" type="number" value={form.ft_lb} onChange={set('ft_lb')} placeholder="18" />
             </div>
             <div className="cockpit-input-box">
-              <span className="card-metric-label">INTERVAL (${isNonRoad ? 'HOURS' : 'MILES'})</span>
+              <span className="card-metric-label">INTERVAL ({isNonRoad ? 'HOURS' : 'MILES'})</span>
               <input className="cockpit-input-raw" type="number" value={form.interval_miles} onChange={set('interval_miles')} placeholder="5000" />
             </div>
             <div className="cockpit-input-box">
-              <span className="card-metric-label">NEXT DUE (${isNonRoad ? 'HOURS' : 'MILES'})</span>
+              <span className="card-metric-label">NEXT DUE ({isNonRoad ? 'HOURS' : 'MILES'})</span>
               <input className="cockpit-input-raw" type="number" value={form.due_at_miles} onChange={set('due_at_miles')} placeholder="5000" />
             </div>
           </div>
@@ -304,11 +308,11 @@ function SpecsEditor({ vehicle, token, onUpdated, isNonRoad }) {
               <input className="cockpit-input-raw" type="number" value={newPoint.ft_lb} onChange={setNp('ft_lb')} placeholder="18" />
             </div>
             <div className="cockpit-input-box">
-              <span className="card-metric-label">INTERVAL (${isNonRoad ? 'HOURS' : 'MILES'})</span>
+              <span className="card-metric-label">INTERVAL ({isNonRoad ? 'HOURS' : 'MILES'})</span>
               <input className="cockpit-input-raw" type="number" value={newPoint.interval_miles} onChange={setNp('interval_miles')} placeholder="5000" />
             </div>
             <div className="cockpit-input-box">
-              <span className="card-metric-label">NEXT DUE (${isNonRoad ? 'HOURS' : 'MILES'})</span>
+              <span className="card-metric-label">NEXT DUE ({isNonRoad ? 'HOURS' : 'MILES'})</span>
               <input className="cockpit-input-raw" type="number" value={newPoint.due_at_miles} onChange={setNp('due_at_miles')} placeholder="5000" />
             </div>
           </div>
@@ -473,7 +477,7 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
     finally { setBusy(false); }
   };
 
-  const currentV = vehicles.find(v => v.id === vehicleId);
+  const currentV = vehicles.find(v => String(v.id) === String(vehicleId));
 
   return (
     <div className="rs-card is-wide" style={{ padding: 24 }}>
@@ -606,7 +610,7 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
 
       {result && (
         <div className="mp-flash--ok" style={{ marginBottom: 16 }}>
-          Successfully applied! ${result.updated} updated, ${result.created} new checkpoints configured (${result.total} total found).
+          Successfully applied! {result.updated} updated, {result.created} new checkpoints configured ({result.total} total found).
         </div>
       )}
       {error && <div className="mp-error" style={{ marginBottom: 16 }}>{error}</div>}
@@ -629,7 +633,7 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
 
       {preview && (
         <div style={{ marginTop: 16, background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 12 }}>
-          <div className="card-metric-label" style={{ marginBottom: 12 }}>PREVIEW — ${preview.length} ITEMS DETECTED</div>
+          <div className="card-metric-label" style={{ marginBottom: 12 }}>PREVIEW — {preview.length} ITEMS DETECTED</div>
           {preview.length === 0 ? (
             <div className="mp-empty-specs">No structured maintenance items detected in this document.</div>
           ) : (
@@ -689,9 +693,10 @@ function SettingsPanel({ token, vehicles, people, selectedVehicleId, onPeopleRef
 // ---------------------------------------------------------------------------
 // Vehicle RAG Subsystem (Documents Tab)
 // ---------------------------------------------------------------------------
-function VehicleRAG({ token, vehicleId, currentOdometer }) {
+function VehicleRAG({ token, vehicleId, currentOdometer, onUpdated }) {
   const [file, setFile] = useState(null);
   const [ingesting, setIngesting] = useState(false);
+  const [notice, setNotice] = useState('');
   const [question, setQuestion] = useState('');
   const [asking, setAsking] = useState(false);
   const [answer, setAnswer] = useState(null);
@@ -700,7 +705,7 @@ function VehicleRAG({ token, vehicleId, currentOdometer }) {
 
   const handleIngest = async () => {
     if (!file) return;
-    setIngesting(true); setError('');
+    setIngesting(true); setError(''); setNotice('');
     try {
       const fd = new FormData();
       fd.append('file', file);
@@ -709,10 +714,19 @@ function VehicleRAG({ token, vehicleId, currentOdometer }) {
         headers: { Authorization: `Bearer ${token}` },
         body: fd
       });
-      if (!res.ok) throw new Error('Ingestion failed');
-      alert('Document successfully indexed into vehicle knowledgebase!');
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.detail || 'Ingestion failed');
+      }
+      const data = await res.json().catch(() => null);
+      setNotice(
+        data && data.total != null
+          ? `Indexed. ${data.created ?? 0} new and ${data.updated ?? 0} updated checkpoints extracted from ${data.total} detected items.`
+          : 'Document indexed into this vehicle\'s knowledgebase.'
+      );
       setFile(null);
       if (fileRef.current) fileRef.current.value = '';
+      if (onUpdated) onUpdated();
     } catch (e) { setError(e.message); }
     finally { setIngesting(false); }
   };
@@ -745,6 +759,7 @@ function VehicleRAG({ token, vehicleId, currentOdometer }) {
         Ask River Song about fluid capacities, torque specs, part numbers, or upcoming service schedules grounded in your vehicle's technical manual.
       </p>
 
+      {notice && <div className="mp-flash--ok" style={{ marginBottom: 14 }}>{notice}</div>}
       {error && <div className="mp-error" style={{ marginBottom: 14 }}>{error}</div>}
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 18 }}>
@@ -816,7 +831,7 @@ export default function MaintenancePulse({
 
   // Active Vehicle Data
   const currentVehicle = useMemo(() => {
-    return vehicles.find(v => String(v.id) === String(selectedId)) || vehicles[0] || null;
+    return vehicles.find(v => String(v.id) === String(selectedId)) || null;
   }, [vehicles, selectedId]);
 
   // Current Odometer & Inline update
@@ -824,6 +839,10 @@ export default function MaintenancePulse({
     if (!currentVehicle) return 0;
     return currentVehicle.current_odometer ?? (currentVehicle.usage_readings?.[0]?.value ?? 0);
   }, [currentVehicle]);
+
+  const isNonRoad = isHourMetered(currentVehicle);
+  const unitLabel = isNonRoad ? 'HRS' : 'MI';
+  const usageUnit = isNonRoad ? 'hours' : 'miles';
 
   const [isUpdatingOdo, setIsUpdatingOdo] = useState(false);
   const [newOdoInput, setNewOdoInput] = useState('');
@@ -946,19 +965,20 @@ export default function MaintenancePulse({
     });
 
     const sortedMiles = Array.from(setMiles).sort((a, b) => a - b);
-    if (sortedMiles.length === 0) {
-      sortedMiles.push(1000, 4000, 8000, 12000);
-    }
 
-    const dueMilestone = sortedMiles.find(m => m >= currentOdometer) || sortedMiles[sortedMiles.length - 1];
-    const activeM = selectedMilestone || dueMilestone;
+    const dueMilestone = sortedMiles.find(m => m >= currentOdometer)
+      ?? sortedMiles[sortedMiles.length - 1]
+      ?? null;
+    const activeM = selectedMilestone ?? dueMilestone;
 
     const active = [];
     const future = [];
 
     checkPoints.forEach(cp => {
       const due = cp.due_at_miles || cp.interval_miles || 0;
-      if (activeM === 'all' || due === activeM || (cp.interval_miles && activeM % cp.interval_miles === 0)) {
+      const matchesInterval =
+        typeof activeM === 'number' && cp.interval_miles && activeM % cp.interval_miles === 0;
+      if (activeM === 'all' || (activeM != null && due === activeM) || matchesInterval) {
         active.push(cp);
       } else {
         future.push(cp);
@@ -1006,7 +1026,7 @@ export default function MaintenancePulse({
     try {
       await apiFetch(`/api/vehicles/${selectedId}/usage`, token, {
         method: 'POST',
-        body: JSON.stringify({ value: val, unit: 'miles', source: 'manual' })
+        body: JSON.stringify({ value: val, unit: usageUnit, source: 'manual' })
       });
       setIsUpdatingOdo(false);
       onRefreshVehicles();
@@ -1052,20 +1072,25 @@ export default function MaintenancePulse({
 
   // Quick Start Interval from Walkthrough
   const handleStartIntervalInLog = () => {
-    const milestoneNum = (selectedMilestone || currentMilestone);
-    const mLabel = milestoneNum ? `${milestoneNum.toLocaleString()}-Mile Scheduled Maintenance` : 'Scheduled Maintenance';
-    
-    const initialStatuses = {};
+    const milestoneNum = selectedMilestone ?? currentMilestone;
+    const mLabel = typeof milestoneNum === 'number'
+      ? `${milestoneNum.toLocaleString()}-${unitLabel === 'HRS' ? 'Hour' : 'Mile'} Scheduled Maintenance`
+      : 'Scheduled Maintenance';
+
+    // Only procedures the operator left staged (not skipped) carry over, along
+    // with any values they actually measured. Nothing is marked done for them.
+    const carried = {};
     activeProcedures.forEach(cp => {
-      initialStatuses[cp.id] = 'done';
+      if ((checkStatuses[cp.id] || 'nominal') !== 'skip') carried[cp.id] = 'done';
     });
-    setLogCheckedPoints(initialStatuses);
-    
+    setLogCheckedPoints(carried);
+    setLogActualValues(prev => ({ ...prev, ...actualValues }));
+
     setLogForm(prev => ({
       ...prev,
       service_type: mLabel,
-      odometer: currentOdometer > 0 ? String(currentOdometer) : String(milestoneNum || ''),
-      notes: `Performed ${mLabel} interval procedures.`
+      odometer: currentOdometer > 0 ? String(currentOdometer) : '',
+      notes: prev.notes || ''
     }));
     setActiveTab('log');
   };
@@ -1078,13 +1103,21 @@ export default function MaintenancePulse({
 
     const checkResults = (currentVehicle.check_points || [])
       .filter(cp => logForm.is_pro_service || logCheckedPoints[cp.id] === 'done')
-      .map(cp => ({
-        description: cp.description,
-        check_point_id: cp.id,
-        actual_value: logActualValues[cp.id] || null,
-        status: 'pass',
-        passed: true
-      }));
+      .map(cp => {
+        const raw = logActualValues[cp.id];
+        const measured = raw !== undefined && raw !== '' ? Number(raw) : null;
+        const inRange = measured === null || Number.isNaN(measured)
+          ? true
+          : (cp.min_value == null || measured >= cp.min_value)
+            && (cp.max_value == null || measured <= cp.max_value);
+        return {
+          description: cp.description,
+          check_point_id: cp.id,
+          actual_value: raw || null,
+          status: inRange ? 'pass' : 'fail',
+          passed: inRange,
+        };
+      });
 
     const odoNum = logForm.odometer ? parseInt(logForm.odometer, 10) : null;
 
@@ -1160,8 +1193,9 @@ export default function MaintenancePulse({
     );
   }
 
-  const odoDelta = currentOdometer - currentMilestone;
-  const isOverdue = currentOdometer > 0 && odoDelta >= 0;
+  const hasSchedule = typeof currentMilestone === 'number';
+  const odoDelta = hasSchedule ? currentOdometer - currentMilestone : 0;
+  const isOverdue = hasSchedule && currentOdometer > 0 && odoDelta >= 0;
 
   const TABS = [
     { id: 'walkthrough', icon: 'route', label: 'WALKTHROUGH' },
@@ -1305,7 +1339,7 @@ export default function MaintenancePulse({
             <span className="card-metric-label">CERTIFIED ODOMETER</span>
             <div className="odometer-stat-num">
               {currentOdometer > 0 ? currentOdometer.toLocaleString() : '0'}
-              <span className="odometer-stat-unit">{currentVehicle.vehicle_type === 'atv' ? 'HRS' : 'MI'}</span>
+              <span className="odometer-stat-unit">{unitLabel}</span>
             </div>
           </div>
         </div>
@@ -1315,7 +1349,13 @@ export default function MaintenancePulse({
           <div className={`odometer-delta-badge ${isOverdue ? 'is-due' : 'is-nominal'}`}>
             <span className="rs-status-dot" style={{ background: isOverdue ? 'var(--rs-status-critical, #ff8b8b)' : 'var(--rs-status-nominal, #4ade80)' }} />
             <span>
-              {currentOdometer === 0 ? 'ODOMETER NOT INITIALIZED' : isOverdue ? `${Math.abs(odoDelta).toLocaleString()} MI OVERDUE` : `${Math.abs(odoDelta).toLocaleString()} MI TO NEXT INTERVAL`}
+              {currentOdometer === 0
+                ? 'ODOMETER NOT INITIALIZED'
+                : !hasSchedule
+                  ? 'NO SERVICE SCHEDULE SET'
+                  : isOverdue
+                    ? `${Math.abs(odoDelta).toLocaleString()} ${unitLabel} OVERDUE`
+                    : `${Math.abs(odoDelta).toLocaleString()} ${unitLabel} TO NEXT INTERVAL`}
             </span>
           </div>
 
@@ -1374,7 +1414,13 @@ export default function MaintenancePulse({
             <div className="service-scope-header">
               <div className="service-scope-title">
                 <span className="material-symbols-rounded" style={{ color: 'var(--primary)' }}>precision_manufacturing</span>
-                <span>{(selectedMilestone || currentMilestone).toLocaleString()}-MILE SCHEDULED INTERVAL</span>
+                <span>
+                  {selectedMilestone === 'all'
+                    ? 'ALL CONFIGURED PROCEDURES'
+                    : hasSchedule || typeof selectedMilestone === 'number'
+                      ? `${(selectedMilestone ?? currentMilestone).toLocaleString()}-${unitLabel === 'HRS' ? 'HOUR' : 'MILE'} SCHEDULED INTERVAL`
+                      : 'NO SCHEDULED INTERVAL'}
+                </span>
               </div>
               <span
                 className="rs-status-strip"
@@ -1389,7 +1435,7 @@ export default function MaintenancePulse({
                 }}
               >
                 <span className="rs-status-dot" style={{ background: isOverdue ? 'var(--rs-status-critical, #ff8b8b)' : 'var(--rs-status-nominal, #4ade80)' }} />
-                <span>{isOverdue ? `ACTION REQUIRED (${Math.abs(odoDelta).toLocaleString()} MI OVERDUE)` : 'UPCOMING'}</span>
+                <span>{isOverdue ? `ACTION REQUIRED (${Math.abs(odoDelta).toLocaleString()} ${unitLabel} OVERDUE)` : 'UPCOMING'}</span>
               </span>
             </div>
             <div className="service-scope-desc">
@@ -1404,7 +1450,7 @@ export default function MaintenancePulse({
                   className={`interval-chip ${(selectedMilestone || currentMilestone) === m ? 'is-active' : ''} ${currentOdometer > 0 && currentOdometer >= m ? 'is-overdue' : ''}`}
                   onClick={() => setSelectedMilestone(m)}
                 >
-                  {m.toLocaleString()} MI
+                  {m.toLocaleString()} {unitLabel}
                 </button>
               ))}
               <button
@@ -1569,7 +1615,7 @@ export default function MaintenancePulse({
                 />
               </div>
               <div className="cockpit-input-box">
-                <span className="card-metric-label">ODOMETER (MILES) *</span>
+                <span className="card-metric-label">ODOMETER ({isNonRoad ? 'HOURS' : 'MILES'}) *</span>
                 <input
                   className="cockpit-input-raw"
                   type="number"
@@ -1717,7 +1763,7 @@ export default function MaintenancePulse({
             vehicle={currentVehicle}
             token={token}
             onUpdated={onRefreshVehicles}
-            isNonRoad={currentVehicle.vehicle_type === 'atv'}
+            isNonRoad={isNonRoad}
           />
         </div>
       )}
@@ -1743,9 +1789,9 @@ export default function MaintenancePulse({
                   </div>
 
                   <div style={{ display: 'flex', gap: 16, fontSize: '0.82rem', color: 'var(--md-on-surface-variant)', flexWrap: 'wrap' }}>
-                    <span>Odometer: <strong>{log.odometer != null ? `${log.odometer.toLocaleString()} mi` : '—'}</strong></span>
+                    <span>Odometer: <strong>{log.odometer != null ? `${log.odometer.toLocaleString()} ${unitLabel.toLowerCase()}` : '—'}</strong></span>
                     <span>Facility: <strong>{log.service_center || 'Personal Hangar'}</strong></span>
-                    {log.cost != null && <span>Cost: <strong>$${Number(log.cost).toFixed(2)}</strong></span>}
+                    {log.cost != null && <span>Cost: <strong>${Number(log.cost).toFixed(2)}</strong></span>}
                     {log.performed_by && <span>By: <strong>{log.performed_by.display_name || log.performed_by.email}</strong></span>}
                   </div>
 
@@ -1757,11 +1803,18 @@ export default function MaintenancePulse({
 
                   {log.check_results?.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-                      {log.check_results.map(cr => (
-                        <span key={cr.id} className="cp-spec-tag">
-                          ✓ {cr.description} {cr.actual_value ? `(${cr.actual_value})` : ''}
-                        </span>
-                      ))}
+                      {log.check_results.map(cr => {
+                        const failed = cr.passed === false || cr.status === 'fail';
+                        return (
+                          <span
+                            key={cr.id}
+                            className="cp-spec-tag"
+                            style={failed ? { color: 'var(--rs-status-critical, #ff8b8b)', borderColor: 'rgba(255,139,139,0.35)' } : undefined}
+                          >
+                            {failed ? '✕' : '✓'} {cr.description} {cr.actual_value ? `(${cr.actual_value})` : ''}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1780,6 +1833,7 @@ export default function MaintenancePulse({
             token={token}
             vehicleId={currentVehicle.id}
             currentOdometer={currentOdometer}
+            onUpdated={onRefreshVehicles}
           />
         </div>
       )}
@@ -1802,10 +1856,12 @@ export default function MaintenancePulse({
 
       {/* RAG Ask River Sheet */}
       {showAskRiver && (
-        <Sheet isOpen={showAskRiver} onClose={() => setShowAskRiver(false)} title={`River Song // ${currentVehicle.nickname || currentVehicle.model}`}>
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Sheet open={showAskRiver} onClose={() => setShowAskRiver(false)} title={`River Song // ${currentVehicle.nickname || currentVehicle.model}`}>
+          <div style={{ height: '70vh', display: 'flex', flexDirection: 'column' }}>
             <ChatInterface
-              initialContext={`Telemetry & maintenance advisor for ${currentVehicle.year || ''} ${currentVehicle.make} ${currentVehicle.model}. Certified odometer: ${currentOdometer} miles.`}
+              embedded={true}
+              onClose={() => setShowAskRiver(false)}
+              vehicleId={String(currentVehicle.id)}
             />
           </div>
         </Sheet>
