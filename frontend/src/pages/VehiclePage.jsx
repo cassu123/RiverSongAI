@@ -147,7 +147,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
   // ---------------------------------------------------------------------------
   if (selectedVehicleId === 'NEW') {
     return (
-      <div className="rs-foyer animate-page-in rs-mode-hangar">
+      <div className="animate-page-in rs-mode-hangar">
         <div className="rs-foyer-head" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
           <button className="rs-pill" onClick={() => setSelectedVehicleId(null)}>
             <span className="material-symbols-rounded">arrow_back</span>

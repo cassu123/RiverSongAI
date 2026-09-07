@@ -722,24 +722,25 @@
   color: #ef4444;
 }
 
-/* ── 10. Kitchen Navigation & Guided Cook Mode (Solid Grounding & Legibility) ── */
+/* ── 10. Kitchen Navigation & Guided Cook Mode ── */
 .gh-kitchen-stage {
-  /* Solid, opaque dark foundation with zero particle bleed-through */
-  background: #0d1219;
-  border-radius: 28px;
-  padding: 24px;
-  margin: -8px -8px 80px -8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-  min-height: calc(100vh - 120px);
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  min-height: auto !important;
+  border: none !important;
+  width: 100%;
 }
 
 @media (min-width: 768px) {
   .gh-kitchen-stage {
-    padding: 32px;
+    padding: 0 !important;
   }
 }
 
-/* Force solid surfaces in the kitchen stage */
+/* Force solid surfaces for cards in the kitchen stage */
 .gh-kitchen-stage .gh-card,
 .gh-kitchen-stage .rs-card {
   background: #151c27 !important;
@@ -750,13 +751,13 @@
 .gh-kitchen-nav-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: #151c27;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.6);
-  margin-bottom: 24px;
+  gap: 8px;
+  padding: 4px 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 20px;
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
@@ -768,15 +769,16 @@
 .gh-kitchen-nav-btn {
   all: unset;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 22px;
+  gap: 8px;
+  padding: 8px 18px;
   border-radius: 999px;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 650;
   color: rgba(220, 230, 245, 0.75);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   white-space: nowrap;
   flex-shrink: 0;
@@ -784,19 +786,20 @@
 }
 
 .gh-kitchen-nav-btn .material-symbols-rounded {
-  font-size: 22px;
+  font-size: 20px;
 }
 
 .gh-kitchen-nav-btn:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .gh-kitchen-nav-btn.is-active {
   background: rgba(0, 229, 255, 0.18);
   border: 1px solid rgba(0, 229, 255, 0.45);
   color: #96cbff;
-  box-shadow: 0 0 18px -4px rgba(0, 229, 255, 0.35);
+  box-shadow: 0 0 16px -2px rgba(0, 229, 255, 0.35);
 }
 
 .gh-live-dot {
@@ -959,19 +962,21 @@
   transform: scale(0.98);
 }
 
-/* ── 11. Settings & Account Hub (Solid Grounding & Legibility) ────────── */
+/* ── 11. Settings & Account Hub ────────── */
 .gh-settings-stage {
-  background: #0d1219;
-  border-radius: 28px;
-  padding: 24px;
-  margin: -8px -8px 80px -8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-  min-height: calc(100vh - 120px);
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  min-height: auto !important;
+  border: none !important;
+  width: 100%;
 }
 
 @media (min-width: 768px) {
   .gh-settings-stage {
-    padding: 32px;
+    padding: 0 !important;
   }
 }
 
@@ -985,13 +990,13 @@
 .gh-settings-nav-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: #151c27;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.6);
-  margin-bottom: 24px;
+  gap: 8px;
+  padding: 4px 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 20px;
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
@@ -1003,34 +1008,36 @@
 .gh-settings-nav-btn {
   all: unset;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 22px;
+  gap: 8px;
+  padding: 8px 18px;
   border-radius: 999px;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 650;
   color: rgba(220, 230, 245, 0.75);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .gh-settings-nav-btn .material-symbols-rounded {
-  font-size: 22px;
+  font-size: 20px;
 }
 
 .gh-settings-nav-btn:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .gh-settings-nav-btn.is-active {
   background: rgba(0, 229, 255, 0.18);
   border: 1px solid rgba(0, 229, 255, 0.45);
   color: #96cbff;
-  box-shadow: 0 0 18px -4px rgba(0, 229, 255, 0.35);
+  box-shadow: 0 0 16px -2px rgba(0, 229, 255, 0.35);
 }
 
 .gh-kitchen-nav-btn:focus-visible,
