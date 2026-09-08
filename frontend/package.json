@@ -53,7 +53,7 @@
     "jsdom": "^30.0.1",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.1",
-    "vite": "^8.2.1",
+    "vite": "^8.2.2",
     "vitest": "^5.0.0"
   },
   "engines": {
