@@ -85,13 +85,12 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.65rem;
-  font-family: 'JetBrains Mono', monospace; /* Changed to JetBrains Mono */
+  font-size: var(--rs-fs-micro);
+  font-family: var(--font-mono);
   color: var(--md-on-surface-variant);
-  letter-spacing: 0.2em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   font-weight: 800;
-  opacity: 0.6;
   /* Short telemetry labels must never shatter mid-word (WIND -> W·I·N·D) when a
      container gets narrow — override the .rs-card break-word inheritance. They
      wrap at spaces only; size the container so they fit. */
@@ -111,12 +110,13 @@
 }
 
 .rs-card-meta {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
+  font-family: var(--font-base);
+  font-size: var(--rs-fs-small);
+  line-height: 1.55;
   color: var(--md-on-surface-variant);
   margin-block-start: 12px;
   overflow-wrap: break-word;
-  opacity: 0.5;
+  max-inline-size: 72ch;
 }
 
 /* --- Status & Alerts ----------------------------------------------------- */
@@ -229,7 +229,9 @@
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
+  min-height: 44px;
   padding: 10px 18px;
   border-radius: var(--md-shape-full);
   background: color-mix(in srgb, var(--md-on-surface-variant) 8%, transparent);
@@ -238,7 +240,7 @@
   font-weight: 800;
   letter-spacing: 0.05em;
   cursor: pointer;
-  transition: all var(--rs-motion-fast) var(--rs-motion-curve);
+  transition: background-color var(--rs-motion-fast) var(--rs-motion-curve), border-color var(--rs-motion-fast) var(--rs-motion-curve), color var(--rs-motion-fast) var(--rs-motion-curve), box-shadow var(--rs-motion-fast) var(--rs-motion-curve), transform var(--rs-motion-fast) var(--rs-motion-curve), opacity var(--rs-motion-fast) var(--rs-motion-curve);
   border: 1px solid transparent;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15); /* 3D Lip */
 }
@@ -272,6 +274,7 @@
 }
 
 .rs-btn-primary {
+  min-height: var(--rs-tap, 44px);
   all: unset;
   box-sizing: border-box;
   display: flex;
@@ -285,7 +288,7 @@
   font-weight: 800;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all var(--rs-motion-fast) var(--rs-motion-curve);
+  transition: background-color var(--rs-motion-fast) var(--rs-motion-curve), border-color var(--rs-motion-fast) var(--rs-motion-curve), color var(--rs-motion-fast) var(--rs-motion-curve), box-shadow var(--rs-motion-fast) var(--rs-motion-curve), transform var(--rs-motion-fast) var(--rs-motion-curve), opacity var(--rs-motion-fast) var(--rs-motion-curve);
   box-shadow: 0 8px 24px -8px var(--primary);
 }
 
@@ -305,7 +308,7 @@
   border-radius: 50%;
   background: color-mix(in srgb, var(--md-on-surface-variant) 8%, transparent);
   color: var(--md-on-surface-variant);
-  transition: all var(--rs-motion-fast) var(--rs-motion-curve);
+  transition: background-color var(--rs-motion-fast) var(--rs-motion-curve), border-color var(--rs-motion-fast) var(--rs-motion-curve), color var(--rs-motion-fast) var(--rs-motion-curve), box-shadow var(--rs-motion-fast) var(--rs-motion-curve), transform var(--rs-motion-fast) var(--rs-motion-curve), opacity var(--rs-motion-fast) var(--rs-motion-curve);
 }
 
 .rs-icon-btn:hover { background: var(--md-surface-container-highest); transform: scale(1.05); }
@@ -456,7 +459,6 @@
   padding-block: 32px;
   color: var(--md-on-surface-variant);
   font-size: 0.85rem;
-  opacity: 0.6;
 }
 
 /* ── Model picker popover (rs-mpop) ─────────────────────────────────────────

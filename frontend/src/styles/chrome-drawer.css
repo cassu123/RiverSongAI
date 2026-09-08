@@ -62,7 +62,6 @@
   padding-inline: 12px;
   margin-block: 4px 8px;
   font-weight: 700;
-  opacity: 0.5;
   display: block;
 }
 
@@ -209,7 +208,6 @@
 .rs-drawer-profile-sub {
   font-size: var(--rs-fs-micro);
   color: var(--md-on-surface-variant);
-  opacity: 0.7;
 }
 
 /* ── Admin mode toggle ───────────────────────────────────────────────────── */
@@ -499,21 +497,18 @@
 }
 
 .rs-greeting-sub {
-  /* Used by 23 pages, and on several of them for a whole sentence rather than
-     a short status line. The telemetry voice stays — DESIGN.md 3 asks for it —
-     but three lines of tracked uppercase accent over a photographic Stage was
-     unreadable on the bright skins. Fixes: cap the measure so it stops running
-     to three lines, open the leading, and carry a scrim so it holds over sand
-     as well as night. */
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.78rem;
-  color: var(--primary);
-  letter-spacing: 0.08em;
-  line-height: 1.6;
-  text-transform: uppercase;
+  /* Used by 23 pages, usually for a whole sentence rather than a short status
+     line, so it is set as prose: reading face, sentence case, capped measure.
+     Mono and tracked uppercase are for numbers and labels, not paragraphs. The
+     scrim stays — it has to hold over sand as well as night. */
+  font-family: var(--font-base);
+  font-size: var(--rs-fs-body);
+  color: var(--md-on-surface-variant);
+  letter-spacing: 0;
+  line-height: 1.55;
   margin-block-start: 16px;
-  max-inline-size: 62ch;
-  text-wrap: balance;
+  max-inline-size: 65ch;
+  text-wrap: pretty;
   text-shadow: 0 1px 10px color-mix(in srgb, var(--bg-base) 88%, transparent);
 }
 
@@ -611,14 +606,12 @@
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--md-on-surface-variant);
-  opacity: 0.55;
   margin: 0 0 12px;
 }
 
 .rs-chat-sidebar-empty {
   font-size: var(--rs-fs-small);
   color: var(--md-on-surface-variant);
-  opacity: 0.45;
   line-height: 1.7;
 }
 
@@ -650,7 +643,7 @@
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transition: background-color 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s cubic-bezier(0.2, 0, 0, 1), color 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
   text-align: center;
   user-select: none;
   min-width: 0;
@@ -686,7 +679,7 @@
   justify-content: center;
   background: rgba(255, 255, 255, 0.06);
   color: #cbe6ff;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
   flex-shrink: 0;
 }
 .rs-space-tile:hover .rs-space-icon-wrap {
