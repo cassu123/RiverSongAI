@@ -8,15 +8,21 @@
 .rs-card {
   container-type: inline-size;
   position: relative;
-  background: rgba(14, 18, 28, 0.65);
+  /* Tinted from the environment's own ground rather than a fixed navy, so a
+     card reads as part of the page it sits on instead of a window laid over
+     it. Same density as before — only the hue now follows the theme. */
+  background: color-mix(in srgb, var(--bg-base, #0e121c) 65%, transparent);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, var(--card-border-alpha, 0.08));
   border-radius: var(--card-radius, 1.25rem);
   padding: clamp(18px, 4cqi, 28px);
-  box-shadow: 
-    0 12px 36px -8px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+  /* Enough lift to separate from the ground, not so much that the card looks
+     like a window hovering over it. The inset highlight follows the
+     environment's refraction token. */
+  box-shadow:
+    0 6px 20px -10px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.14));
   transition: background var(--rs-motion-fast) var(--rs-motion-curve),
               border-color var(--rs-motion-fast) var(--rs-motion-curve),
               transform var(--rs-motion-fast) var(--rs-motion-curve),

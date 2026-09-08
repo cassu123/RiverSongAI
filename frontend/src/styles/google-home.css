@@ -731,14 +731,6 @@
   box-sizing: border-box;
 }
 
-/* Force solid surfaces for cards in the kitchen stage */
-.gh-kitchen-stage .gh-card,
-.gh-kitchen-stage .rs-card {
-  background: #151c27 !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.6) !important;
-}
-
 .gh-kitchen-nav-bar {
   display: flex;
   align-items: center;
@@ -787,10 +779,10 @@
 }
 
 .gh-kitchen-nav-btn.is-active {
-  background: rgba(0, 229, 255, 0.18);
-  border: 1px solid rgba(0, 229, 255, 0.45);
-  color: #96cbff;
-  box-shadow: 0 0 16px -2px rgba(0, 229, 255, 0.35);
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  color: var(--primary);
+  box-shadow: 0 0 16px -2px color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
 .gh-live-dot {
@@ -834,11 +826,11 @@
 }
 
 .gh-cook-hero-card {
-  background: #151c27 !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  border-radius: 28px;
+  background: color-mix(in srgb, var(--bg-base) 65%, transparent);
+  border: 1px solid rgba(255, 255, 255, var(--card-border-alpha, 0.15));
+  border-radius: var(--card-radius, 28px);
   padding: 32px 28px;
-  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.7) !important;
+  box-shadow: 0 8px 26px -12px rgba(0, 0, 0, 0.55);
   position: relative;
   overflow: hidden;
 }
@@ -885,9 +877,9 @@
   flex-wrap: wrap;
   gap: 18px;
   padding: 22px 28px;
-  border-radius: 22px;
-  background: #1b2432;
-  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: var(--card-radius, 22px);
+  background: color-mix(in srgb, var(--bg-base) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
   margin-bottom: 28px;
 }
 
@@ -962,13 +954,6 @@
   box-sizing: border-box;
 }
 
-.gh-settings-stage .gh-card,
-.gh-settings-stage .rs-card {
-  background: #151c27 !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.6) !important;
-}
-
 .gh-settings-nav-bar {
   display: flex;
   align-items: center;
@@ -1016,10 +1001,10 @@
 }
 
 .gh-settings-nav-btn.is-active {
-  background: rgba(0, 229, 255, 0.18);
-  border: 1px solid rgba(0, 229, 255, 0.45);
-  color: #96cbff;
-  box-shadow: 0 0 16px -2px rgba(0, 229, 255, 0.35);
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  color: var(--primary);
+  box-shadow: 0 0 16px -2px color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
 .gh-kitchen-nav-btn:focus-visible,
@@ -1027,7 +1012,7 @@
 .gh-cook-btn-prev:focus-visible,
 .gh-cook-btn-next:focus-visible,
 .gh-settings-nav-btn:focus-visible {
-  outline: 2px solid #00e5ff;
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
@@ -1039,10 +1024,10 @@
 .gh-settings-stage .settings-select {
   font-size: 1.05rem !important;
   min-height: 48px !important;
-  background: #1b2432;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #fff !important;
-  border-radius: 12px !important;
+  background: color-mix(in srgb, var(--bg-base) 70%, transparent);
+  border: 1px solid rgba(255, 255, 255, var(--card-border-alpha, 0.16));
+  color: var(--fg) !important;
+  border-radius: var(--inner-radius, 12px) !important;
   padding: 10px 16px;
   outline: none;
 }
@@ -1050,15 +1035,15 @@
 .gh-settings-stage input:focus,
 .gh-settings-stage select:focus,
 .gh-settings-stage textarea:focus {
-  border-color: rgba(0, 229, 255, 0.6) !important;
-  box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.25) !important;
+  border-color: color-mix(in srgb, var(--primary) 60%, transparent) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent) !important;
 }
 
 .gh-settings-stage .rs-card-label {
   font-size: 0.82rem !important;
   letter-spacing: 0.07em !important;
   font-weight: 700 !important;
-  color: rgba(150, 203, 255, 0.9) !important;
+  color: var(--primary) !important;
 }
 
 .gh-settings-stage .rs-card-title,
@@ -1066,14 +1051,14 @@
 .gh-settings-stage h3 {
   font-size: 1.25rem !important;
   font-weight: 700 !important;
-  color: #fff !important;
+  color: var(--fg) !important;
 }
 
 .gh-settings-stage .rs-card-meta,
 .gh-settings-stage p {
   font-size: 0.98rem !important;
   line-height: 1.55 !important;
-  color: rgba(220, 230, 245, 0.75) !important;
+  color: var(--md-on-surface-variant) !important;
 }
 
 .gh-settings-stage .rs-pill {
