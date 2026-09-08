@@ -50,6 +50,60 @@
   overflow: hidden;
 }
 
+/* --- Chrome is not text ---------------------------------------------------
+   The header, dock, drawer and sheets are controls, not content. Without this
+   a long-press — or a tap held a fraction too long on a phone — selects the
+   label instead of pressing the control, and Android raises its
+   Copy / Share / Select all / Web search bar over the UI. Nobody wants to copy
+   the word "Settings".
+
+   Scoped to the chrome shells only: .rs-content re-enables selection below, so
+   chat replies, code blocks and page copy stay selectable as normal. */
+.rs-header,
+.rs-action,
+.rs-drawer,
+.rs-sheet,
+.rs-floating-dock,
+.rs-mobile-dock {
+  -webkit-user-select: none;
+  user-select: none;
+  /* Suppresses the iOS long-press callout and the Android tap flash on chrome. */
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Content stays selectable — this is the part worth copying. Sheets are chrome,
+   but an embedded chat inside one (Ask River) puts real replies on screen, so
+   the message thread opts back in wherever it renders. */
+.rs-content,
+.rs-thread,
+.rs-sheet .rs-thread {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* Anything the user actually types into is exempt. The chat composer lives in
+   .rs-action, and drawers and sheets carry their own fields; a blanket
+   user-select:none on an ancestor can leave an input unselectable in WebKit,
+   which would make the composer feel broken. */
+.rs-header input,
+.rs-header textarea,
+.rs-header [contenteditable="true"],
+.rs-action input,
+.rs-action textarea,
+.rs-action [contenteditable="true"],
+.rs-drawer input,
+.rs-drawer textarea,
+.rs-drawer [contenteditable="true"],
+.rs-sheet input,
+.rs-sheet textarea,
+.rs-sheet [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
 /* --- Header --------------------------------------------------------------- */
 .rs-header {
   grid-area: header;
