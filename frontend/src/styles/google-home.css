@@ -9,7 +9,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 16px 20px;
-  background: rgba(16, 22, 34, 0.75);
+  background: color-mix(in srgb, var(--bg-base) 70%, transparent);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -27,7 +27,7 @@
   left: 10%;
   right: 10%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.8), rgba(150, 203, 255, 0.9), transparent);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary) 80%, transparent), rgba(150, 203, 255, 0.9), transparent);
   border-radius: 999px;
   opacity: 0.8;
 }
@@ -47,9 +47,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 229, 255, 0.12);
-  border: 1px solid rgba(0, 229, 255, 0.3);
-  box-shadow: 0 0 16px -2px rgba(0, 229, 255, 0.25);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  box-shadow: 0 0 16px -2px color-mix(in srgb, var(--primary) 25%, transparent);
   flex-shrink: 0;
 }
 
@@ -86,9 +86,9 @@
   gap: 8px;
   padding: 8px 16px;
   border-radius: 999px;
-  background: rgba(0, 229, 255, 0.15);
-  border: 1px solid rgba(0, 229, 255, 0.35);
-  color: #96cbff;
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  color: var(--primary);
   font-size: 0.82rem;
   font-weight: 600;
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
@@ -96,8 +96,8 @@
 }
 
 .gh-glance-action:hover {
-  background: rgba(0, 229, 255, 0.25);
-  border-color: rgba(0, 229, 255, 0.6);
+  background: color-mix(in srgb, var(--primary) 25%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 60%, transparent);
   transform: translateY(-1px);
 }
 
@@ -108,7 +108,7 @@
 .gh-attention-chip:focus-visible,
 .gh-scene-chip:focus-visible,
 .gh-media-play-btn:focus-visible {
-  outline: 2px solid #00e5ff;
+  outline: 2px solid var(--primary);
   outline-offset: 3px;
 }
 
@@ -131,7 +131,7 @@
   gap: 8px;
   padding: 8px 16px;
   border-radius: 999px;
-  background: rgba(18, 24, 36, 0.65);
+  background: color-mix(in srgb, var(--bg-base) 62%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.09);
@@ -144,15 +144,15 @@
 }
 
 .gh-chip:hover {
-  background: rgba(26, 34, 52, 0.8);
+  background: color-mix(in srgb, var(--bg-base) 76%, transparent);
   color: #fff;
   border-color: rgba(255, 255, 255, 0.2);
 }
 
 .gh-chip.is-active {
-  background: #004a77;
+  background: color-mix(in srgb, var(--primary) 24%, var(--bg-base));
   color: #cbe6ff;
-  border-color: rgba(0, 229, 255, 0.4);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
   font-weight: 700;
   box-shadow: 0 4px 16px -2px rgba(0, 74, 119, 0.5);
 }
@@ -180,12 +180,12 @@
 .gh-tile {
   position: relative;
   border-radius: 24px;
-  background: rgba(15, 20, 30, 0.65);
+  background: color-mix(in srgb, var(--bg-base) 62%, transparent);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 18px;
-  box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  box-shadow: 0 5px 18px -10px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.12));
   transition: background-color 0.22s cubic-bezier(0.2, 0, 0, 1), border-color 0.22s cubic-bezier(0.2, 0, 0, 1), color 0.22s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.22s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.2, 0, 0, 1), opacity 0.22s cubic-bezier(0.2, 0, 0, 1);
   display: flex;
   flex-direction: column;
@@ -223,19 +223,19 @@
 
 /* Climate Active State: Crisp Cyan Illumination */
 .gh-tile.is-climate {
-  border-color: rgba(0, 229, 255, 0.25);
+  border-color: color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
 .gh-tile.is-climate.is-cooling {
   background: rgba(8, 32, 48, 0.75);
-  border-color: rgba(0, 229, 255, 0.45);
-  box-shadow: 0 12px 36px -6px rgba(0, 229, 255, 0.2), inset 0 1px 0 0 rgba(180, 245, 255, 0.3);
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  box-shadow: 0 12px 36px -6px color-mix(in srgb, var(--primary) 20%, transparent), inset 0 1px 0 0 rgba(180, 245, 255, 0.3);
 }
 
 .gh-tile.is-climate.is-cooling .gh-tile-icon-wrap {
-  background: #00e5ff;
+  background: var(--primary);
   color: #00363a;
-  box-shadow: 0 0 18px rgba(0, 229, 255, 0.5);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--primary) 50%, transparent);
 }
 
 .gh-tile.is-climate.is-heating {
@@ -370,13 +370,13 @@
   background: #fff;
   cursor: pointer;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
-  border: 2px solid #00e5ff;
+  border: 2px solid var(--primary);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .gh-tile-slider::-webkit-slider-thumb:hover {
   transform: scale(1.18);
-  box-shadow: 0 0 14px rgba(0, 229, 255, 0.8);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--primary) 80%, transparent);
 }
 
 .gh-tile-slider-pct {
@@ -431,18 +431,18 @@
 }
 
 .gh-temp-step-btn:hover {
-  background: rgba(0, 229, 255, 0.3);
-  border-color: rgba(0, 229, 255, 0.6);
+  background: color-mix(in srgb, var(--primary) 30%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 60%, transparent);
   transform: scale(1.08);
 }
 
 .gh-temp-step-btn:active {
   transform: scale(0.92);
-  background: rgba(0, 229, 255, 0.45);
+  background: color-mix(in srgb, var(--primary) 45%, transparent);
 }
 
 .gh-temp-step-btn:hover {
-  background: rgba(0, 229, 255, 0.3);
+  background: color-mix(in srgb, var(--primary) 30%, transparent);
   transform: scale(1.1);
 }
 
@@ -483,9 +483,9 @@
   gap: 4px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(0, 229, 255, 0.1);
-  border: 1px solid rgba(0, 229, 255, 0.25);
-  color: #96cbff;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+  color: var(--primary);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.82rem;
   font-weight: 600;
@@ -587,8 +587,8 @@
 }
 
 .gh-scene-chip:hover {
-  background: rgba(0, 229, 255, 0.15);
-  border-color: rgba(0, 229, 255, 0.4);
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
   color: #fff;
   transform: translateY(-1px);
 }
@@ -600,7 +600,7 @@
 /* ── 8. Media Player Tile ────────────────────────────────────────────────── */
 .gh-media-tile {
   grid-column: 1 / -1;
-  background: rgba(18, 24, 38, 0.7);
+  background: color-mix(in srgb, var(--bg-base) 66%, transparent);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -620,14 +620,14 @@
   width: 52px;
   height: 52px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #004a77, #00e5ff);
+  background: linear-gradient(135deg, #004a77, var(--primary));
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-size: 26px;
   flex-shrink: 0;
-  box-shadow: 0 6px 18px rgba(0, 229, 255, 0.3);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 .gh-media-info {
@@ -659,19 +659,19 @@
   width: 46px;
   height: 46px;
   border-radius: 50%;
-  background: #00e5ff;
+  background: var(--primary);
   color: #00363a;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--primary) 40%, transparent);
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
   flex-shrink: 0;
 }
 
 .gh-media-play-btn:hover {
   transform: scale(1.08);
-  box-shadow: 0 0 26px rgba(0, 229, 255, 0.6);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--primary) 60%, transparent);
 }
 
 .gh-media-play-btn:active {
@@ -790,8 +790,8 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #00e5ff;
-  box-shadow: 0 0 10px #00e5ff;
+  background: var(--primary);
+  box-shadow: 0 0 10px var(--primary);
   animation: gh-pulse 2s infinite;
 }
 
@@ -821,9 +821,9 @@
 }
 
 .gh-cook-flow-step.is-active {
-  background: rgba(0, 229, 255, 0.2);
-  border-color: rgba(0, 229, 255, 0.5);
-  color: #96cbff;
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  color: var(--primary);
 }
 
 .gh-cook-hero-card {
@@ -856,7 +856,7 @@
 
 .gh-cook-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #0071dc, #00e5ff);
+  background: linear-gradient(90deg, #0071dc, var(--primary));
   border-radius: 999px;
   transition: width 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
@@ -888,7 +888,7 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 3.2rem;
   font-weight: 800;
-  color: #00e5ff;
+  color: var(--primary);
   letter-spacing: 0.02em;
 }
 
@@ -927,18 +927,18 @@
   height: 64px;
   padding: 0 32px;
   border-radius: 20px;
-  background: linear-gradient(135deg, #0071dc, #00e5ff);
+  background: linear-gradient(135deg, #0071dc, var(--primary));
   color: #002033;
   font-size: 1.25rem;
   font-weight: 800;
-  box-shadow: 0 8px 24px -4px rgba(0, 229, 255, 0.45);
+  box-shadow: 0 8px 24px -4px color-mix(in srgb, var(--primary) 45%, transparent);
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
   flex: 2;
 }
 
 .gh-cook-btn-next:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 28px -4px rgba(0, 229, 255, 0.6);
+  box-shadow: 0 12px 28px -4px color-mix(in srgb, var(--primary) 60%, transparent);
 }
 
 .gh-cook-btn-next:active,

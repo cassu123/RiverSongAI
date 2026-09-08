@@ -652,13 +652,13 @@
   overflow: hidden;
 }
 .rs-space-tile:hover {
-  background: rgba(0, 229, 255, 0.12);
-  border-color: rgba(0, 229, 255, 0.35);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px -4px rgba(0, 229, 255, 0.2);
+  box-shadow: 0 8px 20px -4px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 .rs-space-tile:focus-visible {
-  outline: 2px solid #00e5ff;
+  outline: 2px solid var(--primary);
   outline-offset: 3px;
 }
 .rs-space-tile:active {
@@ -666,8 +666,8 @@
 }
 .rs-space-tile.is-active {
   background: rgba(0, 74, 119, 0.5);
-  border-color: rgba(0, 229, 255, 0.5);
-  box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
 .rs-space-icon-wrap {
@@ -683,12 +683,12 @@
   flex-shrink: 0;
 }
 .rs-space-tile:hover .rs-space-icon-wrap {
-  background: #00e5ff;
+  background: var(--primary);
   color: #00363a;
-  box-shadow: 0 0 16px rgba(0, 229, 255, 0.5);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--primary) 50%, transparent);
 }
 .rs-space-tile.is-active .rs-space-icon-wrap {
-  background: #00e5ff;
+  background: var(--primary);
   color: #00363a;
 }
 .rs-space-label {
