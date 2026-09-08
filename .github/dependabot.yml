@@ -4,6 +4,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "websockets"
 
   - package-ecosystem: npm
     directory: /frontend
