@@ -48,8 +48,8 @@
    html[data-env=...] — a body-level default would win over them by owning its
    own declaration, leaving every environment on the same material. */
 :root {
-  --card-radius: 2rem;
-  --inner-radius: calc(2rem - 0.5rem);
+  --card-radius: 1.25rem;
+  --inner-radius: 0.75rem;
   --glass-opacity: 0.45;
   --card-border-alpha: 0.12;
   --inner-refraction: rgba(255, 255, 255, 0.12);
@@ -96,8 +96,8 @@ html[data-env="arrakis"] {
   --card-border-alpha: 0.18;
   --inner-refraction: rgba(255, 214, 170, 0.10);
   --glass-opacity: 0.45;
-  --card-radius: 1.5rem;
-  --inner-radius: 0.75rem;
+  --card-radius: 1.125rem;
+  --inner-radius: 0.625rem;
 }
 
 /* ============================================================
