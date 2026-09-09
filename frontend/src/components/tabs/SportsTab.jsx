@@ -16,28 +16,28 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { InlineSettingsSection } from '../TabSettingsPanel.jsx'
 
 const ALL_LEAGUES = [
-  { id: 'nfl',        label: 'NFL',              icon: '🏈', category: 'American Pro' },
-  { id: 'nba',        label: 'NBA',              icon: '🏀', category: 'American Pro' },
-  { id: 'mlb',        label: 'MLB',              icon: '⚾', category: 'American Pro' },
-  { id: 'nhl',        label: 'NHL',              icon: '🏒', category: 'American Pro' },
-  { id: 'mls',        label: 'MLS',              icon: '⚽', category: 'American Pro' },
-  { id: 'wnba',       label: 'WNBA',             icon: '🏀', category: 'American Pro' },
-  { id: 'nwsl',       label: 'NWSL',             icon: '⚽', category: 'American Pro' },
-  { id: 'ncaaf',      label: 'NCAAF',            icon: '🏈', category: 'College' },
-  { id: 'ncaab',      label: 'NCAAB',            icon: '🏀', category: 'College' },
-  { id: 'ncaabw',     label: 'NCAAB Women',      icon: '🏀', category: 'College' },
-  { id: 'epl',        label: 'Premier League',   icon: '⚽', category: 'Global Soccer' },
-  { id: 'laliga',     label: 'La Liga',          icon: '⚽', category: 'Global Soccer' },
-  { id: 'seriea',     label: 'Serie A',          icon: '⚽', category: 'Global Soccer' },
-  { id: 'bundesliga', label: 'Bundesliga',       icon: '⚽', category: 'Global Soccer' },
-  { id: 'ligue1',     label: 'Ligue 1',          icon: '⚽', category: 'Global Soccer' },
-  { id: 'ucl',        label: 'Champions League', icon: '⚽', category: 'Global Soccer' },
-  { id: 'uel',        label: 'Europa League',    icon: '⚽', category: 'Global Soccer' },
-  { id: 'ligamx',     label: 'Liga MX',          icon: '⚽', category: 'Global Soccer' },
-  { id: 'atp',        label: 'ATP Tennis',       icon: '🎾', category: 'Racket' },
-  { id: 'wta',        label: 'WTA Tennis',       icon: '🎾', category: 'Racket' },
-  { id: 'pga',        label: 'PGA Tour',         icon: '⛳', category: 'Golf' },
-  { id: 'lpga',       label: 'LPGA',             icon: '⛳', category: 'Golf' },
+  { id: 'nfl',        label: 'NFL',              icon: 'sports_football', category: 'American Pro' },
+  { id: 'nba',        label: 'NBA',              icon: 'sports_basketball', category: 'American Pro' },
+  { id: 'mlb',        label: 'MLB',              icon: 'sports_baseball', category: 'American Pro' },
+  { id: 'nhl',        label: 'NHL',              icon: 'sports_hockey', category: 'American Pro' },
+  { id: 'mls',        label: 'MLS',              icon: 'sports_soccer', category: 'American Pro' },
+  { id: 'wnba',       label: 'WNBA',             icon: 'sports_basketball', category: 'American Pro' },
+  { id: 'nwsl',       label: 'NWSL',             icon: 'sports_soccer', category: 'American Pro' },
+  { id: 'ncaaf',      label: 'NCAAF',            icon: 'sports_football', category: 'College' },
+  { id: 'ncaab',      label: 'NCAAB',            icon: 'sports_basketball', category: 'College' },
+  { id: 'ncaabw',     label: 'NCAAB Women',      icon: 'sports_basketball', category: 'College' },
+  { id: 'epl',        label: 'Premier League',   icon: 'sports_soccer', category: 'Global Soccer' },
+  { id: 'laliga',     label: 'La Liga',          icon: 'sports_soccer', category: 'Global Soccer' },
+  { id: 'seriea',     label: 'Serie A',          icon: 'sports_soccer', category: 'Global Soccer' },
+  { id: 'bundesliga', label: 'Bundesliga',       icon: 'sports_soccer', category: 'Global Soccer' },
+  { id: 'ligue1',     label: 'Ligue 1',          icon: 'sports_soccer', category: 'Global Soccer' },
+  { id: 'ucl',        label: 'Champions League', icon: 'sports_soccer', category: 'Global Soccer' },
+  { id: 'uel',        label: 'Europa League',    icon: 'sports_soccer', category: 'Global Soccer' },
+  { id: 'ligamx',     label: 'Liga MX',          icon: 'sports_soccer', category: 'Global Soccer' },
+  { id: 'atp',        label: 'ATP Tennis',       icon: 'sports_tennis', category: 'Racket' },
+  { id: 'wta',        label: 'WTA Tennis',       icon: 'sports_tennis', category: 'Racket' },
+  { id: 'pga',        label: 'PGA Tour',         icon: 'golf_course', category: 'Golf' },
+  { id: 'lpga',       label: 'LPGA',             icon: 'golf_course', category: 'Golf' },
 ]
 const LEAGUE_BY_ID = Object.fromEntries(ALL_LEAGUES.map(l => [l.id, l]))
 const DEFAULT_LEAGUES = ['nba', 'nfl', 'mlb']
@@ -200,7 +200,7 @@ function LeagueGrid({ favorites, onToggle }) {
                     transition: 'all 0.15s',
                   }}
                 >
-                  <span>{l.icon}</span>
+                  <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>{l.icon}</span>
                   {l.label}
                   {active && (
                     <span className="material-symbols-rounded" style={{ fontSize: '0.75rem' }}>check</span>
@@ -760,7 +760,7 @@ function ScoresView({
         {!myTeamsMode && favorites.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 }}>
             {favorites.map(id => {
-              const meta = LEAGUE_BY_ID[id] || { label: id.toUpperCase(), icon: '🏆' }
+              const meta = LEAGUE_BY_ID[id] || { label: id.toUpperCase(), icon: 'emoji_events' }
               return (
                 <button
                   key={id}
@@ -768,7 +768,7 @@ function ScoresView({
                   onClick={() => setActiveLeague(id)}
                   style={{ fontSize: '0.65rem' }}
                 >
-                  <span style={{ marginRight: 4 }}>{meta.icon}</span>
+                  <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', marginRight: 4, verticalAlign: '-2px' }}>{meta.icon}</span>
                   {meta.label}
                 </button>
               )

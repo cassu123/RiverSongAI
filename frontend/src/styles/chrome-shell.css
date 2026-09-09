@@ -17,12 +17,26 @@
   --rs-motion-slow:   750ms;
   --rs-motion-curve:  cubic-bezier(0.25, 1, 0.5, 1);
 
-  /* Type scale */
+  /* Type scale — six steps, nothing between them. A dense instrument reads
+     because it has few sizes, not many. */
   --rs-fs-h1:         clamp(2.5rem, 8vw, 4.5rem);
   --rs-fs-h2:         clamp(1.5rem, 4vw, 2.2rem);
-  --rs-fs-body:       1.05rem; /* slightly larger body text */
+  --rs-fs-h3:         1.25rem;
+  --rs-fs-body:       1.05rem;
   --rs-fs-small:      0.9rem;
   --rs-fs-micro:      0.75rem;
+
+  /* Spacing — 4pt base. Use these instead of a new number. */
+  --rs-space-1:  4px;
+  --rs-space-2:  8px;
+  --rs-space-3:  12px;
+  --rs-space-4:  16px;
+  --rs-space-5:  24px;
+  --rs-space-6:  32px;
+  --rs-space-7:  48px;
+
+  /* Minimum comfortable touch target. */
+  --rs-tap:      44px;
 }
 
 .rs-root {
@@ -50,6 +64,60 @@
   overflow: hidden;
 }
 
+/* --- Chrome is not text ---------------------------------------------------
+   The header, dock, drawer and sheets are controls, not content. Without this
+   a long-press — or a tap held a fraction too long on a phone — selects the
+   label instead of pressing the control, and Android raises its
+   Copy / Share / Select all / Web search bar over the UI. Nobody wants to copy
+   the word "Settings".
+
+   Scoped to the chrome shells only: .rs-content re-enables selection below, so
+   chat replies, code blocks and page copy stay selectable as normal. */
+.rs-header,
+.rs-action,
+.rs-drawer,
+.rs-sheet,
+.rs-floating-dock,
+.rs-mobile-dock {
+  -webkit-user-select: none;
+  user-select: none;
+  /* Suppresses the iOS long-press callout and the Android tap flash on chrome. */
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Content stays selectable — this is the part worth copying. Sheets are chrome,
+   but an embedded chat inside one (Ask River) puts real replies on screen, so
+   the message thread opts back in wherever it renders. */
+.rs-content,
+.rs-thread,
+.rs-sheet .rs-thread {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* Anything the user actually types into is exempt. The chat composer lives in
+   .rs-action, and drawers and sheets carry their own fields; a blanket
+   user-select:none on an ancestor can leave an input unselectable in WebKit,
+   which would make the composer feel broken. */
+.rs-header input,
+.rs-header textarea,
+.rs-header [contenteditable="true"],
+.rs-action input,
+.rs-action textarea,
+.rs-action [contenteditable="true"],
+.rs-drawer input,
+.rs-drawer textarea,
+.rs-drawer [contenteditable="true"],
+.rs-sheet input,
+.rs-sheet textarea,
+.rs-sheet [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
 /* --- Header --------------------------------------------------------------- */
 .rs-header {
   grid-area: header;
@@ -60,7 +128,7 @@
   padding-inline: clamp(16px, 3vw, 32px);
   padding-block: 0;
   padding-block-start: env(safe-area-inset-top, 0px);
-  background: rgba(10, 14, 22, 0.65);
+  background: color-mix(in srgb, var(--bg-base) 62%, transparent);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-block-end: 1px solid rgba(255, 255, 255, 0.08);
@@ -107,16 +175,16 @@
   gap: 8px;
   padding: 5px 12px 5px 6px;
   border-radius: 999px;
-  background: rgba(16, 22, 36, 0.7);
-  border: 1px solid rgba(0, 229, 255, 0.25);
-  box-shadow: 0 0 14px -3px rgba(0, 229, 255, 0.18), inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
-  transition: all var(--rs-motion-fast) var(--rs-motion-curve);
+  background: color-mix(in srgb, var(--bg-base) 66%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+  box-shadow: 0 0 14px -3px color-mix(in srgb, var(--primary) 18%, transparent), inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+  transition: background-color var(--rs-motion-fast) var(--rs-motion-curve), border-color var(--rs-motion-fast) var(--rs-motion-curve), color var(--rs-motion-fast) var(--rs-motion-curve), box-shadow var(--rs-motion-fast) var(--rs-motion-curve), transform var(--rs-motion-fast) var(--rs-motion-curve), opacity var(--rs-motion-fast) var(--rs-motion-curve);
 }
 
 .rs-header-voice-btn:hover {
-  background: rgba(20, 28, 48, 0.85);
-  border-color: rgba(0, 229, 255, 0.5);
-  box-shadow: 0 0 20px -2px rgba(0, 229, 255, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
+  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  box-shadow: 0 0 20px -2px color-mix(in srgb, var(--primary) 30%, transparent), inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
 }
 
@@ -134,7 +202,7 @@
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--md-primary, #96cbff);
+  color: var(--md-primary, var(--primary));
   text-transform: uppercase;
 }
 
@@ -274,13 +342,14 @@
 /* --- Main Content Area ---------------------------------------------------- */
 .rs-content {
   grid-area: main;
+  min-height: 0; /* Grid tracks default to min-height:auto, which broke scrolling */
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   padding-inline: var(--rs-content-pad-i);
   padding-block: var(--rs-content-pad-b);
-  padding-bottom: 110px;
+  padding-bottom: 120px;
   display: flex;
   flex-direction: column;
 }
@@ -290,12 +359,14 @@
   inline-size: 100%;
   max-inline-size: 1380px;
   padding-block-end: 0;
-  overflow: clip; /* Prevent horizontal leakage */
+  min-height: 0;
+  width: 100%;
 }
 
 /* The Shell's direct-child foyer is a centering wrapper only. */
 .rs-content > .rs-foyer {
   padding-block-end: 0;
+  flex: 1 0 auto;
 }
 
 .rs-foyer-head {
@@ -450,13 +521,13 @@
   inset-block: 0 !important;
   inset-inline-start: 0 !important;
   z-index: 300 !important;
-  inline-size: min(85vw, 340px) !important;
-  background: rgba(12, 17, 28, 0.88) !important;
+  inline-size: min(88vw, 360px) !important;
+  background: color-mix(in srgb, var(--bg-base) 92%, transparent) !important;
   backdrop-filter: blur(32px) !important;
   -webkit-backdrop-filter: blur(32px) !important;
   border-inline-end: 1px solid rgba(255, 255, 255, 0.1) !important;
   box-shadow: 12px 0 48px rgba(0, 0, 0, 0.8), inset -1px 0 0 0 rgba(255, 255, 255, 0.08) !important;
-  padding: max(env(safe-area-inset-top), 20px) 20px max(env(safe-area-inset-bottom), 20px) !important;
+  padding: max(env(safe-area-inset-top), 20px) 16px max(env(safe-area-inset-bottom), 20px) !important;
   transform: translateX(-100%) !important;
   transition: transform 0.28s cubic-bezier(0.2, 0, 0, 1) !important;
   overflow: hidden !important;
@@ -526,13 +597,11 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--md-on-surface-variant);
-  opacity: 0.7;
 }
 
 .rs-chat-sidebar-empty {
   font-size: 0.82rem;
   color: var(--md-on-surface-variant);
-  opacity: 0.55;
   line-height: 1.5;
   margin: 0;
 }
@@ -580,7 +649,7 @@
   width: calc(100% - 32px);
   max-width: 480px;
   height: 64px;
-  background: rgba(12, 17, 28, 0.82);
+  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -608,7 +677,7 @@
   color: rgba(220, 230, 245, 0.65);
   font-size: 0.68rem;
   font-weight: 500;
-  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  transition: background-color 0.18s cubic-bezier(0.2, 0, 0, 1), border-color 0.18s cubic-bezier(0.2, 0, 0, 1), color 0.18s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.18s cubic-bezier(0.2, 0, 0, 1), transform 0.18s cubic-bezier(0.2, 0, 0, 1), opacity 0.18s cubic-bezier(0.2, 0, 0, 1);
   user-select: none;
 }
 
@@ -626,9 +695,9 @@
 
 .rs-floating-dock-btn.is-active,
 .rs-mobile-dock-btn.is-active {
-  color: #96cbff;
+  color: var(--primary);
   font-weight: 700;
-  background: rgba(0, 229, 255, 0.12);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 .rs-floating-dock-btn.is-active span.material-symbols-rounded,
@@ -647,7 +716,7 @@
   position: absolute;
   inset: -2px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 229, 255, 0.3) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary) 30%, transparent) 0%, transparent 70%);
   animation: rs-dock-halo-pulse 2.5s ease-in-out infinite;
   pointer-events: none;
 }

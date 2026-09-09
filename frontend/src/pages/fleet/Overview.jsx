@@ -124,7 +124,7 @@ export default function Overview({ setAction }) {
                 <p>Platform: {u.platform} | Status: {u.online ? 'Online' : 'Offline'}</p>
                 <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'center' }}>
                   <span style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.1)' }}>{u.operating_mode || 'idle'}</span>
-                  <span>🔋 {u.last_battery_pct ?? '--'}%</span>
+                  <span><span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: '-2px' }}>battery_full</span> {u.last_battery_pct ?? '--'}%</span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
                   <Link to={`/fleet/vector/units/${u.unit_id}`} className="rs-btn-ghost" style={{textDecoration: 'none'}}>Details</Link>

@@ -689,7 +689,7 @@ export default function SettingsPage({
   ]
 
   return (
-    <div className="rs-foyer gh-settings-stage animate-fade-in">
+    <div className="gh-settings-stage animate-fade-in">
       {/* CSS for recommended strip and persona textarea */}
       <style>{`
         .model-recommended-strip {

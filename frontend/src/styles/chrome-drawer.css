@@ -62,7 +62,6 @@
   padding-inline: 12px;
   margin-block: 4px 8px;
   font-weight: 700;
-  opacity: 0.5;
   display: block;
 }
 
@@ -209,7 +208,6 @@
 .rs-drawer-profile-sub {
   font-size: var(--rs-fs-micro);
   color: var(--md-on-surface-variant);
-  opacity: 0.7;
 }
 
 /* ── Admin mode toggle ───────────────────────────────────────────────────── */
@@ -499,21 +497,18 @@
 }
 
 .rs-greeting-sub {
-  /* Used by 23 pages, and on several of them for a whole sentence rather than
-     a short status line. The telemetry voice stays — DESIGN.md 3 asks for it —
-     but three lines of tracked uppercase accent over a photographic Stage was
-     unreadable on the bright skins. Fixes: cap the measure so it stops running
-     to three lines, open the leading, and carry a scrim so it holds over sand
-     as well as night. */
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.78rem;
-  color: var(--primary);
-  letter-spacing: 0.08em;
-  line-height: 1.6;
-  text-transform: uppercase;
+  /* Used by 23 pages, usually for a whole sentence rather than a short status
+     line, so it is set as prose: reading face, sentence case, capped measure.
+     Mono and tracked uppercase are for numbers and labels, not paragraphs. The
+     scrim stays — it has to hold over sand as well as night. */
+  font-family: var(--font-base);
+  font-size: var(--rs-fs-body);
+  color: var(--md-on-surface-variant);
+  letter-spacing: 0;
+  line-height: 1.55;
   margin-block-start: 16px;
-  max-inline-size: 62ch;
-  text-wrap: balance;
+  max-inline-size: 65ch;
+  text-wrap: pretty;
   text-shadow: 0 1px 10px color-mix(in srgb, var(--bg-base) 88%, transparent);
 }
 
@@ -611,28 +606,28 @@
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--md-on-surface-variant);
-  opacity: 0.55;
   margin: 0 0 12px;
 }
 
 .rs-chat-sidebar-empty {
   font-size: var(--rs-fs-small);
   color: var(--md-on-surface-variant);
-  opacity: 0.45;
   line-height: 1.7;
 }
 
 /* ── Google Spaces Launcher Sheet ────────────────────────────────────────── */
 .rs-spaces-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   margin-block: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 @media (min-width: 480px) {
   .rs-spaces-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
   }
 }
 
@@ -643,23 +638,27 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 6px;
-  border-radius: 18px;
+  gap: 6px;
+  padding: 10px 4px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transition: background-color 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s cubic-bezier(0.2, 0, 0, 1), color 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
   text-align: center;
   user-select: none;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .rs-space-tile:hover {
-  background: rgba(0, 229, 255, 0.12);
-  border-color: rgba(0, 229, 255, 0.35);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px -4px rgba(0, 229, 255, 0.2);
+  box-shadow: 0 8px 20px -4px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 .rs-space-tile:focus-visible {
-  outline: 2px solid #00e5ff;
+  outline: 2px solid var(--primary);
   outline-offset: 3px;
 }
 .rs-space-tile:active {
@@ -667,32 +666,33 @@
 }
 .rs-space-tile.is-active {
   background: rgba(0, 74, 119, 0.5);
-  border-color: rgba(0, 229, 255, 0.5);
-  box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
 .rs-space-icon-wrap {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(255, 255, 255, 0.06);
   color: #cbe6ff;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+  flex-shrink: 0;
 }
 .rs-space-tile:hover .rs-space-icon-wrap {
-  background: #00e5ff;
+  background: var(--primary);
   color: #00363a;
-  box-shadow: 0 0 16px rgba(0, 229, 255, 0.5);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--primary) 50%, transparent);
 }
 .rs-space-tile.is-active .rs-space-icon-wrap {
-  background: #00e5ff;
+  background: var(--primary);
   color: #00363a;
 }
 .rs-space-label {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 600;
   color: #e2e8f0;
   letter-spacing: -0.01em;
@@ -700,5 +700,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  width: 100%;
+  display: block;
+  min-width: 0;
 }
 
