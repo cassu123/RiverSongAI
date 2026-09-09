@@ -294,7 +294,7 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
             }`}
             title="Toggle Auto Rotation"
           >
-            🔄 Rotate
+            <span className="material-symbols-rounded" style={{ fontSize: "1rem", verticalAlign: "-3px" }}>autorenew</span> Rotate
           </button>
           <button
             type="button"
@@ -304,7 +304,7 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
             }`}
             title="Toggle Wireframe"
           >
-            🕸️ Wireframe
+            <span className="material-symbols-rounded" style={{ fontSize: "1rem", verticalAlign: "-3px" }}>grid_on</span> Wireframe
           </button>
           <button
             type="button"
@@ -312,7 +312,7 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
             className="px-2 py-1 text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 rounded transition-colors"
             title="Reset Camera Position"
           >
-            🎯 Center
+            <span className="material-symbols-rounded" style={{ fontSize: "1rem", verticalAlign: "-3px" }}>filter_center_focus</span> Center
           </button>
           {effectiveDownloadUrl && (
             <a
@@ -321,7 +321,7 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
               className="px-2.5 py-1 text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded transition-colors flex items-center gap-1 shadow-sm"
               title="Download STL Binary for 3D Printing"
             >
-              💾 STL
+              <span className="material-symbols-rounded" style={{ fontSize: "1rem", verticalAlign: "-3px" }}>download</span> STL
             </a>
           )}
         </div>
@@ -357,7 +357,7 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
 
       {/* Helper text on bottom */}
       <div className="absolute bottom-2 left-3 pointer-events-none text-[10px] font-mono text-slate-400 bg-slate-950/70 px-2 py-0.5 rounded backdrop-blur-xs">
-        🖱️ Drag to rotate • Right-click to pan • Scroll to zoom
+        Drag to rotate &middot; Right-click to pan &middot; Scroll to zoom
       </div>
     </div>
   )

@@ -1234,7 +1234,7 @@ export default function MaintenancePulse({
             >
               {vehicles.map(v => (
                 <option key={v.id} value={v.id} style={{ background: 'var(--bg-base)', color: 'var(--fg)' }}>
-                  {v.vehicle_type === 'moto' ? '🏍️ ' : '🚗 '} {v.nickname || `${v.year || ''} ${v.make} ${v.model}`}
+                  {v.nickname || `${v.year || ''} ${v.make} ${v.model}`}
                 </option>
               ))}
             </select>

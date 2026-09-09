@@ -71,7 +71,7 @@
   flex-direction: column;
   gap: 6px;
   box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.12));
-  transition: all var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
+  transition: background-color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), border-color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), box-shadow var(--rs-motion-fast, 180ms) var(--rs-motion-curve), transform var(--rs-motion-fast, 180ms) var(--rs-motion-curve), opacity var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
   position: relative;
   overflow: hidden;
 }
@@ -154,12 +154,12 @@
   border: 1px solid rgba(255, 255, 255, var(--card-border-alpha, 0.12));
   border-radius: var(--card-radius, 1.25rem);
   padding: 22px 24px;
-  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.55), inset 0 1px 0 var(--inner-refraction, rgba(255, 255, 255, 0.14));
+  box-shadow: inset 0 1px 0 var(--inner-refraction, rgba(255, 255, 255, 0.14));
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  transition: all var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
+  transition: background-color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), border-color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), box-shadow var(--rs-motion-fast, 180ms) var(--rs-motion-curve), transform var(--rs-motion-fast, 180ms) var(--rs-motion-curve), opacity var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
@@ -303,7 +303,6 @@
   color: var(--md-on-surface-variant);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  opacity: 0.75;
 }
 
 .card-metric-val {
@@ -437,7 +436,7 @@
   cursor: pointer;
   outline: none;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 16px rgba(0, 0, 0, 0.35);
-  transition: all var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
+  transition: background-color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), border-color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), box-shadow var(--rs-motion-fast, 180ms) var(--rs-motion-curve), transform var(--rs-motion-fast, 180ms) var(--rs-motion-curve), opacity var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
 }
 
 .rs-vehicle-select-dropdown:hover {
@@ -529,6 +528,7 @@
 
 .hangar-tab-pill {
   all: unset;
+  min-height: var(--rs-tap, 44px);
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -542,7 +542,7 @@
   letter-spacing: 0.04em;
   cursor: pointer;
   white-space: nowrap;
-  transition: all var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
+  transition: background-color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), border-color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), box-shadow var(--rs-motion-fast, 180ms) var(--rs-motion-curve), transform var(--rs-motion-fast, 180ms) var(--rs-motion-curve), opacity var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
   border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
@@ -571,7 +571,7 @@
   border-radius: 18px;
   padding: 20px 24px;
   margin-bottom: 24px;
-  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.12));
 }
 
 .service-scope-header {
@@ -610,6 +610,7 @@
 
 .interval-chip {
   all: unset;
+  min-height: var(--rs-tap, 44px);
   box-sizing: border-box;
   padding: 6px 14px;
   border-radius: var(--md-shape-full, 999px);
@@ -621,7 +622,7 @@
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: all var(--rs-motion-fast, 180ms);
+  transition: background-color var(--rs-motion-fast, 180ms), border-color var(--rs-motion-fast, 180ms), color var(--rs-motion-fast, 180ms), box-shadow var(--rs-motion-fast, 180ms), transform var(--rs-motion-fast, 180ms), opacity var(--rs-motion-fast, 180ms);
 }
 
 .interval-chip:hover {

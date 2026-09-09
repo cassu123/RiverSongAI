@@ -55,9 +55,9 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
           display: 'flex', gap: 12, marginTop: 32, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 500
         }}>
           {[
-            '🛠️ Design a 3D mounting bracket',
-            '📊 Generate architecture diagram',
-            '💻 Run Python code sandbox',
+            'Design a 3D mounting bracket',
+            'Generate architecture diagram',
+            'Run Python code sandbox',
             'Review my agenda',
             'Run a maintenance check',
             'Add milk to grocery list'
