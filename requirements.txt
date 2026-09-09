@@ -14,7 +14,7 @@ uvicorn[standard]==0.44.0       # ASGI server; [standard] pulls websockets + uvl
 websockets>=14.0,<15.0             # for Home Assistant WS events (capped <15.0 for HA proxy and google-genai compatibility)
 starlette>=0.50.0               # WebSocket state management; >=0.50.0 clears CVE range headers DoS (<=0.49.0)
 python-multipart==0.0.31        # Form data parsing for FastAPI
-pypdf==6.14.2                   # PDF text extraction for vehicle manual uploads (11 CVEs fixed since 6.12.0)
+pypdf>=6.16.1                   # PDF text extraction for vehicle manual uploads (CVEs fixed through 6.16.1)
 pymupdf==1.28.0               # Culinary: PDF ingestion + image ripping
 beautifulsoup4==4.14.3          # Culinary: URL recipe scraping
 
@@ -44,7 +44,7 @@ trimesh>=4.5.0                  # STL mesh analysis for the CAD engine
 # -----------------------------------------------------------------------------
 ollama==0.6.1                   # Ollama client — local LLM (primary)
 anthropic>=0.105.2,<1.0.0               # Claude API cloud LLM
-google-genai==1.16.0            # Google Gemini cloud LLM
+google-genai==1.16.1            # Google Gemini cloud LLM (1.16.0 was yanked from PyPI)
 openai==2.50.0                  # OpenAI cloud LLM
 mistralai==2.8.0                # Mistral AI cloud LLM
 boto3==1.43.64                   # Amazon Bedrock (and AWS SDK)

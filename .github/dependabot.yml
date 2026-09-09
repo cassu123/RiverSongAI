@@ -5,7 +5,11 @@ updates:
     schedule:
       interval: weekly
     ignore:
+      # Capped <15.0 in requirements.txt for Home Assistant proxy and
+      # google-genai compatibility. Bound the ignore to the majors that break
+      # us so 14.x security patches still come through.
       - dependency-name: "websockets"
+        versions: [">= 15.0.0"]
 
   - package-ecosystem: npm
     directory: /frontend
