@@ -268,8 +268,8 @@
 }
 
 .rs-btn-primary {
-  min-height: var(--rs-tap, 44px);
   all: unset;
+  min-height: var(--rs-tap, 44px);
   box-sizing: border-box;
   display: flex;
   align-items: center;

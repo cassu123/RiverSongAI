@@ -158,8 +158,8 @@
 }
 
 .mp-settings-tab {
-  min-height: var(--rs-tap, 44px);
   all: unset;
+  min-height: var(--rs-tap, 44px);
   padding: 6px 14px;
   border-radius: var(--md-shape-full, 999px);
   font-family: var(--font-mono);

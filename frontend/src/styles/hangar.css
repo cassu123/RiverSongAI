@@ -527,8 +527,8 @@
 }
 
 .hangar-tab-pill {
-  min-height: var(--rs-tap, 44px);
   all: unset;
+  min-height: var(--rs-tap, 44px);
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -609,8 +609,8 @@
 }
 
 .interval-chip {
-  min-height: var(--rs-tap, 44px);
   all: unset;
+  min-height: var(--rs-tap, 44px);
   box-sizing: border-box;
   padding: 6px 14px;
   border-radius: var(--md-shape-full, 999px);

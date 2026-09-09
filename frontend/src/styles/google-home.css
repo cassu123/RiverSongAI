@@ -750,8 +750,8 @@
 }
 
 .gh-kitchen-nav-btn {
-  min-height: var(--rs-tap, 44px);
   all: unset;
+  min-height: var(--rs-tap, 44px);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -974,8 +974,8 @@
 }
 
 .gh-settings-nav-btn {
-  min-height: var(--rs-tap, 44px);
   all: unset;
+  min-height: var(--rs-tap, 44px);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
