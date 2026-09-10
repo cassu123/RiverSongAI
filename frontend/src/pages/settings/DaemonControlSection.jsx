@@ -1,7 +1,7 @@
 // =============================================================================
 // src/pages/settings/DaemonControlSection.jsx
 //
-// DAEMON CONTROL — admin: Warden / Mechanic / Herald / Sifter daemons.
+// DAEMON CONTROL — admin: Warden / Mechanic / Pulse / Scribe / Sifter daemons.
 // =============================================================================
 
 import React from 'react'
@@ -63,30 +63,46 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
               )}
             </div>
 
-            {/* HERALD */}
+            {/* PULSE */}
             <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>HERALD (Casting/Lip-Sync)</div>
-                  <div className="rs-card-meta" style={{ margin: 0 }}>Google Home Hub Integration</div>
+                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>PULSE (Ambient Feeds)</div>
+                  <div className="rs-card-meta" style={{ margin: 0 }}>News, Markets, and Flights Poller</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                  <span className="rs-card-label" style={{ color: daemonStatus.herald?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
-                    {daemonStatus.herald?.alive ? '● ONLINE' : '○ OFFLINE'}
+                  <span className="rs-card-label" style={{ color: daemonStatus.pulse?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
+                    {daemonStatus.pulse?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
                   <Toggle
-                    id="herald-toggle"
+                    id="pulse-toggle"
                     label=""
-                    checked={!!aiFeatures.HERALD_ENABLED}
-                    onChange={v => saveAiFeature('HERALD_ENABLED', v)}
+                    checked={!!aiFeatures.DAEMON_PULSE_ENABLED}
+                    onChange={v => saveAiFeature('DAEMON_PULSE_ENABLED', v)}
                   />
                 </div>
               </div>
-              {daemonStatus.herald?.alive && (
-                <div style={{ marginTop: 12 }}>
-                  <button className="rs-pill" onClick={() => triggerDaemonTask('herald', 'recast_now')}>RECAST KIOSK</button>
+            </div>
+
+            {/* SCRIBE */}
+            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>SCRIBE (Chronos Heuristics)</div>
+                  <div className="rs-card-meta" style={{ margin: 0 }}>Schedule & Chronobiology Heuristics</div>
                 </div>
-              )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                  <span className="rs-card-label" style={{ color: daemonStatus.scribe?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
+                    {daemonStatus.scribe?.alive ? '● ONLINE' : '○ OFFLINE'}
+                  </span>
+                  <Toggle
+                    id="scribe-toggle"
+                    label=""
+                    checked={!!aiFeatures.DAEMON_SCRIBE_ENABLED}
+                    onChange={v => saveAiFeature('DAEMON_SCRIBE_ENABLED', v)}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* SIFTER */}

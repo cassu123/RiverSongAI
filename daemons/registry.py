@@ -89,9 +89,19 @@ async def call_daemon(name: str, action: str, payload: dict = {}) -> dict:
             logger.warning(f"Could not find port for daemon '{name}' in registry.")
             return {}
 
+        from config.settings import get_settings
+        headers = {
+            "Authorization": f"Bearer {get_settings().daemon_internal_secret}"
+        }
+
         async with httpx.AsyncClient() as client:
             url = f"http://127.0.0.1:{port}/task"
-            resp = await client.post(url, json={"action": action, "payload": payload}, timeout=5.0)
+            resp = await client.post(
+                url,
+                json={"action": action, "payload": payload},
+                headers=headers,
+                timeout=5.0,
+            )
             if resp.status_code == 200:
                 return resp.json()
             return {}

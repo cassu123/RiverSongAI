@@ -58,7 +58,9 @@ The unit runs `python -m daemons.<instance>` from
 to the journal:
 
 ```
-journalctl -u river-song-daemon@herald -f
+journalctl -u river-song-daemon@pulse -f
+# or if running as a user service:
+journalctl --user -u river-song-daemon@pulse -f
 ```
 
 ### Manual (development)
@@ -66,8 +68,8 @@ journalctl -u river-song-daemon@herald -f
 Inside the venv:
 
 ```bash
-python -m daemons.herald
 python -m daemons.pulse
+python -m daemons.scribe
 # ...etc
 ```
 
@@ -102,6 +104,8 @@ stopping the service, flip the flag in `.env` and restart the unit.
 | Chemist | 8015 | `DAEMON_CHEMIST_PORT` *(reserved; no daemon yet)* |
 | Pulse | 8016 | `DAEMON_PULSE_PORT` |
 | Scribe | 8017 | `DAEMON_SCRIBE_PORT` |
+| Vector Discovery | 8018 | `DAEMON_VECTOR_DISCOVERY_PORT` |
+| Vector Scheduler | 8019 | `DAEMON_VECTOR_SCHEDULER_PORT` |
 
 Navigator and Chemist are reserved port numbers; no concrete daemon class
 exists for them yet.
@@ -147,21 +151,21 @@ returns under a different responsibility.
   prompt asking for `[{key, value}]` JSON, upserts each fact via
   `memory_manager.upsert_fact(source="scribe")`, and stamps `indexed_at` to
   the current time.
-- **Task actions:** `analyze_note(path)` — deep-analyse a single note.
-  (Currently a stub returning `{status: "analyzed"}`.)
-- **Dependencies:** the main app's `memory_manager` and a working LLM
-  provider via `core.conversation_loop._build_llm_provider`. See
+- **Task actions:** `analyze_note(path)` — deep-analyses a single note using the
+  Scribe LLM role, extracts facts, upserts them into memory, and writes an episode
+  to Graphiti for cross-session recall.
+- **Dependencies:** the main app's `memory_manager`, `GraphitiProvider`, and a
+  working LLM provider via `core.conversation_loop._build_llm_provider`. See
   `docs/CHRONOS.md` for the broader design context.
 
-### Sifter — Background Document RAG (stub)
+### Sifter — Background Document RAG
 
 - **File:** `daemons/sifter/sifter.py`
 - **Enable:** `SIFTER_ENABLED=false` (default false).
-- **Status:** scaffolded only. The class exists and the systemd template
-  works, but `_main_loop()` is a 60 s idle sleep — no document scanning is
-  implemented yet.
-- **Intended role:** index `WAPS_DOCUMENTS_PATH` (`/mnt/data/river-song/waps`)
-  into ChromaDB so the RAG route can answer questions over the WAPS corpus.
+- **What it does:** walks `WAPS_DOCUMENTS_PATH` (`/mnt/data/river-song/waps`) on
+  a 300-second interval, detects new or modified documents (`.pdf`, `.txt`, `.md`,
+  `.docx`, `.csv`), extracts text and chunks it, ingests into ChromaDB, and maintains
+  `data/sifter_state.json` so unchanged files are not re-processed.
 
 ### Warden — Security / Vision (stub)
 
@@ -189,6 +193,20 @@ returns under a different responsibility.
   - `set_mode(mode)` — set ArduRover flight mode by name.
 - **Dependencies:** `pymavlink`, USB serial access (user `riversong` may
   need to be in the `dialout` group).
+
+### Vector Discovery — LAN Autonomous Mower Discovery
+
+- **File:** `daemons/vector_discovery/discovery.py`
+- **Internal Port:** 8018 (`DAEMON_VECTOR_DISCOVERY_PORT`)
+- **What it does:** monitors local network / SSDP / mDNS for newly powered-on
+  River Vector autonomous mower units and auto-registers them in the fleet.
+
+### Vector Scheduler — Yard Autonomous Mission Orchestration
+
+- **File:** `daemons/vector_scheduler/scheduler.py`
+- **Internal Port:** 8019 (`DAEMON_VECTOR_SCHEDULER_PORT`)
+- **What it does:** manages scheduled mowing runs, yard zone partitions, battery
+  recharge state transitions, and weather safety lockouts for Vector mowers.
 
 ---
 

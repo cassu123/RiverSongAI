@@ -8,7 +8,7 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-_BASE = os.getenv("PAPERLESS_URL", "http://localhost:8010")
+_BASE = os.getenv("PAPERLESS_URL", "http://localhost:8020")
 _TOKEN = os.getenv("PAPERLESS_TOKEN", "")
 _CACHE_TTL = 30  # seconds for read-heavy endpoints
 _cache: dict[str, tuple[Any, float]] = {}

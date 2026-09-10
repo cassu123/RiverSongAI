@@ -17,9 +17,10 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Header, Request
+from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel
 
+from core.auth import require_role, verify_daemon_secret
 from core.kill_switch import is_kill_switch_active
 from config.settings import get_settings
 
@@ -157,10 +158,11 @@ async def health_check(request: Request) -> HealthResponse:
     )
 
 
-@router.get("/api/health/system")
+@router.get("/api/health/system", dependencies=[Depends(require_role("admin"))])
 async def system_health() -> dict:
     """
     Returns CPU/GPU/RAM/disk metrics pulled from Glances.
+    Admin-only.
     """
     glances_url = get_settings().glances_url
     async with httpx.AsyncClient(timeout=5.0) as client:
@@ -190,12 +192,7 @@ def _require_internal_secret(authorization: Optional[str]) -> None:
     trusted-daemon boundary is rejected.
     """
     from fastapi import HTTPException
-    secret = (get_settings().daemon_internal_secret or "").strip()
-    if not secret:
-        raise HTTPException(
-            status_code=503,
-            detail="Webhook auth not configured.")
-    if authorization != f"Bearer {secret}":
+    if not verify_daemon_secret(authorization):
         raise HTTPException(
             status_code=401,
             detail="Invalid webhook credentials.")

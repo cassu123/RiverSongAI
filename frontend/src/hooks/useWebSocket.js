@@ -35,7 +35,7 @@ function reconnectDelay(attempt) {
 }
 
 export function useWebSocket(baseUrl, onMessage, options = {}) {
-  const { token, kioskToken } = options
+  const { token } = options
   const [connectionStatus, setConnectionStatus] = useState('disconnected')
   const [authError, setAuthError] = useState(false)
 
@@ -60,22 +60,13 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
           const data = await res.json()
           ticket = data.ticket
         }
-      } else if (kioskToken) {
-        const res = await fetch(`${API_BASE}/api/auth/ws-ticket/kiosk`, {
-          method: 'POST',
-          headers: { 'X-Kiosk-Token': kioskToken }
-        })
-        if (res.ok) {
-          const data = await res.json()
-          ticket = data.ticket
-        }
       }
 
       // 2. Build full URL with ticket
       const url = new URL(baseUrl, window.location.href)
       if (ticket) {
         url.searchParams.set('ticket', ticket)
-      } else if (token || kioskToken) {
+      } else if (token) {
         // Ticket exchange failed. Never fall back to ?token= — it leaks the
         // JWT into access logs and the server rejects it by default anyway.
         console.error('[useWebSocket] Ticket exchange failed; not connecting.')
@@ -176,7 +167,7 @@ export function useWebSocket(baseUrl, onMessage, options = {}) {
       console.error('[useWebSocket] Failed to create WebSocket:', err)
       setConnectionStatus('error')
     }
-  }, [baseUrl, onMessage, token, kioskToken])
+  }, [baseUrl, onMessage, token])
 
   useEffect(() => {
     isMountedRef.current = true

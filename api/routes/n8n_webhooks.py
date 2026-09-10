@@ -8,6 +8,7 @@ Allows n8n workflows to trigger internal River Song actions.
 from __future__ import annotations
 
 import logging
+import secrets
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -41,7 +42,10 @@ async def n8n_webhook_receiver(
     Validates against N8N_WEBHOOK_SECRET.
     """
     settings = get_settings()
-    if settings.n8n_webhook_secret and x_n8n_secret != settings.n8n_webhook_secret:
+    configured_secret = (settings.n8n_webhook_secret or "").strip()
+    if not configured_secret:
+        raise HTTPException(status_code=503, detail="n8n webhook authentication not configured.")
+    if not x_n8n_secret or not secrets.compare_digest(x_n8n_secret.strip(), configured_secret):
         raise HTTPException(status_code=401, detail="Invalid webhook secret.")
 
     payload = await request.json()

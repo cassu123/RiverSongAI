@@ -1,10 +1,11 @@
 from __future__ import annotations
-from fastapi import Request, HTTPException
+from fastapi import Request, HTTPException, Header
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import inspect
+import secrets
 import uuid
 import jwt
 
@@ -156,3 +157,25 @@ def require_role(*roles: str):
 
         return user
     return role_checker
+
+
+def verify_daemon_secret(auth_header: Optional[str]) -> bool:
+    """Constant-time verification of the daemon shared internal secret."""
+    settings = get_settings()
+    secret = (settings.daemon_internal_secret or "").strip()
+    if not secret or not auth_header:
+        return False
+    candidate = (
+        auth_header.removeprefix("Bearer ").strip()
+        if auth_header.startswith("Bearer ")
+        else auth_header.strip()
+    )
+    return secrets.compare_digest(candidate, secret)
+
+
+def require_daemon_secret(authorization: Optional[str] = Header(None)) -> None:
+    """FastAPI dependency requiring the internal daemon secret."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing Bearer token")
+    if not verify_daemon_secret(authorization):
+        raise HTTPException(status_code=403, detail="Forbidden")
