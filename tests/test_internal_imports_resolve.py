@@ -72,15 +72,25 @@ def test_first_party_imports_point_at_real_modules(path):
 
 
 def test_the_moved_packages_are_packages_not_loose_modules():
-    """core/vortex, core/tools, and domains/* are packages; flat modules are gone."""
-    for pkg in ("core/vortex", "core/tools", "core/sweeps", "domains", "domains/culinary", "domains/inventory", "domains/vehicles", "domains/commercial_inventory"):
+    """core/vortex, core/tools, domains/*, and api/routes/* are packages; flat modules are gone."""
+    for pkg in (
+        "core/vortex", "core/tools", "core/sweeps", "domains",
+        "domains/culinary", "domains/inventory", "domains/vehicles", "domains/commercial_inventory",
+        "api/routes/auth", "api/routes/system", "api/routes/ai", "api/routes/domains",
+        "api/routes/fleet", "api/routes/webhooks", "api/routes/feeds",
+    ):
         assert (ROOT / pkg / "__init__.py").exists(), f"{pkg} is not a package"
         assert not (ROOT / f"{pkg}.py").exists(), f"{pkg}.py still shadows {pkg}/"
 
     for root_dom in ("culinary", "inventory", "vehicles", "commercial_inventory"):
         assert not (ROOT / root_dom).exists(), f"legacy root folder {root_dom}/ still exists"
 
-    stale = sorted(
+    stale_core = sorted(
         p.name for p in (ROOT / "core").glob("vortex_*.py")
     ) + sorted(p.name for p in (ROOT / "core").glob("tools_*.py"))
-    assert not stale, f"pre-move modules left behind in core/: {stale}"
+    assert not stale_core, f"pre-move modules left behind in core/: {stale_core}"
+
+    stale_routes = sorted(
+        p.name for p in (ROOT / "api" / "routes").glob("*.py") if p.name != "__init__.py"
+    )
+    assert not stale_routes, f"flat routes left behind in api/routes/: {stale_routes}"

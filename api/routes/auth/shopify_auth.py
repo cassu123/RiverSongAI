@@ -129,7 +129,7 @@ async def shopify_auth_callback(
 
         # Also record it in user_integrations (encrypted) so the
         # Connected Accounts card on the profile page reflects the link.
-        from api.routes.integrations import encrypt_token
+        from api.routes.feeds.integrations import encrypt_token
         await store.upsert_user_integration(
             user_id=user_id,
             service="shopify",

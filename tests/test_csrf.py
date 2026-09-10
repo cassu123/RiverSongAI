@@ -230,7 +230,7 @@ def test_csrf_cookie_is_readable_by_script_and_session_cookie_is_not():
     """The whole mechanism depends on exactly one of these being httpOnly."""
     from starlette.responses import JSONResponse
 
-    from api.routes.auth import _issue_session
+    from api.routes.auth.auth import _issue_session
 
     response = JSONResponse(content={})
     _issue_session(response, "a-token")

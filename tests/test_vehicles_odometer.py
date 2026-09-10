@@ -20,7 +20,7 @@ from domains.vehicles.models import UsageUnit, VehicleType
 # are pure serializer tests and need none of that.
 _spec = importlib.util.spec_from_file_location(
     "_vehicles_routes_under_test",
-    pathlib.Path(__file__).resolve().parents[1] / "api" / "routes" / "vehicles.py",
+    pathlib.Path(__file__).resolve().parents[1] / "api" / "routes" / "domains" / "vehicles.py",
 )
 _vehicles_routes = importlib.util.module_from_spec(_spec)
 sys.modules[_spec.name] = _vehicles_routes

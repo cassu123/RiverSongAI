@@ -67,7 +67,7 @@ from pydantic import BaseModel, Field
 # Reused rather than reimplemented: fleet.py owns the fleet_units schema and
 # the token check, and a second copy of either would be a second place for the
 # constant-time comparison to drift out of.
-from api.routes.fleet import _ensure_schema, _now, _verify_unit, _get_store
+from api.routes.fleet.fleet import _ensure_schema, _now, _verify_unit, _get_store
 from core.auth import decode_token
 from core.vortex.hub import PRESENCE_STATES, get_vortex_hub
 from core.vortex.replica import get_replica_service
@@ -503,7 +503,7 @@ async def vortex_websocket(websocket: WebSocket) -> None:
 async def _restore_and_replay(unit_id: str, owner: str) -> None:
     """Rebuild any live cooking card, then replay the unit's full card set."""
     try:
-        from api.routes.culinary_sessions import restore_kitchen_surface
+        from api.routes.domains.culinary_sessions import restore_kitchen_surface
         await restore_kitchen_surface(owner)
     except Exception as exc:
         logger.debug("Cooking surface restore skipped for %s: %s", unit_id, exc)
@@ -986,7 +986,7 @@ async def camera_snapshot(entity_id: str, unit_id: str = Query(...),
     if not entity_id.startswith("camera."):
         raise HTTPException(status_code=400, detail="Not a camera entity.")
 
-    from api.routes.home import _get_client, _is_configured
+    from api.routes.domains.home import _get_client, _is_configured
 
     if not _is_configured():
         raise HTTPException(status_code=503, detail="Home Assistant not configured.")

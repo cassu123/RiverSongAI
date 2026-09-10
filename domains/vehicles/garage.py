@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List
 import json
 from config.settings import get_settings
-from api.routes.vehicles import get_db, get_maintenance_timeline, _DB_URL
+from api.routes.domains.vehicles import get_db, get_maintenance_timeline, _DB_URL
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from domains.vehicles.models import Vehicle
@@ -31,7 +31,7 @@ def get_due_maintenance(user_id: str) -> List[dict]:
     
     with _Session() as db:
         # Note: get_maintenance_timeline uses get_vehicles which requires db and user_id
-        from api.routes.vehicles import get_vehicles
+        from api.routes.domains.vehicles import get_vehicles
         try:
             vehicles = get_vehicles(db, user_id)
         except Exception as e:
@@ -93,7 +93,7 @@ async def garage_sweep_func(app):
     # In a real app we'd query users with vehicles. 
     # For now we can fetch all vehicles and map to users.
     from core.push import send_push_notification
-    from api.routes.vehicles import get_vehicles, get_maintenance_timeline
+    from api.routes.domains.vehicles import get_vehicles, get_maintenance_timeline
     
     with _Session() as db:
         vehicles = db.query(Vehicle).all()

@@ -390,7 +390,7 @@ async def _exec_calendar_event(args: dict, user_id: str) -> str:
 
 async def _exec_add_asset(args: dict, user_id: str) -> str:
     def _sync_work():
-        from api.routes.inventory import get_db as get_inventory_db
+        from api.routes.domains.inventory import get_db as get_inventory_db
         from domains.inventory.management import create_item, get_or_create_inv_user, get_homes_for_user, create_home, ItemCategory
         from domains.inventory.models import InvHome
         from core.family import resolve_module_owner
@@ -435,7 +435,7 @@ async def _exec_add_asset(args: dict, user_id: str) -> str:
 
 async def _exec_find_asset(args: dict, user_id: str) -> str:
     def _sync_work():
-        from api.routes.inventory import get_db as get_inventory_db
+        from api.routes.domains.inventory import get_db as get_inventory_db
         from domains.inventory.models import InventoryItem, InvHome
         from domains.inventory.management import get_or_create_inv_user
         from core.family import resolve_module_owner
@@ -472,7 +472,7 @@ async def _exec_find_asset(args: dict, user_id: str) -> str:
 
 async def _exec_asset_summary(args: dict, user_id: str) -> str:
     def _sync_work():
-        from api.routes.inventory import get_db as get_inventory_db
+        from api.routes.domains.inventory import get_db as get_inventory_db
         from domains.inventory.models import InventoryItem, InvHome
         from domains.inventory.management import get_or_create_inv_user
         from core.family import resolve_module_owner
@@ -501,7 +501,7 @@ async def _exec_asset_summary(args: dict, user_id: str) -> str:
 
 async def _exec_registry_health(args: dict, user_id: str) -> str:
     def _sync_work():
-        from api.routes.inventory import get_db as get_inventory_db
+        from api.routes.domains.inventory import get_db as get_inventory_db
         from domains.inventory.models import InventoryItem, InvHome
         from domains.inventory.management import get_or_create_inv_user
         from core.family import resolve_module_owner
@@ -536,7 +536,7 @@ async def _exec_registry_health(args: dict, user_id: str) -> str:
 
 async def _exec_warranty_check(args: dict, user_id: str) -> str:
     def _sync_work():
-        from api.routes.inventory import get_db as get_inventory_db
+        from api.routes.domains.inventory import get_db as get_inventory_db
         from domains.inventory.models import InventoryItem, InvHome
         from domains.inventory.management import get_or_create_inv_user
         from core.family import resolve_module_owner
@@ -626,7 +626,7 @@ def _split_trailing_store(text: str) -> Tuple[str, Optional[str]]:
 
 
 async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
-    from api.routes.culinary import _Session as SessionLocal, store_display_name
+    from api.routes.domains.culinary import _Session as SessionLocal, store_display_name
     from domains.culinary.models import Household, ShoppingListItem, ListSource, StoreMapping
     item = args.get("item")
     qty = args.get("quantity")
@@ -708,7 +708,7 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
     # item sat invisible until someone reloaded -- which for a list whose
     # whole point is being shared is most of the value gone.
     try:
-        from api.routes.culinary import _ws_manager
+        from api.routes.domains.culinary import _ws_manager
         await _ws_manager.broadcast(household_id, "grocery_updated", {})
     except Exception as exc:
         logger.warning(
@@ -721,7 +721,7 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
 
 
 async def _exec_read_shopping_list(args: dict, user_id: str) -> str:
-    from api.routes.culinary import _Session as SessionLocal
+    from api.routes.domains.culinary import _Session as SessionLocal
     from domains.culinary.models import Household, ShoppingListItem
 
     store_filter = (args.get("store") or "").strip()
@@ -990,7 +990,7 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> str:
 
 def _resolve_vehicle_sync(db, user_id, query):
     import difflib
-    from api.routes.vehicles import get_vehicles
+    from api.routes.domains.vehicles import get_vehicles
     vehicles = get_vehicles(db, user_id)
     if not vehicles:
         return None
@@ -1028,7 +1028,7 @@ async def _exec_list_vehicles(args: dict, context: dict) -> str:
     def _sync():
         db, close = _get_db_for_tools(context)
         try:
-            from api.routes.vehicles import get_vehicles, get_maintenance_timeline
+            from api.routes.domains.vehicles import get_vehicles, get_maintenance_timeline
             vehicles = get_vehicles(db, user_id)
             res = []
             for v in vehicles:
@@ -1440,7 +1440,7 @@ async def _exec_code_interpreter(args: dict, user_id: str) -> str:
 
 async def _exec_mow_command(args: dict, user_id: str) -> str:
     try:
-        from api.routes.vector_fleet import queue_command, get_fleet_state, get_first_unit_id
+        from api.routes.fleet.vector_fleet import queue_command, get_fleet_state, get_first_unit_id
 
         command = args["command"]
         unit_id = args.get("unit_id") or get_first_unit_id()
@@ -1488,13 +1488,13 @@ async def _exec_set_timer(args: dict, user_id: str) -> str:
     
     async def _timer_task():
         await asyncio.sleep(duration)
-        from api.routes.culinary import _ws_manager
+        from api.routes.domains.culinary import _ws_manager
         from core.family import resolve_module_owner
         uid = resolve_module_owner(user_id, "culinary")
         # In culinary, household ID is usually needed for broadcast. Wait, _ws_manager broadcasts to household_id.
         # So we need to get household_id.
         from sqlalchemy.orm import Session
-        from api.routes.culinary import get_db, _get_household
+        from api.routes.domains.culinary import get_db, _get_household
         
         # We need a new DB session inside the background task since the current one might be closed
         from database.core import engine
@@ -1545,7 +1545,7 @@ async def _exec_get_vehicle_status(args: dict, user_id: str) -> str:
     if not vid: return "Vehicle not found."
     from database.core import engine
     from sqlalchemy.orm import sessionmaker
-    from api.routes.vehicles import get_maintenance_timeline
+    from api.routes.domains.vehicles import get_maintenance_timeline
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
     try:

@@ -17,7 +17,7 @@ Free was not a reason to be exempt from any of them, which is the point.
 import pytest
 from fastapi.testclient import TestClient
 
-from api.routes.models_settings import (
+from api.routes.system.models_settings import (
     PROVIDER_ORDER,
     _USER_GATED_PROVIDERS,
     _get_enabled_providers,
@@ -506,7 +506,7 @@ def test_local_kill_switch_survives_a_per_provider_flip():
 def test_a_failed_config_read_denies_gated_providers_to_users(_state, monkeypatch):
     """A store error must not widen access. The defaults grant everything, so
     continuing on them served a restricted account the full metered catalog."""
-    import api.routes.models_settings as ms
+    import api.routes.system.models_settings as ms
 
     async def boom():
         raise RuntimeError("store is down")

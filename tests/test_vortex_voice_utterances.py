@@ -183,7 +183,7 @@ def test_a_wav_chunks_are_unwrapped_before_joining():
 
 def test_a_frame_cap_is_documented_as_a_frame_cap():
     """The per-frame cap stays; it was only ever wrong as an utterance size."""
-    from api.routes.vortex import MAX_AUDIO_CHUNK_BYTES
+    from api.routes.fleet.vortex import MAX_AUDIO_CHUNK_BYTES
     import core.vortex.voice as voice
 
     assert MAX_AUDIO_CHUNK_BYTES == 128 * 1024
@@ -289,7 +289,7 @@ def test_c_the_willow_route_is_gone():
     paths = [getattr(r, "path", "") for r in app.routes]
     assert not [p for p in paths if p.startswith("/api/willow")]
 
-    from api.routes.fleet import FLEET_PROGRAMS
+    from api.routes.fleet.fleet import FLEET_PROGRAMS
     assert "willow" not in FLEET_PROGRAMS
 
     with pytest.raises(ImportError):
@@ -314,7 +314,7 @@ def test_c_claiming_a_unit_records_its_owner(admin_headers):
     unit_id, token = r.json()["unit_id"], r.json()["unit_token"]
 
     async def _owner():
-        from api.routes.fleet import unit_owner
+        from api.routes.fleet.fleet import unit_owner
         from providers.memory.sqlite_store import SQLiteStore
         return await unit_owner(SQLiteStore(), "kova", unit_id)
 
@@ -331,7 +331,7 @@ def test_c_claiming_a_unit_records_its_owner(admin_headers):
 def test_c_an_unclaimed_unit_has_no_owner():
     """Absence is reported as absence, not as some fallback account."""
     async def _owner():
-        from api.routes.fleet import _ensure_schema, unit_owner
+        from api.routes.fleet.fleet import _ensure_schema, unit_owner
         from providers.memory.sqlite_store import SQLiteStore
 
         store = SQLiteStore()

@@ -65,7 +65,7 @@ async def list_targets(user_id: str) -> List[Dict[str, Any]]:
     targets: List[Dict[str, Any]] = []
 
     try:
-        from api.routes.home import collect_devices
+        from api.routes.domains.home import collect_devices
 
         for device in await collect_devices():
             if device.get("domain") != "media_player":
@@ -233,7 +233,7 @@ async def _cast_via_unit(*, user_id: str, target: Dict[str, Any], url: str,
     not exist yet — `core/fleet_simulator.py` accepts the command and tracks
     `cast_target`, but no real unit implements it.
     """
-    from api.routes.fleet import _ensure_schema, _now
+    from api.routes.fleet.fleet import _ensure_schema, _now
     from providers.memory.sqlite_store import SQLiteStore
     import uuid
 
@@ -265,7 +265,7 @@ async def _cast_via_unit(*, user_id: str, target: Dict[str, Any], url: str,
 async def stop(*, user_id: str, target: Dict[str, Any]) -> Dict[str, Any]:
     """Stop whatever a target is playing."""
     if target["kind"] == "unit":
-        from api.routes.fleet import _ensure_schema, _now
+        from api.routes.fleet.fleet import _ensure_schema, _now
         from providers.memory.sqlite_store import SQLiteStore
         import uuid
 

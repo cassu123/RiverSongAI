@@ -143,7 +143,7 @@ class ReplicaService:
 
     async def _section_devices(self, owner_user_id: str) -> List[Dict[str, Any]]:
         """The household's controllable entities, straight from /api/home."""
-        from api.routes.home import collect_devices
+        from api.routes.domains.home import collect_devices
         return await collect_devices()
 
     async def _section_cameras(self, owner_user_id: str) -> List[Dict[str, Any]]:
@@ -154,7 +154,7 @@ class ReplicaService:
         {entity_id}/snapshot`) rather than handed over as a Home Assistant URL
         with a token attached — units never hold HA credentials (invariant 3).
         """
-        from api.routes.home import collect_raw_states
+        from api.routes.domains.home import collect_raw_states
         cameras = []
         for state in await collect_raw_states():
             entity_id = state.get("entity_id", "")
@@ -176,7 +176,7 @@ class ReplicaService:
         Active notifications: HA persistent notifications plus unacked alerts
         raised by the household's own units.
         """
-        from api.routes.home import collect_raw_states
+        from api.routes.domains.home import collect_raw_states
         notifications: List[Dict[str, Any]] = []
 
         for state in await collect_raw_states():

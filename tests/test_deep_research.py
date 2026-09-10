@@ -264,7 +264,7 @@ class TestRouteSurface:
         assert getattr(get_settings(), "deep_research_enabled", False) is True
 
     def test_router_importable(self):
-        from api.routes import research
+        from api.routes.ai import research
         assert research.router.prefix == "/api/research"
         paths = {r.path for r in research.router.routes}
         assert "/api/research/run" in paths

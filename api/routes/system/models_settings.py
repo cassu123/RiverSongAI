@@ -35,7 +35,7 @@ from pydantic import BaseModel, ConfigDict
 
 from config.settings import get_settings
 from core.auth import decode_token
-from api.routes.auth import bad_request, forbidden, not_found, unauthorized
+from api.routes.auth.auth import bad_request, forbidden, not_found, unauthorized
 from providers.llm.registry import LLMRegistry, ModelEntry
 from providers.memory.models import LLMSettings, MemorySettings, TTLOption
 

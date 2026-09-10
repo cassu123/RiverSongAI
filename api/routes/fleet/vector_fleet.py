@@ -675,7 +675,7 @@ async def post_command(unit_id: str, body: CommandBody, request: Request):
     """
     await store.execute_write_async(sql, (cmd_id, unit_id, user_id, now, body.idempotency_key, body.action, json.dumps(body.params), ttl_seconds))
 
-    from api.routes.vector_fleet import _get_command_event
+    from api.routes.fleet.vector_fleet import _get_command_event
     _get_command_event(unit_id).set()
     _get_command_event(unit_id).clear()
 
@@ -741,7 +741,7 @@ async def patch_unit(id: str, body: UnitPatchBody):
         """
         await store.execute_write_async(cmd_sql, (cmd_id, id, now))
 
-        from api.routes.vector_fleet import _get_command_event
+        from api.routes.fleet.vector_fleet import _get_command_event
         _get_command_event(id).set()
         _get_command_event(id).clear()
 
@@ -994,7 +994,7 @@ async def patch_program(id: str, body: dict):
         await store.execute_write_async(f"UPDATE vector_programs SET {cols} WHERE program_id=?", tuple(params))
         if assigned_unit_id:
             await store.bump_config_revision(assigned_unit_id)
-            from api.routes.vector_fleet import _get_command_event
+            from api.routes.fleet.vector_fleet import _get_command_event
             _get_command_event(assigned_unit_id).set()
             _get_command_event(assigned_unit_id).clear()
     return {"status": "ok"}
@@ -1021,7 +1021,7 @@ async def run_program(id: str, user: dict = Depends(
         "INSERT INTO vector_commands (command_id, unit_id, issued_by, issued_at, action, params, status, ttl_seconds) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)",
         (cmd_id, prog["assigned_unit_id"], user_id, now, "mow_start", "{}", 30)
     )
-    from api.routes.vector_fleet import _get_command_event
+    from api.routes.fleet.vector_fleet import _get_command_event
     _get_command_event(prog["assigned_unit_id"]).set()
     _get_command_event(prog["assigned_unit_id"]).clear()
     return {"command_id": cmd_id}

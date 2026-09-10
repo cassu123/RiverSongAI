@@ -141,7 +141,7 @@ class TestRouteSurface:
         assert getattr(get_settings(), "skills_enabled", False) is True
 
     def test_router_importable(self):
-        from api.routes import skills as skills_route
+        from api.routes.ai import skills as skills_route
         assert skills_route.router.prefix == "/api/skills"
         paths = {r.path for r in skills_route.router.routes}
         assert "/api/skills"              in paths

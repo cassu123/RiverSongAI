@@ -14,7 +14,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from core.auth import decode_token
-from api.routes.features import ALL_FEATURE_KEYS
+from api.routes.system.features import ALL_FEATURE_KEYS
 
 router = APIRouter(prefix="/api/parent", tags=["parent"])
 

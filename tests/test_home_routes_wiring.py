@@ -20,7 +20,7 @@ fastapi = pytest.importorskip("fastapi")
 
 @pytest.fixture(scope="module")
 def home_router():
-    import api.routes.home as home
+    import api.routes.domains.home as home
     return home.router
 
 
@@ -57,7 +57,7 @@ def test_routes_that_need_the_request_object_receive_it(home_router):
 def test_every_annotation_in_the_module_resolves(home_router):
     """A missing import anywhere in the module surfaces the same way."""
     import typing
-    import api.routes.home as home
+    import api.routes.domains.home as home
     unresolved = []
     for route in home_router.routes:
         endpoint = getattr(route, "endpoint", None)

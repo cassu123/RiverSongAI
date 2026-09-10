@@ -114,7 +114,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         import sqlite3
         from domains.inventory.management import create_item, get_or_create_inv_user, get_homes_for_user, create_home, ItemCategory
-        from api.routes.inventory import get_db as get_inventory_db
+        from api.routes.domains.inventory import get_db as get_inventory_db
         from core.family import resolve_module_owner
         conn = sqlite3.connect(settings.db_path)
         cur = conn.cursor()
@@ -171,7 +171,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Load persistent AI feature flags and admin-saved config
     try:
-        from api.routes.features import AI_FEATURE_MAP
+        from api.routes.system.features import AI_FEATURE_MAP
         config = await store.get_admin_config()
         ai_config = config.get("ai_features", {})
         for flag_name, attr in AI_FEATURE_MAP.items():

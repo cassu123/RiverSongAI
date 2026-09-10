@@ -125,7 +125,7 @@ class TestRouteSurface:
         assert getattr(get_settings(), "blind_compare_enabled", True) is False
 
     def test_router_importable(self):
-        from api.routes import compare
+        from api.routes.feeds import compare
         assert compare.router.prefix == "/api/compare"
         paths = {r.path for r in compare.router.routes}
         assert "/api/compare/run"           in paths

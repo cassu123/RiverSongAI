@@ -22,7 +22,7 @@ from core.family_migration import (
 from fastapi import APIRouter, Request, Header
 from pydantic import BaseModel
 
-from api.routes.features import ALL_FEATURES, ALL_FEATURE_KEYS
+from api.routes.system.features import ALL_FEATURES, ALL_FEATURE_KEYS
 
 from core.auth import decode_token, create_access_token
 from core.errors import bad_request, forbidden, not_found, unauthorized

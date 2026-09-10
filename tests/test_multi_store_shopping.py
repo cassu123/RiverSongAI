@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
 from main import app
-from api.routes.culinary import _Session, get_db
+from api.routes.domains.culinary import _Session, get_db
 from domains.culinary.models import Household, ShoppingListItem, StoreMapping, WalmartMapping, ListSource
 from core.tools.registry import _exec_add_shopping_list, _exec_read_shopping_list
 
@@ -45,7 +45,7 @@ def test_user_household():
             db.close()
 
 def test_add_shopping_item_with_store(client, monkeypatch):
-    monkeypatch.setattr("api.routes.culinary._get_user_id", AsyncMock(return_value="test_shopper_123"))
+    monkeypatch.setattr("api.routes.domains.culinary._get_user_id", AsyncMock(return_value="test_shopper_123"))
     
     # 1. Add item with explicit store
     res = client.post("/api/culinary/grocery", json={
@@ -79,7 +79,7 @@ def test_add_shopping_item_with_store(client, monkeypatch):
     assert not any(i["id"] == item_id for i in res_walmart.json())
 
 def test_store_mappings_and_cart_export(client, monkeypatch):
-    monkeypatch.setattr("api.routes.culinary._get_user_id", AsyncMock(return_value="test_shopper_123"))
+    monkeypatch.setattr("api.routes.domains.culinary._get_user_id", AsyncMock(return_value="test_shopper_123"))
 
     # 1. Create Amazon mapping
     res = client.post("/api/culinary/store/mappings", json={

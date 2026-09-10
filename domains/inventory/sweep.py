@@ -6,7 +6,7 @@ from config.settings import get_settings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from api.routes.inventory import _DB_URL
+from api.routes.domains.inventory import _DB_URL
 from domains.inventory.models import AuditStatus, InvHome, InventoryAudit, InventoryItem
 from core.push import send_push_notification
 

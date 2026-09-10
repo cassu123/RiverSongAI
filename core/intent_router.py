@@ -700,7 +700,7 @@ async def _handle_kova_chore(transcript: str, user_id: str) -> str:
         return "I'm sorry, home automation controls are not enabled for your account."
 
     try:
-        from api.routes.kova import dispatch_chore
+        from api.routes.fleet.kova import dispatch_chore
 
         parsed = _parse_kova_chore(transcript)
         chore_type = parsed["chore_type"]
@@ -860,7 +860,7 @@ async def _handle_intercom(transcript: str, user_id: str) -> str:
         return error
 
     try:
-        from api.routes.vortex import _ring_surface
+        from api.routes.fleet.vortex import _ring_surface
         await _ring_surface(callee, caller, call.id, resolved_mode)
     except Exception as exc:
         logger.debug("Could not raise the ringing card: %s", exc)
@@ -952,7 +952,7 @@ async def _handle_cooking(transcript: str, user_id: str) -> str:
 
     command, argument = parsed
     try:
-        from api.routes.culinary_sessions import voice_command
+        from api.routes.domains.culinary_sessions import voice_command
 
         spoken = await voice_command(user_id, command, argument)
     except Exception as exc:

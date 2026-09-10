@@ -9,7 +9,7 @@ import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from api.routes.shopify_auth import _normalize_shop
+from api.routes.auth.shopify_auth import _normalize_shop
 from main import app
 
 client = TestClient(app)

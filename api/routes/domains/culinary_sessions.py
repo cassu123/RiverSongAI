@@ -37,7 +37,7 @@ from fastapi import APIRouter, Depends, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from api.routes.culinary import (
+from api.routes.domains.culinary import (
     _get_household,
     _get_user_id,
     _ws_manager,
@@ -501,7 +501,7 @@ async def restore_kitchen_surface(user_id: str) -> bool:
     """
     db = None
     try:
-        from api.routes.culinary import _Session
+        from api.routes.domains.culinary import _Session
         from core.vortex.surfaces import publish_cooking_step
 
         db = _Session()
@@ -539,7 +539,7 @@ async def voice_command(user_id: str, command: str,
     """
     db = None
     try:
-        from api.routes.culinary import _Session
+        from api.routes.domains.culinary import _Session
 
         db = _Session()
         hh = _get_household(db, user_id)
