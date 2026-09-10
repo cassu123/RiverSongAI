@@ -1,5 +1,5 @@
 """
-core/vortex_media.py
+core/vortex/media.py
 
 Music comes out of the room you asked in.
 
@@ -81,8 +81,8 @@ async def target_unit(*, user_id: str, requesting_unit: Optional[str],
     the person is. Occupancy is a hint used for routing only; it never grants
     anything.
     """
-    from core.vortex_hub import get_vortex_hub
-    from core.vortex_units import resolve_room
+    from core.vortex.hub import get_vortex_hub
+    from core.vortex.units import resolve_room
 
     hub = get_vortex_hub()
 
@@ -112,7 +112,7 @@ async def play_on_unit(*, unit_id: str, track: Dict[str, Any],
     `/api/vortex/v1/media/play`: units poll and connect outbound, and nothing
     here should be opening an inbound connection to a Pi.
     """
-    from core.vortex_hub import get_vortex_hub
+    from core.vortex.hub import get_vortex_hub
 
     payload = {"action": "play", "track": track}
     if queue:
@@ -133,7 +133,7 @@ async def control_playback(*, user_id: str, requesting_unit: str,
     if action not in TRANSPORT_ACTIONS:
         return {"status": "error", "message": f"Unknown transport action '{action}'."}
 
-    from core.vortex_hub import get_vortex_hub
+    from core.vortex.hub import get_vortex_hub
 
     hub = get_vortex_hub()
     target = _playing_unit(user_id) or requesting_unit
@@ -196,7 +196,7 @@ async def handle_play_request(*, transcript: str, user_id: str,
 
     note_playing(user_id, target)
 
-    from core.vortex_units import get_profile
+    from core.vortex.units import get_profile
 
     where = ""
     if target != origin.unit_id:

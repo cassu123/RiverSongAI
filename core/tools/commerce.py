@@ -1,5 +1,5 @@
 """
-core/tools_commerce.py
+core/tools/commerce.py
 
 Commerce product/sale tool executors + shared _get_commerce_db.
 Split out of core/tools.py (god-file audit #3); re-exported by core.tools

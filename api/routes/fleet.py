@@ -43,7 +43,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from core.auth import require_role
-from core.vortex_security import (
+from core.vortex.security import (
     hash_unit_token,
     is_hashed,
     mint_unit_token,

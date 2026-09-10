@@ -1,5 +1,5 @@
 """
-core/tools_memory.py
+core/tools/memory.py
 
 Memory and vault-note tool executors, split out of core/tools.py (god-file
 audit #3). These are self-contained (no shared tools.py helpers) and are

@@ -69,16 +69,16 @@ from pydantic import BaseModel, Field
 # constant-time comparison to drift out of.
 from api.routes.fleet import _ensure_schema, _now, _verify_unit, _get_store
 from core.auth import decode_token
-from core.vortex_hub import PRESENCE_STATES, get_vortex_hub
-from core.vortex_replica import get_replica_service
-from core.vortex_security import (
+from core.vortex.hub import PRESENCE_STATES, get_vortex_hub
+from core.vortex.replica import get_replica_service
+from core.vortex.security import (
     hash_unit_token,
     mint_unit_token,
     pairing_limiter,
     verify_unit_token,
 )
-from core.vortex_surfaces import SurfaceError, get_surface_publisher
-from core.vortex_units import PROGRAM, ensure_schema as ensure_unit_schema
+from core.vortex.surfaces import SurfaceError, get_surface_publisher
+from core.vortex.units import PROGRAM, ensure_schema as ensure_unit_schema
 from providers.memory.sqlite_store import SQLiteStore
 
 logger = logging.getLogger(__name__)
@@ -95,7 +95,7 @@ WS_AUTH_TIMEOUT_SECONDS = 5.0
 # roughly four seconds of speech per frame — generous for a stream.
 #
 # This is a frame size, not an utterance size. A longer utterance arrives as
-# several frames with `final` set on the last; core.vortex_voice buffers them
+# several frames with `final` set on the last; core.vortex.voice buffers them
 # and bounds the total separately (MAX_UTTERANCE_BYTES). Treating this cap as
 # the limit on a whole utterance is what used to truncate anything past ~4
 # seconds.
@@ -134,7 +134,7 @@ async def _require_unit(unit_id: str, token: Optional[str]) -> Dict[str, Any]:
     await ensure_unit_schema(store)
     unit = await _verify_unit(store, PROGRAM, unit_id, token)
 
-    from core.vortex_units import get_profile
+    from core.vortex.units import get_profile
 
     profile = await get_profile(unit_id) or {}
     return {"unit": unit, "profile": profile,
@@ -164,7 +164,7 @@ def _client_key(request: Request) -> str:
 # pair/status are necessarily unauthenticated. The code alone must never mint
 # a token: approval is what mints it, and approval requires a logged-in user.
 # Eight digits is 10^8, which is only safe behind the shared lockout in
-# core.vortex_security — both open routes count against it.
+# core.vortex.security — both open routes count against it.
 
 class PairRequestBody(BaseModel):
     code: str = Field(min_length=8, max_length=8, pattern=r"^\d{8}$")
@@ -365,7 +365,7 @@ async def pair_approve(body: PairApproveBody, request: Request,
          json.dumps(metadata), _now()),
     )
 
-    from core.vortex_units import upsert_profile
+    from core.vortex.units import upsert_profile
 
     await upsert_profile(
         unit_id,
@@ -433,7 +433,7 @@ async def vortex_websocket(websocket: WebSocket) -> None:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    from core.vortex_units import get_profile
+    from core.vortex.units import get_profile
 
     profile = await get_profile(unit_id) or {}
     owner = profile.get("owner_user_id") or ""
@@ -486,7 +486,7 @@ async def vortex_websocket(websocket: WebSocket) -> None:
         # A unit that drops off WiFi mid-call leaves the other end holding a
         # camera light on. End it rather than leaving a half-open call.
         try:
-            from core.vortex_calls import get_call_registry, participant_id
+            from core.vortex.calls import get_call_registry, participant_id
             await get_call_registry().end_all_for(
                 participant_id(unit_id=unit_id), reason="peer_gone")
         except Exception as exc:
@@ -494,7 +494,7 @@ async def vortex_websocket(websocket: WebSocket) -> None:
         # Drop any half-spoken utterance. The rest of that sentence is not
         # arriving, and it must not become the opening of the next one.
         try:
-            from core.vortex_voice import clear_utterance
+            from core.vortex.voice import clear_utterance
             await clear_utterance(unit_id)
         except Exception as exc:
             logger.debug("Utterance cleanup for %s failed: %s", unit_id, exc)
@@ -590,7 +590,7 @@ async def _handle_unit_frame(unit_id: str, owner: str, frame: Dict[str, Any],
     if kind == "camera_state":
         # The unit tells us what its camera is fitted with and consented to.
         # This only ever narrows what we will ask for.
-        from core.vortex_units import upsert_profile
+        from core.vortex.units import upsert_profile
         await upsert_profile(unit_id, camera=frame.get("camera") or {})
         return
 
@@ -615,7 +615,7 @@ async def _handle_unit_call_frame(unit_id: str, kind: str,
     phone are two addresses of the same kind, so kitchen-to-bedroom and
     phone-to-kitchen are one code path.
     """
-    from core.vortex_calls import get_call_registry, participant_id
+    from core.vortex.calls import get_call_registry, participant_id
 
     registry = get_call_registry()
     address = participant_id(unit_id=unit_id)
@@ -699,7 +699,7 @@ async def _handle_audio_chunk(unit_id: str, owner: str,
                        unit_id, len(audio))
         return
 
-    from core.vortex_voice import handle_unit_utterance
+    from core.vortex.voice import handle_unit_utterance
 
     asyncio.create_task(handle_unit_utterance(
         unit_id=unit_id, user_id=owner, audio=audio,
@@ -812,7 +812,7 @@ async def surface_action(body: SurfaceActionBody,
     context = await _require_unit(body.unit_id, x_unit_token)
     owner = _require_owner(context)
 
-    from core.vortex_actions import STATUS_DENIED, STATUS_ERROR, run_surface_action
+    from core.vortex.actions import STATUS_DENIED, STATUS_ERROR, run_surface_action
 
     result = await run_surface_action(
         surface_id=body.surface_id, intent=body.intent,
@@ -854,7 +854,7 @@ async def toggle_device(body: DeviceToggleBody,
     context = await _require_unit(body.unit_id, x_unit_token)
     owner = _require_owner(context)
 
-    from core.vortex_actions import STATUS_DENIED, execute_home_action
+    from core.vortex.actions import STATUS_DENIED, execute_home_action
 
     result = await execute_home_action(
         user_id=owner, entity_id=body.entity_id, action="toggle",
@@ -872,7 +872,7 @@ async def control_device(body: DeviceControlBody,
     context = await _require_unit(body.unit_id, x_unit_token)
     owner = _require_owner(context)
 
-    from core.vortex_actions import STATUS_DENIED, execute_home_action
+    from core.vortex.actions import STATUS_DENIED, execute_home_action
 
     result = await execute_home_action(
         user_id=owner, entity_id=body.entity_id, action=body.action,
@@ -901,7 +901,7 @@ async def confirm_action(body: ConfirmBody,
     """
     await _require_unit(body.unit_id, x_unit_token)
 
-    from core.vortex_actions import STATUS_DENIED, resolve_confirmation
+    from core.vortex.actions import STATUS_DENIED, resolve_confirmation
 
     result = await resolve_confirmation(
         challenge_id=body.challenge_id, code=body.code, unit_id=body.unit_id)
@@ -938,7 +938,7 @@ async def synthesize(body: TTSBody,
     """
     await _require_unit(body.unit_id, x_unit_token)
 
-    from core.vortex_voice import synthesize_for_unit
+    from core.vortex.voice import synthesize_for_unit
 
     wav = await synthesize_for_unit(body.text)
     if not wav:
@@ -1026,7 +1026,7 @@ async def camera_frames(body: CameraFramesBody,
     context = await _require_unit(body.unit_id, x_unit_token)
     owner = _require_owner(context)
 
-    from core.vortex_units import CAMERA_PURPOSES, camera_purpose_enabled
+    from core.vortex.units import CAMERA_PURPOSES, camera_purpose_enabled
 
     if body.purpose not in CAMERA_PURPOSES:
         raise HTTPException(status_code=400, detail="Unknown camera purpose.")
@@ -1040,7 +1040,7 @@ async def camera_frames(body: CameraFramesBody,
     if not body.frames:
         raise HTTPException(status_code=400, detail="No frames supplied.")
 
-    from core.vortex_vision import identify_from_frames
+    from core.vortex.vision import identify_from_frames
 
     return await identify_from_frames(
         unit_id=body.unit_id, owner_user_id=owner,
@@ -1066,7 +1066,7 @@ async def motion_snapshot(body: MotionSnapshotBody,
     context = await _require_unit(body.unit_id, x_unit_token)
     _require_owner(context)
 
-    from core.vortex_units import camera_purpose_enabled
+    from core.vortex.units import camera_purpose_enabled
 
     if not camera_purpose_enabled(context["profile"], "motion_snapshots"):
         raise HTTPException(
@@ -1074,8 +1074,8 @@ async def motion_snapshot(body: MotionSnapshotBody,
             detail="Motion snapshots are not enabled on this unit.",
         )
 
-    from core.vortex_vision import store_snapshot
-    from core.vortex_surfaces import publish_doorbell, publish_motion_snapshot
+    from core.vortex.vision import store_snapshot
+    from core.vortex.surfaces import publish_doorbell, publish_motion_snapshot
 
     camera_name = body.camera_name or context["profile"].get("room") or body.unit_id
     try:
@@ -1102,7 +1102,7 @@ async def get_snapshot(snapshot_id: str, exp: int = Query(...),
     attach one. The signature covers the id and the expiry, and the file is
     deleted at the same expiry, so a leaked link outlives nothing.
     """
-    from core.vortex_vision import read_snapshot
+    from core.vortex.vision import read_snapshot
 
     try:
         data, media_type = read_snapshot(snapshot_id, exp, sig)
@@ -1138,7 +1138,7 @@ async def media_control(body: MediaControlBody,
     context = await _require_unit(body.unit_id, x_unit_token)
     owner = _require_owner(context)
 
-    from core.vortex_media import control_playback
+    from core.vortex.media import control_playback
 
     return await control_playback(user_id=owner, requesting_unit=body.unit_id,
                                   action=body.action, value=body.value)
@@ -1170,7 +1170,7 @@ async def cast_targets(unit_id: str = Query(...),
     context = await _require_unit(unit_id, x_unit_token)
     owner = _require_owner(context)
 
-    from core.vortex_cast import list_targets
+    from core.vortex.cast import list_targets
 
     return {"targets": await list_targets(owner)}
 
@@ -1189,7 +1189,7 @@ async def start_cast(body: CastBody,
     context = await _require_unit(body.unit_id, x_unit_token)
     owner = _require_owner(context)
 
-    from core.vortex_cast import cast, resolve_target
+    from core.vortex.cast import cast, resolve_target
 
     target = await resolve_target(body.target, owner)
     if target is None:
@@ -1201,7 +1201,7 @@ async def start_cast(body: CastBody,
         if not body.query:
             raise HTTPException(status_code=400,
                                 detail="Supply either a url or a query.")
-        from core.vortex_media import resolve_track
+        from core.vortex.media import resolve_track
 
         track = await resolve_track(body.query)
         if not track:
@@ -1228,7 +1228,7 @@ async def stop_cast(body: CastStopBody,
     context = await _require_unit(body.unit_id, x_unit_token)
     owner = _require_owner(context)
 
-    from core.vortex_cast import resolve_target, stop
+    from core.vortex.cast import resolve_target, stop
 
     target = await resolve_target(body.target, owner)
     if target is None:
@@ -1280,7 +1280,7 @@ async def _caller_address(unit_id: Optional[str], token: Optional[str],
     phone app authenticates as a user and is addressed as `user:<id>`. Both
     resolve their household here — neither gets to claim one.
     """
-    from core.vortex_calls import participant_id
+    from core.vortex.calls import participant_id
 
     if unit_id:
         context = await _require_unit(unit_id, token)
@@ -1298,8 +1298,8 @@ async def _resolve_callee(to: str, owner_user_id: str) -> Optional[str]:
     Only reaches units in this household and users who own units in it: a call
     is never a route into someone else's house.
     """
-    from core.vortex_calls import participant_id, split_participant
-    from core.vortex_units import list_profiles, normalise_room
+    from core.vortex.calls import participant_id, split_participant
+    from core.vortex.units import list_profiles, normalise_room
 
     kind, value = split_participant(to)
     if kind == "user" and value:
@@ -1336,9 +1336,9 @@ async def call_targets(unit_id: Optional[str] = Query(default=None),
     """Rooms and people this caller can reach."""
     _, owner = await _caller_address(unit_id, x_unit_token, authorization)
 
-    from core.vortex_calls import participant_id
-    from core.vortex_calls_ws import is_connected
-    from core.vortex_units import list_profiles
+    from core.vortex.calls import participant_id
+    from core.vortex.calls_ws import is_connected
+    from core.vortex.units import list_profiles
 
     hub = get_vortex_hub()
     rooms = [
@@ -1374,7 +1374,7 @@ async def start_call(body: CallStartBody,
         raise HTTPException(status_code=404,
                             detail=f"I couldn't find '{body.to}'.")
 
-    from core.vortex_calls import get_call_registry, ice_servers, negotiate_mode
+    from core.vortex.calls import get_call_registry, ice_servers, negotiate_mode
 
     mode, note = await negotiate_mode(body.mode, caller, callee)
     call, error = await get_call_registry().start(
@@ -1403,9 +1403,9 @@ async def _ring_surface(callee: str, caller: str, call_id: str,
     time-limited, someone is waiting, and a card that sits politely below the
     clock is a call nobody answers.
     """
-    from core.vortex_calls import split_participant
-    from core.vortex_surfaces import get_surface_publisher
-    from core.vortex_units import get_profile
+    from core.vortex.calls import split_participant
+    from core.vortex.surfaces import get_surface_publisher
+    from core.vortex.units import get_profile
 
     kind, value = split_participant(callee)
     if kind != "unit":
@@ -1449,7 +1449,7 @@ async def answer_call(body: CallActionBody,
                       authorization: Optional[str] = Header(default=None)):
     address, _ = await _caller_address(body.unit_id, x_unit_token, authorization)
 
-    from core.vortex_calls import get_call_registry
+    from core.vortex.calls import get_call_registry
 
     call, error = await get_call_registry().answer(body.call_id, address)
     if call is None:
@@ -1464,7 +1464,7 @@ async def end_call(body: CallActionBody,
                    authorization: Optional[str] = Header(default=None)):
     address, _ = await _caller_address(body.unit_id, x_unit_token, authorization)
 
-    from core.vortex_calls import get_call_registry
+    from core.vortex.calls import get_call_registry
 
     registry = get_call_registry()
     call = registry.get(body.call_id)
@@ -1491,7 +1491,7 @@ async def signal_call(body: CallSignalBody,
     """
     address, _ = await _caller_address(body.unit_id, x_unit_token, authorization)
 
-    from core.vortex_calls import get_call_registry
+    from core.vortex.calls import get_call_registry
 
     ok, error = await get_call_registry().relay(
         body.call_id, address, {"type": body.type, **body.payload})
@@ -1501,7 +1501,7 @@ async def signal_call(body: CallSignalBody,
 
 
 async def _withdraw_call_surface(address: str, call_id: str) -> None:
-    from core.vortex_calls import split_participant
+    from core.vortex.calls import split_participant
 
     kind, value = split_participant(address)
     if kind != "unit":
@@ -1536,8 +1536,8 @@ async def calls_websocket(websocket: WebSocket) -> None:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    from core.vortex_calls import get_call_registry, ice_servers, participant_id
-    from core.vortex_calls_ws import register, unregister
+    from core.vortex.calls import get_call_registry, ice_servers, participant_id
+    from core.vortex.calls_ws import register, unregister
 
     await websocket.accept()
     await register(user_id, websocket)
@@ -1624,7 +1624,7 @@ class UnitProfileBody(BaseModel):
 async def list_unit_profiles(authorization: Optional[str] = Header(default=None)):
     """Every unit this user owns, with room, display and camera capability."""
     user_id = await _require_user(authorization)
-    from core.vortex_units import list_profiles
+    from core.vortex.units import list_profiles
 
     hub = get_vortex_hub()
     profiles = await list_profiles(user_id)
@@ -1657,7 +1657,7 @@ async def adopt_unit(unit_id: str, body: UnitProfileBody,
     if not unit:
         raise HTTPException(status_code=404, detail="Unit not found.")
 
-    from core.vortex_units import get_profile, upsert_profile
+    from core.vortex.units import get_profile, upsert_profile
 
     existing = await get_profile(unit_id)
     if existing and existing.get("owner_user_id"):
@@ -1677,7 +1677,7 @@ async def update_unit_profile(unit_id: str, body: UnitProfileBody,
                               authorization: Optional[str] = Header(default=None)):
     """Move a unit to a different room, or record that it has no screen."""
     user_id = await _require_user(authorization)
-    from core.vortex_units import get_profile, upsert_profile
+    from core.vortex.units import get_profile, upsert_profile
 
     profile = await get_profile(unit_id)
     if not profile or profile.get("owner_user_id") != user_id:

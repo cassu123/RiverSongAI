@@ -468,7 +468,7 @@ async def get_chat_tools(
 ):
     """Retrieve all chat and voice tools categorized with current enabled/disabled state."""
     await _require_admin(request, authorization)
-    from core.tools_schemas import TOOL_SCHEMAS
+    from core.tools.schemas import TOOL_SCHEMAS
     store = _get_store(request)
     config = await store.get_admin_config()
     disabled = set(config.get("disabled_tools", []))

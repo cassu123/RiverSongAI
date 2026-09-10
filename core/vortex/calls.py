@@ -1,5 +1,5 @@
 """
-core/vortex_calls.py
+core/vortex/calls.py
 
 Room-to-room intercom and video calls — and the phone app talking to the house.
 
@@ -45,7 +45,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from core.vortex_security import LoopLock
+from core.vortex.security import LoopLock
 
 logger = logging.getLogger(__name__)
 
@@ -302,13 +302,13 @@ class CallRegistry:
         kind, value = split_participant(address)
 
         if kind == "unit":
-            from core.vortex_hub import get_vortex_hub
+            from core.vortex.hub import get_vortex_hub
             if await get_vortex_hub().send(value, frame.get("type", "call"),
                                            {k: v for k, v in frame.items()
                                             if k != "type"}):
                 return True
         elif kind == "user":
-            from core.vortex_calls_ws import send_to_user
+            from core.vortex.calls_ws import send_to_user
             if await send_to_user(value, frame):
                 return True
 
@@ -414,7 +414,7 @@ async def negotiate_mode(requested: str, caller: str, callee: str) -> Tuple[str,
     if requested != MODE_VIDEO:
         return MODE_AUDIO, ""
 
-    from core.vortex_units import camera_purpose_enabled, get_profile
+    from core.vortex.units import camera_purpose_enabled, get_profile
 
     for address in (caller, callee):
         kind, value = split_participant(address)

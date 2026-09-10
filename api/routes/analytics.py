@@ -80,7 +80,7 @@ async def get_business_report(
     This reuses the logic from the LLM tool but exposes it as a clean API.
     """
     user_id = await _require_user(authorization)
-    from core.tools import _exec_generate_business_report
+    from core.tools.registry import _exec_generate_business_report
 
     try:
         report = await _exec_generate_business_report({"days": days}, user_id)

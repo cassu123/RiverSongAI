@@ -1,5 +1,5 @@
 """
-core/vortex_calls_ws.py
+core/vortex/calls_ws.py
 
 The phone app's end of the intercom.
 
@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Set
 
-from core.vortex_security import LoopLock
+from core.vortex.security import LoopLock
 
 logger = logging.getLogger(__name__)
 

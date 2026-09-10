@@ -1,5 +1,5 @@
 """
-core/vortex_voice.py
+core/vortex/voice.py
 
 Voice for River Vortex units: speech in, River's voice out, and the orb
 animated by the same synthesis that produced the audio.
@@ -32,7 +32,7 @@ import wave
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from core.vortex_security import LoopLock
+from core.vortex.security import LoopLock
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +204,7 @@ async def handle_unit_utterance(*, unit_id: str, user_id: str, audio: bytes,
     presence, audio and amplitude frames.
     """
     from core.intent_router import ORIGIN_VORTEX_UNIT, RequestOrigin, origin_scope
-    from core.vortex_hub import get_vortex_hub
+    from core.vortex.hub import get_vortex_hub
 
     hub = get_vortex_hub()
 
@@ -226,7 +226,7 @@ async def handle_unit_utterance(*, unit_id: str, user_id: str, audio: bytes,
         await hub.presence(unit_id, "idle")
         return
 
-    from core.vortex_actions import origin_for_unit
+    from core.vortex.actions import origin_for_unit
 
     origin = await origin_for_unit(unit_id)
     origin = RequestOrigin(kind=ORIGIN_VORTEX_UNIT, unit_id=unit_id,
@@ -342,5 +342,5 @@ async def speak_to_unit(unit_id: str, text: str) -> bool:
     wav = await synthesize_for_unit(text)
     if not wav:
         return False
-    from core.vortex_hub import get_vortex_hub
+    from core.vortex.hub import get_vortex_hub
     return await get_vortex_hub().speak(unit_id, wav, text=text)

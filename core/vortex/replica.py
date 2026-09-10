@@ -1,5 +1,5 @@
 """
-core/vortex_replica.py
+core/vortex/replica.py
 
 The local copy a River Vortex unit renders from.
 
@@ -39,7 +39,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from core.vortex_security import LoopLock
+from core.vortex.security import LoopLock
 
 logger = logging.getLogger(__name__)
 
@@ -194,7 +194,7 @@ class ReplicaService:
 
         try:
             from providers.memory.sqlite_store import SQLiteStore
-            from core.vortex_units import list_profiles
+            from core.vortex.units import list_profiles
 
             unit_ids = [p["unit_id"] for p in await list_profiles(owner_user_id)]
             if unit_ids:
@@ -308,7 +308,7 @@ class ReplicaService:
 
     async def _unit_block(self, unit_id: str) -> Dict[str, Any]:
         """The unit's own settings and what this server believes it can do."""
-        from core.vortex_units import get_profile
+        from core.vortex.units import get_profile
         profile = await get_profile(unit_id) or {}
         return {
             "unit_id": unit_id,
@@ -334,8 +334,8 @@ class ReplicaService:
         if not changed:
             return 0
 
-        from core.vortex_hub import get_vortex_hub
-        from core.vortex_units import list_profiles
+        from core.vortex.hub import get_vortex_hub
+        from core.vortex.units import list_profiles
 
         replica = self._household(owner_user_id)
         hub = get_vortex_hub()
@@ -373,7 +373,7 @@ class ReplicaService:
         A wall panel is exactly the right place for a severe weather warning,
         and a warning that has lapsed should come off the screen by itself.
         """
-        from core.vortex_surfaces import get_surface_publisher, publish_weather_alert
+        from core.vortex.surfaces import get_surface_publisher, publish_weather_alert
 
         publisher = get_surface_publisher()
         live_ids = set()
@@ -387,7 +387,7 @@ class ReplicaService:
 
     async def push_to_unit(self, unit_id: str, owner_user_id: str) -> bool:
         """Send a full replica to one unit — used the moment it connects."""
-        from core.vortex_hub import get_vortex_hub
+        from core.vortex.hub import get_vortex_hub
 
         snapshot = await self.snapshot(owner_user_id, unit_id=unit_id)
         hub = get_vortex_hub()

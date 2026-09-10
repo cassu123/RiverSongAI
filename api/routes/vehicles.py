@@ -1090,7 +1090,7 @@ async def lookup_part_ai(
     vehicle_id: str, body: PartLookupQuery,
     db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
 ):
-    from core.tools import _exec_web_search
+    from core.tools.registry import _exec_web_search
     import json
     import re
     from vehicles.models import VehiclePart

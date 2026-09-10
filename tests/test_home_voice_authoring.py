@@ -1,4 +1,4 @@
-"""Voice authoring of device alerts — core.tools_home.
+"""Voice authoring of device alerts — core.tools.home.
 
 The model turns a sentence into fields; these cover what happens to those
 fields afterwards, which is the part that has to be right.
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from core.tools_home import _norm_hhmm, describe, DEVICE_CLASS_SYNONYMS
+from core.tools.home import _norm_hhmm, describe, DEVICE_CLASS_SYNONYMS
 
 
 # ---------------------------------------------------------------------------
@@ -128,7 +128,7 @@ class FakeStore:
 @pytest.fixture
 def wired(monkeypatch):
     store = FakeStore()
-    monkeypatch.setattr("core.tools_home._store", lambda: store)
+    monkeypatch.setattr("core.tools.home._store", lambda: store)
     async def _enabled(uid, feat): return True
     import core.family
     monkeypatch.setattr(core.family, "is_feature_enabled_for", _enabled)
@@ -137,7 +137,7 @@ def wired(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_authoring_the_example_from_the_plan(wired):
-    from core.tools_home import _exec_create_device_alert
+    from core.tools.home import _exec_create_device_alert
     reply = await _exec_create_device_alert({
         "name": "Garage open late", "device_class": "garage",
         "to_state": "on", "between_start": "10pm", "between_end": "6am",
@@ -152,7 +152,7 @@ async def test_authoring_the_example_from_the_plan(wired):
 
 @pytest.mark.asyncio
 async def test_a_rule_with_nothing_to_watch_is_refused(wired):
-    from core.tools_home import _exec_create_device_alert
+    from core.tools.home import _exec_create_device_alert
     reply = await _exec_create_device_alert({"name": "Vague", "to_state": "on"}, "u1")
     assert wired.created == []
     assert "what to watch" in reply
@@ -161,7 +161,7 @@ async def test_a_rule_with_nothing_to_watch_is_refused(wired):
 @pytest.mark.asyncio
 async def test_half_a_time_window_is_refused_rather_than_halved(wired):
     """Storing only one end would leave a window that means something else."""
-    from core.tools_home import _exec_create_device_alert
+    from core.tools.home import _exec_create_device_alert
     reply = await _exec_create_device_alert({
         "device_class": "door", "between_start": "10pm"}, "u1")
     assert wired.created == []
@@ -170,7 +170,7 @@ async def test_half_a_time_window_is_refused_rather_than_halved(wired):
 
 @pytest.mark.asyncio
 async def test_minutes_become_seconds(wired):
-    from core.tools_home import _exec_create_device_alert
+    from core.tools.home import _exec_create_device_alert
     await _exec_create_device_alert(
         {"device_class": "door", "for_minutes": 10}, "u1")
     assert wired.created[0]["trigger_config"]["for_seconds"] == 600
@@ -180,7 +180,7 @@ async def test_minutes_become_seconds(wired):
 async def test_deleting_a_builtin_mutes_it_instead(wired):
     """A deleted safety rule is indistinguishable from one that never
     existed. Muting is reversible and visible on the Home page."""
-    from core.tools_home import _exec_set_device_alert
+    from core.tools.home import _exec_set_device_alert
     wired._routines.append({"id": "b1", "user_id": "u1", "name": "Water leak",
                             "trigger": "device", "builtin": True,
                             "enabled": True, "trigger_config": {}})
@@ -192,7 +192,7 @@ async def test_deleting_a_builtin_mutes_it_instead(wired):
 
 @pytest.mark.asyncio
 async def test_an_authored_rule_can_be_deleted(wired):
-    from core.tools_home import _exec_set_device_alert
+    from core.tools.home import _exec_set_device_alert
     wired._routines.append({"id": "a1", "user_id": "u1", "name": "Garage open late",
                             "trigger": "device", "builtin": False,
                             "enabled": True, "trigger_config": {}})
@@ -202,7 +202,7 @@ async def test_an_authored_rule_can_be_deleted(wired):
 
 @pytest.mark.asyncio
 async def test_an_ambiguous_name_asks_rather_than_picking(wired):
-    from core.tools_home import _exec_set_device_alert
+    from core.tools.home import _exec_set_device_alert
     for i in (1, 2):
         wired._routines.append({"id": f"x{i}", "user_id": "u1",
                                 "name": f"Door alert {i}", "trigger": "device",
@@ -215,7 +215,7 @@ async def test_an_ambiguous_name_asks_rather_than_picking(wired):
 
 @pytest.mark.asyncio
 async def test_listing_answers_what_happens_when_the_garage_opens(wired):
-    from core.tools_home import _exec_list_device_alerts
+    from core.tools.home import _exec_list_device_alerts
     wired._routines.append({
         "id": "a1", "user_id": "u1", "name": "Garage open late",
         "trigger": "device", "builtin": False, "enabled": True,
@@ -245,7 +245,7 @@ def test_singular_second_reads_correctly():
 @pytest.mark.asyncio
 async def test_an_unknown_action_does_not_silently_mute(wired):
     """Falling through to enabled=False meant a typo muted a safety alert."""
-    from core.tools_home import _exec_set_device_alert
+    from core.tools.home import _exec_set_device_alert
     wired._routines.append({"id": "a1", "user_id": "u1", "name": "Garage",
                             "trigger": "device", "builtin": False,
                             "enabled": True, "trigger_config": {}})
@@ -257,7 +257,7 @@ async def test_an_unknown_action_does_not_silently_mute(wired):
 
 @pytest.mark.asyncio
 async def test_mute_and_unmute_both_work(wired):
-    from core.tools_home import _exec_set_device_alert
+    from core.tools.home import _exec_set_device_alert
     wired._routines.append({"id": "a1", "user_id": "u1", "name": "Garage",
                             "trigger": "device", "builtin": False,
                             "enabled": True, "trigger_config": {}})

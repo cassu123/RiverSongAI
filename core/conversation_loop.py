@@ -944,7 +944,7 @@ class ConversationLoop:
         if vid:
             try:
                 from api.routes.vehicles import get_vehicles
-                from core.tools import _get_db_for_tools
+                from core.tools.registry import _get_db_for_tools
                 db, close = _get_db_for_tools({})
                 vehicles = get_vehicles(db, self._user_id)
                 v = next((x for x in vehicles if str(x.id) == vid), None)

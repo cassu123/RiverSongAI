@@ -1,5 +1,5 @@
 """
-core/tools_schemas.py
+core/tools/schemas.py
 
 Tool JSON schemas (Anthropic / Ollama compatible) for River Song's agent
 tools. Split out of core/tools.py so the executor logic and the large schema

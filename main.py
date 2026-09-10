@@ -269,7 +269,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # River Vortex camera snapshots are retained for 24 hours and then
     # deleted. These are cameras in bedrooms — retention is enforced by
     # actually removing the files, not by letting their links expire.
-    from core.vortex_vision import purge_expired_snapshots
+    from core.vortex.vision import purge_expired_snapshots
     register_sweep("vortex_snapshots", 3600, purge_expired_snapshots)
     
     # Run HA sync once on startup

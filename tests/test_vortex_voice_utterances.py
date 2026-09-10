@@ -33,7 +33,7 @@ def _pcm(seconds: float, value: int = 1) -> bytes:
 
 @pytest.fixture(autouse=True)
 def _clean_buffers():
-    import core.vortex_voice as voice
+    import core.vortex.voice as voice
 
     async def _reset():
         async with voice._utterance_lock:      # noqa: SLF001 - test seam
@@ -53,7 +53,7 @@ def test_a_multi_chunk_utterance_is_joined_not_dropped():
     The bug this replaces: only the final frame survived, so anything past
     about four seconds was discarded and the user got silence.
     """
-    import core.vortex_voice as voice
+    import core.vortex.voice as voice
 
     async def _run():
         # Ten seconds arriving as four frames — none of which is final.
@@ -72,7 +72,7 @@ def test_a_multi_chunk_utterance_is_joined_not_dropped():
 
 def test_a_single_frame_utterance_still_works_untouched():
     """A short command arrives in one final frame and must pass through as-is."""
-    import core.vortex_voice as voice
+    import core.vortex.voice as voice
 
     payload = _pcm(2.0, 7)
     result = asyncio.run(voice._take_utterance("unit-b", payload))
@@ -85,7 +85,7 @@ def test_a_utterance_is_bounded_by_total_not_by_frame():
     The cap is on the accumulated total; the per-frame cap is a separate,
     smaller thing.
     """
-    import core.vortex_voice as voice
+    import core.vortex.voice as voice
 
     assert voice.MAX_UTTERANCE_BYTES == BYTES_PER_SECOND * voice.MAX_UTTERANCE_SECONDS
     # Comfortably above the device's own 30s recording limit, so a long-but-
@@ -111,7 +111,7 @@ def test_a_an_overflowed_utterance_is_dropped_whole():
     final chunk of an overflowed utterance is discarded too, not transcribed
     on its own.
     """
-    import core.vortex_voice as voice
+    import core.vortex.voice as voice
 
     async def _run():
         while await voice._accumulate("unit-d", _pcm(1.0)):
@@ -123,7 +123,7 @@ def test_a_an_overflowed_utterance_is_dropped_whole():
 
 def test_a_buffer_resets_after_each_final():
     """A half-spoken command must not prepend itself to the next one."""
-    import core.vortex_voice as voice
+    import core.vortex.voice as voice
 
     async def _run():
         await voice._accumulate("unit-e", _pcm(1.0, 1))
@@ -139,7 +139,7 @@ def test_a_buffer_resets_after_each_final():
 
 
 def test_a_disconnect_clears_a_half_spoken_utterance():
-    import core.vortex_voice as voice
+    import core.vortex.voice as voice
 
     async def _run():
         await voice._accumulate("unit-f", _pcm(2.0, 1))
@@ -160,7 +160,7 @@ def test_a_wav_chunks_are_unwrapped_before_joining():
     import io
     import wave
 
-    import core.vortex_voice as voice
+    import core.vortex.voice as voice
 
     def _wav(seconds, value):
         buffer = io.BytesIO()
@@ -184,7 +184,7 @@ def test_a_wav_chunks_are_unwrapped_before_joining():
 def test_a_frame_cap_is_documented_as_a_frame_cap():
     """The per-frame cap stays; it was only ever wrong as an utterance size."""
     from api.routes.vortex import MAX_AUDIO_CHUNK_BYTES
-    import core.vortex_voice as voice
+    import core.vortex.voice as voice
 
     assert MAX_AUDIO_CHUNK_BYTES == 128 * 1024
     assert voice.MAX_UTTERANCE_BYTES > MAX_AUDIO_CHUNK_BYTES
@@ -200,7 +200,7 @@ def test_a_ten_second_command_reaches_the_transcriber_in_full(monkeypatch):
     "set a timer for ten minutes" fit, "put milk and eggs on the shopping list
     and start the oven timer" did not.
     """
-    import core.vortex_voice as voice
+    import core.vortex.voice as voice
 
     received = {}
 
@@ -228,7 +228,7 @@ def test_a_ten_second_command_reaches_the_transcriber_in_full(monkeypatch):
 
     hub = _FakeHub()
     monkeypatch.setattr(voice, "_get_loop", _fake_get_loop)
-    monkeypatch.setattr("core.vortex_hub.get_vortex_hub", lambda: hub)
+    monkeypatch.setattr("core.vortex.hub.get_vortex_hub", lambda: hub)
 
     async def _run():
         # Nine one-second frames, then a final one — ten seconds total.

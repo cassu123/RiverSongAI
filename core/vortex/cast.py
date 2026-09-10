@@ -1,5 +1,5 @@
 """
-core/vortex_cast.py
+core/vortex/cast.py
 
 Casting — "put this on the living room TV".
 
@@ -84,8 +84,8 @@ async def list_targets(user_id: str) -> List[Dict[str, Any]]:
         logger.warning("Could not list media_player cast targets: %s", exc)
 
     try:
-        from core.vortex_hub import get_vortex_hub
-        from core.vortex_units import list_profiles
+        from core.vortex.hub import get_vortex_hub
+        from core.vortex.units import list_profiles
 
         hub = get_vortex_hub()
         for profile in await list_profiles(user_id):
@@ -313,7 +313,7 @@ async def cast_from_voice(*, user_id: str, query: str, target_name: str
     if target is None:
         return True, f"I couldn't find anything called the {target_name}."
 
-    from core.vortex_media import resolve_track
+    from core.vortex.media import resolve_track
 
     track = await resolve_track(query)
     if not track:

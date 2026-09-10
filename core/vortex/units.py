@@ -1,5 +1,5 @@
 """
-core/vortex_units.py
+core/vortex/units.py
 
 The server's record of what each River Vortex unit *is*: which household owns
 it, which room it sits in, whether it has a screen, and what its camera is

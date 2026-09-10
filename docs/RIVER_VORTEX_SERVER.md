@@ -21,7 +21,7 @@ one is enforced in code rather than by convention.
 | 1 | A unit never decides permission | `core/intent_router.evaluate_device_request` — every voice command, tapped card button and device-grid toggle goes through it |
 | 2 | Locks, garage doors and alarm disarm are **hard-denied** to units | `UNIT_DENIED_DOMAINS` + `_GARAGE_PATTERN`, refused at the router with a log line saying why |
 | 3 | Units never hold Home Assistant credentials | All device state and control flows through `api/routes/home.py`; camera snapshots are proxied, never handed over as HA URLs |
-| 4 | A unit never self-asserts identity | `core.vortex_units.resolve_owner` resolves the user from the pairing record; no route accepts a `user_id` from a device |
+| 4 | A unit never self-asserts identity | `core.vortex.units.resolve_owner` resolves the user from the pairing record; no route accepts a `user_id` from a device |
 | 5 | Second factors are entered on the touchscreen, never spoken | `POST /api/vortex/confirm` is HTTP-only and is never reachable from a transcript |
 | 6 | Camera consent is per purpose and lives on the unit | `camera_purpose_enabled` gates every request; an unconsented purpose answers **409**, distinct from a hardware fault, and is never retried around |
 | 7 | Anything pushed to a screenless unit must carry `speech` | `SurfacePublisher._for_unit` derives speech from the card text when a publisher forgets |

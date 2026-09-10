@@ -488,7 +488,7 @@ def kitchen_unit(headers):
 
 def test_step_changes_reach_the_kitchen_screen(headers, recipe_id, kitchen_unit):
     """A step that only reached one of the three screens is the bug this fixes."""
-    from core.vortex_surfaces import get_surface_publisher
+    from core.vortex.surfaces import get_surface_publisher
 
     sid = _start(headers, recipe_id)["id"]
     client.post(f"/api/culinary/sessions/{sid}/step",
@@ -505,7 +505,7 @@ def test_step_changes_reach_the_kitchen_screen(headers, recipe_id, kitchen_unit)
 
 def test_ending_a_session_takes_the_card_down(headers, recipe_id, kitchen_unit):
     """A card left to expire is a card that stayed up after it stopped mattering."""
-    from core.vortex_surfaces import get_surface_publisher
+    from core.vortex.surfaces import get_surface_publisher
 
     sid = _start(headers, recipe_id)["id"]
     assert asyncio.run(get_surface_publisher().find("cooking-step")) is not None

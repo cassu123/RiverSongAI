@@ -1,5 +1,5 @@
 """
-core/tools_home.py
+core/tools/home.py
 
 Voice authoring of device alerts — the last piece of phase H4 in
 docs/smart-home-plan.md.

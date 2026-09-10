@@ -1,5 +1,5 @@
 """
-core/vortex_security.py
+core/vortex/security.py
 
 Security primitives shared by every River Vortex code path.
 

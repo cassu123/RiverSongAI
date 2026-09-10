@@ -1,5 +1,5 @@
 """
-core/vortex_hub.py
+core/vortex/hub.py
 
 The live channel to River Vortex units.
 
@@ -37,7 +37,7 @@ import wave
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
-from core.vortex_security import LoopLock
+from core.vortex.security import LoopLock
 
 logger = logging.getLogger(__name__)
 

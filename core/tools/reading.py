@@ -1,5 +1,5 @@
 """
-core/tools_reading.py
+core/tools/reading.py
 
 Reading / Kindle tool executors.
 Split out of core/tools.py (god-file audit #3); re-exported by core.tools

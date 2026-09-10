@@ -1,5 +1,5 @@
 """
-core/vortex_vision.py
+core/vortex/vision.py
 
 Camera handling for River Vortex units: motion snapshots, their retention, and
 face identification as a second factor.
@@ -459,7 +459,7 @@ async def identify_from_frames(*, unit_id: str, owner_user_id: str,
     }
 
     if challenge_id:
-        from core.vortex_security import confirmations
+        from core.vortex.security import confirmations
 
         pending = await confirmations.peek(challenge_id)
         if pending is not None and identity == pending.user_id:

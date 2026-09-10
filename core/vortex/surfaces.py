@@ -1,5 +1,5 @@
 """
-core/vortex_surfaces.py
+core/vortex/surfaces.py
 
 Deciding what a River Vortex ambient screen shows.
 
@@ -30,7 +30,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional
 
-from core.vortex_security import LoopLock
+from core.vortex.security import LoopLock
 
 logger = logging.getLogger(__name__)
 
@@ -245,7 +245,7 @@ class SurfacePublisher:
                 surface.title,
             )
 
-        from core.vortex_hub import get_vortex_hub
+        from core.vortex.hub import get_vortex_hub
         hub = get_vortex_hub()
 
         delivered = 0
@@ -294,7 +294,7 @@ class SurfacePublisher:
                 targets = [u for u, cards in self._by_unit.items()
                            if surface_id in cards]
 
-        from core.vortex_hub import get_vortex_hub
+        from core.vortex.hub import get_vortex_hub
         hub = get_vortex_hub()
 
         withdrawn = 0
@@ -319,7 +319,7 @@ class SurfacePublisher:
         cards = await self.list_for_unit(unit_id)
         if not cards:
             return 0
-        from core.vortex_hub import get_vortex_hub
+        from core.vortex.hub import get_vortex_hub
         hub = get_vortex_hub()
         sent = 0
         for card in cards:
@@ -340,9 +340,9 @@ class SurfacePublisher:
         if unit_ids is not None:
             return [u for u in unit_ids if u]
         if room:
-            from core.vortex_units import resolve_room
+            from core.vortex.units import resolve_room
             return await resolve_room(room)
-        from core.vortex_units import list_profiles
+        from core.vortex.units import list_profiles
         return [p["unit_id"] for p in await list_profiles()]
 
     async def reset(self) -> None:

@@ -1,5 +1,5 @@
 """
-core/vortex_actions.py
+core/vortex/actions.py
 
 Everything a River Vortex unit can ask this server to *do*.
 
@@ -50,7 +50,7 @@ async def origin_for_unit(unit_id: str) -> RequestOrigin:
     request body — a unit does not get to describe itself into a different
     permission set.
     """
-    from core.vortex_units import get_profile
+    from core.vortex.units import get_profile
 
     profile = await get_profile(unit_id) or {}
     return RequestOrigin(
@@ -114,7 +114,7 @@ async def execute_home_action(
         return _denied(decision.message, decision.reason)
 
     if decision.needs_confirmation:
-        from core.vortex_security import confirmations
+        from core.vortex.security import confirmations
 
         pending = await confirmations.create(
             user_id=user_id,
@@ -159,7 +159,7 @@ async def _run_home_action(entity_ids: List[str], action: str,
     # Device state just moved; get the change onto every screen rather than
     # waiting for the next poll.
     try:
-        from core.vortex_replica import get_replica_service
+        from core.vortex.replica import get_replica_service
 
         service = get_replica_service()
         service.invalidate(user_id)
@@ -201,7 +201,7 @@ async def run_surface_action(*, surface_id: str, intent: str, unit_id: str,
                 unit_id, surface_id, intent)
 
     if intent.startswith("cancel:"):
-        from core.vortex_security import confirmations
+        from core.vortex.security import confirmations
         await confirmations.consume(intent.split(":", 1)[1])
         await _withdraw(surface_id, unit_id)
         return _ok("Cancelled.")
@@ -254,7 +254,7 @@ async def _handle_call_button(intent: str, surface_id: str,
     `call_answer` frame over the socket, so however someone picks up, one code
     path decides whether they may.
     """
-    from core.vortex_calls import get_call_registry, participant_id
+    from core.vortex.calls import get_call_registry, participant_id
 
     action, _, call_id = intent.partition("call.")[2].partition(".")
     registry = get_call_registry()
@@ -309,7 +309,7 @@ _SERVICE_TO_ACTION = {
 
 
 async def _withdraw(surface_id: str, unit_id: str) -> None:
-    from core.vortex_surfaces import get_surface_publisher
+    from core.vortex.surfaces import get_surface_publisher
     try:
         await get_surface_publisher().withdraw(surface_id, [unit_id])
     except Exception as exc:  # pragma: no cover - best effort
@@ -333,7 +333,7 @@ async def resolve_confirmation(*, challenge_id: str, code: str,
     The challenge is consumed on success and on running out of attempts, so a
     given challenge id executes at most one action.
     """
-    from core.vortex_security import confirmations, verify_second_factor
+    from core.vortex.security import confirmations, verify_second_factor
 
     pending = await confirmations.peek(challenge_id)
     if pending is None:

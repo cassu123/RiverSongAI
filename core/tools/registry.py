@@ -1,5 +1,5 @@
 """
-core/tools.py
+core/tools/registry.py
 
 Tool definitions and execution logic for River Song AI.
 Enables LLMs to perform real-world actions via function calling.
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # TOOL_SCHEMAS (and its Playwright extension) live in core/tools_schemas.py;
 # re-exported here so existing `from core.tools import TOOL_SCHEMAS` works.
-from core.tools_schemas import TOOL_SCHEMAS  # noqa: E402,F401
+from core.tools.schemas import TOOL_SCHEMAS  # noqa: E402,F401
 
 
 # =============================================================================
@@ -122,15 +122,15 @@ async def execute_tool(
             return await _exec_add_shopping_list(tool_input, user_id)
 
         elif tool_name == "create_device_alert":
-            from core.tools_home import _exec_create_device_alert
+            from core.tools.home import _exec_create_device_alert
             return await _exec_create_device_alert(tool_input, user_id)
 
         elif tool_name == "list_device_alerts":
-            from core.tools_home import _exec_list_device_alerts
+            from core.tools.home import _exec_list_device_alerts
             return await _exec_list_device_alerts(tool_input, user_id)
 
         elif tool_name == "set_device_alert":
-            from core.tools_home import _exec_set_device_alert
+            from core.tools.home import _exec_set_device_alert
             return await _exec_set_device_alert(tool_input, user_id)
 
         elif tool_name == "play_media":
@@ -1084,14 +1084,14 @@ async def _exec_add_recipe(args: dict, user_id: str) -> str:
 
 # Routine / reading / commerce executors live in their own modules
 # (god-file #3); re-exported so execute_tool's dispatch is unchanged.
-from core.tools_routines import (  # noqa: E402
+from core.tools.routines import (  # noqa: E402
     _exec_create_routine, _exec_list_routines, _exec_update_routine,
     _exec_delete_routine, _exec_run_routine_now,
 )
-from core.tools_reading import (  # noqa: E402
+from core.tools.reading import (  # noqa: E402
     _exec_check_reading_status, _exec_sync_kindle,
 )
-from core.tools_commerce import (  # noqa: E402
+from core.tools.commerce import (  # noqa: E402
     _get_commerce_db, _exec_search_commerce_products, _exec_create_commerce_sale,
 )
 async def _exec_trigger_n8n(args: dict, user_id: str) -> str:
@@ -1604,7 +1604,7 @@ async def _exec_find_parts(args: dict, user_id: str) -> str:
     vid = args.get("vehicle_id") or await _resolve_vehicle(args.get("vehicle"), user_id)
     if not vid: return "Vehicle not found."
     # AI lookup verified pipeline
-    from core.tools import _exec_web_search
+    from core.tools.registry import _exec_web_search
     return await _exec_web_search({"query": f"{args.get('vehicle')} {args.get('job')} OEM part number alternatives price"}, user_id)
 
 
@@ -1660,7 +1660,7 @@ async def _exec_render_diagram(args: dict, user_id: str) -> str:
 
 # Memory + note executors live in core/tools_memory.py (god-file #3);
 # re-exported so execute_tool's dispatch and external callers are unchanged.
-from core.tools_memory import (  # noqa: E402
+from core.tools.memory import (  # noqa: E402
     _exec_remember_fact,
     _exec_forget_memory,
     _exec_recall_memory,

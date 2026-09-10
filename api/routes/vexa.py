@@ -45,7 +45,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from core.auth import require_role
-from core.vortex_security import hash_unit_token, mint_unit_token, verify_unit_token
+from core.vortex.security import hash_unit_token, mint_unit_token, verify_unit_token
 from providers.memory.sqlite_store import SQLiteStore, get_shared_store
 
 logger = logging.getLogger(__name__)

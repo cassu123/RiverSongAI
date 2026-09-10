@@ -113,13 +113,13 @@ async def broadcast_session(household_id: str, payload: Dict[str, Any],
         logger.debug("Culinary WS broadcast failed: %s", exc)
 
     try:
-        from core.vortex_hub import get_vortex_hub
+        from core.vortex.hub import get_vortex_hub
         await get_vortex_hub().broadcast(event, {"data": payload})
     except Exception as exc:
         logger.debug("Vortex WS broadcast failed: %s", exc)
 
     try:
-        from core.vortex_surfaces import get_surface_publisher, publish_cooking_step
+        from core.vortex.surfaces import get_surface_publisher, publish_cooking_step
 
         if payload.get("is_active") and payload.get("step", {}).get("instruction"):
             await publish_cooking_step(step=payload["step"],
@@ -149,7 +149,7 @@ async def announce_timer(household_id: str, session: CookingSession,
     # A timer going off is worth interrupting for — but it is a kitchen timer,
     # not a smoke alarm, so `high` rather than `critical`.
     try:
-        from core.vortex_surfaces import get_surface_publisher
+        from core.vortex.surfaces import get_surface_publisher
 
         await get_surface_publisher().publish(
             {
@@ -427,7 +427,7 @@ async def cancel_timer(session_id: str, timer_id: str, request: Request,
     db.commit()
 
     try:
-        from core.vortex_surfaces import get_surface_publisher
+        from core.vortex.surfaces import get_surface_publisher
         await get_surface_publisher().withdraw(f"timer:{timer.id}")
     except Exception as exc:
         logger.debug("Could not withdraw timer surface: %s", exc)
@@ -455,7 +455,7 @@ async def end_session(session_id: str, request: Request,
     session.is_active = False
     session.ended_at = _now()
 
-    from core.vortex_surfaces import get_surface_publisher
+    from core.vortex.surfaces import get_surface_publisher
 
     publisher = get_surface_publisher()
     for timer in session.timers:
@@ -502,7 +502,7 @@ async def restore_kitchen_surface(user_id: str) -> bool:
     db = None
     try:
         from api.routes.culinary import _Session
-        from core.vortex_surfaces import publish_cooking_step
+        from core.vortex.surfaces import publish_cooking_step
 
         db = _Session()
         hh = _get_household(db, user_id)
