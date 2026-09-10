@@ -49,8 +49,8 @@ The central intelligence of the entire ecosystem. Locally-hosted AI assistant ru
 |---|---|
 | Backend | FastAPI (Python 3.11+) |
 | Frontend | React + Vite |
-| Database | Firebase Firestore |
-| Auth | Firebase Auth |
+| Database | SQLite (local `aiosqlite`, WAL mode) |
+| Auth | Local JWT (HS256) + Argon2id + TOTP 2FA |
 | LLM | Ollama (local) |
 | Speech-to-Text | Whisper (local) |
 | Text-to-Speech | Piper (local) |
@@ -61,7 +61,7 @@ The central intelligence of the entire ecosystem. Locally-hosted AI assistant ru
 ### Server
 
 - Hostname: `riversongai.com` — primary web interface
-- Local server: ASUS Sabertooth 990FX, AMD FX-8350, GTX 1050 Ti, 32 GB RAM, Ubuntu 26.04 LTS
+- Local server: ASUS Sabertooth 990FX, AMD FX-8350, GTX 1050 Ti, 32 GB RAM, Ubuntu 25.10
 - All AI processing runs locally — no data sent to cloud
 
 ---

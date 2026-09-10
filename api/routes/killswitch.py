@@ -20,6 +20,7 @@ from fastapi import Header
 
 from config.settings import get_settings
 from core.auth import decode_token
+from core.limiter import limiter
 from core.kill_switch import (
     is_kill_switch_active,
     activate_global_kill_switch,
@@ -86,7 +87,9 @@ async def activate(body: ActivateBody, request: Request,
 
 
 @router.post("/reset")
+@limiter.limit("5/minute")
 async def reset(body: ResetBody,
+                request: Request,
                 authorization: Optional[str] = Header(default=None)):
     await _require_admin(authorization)
     success = reset_global_kill_switch(body.password)

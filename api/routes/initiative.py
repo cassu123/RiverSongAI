@@ -19,7 +19,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from config.settings import get_settings
-from core.auth import decode_token
+from core.auth import decode_token, verify_daemon_secret
 from core.initiative import InitiativeEvent, get_initiative_engine
 
 logger = logging.getLogger(__name__)
@@ -30,9 +30,9 @@ async def _require_admin_or_internal(authorization: Optional[str]) -> str:
     """Accept an admin JWT or the daemon internal secret (for n8n/scripts)."""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    token = authorization.removeprefix("Bearer ").strip()
-    if token == get_settings().daemon_internal_secret:
+    if verify_daemon_secret(authorization):
         return "internal"
+    token = authorization.removeprefix("Bearer ").strip()
     payload = await decode_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")

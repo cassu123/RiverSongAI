@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
-from core.auth import require_role
+from core.auth import require_role, verify_daemon_secret
 from config.settings import get_settings
 from providers.memory.sqlite_store import SQLiteStore, _safe_cols
 
@@ -79,9 +79,7 @@ async def _verify_unit_token(
 @router.post("/internal/wake/{unit_id}")
 async def internal_wake_queue(unit_id: str, request: Request):
     auth_header = request.headers.get("Authorization")
-    settings = get_settings()
-    expected = f"Bearer {settings.daemon_internal_secret}"
-    if not auth_header or auth_header != expected:
+    if not verify_daemon_secret(auth_header):
         raise HTTPException(status_code=401, detail="Invalid internal secret")
     event = _get_command_event(unit_id)
     event.set()

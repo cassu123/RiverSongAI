@@ -13,7 +13,7 @@ from typing import Optional, Any, Dict
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
-from core.auth import decode_token
+from core.auth import decode_token, verify_daemon_secret
 from config.settings import get_settings
 from daemons.registry import call_daemon
 
@@ -62,10 +62,7 @@ async def record_heartbeat(
     Heartbeat endpoint called by background daemons.
     Authenticated via a shared internal secret.
     """
-    settings = get_settings()
-    expected = f"Bearer {settings.daemon_internal_secret}"
-
-    if authorization != expected:
+    if not verify_daemon_secret(authorization):
         logger.warning(
             "Unauthorized heartbeat attempt for daemon '%s'",
             body.name)

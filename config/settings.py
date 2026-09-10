@@ -1218,6 +1218,14 @@ class Settings(BaseSettings):
         default=True,
         description="Enable the Scribe daemon.",
     )
+    daemon_vector_discovery_port: int = Field(
+        default=8018,
+        description="Internal port for the Vector Discovery daemon.",
+    )
+    daemon_vector_scheduler_port: int = Field(
+        default=8019,
+        description="Internal port for the Vector Scheduler daemon.",
+    )
     pulse_tick_seconds: int = Field(
         default=300,
         description="Pulse fetch interval (seconds)",

@@ -4,9 +4,10 @@ import logging
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 
+from typing import Optional
 import httpx
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from config.settings import get_settings
@@ -84,7 +85,13 @@ class BaseDaemon(ABC):
         app = FastAPI(title=f"River Song Daemon - {self.name}")
 
         @app.post("/task")
-        async def task_handler(req: TaskRequest):
+        async def task_handler(
+            req: TaskRequest,
+            authorization: Optional[str] = Header(default=None),
+        ):
+            from core.auth import verify_daemon_secret
+            if not verify_daemon_secret(authorization):
+                raise HTTPException(status_code=403, detail="Forbidden")
             return await self._handle_task(req.action, req.payload)
 
         config = uvicorn.Config(

@@ -21,14 +21,14 @@ This document tracks the sidecars, libraries, and external integrations that pow
 ## 1. Phase 1 — Python Libraries
 
 ### Faster-Whisper
-- **Status:** [PENDING]
+- **Status:** ✅ Complete
 - **Repo:** https://github.com/SYSTRAN/faster-whisper
-- **Notes:** 3-4x speedup on 1050 Ti.
+- **Notes:** Integrated in `providers/stt/whisper_local.py`. 3-4x speedup on GTX 1050 Ti.
 
 ### Apprise
-- **Status:** [PENDING]
+- **Status:** ✅ Complete
 - **Repo:** https://github.com/caronc/apprise
-- **Notes:** Unified push notifications.
+- **Notes:** Integrated in `providers/push/apprise_provider.py` and `notifier.py`. Unified push notifications.
 
 ### Open-Interpreter
 - **Status:** [PENDING]
@@ -47,7 +47,7 @@ This document tracks the sidecars, libraries, and external integrations that pow
 ### Paperless-ngx
 - **Official URL:** https://github.com/paperless-ngx/paperless-ngx
 - **Image:** `ghcr.io/paperless-ngx/paperless-ngx:2.10`
-- **Port:** 8010
+- **Port:** 8020
 - **Env Vars:** `PAPERLESS_URL`, `PAPERLESS_TOKEN`
 - **Volume:** `./infra/paperless/data`, `./infra/paperless/media`
 - **Backup:** Back up the entire `./infra/paperless` directory.
@@ -113,6 +113,21 @@ This document tracks the sidecars, libraries, and external integrations that pow
 - **Port:** 8888
 - **Volume:** `./infra/searxng/settings.yml`
 
+### Langfuse
+- **Official URL:** https://langfuse.com/
+- **Image:** `ghcr.io/langfuse/langfuse:2`
+- **Port:** 3000
+- **Env Vars:** `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`
+- **Notes:** LLM observability, tracing, and prompt management.
+
+### Neo4j / Graphiti
+- **Official URL:** https://neo4j.com/
+- **Image:** `neo4j:5.20-community`
+- **Port:** 7474 (HTTP UI), 7687 (Bolt protocol)
+- **Env Vars:** `NEO4J_AUTH`, `NEO4J_URI`
+- **Volume:** `./infra/neo4j/data`
+- **Notes:** Graph knowledge base backend for Graphiti dynamic memory episodes.
+
 ---
 
 ## 3. Backups
@@ -129,6 +144,7 @@ The following directories must be included in your backup routine:
 | Grocy | `./infra/grocy/data/` |
 | Tandoor | `./infra/tandoor/media/` + Database |
 | Homebox | `./infra/homebox/data/` |
+| Neo4j | `./infra/neo4j/data/` |
 | MemGPT | `./infra/memgpt/` |
 | GPT-SoVITS | `./infra/gpt-sovits/output/` |
 | ComfyUI | `./infra/comfyui/` |

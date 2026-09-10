@@ -8,7 +8,7 @@ from typing import Optional, Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
-from core.auth import decode_token
+from core.auth import decode_token, require_daemon_secret as _require_daemon_secret
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -23,17 +23,6 @@ async def _require_user(
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return payload["sub"]
-
-
-def _require_daemon_secret(
-        authorization: Optional[str] = Header(default=None)) -> None:
-    """Internal-only auth using the daemon shared secret."""
-    settings = get_settings()
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
-    token = authorization.removeprefix("Bearer ")
-    if token != settings.daemon_internal_secret:
-        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 class SnapshotBody(BaseModel):

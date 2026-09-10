@@ -13,7 +13,7 @@ from typing import Optional, Dict, Any
 from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
-from core.auth import decode_token
+from core.auth import decode_token, verify_daemon_secret
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -46,17 +46,8 @@ async def _require_admin(authorization: Optional[str]) -> str:
 
 
 def _authenticate_daemon(authorization: Optional[str]) -> bool:
-    """
-    Accepts only the daemon internal secret.
-    """
-    if not authorization:
-        return False
-
-    settings = get_settings()
-    if authorization == f"Bearer {settings.daemon_internal_secret}":
-        return True
-
-    return False
+    """Accepts only the daemon internal secret."""
+    return verify_daemon_secret(authorization)
 
 
 @router.post("/sensor_event")
