@@ -50,10 +50,10 @@
 }
 
 /* --- Touch-target helper ---------------------------------------------------- */
-.rs-touch { min-inline-size: var(--rs-touch-min); min-block-size: var(--rs-touch-min); }
-
-/* --- Readable text column --------------------------------------------------- */
-.rs-readable { max-inline-size: var(--rs-content-max); }
+/* Tap targets are enforced on the controls themselves via --rs-tap in
+   chrome-shell.css, and the prose measure via max-inline-size on .rs-card-meta
+   and .rs-greeting-sub. The .rs-touch / .rs-readable utilities that used to sit
+   here were never applied to a single element. */
 
 /* --- Visibility helpers (use sparingly; prefer fluid CSS) ------------------- */
 @media (max-width: 767px)  { .rs-hide-phone   { display: none !important; } }
