@@ -37,10 +37,10 @@ authorizes all six surfaces. Per-user tokens are stored as JSON files in
 
 | Integration | Status | Provider | Route | Registry | Setup |
 |---|---|---|---|---|---|
-| Auth orchestration | ✅ | `providers/google/auth.py` | `api/routes/google.py` | `docs/api_registry/google_oauth.txt` | M |
-| Calendar | ✅ | `providers/google/calendar.py` | `api/routes/google.py` | google_oauth.txt | M |
+| Auth orchestration | ✅ | `providers/google/auth.py` | `api/routes/feeds/google.py` | `docs/api_registry/google_oauth.txt` | M |
+| Calendar | ✅ | `providers/google/calendar.py` | `api/routes/feeds/google.py` | google_oauth.txt | M |
 | Gmail | ✅ | `providers/google/gmail.py` | google.py | google_oauth.txt | M |
-| Maps | ✅ | `providers/google/maps.py` | `api/routes/location.py` | google_oauth.txt | S — also needs `GOOGLE_MAPS_API_KEY` |
+| Maps | ✅ | `providers/google/maps.py` | `api/routes/feeds/location.py` | google_oauth.txt | S — also needs `GOOGLE_MAPS_API_KEY` |
 | Tasks | ✅ | `providers/google/tasks.py` | google.py | google_oauth.txt | M |
 | YouTube Music | ✅ | `providers/google/youtube_music.py` | google.py | google_oauth.txt | M |
 | Books | ✅ | `providers/google/books.py` | (used via reading) | google_oauth.txt | M |
@@ -55,9 +55,9 @@ refresh token is persisted to `{user_id}.json`. Never commit
 
 | Integration | Status | Auth | Provider | Routes | Registry | Setup |
 |---|---|---|---|---|---|---|
-| Amazon Seller (SP-API) | ✅ | LWA + AWS IAM | `providers/commerce/amazon.py` | `api/routes/commerce.py` | `docs/api_registry/amazon_seller.txt` | L |
+| Amazon Seller (SP-API) | ✅ | LWA + AWS IAM | `providers/commerce/amazon.py` | `api/routes/domains/commerce.py` | `docs/api_registry/amazon_seller.txt` | L |
 | Walmart Marketplace | ⚠️ scaffold | OAuth2 | `providers/commerce/walmart.py` | commerce.py | `docs/api_registry/walmart_seller.txt` | M |
-| Shopify (Admin API) | ✅ | OAuth2 + HMAC | `providers/commerce/shopify.py`, `providers/commerce/shopify_auth.py` | `api/routes/shopify_auth.py`, `api/routes/shopify_webhooks.py` | `docs/api_registry/shopify_analytics.txt` | L |
+| Shopify (Admin API) | ✅ | OAuth2 + HMAC | `providers/commerce/shopify.py`, `providers/commerce/shopify_auth.py` | `api/routes/auth/shopify_auth.py`, `api/routes/webhooks/shopify_webhooks.py` | `docs/api_registry/shopify_analytics.txt` | L |
 
 Shopify uses HMAC-validated webhooks (`SHOPIFY_WEBHOOK_SECRET`) for order
 events and stock counts.
@@ -108,7 +108,7 @@ records snapshots.
 
 | Integration | Status | Auth | Provider | Routes |
 |---|---|---|---|---|
-| Home Assistant | ✅ | long-lived token | `providers/smart_home/home_assistant.py` | `api/routes/home.py` |
+| Home Assistant | ✅ | long-lived token | `providers/smart_home/home_assistant.py` | `api/routes/domains/home.py` |
 | Device registry | ✅ | local file | `providers/smart_home/device_registry.py` | home.py |
 
 Google Home Hub integration was previously planned as a kiosk-cast
@@ -122,12 +122,12 @@ it. See `docs/KNOWN_ISSUES.md` for context.
 
 | Integration | Status | Auth | Provider | Routes |
 |---|---|---|---|---|
-| Whisper STT (local) | ✅ | none | `providers/stt/whisper_local.py` | `api/routes/conversation.py` |
+| Whisper STT (local) | ✅ | none | `providers/stt/whisper_local.py` | `api/routes/ai/conversation.py` |
 | Piper TTS (local) | ✅ | none | `providers/tts/piper.py` | conversation.py |
 | Kokoro TTS (local) | ✅ | none | `providers/tts/kokoro_provider.py` | conversation.py |
 | ElevenLabs TTS (cloud) | ✅ | key | `providers/tts/elevenlabs.py` | conversation.py |
 | Chatterbox (local clone) | ✅ | none | `providers/tts/chatterbox_provider.py` | conversation.py |
-| Voice ID (Resemblyzer) | ✅ | none | `providers/voice_id/voice_id_provider.py` | `api/routes/voice_id.py` |
+| Voice ID (Resemblyzer) | ✅ | none | `providers/voice_id/voice_id_provider.py` | `api/routes/auth/voice_id.py` |
 | openWakeWord | ✅ | none | `core/wake_word_service.py` | conversation.py |
 
 See `docs/VOICE_ID.md` for the Voice ID enrollment + verification flow.
@@ -138,8 +138,8 @@ See `docs/VOICE_ID.md` for the Voice ID enrollment + verification flow.
 
 | Integration | Status | Provider | Routes | Notes |
 |---|---|---|---|---|
-| Stable Diffusion (A1111 API) | ✅ | `providers/image/sd_provider.py` | `api/routes/image.py` | On-demand via `SD_ON_DEMAND` to save VRAM |
-| Vision (Ollama moondream) | ✅ | `providers/llm/vision_provider.py` | `api/routes/vision.py` | `VISION_MODEL=moondream` |
+| Stable Diffusion (A1111 API) | ✅ | `providers/image/sd_provider.py` | `api/routes/ai/image.py` | On-demand via `SD_ON_DEMAND` to save VRAM |
+| Vision (Ollama moondream) | ✅ | `providers/llm/vision_provider.py` | `api/routes/feeds/vision.py` | `VISION_MODEL=moondream` |
 
 ---
 
@@ -182,7 +182,7 @@ See `docs/VOICE_ID.md` for the Voice ID enrollment + verification flow.
 
 | Integration | Status | File | Setup |
 |---|---|---|---|
-| Web Push (VAPID) | ✅ | `providers/push/sender.py`, `api/routes/push.py` | `PUSH_NOTIFICATIONS_ENABLED=true` + VAPID keys |
+| Web Push (VAPID) | ✅ | `providers/push/sender.py`, `api/routes/webhooks/push.py` | `PUSH_NOTIFICATIONS_ENABLED=true` + VAPID keys |
 
 See `docs/PUSH_NOTIFICATIONS.md`. The internal broadcast WebSocket
 (`/api/broadcast/*`) was removed with the kiosk archive — its only
@@ -194,7 +194,7 @@ consumer was Herald lip-sync.
 
 | Integration | Status | File | Setup |
 |---|---|---|---|
-| n8n | ✅ | `providers/automation/n8n_client.py`, `api/routes/n8n_webhooks.py` | `N8N_ENABLED=true`, URL + API key + webhook secret |
+| n8n | ✅ | `providers/automation/n8n_client.py`, `api/routes/webhooks/n8n_webhooks.py` | `N8N_ENABLED=true`, URL + API key + webhook secret |
 
 ---
 
@@ -202,7 +202,7 @@ consumer was Herald lip-sync.
 
 | Integration | Status | File | Setup |
 |---|---|---|---|
-| MAVLink / ArduRover | ✅ (daemon) | `daemons/mechanic/mechanic.py`, `api/routes/rover.py` | `MECHANIC_ENABLED=true`, serial port + baud |
+| MAVLink / ArduRover | ✅ (daemon) | `daemons/mechanic/mechanic.py`, `api/routes/fleet/rover.py` | `MECHANIC_ENABLED=true`, serial port + baud |
 | Vision (YOLO + RTSP cameras) | 🔜 | `daemons/warden/warden.py` (stub) | Scaffolded settings only |
 
 ---

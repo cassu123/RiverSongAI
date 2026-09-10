@@ -120,7 +120,7 @@ alerts.
 
 ```
 Browser (mic) → base64 WAV over WebSocket
-  → api/routes/conversation.py
+  → api/routes/ai/conversation.py
   → core/conversation_loop.py
       ├─ providers/stt/whisper_local.py  → transcript
       ├─ core/intent_router.py           → route or fall through

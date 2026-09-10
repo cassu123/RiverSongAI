@@ -82,8 +82,12 @@ def test_the_moved_packages_are_packages_not_loose_modules():
         assert (ROOT / pkg / "__init__.py").exists(), f"{pkg} is not a package"
         assert not (ROOT / f"{pkg}.py").exists(), f"{pkg}.py still shadows {pkg}/"
 
+    # Assert on source, not on the directory. Git does not track empty dirs, so
+    # switching from a pre-move branch leaves the old folders behind holding
+    # nothing but __pycache__ — that must not fail the suite.
     for root_dom in ("culinary", "inventory", "vehicles", "commercial_inventory"):
-        assert not (ROOT / root_dom).exists(), f"legacy root folder {root_dom}/ still exists"
+        left = sorted(str(f.relative_to(ROOT)) for f in (ROOT / root_dom).glob("*.py"))
+        assert not left, f"legacy root package {root_dom}/ still has sources: {left}"
 
     stale_core = sorted(
         p.name for p in (ROOT / "core").glob("vortex_*.py")
