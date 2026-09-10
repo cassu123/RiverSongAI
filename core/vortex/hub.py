@@ -9,7 +9,7 @@ the socket got there. The `/commands` poll in fleet.py stays as it is for slow,
 offline-tolerant operations; this is for everything that has to be sub-second.
 
 Server → unit message vocabulary (fixed — the Vortex orb consumes exactly
-these shapes; see prototypes/presence-orb.html):
+these shapes):
 
     presence   {state, amplitude, mood, caption}
     amplitude  {value: 0..1}

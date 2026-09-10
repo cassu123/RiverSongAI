@@ -17,7 +17,7 @@
 # The registry is loaded once and cached in memory. Call reload() to pick up
 # changes to the JSON file without restarting the application.
 #
-# File format (see config_files/device_registry.example.json):
+# File format (see config/templates/device_registry.example.json):
 #   {
 #     "devices": {
 #       "living room lights": "light.living_room",
@@ -82,7 +82,7 @@ class DeviceRegistry:
         if not self._path.exists():
             raise FileNotFoundError(
                 f"Device registry not found: {self._path}\n"
-                f"Copy config_files/device_registry.example.json to "
+                f"Copy config/templates/device_registry.example.json to "
                 f"{self._path} and fill in your HA entity IDs."
             )
 

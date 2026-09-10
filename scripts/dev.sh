@@ -4,7 +4,7 @@ sudo systemctl stop river-song 2>/dev/null
 sudo fuser -k 8000/tcp 2>/dev/null
 sleep 0.5
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 source "$SCRIPT_DIR/venv/bin/activate"
 
