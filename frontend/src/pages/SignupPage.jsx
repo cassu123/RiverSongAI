@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
+import { useAuth } from '@context/AuthContext.jsx'
 
 /**
  * SignupPage — Phase 3 Rewrite

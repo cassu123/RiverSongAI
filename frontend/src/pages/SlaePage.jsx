@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useAuthHeaders, API_BASE } from '../utils/useApi.js'
-import { useInterval } from '../hooks/useInterval.js'
+import { useInterval } from '@hooks/useInterval.js'
 
 /**
  * SlaePage — admin control panel for the Synchronized Local Autonomous

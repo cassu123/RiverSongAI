@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { useAuth } from '../context/AuthContext'
-import BarcodeScanner from '../components/BarcodeScanner'
-import AssetDetailModal from '../components/AssetDetailModal'
-import HomeAuditModal from '../components/HomeAuditModal'
-import RoomSweepModal from '../components/RoomSweepModal'
-import ReassignHomeModal from '../components/ReassignHomeModal'
+import { useAuth } from '@context/AuthContext'
+import BarcodeScanner from '@components/BarcodeScanner'
+import AssetDetailModal from '@components/AssetDetailModal'
+import HomeAuditModal from '@components/HomeAuditModal'
+import RoomSweepModal from '@components/RoomSweepModal'
+import ReassignHomeModal from '@components/ReassignHomeModal'
 
 /**
  * InventoryPage — Spatial Intelligence v2.0

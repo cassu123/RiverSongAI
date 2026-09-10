@@ -3,7 +3,7 @@ import { render, screen, act } from '@testing-library/react'
 import ChatInterface from './ChatInterface.jsx'
 import React from 'react'
 
-import { useConversation } from '../hooks/useConversation.js'
+import { useConversation } from '@hooks/useConversation.js'
 
 // Mock dependencies
 vi.mock('../context/AuthContext.jsx', () => ({

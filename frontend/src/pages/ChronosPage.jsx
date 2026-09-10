@@ -4,8 +4,8 @@ import remarkGfm from 'remark-gfm'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { autocompletion } from '@codemirror/autocomplete'
-import { useAuth } from '../context/AuthContext.jsx'
-import VaultGraph from '../components/VaultGraph.jsx'
+import { useAuth } from '@context/AuthContext.jsx'
+import VaultGraph from '@components/VaultGraph.jsx'
 
 export default function ChronosPage({ setAction }) {
   const { token } = useAuth()

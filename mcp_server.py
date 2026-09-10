@@ -41,7 +41,7 @@ from mcp.types import Tool, TextContent
 # Add repo root to sys.path so we can import River Song internals (read-only)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from core.tools import TOOL_SCHEMAS as RS_TOOLS  # the canonical tool definitions
+from core.tools.schemas import TOOL_SCHEMAS as RS_TOOLS  # the canonical tool definitions
 from core.auth import decode_token
 
 logger = logging.getLogger("rs-mcp")
@@ -149,7 +149,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     # PREFERENCE: call execute_tool directly. The FastAPI app and MCP server share
     # the same Python environment and database. Going through HTTP would add
     # latency and require a tool-invocation endpoint that doesn't currently exist.
-    from core.tools import execute_tool
+    from core.tools.registry import execute_tool
     context = {"user_id": user_id}
     try:
         result_text = await execute_tool(name, arguments, context)

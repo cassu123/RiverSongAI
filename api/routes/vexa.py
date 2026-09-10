@@ -220,7 +220,7 @@ async def _handle_voice_task_request(store: SQLiteStore, unit: dict,
             "text": "I couldn't understand the time on that one."})
         return
 
-    from core.tools import execute_tool
+    from core.tools.registry import execute_tool
     rider = unit.get("rider_id") or "primary_user"
     result = await execute_tool(tool_name, tool_input, {"user_id": rider})
 

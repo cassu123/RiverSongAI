@@ -55,7 +55,7 @@ The project root currently contains **29 top-level items**, exhibiting severe na
 `core/` currently contains 50+ files in a flat directory, mixing conversational loops with hardware drivers, sweeping routines, and smart home tools:
 * **Vortex Cluster:** 12 individual files prefixed `vortex_*.py` (`vortex_actions.py`, `vortex_calls.py`, `vortex_vision.py`, etc.) totaling ~150KB.
 * **Tools Cluster:** 7 individual files prefixed `tools_*.py` (`tools.py`, `tools_commerce.py`, `tools_schemas.py`, etc.).
-* **Domain Sweep Cluster:** `kitchen_sweep.py`, `inventory_sweep.py`, `memory_sweep.py`, `sweeps.py`.
+* **Domain Sweep Cluster:** `kitchen_sweep.py`, `inventory_sweep.py`, `sweeps.py`.
 * **Subsystem Misplacement:** `cooking_sessions.py` and `garage.py` live in `core/` while their corresponding domain packages live at root (`culinary/` and `vehicles/`).
 
 ### 2.3 API Router Sprawl (`api/routes/`)
@@ -210,7 +210,7 @@ Group the 62 routes into 7 functional subdirectories while preserving `api/route
 | **`api/routes/auth/`** | `auth.py`, `twofa.py`, `face_id.py`, `voice_id.py`, `webhook_tokens.py`, `shopify_auth.py` |
 | **`api/routes/system/`** | `health.py`, `daemons.py`, `killswitch.py`, `features.py`, `models_settings.py`, `usage.py`, `admin.py`, `remote_ollama.py` |
 | **`api/routes/ai/`** | `conversation.py`, `chat_sessions.py`, `session_presets.py`, `proactive.py`, `initiative.py`, `skills.py`, `research.py`, `rag.py`, `image.py`, `cad.py`, `memory.py`, `vault.py`, `slae.py` |
-| **`api/routes/domains/`** | `culinary.py`, `culinary_sessions.py`, `culinary_shopping.py`, `inventory.py`, `commerce.py`, `vehicles.py`, `reading.py`, `analytics.py`, `home.py`, `routines.py`, `briefing.py`, `dashboard.py` |
+| **`api/routes/domains/`** | `culinary.py`, `culinary_sessions.py`, `inventory.py`, `commerce.py`, `vehicles.py`, `reading.py`, `analytics.py`, `home.py`, `routines.py`, `briefing.py`, `dashboard.py` |
 | **`api/routes/fleet/`** | `fleet.py`, `vector_fleet.py`, `rover.py`, `kova.py`, `vexa.py`, `vortex.py`, `context.py` |
 | **`api/routes/webhooks/`** | `n8n_webhooks.py`, `shopify_webhooks.py`, `push.py` |
 | **`api/routes/feeds/`** | `feeds.py`, `pulse.py`, `google.py`, `location.py`, `compare.py`, `legal.py`, `parent.py`, `vision.py`, `sweeps.py` |

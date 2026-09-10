@@ -1,5 +1,5 @@
 import React from 'react'
-import RsMark from '../components/RsMark.jsx'
+import RsMark from '@components/RsMark.jsx'
 import EnvIcon from './EnvIcon.jsx'
 import { NAV_GROUPS, ALWAYS_VISIBLE } from '../utils/constants.js'
 

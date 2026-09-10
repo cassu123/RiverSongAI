@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
-import { CommerceMembers, CommerceCustomers, CommerceSuppliers, CommerceSales } from '../components/CommerceComponents.jsx'
+import { useAuth } from '@context/AuthContext.jsx'
+import { CommerceMembers, CommerceCustomers, CommerceSuppliers, CommerceSales } from '@components/CommerceComponents.jsx'
 
 // ---------------------------------------------------------------------------
 // Constants & Helpers

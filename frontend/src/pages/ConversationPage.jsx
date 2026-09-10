@@ -1,9 +1,9 @@
 import React, { useState, useCallback, Suspense, lazy, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
-import { useConversation } from '../hooks/useConversation.js'
-import AudioVisualizer from '../components/AudioVisualizer.jsx'
-import RsMarkdown from '../components/RsMarkdown.jsx'
-import PresenceBulb from '../components/PresenceBulb.jsx'
+import { useAuth } from '@context/AuthContext.jsx'
+import { useConversation } from '@hooks/useConversation.js'
+import AudioVisualizer from '@components/AudioVisualizer.jsx'
+import RsMarkdown from '@components/RsMarkdown.jsx'
+import PresenceBulb from '@components/PresenceBulb.jsx'
 
 // The VRM character path is intact and unchanged — set VITE_RIVER_USE_AVATAR=true
 // (with a model at public/models/river.vrm) to render it.
@@ -15,7 +15,7 @@ import PresenceBulb from '../components/PresenceBulb.jsx'
 // costs none of that.
 const useAvatar = import.meta.env?.VITE_RIVER_USE_AVATAR === 'true'
 
-const RiverAvatar = lazy(() => import('../components/RiverAvatar.jsx'))
+const RiverAvatar = lazy(() => import('@components/RiverAvatar.jsx'))
 
 export default function ConversationPage({ setAction }) {
   const { token, user } = useAuth()

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
+import { useAuth } from '@context/AuthContext.jsx'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 

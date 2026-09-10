@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { useAuth } from '../context/AuthContext'
-import MaintenancePulse from '../components/MaintenancePulse.jsx'
+import { useAuth } from '@context/AuthContext'
+import MaintenancePulse from '@components/MaintenancePulse.jsx'
 import Sheet from '../chrome/Sheet.jsx'
-import ChatInterface from '../components/ChatInterface.jsx'
+import ChatInterface from '@components/ChatInterface.jsx'
 
 /**
  * VehiclePage — Spatial Intelligence v2.0

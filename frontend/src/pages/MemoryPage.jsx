@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { useBreakpoint } from '../hooks/useBreakpoint'
+import { useAuth } from '@context/AuthContext'
+import { useBreakpoint } from '@hooks/useBreakpoint'
 
 /**
  * MemoryPage — Phase 3 Rewrite

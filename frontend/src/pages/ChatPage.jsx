@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import ChatInterface from '../components/ChatInterface.jsx'
+import ChatInterface from '@components/ChatInterface.jsx'
 
 export default function ChatPage({ setAction, onNavigate }) {
   const [initialIntent, setInitialIntent] = useState(null)

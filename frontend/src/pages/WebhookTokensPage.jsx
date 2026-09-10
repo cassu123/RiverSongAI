@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuthHeaders, API_BASE } from '../utils/useApi.js'
-import FlagGatedPage from '../components/FlagGatedPage.jsx'
+import FlagGatedPage from '@components/FlagGatedPage.jsx'
 
 /**
  * WebhookTokensPage — Q2#10 admin UI.

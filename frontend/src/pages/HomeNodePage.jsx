@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useAuth } from '../context/AuthContext'
-import SafetyRules from '../components/SafetyRules.jsx'
+import { useAuth } from '@context/AuthContext'
+import SafetyRules from '@components/SafetyRules.jsx'
 
 const READONLY = new Set(['sensor', 'binary_sensor'])
 const LAUNCHERS = new Set(['scene', 'script'])

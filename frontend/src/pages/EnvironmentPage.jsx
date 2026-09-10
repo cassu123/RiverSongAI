@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '@context/AuthContext'
 import { Link } from 'react-router-dom'
 
 function authHeaders(token) {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './MaintenancePulse.css';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth } from '@context/AuthContext.jsx';
 import RsMarkdown from './RsMarkdown.jsx';
 
 async function apiFetch(path, token, opts = {}) {

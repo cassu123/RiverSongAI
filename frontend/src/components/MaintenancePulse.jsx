@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useAuth } from '../context/AuthContext.jsx';
-import { API_BASE } from '../lib/api';
+import { useAuth } from '@context/AuthContext.jsx';
+import { API_BASE } from '@lib/api';
 import Sheet from '../chrome/Sheet.jsx';
-import ChatInterface from '../components/ChatInterface.jsx';
+import ChatInterface from '@components/ChatInterface.jsx';
 import './MaintenancePulse.css';
 
 function authHeaders(token) {

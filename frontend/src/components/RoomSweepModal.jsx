@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@context/AuthContext';
 
 export default function RoomSweepModal({ homeId, onClose, onComplete }) {
   const { token } = useAuth();

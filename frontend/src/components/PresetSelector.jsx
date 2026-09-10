@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
-import { useBreakpoint } from '../hooks/useBreakpoint'
+import { useAuth } from '@context/AuthContext.jsx'
+import { useBreakpoint } from '@hooks/useBreakpoint'
 
 /**
  * PresetSelector — Q2#9.

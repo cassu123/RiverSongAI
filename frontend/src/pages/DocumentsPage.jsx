@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuthHeaders, API_BASE } from '../utils/useApi.js'
-import FlagGatedPage from '../components/FlagGatedPage.jsx'
-import { useBreakpoint } from '../hooks/useBreakpoint'
+import FlagGatedPage from '@components/FlagGatedPage.jsx'
+import { useBreakpoint } from '@hooks/useBreakpoint'
 
 /**
  * DocumentsPage — Q2#6.

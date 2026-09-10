@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '@context/AuthContext'
 
 const API_BASE = '/api/google'
 

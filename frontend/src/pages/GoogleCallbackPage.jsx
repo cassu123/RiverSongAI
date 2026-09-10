@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
+import { useAuth } from '@context/AuthContext.jsx'
 
 export default function GoogleCallbackPage({ onSuccess }) {
   const { loginWithGoogle } = useAuth()

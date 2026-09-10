@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import ConversationPanel   from './ConversationPanel.jsx'
-import { useAuth }         from '../context/AuthContext.jsx'
+import { useAuth }         from '@context/AuthContext.jsx'
 import RateIndicator       from './RateIndicator.jsx'
 import ModelPickerPopover  from './ModelPickerPopover.jsx'
-import { useConversation } from '../hooks/useConversation.js'
+import { useConversation } from '@hooks/useConversation.js'
 import { API_BASE } from '../utils/useApi.js'
 
 function fmtDate(iso) {

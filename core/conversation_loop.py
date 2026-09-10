@@ -1217,7 +1217,8 @@ class ConversationLoop:
                 assert self._llm is not None
                 # Handle Tool Use first if enabled
                 if self._settings.tool_use_enabled:
-                    from core.tools import TOOL_SCHEMAS, execute_tool
+                    from core.tools.registry import execute_tool
+                    from core.tools.schemas import TOOL_SCHEMAS
                     from core.agent_loop import run_agent_loop
                     
                     disabled_tools: list[str] = []
@@ -1505,7 +1506,8 @@ class ConversationLoop:
 
             # Phase 3: Tool Use / Function Calling
             if self._settings.tool_use_enabled:
-                from core.tools import TOOL_SCHEMAS, execute_tool
+                from core.tools.registry import execute_tool
+                from core.tools.schemas import TOOL_SCHEMAS
                 from core.agent_loop import run_agent_loop
 
                 disabled_tools: list[str] = []

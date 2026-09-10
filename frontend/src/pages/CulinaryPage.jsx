@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
-import BarcodeScanner from '../components/BarcodeScanner.jsx'
-import AddRecipeModal from '../components/AddRecipeModal.jsx'
-import ShoppingListTab from '../components/ShoppingListTab.jsx'
-import CookPlanTab from '../components/CookPlanTab.jsx'
-import AppliancePanel from '../components/AppliancePanel.jsx'
-import { API_BASE } from '../lib/api.js'
+import { useAuth } from '@context/AuthContext.jsx'
+import BarcodeScanner from '@components/BarcodeScanner.jsx'
+import AddRecipeModal from '@components/AddRecipeModal.jsx'
+import ShoppingListTab from '@components/ShoppingListTab.jsx'
+import CookPlanTab from '@components/CookPlanTab.jsx'
+import AppliancePanel from '@components/AppliancePanel.jsx'
+import { API_BASE } from '@lib/api.js'
 
 /**
  * CulinaryPage — Google Home / AI-First Kitchen Hub

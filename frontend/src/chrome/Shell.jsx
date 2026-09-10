@@ -1,6 +1,6 @@
 import React from 'react'
 import PresenceOrb from './PresenceOrb.jsx'
-import RsMark from '../components/RsMark.jsx'
+import RsMark from '@components/RsMark.jsx'
 
 const PAGE_TITLES = {
   briefing:       'Briefing',

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { apiFetch } from '../lib/api'
+import { apiFetch } from '@lib/api'
 import { Section } from './settings/shared.jsx'
 
 /**

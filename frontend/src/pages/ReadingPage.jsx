@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '@context/AuthContext'
 import Sheet, { SheetRow } from '../chrome/Sheet'
-import ReadingIntegrationsModal from '../components/ReadingIntegrationsModal'
+import ReadingIntegrationsModal from '@components/ReadingIntegrationsModal'
 
 const API = '/api/reading'
 

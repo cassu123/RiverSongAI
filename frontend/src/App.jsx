@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useAuth }        from './context/AuthContext.jsx'
+import { useAuth }        from '@context/AuthContext.jsx'
 import { setupFcm }       from './utils/fcm.js'
-import Shell              from './chrome/Shell.jsx'
-import Drawer             from './chrome/Drawer.jsx'
-import ErrorBoundary      from './components/ErrorBoundary.jsx'
-import ToastHost          from './components/ToastHost.jsx'
-import { apiFetch }       from './lib/api.js'
-import RsMark             from './components/RsMark.jsx'
-import Stage              from './chrome/Stage.jsx'
+import Shell              from '@/chrome/Shell.jsx'
+import Drawer             from '@/chrome/Drawer.jsx'
+import ErrorBoundary      from '@components/ErrorBoundary.jsx'
+import ToastHost          from '@components/ToastHost.jsx'
+import { apiFetch }       from '@lib/api.js'
+import RsMark             from '@components/RsMark.jsx'
+import Stage              from '@/chrome/Stage.jsx'
 import './styles/breakpoints.css'
 import './styles/chrome-shell.css'
 import './styles/chrome-stage.css'
@@ -25,45 +25,45 @@ import './styles/responsive.css'
 import './styles/google-home.css'
 
 // Lazy load pages
-const LoginPage          = lazy(() => import('./pages/LoginPage.jsx'))
-const SignupPage         = lazy(() => import('./pages/SignupPage.jsx'))
-const SetupPage          = lazy(() => import('./pages/SetupPage.jsx'))
-const BriefingPage       = lazy(() => import('./pages/BriefingPage.jsx'))
-const DashboardPage      = lazy(() => import('./pages/DashboardPage.jsx'))
+const LoginPage          = lazy(() => import('@pages/LoginPage.jsx'))
+const SignupPage         = lazy(() => import('@pages/SignupPage.jsx'))
+const SetupPage          = lazy(() => import('@pages/SetupPage.jsx'))
+const BriefingPage       = lazy(() => import('@pages/BriefingPage.jsx'))
+const DashboardPage      = lazy(() => import('@pages/DashboardPage.jsx'))
 
-const ConversationPage   = lazy(() => import('./pages/ConversationPage.jsx'))
-const ChatPage           = lazy(() => import('./pages/ChatPage.jsx'))
-const MemoryHubPage      = lazy(() => import('./pages/MemoryHubPage.jsx'))
-const RoutinesPage       = lazy(() => import('./pages/RoutinesPage.jsx'))
-const HomeNodePage       = lazy(() => import('./pages/HomeNodePage.jsx'))
-const UsersPage          = lazy(() => import('./pages/UsersPage.jsx'))
-const KillSwitchPage     = lazy(() => import('./pages/KillSwitchPage.jsx'))
-const ProfilePage        = lazy(() => import('./pages/ProfilePage.jsx'))
-const SettingsPage       = lazy(() => import('./pages/SettingsPage.jsx'))
-const AdminSettingsPage  = lazy(() => import('./pages/AdminSettingsPage.jsx'))
-const FeedsPage          = lazy(() => import('./pages/FeedsPage.jsx'))
-const GooglePage         = lazy(() => import('./pages/GooglePage.jsx'))
-const CommercePage       = lazy(() => import('./pages/CommercePage.jsx'))
-const ReadingPage        = lazy(() => import('./pages/ReadingPage.jsx'))
-const AnalyticsPage      = lazy(() => import('./pages/AnalyticsPage.jsx'))
-const InventoryPage           = lazy(() => import('./pages/InventoryPage.jsx'))
-const ChronosPage             = lazy(() => import('./pages/ChronosPage.jsx'))
-const VehiclePage             = lazy(() => import('./pages/VehiclePage.jsx'))
-const CulinaryPage            = lazy(() => import('./pages/CulinaryPage.jsx'))
-const EnvironmentPage         = lazy(() => import('./pages/EnvironmentPage.jsx'))
-const FleetPage               = lazy(() => import('./pages/FleetPage.jsx'))
-const DocumentsPage           = lazy(() => import('./pages/DocumentsPage.jsx'))
-const SkillsPage              = lazy(() => import('./pages/SkillsPage.jsx'))
-const PresetsPage             = lazy(() => import('./pages/PresetsPage.jsx'))
-const ComparePage             = lazy(() => import('./pages/ComparePage.jsx'))
-const RemoteOllamaPage        = lazy(() => import('./pages/RemoteOllamaPage.jsx'))
-const WebhookTokensPage       = lazy(() => import('./pages/WebhookTokensPage.jsx'))
-const GoogleCallbackPage      = lazy(() => import('./pages/GoogleCallbackPage.jsx'))
-const ReadingOAuthCallbackPage = lazy(() => import('./pages/ReadingOAuthCallbackPage.jsx'))
-const ForcePasswordChangePage  = lazy(() => import('./pages/ForcePasswordChangePage.jsx'))
-const SlaePage                 = lazy(() => import('./pages/SlaePage.jsx'))
+const ConversationPage   = lazy(() => import('@pages/ConversationPage.jsx'))
+const ChatPage           = lazy(() => import('@pages/ChatPage.jsx'))
+const MemoryHubPage      = lazy(() => import('@pages/MemoryHubPage.jsx'))
+const RoutinesPage       = lazy(() => import('@pages/RoutinesPage.jsx'))
+const HomeNodePage       = lazy(() => import('@pages/HomeNodePage.jsx'))
+const UsersPage          = lazy(() => import('@pages/UsersPage.jsx'))
+const KillSwitchPage     = lazy(() => import('@pages/KillSwitchPage.jsx'))
+const ProfilePage        = lazy(() => import('@pages/ProfilePage.jsx'))
+const SettingsPage       = lazy(() => import('@pages/SettingsPage.jsx'))
+const AdminSettingsPage  = lazy(() => import('@pages/AdminSettingsPage.jsx'))
+const FeedsPage          = lazy(() => import('@pages/FeedsPage.jsx'))
+const GooglePage         = lazy(() => import('@pages/GooglePage.jsx'))
+const CommercePage       = lazy(() => import('@pages/CommercePage.jsx'))
+const ReadingPage        = lazy(() => import('@pages/ReadingPage.jsx'))
+const AnalyticsPage      = lazy(() => import('@pages/AnalyticsPage.jsx'))
+const InventoryPage           = lazy(() => import('@pages/InventoryPage.jsx'))
+const ChronosPage             = lazy(() => import('@pages/ChronosPage.jsx'))
+const VehiclePage             = lazy(() => import('@pages/VehiclePage.jsx'))
+const CulinaryPage            = lazy(() => import('@pages/CulinaryPage.jsx'))
+const EnvironmentPage         = lazy(() => import('@pages/EnvironmentPage.jsx'))
+const FleetPage               = lazy(() => import('@pages/FleetPage.jsx'))
+const DocumentsPage           = lazy(() => import('@pages/DocumentsPage.jsx'))
+const SkillsPage              = lazy(() => import('@pages/SkillsPage.jsx'))
+const PresetsPage             = lazy(() => import('@pages/PresetsPage.jsx'))
+const ComparePage             = lazy(() => import('@pages/ComparePage.jsx'))
+const RemoteOllamaPage        = lazy(() => import('@pages/RemoteOllamaPage.jsx'))
+const WebhookTokensPage       = lazy(() => import('@pages/WebhookTokensPage.jsx'))
+const GoogleCallbackPage      = lazy(() => import('@pages/GoogleCallbackPage.jsx'))
+const ReadingOAuthCallbackPage = lazy(() => import('@pages/ReadingOAuthCallbackPage.jsx'))
+const ForcePasswordChangePage  = lazy(() => import('@pages/ForcePasswordChangePage.jsx'))
+const SlaePage                 = lazy(() => import('@pages/SlaePage.jsx'))
 const PreviewRoot              = lazy(() => import('./preview/PreviewRoot.jsx'))
-const ProactivePage            = lazy(() => import('./pages/ProactivePage.jsx'))
+const ProactivePage            = lazy(() => import('@pages/ProactivePage.jsx'))
 
 import { ADMIN_PAGES, ALWAYS_VISIBLE } from './utils/constants.js'
 

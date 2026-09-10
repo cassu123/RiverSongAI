@@ -122,7 +122,7 @@ class TestAvailability:
 
 class TestToolsDispatcher:
     def test_execute_tool_routes_browser_navigate(self):
-        from core.tools import execute_tool
+        from core.tools.registry import execute_tool
         out = _run(execute_tool("browser_navigate", {"url": "https://x"}, {"user_id": "u"}))
         # Provider short-circuits with "disabled" since the flag is off.
         assert "disabled" in out.lower()
