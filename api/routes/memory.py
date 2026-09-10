@@ -322,7 +322,7 @@ async def update_summary_ttl_setting(summary_id: str, body: SummaryUpdate, reque
     from providers.memory.ttl_engine import calculate_expires_at
     new_expires_at = calculate_expires_at(body.ttl_setting)
     
-    from core.utils import _dt_to_str
+    from providers.memory.store._util import _dt_to_str
     await mm._store.execute_write_async(
         "UPDATE conversation_summaries SET ttl_setting = ?, expires_at = ? WHERE id = ? AND user_id = ?",
         (body.ttl_setting, _dt_to_str(new_expires_at), summary_id, user_id)

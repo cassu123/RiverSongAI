@@ -34,8 +34,9 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 def _get_store(request: Request):
     if hasattr(request.app.state, "memory_manager") and request.app.state.memory_manager:
         return request.app.state.memory_manager._store
-    from core.memory import get_memory_manager
-    return get_memory_manager()._store
+    # main.py's lifespan always sets this. Reaching here means the app was
+    # built without it, which is a wiring fault, not a request-level one.
+    raise RuntimeError("memory_manager is not attached to app.state")
 
 
 async def _require_admin(request: Request,

@@ -340,12 +340,12 @@ async def _exec_deep_research(args: dict, user_id: str,
                     
                     # Try to push via FCM
                     try:
-                        from providers.notifier.fcm_notifier import FCMNotifier
-                        await FCMNotifier(store).send_notification(
+                        from providers.push.notifier import notify_user
+                        await notify_user(
+                            store,
                             user_id=user_id,
                             title="Research Complete",
                             body=f"Your deep research on '{query}' is ready.",
-                            data={"session_id": target_session, "doc_id": doc_id or ""}
                         )
                     except Exception as e:
                         logger.debug("Failed to push FCM notification for research: %s", e)

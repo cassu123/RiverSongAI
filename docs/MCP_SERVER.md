@@ -128,8 +128,8 @@ appear in the MCP server list with all 14 tools.
 
 ## Adding a new tool to MCP
 
-1. Implement the tool in `core/tools.py` (and register its schema in
-   `TOOL_SCHEMAS`).
+1. Implement the tool in `core/tools/registry.py` (and register its schema in
+   `TOOL_SCHEMAS`, in `core/tools/schemas.py`).
 2. Decide whether it is **read-only or low-blast-radius** — if not,
    stop. Don't add it.
 3. Add its name to `EXPOSED_TOOL_NAMES` in `mcp_server.py`.
@@ -141,6 +141,7 @@ appear in the MCP server list with all 14 tools.
 ## See also
 
 - `mcp_server.py` — implementation
-- `core/tools.py` — canonical tool definitions and `execute_tool`
+- `core/tools/registry.py` — canonical tool definitions and `execute_tool`
+- `core/tools/schemas.py` — `TOOL_SCHEMAS`
 - `scripts/mcp-server.sh` — launcher
 - `README.md` § *MCP server* — user-facing setup

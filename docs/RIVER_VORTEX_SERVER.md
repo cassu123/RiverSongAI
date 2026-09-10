@@ -32,15 +32,15 @@ one is enforced in code rather than by convention.
 
 | Module | Responsibility |
 |---|---|
-| `core/vortex_security.py` | Token hashing and constant-time comparison, pairing lockout, pending confirmations, second-factor verification |
-| `core/vortex_units.py` | Unit profiles: owner, room, display, camera capability. Room → unit resolution |
-| `core/vortex_hub.py` | The live WebSocket registry and every server → unit push, including the amplitude envelope |
-| `core/vortex_surfaces.py` | Card validation, the per-unit card set, room-aware publishers and their withdrawals |
-| `core/vortex_replica.py` | The unit's local copy: devices, cameras, notifications, rooms, weather, wake word. Section-level versioning |
-| `core/vortex_actions.py` | Device control, card actions and confirmation redemption — all through the permission model |
-| `core/vortex_voice.py` | Utterance handling and TTS, plus the orb's presence vocabulary |
-| `core/vortex_vision.py` | Snapshot storage and retention, face identification |
-| `core/vortex_media.py` | Resolve-vs-play split, room targeting, transport routing |
+| `core/vortex/security.py` | Token hashing and constant-time comparison, pairing lockout, pending confirmations, second-factor verification |
+| `core/vortex/units.py` | Unit profiles: owner, room, display, camera capability. Room → unit resolution |
+| `core/vortex/hub.py` | The live WebSocket registry and every server → unit push, including the amplitude envelope |
+| `core/vortex/surfaces.py` | Card validation, the per-unit card set, room-aware publishers and their withdrawals |
+| `core/vortex/replica.py` | The unit's local copy: devices, cameras, notifications, rooms, weather, wake word. Section-level versioning |
+| `core/vortex/actions.py` | Device control, card actions and confirmation redemption — all through the permission model |
+| `core/vortex/voice.py` | Utterance handling and TTS, plus the orb's presence vocabulary |
+| `core/vortex/vision.py` | Snapshot storage and retention, face identification |
+| `core/vortex/media.py` | Resolve-vs-play split, room targeting, transport routing |
 | `api/routes/vortex.py` | Everything device-facing |
 
 ---
@@ -138,7 +138,7 @@ an authorisation. It returns 2xx only when the action was accepted — the unit
 leaves the card up on anything else, so a tap that did not land never looks
 like one that did.
 
-Ready-made publishers live in `core/vortex_surfaces.py`:
+Ready-made publishers live in `core/vortex/surfaces.py`:
 `publish_shopping_list`, `publish_reminder`, `publish_weather_alert`,
 `publish_doorbell`, `publish_motion_snapshot`, `publish_cooking_step`.
 
