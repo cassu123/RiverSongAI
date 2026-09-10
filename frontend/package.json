@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "android:sync": "npm run build && cap sync android",
+    "android:open": "npm run android:sync && cap open android"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
