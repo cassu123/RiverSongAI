@@ -59,6 +59,15 @@ AI_FEATURE_MAP = {
     "WAKE_WORD_THRESHOLD": "wake_word_threshold",
     "CAD_ENABLED": "cad_enabled",
     "SANDBOX_ENABLED": "sandbox_enabled",
+
+    # Daemon toggles. DaemonControlSection renders a switch for each of these
+    # and PUTs the flag name here; without an entry the endpoint 400s and the
+    # switch does nothing. Every attribute below is a real Settings field.
+    "WARDEN_ENABLED": "warden_enabled",
+    "MECHANIC_ENABLED": "mechanic_enabled",
+    "SIFTER_ENABLED": "sifter_enabled",
+    "DAEMON_PULSE_ENABLED": "daemon_pulse_enabled",
+    "DAEMON_SCRIBE_ENABLED": "daemon_scribe_enabled",
 }
 
 

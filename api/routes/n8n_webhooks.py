@@ -45,7 +45,14 @@ async def n8n_webhook_receiver(
     configured_secret = (settings.n8n_webhook_secret or "").strip()
     if not configured_secret:
         raise HTTPException(status_code=503, detail="n8n webhook authentication not configured.")
-    if not x_n8n_secret or not secrets.compare_digest(x_n8n_secret.strip(), configured_secret):
+    # The presented value is compared verbatim; stripping it would accept a
+    # secret with trailing whitespace. compare_digest raises TypeError on
+    # non-ASCII str operands, which must be a rejection rather than a 500.
+    try:
+        ok = bool(x_n8n_secret) and secrets.compare_digest(x_n8n_secret, configured_secret)
+    except TypeError:
+        ok = False
+    if not ok:
         raise HTTPException(status_code=401, detail="Invalid webhook secret.")
 
     payload = await request.json()
