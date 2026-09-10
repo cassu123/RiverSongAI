@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from api.routes.inventory import _DB_URL
-from inventory.models import AuditStatus, InvHome, InventoryAudit, InventoryItem
+from domains.inventory.models import AuditStatus, InvHome, InventoryAudit, InventoryItem
 from core.push import send_push_notification
 
 logger = logging.getLogger(__name__)

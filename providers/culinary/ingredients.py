@@ -15,7 +15,7 @@ from typing import Dict, List
 from sqlalchemy.orm import Session
 
 from api.services.recipe_parser import _extract_json, _format_qty, _parse_qty
-from culinary.models import BannedIngredient, StockroomItem, StockState
+from domains.culinary.models import BannedIngredient, StockroomItem, StockState
 
 logger = logging.getLogger(__name__)
 

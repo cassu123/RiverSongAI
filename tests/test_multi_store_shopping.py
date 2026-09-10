@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
 from main import app
 from api.routes.culinary import _Session, get_db
-from culinary.models import Household, ShoppingListItem, StoreMapping, WalmartMapping, ListSource
+from domains.culinary.models import Household, ShoppingListItem, StoreMapping, WalmartMapping, ListSource
 from core.tools.registry import _exec_add_shopping_list, _exec_read_shopping_list
 
 @pytest.fixture

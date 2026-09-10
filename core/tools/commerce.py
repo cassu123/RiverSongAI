@@ -25,7 +25,7 @@ def _get_commerce_db():
 async def _exec_search_commerce_products(args: dict, user_id: str) -> str:
     db = None
     try:
-        from commercial_inventory.management import get_workspaces_for_user, get_products, get_or_create_biz_user
+        from domains.commercial_inventory.management import get_workspaces_for_user, get_products, get_or_create_biz_user
 
         db = _get_commerce_db()
         biz_user = get_or_create_biz_user(
@@ -56,8 +56,8 @@ async def _exec_search_commerce_products(args: dict, user_id: str) -> str:
 async def _exec_create_commerce_sale(args: dict, user_id: str) -> str:
     db = None
     try:
-        from commercial_inventory.management import get_workspaces_for_user, get_products, get_or_create_biz_user, create_sale, LineItemIn
-        from commercial_inventory.models import Customer
+        from domains.commercial_inventory.management import get_workspaces_for_user, get_products, get_or_create_biz_user, create_sale, LineItemIn
+        from domains.commercial_inventory.models import Customer
 
         db = _get_commerce_db()
         biz_user = get_or_create_biz_user(
@@ -106,7 +106,7 @@ async def _exec_create_commerce_sale(args: dict, user_id: str) -> str:
                            notes="Created via Voice Assistant",
                            deduct_stock=True)
 
-        from commercial_inventory.models import SaleStatus
+        from domains.commercial_inventory.models import SaleStatus
         sale.status = SaleStatus.COMPLETED
         db.commit()
 

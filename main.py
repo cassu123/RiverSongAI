@@ -113,7 +113,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # I0.4 Shadow table migration
     try:
         import sqlite3
-        from inventory.management import create_item, get_or_create_inv_user, get_homes_for_user, create_home, ItemCategory
+        from domains.inventory.management import create_item, get_or_create_inv_user, get_homes_for_user, create_home, ItemCategory
         from api.routes.inventory import get_db as get_inventory_db
         from core.family import resolve_module_owner
         conn = sqlite3.connect(settings.db_path)
@@ -246,19 +246,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     
     # register_sweep calls func() with no arguments. Both of these take `app`,
     # so registering them bare raised TypeError on every run.
-    from core.garage import garage_sweep_func
+    from domains.vehicles.garage import garage_sweep_func
 
     async def _garage_sweep():
         await garage_sweep_func(app)
     register_sweep("garage", 86400, _garage_sweep)
 
-    from core.inventory_sweep import inventory_sweep_func
+    from domains.inventory.sweep import inventory_sweep_func
 
     async def _inventory_sweep():
         await inventory_sweep_func(app)
     register_sweep("inventory", 86400, _inventory_sweep)
     
-    from core.kitchen_sweep import kitchen_sweep_func
+    from domains.culinary.sweep import kitchen_sweep_func
     register_sweep("kitchen", 3600, kitchen_sweep_func)
 
     from providers.smart_home.sync import sync_ha_entities

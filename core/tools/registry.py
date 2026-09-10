@@ -391,8 +391,8 @@ async def _exec_calendar_event(args: dict, user_id: str) -> str:
 async def _exec_add_asset(args: dict, user_id: str) -> str:
     def _sync_work():
         from api.routes.inventory import get_db as get_inventory_db
-        from inventory.management import create_item, get_or_create_inv_user, get_homes_for_user, create_home, ItemCategory
-        from inventory.models import InvHome
+        from domains.inventory.management import create_item, get_or_create_inv_user, get_homes_for_user, create_home, ItemCategory
+        from domains.inventory.models import InvHome
         from core.family import resolve_module_owner
         
         db = next(get_inventory_db())
@@ -436,8 +436,8 @@ async def _exec_add_asset(args: dict, user_id: str) -> str:
 async def _exec_find_asset(args: dict, user_id: str) -> str:
     def _sync_work():
         from api.routes.inventory import get_db as get_inventory_db
-        from inventory.models import InventoryItem, InvHome
-        from inventory.management import get_or_create_inv_user
+        from domains.inventory.models import InventoryItem, InvHome
+        from domains.inventory.management import get_or_create_inv_user
         from core.family import resolve_module_owner
         
         db = next(get_inventory_db())
@@ -473,8 +473,8 @@ async def _exec_find_asset(args: dict, user_id: str) -> str:
 async def _exec_asset_summary(args: dict, user_id: str) -> str:
     def _sync_work():
         from api.routes.inventory import get_db as get_inventory_db
-        from inventory.models import InventoryItem, InvHome
-        from inventory.management import get_or_create_inv_user
+        from domains.inventory.models import InventoryItem, InvHome
+        from domains.inventory.management import get_or_create_inv_user
         from core.family import resolve_module_owner
         from decimal import Decimal
         
@@ -502,8 +502,8 @@ async def _exec_asset_summary(args: dict, user_id: str) -> str:
 async def _exec_registry_health(args: dict, user_id: str) -> str:
     def _sync_work():
         from api.routes.inventory import get_db as get_inventory_db
-        from inventory.models import InventoryItem, InvHome
-        from inventory.management import get_or_create_inv_user
+        from domains.inventory.models import InventoryItem, InvHome
+        from domains.inventory.management import get_or_create_inv_user
         from core.family import resolve_module_owner
         
         db = next(get_inventory_db())
@@ -537,8 +537,8 @@ async def _exec_registry_health(args: dict, user_id: str) -> str:
 async def _exec_warranty_check(args: dict, user_id: str) -> str:
     def _sync_work():
         from api.routes.inventory import get_db as get_inventory_db
-        from inventory.models import InventoryItem, InvHome
-        from inventory.management import get_or_create_inv_user
+        from domains.inventory.models import InventoryItem, InvHome
+        from domains.inventory.management import get_or_create_inv_user
         from core.family import resolve_module_owner
         from datetime import date, timedelta
         
@@ -627,7 +627,7 @@ def _split_trailing_store(text: str) -> Tuple[str, Optional[str]]:
 
 async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
     from api.routes.culinary import _Session as SessionLocal, store_display_name
-    from culinary.models import Household, ShoppingListItem, ListSource, StoreMapping
+    from domains.culinary.models import Household, ShoppingListItem, ListSource, StoreMapping
     item = args.get("item")
     qty = args.get("quantity")
     unit = args.get("unit")
@@ -722,7 +722,7 @@ async def _exec_add_shopping_list(args: dict, user_id: str) -> str:
 
 async def _exec_read_shopping_list(args: dict, user_id: str) -> str:
     from api.routes.culinary import _Session as SessionLocal
-    from culinary.models import Household, ShoppingListItem
+    from domains.culinary.models import Household, ShoppingListItem
 
     store_filter = (args.get("store") or "").strip()
 
@@ -877,7 +877,7 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> str:
 
 
     def _sync_work():
-        from vehicles.management import get_vehicles, create_service_log
+        from domains.vehicles.management import get_vehicles, create_service_log
         import difflib
         from datetime import datetime, timezone
 
@@ -961,7 +961,7 @@ async def _exec_vehicle_maintenance(args: dict, context: dict) -> str:
             
             # Record usage reading if mileage provided
             if mileage is not None:
-                from vehicles.models import UsageReading, UsageUnit, UsageSource
+                from domains.vehicles.models import UsageReading, UsageUnit, UsageSource
                 ur = UsageReading(
                     vehicle_id=v.id,
                     value=mileage,
@@ -1112,7 +1112,7 @@ async def _exec_trigger_n8n(args: dict, user_id: str) -> str:
 
 
 async def _exec_generate_business_report(args: dict, user_id: str) -> str:
-    from commercial_inventory.management import get_workspaces_for_user, get_sales, get_or_create_biz_user
+    from domains.commercial_inventory.management import get_workspaces_for_user, get_sales, get_or_create_biz_user
     from datetime import datetime, timedelta
 
     db = _get_commerce_db()
@@ -1514,7 +1514,7 @@ async def _exec_set_timer(args: dict, user_id: str) -> str:
     return f"Timer '{label}' set for {duration} seconds."
 
 async def _resolve_vehicle(query: str | None, user_id: str | None):
-    from vehicles.management import get_vehicles
+    from domains.vehicles.management import get_vehicles
     from core.family import resolve_module_owner
     from database.core import engine
     from sqlalchemy.orm import sessionmaker
@@ -1563,7 +1563,7 @@ async def _exec_get_vehicle_spec(args: dict, user_id: str) -> str:
     if not vid: return "Vehicle not found."
     from database.core import engine
     from sqlalchemy.orm import sessionmaker
-    from vehicles.models import VehicleCheckPoint
+    from domains.vehicles.models import VehicleCheckPoint
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
     try:
@@ -1590,7 +1590,7 @@ async def _exec_record_odometer(args: dict, user_id: str) -> str:
     val = args.get("value")
     from database.core import engine
     from sqlalchemy.orm import sessionmaker
-    from vehicles.models import UsageReading, UsageSource
+    from domains.vehicles.models import UsageReading, UsageSource
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
     try:

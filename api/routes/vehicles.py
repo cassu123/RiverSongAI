@@ -42,7 +42,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from core.auth import decode_token
 from core.errors import bad_request, not_found, unauthorized
 from core.family import resolve_module_owner
-from vehicles.management import (
+from domains.vehicles.management import (
     AssignmentExistsError,
     PermissionDeniedError,
     PersonAlreadyExistsError,
@@ -79,7 +79,7 @@ from vehicles.management import (
     update_service_log,
     update_vehicle,
 )
-from vehicles.models import Base, VehicleType
+from domains.vehicles.models import Base, VehicleType
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/vehicles", tags=["vehicles"])
@@ -716,7 +716,7 @@ def post_vehicle_usage(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    from vehicles.models import UsageReading, UsageUnit, UsageSource
+    from domains.vehicles.models import UsageReading, UsageUnit, UsageSource
     try:
         v = _get_vehicle(db, vehicle_id, user_id)
             
@@ -1013,7 +1013,7 @@ def list_parts(
     db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
 ):
     try:
-        from vehicles.models import VehiclePart
+        from domains.vehicles.models import VehiclePart
         v = _get_vehicle(db, vehicle_id, user_id)
         parts = db.query(VehiclePart).filter(
             VehiclePart.vehicle_id == v.id).all()
@@ -1028,7 +1028,7 @@ def add_part(
     db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
 ):
     try:
-        from vehicles.models import VehiclePart
+        from domains.vehicles.models import VehiclePart
         # Verify ownership
         v = _get_vehicle(db, vehicle_id, user_id)
 
@@ -1060,7 +1060,7 @@ def update_part(
     db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id),
 ):
     try:
-        from vehicles.models import VehiclePart
+        from domains.vehicles.models import VehiclePart
         v = _get_vehicle(db, vehicle_id, user_id)
         part = db.query(VehiclePart).filter(
             VehiclePart.id == part_id,
@@ -1093,7 +1093,7 @@ async def lookup_part_ai(
     from core.tools.registry import _exec_web_search
     import json
     import re
-    from vehicles.models import VehiclePart
+    from domains.vehicles.models import VehiclePart
     try:
         v = _get_vehicle(db, vehicle_id, user_id)
 
@@ -1435,7 +1435,7 @@ def create_log(
         )
         if body.odometer is not None:
             try:
-                from vehicles.models import UsageReading, UsageUnit, UsageSource
+                from domains.vehicles.models import UsageReading, UsageUnit, UsageSource
                 v = _get_vehicle(db, vehicle_id, user_id)
                 ur = UsageReading(
                     vehicle_id=v.id,
@@ -1527,7 +1527,7 @@ async def upload_receipt(
 # Media (Phase G3)
 # ---------------------------------------------------------------------------
 
-from vehicles.models import MediaSource
+from domains.vehicles.models import MediaSource
 from fastapi.responses import FileResponse
 import mimetypes
 
@@ -1539,11 +1539,11 @@ async def list_media(
     user_id: str = Depends(get_current_user_id),
 ):
     try:
-        from vehicles.models import VehicleMedia
+        from domains.vehicles.models import VehicleMedia
         import uuid
         
         # Checking permission
-        from vehicles.models import Vehicle, VehicleAssignment
+        from domains.vehicles.models import Vehicle, VehicleAssignment
         vehicle = db.query(Vehicle).filter(Vehicle.id == uuid.UUID(vehicle_id)).first()
         if not vehicle:
             raise ValueError("Vehicle not found")
@@ -1584,7 +1584,7 @@ async def archive_guide(
         
         # In a full implementation, this would trigger a web search agent to find the best guide.
         # For this prototype, we'll just create a link_archive.
-        from vehicles.models import VehicleMedia, MediaKind
+        from domains.vehicles.models import VehicleMedia, MediaKind
         import uuid
         
         media = VehicleMedia(
@@ -1618,7 +1618,7 @@ async def remove_media(
     user_id: str = Depends(get_current_user_id),
 ):
     try:
-        from vehicles.models import VehicleMedia
+        from domains.vehicles.models import VehicleMedia
         m = db.query(VehicleMedia).filter(VehicleMedia.id == media_id).first()
         if not m:
             raise not_found("Media not found")
@@ -1647,8 +1647,8 @@ async def upload_vehicle_media(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    from vehicles.media import process_upload
-    from vehicles.models import VehicleMedia, MediaKind, MediaSource
+    from domains.vehicles.media import process_upload
+    from domains.vehicles.models import VehicleMedia, MediaKind, MediaSource
     
     file_path, thumb_path = await process_upload(file, kind)
     if not file_path:
@@ -1676,7 +1676,7 @@ async def get_vehicle_media(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    from vehicles.models import VehicleMedia
+    from domains.vehicles.models import VehicleMedia
     from fastapi.responses import FileResponse
     m = db.query(VehicleMedia).filter(VehicleMedia.id == media_id).first()
     if not m:

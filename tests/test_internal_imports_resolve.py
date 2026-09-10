@@ -23,7 +23,7 @@ import pytest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 FIRST_PARTY = {
     "core", "api", "daemons", "providers", "config",
-    "clients", "vehicles", "culinary", "db",
+    "clients", "domains", "db",
 }
 SKIP_DIRS = {"node_modules", "venv", ".venv", "__pycache__", ".git", "dist", "build"}
 
@@ -72,10 +72,13 @@ def test_first_party_imports_point_at_real_modules(path):
 
 
 def test_the_moved_packages_are_packages_not_loose_modules():
-    """core/vortex and core/tools are packages; the flat modules are gone."""
-    for pkg in ("core/vortex", "core/tools"):
+    """core/vortex, core/tools, and domains/* are packages; flat modules are gone."""
+    for pkg in ("core/vortex", "core/tools", "domains", "domains/culinary", "domains/inventory", "domains/vehicles", "domains/commercial_inventory"):
         assert (ROOT / pkg / "__init__.py").exists(), f"{pkg} is not a package"
         assert not (ROOT / f"{pkg}.py").exists(), f"{pkg}.py still shadows {pkg}/"
+
+    for root_dom in ("culinary", "inventory", "vehicles", "commercial_inventory"):
+        assert not (ROOT / root_dom).exists(), f"legacy root folder {root_dom}/ still exists"
 
     stale = sorted(
         p.name for p in (ROOT / "core").glob("vortex_*.py")

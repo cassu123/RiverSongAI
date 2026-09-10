@@ -32,8 +32,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from core.auth import decode_token
 from core.errors import bad_request, forbidden, not_found, unauthorized
 from core.family import resolve_module_owner
-from inventory.auth import HomeNotFoundError, PermissionDeniedError, set_active_home
-from inventory.management import (
+from domains.inventory.auth import HomeNotFoundError, PermissionDeniedError, set_active_home
+from domains.inventory.management import (
     add_attachment,
     complete_audit,
     create_home,
@@ -58,7 +58,7 @@ from inventory.management import (
     start_audit,
     update_item,
 )
-from inventory.models import (
+from domains.inventory.models import (
     AssetStatus,
     AuditScan,
     Base,
@@ -560,7 +560,7 @@ def get_audit_discrepancy_report(
     db: Session = Depends(get_db),
     user: InvUser = Depends(get_current_inv_user),
 ):
-    from inventory.file_utils import INVENTORY_FILES_BASE_DIR
+    from domains.inventory.file_utils import INVENTORY_FILES_BASE_DIR
     try:
         pdf_path = generate_audit_discrepancy_report(db, str(user.id), audit_id, mark_missing)
         base = os.path.realpath(INVENTORY_FILES_BASE_DIR)
@@ -645,7 +645,7 @@ async def upload_attachment(
 @router.get("/attachments/{attachment_id}/download")
 def download_attachment(attachment_id: str, db: Session = Depends(
         get_db), user: InvUser = Depends(get_current_inv_user)):
-    from inventory.file_utils import INVENTORY_FILES_BASE_DIR
+    from domains.inventory.file_utils import INVENTORY_FILES_BASE_DIR
     attachment = db.query(ItemAttachment).filter(
         ItemAttachment.id == _uid(attachment_id)).first()
     if not attachment:
@@ -704,7 +704,7 @@ def get_home_labels(
     user: InvUser = Depends(get_current_inv_user),
 ):
     from fastapi.responses import StreamingResponse
-    from inventory.labels import generate_labels_pdf
+    from domains.inventory.labels import generate_labels_pdf
     from datetime import datetime, timezone
     
     home = db.query(InvHome).filter(InvHome.id == _uid(home_id)).first()
@@ -802,8 +802,8 @@ async def upload_warranty_image(
     db: Session = Depends(get_db),
     user: InvUser = Depends(get_current_inv_user),
 ):
-    from inventory.file_utils import save_file_for_home
-    from inventory.management import _get_item_or_raise
+    from domains.inventory.file_utils import save_file_for_home
+    from domains.inventory.management import _get_item_or_raise
     mime = (file.content_type or "").lower().split(";")[0].strip()
     if mime not in _WARRANTY_ALLOWED_MIME:
         raise HTTPException(
@@ -906,7 +906,7 @@ def remove_collaborator(home_id: str, collab_user_id: str, db: Session = Depends
 @router.get("/homes/{home_id}/manifest")
 def insurance_manifest(home_id: str, fmt: str = "pdf", db: Session = Depends(
         get_db), user: InvUser = Depends(get_current_inv_user)):
-    from inventory.file_utils import INVENTORY_FILES_BASE_DIR
+    from domains.inventory.file_utils import INVENTORY_FILES_BASE_DIR
     try:
         manifest_files = generate_insurance_manifest(db, str(user.id), home_id)
         file_path = manifest_files.get(fmt)

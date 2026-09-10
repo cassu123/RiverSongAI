@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 from api.routes.culinary import _Session as SessionLocal
 from api.routes.culinary import _ws_manager, get_db, _get_household
-from culinary.models import Household, Recipe, StockroomItem, ShoppingListItem, MealPlanEntry, StockState
+from domains.culinary.models import Household, Recipe, StockroomItem, ShoppingListItem, MealPlanEntry, StockState
 from core.proactive import get_delivery_router, ProactiveItem
 
 logger = logging.getLogger(__name__)

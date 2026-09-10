@@ -45,7 +45,7 @@ from api.routes.culinary import (
 )
 from api.services.recipe_parser import _format_qty, _parse_qty, _safe_json
 from core.errors import bad_request, not_found
-from core.cooking_sessions import (
+from domains.culinary.sessions import (
     _as_utc,
     build_step,
     expired_timers,
@@ -57,7 +57,7 @@ from core.cooking_sessions import (
     start_deadline,
     timer_out,
 )
-from culinary.models import CookingSession, CookingTimer, Recipe
+from domains.culinary.models import CookingSession, CookingTimer, Recipe
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/culinary", tags=["culinary:sessions"])
@@ -552,11 +552,11 @@ async def voice_command(user_id: str, command: str,
         ingredients = _safe_json(session.ingredients_json, [])
 
         if command == "how_long":
-            from core.cooking_sessions import speak_remaining
+            from domains.culinary.sessions import speak_remaining
             return speak_remaining([timer_out(t) for t in session.timers])
 
         if command == "how_much":
-            from core.cooking_sessions import speak_ingredient
+            from domains.culinary.sessions import speak_ingredient
 
             match = find_ingredient(argument, ingredients)
             if match:
@@ -588,7 +588,7 @@ async def voice_command(user_id: str, command: str,
             db.commit()
             db.refresh(timer)
             await announce_timer(hh.id, session, timer)
-            from core.cooking_sessions import humanise
+            from domains.culinary.sessions import humanise
             return f"{timer.label} set for {humanise(seconds)}."
 
         # next | back | repeat
@@ -663,7 +663,7 @@ def _owned_stations(db: Session, household_id: str) -> Dict[str, int]:
     conflict and a fine plan, so equipment is counted rather than checked for
     presence.
     """
-    from culinary.models import KitchenEquipment
+    from domains.culinary.models import KitchenEquipment
 
     counts: Dict[str, int] = {}
     for eq in db.query(KitchenEquipment).filter_by(household_id=household_id).all():
@@ -684,7 +684,7 @@ def _owned_appliances(db: Session, household_id: str) -> List[Dict[str, Any]]:
     Appliances with no schedulable station are left out. A cooking blender is
     worth recording and is not somewhere a dish gets sent.
     """
-    from culinary.models import KitchenEquipment
+    from domains.culinary.models import KitchenEquipment
 
     out: List[Dict[str, Any]] = []
     for eq in db.query(KitchenEquipment).filter_by(household_id=household_id).all():
@@ -864,7 +864,7 @@ async def preview_cook_plan(
     and the staged list. Starting a cook freezes a copy; this is the version
     you are still allowed to change your mind about.
     """
-    from culinary.models import PrepSession
+    from domains.culinary.models import PrepSession
 
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
@@ -890,7 +890,7 @@ def _appliance_profile(db: Session, household_id: str, station: str,
     are not interchangeable, and picking whichever came back from the database
     first would silently rewrite a method for the wrong appliance.
     """
-    from culinary.models import KitchenEquipment
+    from domains.culinary.models import KitchenEquipment
 
     owned = db.query(KitchenEquipment).filter_by(household_id=household_id).all()
     if equipment_id:
@@ -942,7 +942,7 @@ async def record_appliance_outcome(
     Deliberately three answers and an optional sentence. A form that asks for
     more than that after dinner does not get filled in.
     """
-    from culinary.models import KitchenEquipment
+    from domains.culinary.models import KitchenEquipment
 
     if body.verdict not in ("spot_on", "longer", "shorter"):
         raise bad_request("Verdict must be spot_on, longer or shorter.")
@@ -1004,7 +1004,7 @@ async def swap_appliance(
     The saved recipe is never written to. Clearing the swap brings the
     original back because it was never gone.
     """
-    from culinary.models import PrepSession, PrepSessionRecipe
+    from domains.culinary.models import PrepSession, PrepSessionRecipe
     from providers.culinary.appliance_swap import (
         APPLIANCE_NAMES, SwapFailed, rewrite_for_appliance)
     from providers.culinary.cook_plan import analyse_steps
@@ -1076,7 +1076,7 @@ async def start_meal_cook(
     Like the single-recipe session, starting a second one ends the first: the
     kitchen screen shows one meal, and two live plans would fight over it.
     """
-    from culinary.models import MealCook, PrepSession
+    from domains.culinary.models import MealCook, PrepSession
 
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
@@ -1126,7 +1126,7 @@ async def start_meal_cook(
 
 def _live_timers(db: Session, cook_id: str) -> List[Any]:
     """Timers still worth showing: running, paused, or ringing unacknowledged."""
-    from culinary.models import MealTimer
+    from domains.culinary.models import MealTimer
 
     return db.query(MealTimer).filter(
         MealTimer.cook_id == cook_id,
@@ -1158,7 +1158,7 @@ async def start_meal_timer(
     that implies otherwise is worse than no alarm -- so the cook decides which
     steps get one.
     """
-    from culinary.models import MealCook, MealTimer
+    from domains.culinary.models import MealCook, MealTimer
 
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
@@ -1192,7 +1192,7 @@ async def adjust_meal_timer(
     back. Only one of the two is ever set, so there is no state where both
     disagree about how long is left.
     """
-    from culinary.models import MealCook, MealTimer
+    from domains.culinary.models import MealCook, MealTimer
 
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
@@ -1237,7 +1237,7 @@ async def stop_meal_timer(
     Marked stopped rather than deleted so an alarm that has been silenced on
     one phone does not start ringing again on the next one to open the page.
     """
-    from culinary.models import MealCook, MealTimer
+    from domains.culinary.models import MealCook, MealTimer
 
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
@@ -1253,7 +1253,7 @@ async def stop_meal_timer(
 @router.get("/meal-cook")
 async def active_meal_cook(request: Request, db: Session = Depends(get_db)):
     """The household's meal in progress, or `{"cook": null}`."""
-    from culinary.models import MealCook
+    from domains.culinary.models import MealCook
 
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
@@ -1274,7 +1274,7 @@ async def mark_meal_step(
     single position to advance. Two people cooking together also do not go in
     the same order, and the broadcast is what keeps their screens agreeing.
     """
-    from culinary.models import MealCook
+    from domains.culinary.models import MealCook
 
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
@@ -1317,7 +1317,7 @@ async def set_meal_serve_time(
     at once and never reshuffles the order -- what was true about which dish
     goes in when does not stop being true because dinner slipped half an hour.
     """
-    from culinary.models import MealCook
+    from domains.culinary.models import MealCook
 
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)
@@ -1344,7 +1344,7 @@ async def set_meal_serve_time(
 async def end_meal_cook(
     cook_id: str, request: Request, db: Session = Depends(get_db)
 ):
-    from culinary.models import MealCook
+    from domains.culinary.models import MealCook
 
     uid = await _get_user_id(request)
     hh = _get_household(db, uid)

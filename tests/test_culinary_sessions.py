@@ -283,7 +283,7 @@ def test_a_timer_survives_the_process_that_started_it(headers, recipe_id):
 
     async def _backdate():
         from api.routes.culinary import _Session
-        from culinary.models import CookingTimer
+        from domains.culinary.models import CookingTimer
 
         db = _Session()
         try:

@@ -6,11 +6,11 @@ from config.settings import get_settings
 from api.routes.vehicles import get_db, get_maintenance_timeline, _DB_URL
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from vehicles.models import Vehicle
+from domains.vehicles.models import Vehicle
 
 logger = logging.getLogger(__name__)
 
-# Re-use engine from vehicles if needed, but get_db should work if called correctly.
+# Re-use engine from domains.vehicles if needed, but get_db should work if called correctly.
 # Wait, get_db() yields a session.
 _engine = create_engine(
     _DB_URL,

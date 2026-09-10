@@ -40,7 +40,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from core.auth import decode_token
 from core.family import resolve_module_owner
-from commercial_inventory.management import (
+from domains.commercial_inventory.management import (
     PermissionDeniedError,
     WorkspaceNotFoundError,
     LineItemIn,
@@ -74,7 +74,7 @@ from commercial_inventory.management import (
     update_sale_status,
     update_supplier,
 )
-from commercial_inventory.models import (
+from domains.commercial_inventory.models import (
     Base,
     BizUser,
     BizWorkspace,

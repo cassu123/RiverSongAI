@@ -16,7 +16,7 @@ from typing import Optional
 
 from api.services.recipe_parser import _safe_json
 from core.family import resolve_module_owner as _resolve_module_owner
-from culinary.models import Recipe
+from domains.culinary.models import Recipe
 from providers.vault.vault_provider import (
     VROOT_HOUSEHOLD,
     VROOT_PERSONAL,

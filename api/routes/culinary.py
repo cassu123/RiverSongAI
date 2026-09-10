@@ -119,7 +119,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from core.auth import decode_token
 from core.errors import api_error, bad_request, conflict, not_found, unauthorized
-from culinary.models import (
+from domains.culinary.models import (
     Base,
     BannedIngredient,
     DinnerProposal,

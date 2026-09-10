@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from vehicles.models import UsageUnit, VehicleType
+from domains.vehicles.models import UsageUnit, VehicleType
 
 # Loaded by path rather than as `api.routes.vehicles`: importing the submodule
 # runs `api/routes/__init__.py`, which pulls in every router in the app. These
