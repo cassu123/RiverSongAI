@@ -220,7 +220,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.warning("Failed to purge expired tokens: %s", e)
 
     # Register Sweeps
-    from core.sweeps import register_sweep, start_sweeps, stop_sweeps
+    from core.sweeps.registry import register_sweep, start_sweeps, stop_sweeps
     from core.routines_scheduler import _check_routines
     from core.distiller import run_distiller, sweep_messages
     from core.initiative import weather_sweep_func

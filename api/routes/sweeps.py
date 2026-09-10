@@ -16,7 +16,7 @@ import logging
 from fastapi import APIRouter, Depends, Request
 
 from core.auth import require_role
-from core.sweeps import get_registry
+from core.sweeps.registry import get_registry
 
 logger = logging.getLogger(__name__)
 

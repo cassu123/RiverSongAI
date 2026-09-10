@@ -73,7 +73,7 @@ def test_first_party_imports_point_at_real_modules(path):
 
 def test_the_moved_packages_are_packages_not_loose_modules():
     """core/vortex, core/tools, and domains/* are packages; flat modules are gone."""
-    for pkg in ("core/vortex", "core/tools", "domains", "domains/culinary", "domains/inventory", "domains/vehicles", "domains/commercial_inventory"):
+    for pkg in ("core/vortex", "core/tools", "core/sweeps", "domains", "domains/culinary", "domains/inventory", "domains/vehicles", "domains/commercial_inventory"):
         assert (ROOT / pkg / "__init__.py").exists(), f"{pkg} is not a package"
         assert not (ROOT / f"{pkg}.py").exists(), f"{pkg}.py still shadows {pkg}/"
 
