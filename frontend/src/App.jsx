@@ -20,7 +20,6 @@ import './styles/bulb.css'
 import './styles/feeds.css'
 import './styles/fleet.css'
 import './styles/hangar.css'
-import './styles/white-pages.css'
 import './styles/responsive.css'
 import './styles/google-home.css'
 

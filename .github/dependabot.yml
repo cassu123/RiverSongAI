@@ -16,12 +16,3 @@ updates:
     schedule:
       interval: weekly
 
-  # Capacitor wraps the frontend into a native Android app, so frontend/android
-  # carries a real Gradle build: the Android Gradle Plugin and the Google
-  # Services plugin that wires up FCM push. Dependabot raises security alerts
-  # for these whether or not they are configured here — without this block the
-  # alerts appear and nothing ever opens a PR to act on them.
-  - package-ecosystem: gradle
-    directory: /frontend/android
-    schedule:
-      interval: weekly
