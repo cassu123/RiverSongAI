@@ -117,6 +117,27 @@
   --rs-motion-slow: 750ms;
   --rs-motion-curve: cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* Surface veils and hairlines.
+
+     Components had been writing rgba(255,255,255,0.05) and
+     1px solid rgba(255,255,255,0.12) by hand — a fixed white lift that no
+     environment could move. The border alphas in particular are the whole
+     difference between the ethereal environments and the tactical ones, and
+     --card-border-alpha already carries that (0.12 vs 0.25); it just never
+     reached anything drawn inline. Three weights, all derived from it, so a
+     hairline gets heavier when the environment says it should. */
+  --rs-veil-1:   rgba(255, 255, 255, 0.04);
+  --rs-veil-2:   rgba(255, 255, 255, 0.06);
+  --rs-veil-3:   rgba(255, 255, 255, 0.10);
+  --rs-hairline-soft:   rgba(255, 255, 255, calc(var(--card-border-alpha, 0.12) * 0.5));
+  --rs-hairline:        rgba(255, 255, 255, calc(var(--card-border-alpha, 0.12) * 0.75));
+  --rs-hairline-strong: rgba(255, 255, 255, var(--card-border-alpha, 0.12));
+
+  /* Scrims — dark washes over media and behind overlays. */
+  --rs-scrim-1:  rgba(0, 0, 0, 0.25);
+  --rs-scrim-2:  rgba(0, 0, 0, 0.6);
+  --rs-scrim-3:  rgba(0, 0, 0, 0.8);
+
   /* Semantic Status Colors */
   --rs-status-nominal:  #4ade80;
   --rs-status-warning:  #facc15;

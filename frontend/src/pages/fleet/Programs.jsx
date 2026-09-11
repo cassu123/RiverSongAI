@@ -143,7 +143,7 @@ export default function Programs() {
         <div className="rs-table-wrap">
           <table className="rs-w-full rs-text-left" style={{ borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <tr style={{ borderBottom: '1px solid var(--rs-hairline)' }}>
                 <th className="rs-p-3">Name</th>
                 <th className="rs-p-3">Unit</th>
                 <th className="rs-p-3">Zones</th>
@@ -157,7 +157,7 @@ export default function Programs() {
                 let zIds = p.zone_ids || []
                 if (typeof zIds === 'string') { try { zIds = JSON.parse(zIds) } catch(e){} }
                 return (
-                  <tr key={p.program_id || p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <tr key={p.program_id || p.id} style={{ borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                     <td className="rs-p-3">{p.name}</td>
                     <td className="rs-p-3">{u ? u.name : 'Unassigned'}</td>
                     <td className="rs-p-3">{zIds.length} zone(s)</td>
@@ -177,7 +177,7 @@ export default function Programs() {
       </div>
 
       {showModal && (
-        <div className="rs-flex rs-items-center rs-justify-center" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000 }}>
+        <div className="rs-flex rs-items-center rs-justify-center" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--rs-scrim-3)', zIndex: 1000 }}>
           <div className="rs-card" style={{ width: 600, maxHeight: '90vh', overflowY: 'auto' }}>
             <h3>{editingId ? 'Edit Program' : 'Create Program'}</h3>
             
@@ -198,7 +198,7 @@ export default function Programs() {
                 <label>Zones</label>
                 <div className="rs-flex rs-flex-wrap rs-gap-3" style={{ marginTop: 5 }}>
                   {zones.map(z => (
-                    <label key={z.zone_id || z.id} className="rs-flex rs-items-center" style={{ gap: 5, background: 'rgba(255,255,255,0.05)', padding: '5px 10px', borderRadius: 'var(--md-shape-xs)' }}>
+                    <label key={z.zone_id || z.id} className="rs-flex rs-items-center" style={{ gap: 5, background: 'var(--rs-veil-1)', padding: '5px 10px', borderRadius: 'var(--md-shape-xs)' }}>
                       <input type="checkbox" checked={formData.zone_ids.includes(z.zone_id || z.id)} onChange={() => toggleZone(z.zone_id || z.id)} />
                       {z.name}
                     </label>

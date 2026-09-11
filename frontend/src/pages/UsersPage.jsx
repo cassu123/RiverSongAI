@@ -205,7 +205,7 @@ export default function UsersPage({ embedded = false }) {
 
   if (currentUser?.role !== 'admin') {
     return (
-      <div className="rs-card rs-text-center" style={{ padding: 'var(--rs-space-7) var(--rs-space-5)', background: '#151c27', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 24 }}>
+      <div className="rs-card rs-text-center" style={{ padding: 'var(--rs-space-7) var(--rs-space-5)', background: '#151c27', border: '1px solid var(--rs-hairline-strong)', borderRadius: 24 }}>
         <span className="material-symbols-rounded rs-mb-4 rs-c-critical" style={{ fontSize: '3.2rem', display: 'block' }}>
           admin_panel_settings
         </span>
@@ -243,7 +243,7 @@ export default function UsersPage({ embedded = false }) {
                 ) : (
                   <select 
                     className={`rs-pill ${u.role === 'admin' ? 'is-active' : ''}`}
-                    style={{ fontSize: 'var(--rs-fs-tiny)', padding: 'var(--rs-space-2) var(--rs-space-4)', outline: 'none', border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer', textAlign: 'center', background: '#1b2432', color: '#fff' }}
+                    style={{ fontSize: 'var(--rs-fs-tiny)', padding: 'var(--rs-space-2) var(--rs-space-4)', outline: 'none', border: '1px solid var(--rs-hairline-strong)', cursor: 'pointer', textAlign: 'center', background: '#1b2432', color: '#fff' }}
                     value={u.role}
                     onChange={(e) => updateRole(u, e.target.value)}
                   >
@@ -266,7 +266,7 @@ export default function UsersPage({ embedded = false }) {
               </div>
               
               <div className="rs-mt-5 rs-flex rs-flex-col rs-gap-4">
-                <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                   <div>
                     <span className="rs-card-label rs-type-tiny rs-c-fg">FORCE PASSWORD CHANGE</span>
                     <span className="rs-type-tiny rs-muted" style={{ display: 'block', marginTop: 2 }}>Requires changing password on next sign-in</span>
@@ -280,7 +280,7 @@ export default function UsersPage({ embedded = false }) {
                   </button>
                 </div>
 
-                <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                   <div>
                     <span className="rs-card-label rs-type-tiny rs-c-fg">SUSPEND ACCOUNT</span>
                     <span className="rs-type-tiny rs-muted" style={{ display: 'block', marginTop: 2 }}>Block sign-in and API access immediately</span>
@@ -294,7 +294,7 @@ export default function UsersPage({ embedded = false }) {
                   </button>
                 </div>
 
-                <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                   <div>
                     <span className="rs-card-label rs-type-tiny rs-c-fg">
                       FREE MODELS ONLY

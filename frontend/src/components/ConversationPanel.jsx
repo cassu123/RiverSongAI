@@ -63,8 +63,8 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
             'Add milk to grocery list'
           ].map((chip, idx) => (
             <button key={idx} className="rs-type-tiny rs-pointer" style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'var(--rs-veil-1)',
+              border: '1px solid var(--rs-hairline)',
               borderRadius: 'var(--md-shape-xl)',
               padding: 'var(--rs-space-3) var(--rs-space-4)',
               color: 'var(--md-on-surface-variant)',

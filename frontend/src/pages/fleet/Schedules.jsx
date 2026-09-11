@@ -108,7 +108,7 @@ export default function Schedules() {
         <div className="rs-table-wrap">
           <table className="rs-w-full rs-text-left" style={{ borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <tr style={{ borderBottom: '1px solid var(--rs-hairline)' }}>
                 <th className="rs-p-3">Enabled</th>
                 <th className="rs-p-3">Name</th>
                 <th className="rs-p-3">Program</th>
@@ -121,7 +121,7 @@ export default function Schedules() {
               {schedules.map(s => {
                 const p = programs.find(x => x.program_id === s.program_id)
                 return (
-                  <tr key={s.schedule_id || s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <tr key={s.schedule_id || s.id} style={{ borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                     <td className="rs-p-3">
                       <input type="checkbox" checked={s.enabled} onChange={() => toggleEnabled(s)} />
                     </td>
@@ -143,7 +143,7 @@ export default function Schedules() {
       </div>
 
       {showModal && (
-        <div className="rs-flex rs-items-center rs-justify-center" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000 }}>
+        <div className="rs-flex rs-items-center rs-justify-center" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--rs-scrim-3)', zIndex: 1000 }}>
           <div className="rs-card" style={{ width: 500 }}>
             <h3>{editingId ? 'Edit Schedule' : 'Create Schedule'}</h3>
             

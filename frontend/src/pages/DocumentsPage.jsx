@@ -227,8 +227,8 @@ export default function DocumentsPage({ setAction }) {
                 onChange={onChangeTitle}
                 placeholder="Title"
                 className="rs-grow rs-type-small rs-fw-700" style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'var(--rs-veil-1)',
+                  border: '1px solid var(--rs-hairline-strong)',
                   borderRadius: 'var(--md-shape-sm)',
                   padding: 'var(--rs-space-3) var(--rs-space-3)',
                   color: 'var(--md-on-surface)',
@@ -240,8 +240,8 @@ export default function DocumentsPage({ setAction }) {
                 value={activeDoc.kind}
                 onChange={onChangeKind}
                 className="rs-type-nano rs-fw-700" style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'var(--rs-veil-1)',
+                  border: '1px solid var(--rs-hairline-strong)',
                   borderRadius: 'var(--md-shape-sm)',
                   padding: '9px 10px',
                   color: 'var(--md-on-surface)',
@@ -265,8 +265,8 @@ export default function DocumentsPage({ setAction }) {
               spellCheck={true}
               className="rs-grow rs-p-4 rs-type-small" style={{
                 minHeight: 'calc(100dvh - 300px)',
-                background: 'rgba(0,0,0,0.18)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'var(--rs-scrim-1)',
+                border: '1px solid var(--rs-hairline)',
                 borderRadius: 'var(--md-shape-sm)',
                 color: 'var(--md-on-surface)',
                 fontFamily: activeDoc.kind === 'markdown' || activeDoc.kind === 'csv' || activeDoc.kind === 'html'

@@ -245,7 +245,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
         </div>
 
         <div className="rs-modal-body">
-          {error && <div className="rs-status-strip rs-mb-4 rs-c-critical" style={{ background: 'rgba(248,113,113,0.2)' }}>{error}</div>}
+          {error && <div className="rs-status-strip rs-mb-4 rs-c-critical" style={{ background: 'color-mix(in srgb, var(--rs-status-critical) 20%, transparent)' }}>{error}</div>}
 
           {!isNew && (
             <div className="rs-mb-5">
@@ -253,7 +253,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
                 {attachments.map(att => (
                    <div key={att.id} className="rs-relative rs-clip rs-no-shrink" style={{ width: 120, height: 120, borderRadius: 'var(--md-shape-sm)', background: 'var(--md-surface-container-high)' }}>
                      <img src={`/api/inventory/attachments/${att.id}/download?token=${token}`} alt="Attachment" className="rs-w-full rs-h-full" style={{ objectFit: 'cover' }} />
-                     <button onClick={() => deleteAttachment(att.id)} className="rs-pointer" style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24 }}>
+                     <button onClick={() => deleteAttachment(att.id)} className="rs-pointer" style={{ position: 'absolute', top: 4, right: 4, background: 'var(--rs-scrim-2)', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24 }}>
                        <span className="material-symbols-rounded" style={{ fontSize: '14px' }}>close</span>
                      </button>
                    </div>

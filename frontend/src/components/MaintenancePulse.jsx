@@ -389,7 +389,7 @@ function PeopleSettings({ token, people, onRefresh }) {
       <div className="rs-flex rs-gap-3 rs-mb-5">
         <input
           className="cockpit-input-raw rs-grow"
-          style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--md-shape-sm)', padding: 'var(--rs-space-3) var(--rs-space-4)' }}
+          style={{ background: 'var(--rs-scrim-1)', border: '1px solid var(--rs-hairline)', borderRadius: 'var(--md-shape-sm)', padding: 'var(--rs-space-3) var(--rs-space-4)' }}
           placeholder="member@example.com"
           value={emailInput}
           onChange={e => setEmailInput(e.target.value)}
@@ -501,7 +501,7 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
 
       <div className="rs-gap-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
         {/* Assigned */}
-        <div className="rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-md)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rs-p-4" style={{ background: 'var(--rs-scrim-1)', borderRadius: 'var(--md-shape-md)', border: '1px solid var(--rs-hairline-soft)' }}>
           <div className="card-metric-label rs-mb-3">
             ASSIGNED TO {currentV?.nickname?.toUpperCase() || currentV?.model?.toUpperCase() || 'VEHICLE'}
           </div>
@@ -522,7 +522,7 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
         </div>
 
         {/* Unassigned */}
-        <div className="rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-md)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rs-p-4" style={{ background: 'var(--rs-scrim-1)', borderRadius: 'var(--md-shape-md)', border: '1px solid var(--rs-hairline-soft)' }}>
           <div className="card-metric-label rs-mb-3">AVAILABLE ROSTER MEMBERS</div>
           {unassigned.length === 0 ? (
             <div className="mp-empty-specs rs-p-4">All registered members are assigned.</div>
@@ -632,7 +632,7 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
       </div>
 
       {preview && (
-        <div className="rs-mt-4 rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-md)' }}>
+        <div className="rs-mt-4 rs-p-4" style={{ background: 'var(--rs-scrim-1)', borderRadius: 'var(--md-shape-md)' }}>
           <div className="card-metric-label rs-mb-3">PREVIEW — {preview.length} ITEMS DETECTED</div>
           {preview.length === 0 ? (
             <div className="mp-empty-specs">No structured maintenance items detected in this document.</div>
@@ -778,7 +778,7 @@ function VehicleRAG({ token, vehicleId, currentOdometer, onUpdated }) {
       <form onSubmit={handleAsk} className="rs-flex rs-gap-3">
         <input
           className="cockpit-input-raw rs-grow"
-          style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--md-shape-sm)', padding: 'var(--rs-space-3) var(--rs-space-4)' }}
+          style={{ background: 'var(--rs-scrim-1)', border: '1px solid var(--rs-hairline)', borderRadius: 'var(--md-shape-sm)', padding: 'var(--rs-space-3) var(--rs-space-4)' }}
           placeholder="e.g. 'What oil viscosity is recommended?' or 'What is the torque for the oil drain plug?'"
           value={question}
           onChange={e => setQuestion(e.target.value)}
@@ -799,7 +799,7 @@ function VehicleRAG({ token, vehicleId, currentOdometer, onUpdated }) {
               <summary className="rs-pointer rs-c-accent">View Citations ({answer.chunks.length})</summary>
               <div className="rs-mt-2 rs-flex rs-flex-col rs-gap-2">
                 {answer.chunks.map((c, idx) => (
-                  <div key={idx} style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-xs)' }}>
+                  <div key={idx} style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'var(--rs-scrim-1)', borderRadius: 'var(--md-shape-xs)' }}>
                     {c.text}
                   </div>
                 ))}
@@ -1311,7 +1311,7 @@ export default function MaintenancePulse({
                 </div>
               </div>
 
-              <div className="rs-flex rs-justify-between rs-items-center" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rs-flex rs-justify-between rs-items-center" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid var(--rs-hairline)' }}>
                 <button type="button" className="rs-pill btn-danger" onClick={handleDeleteVehicle}>
                   DELETE VEHICLE
                 </button>
@@ -1370,7 +1370,7 @@ export default function MaintenancePulse({
                 className="cockpit-input-raw"
                 type="number"
                 style={{
-                  background: 'rgba(0,0,0,0.3)',
+                  background: 'var(--rs-scrim-1)',
                   border: '1px solid var(--primary)',
                   borderRadius: 'var(--md-shape-sm)',
                   padding: 'var(--rs-space-2) var(--rs-space-3)',
@@ -1499,7 +1499,7 @@ export default function MaintenancePulse({
               ) : (
                 <div className="staging-tags-flow">
                   {fastenerTorques.map((t, idx) => (
-                    <span key={idx} className="staging-chip" style={{ color: 'var(--rs-status-warning, #facc15)', borderColor: 'rgba(250, 204, 21, 0.3)' }}>
+                    <span key={idx} className="staging-chip" style={{ color: 'var(--rs-status-warning, #facc15)', borderColor: 'color-mix(in srgb, var(--rs-status-warning) 30%, transparent)' }}>
                       <strong>{t.item}:</strong> {t.ft_lb ? `${t.ft_lb} ft-lb` : ''}{t.ft_lb && t.nm ? ' / ' : ''}{t.nm ? `${t.nm} N·m` : ''}
                     </span>
                   ))}
@@ -1558,7 +1558,7 @@ export default function MaintenancePulse({
                         <span className="rs-type-micro" style={{ color: 'var(--md-on-surface-variant)' }}>Measured:</span>
                         <input
                           className="cockpit-input-raw rs-type-tiny"
-                          style={{ maxWidth: 140, padding: 'var(--rs-space-1) var(--rs-space-2)', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-xs)' }}
+                          style={{ maxWidth: 140, padding: 'var(--rs-space-1) var(--rs-space-2)', background: 'var(--rs-scrim-1)', borderRadius: 'var(--md-shape-xs)' }}
                           placeholder={cp.unit ? `e.g. 32 ${cp.unit}` : 'Actual value'}
                           value={actualValues[cp.id] || ''}
                           onChange={e => setActualValues({ ...actualValues, [cp.id]: e.target.value })}
@@ -1653,7 +1653,7 @@ export default function MaintenancePulse({
 
             {/* Pro Service Specific Fields */}
             {logForm.is_pro_service && (
-              <div className="rs-gap-4 rs-mb-5 rs-p-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-md)' }}>
+              <div className="rs-gap-4 rs-mb-5 rs-p-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', background: 'var(--rs-scrim-1)', borderRadius: 'var(--md-shape-md)' }}>
                 <div className="cockpit-input-box">
                   <span className="card-metric-label">SERVICE FACILITY / DEALER</span>
                   <input

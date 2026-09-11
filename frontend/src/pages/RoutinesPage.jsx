@@ -103,7 +103,7 @@ export default function RoutinesPage({ setAction }) {
                 </div>
               )}
               {r.last_output && (
-                <div className="rs-card-meta" style={{ marginTop: 'var(--rs-space-2)', padding: 'var(--rs-space-2)', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-xs)', whiteSpace: 'pre-wrap', color: '#fff' }}>
+                <div className="rs-card-meta" style={{ marginTop: 'var(--rs-space-2)', padding: 'var(--rs-space-2)', background: 'var(--rs-scrim-1)', borderRadius: 'var(--md-shape-xs)', whiteSpace: 'pre-wrap', color: '#fff' }}>
                   {r.last_output}
                 </div>
               )}

@@ -30,9 +30,9 @@ async function apiFetch(path, token, opts = {}) {
 }
 
 function StockBadge({ qty, threshold }) {
-  if (qty === 0) return <span className="rs-pill rs-c-critical" style={{ background: 'rgba(248,113,113,0.1)', borderColor: 'var(--rs-status-critical)' }}>OUT</span>;
-  if (qty <= threshold) return <span className="rs-pill rs-c-warning" style={{ background: 'rgba(250,204,21,0.1)', borderColor: 'var(--rs-status-warning)' }}>LOW</span>;
-  return <span className="rs-pill rs-c-nominal" style={{ background: 'rgba(74,222,128,0.1)', borderColor: 'var(--rs-status-nominal)' }}>IN STOCK</span>;
+  if (qty === 0) return <span className="rs-pill rs-c-critical" style={{ background: 'color-mix(in srgb, var(--rs-status-critical) 10%, transparent)', borderColor: 'var(--rs-status-critical)' }}>OUT</span>;
+  if (qty <= threshold) return <span className="rs-pill rs-c-warning" style={{ background: 'color-mix(in srgb, var(--rs-status-warning) 10%, transparent)', borderColor: 'var(--rs-status-warning)' }}>LOW</span>;
+  return <span className="rs-pill rs-c-nominal" style={{ background: 'color-mix(in srgb, var(--rs-status-nominal) 10%, transparent)', borderColor: 'var(--rs-status-nominal)' }}>IN STOCK</span>;
 }
 
 // ---------------------------------------------------------------------------
@@ -62,7 +62,7 @@ function ListingBuilder({ product }) {
       <div className="rs-flex rs-gap-2 rs-mb-3">
         <select 
           className="rs-pill rs-c-fg" 
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', padding: '0 var(--rs-space-3)' }}
+          style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', padding: '0 var(--rs-space-3)' }}
           value={platform} 
           onChange={(e) => setPlatform(e.target.value)}
         >
@@ -73,7 +73,7 @@ function ListingBuilder({ product }) {
         </button>
       </div>
       <div className="rs-p-3 rs-type-tiny" style={{
-        background: 'rgba(0,0,0,0.2)',
+        background: 'var(--rs-scrim-1)',
         borderRadius: 'var(--md-shape-sm)',
         maxHeight: 150,
         overflowY: 'auto',
@@ -239,42 +239,42 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
           <div className="rs-flex rs-gap-3 rs-flex-wrap">
             <div className="rs-grow">
               <label className="rs-card-label">PRODUCT NAME *</label>
-              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} value={form.name} onChange={set('name')} placeholder="e.g. Midnight Bloom" />
+              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} value={form.name} onChange={set('name')} placeholder="e.g. Midnight Bloom" />
             </div>
             <div className="rs-grow">
               <label className="rs-card-label">SKU *</label>
-              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} value={form.sku} onChange={set('sku')} placeholder="e.g. HBH-MB-001" />
+              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} value={form.sku} onChange={set('sku')} placeholder="e.g. HBH-MB-001" />
             </div>
           </div>
           <div className="rs-flex rs-gap-3 rs-flex-wrap">
             <div className="rs-grow">
               <label className="rs-card-label">CATEGORY</label>
-              <select className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} value={form.category} onChange={set('category')}>
+              <select className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} value={form.category} onChange={set('category')}>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div className="rs-grow">
               <label className="rs-card-label">STOCK QTY</label>
-              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} type="number" min="0" value={form.stock_qty} onChange={set('stock_qty')} />
+              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} type="number" min="0" value={form.stock_qty} onChange={set('stock_qty')} />
             </div>
             <div className="rs-grow">
               <label className="rs-card-label">THRESHOLD</label>
-              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} type="number" min="0" value={form.threshold} onChange={set('threshold')} />
+              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} type="number" min="0" value={form.threshold} onChange={set('threshold')} />
             </div>
           </div>
           <div className="rs-flex rs-gap-3 rs-flex-wrap">
             <div className="rs-grow">
               <label className="rs-card-label">SALE PRICE ($)</label>
-              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} type="number" min="0" step="0.01" value={form.unit_price} onChange={set('unit_price')} placeholder="0.00" />
+              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} type="number" min="0" step="0.01" value={form.unit_price} onChange={set('unit_price')} placeholder="0.00" />
             </div>
             <div className="rs-grow">
               <label className="rs-card-label">COST PRICE ($)</label>
-              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} type="number" min="0" step="0.01" value={form.cost_price} onChange={set('cost_price')} placeholder="0.00" />
+              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} type="number" min="0" step="0.01" value={form.cost_price} onChange={set('cost_price')} placeholder="0.00" />
             </div>
           </div>
           <div>
             <label className="rs-card-label">DESCRIPTION</label>
-            <textarea className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', resize: 'vertical' }} value={form.description} onChange={set('description')} rows={2} placeholder="Optional notes..." />
+            <textarea className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', resize: 'vertical' }} value={form.description} onChange={set('description')} rows={2} placeholder="Optional notes..." />
           </div>
         </div>
       </div>
@@ -305,7 +305,7 @@ function ProductCard({ product, onEdit, onDelete, onGenerateImage }) {
 
   return (
     <div className="rs-card animate-fade-in rs-flex rs-flex-col rs-clip" style={{ padding: 0 }}>
-      <div className="rs-relative" style={{ height: 180, background: 'rgba(0,0,0,0.2)' }}>
+      <div className="rs-relative" style={{ height: 180, background: 'var(--rs-scrim-1)' }}>
         {product.image_data
           ? <img src={product.image_data} alt={product.name} className="rs-w-full rs-h-full" style={{ objectFit: 'cover' }} />
           : <div className="rs-w-full rs-flex rs-items-center rs-justify-center rs-muted rs-h-full" style={{ fontSize: '2rem' }}>
@@ -398,7 +398,7 @@ export default function CommercePage({ setAction }) {
           <span className="material-symbols-rounded" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>search</span>
           <input 
             className="rs-w-full rs-type-small rs-c-fg" style={{
-              background: 'rgba(255,255,255,0.08)',
+              background: 'var(--rs-veil-2)',
               border: '1px solid var(--md-outline-variant)',
               borderRadius: 30,
               padding: 'var(--rs-space-3) var(--rs-space-3) var(--rs-space-3) var(--rs-space-7)',
@@ -582,7 +582,7 @@ function CreateWorkspaceForm({ token, onCreate }) {
       {error && <div className="rs-mb-3 rs-type-tiny rs-c-critical">{error}</div>}
       <div className="rs-flex rs-gap-3">
         <input 
-          className="rs-grow rs-p-3 rs-c-fg" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }}
+          className="rs-grow rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }}
           placeholder="e.g. My Boutique" 
           value={name} 
           onChange={e => setName(e.target.value)} 

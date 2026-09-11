@@ -174,7 +174,7 @@ export default function ReadingPage({ setAction }) {
                     <span className="rs-status-dot" style={{ background: ALL_SERVICES_MAP[book.service]?.color || 'var(--primary)' }} />
                   </div>
                   {book.status === 'reading' && (
-                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(0,0,0,0.3)' }}>
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'var(--rs-scrim-1)' }}>
                       <div className="rs-h-full" style={{ width: `${book.progress_pct}%`, background: 'var(--primary)', boxShadow: '0 0 12px var(--primary)' }} />
                     </div>
                   )}

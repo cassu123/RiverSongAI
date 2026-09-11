@@ -305,7 +305,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
   }, [])
 
   const ActionSlot = useMemo(() => (
-    <div className="rs-chat-input-container" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(16px)', borderRadius: '24px', padding: 'var(--rs-space-2) var(--rs-space-3)', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div className="rs-chat-input-container" style={{ background: 'var(--rs-scrim-1)', backdropFilter: 'blur(16px)', borderRadius: '24px', padding: 'var(--rs-space-2) var(--rs-space-3)', border: '1px solid var(--rs-hairline)' }}>
       <textarea
         ref={inputRef}
         rows={1}

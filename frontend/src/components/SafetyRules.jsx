@@ -189,7 +189,7 @@ export default function SafetyRules() {
               {showing && (
                 <div className="rs-mt-3 rs-p-3 rs-type-small" style={{
                   borderRadius: 'var(--md-shape-sm)',
-                  background: 'rgba(0,0,0,0.22)',
+                  background: 'var(--rs-scrim-1)',
                   border: `1px solid ${result.ok ? 'var(--secondary)' : 'var(--warn)'}`,
                 }}>
                   <div className="rs-fw-700" style={{ color: result.ok ? 'var(--secondary)' : 'var(--warn)' }}>

@@ -115,7 +115,7 @@ export default function PresetSelector({ onApply, onManage }) {
               <button
                 className="rs-drawer-item rs-w-full rs-mt-1 rs-text-left"
                 onClick={() => { setOpen(false); onManage() }}
-                style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', opacity: 0.7, borderTop: '1px solid rgba(255,255,255,0.08)' }}
+                style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', opacity: 0.7, borderTop: '1px solid var(--rs-hairline)' }}
               >
                 <span className="rs-type-nano rs-fw-700">+ MANAGE PRESETS</span>
               </button>

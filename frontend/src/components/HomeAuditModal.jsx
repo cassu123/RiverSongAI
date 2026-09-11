@@ -110,7 +110,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
         <h2 className="rs-mb-2" style={{ marginTop: 0, fontSize: '2rem' }}>Sector Audit</h2>
         <p className="rs-card-meta">Verify physical presence of operational assets.</p>
 
-        {error && <div className="rs-p-2 rs-mb-4 rs-c-critical" style={{ background: 'rgba(248,113,113,0.1)' }}>{error}</div>}
+        {error && <div className="rs-p-2 rs-mb-4 rs-c-critical" style={{ background: 'color-mix(in srgb, var(--rs-status-critical) 10%, transparent)' }}>{error}</div>}
 
         {loading ? (
           <div>INITIALIZING AUDIT SUBSYSTEM...</div>
@@ -170,7 +170,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
                   <div key={loc} className="rs-mb-4">
                     <div className="rs-mb-2 rs-muted rs-type-tiny" style={{ textTransform: 'uppercase', letterSpacing: 1 }}>{loc}</div>
                     {scannedByLoc[loc].map(i => (
-                      <div key={i.id} className="rs-mb-1 rs-flex rs-justify-between" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'rgba(74,222,128,0.05)', borderRadius: 'var(--md-shape-xs)' }}>
+                      <div key={i.id} className="rs-mb-1 rs-flex rs-justify-between" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'color-mix(in srgb, var(--rs-status-nominal) 5%, transparent)', borderRadius: 'var(--md-shape-xs)' }}>
                         <span>{i.name}</span>
                         <span className="rs-muted rs-type-tiny rs-mono">{i.ein}</span>
                       </div>
@@ -187,7 +187,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
                   <div key={loc} className="rs-mb-4">
                     <div className="rs-mb-2 rs-muted rs-type-tiny" style={{ textTransform: 'uppercase', letterSpacing: 1 }}>{loc}</div>
                     {missingByLoc[loc].map(i => (
-                      <div key={i.id} className="rs-mb-1 rs-flex rs-justify-between" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'rgba(248,113,113,0.05)', borderRadius: 'var(--md-shape-xs)' }}>
+                      <div key={i.id} className="rs-mb-1 rs-flex rs-justify-between" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'color-mix(in srgb, var(--rs-status-critical) 5%, transparent)', borderRadius: 'var(--md-shape-xs)' }}>
                         <span>{i.name}</span>
                         <span className="rs-muted rs-type-tiny rs-mono">{i.ein}</span>
                       </div>
@@ -205,7 +205,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
               />
-              <button className="rs-btn-primary rs-w-full rs-justify-center rs-c-nominal" onClick={completeAudit} disabled={completing} style={{ height: 56, background: 'rgba(74,222,128,0.2)' }}>
+              <button className="rs-btn-primary rs-w-full rs-justify-center rs-c-nominal" onClick={completeAudit} disabled={completing} style={{ height: 56, background: 'color-mix(in srgb, var(--rs-status-nominal) 20%, transparent)' }}>
                 <span className="material-symbols-rounded">done_all</span>
                 {completing ? 'FINALIZING...' : 'FINALIZE AUDIT'}
               </button>

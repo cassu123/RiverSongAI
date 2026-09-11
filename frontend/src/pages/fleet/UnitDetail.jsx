@@ -137,16 +137,16 @@ export default function UnitDetail() {
           <span style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)', background: unit.online ? 'rgba(0,255,0,0.2)' : 'rgba(255,0,0,0.2)' }}>
             {unit.online ? 'Online' : 'Offline'}
           </span>
-          <span style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)', background: 'rgba(255,255,255,0.1)' }}>
+          <span style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)', background: 'var(--rs-veil-3)' }}>
             Mode: {unit.operating_mode || 'idle'}
           </span>
-          <span style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)', background: 'rgba(255,255,255,0.1)' }}>
+          <span style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)', background: 'var(--rs-veil-3)' }}>
             Tier: {unit.connectivity_tier || 'lan'}
           </span>
         </div>
       </div>
 
-      <div className="rs-flex rs-gap-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', margin: 'var(--rs-space-5) 0', paddingBottom: 'var(--rs-space-3)' }}>
+      <div className="rs-flex rs-gap-5" style={{ borderBottom: '1px solid var(--rs-hairline)', margin: 'var(--rs-space-5) 0', paddingBottom: 'var(--rs-space-3)' }}>
         <button className="rs-btn-ghost" style={{ fontWeight: tab === 'live' ? 'bold' : 'normal' }} onClick={() => setTab('live')}>Live</button>
         <button className="rs-btn-ghost" style={{ fontWeight: tab === 'history' ? 'bold' : 'normal' }} onClick={() => setTab('history')}>History</button>
         <button className="rs-btn-ghost" style={{ fontWeight: tab === 'settings' ? 'bold' : 'normal' }} onClick={() => setTab('settings')}>Settings</button>
@@ -180,7 +180,7 @@ export default function UnitDetail() {
               <h3>Recent Alerts</h3>
               {alerts.length === 0 && <p className="rs-muted">No alerts.</p>}
               {alerts.map(a => (
-                <div key={a.id} className="rs-flex rs-justify-between rs-p-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div key={a.id} className="rs-flex rs-justify-between rs-p-3" style={{ borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                   <div>
                     <strong style={{ color: a.level === 'critical' ? 'var(--danger)' : 'white' }}>{a.title}</strong>
                     <div className="rs-muted" style={{ fontSize: '0.85em' }}>{new Date(a.timestamp + 'Z').toLocaleString()}</div>
@@ -248,7 +248,7 @@ export default function UnitDetail() {
           <div className="rs-table-wrap">
             <table className="rs-w-full rs-text-left" style={{ borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <tr style={{ borderBottom: '1px solid var(--rs-hairline)' }}>
                   <th className="rs-p-3">Started At</th>
                   <th className="rs-p-3">Program</th>
                   <th className="rs-p-3">Status</th>
@@ -256,7 +256,7 @@ export default function UnitDetail() {
               </thead>
               <tbody>
                 {sessions.map(s => (
-                  <tr key={s.session_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <tr key={s.session_id} style={{ borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                     <td className="rs-p-3">{new Date(s.started_at + 'Z').toLocaleString()}</td>
                     <td className="rs-p-3">{s.program_id || 'Manual'}</td>
                     <td className="rs-p-3">{s.status}</td>
@@ -275,7 +275,7 @@ export default function UnitDetail() {
             Re-run Setup Wizard
           </button>
           
-          <div className="rs-mt-5" style={{ paddingTop: 'var(--rs-space-5)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="rs-mt-5" style={{ paddingTop: 'var(--rs-space-5)', borderTop: '1px solid var(--rs-hairline)' }}>
             <h3>Danger Zone</h3>
             <button className="rs-btn-danger" onClick={async () => {
               if (confirm('Delete this unit? This cannot be undone.')) {

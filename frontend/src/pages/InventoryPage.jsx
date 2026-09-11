@@ -159,7 +159,7 @@ export default function InventoryPage({ setAction }) {
             <span className="material-symbols-rounded">barcode_scanner</span>
             <span className="rs-speak-actions-label">SCAN</span>
           </button>
-          <button className="rs-btn-primary rs-c-warning" onClick={() => setAuditModalOpen(true)} style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'rgba(250,204,21,0.2)' }} disabled={!homeId}>
+          <button className="rs-btn-primary rs-c-warning" onClick={() => setAuditModalOpen(true)} style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'color-mix(in srgb, var(--rs-status-warning) 20%, transparent)' }} disabled={!homeId}>
             <span className="material-symbols-rounded">fact_check</span>
             <span className="rs-speak-actions-label">AUDIT</span>
           </button>

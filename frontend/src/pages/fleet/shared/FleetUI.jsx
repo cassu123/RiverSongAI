@@ -220,7 +220,7 @@ export function ClaimUnitModal({ program, onClose, onDone }) {
   }
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--rs-scrim-2)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
       <div onClick={e => e.stopPropagation()} className="rs-card" style={{ width: 'min(460px, 92vw)', padding: 22 }}>
         <div className="rs-card-label rs-mb-2">CLAIM A {program.toUpperCase()} UNIT</div>
         {!result ? (

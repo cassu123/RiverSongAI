@@ -190,7 +190,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
             </div>
 
             {newError && (
-              <div className="mp-error rs-mb-4" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', borderRadius: 'var(--md-shape-sm)', background: 'rgba(255,139,139,0.1)', color: 'var(--rs-status-critical, #ff8b8b)', border: '1px solid rgba(255,139,139,0.3)' }}>
+              <div className="mp-error rs-mb-4" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', borderRadius: 'var(--md-shape-sm)', background: 'color-mix(in srgb, var(--rs-status-critical) 10%, transparent)', color: 'var(--rs-status-critical, #ff8b8b)', border: '1px solid color-mix(in srgb, var(--rs-status-critical) 30%, transparent)' }}>
                 {newError}
               </div>
             )}
@@ -280,7 +280,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
                 </div>
               </div>
 
-              <div className="rs-flex rs-gap-3 rs-justify-end" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rs-flex rs-gap-3 rs-justify-end" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid var(--rs-hairline)' }}>
                 <button type="button" className="rs-pill" onClick={() => setSelectedVehicleId(null)}>
                   CANCEL
                 </button>

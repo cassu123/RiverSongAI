@@ -159,7 +159,7 @@ export default function ComparePage({ setAction }) {
           <div className="rs-card-label rs-mb-2">LEADERBOARD (YOUR VOTES)</div>
           <div className="rs-flex rs-flex-col rs-gap-1">
             {board.slice(0, 8).map((row, i) => (
-              <div key={`${row.provider}:${row.model}:${i}`} className="rs-flex rs-justify-between rs-type-micro" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div key={`${row.provider}:${row.model}:${i}`} className="rs-flex rs-justify-between rs-type-micro" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                 <span>{row.provider} · {row.model}</span>
                 <span style={{ opacity: 0.7 }}>{row.wins}W · {row.ties}T · {row.losses}L · {(row.win_rate * 100).toFixed(0)}%</span>
               </div>
@@ -172,7 +172,7 @@ export default function ComparePage({ setAction }) {
         <div className="rs-card is-wide rs-p-4">
           <div className="rs-card-label rs-mb-2">RECENT RUNS</div>
           {history.slice(0, 6).map(h => (
-            <div key={h.id} className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div key={h.id} className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid var(--rs-hairline-soft)' }}>
               <span className="rs-grow rs-clip rs-ellipsis rs-nowrap rs-type-tiny">{h.prompt}</span>
               <span className="rs-pill rs-type-nano" style={{ padding: '2px 8px' }}>{h.winner ? h.winner.toUpperCase() : 'OPEN'}</span>
             </div>

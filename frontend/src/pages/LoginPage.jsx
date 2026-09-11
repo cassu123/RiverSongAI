@@ -227,9 +227,9 @@ export default function LoginPage({ onSwitchToSignup }) {
 
         {!challengeToken && (
         <div className="rs-flex rs-items-center rs-gap-3" style={{ margin: '1.25rem 0' }}>
-          <div className="rs-grow" style={{ height: 1, background: 'rgba(255,255,255,0.1)' }} />
+          <div className="rs-grow" style={{ height: 1, background: 'var(--rs-veil-3)' }} />
           <span className="rs-muted rs-type-nano rs-fw-700" style={{ letterSpacing: '0.1em' }}>OR</span>
-          <div className="rs-grow" style={{ height: 1, background: 'rgba(255,255,255,0.1)' }} />
+          <div className="rs-grow" style={{ height: 1, background: 'var(--rs-veil-3)' }} />
         </div>
         )}
 

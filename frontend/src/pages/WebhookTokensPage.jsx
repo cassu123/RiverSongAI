@@ -236,7 +236,7 @@ export default function WebhookTokensPage({ setAction }) {
           className="rs-flex rs-justify-end" style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.55)',
+            background: 'var(--rs-scrim-2)',
             zIndex: 100,
           }}
         >
@@ -246,7 +246,7 @@ export default function WebhookTokensPage({ setAction }) {
               width: 'min(520px, 100vw)',
               overflowY: 'auto',
               background: 'var(--bg-surface, #1a1a1a)',
-              borderLeft: '1px solid rgba(255,255,255,0.1)',
+              borderLeft: '1px solid var(--rs-hairline)',
             }}
           >
             <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
@@ -259,7 +259,7 @@ export default function WebhookTokensPage({ setAction }) {
             )}
             {!audit.loading && audit.entries.map(e => (
               <div key={e.id} className="rs-p-3 rs-mb-2 rs-type-micro" style={{
-                background: 'rgba(255,255,255,0.04)',
+                background: 'var(--rs-veil-1)',
                 borderRadius: 'var(--md-shape-xs)',
               }}>
                 <div className="rs-flex rs-justify-between rs-mb-1">

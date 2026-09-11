@@ -62,7 +62,7 @@ function fmtGameTime(iso) {
 function StatusBadge({ game }) {
   if (game.is_live) return (
     <span className="rs-type-nano rs-c-critical rs-fw-800" style={{
-      background: 'rgba(248,113,113,0.15)',
+      background: 'color-mix(in srgb, var(--rs-status-critical) 15%, transparent)',
       letterSpacing: '0.08em',
       padding: '3px 8px',
       borderRadius: 'var(--md-shape-xs)',
@@ -72,7 +72,7 @@ function StatusBadge({ game }) {
   )
   if (game.status === 'STATUS_FINAL') return (
     <span className="rs-type-nano rs-c-nominal rs-fw-800" style={{
-      background: 'rgba(74,222,128,0.12)',
+      background: 'color-mix(in srgb, var(--rs-status-nominal) 12%, transparent)',
       letterSpacing: '0.08em',
       padding: '3px 8px',
       borderRadius: 'var(--md-shape-xs)',

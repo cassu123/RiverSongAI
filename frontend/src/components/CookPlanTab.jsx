@@ -382,7 +382,7 @@ export default function CookPlanTab({
           </div>
 
           {showAppliances && (
-            <div className="rs-mt-5" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <div className="rs-mt-5" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid var(--rs-hairline)' }}>
               {availableEquipment.length === 0 ? (
                 <div className="rs-p-3 rs-type-tiny rs-muted">
                   No kitchen equipment registered. Add your appliances in settings.
@@ -416,7 +416,7 @@ export default function CookPlanTab({
         </div>
 
         {error && (
-          <div className="rs-card" style={{ borderColor: 'var(--md-error)', background: 'rgba(239, 68, 68, 0.08)' }}>
+          <div className="rs-card" style={{ borderColor: 'var(--md-error)', background: 'color-mix(in srgb, var(--rs-status-critical) 8%, transparent)' }}>
             <div className="rs-card-inner rs-c-error">{error}</div>
           </div>
         )}
@@ -456,7 +456,7 @@ export default function CookPlanTab({
               <h3 className="rs-m-0 rs-type-body rs-fw-700 rs-c-fg">Choose from Cookbook</h3>
               <div className="rs-type-tiny rs-muted">Select any recipe to start guided cooking immediately</div>
             </div>
-            <div className="rs-flex rs-items-center rs-gap-2" style={{ background: 'rgba(255, 255, 255, 0.06)', padding: 'var(--rs-space-2) var(--rs-space-4)', borderRadius: 'var(--md-shape-full)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <div className="rs-flex rs-items-center rs-gap-2" style={{ background: 'var(--rs-veil-2)', padding: 'var(--rs-space-2) var(--rs-space-4)', borderRadius: 'var(--md-shape-full)', border: '1px solid var(--rs-hairline)' }}>
               <span className="material-symbols-rounded rs-muted" style={{ fontSize: 18 }}>search</span>
               <input
                 type="text"
@@ -477,8 +477,8 @@ export default function CookPlanTab({
                   key={r.id}
                   className="rs-flex rs-flex-col rs-justify-between rs-p-4 rs-gap-3" style={{
                     borderRadius: 'var(--md-shape-xl)',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: 'var(--rs-veil-1)',
+                    border: '1px solid var(--rs-hairline)',
                   }}
                 >
                   <div>
@@ -550,7 +550,7 @@ export default function CookPlanTab({
             {cook ? (
               <button
                 className="gh-kitchen-nav-btn"
-                style={{ background: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.4)', color: '#fca5a5' }}
+                style={{ background: 'color-mix(in srgb, var(--rs-status-critical) 15%, transparent)', borderColor: 'color-mix(in srgb, var(--rs-status-critical) 40%, transparent)', color: '#fca5a5' }}
                 onClick={endMealCook}
                 disabled={busy}
               >
@@ -572,12 +572,12 @@ export default function CookPlanTab({
         </div>
 
         {/* Eat At Time Picker */}
-        <div className="rs-flex rs-items-center rs-gap-3 rs-mt-4 rs-flex-wrap" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+        <div className="rs-flex rs-items-center rs-gap-3 rs-mt-4 rs-flex-wrap" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid var(--rs-hairline)' }}>
           <span className="rs-type-tiny rs-muted rs-fw-700">TARGET SERVE TIME:</span>
           <input
             type="time"
             className="rs-pill"
-            style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.12)', color: '#fff', padding: 'var(--rs-space-1) var(--rs-space-3)' }}
+            style={{ background: 'var(--rs-veil-2)', border: '1px solid var(--rs-hairline-strong)', color: '#fff', padding: 'var(--rs-space-1) var(--rs-space-3)' }}
             value={serveTime}
             onChange={e => reschedule(e.target.value)}
           />
@@ -621,7 +621,7 @@ export default function CookPlanTab({
       </div>
 
       {error && (
-        <div className="rs-card" style={{ borderColor: 'var(--md-error)', background: 'rgba(239, 68, 68, 0.08)' }}>
+        <div className="rs-card" style={{ borderColor: 'var(--md-error)', background: 'color-mix(in srgb, var(--rs-status-critical) 8%, transparent)' }}>
           <div className="rs-card-inner rs-c-error">{error}</div>
         </div>
       )}
@@ -777,11 +777,11 @@ export default function CookPlanTab({
 
             <div className="rs-flex rs-flex-col rs-gap-3">
               {plan.recipes.map(r => (
-                <div key={r.id} className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--md-shape-md)' }}>
+                <div key={r.id} className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'var(--rs-veil-1)', borderRadius: 'var(--md-shape-md)' }}>
                   <span className="rs-type-small rs-fw-600 rs-c-fg" style={{ minWidth: 160 }}>{r.title}</span>
                   <select
                     className="rs-pill rs-grow rs-type-tiny"
-                    style={{ background: 'rgba(255, 255, 255, 0.08)', border: 'none', color: '#fff' }}
+                    style={{ background: 'var(--rs-veil-2)', border: 'none', color: '#fff' }}
                     disabled={swapping === r.id}
                     value={(plan?.swaps || []).find(w => w.recipe_id === r.id)?.pick || ''}
                     onChange={e => swapAppliance(r.id, e.target.value || null)}
@@ -936,8 +936,8 @@ export default function CookPlanTab({
                   <div className="rs-mt-5 rs-flex rs-items-center rs-gap-3" style={{
                     padding: 'var(--rs-space-3) var(--rs-space-4)',
                     borderRadius: 'var(--md-shape-lg)',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    background: 'var(--rs-veil-1)',
+                    border: '1px solid var(--rs-hairline-soft)',
                   }}>
                     <span className="rs-type-micro rs-muted rs-fw-800" style={{ textTransform: 'uppercase' }}>
                       UP NEXT:
@@ -1083,8 +1083,8 @@ export default function CookPlanTab({
               maxWidth: 480,
               padding: 'var(--rs-space-3) var(--rs-space-4)',
               borderRadius: 'var(--md-shape-md)',
-              background: 'rgba(74, 222, 128, 0.12)',
-              border: '1px solid rgba(74, 222, 128, 0.3)',
+              background: 'color-mix(in srgb, var(--rs-status-nominal) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--rs-status-nominal) 30%, transparent)',
             }}>
               {completionNotice}
             </div>
@@ -1113,7 +1113,7 @@ export default function CookPlanTab({
 
             <button
               className="gh-kitchen-nav-btn rs-justify-center rs-mt-2"
-              style={{ background: 'rgba(255, 255, 255, 0.05)' }}
+              style={{ background: 'var(--rs-veil-1)' }}
               onClick={() => {
                 if (cook) endMealCook()
                 else {

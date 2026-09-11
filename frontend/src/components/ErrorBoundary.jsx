@@ -83,7 +83,7 @@ export default class ErrorBoundary extends React.Component {
                 wordBreak: 'break-all',
                 lineHeight: 1.4,
                 background: 'rgba(0,0,0,0.4)',
-                border: '1px solid rgba(255,255,255,0.15)',
+                border: '1px solid var(--rs-hairline-strong)',
                 borderRadius: 'var(--md-shape-xs)',
                 maxHeight: 240,
                 overflow: 'auto',

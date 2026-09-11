@@ -101,7 +101,7 @@ export default function Drawer({
         </div>
 
         {/* Account & Quick Controls Footer */}
-        <div className="rs-drawer-footer rs-mt-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 'var(--rs-space-4)' }}>
+        <div className="rs-drawer-footer rs-mt-3" style={{ borderTop: '1px solid var(--rs-hairline)', paddingTop: 'var(--rs-space-4)' }}>
           <div className="rs-flex rs-items-center rs-justify-between rs-gap-3">
             <button
               className={`rs-drawer-profile ${currentPage === 'profile' ? 'is-active' : ''}`}
@@ -121,7 +121,7 @@ export default function Drawer({
               onClick={() => navigate('settings')}
               title="Settings"
               aria-label="Settings"
-              style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }}
+              style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--rs-veil-2)' }}
             >
               <EnvIcon name="settings" className="rs-icon" />
             </button>
@@ -132,7 +132,7 @@ export default function Drawer({
                 onClick={() => { onClose(); onLogout() }}
                 title="Sign out"
                 aria-label="Sign out"
-                style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)' }}
+                style={{ width: 40, height: 40, borderRadius: '50%', background: 'color-mix(in srgb, var(--rs-status-critical) 15%, transparent)' }}
               >
                 <EnvIcon name="logout" className="rs-icon" />
               </button>
@@ -140,7 +140,7 @@ export default function Drawer({
           </div>
 
           {userIsAdmin && (
-            <div className="rs-mt-3 rs-flex rs-items-center rs-justify-between" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', borderRadius: 'var(--md-shape-md)', background: 'rgba(255,255,255,0.04)' }}>
+            <div className="rs-mt-3 rs-flex rs-items-center rs-justify-between" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', borderRadius: 'var(--md-shape-md)', background: 'var(--rs-veil-1)' }}>
               <span className="rs-type-tiny rs-muted rs-fw-500">Admin Mode</span>
               <button
                 className={`rs-drawer-toggle ${adminMode ? 'is-on' : ''}`}

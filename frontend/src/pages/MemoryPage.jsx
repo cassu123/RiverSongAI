@@ -219,7 +219,7 @@ export default function MemoryPage({ setAction }) {
         ) : (
           filtered.map((m, i) => (
             <div key={m.id || i} className="rs-card is-wide animate-page-in">
-              <div className="rs-card-head rs-mb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 'var(--rs-space-2)' }}>
+              <div className="rs-card-head rs-mb-3" style={{ borderBottom: '1px solid var(--rs-hairline-soft)', paddingBottom: 'var(--rs-space-2)' }}>
                 <span className="rs-card-label" style={{ 
                   color: m._type === 'FACT' ? 'var(--primary)' 
                        : m._type === 'PREFERENCE' ? 'var(--rs-status-warning)' 

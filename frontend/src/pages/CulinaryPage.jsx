@@ -99,7 +99,7 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
                       : (pushing ? 'ADDING...' : 'PUSH TO SHOPPING LIST')}
                   </button>
                   {exportResult ? (
-                    <div className="rs-p-4" style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid #4ade80', borderRadius: 'var(--md-shape-sm)' }}>
+                    <div className="rs-p-4" style={{ background: 'color-mix(in srgb, var(--rs-status-nominal) 10%, transparent)', border: '1px solid #4ade80', borderRadius: 'var(--md-shape-sm)' }}>
                       <div className="rs-mb-2 rs-c-nominal rs-fw-800">EXPORT SUCCESSFUL</div>
                       {exportResult.cart_url ? (
                          <a href={exportResult.cart_url} target="_blank" rel="noreferrer" className="rs-btn-primary" style={{ display: 'inline-flex', textDecoration: 'none' }}>OPEN WALMART CART</a>
@@ -142,8 +142,8 @@ function PrepAdjuster({ entry, recipe, api, onUpdate }) {
   return (
     <div className="rs-mt-3 rs-flex rs-gap-3 rs-items-center rs-flex-wrap" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', background: 'var(--md-surface-container-low)', borderRadius: 'var(--md-shape-md)' }}>
        <span className="rs-card-label">SCALE TO</span>
-       <input className="rs-pill rs-text-center" type="number" style={{ width: 60, border: 'none', background: 'rgba(0,0,0,0.2)' }} value={target} onChange={e => setTarget(e.target.value)} />
-       <select className="rs-pill" style={{ border: 'none', background: 'rgba(0,0,0,0.2)' }} value={system} onChange={e => setSystem(e.target.value)}>
+       <input className="rs-pill rs-text-center" type="number" style={{ width: 60, border: 'none', background: 'var(--rs-scrim-1)' }} value={target} onChange={e => setTarget(e.target.value)} />
+       <select className="rs-pill" style={{ border: 'none', background: 'var(--rs-scrim-1)' }} value={system} onChange={e => setSystem(e.target.value)}>
           <option value="">ORIGINAL</option>
           <option value="imperial">IMPERIAL</option>
           <option value="metric">METRIC</option>
@@ -254,7 +254,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
   }
 
   return (
-    <div className="rs-flex rs-items-center rs-justify-center" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(20px)' }} onClick={onClose}>
+    <div className="rs-flex rs-items-center rs-justify-center" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--rs-scrim-2)', backdropFilter: 'blur(20px)' }} onClick={onClose}>
        <div ref={modalRef} tabIndex="-1" className="rs-card is-elev animate-page-in rs-flex rs-flex-col rs-clip" style={{ width: 'min(95%, 720px)', maxHeight: '90vh', animationDuration: '250ms', transformOrigin: 'center' }} onClick={e => e.stopPropagation()}>
           <div className="rs-card-inner rs-grow rs-p-6" style={{ overflowY: 'auto' }}>
              <div className="rs-card-head rs-mb-5" style={{ padding: 'var(--rs-space-2) var(--rs-space-2) 0 var(--rs-space-2)' }}>
@@ -324,7 +324,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                     </div>
                   </div>
 
-                  <div className="rs-mt-6 rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-md)' }}>
+                  <div className="rs-mt-6 rs-p-4" style={{ background: 'var(--rs-scrim-1)', borderRadius: 'var(--md-shape-md)' }}>
                      <div className="rs-card-label rs-mb-3">ADAPT EQUIPMENT</div>
                      <div className="rs-flex rs-gap-3">
                        <input className="rs-pill rs-grow" style={{ background: 'var(--md-surface-container-low)', border: 'none' }} placeholder="E.g., Air Fryer, Instant Pot, Dutch Oven" value={targetEquipment} onChange={e => setTargetEquipment(e.target.value)} />
@@ -354,7 +354,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                  }} /></div>
 
                  {recipe.blacklisted?.length > 0 && (
-                   <div className="rs-card rs-mb-6" style={{ borderColor: 'var(--md-error)', background: 'rgba(239,68,68,0.05)' }}>
+                   <div className="rs-card rs-mb-6" style={{ borderColor: 'var(--md-error)', background: 'color-mix(in srgb, var(--rs-status-critical) 5%, transparent)' }}>
                       <div className="rs-card-inner">
                          <div className="rs-card-label rs-mb-3 rs-c-error">BANNED INGREDIENTS DETECTED</div>
                          <div className="rs-flex rs-flex-col rs-gap-2">
@@ -656,7 +656,7 @@ export default function CulinaryPage({ setAction }) {
           {/* Search & Filter Bar */}
           <div className="gh-card" style={{ padding: 'var(--rs-space-4) var(--rs-space-5)' }}>
             <div className="rs-flex rs-gap-4 rs-items-center rs-flex-wrap">
-              <div className="rs-flex rs-items-center rs-gap-3" style={{ flex: 2, minWidth: 220, background: 'rgba(255,255,255,0.06)', padding: 'var(--rs-space-2) var(--rs-space-4)', borderRadius: 'var(--md-shape-full)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div className="rs-flex rs-items-center rs-gap-3" style={{ flex: 2, minWidth: 220, background: 'var(--rs-veil-2)', padding: 'var(--rs-space-2) var(--rs-space-4)', borderRadius: 'var(--md-shape-full)', border: '1px solid var(--rs-hairline)' }}>
                 <span className="material-symbols-rounded rs-muted" style={{ fontSize: 20 }}>search</span>
                 <input
                   className="rs-w-full rs-type-small rs-c-fg" style={{ all: 'unset' }}
@@ -666,14 +666,14 @@ export default function CulinaryPage({ setAction }) {
                 />
               </div>
               <div className="rs-flex rs-gap-2 rs-flex-wrap">
-                <select className="rs-pill rs-type-tiny" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff' }}>
+                <select className="rs-pill rs-type-tiny" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ border: 'none', background: 'var(--rs-veil-2)', color: '#fff' }}>
                   <option value="ALL">ALL MEALS</option>
                   {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'].map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                 </select>
-                <select className="rs-pill rs-type-tiny" value={filterProtein} onChange={e => setFilterProtein(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff' }}>
+                <select className="rs-pill rs-type-tiny" value={filterProtein} onChange={e => setFilterProtein(e.target.value)} style={{ border: 'none', background: 'var(--rs-veil-2)', color: '#fff' }}>
                   {uniqueProteins.map(p => <option key={p} value={p}>{p === 'ALL' ? 'ALL PROTEINS' : p.toUpperCase()}</option>)}
                 </select>
-                <select className="rs-pill rs-type-tiny" value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff' }}>
+                <select className="rs-pill rs-type-tiny" value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ border: 'none', background: 'var(--rs-veil-2)', color: '#fff' }}>
                   <option value="NEWEST">NEWEST</option>
                   <option value="RATING">TOP RATED</option>
                 </select>
@@ -758,7 +758,7 @@ export default function CulinaryPage({ setAction }) {
                   <div className="rs-mt-5 rs-flex rs-flex-col rs-gap-2">
                     <div className="rs-card-label">AI SUGGESTIONS</div>
                     {recommendations[item.id].map((rec, idx) => (
-                      <div key={idx} className="rs-pill rs-pointer" style={{ justifyContent: 'flex-start', background: 'rgba(255,255,255,0.04)' }} onClick={async () => {
+                      <div key={idx} className="rs-pill rs-pointer" style={{ justifyContent: 'flex-start', background: 'var(--rs-veil-1)' }} onClick={async () => {
                         await api.patch(`/household/banned/${item.id}`, { substitute: rec.name });
                         fetchData('cookbook');
                       }}>
@@ -909,8 +909,8 @@ export default function CulinaryPage({ setAction }) {
                             {p.status.toUpperCase()} PROPOSAL
                           </span>
                           <div className="rs-flex rs-gap-2">
-                            <span className="rs-pill rs-type-micro rs-c-nominal" style={{ padding: '2px 8px', background: 'rgba(74,222,128,0.1)' }}>{p.votes_yes.length} YES</span>
-                            <span className="rs-pill rs-type-micro rs-c-critical" style={{ padding: '2px 8px', background: 'rgba(248,113,113,0.1)' }}>{p.votes_no.length} NO</span>
+                            <span className="rs-pill rs-type-micro rs-c-nominal" style={{ padding: '2px 8px', background: 'color-mix(in srgb, var(--rs-status-nominal) 10%, transparent)' }}>{p.votes_yes.length} YES</span>
+                            <span className="rs-pill rs-type-micro rs-c-critical" style={{ padding: '2px 8px', background: 'color-mix(in srgb, var(--rs-status-critical) 10%, transparent)' }}>{p.votes_no.length} NO</span>
                           </div>
                         </div>
                         <div className="rs-mb-4 rs-type-h3 rs-fw-800 rs-c-fg">
@@ -982,7 +982,7 @@ export default function CulinaryPage({ setAction }) {
 
                 <div className="rs-flex rs-flex-col rs-gap-3">
                   {(activePrep.recipes || []).map((pr, i) => (
-                    <div key={i} className="rs-p-4" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--md-shape-lg)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div key={i} className="rs-p-4" style={{ background: 'var(--rs-veil-1)', borderRadius: 'var(--md-shape-lg)', border: '1px solid var(--rs-hairline)' }}>
                       <div className="rs-flex rs-justify-between rs-items-center">
                         <div className="rs-type-body rs-fw-700 rs-c-fg">{pr.recipe_title}</div>
                         <button className="rs-pill rs-c-error" onClick={async () => {

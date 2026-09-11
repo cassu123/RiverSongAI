@@ -316,7 +316,7 @@ export default function GooglePage() {
                             {t.draft_reply && (
                               <details className="rs-mt-2">
                                 <summary className="rs-type-nano rs-pointer rs-fw-700" style={{ opacity: 0.8 }}>DRAFT REPLY</summary>
-                                <div className="rs-mt-1 rs-p-2 rs-type-micro" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-xs)', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{t.draft_reply}</div>
+                                <div className="rs-mt-1 rs-p-2 rs-type-micro" style={{ background: 'var(--rs-scrim-1)', borderRadius: 'var(--md-shape-xs)', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{t.draft_reply}</div>
                               </details>
                             )}
                           </div>
