@@ -164,14 +164,14 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
   return (
     <Section title={`${meta.label} (paid)`}>
       {/* Connection status */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="rs-flex rs-items-center rs-gap-3">
         <span
           className="material-symbols-rounded"
           style={{ fontSize: '1.4rem', color: statusColor }}
         >
           {enabled ? 'paid' : 'cloud_off'}
         </span>
-        <div style={{ flex: 1 }}>
+        <div className="rs-grow">
           <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>{meta.tagline}</div>
           <div className="rs-card-meta">
             {enabled
@@ -266,8 +266,8 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
           borderRadius: 12,
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className="rs-flex rs-justify-between rs-items-center rs-gap-2 rs-flex-wrap">
+          <div className="rs-flex rs-items-center rs-gap-2">
             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>
               savings
             </span>
@@ -275,7 +275,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
               SPEND TRACKER
             </span>
           </div>
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div className="rs-flex rs-gap-1">
             {[1, 7, 30].map((d) => (
               <button
                 key={d}
@@ -309,7 +309,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
             },
           ].map(({ value, label, icon, color }) => (
             <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div className="rs-flex rs-items-center rs-gap-1">
                 <span className="material-symbols-rounded" style={{ fontSize: '0.8rem', opacity: 0.6 }}>
                   {icon}
                 </span>
@@ -371,7 +371,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
       </div>
 
       {/* Model pills */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <div className="rs-flex rs-gap-2 rs-flex-wrap">
         {meta.models.map(({ name, tag }) => (
           <div
             key={name}

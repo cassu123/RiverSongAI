@@ -93,9 +93,9 @@ export default function PresetSelector({ onApply, onManage }) {
                 : { position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, minWidth: 240 }),
             }}
           >
-            <div className="rs-card-label" style={{ marginBottom: 6 }}>SESSION PRESETS</div>
+            <div className="rs-card-label rs-mb-2">SESSION PRESETS</div>
             {presets.length === 0 && (
-              <div className="rs-card-meta" style={{ padding: 8 }}>No presets yet.</div>
+              <div className="rs-card-meta rs-p-2">No presets yet.</div>
             )}
             {presets.map(p => (
               <button

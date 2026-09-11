@@ -66,14 +66,14 @@ export default function AdminModelFamiliesSection({ token }) {
 
   return (
     <Section title="MODEL FAMILIES">
-      <p className="rs-card-meta" style={{ marginBottom: 12 }}>
+      <p className="rs-card-meta rs-mb-3">
         Toggle which families appear in the Chat picker, give them quirky names, and
         override the model_id each tier maps to. Leave any field blank to use the default.
         Overrides are not validated against the registry — invalid model_ids just show
         as unavailable in the picker.
       </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="rs-flex rs-flex-col rs-gap-3">
         {MODEL_FAMILIES.map(family => {
           const ov = overrides[family.id] || {}
           const enabled = ov.enabled !== false  // default true
@@ -82,7 +82,7 @@ export default function AdminModelFamiliesSection({ token }) {
               key={family.id}
               style={{ padding: 12, opacity: enabled ? 1 : 0.55, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>
                     {family.displayName}
@@ -109,11 +109,11 @@ export default function AdminModelFamiliesSection({ token }) {
                   </span>
                   <input
                     type="text"
-                    className="settings-input"
+                    className="settings-input rs-w-full"
                     placeholder={family.displayName}
                     value={ov.quirky_name || ''}
                     onChange={e => update(family.id, { quirky_name: e.target.value || null })}
-                    style={{ width: '100%' }}
+                   
                     disabled={!enabled}
                   />
                 </label>
@@ -125,11 +125,11 @@ export default function AdminModelFamiliesSection({ token }) {
                     </span>
                     <input
                       type="text"
-                      className="settings-input"
+                      className="settings-input rs-w-full"
                       placeholder={family.tiers[tier] || '(not mapped)'}
                       value={ov.tiers?.[tier] || ''}
                       onChange={e => updateTier(family.id, tier, e.target.value)}
-                      style={{ width: '100%' }}
+                     
                       disabled={!enabled}
                     />
                   </label>
@@ -140,11 +140,11 @@ export default function AdminModelFamiliesSection({ token }) {
         })}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
+      <div className="rs-flex rs-items-center rs-gap-3 rs-mt-4">
         <button className="rs-btn-primary" onClick={handleSave} disabled={saving}>
           {saving ? 'SAVING…' : 'SAVE FAMILY OVERRIDES'}
         </button>
-        {msg && <span className="rs-card-meta" style={{ margin: 0 }}>{msg}</span>}
+        {msg && <span className="rs-card-meta rs-m-0">{msg}</span>}
       </div>
     </Section>
   )

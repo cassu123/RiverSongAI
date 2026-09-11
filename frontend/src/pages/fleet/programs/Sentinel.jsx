@@ -13,8 +13,8 @@ const COMMANDS = [
 
 function Panel({ title, children }) {
   return (
-    <div className="rs-card" style={{ padding: 16, marginBottom: 16 }}>
-      <div className="rs-card-label" style={{ marginBottom: 12 }}>{title}</div>{children}
+    <div className="rs-card rs-p-4 rs-mb-4">
+      <div className="rs-card-label rs-mb-3">{title}</div>{children}
     </div>
   )
 }
@@ -25,7 +25,7 @@ function Dashboard({ unit, sendCmd, latest, alerts, refresh, program }) {
   return (
     <div>
       <Panel title={`${unit.name || unit.unit_id} · ${t.patrolling ? 'PATROLLING' : 'STANDBY'}`}>
-        <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', marginBottom: 14 }}>
+        <div className="rs-flex rs-gap-6 rs-flex-wrap rs-mb-4">
           <MetricStat label="POSTURE" value={t.posture || 'stand'} accent="#f59e0b" />
           <MetricStat label="WAYPOINT" value={`#${t.waypoint ?? 0}`} />
           <MetricStat label="STATE" value={t.patrolling ? 'patrol' : 'idle'} />

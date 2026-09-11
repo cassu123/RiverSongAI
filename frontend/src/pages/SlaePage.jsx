@@ -28,8 +28,8 @@ function StatusPill({ status }) {
 
 function Section({ title, status, message, children }) {
   return (
-    <div className="rs-card is-wide" style={{ padding: 16, marginBottom: 16 }}>
-      <div className="rs-card-head" style={{ marginBottom: 8 }}>
+    <div className="rs-card is-wide rs-p-4 rs-mb-4">
+      <div className="rs-card-head rs-mb-2">
         <span className="rs-card-label">{title}</span>
         <StatusPill status={status} />
       </div>
@@ -156,7 +156,7 @@ export default function SlaePage({ setAction }) {
         {(recent.events || []).length === 0 ? (
           <div className="rs-card-meta">No events yet.</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className="rs-flex rs-flex-col rs-gap-1">
             {recent.events.slice(0, 20).map((e, i) => (
               <div key={i} style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.8 }}>
                 <span style={{ opacity: 0.6 }}>{e.ts}</span>{' '}

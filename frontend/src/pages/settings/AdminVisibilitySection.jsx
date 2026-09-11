@@ -57,25 +57,25 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
 
   return (
     <Section title="MODEL VISIBILITY">
-      <p className="rs-card-meta" style={{ marginBottom: 16 }}>
+      <p className="rs-card-meta rs-mb-4">
         Toggle models off to hide them globally for all users. Hidden models cannot
         be selected but their settings are preserved.
         {saving && <span style={{ marginLeft: 8, color: 'var(--md-primary)' }}>Saving…</span>}
       </p>
 
       {/* ── Voices ── */}
-      <div className="rs-card-label" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="rs-card-label rs-mb-2 rs-flex rs-items-center rs-gap-2">
         <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>VOICE</span>
         Voice Models
       </div>
       {voiceAccents.map(accent => {
         const group = allVoices.filter(v => v.accent === accent)
         return (
-          <div key={accent} style={{ marginBottom: 12 }}>
+          <div key={accent} className="rs-mb-3">
             <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
               {accent.toUpperCase()}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className="rs-flex rs-flex-col rs-gap-1">
               {group.map(v => {
                 const hidden = (visibility.hidden_voices || []).includes(v.voice_id)
                 return (
@@ -104,18 +104,18 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
       })}
 
       {/* ── LLM Models ── */}
-      <div className="rs-card-label" style={{ marginTop: 20, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="rs-card-label rs-mt-5 rs-mb-2 rs-flex rs-items-center rs-gap-2">
         <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px', background: 'var(--md-tertiary)', color: 'var(--md-on-tertiary)' }}>AI</span>
         AI Models
       </div>
       {llmProviders.map(provider => {
         const group = allLlms.filter(m => m.provider === provider)
         return (
-          <div key={provider} style={{ marginBottom: 12 }}>
+          <div key={provider} className="rs-mb-3">
             <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
               {(PROVIDER_DISPLAY[provider] || provider).toUpperCase()}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className="rs-flex rs-flex-col rs-gap-1">
               {group.map(m => {
                 const hidden = (visibility.hidden_llms || []).includes(m.model_id)
                 return (

@@ -109,14 +109,14 @@ export default function ChatToolsSection({ data, token, onChanged }) {
 
   return (
     <Section title="CHAT & VOICE CAPABILITIES MATRIX">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="rs-flex rs-flex-col rs-gap-4">
         {/* Header Description & Metrics */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <p className="rs-card-meta" style={{ margin: 0 }}>
+        <div className="rs-flex rs-flex-wrap rs-items-center rs-justify-between rs-gap-3">
+          <p className="rs-card-meta rs-m-0">
             Configure which skills, integrations, and tools River can access during voice and chat sessions.
             {saving && <span style={{ marginLeft: 8, color: 'var(--primary)' }}>SAVING…</span>}
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="rs-flex rs-items-center rs-gap-2">
             <span style={{
               fontSize: 'var(--rs-fs-micro)',
               fontWeight: 700,
@@ -145,7 +145,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         </div>
 
         {/* Search & Bulk Action Bar */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginTop: 4 }}>
+        <div className="rs-flex rs-flex-wrap rs-items-center rs-gap-3 rs-mt-1">
           <div style={{
             flex: 1,
             minWidth: 220,
@@ -231,8 +231,8 @@ export default function ChatToolsSection({ data, token, onChanged }) {
                 }}
               >
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className="rs-flex rs-items-center rs-justify-between rs-mb-2">
+                    <div className="rs-flex rs-items-center rs-gap-2">
                       <span className="material-symbols-rounded" style={{ fontSize: '1.25rem', color: isEnabled ? 'var(--primary)' : 'var(--md-outline)' }}>
                         {tool.icon || 'handyman'}
                       </span>

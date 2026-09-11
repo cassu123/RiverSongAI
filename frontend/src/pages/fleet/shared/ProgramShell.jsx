@@ -39,22 +39,22 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
 
   return (
     <div className="rs-foyer animate-fade-in" style={{ maxWidth: '100%' }}>
-      <header className="rs-foyer-head" style={{ marginBottom: 16 }}>
+      <header className="rs-foyer-head rs-mb-4">
         <Link to="/fleet" className="rs-card-label" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>arrow_back</span> ECOSYSTEM
         </Link>
-        <h1 className="rs-greeting" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <h1 className="rs-greeting rs-flex rs-items-center rs-gap-3">
           <span className="material-symbols-rounded" style={{ fontSize: '1.8rem', color: accent }}>{icon}</span>
           {title}
         </h1>
         <div className="rs-greeting-sub">{subtitle}</div>
-        <div className="rs-status-strip" style={{ marginTop: 6 }}>
+        <div className="rs-status-strip rs-mt-2">
           <span className="rs-status-dot" style={{ background: onlineCount ? 'var(--rs-status-nominal,#36d399)' : 'var(--md-error)' }} />
           <span>{onlineCount} / {units.length} ONLINE</span>
         </div>
       </header>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+      <div className="rs-flex rs-gap-2 rs-mb-5 rs-flex-wrap">
         <SimulateButton program={program} onDone={refresh} />
         <button className="rs-btn-ghost" style={{ fontSize: 'var(--rs-fs-micro)', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
           onClick={() => setShowClaim(true)}>
@@ -66,22 +66,22 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
       {loading && !units.length ? (
         <div className="rs-card-meta">Loading units…</div>
       ) : !units.length ? (
-        <div className="rs-card" style={{ padding: 40, textAlign: 'center' }}>
+        <div className="rs-card rs-p-7 rs-text-center">
           <span className="material-symbols-rounded" style={{ fontSize: '2.4rem', color: accent, opacity: 0.8 }}>{icon}</span>
           <h3 style={{ margin: '12px 0 6px' }}>No {title} units yet</h3>
-          <p className="rs-card-meta" style={{ marginBottom: 16 }}>Add a simulated unit to watch it come online and stream live telemetry.</p>
+          <p className="rs-card-meta rs-mb-4">Add a simulated unit to watch it come online and stream live telemetry.</p>
           <SimulateButton program={program} onDone={refresh} />
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 280px) 1fr', gap: 20, alignItems: 'start' }}>
           {/* Unit list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="rs-flex rs-flex-col rs-gap-3">
             {units.map(u => (
               <div key={u.unit_id}
                 onClick={() => setSelectedId(u.unit_id)}
                 className={`rs-card is-tappable ${selected?.unit_id === u.unit_id ? 'is-elev' : ''}`}
                 style={{ padding: 12, cursor: 'pointer', borderColor: selected?.unit_id === u.unit_id ? accent : undefined }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div className="rs-flex rs-items-center rs-justify-between rs-gap-2">
                   <span style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {u.name || u.unit_id}
                   </span>
@@ -90,7 +90,7 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
                 {(u.metadata?.simulated || String(u.unit_id).startsWith('sim-')) && (
                   <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px', marginTop: 6, display: 'inline-block' }}>SIM</span>
                 )}
-                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <div className="rs-flex rs-gap-2 rs-mt-2">
                   <button className="rs-btn-ghost" style={{ fontSize: 'var(--rs-fs-nano)', padding: '3px 8px', color: 'var(--md-error)', borderColor: 'var(--md-error)' }}
                     onClick={(e) => { e.stopPropagation(); remove(u) }}>Remove</button>
                 </div>

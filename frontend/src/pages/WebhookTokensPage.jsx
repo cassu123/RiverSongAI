@@ -124,11 +124,11 @@ export default function WebhookTokensPage({ setAction }) {
       {/* Freshly-minted plaintext — shown once, only this page render */}
       {freshlyMinted && (
         <div className="rs-card is-wide" style={{ padding: 16, marginBottom: 16, borderLeft: '3px solid var(--md-secondary)' }}>
-          <div className="rs-card-label" style={{ marginBottom: 6 }}>NEW TOKEN — COPY NOW</div>
+          <div className="rs-card-label rs-mb-2">NEW TOKEN — COPY NOW</div>
           <div style={{ fontFamily: 'var(--font-mono, monospace)', wordBreak: 'break-all', padding: 10, background: 'rgba(0,0,0,0.35)', borderRadius: 6 }}>
             {freshlyMinted.token}
           </div>
-          <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+          <div className="rs-mt-3 rs-flex rs-gap-2">
             <button
               className="rs-pill is-active"
               onClick={() => navigator.clipboard?.writeText(freshlyMinted.token)}
@@ -143,9 +143,9 @@ export default function WebhookTokensPage({ setAction }) {
 
       {/* Create form */}
       {draft && (
-        <div className="rs-card is-wide" style={{ padding: 16, marginBottom: 16 }}>
-          <div className="rs-card-label" style={{ marginBottom: 10 }}>NEW TOKEN</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="rs-card is-wide rs-p-4 rs-mb-4">
+          <div className="rs-card-label rs-mb-3">NEW TOKEN</div>
+          <div className="rs-flex rs-flex-col rs-gap-3">
             <input
               type="text"
               value={draft.label}
@@ -168,7 +168,7 @@ export default function WebhookTokensPage({ setAction }) {
               style={inputStyle}
             />
             {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="rs-flex rs-gap-3">
               <button className="rs-pill is-active" onClick={create}>ISSUE</button>
               <button className="rs-pill" onClick={cancel}>CANCEL</button>
             </div>
@@ -177,7 +177,7 @@ export default function WebhookTokensPage({ setAction }) {
       )}
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 12, alignItems: 'center' }}>
+      <div className="rs-flex rs-gap-3 rs-mb-3 rs-items-center">
         <button
           className={`rs-pill${includeRevoked ? ' is-active' : ''}`}
           onClick={() => setIncludeRevoked(v => !v)}
@@ -208,7 +208,7 @@ export default function WebhookTokensPage({ setAction }) {
                 ID {t.id} · USES {t.use_count}{t.last_used_at ? ` · LAST ${t.last_used_at}` : ''}
               </div>
               {(t.scopes || []).length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+                <div className="rs-flex rs-flex-wrap rs-gap-1 rs-mt-2">
                   {t.scopes.map((s, i) => (
                     <span key={i} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px' }}>{s}</span>
                   ))}
@@ -219,7 +219,7 @@ export default function WebhookTokensPage({ setAction }) {
                   EXPIRES {t.expires_at}
                 </div>
               )}
-              <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+              <div className="rs-mt-3 rs-flex rs-gap-2">
                 <button className="rs-pill" onClick={() => openAudit(t.id)}>AUDIT</button>
                 {!revoked && (
                   <button className="rs-pill" onClick={() => revoke(t.id)} style={{ opacity: 0.7 }}>REVOKE</button>
@@ -247,7 +247,7 @@ export default function WebhookTokensPage({ setAction }) {
               borderLeft: '1px solid rgba(255,255,255,0.1)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
               <div className="rs-card-label">{audit.tokenId ? 'TOKEN AUDIT' : 'FULL AUDIT LOG'}</div>
               <button className="rs-pill" onClick={closeAudit}>CLOSE</button>
             </div>
@@ -260,7 +260,7 @@ export default function WebhookTokensPage({ setAction }) {
                 padding: 10, marginBottom: 8, background: 'rgba(255,255,255,0.04)',
                 borderRadius: 6, fontSize: 'var(--rs-fs-micro)',
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <div className="rs-flex rs-justify-between rs-mb-1">
                   <span style={{ fontWeight: 600 }}>{e.action?.toUpperCase()}</span>
                   <span style={{ opacity: 0.6 }}>{e.ts}</span>
                 </div>

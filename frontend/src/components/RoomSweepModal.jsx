@@ -112,7 +112,7 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
   };
 
   return (
-    <div className="rs-modal-overlay animate-fade-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className="rs-modal-overlay animate-fade-in rs-flex rs-items-center rs-justify-center">
       <div className="rs-modal" style={{ width: 400, maxWidth: '90vw', padding: 24 }}>
         <h2 style={{ marginTop: 0, marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
           Room Sweep
@@ -120,7 +120,7 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
         </h2>
         <p style={{ color: 'var(--text-muted)', margin: 0, marginBottom: 24, fontSize: 'var(--rs-fs-small)' }}>Captured this session: <strong>{count}</strong> items</p>
         
-        <div className="rs-form-group" style={{ marginBottom: 24 }}>
+        <div className="rs-form-group rs-mb-5">
           <label>Room / Location</label>
           <input 
             type="text" 
@@ -137,12 +137,12 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
           accept="image/*" 
           capture="environment" 
           ref={fileInputRef} 
-          style={{ display: 'none' }} 
+          className="rs-hidden" 
           onChange={handleCapture} 
         />
 
         {!photoFile ? (
-          <div style={{ textAlign: 'center', marginTop: 32 }}>
+          <div className="rs-text-center rs-mt-6">
             <button 
               className="rs-btn-primary" 
               onClick={() => {
@@ -165,7 +165,7 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
                  <p>Analyzing image...</p>
                </div>
              ) : (
-               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+               <div className="rs-flex rs-flex-col rs-gap-3">
                  <div className="rs-form-group">
                    <label>Name</label>
                    <input className="rs-input" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
@@ -191,8 +191,8 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
                    <input className="rs-input" value={formData.manufacturer} onChange={e => setFormData({...formData, manufacturer: e.target.value})} />
                  </div>
                  
-                 <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                    <button className="rs-btn-secondary" style={{ flex: 1 }} onClick={() => setPhotoFile(null)}>RETRIES</button>
+                 <div className="rs-flex rs-gap-3 rs-mt-4">
+                    <button className="rs-btn-secondary rs-grow" onClick={() => setPhotoFile(null)}>RETRIES</button>
                     <button className="rs-btn-primary" style={{ flex: 2 }} onClick={handleConfirm} disabled={saving}>
                       {saving ? 'SAVING...' : 'CONFIRM & NEXT'}
                     </button>

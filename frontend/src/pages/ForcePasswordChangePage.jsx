@@ -62,7 +62,7 @@ export default function ForcePasswordChangePage() {
         </header>
         
         <h1 className="rs-greeting" style={{ fontSize: '1.5rem', marginBottom: 12 }}>New Credentials</h1>
-        <p className="rs-card-meta" style={{ marginBottom: 24 }}>An administrator has requested a mandatory password update for your account.</p>
+        <p className="rs-card-meta rs-mb-5">An administrator has requested a mandatory password update for your account.</p>
 
         {success ? (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
@@ -73,9 +73,9 @@ export default function ForcePasswordChangePage() {
             <div className="rs-card-meta">Re-authenticating...</div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <form onSubmit={handleSubmit} className="rs-flex rs-flex-col rs-gap-5">
             <div>
-              <div className="rs-card-label" style={{ marginBottom: 8 }}>NEW PASSWORD</div>
+              <div className="rs-card-label rs-mb-2">NEW PASSWORD</div>
               <input 
                 type="password"
                 className="rs-chat-textarea"
@@ -96,7 +96,7 @@ export default function ForcePasswordChangePage() {
             </div>
 
             <div>
-              <div className="rs-card-label" style={{ marginBottom: 8 }}>CONFIRM PASSWORD</div>
+              <div className="rs-card-label rs-mb-2">CONFIRM PASSWORD</div>
               <input 
                 type="password"
                 className="rs-chat-textarea"
@@ -117,8 +117,8 @@ export default function ForcePasswordChangePage() {
 
             {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)' }}>{error}</div>}
 
-            <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-              <button type="submit" className="rs-btn-primary" style={{ flex: 1 }} disabled={loading}>
+            <div className="rs-flex rs-gap-3 rs-mt-3">
+              <button type="submit" className="rs-btn-primary rs-grow" disabled={loading}>
                 {loading ? 'PROCESSING...' : 'UPDATE & LOGIN'}
               </button>
               <button type="button" className="rs-pill" onClick={logout} disabled={loading} style={{ height: 44 }}>LOGOUT</button>

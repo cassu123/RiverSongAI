@@ -134,7 +134,7 @@ export default function Programs() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="rs-flex rs-justify-between rs-items-center rs-mb-5">
         <h2>Programs Builder</h2>
         <button className="rs-btn-primary" onClick={openCreate}>Create Program</button>
       </div>
@@ -144,11 +144,11 @@ export default function Programs() {
           <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                <th style={{ padding: 10 }}>Name</th>
-                <th style={{ padding: 10 }}>Unit</th>
-                <th style={{ padding: 10 }}>Zones</th>
-                <th style={{ padding: 10 }}>Pattern</th>
-                <th style={{ padding: 10 }}>Actions</th>
+                <th className="rs-p-3">Name</th>
+                <th className="rs-p-3">Unit</th>
+                <th className="rs-p-3">Zones</th>
+                <th className="rs-p-3">Pattern</th>
+                <th className="rs-p-3">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -158,11 +158,11 @@ export default function Programs() {
                 if (typeof zIds === 'string') { try { zIds = JSON.parse(zIds) } catch(e){} }
                 return (
                   <tr key={p.program_id || p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: 10 }}>{p.name}</td>
-                    <td style={{ padding: 10 }}>{u ? u.name : 'Unassigned'}</td>
-                    <td style={{ padding: 10 }}>{zIds.length} zone(s)</td>
-                    <td style={{ padding: 10 }}>{p.pattern}</td>
-                    <td style={{ padding: 10 }}>
+                    <td className="rs-p-3">{p.name}</td>
+                    <td className="rs-p-3">{u ? u.name : 'Unassigned'}</td>
+                    <td className="rs-p-3">{zIds.length} zone(s)</td>
+                    <td className="rs-p-3">{p.pattern}</td>
+                    <td className="rs-p-3">
                       <button className="rs-btn-ghost" style={{ marginRight: 5 }} onClick={() => handleRun(p.program_id || p.id, p.assigned_unit_id)}>Run</button>
                       <button className="rs-btn-ghost" style={{ marginRight: 5 }} onClick={() => openEdit(p)}>Edit</button>
                       <button className="rs-btn-ghost" onClick={() => handleDelete(p.program_id || p.id)}>Delete</button>
@@ -170,7 +170,7 @@ export default function Programs() {
                   </tr>
                 )
               })}
-              {programs.length === 0 && <tr><td colSpan="5" style={{ padding: 10, textAlign: 'center' }}>No programs found</td></tr>}
+              {programs.length === 0 && <tr><td colSpan="5" className="rs-p-3 rs-text-center">No programs found</td></tr>}
             </tbody>
           </table>
         </div>
@@ -184,11 +184,11 @@ export default function Programs() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
                 <label>Name</label><br/>
-                <input type="text" className="rs-input" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%' }} />
+                <input type="text" className="rs-input rs-w-full" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
               </div>
               <div>
                 <label>Assigned Unit</label><br/>
-                <select className="rs-input" value={formData.assigned_unit_id} onChange={e => setFormData({...formData, assigned_unit_id: e.target.value})} style={{ width: '100%' }}>
+                <select className="rs-input rs-w-full" value={formData.assigned_unit_id} onChange={e => setFormData({...formData, assigned_unit_id: e.target.value})}>
                   <option value="">Select Unit...</option>
                   {units.map(u => <option key={u.unit_id} value={u.unit_id}>{u.name || u.unit_id}</option>)}
                 </select>
@@ -208,31 +208,31 @@ export default function Programs() {
 
               <div>
                 <label>Pattern</label><br/>
-                <select className="rs-input" value={formData.pattern} onChange={e => setFormData({...formData, pattern: e.target.value})} style={{ width: '100%' }}>
+                <select className="rs-input rs-w-full" value={formData.pattern} onChange={e => setFormData({...formData, pattern: e.target.value})}>
                   {PATTERNS.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div>
                 <label>Direction (&deg;)</label><br/>
-                <input type="number" className="rs-input" value={formData.direction_deg} onChange={e => setFormData({...formData, direction_deg: parseFloat(e.target.value)})} style={{ width: '100%' }} />
+                <input type="number" className="rs-input rs-w-full" value={formData.direction_deg} onChange={e => setFormData({...formData, direction_deg: parseFloat(e.target.value)})} />
               </div>
 
               <div>
                 <label>Overlap %</label><br/>
-                <input type="number" className="rs-input" value={formData.overlap_pct} onChange={e => setFormData({...formData, overlap_pct: parseFloat(e.target.value)})} style={{ width: '100%' }} />
+                <input type="number" className="rs-input rs-w-full" value={formData.overlap_pct} onChange={e => setFormData({...formData, overlap_pct: parseFloat(e.target.value)})} />
               </div>
               <div>
                 <label>Edge Distance (m)</label><br/>
-                <input type="number" step="0.01" className="rs-input" value={formData.edge_distance_m} onChange={e => setFormData({...formData, edge_distance_m: parseFloat(e.target.value)})} style={{ width: '100%' }} />
+                <input type="number" step="0.01" className="rs-input rs-w-full" value={formData.edge_distance_m} onChange={e => setFormData({...formData, edge_distance_m: parseFloat(e.target.value)})} />
               </div>
 
               <div>
                 <label>Obstacle Clearance (m)</label><br/>
-                <input type="number" step="0.01" className="rs-input" value={formData.obstacle_clearance_m} onChange={e => setFormData({...formData, obstacle_clearance_m: parseFloat(e.target.value)})} style={{ width: '100%' }} />
+                <input type="number" step="0.01" className="rs-input rs-w-full" value={formData.obstacle_clearance_m} onChange={e => setFormData({...formData, obstacle_clearance_m: parseFloat(e.target.value)})} />
               </div>
               <div>
                 <label>Speed Profile</label><br/>
-                <select className="rs-input" value={formData.speed_profile} onChange={e => setFormData({...formData, speed_profile: e.target.value})} style={{ width: '100%' }}>
+                <select className="rs-input rs-w-full" value={formData.speed_profile} onChange={e => setFormData({...formData, speed_profile: e.target.value})}>
                   {SPEEDS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>

@@ -77,7 +77,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
       marginTop: 14, paddingTop: 14,
       borderTop: '1px solid var(--rs-border, rgba(128,128,128,0.25))',
     }}>
-      <div className="rs-card-label" style={{ marginBottom: 6 }}>
+      <div className="rs-card-label rs-mb-2">
         WHAT IS PRINTED ON IT
       </div>
       <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', marginBottom: 12, lineHeight: 1.5 }}>
@@ -115,7 +115,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+          <div className="rs-flex rs-gap-2 rs-mt-4 rs-flex-wrap">
             {/* No rows means the load failed, not that the machine has no
                 buttons. Saving that would post an empty panel and strip every
                 station off a working appliance — a failed read turning into a
@@ -135,7 +135,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
 
 function Group({ rows, on, toggle }) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+    <div className="rs-flex rs-flex-wrap rs-gap-2">
       {rows.map(row => {
         const active = on.has(row.key)
         return (

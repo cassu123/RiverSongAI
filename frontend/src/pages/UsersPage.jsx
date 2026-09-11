@@ -232,7 +232,7 @@ export default function UsersPage({ embedded = false }) {
         ) : (
           users.map(u => (
             <div key={u.id} className="rs-card">
-              <div className="rs-card-head" style={{ marginBottom: 16 }}>
+              <div className="rs-card-head rs-mb-4">
                 <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-tiny)', letterSpacing: '0.08em' }}>
                   MEMBER {u.is_suspended && <span style={{ color: 'var(--md-error)', fontWeight: 700 }}>(SUSPENDED)</span>}
                 </span>
@@ -255,7 +255,7 @@ export default function UsersPage({ embedded = false }) {
                   </select>
                 )}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div className="rs-flex rs-items-center rs-gap-4">
                 <div className="rs-status-dot" style={{ width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary)', color: '#0d1219', fontWeight: 900, fontSize: 'var(--rs-fs-h3)', animation: 'none' }}>
                   {u.display_name?.[0]?.toUpperCase() || '?'}
                 </div>
@@ -265,7 +265,7 @@ export default function UsersPage({ embedded = false }) {
                 </div>
               </div>
               
-              <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="rs-mt-5 rs-flex rs-flex-col rs-gap-4">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div>
                     <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--fg)' }}>FORCE PASSWORD CHANGE</span>
@@ -312,7 +312,7 @@ export default function UsersPage({ embedded = false }) {
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+                <div className="rs-flex rs-gap-3 rs-flex-wrap rs-mt-2">
                   <button className="rs-pill" style={{ padding: '8px 16px', fontSize: 'var(--rs-fs-tiny)' }} onClick={() => { setResetTarget(u); setNewPassword(''); setResetError(''); }}>RESET PASSWORD</button>
                   <button className="rs-pill" style={{ padding: '8px 16px', fontSize: 'var(--rs-fs-tiny)' }} onClick={() => handleForceLogout(u)}>REVOKE SESSIONS</button>
                   {u.id !== currentUser.id && (
@@ -330,8 +330,8 @@ export default function UsersPage({ embedded = false }) {
 
       <Sheet open={!!resetTarget} onClose={() => setResetTarget(null)} title={`Set Temporary Password: ${resetTarget?.display_name}`}>
         <form onSubmit={handleResetPassword} style={{ padding: '0 16px 16px' }}>
-          <div style={{ marginBottom: 20 }}>
-            <div className="rs-card-label" style={{ marginBottom: 8 }}>NEW PASSWORD</div>
+          <div className="rs-mb-5">
+            <div className="rs-card-label rs-mb-2">NEW PASSWORD</div>
             <input 
               type="password"
               className="rs-chat-textarea"
@@ -353,8 +353,8 @@ export default function UsersPage({ embedded = false }) {
           {resetError && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)', marginBottom: 16 }}>{resetError}</div>}
           {resetSuccess && <div style={{ color: 'var(--rs-status-nominal)', fontSize: 'var(--rs-fs-tiny)', marginBottom: 16 }}>{resetSuccess}</div>}
 
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button type="submit" className="rs-btn-primary" style={{ flex: 1 }}>SET PASSWORD</button>
+          <div className="rs-flex rs-gap-3">
+            <button type="submit" className="rs-btn-primary rs-grow">SET PASSWORD</button>
             <button type="button" className="rs-pill" onClick={() => setResetTarget(null)} style={{ height: 44 }}>CANCEL</button>
           </div>
         </form>

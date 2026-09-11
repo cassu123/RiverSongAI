@@ -1,0 +1,67 @@
+/* =============================================================================
+   utilities.css — the layout primitives that were inline.
+
+   Every class here replaces a style={{ }} object that appeared verbatim in
+   dozens of files: a flex row with a gap, a bottom margin, a padded box.
+   Nothing new is expressed — this is the same geometry, named once.
+
+   Two rules for adding to this file:
+     1. Spacing comes from --rs-space-*. If a number is not on the 4pt scale,
+        it does not get a class; pick the nearest step instead.
+     2. One property per class, except the flex pair. A utility that sets
+        three things is a component, and belongs in chrome-components.css.
+
+   Selectors are doubled (.rs-mb-4.rs-mb-4). The declarations they carry came
+   from inline styles, which outranked every rule in the cascade; a single
+   class would silently lose to any component rule touching the same property
+   and move the layout. 0,2,0 keeps the behaviour these elements already had.
+   Imported last in App.jsx so ties go to the utility.
+   ============================================================================= */
+
+.rs-flex.rs-flex             { display: flex; }
+.rs-hidden.rs-hidden         { display: none; }
+.rs-flex-col.rs-flex-col     { flex-direction: column; }
+.rs-flex-row.rs-flex-row     { flex-direction: row; }
+.rs-flex-wrap.rs-flex-wrap   { flex-wrap: wrap; }
+
+.rs-items-center.rs-items-center       { align-items: center; }
+.rs-items-start.rs-items-start         { align-items: flex-start; }
+.rs-justify-between.rs-justify-between { justify-content: space-between; }
+.rs-justify-center.rs-justify-center   { justify-content: center; }
+
+.rs-grow.rs-grow             { flex: 1; }
+.rs-w-full.rs-w-full         { width: 100%; }
+.rs-text-center.rs-text-center { text-align: center; }
+.rs-m-0.rs-m-0               { margin: 0; }
+
+.rs-gap-1.rs-gap-1 { gap: var(--rs-space-1); }
+.rs-gap-2.rs-gap-2 { gap: var(--rs-space-2); }
+.rs-gap-3.rs-gap-3 { gap: var(--rs-space-3); }
+.rs-gap-4.rs-gap-4 { gap: var(--rs-space-4); }
+.rs-gap-5.rs-gap-5 { gap: var(--rs-space-5); }
+.rs-gap-6.rs-gap-6 { gap: var(--rs-space-6); }
+.rs-gap-7.rs-gap-7 { gap: var(--rs-space-7); }
+
+.rs-mb-1.rs-mb-1 { margin-block-end: var(--rs-space-1); }
+.rs-mb-2.rs-mb-2 { margin-block-end: var(--rs-space-2); }
+.rs-mb-3.rs-mb-3 { margin-block-end: var(--rs-space-3); }
+.rs-mb-4.rs-mb-4 { margin-block-end: var(--rs-space-4); }
+.rs-mb-5.rs-mb-5 { margin-block-end: var(--rs-space-5); }
+.rs-mb-6.rs-mb-6 { margin-block-end: var(--rs-space-6); }
+.rs-mb-7.rs-mb-7 { margin-block-end: var(--rs-space-7); }
+
+.rs-mt-1.rs-mt-1 { margin-block-start: var(--rs-space-1); }
+.rs-mt-2.rs-mt-2 { margin-block-start: var(--rs-space-2); }
+.rs-mt-3.rs-mt-3 { margin-block-start: var(--rs-space-3); }
+.rs-mt-4.rs-mt-4 { margin-block-start: var(--rs-space-4); }
+.rs-mt-5.rs-mt-5 { margin-block-start: var(--rs-space-5); }
+.rs-mt-6.rs-mt-6 { margin-block-start: var(--rs-space-6); }
+.rs-mt-7.rs-mt-7 { margin-block-start: var(--rs-space-7); }
+
+.rs-p-1.rs-p-1 { padding: var(--rs-space-1); }
+.rs-p-2.rs-p-2 { padding: var(--rs-space-2); }
+.rs-p-3.rs-p-3 { padding: var(--rs-space-3); }
+.rs-p-4.rs-p-4 { padding: var(--rs-space-4); }
+.rs-p-5.rs-p-5 { padding: var(--rs-space-5); }
+.rs-p-6.rs-p-6 { padding: var(--rs-space-6); }
+.rs-p-7.rs-p-7 { padding: var(--rs-space-7); }

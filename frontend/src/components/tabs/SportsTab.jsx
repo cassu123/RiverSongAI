@@ -129,9 +129,9 @@ function GameCard({ game, onClick }) {
       onMouseEnter={e => { if (clickable) e.currentTarget.style.background = 'var(--md-surface-container)' }}
       onMouseLeave={e => { if (clickable) e.currentTarget.style.background = 'transparent' }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+      <div className="rs-flex rs-items-center rs-justify-between rs-mb-3">
         <StatusBadge game={game} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="rs-flex rs-items-center rs-gap-2">
           {game.venue && (
             <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{game.venue}</span>
           )}
@@ -153,11 +153,11 @@ function GameCard({ game, onClick }) {
 
 function SportsSkeleton() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="rs-flex rs-flex-col">
       {[0, 1, 2].map(i => (
         <div key={i} style={{ padding: '14px 12px', borderBottom: '1px solid var(--md-outline-variant)' }}>
           <div style={{ height: 8, width: 60, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4, marginBottom: 12 }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div className="rs-flex rs-justify-between">
             {[0, 1].map(j => (
               <div key={j} style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: j ? 'flex-end' : 'flex-start' }}>
                 <div style={{ height: 10, width: 48, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
@@ -179,11 +179,11 @@ function LeagueGrid({ favorites, onToggle }) {
   return (
     <div>
       {Object.entries(PICKER_GROUPS).map(([cat, leagues]) => (
-        <div key={cat} style={{ marginBottom: 14 }}>
+        <div key={cat} className="rs-mb-4">
           <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.12em', marginBottom: 8 }}>
             {cat.toUpperCase()}
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div className="rs-flex rs-flex-wrap rs-gap-2">
             {leagues.map(l => {
               const active = favorites.includes(l.id)
               return (
@@ -276,11 +276,11 @@ function NewsArticleCard({ a }) {
 
 function NewsSkeleton() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="rs-flex rs-flex-col rs-gap-3">
       {[0, 1, 2, 3].map(i => (
         <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
           <div style={{ width: 80, height: 64, borderRadius: 6, background: 'var(--md-outline-variant)', flexShrink: 0, opacity: 0.4 }} />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="rs-grow rs-flex rs-flex-col rs-gap-2">
             <div style={{ height: 9, width: '35%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.5 }} />
             <div style={{ height: 12, width: '85%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
             <div style={{ height: 12, width: '70%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
@@ -357,8 +357,8 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
       </button>
 
       {/* Header card — big score line */}
-      <div className="rs-card" style={{ padding: 20, marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <div className="rs-card rs-p-5 rs-mb-4">
+        <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
           <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
             {(event.league_id || '').toUpperCase()}
           </span>
@@ -366,7 +366,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
             {statusText || (event.is_live ? 'LIVE' : 'FINAL')}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="rs-flex rs-items-center rs-gap-3">
           <BoxTeam c={away} />
           <div style={{ fontSize: '1.4rem', opacity: 0.2, fontWeight: 900 }}>—</div>
           <BoxTeam c={home} align="right" />
@@ -381,7 +381,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
 
       {/* Team stats comparison */}
       {!loading && statNames.length > 0 && (
-        <div className="rs-card" style={{ padding: 16, marginBottom: 16 }}>
+        <div className="rs-card rs-p-4 rs-mb-4">
           <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>TEAM STATS</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px 12px', alignItems: 'center' }}>
             <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', textAlign: 'left' }}>
@@ -410,10 +410,10 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
 
       {/* Player leaders */}
       {!loading && leaders.length > 0 && (
-        <div className="rs-card" style={{ padding: 16 }}>
+        <div className="rs-card rs-p-4">
           <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>LEADERS</div>
           {leaders.map((teamBlock, ti) => (
-            <div key={ti} style={{ marginBottom: 14 }}>
+            <div key={ti} className="rs-mb-4">
               <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--primary)', marginBottom: 6 }}>
                 {teamBlock.team?.displayName?.toUpperCase()}
               </div>
@@ -694,7 +694,7 @@ export default function SportsTab({ token, active }) {
       </InlineSettingsSection>
 
       {/* Scores ↔ News sub-tab bar */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+      <div className="rs-flex rs-gap-2 rs-mb-4">
         {[
           { key: 'scores', label: 'SCORES', icon: 'sports_score' },
           { key: 'news',   label: 'NEWS',   icon: 'feed' },
@@ -756,9 +756,9 @@ function ScoresView({
 }) {
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+      <div className="rs-flex rs-items-start rs-gap-2 rs-mb-5 rs-flex-wrap">
         {!myTeamsMode && favorites.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 }}>
+          <div className="rs-flex rs-gap-2 rs-flex-wrap rs-grow">
             {favorites.map(id => {
               const meta = LEAGUE_BY_ID[id] || { label: id.toUpperCase(), icon: 'emoji_events' }
               return (
@@ -776,7 +776,7 @@ function ScoresView({
           </div>
         )}
         {myTeamsMode && (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="rs-grow rs-flex rs-items-center rs-gap-2">
             <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>MY TEAMS</span>
             {hasLiveGames && (
               <span style={{
@@ -809,7 +809,7 @@ function ScoresView({
       {myTeamsMode && myTeams.length === 0 && (
         <div style={{ padding: '24px 0', textAlign: 'center' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, display: 'block', marginBottom: 8 }}>group</span>
-          <div className="rs-card-label" style={{ marginBottom: 6 }}>NO FAVORITE TEAMS</div>
+          <div className="rs-card-label rs-mb-2">NO FAVORITE TEAMS</div>
           <div className="rs-card-meta">Add teams in Feed Preferences to use this view.</div>
         </div>
       )}
@@ -824,7 +824,7 @@ function ScoresView({
         ) : allGames.length === 0 ? (
           <div style={{ padding: '24px 0', textAlign: 'center' }}>
             <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, display: 'block', marginBottom: 8 }}>event_available</span>
-            <div className="rs-card-label" style={{ marginBottom: 6 }}>NO GAMES TODAY</div>
+            <div className="rs-card-label rs-mb-2">NO GAMES TODAY</div>
             <div className="rs-card-meta">Check back on game day or switch leagues above.</div>
           </div>
         ) : (
@@ -872,11 +872,11 @@ function NewsView({
           if (!catSources.length) return null
           return (
             <div key={cat}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <div className="rs-flex rs-items-center rs-gap-2 rs-mb-2">
                 <span className="material-symbols-rounded" style={{ fontSize: '0.85rem', opacity: 0.7 }}>{meta.icon}</span>
                 <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{meta.label.toUpperCase()}</span>
               </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <div className="rs-flex rs-gap-2 rs-flex-wrap">
                 {catSources.map(src => {
                   const isOn = selectedNewsSources.some(s => s.url === src.url)
                   return (
@@ -917,7 +917,7 @@ function NewsView({
        error ? (
         <div style={{ padding: '24px 0', textAlign: 'center' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.3, display: 'block', marginBottom: 8 }}>wifi_off</span>
-          <div className="rs-card-meta" style={{ marginBottom: 12 }}>{error}</div>
+          <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={onRetry}>RETRY</button>
         </div>
        ) : !articles.length ? (
@@ -926,7 +926,7 @@ function NewsView({
           <div className="rs-card-meta">No articles right now. Try expanding the sources panel above.</div>
         </div>
        ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="rs-flex rs-flex-col rs-gap-3">
           {articles.map((a, i) => (<NewsArticleCard key={a.url || i} a={a} />))}
         </div>
        )

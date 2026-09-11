@@ -169,9 +169,9 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="rs-card-inner" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="rs-card-inner rs-flex rs-flex-col rs-gap-4">
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="rs-flex rs-items-center rs-justify-between">
             <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 800 }}>
               Add a recipe
             </div>
@@ -181,7 +181,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
           </div>
 
           {/* Mode picker */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <div className="rs-flex rs-gap-2 rs-flex-wrap">
             {MODES.map((m) => (
               <button
                 key={m.id}
@@ -220,7 +220,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
           )}
 
           {mode === 'manual' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="rs-flex rs-flex-col rs-gap-3">
               <Field label="TITLE">
                 <input
                   style={inputStyle} value={title} autoFocus
@@ -229,7 +229,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
                 />
               </Field>
 
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <div className="rs-flex rs-gap-3 rs-flex-wrap">
                 <div style={{ flex: 1, minWidth: 130 }}>
                   <Field label="MEAL">
                     <select
@@ -298,7 +298,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
           )}
 
           {mode === 'link' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="rs-flex rs-flex-col rs-gap-3">
               <Field label="RECIPE URL">
                 <input
                   style={inputStyle} value={sourceUrl} autoFocus

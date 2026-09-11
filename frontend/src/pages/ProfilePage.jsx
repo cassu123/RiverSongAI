@@ -205,7 +205,7 @@ function TwoFactorCard({ token }) {
       </div>
 
       {phase === 'idle' && !enabled && (
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="rs-flex rs-gap-4 rs-items-center rs-flex-wrap">
           <div style={{ flex: 1, minWidth: 200 }}>
             <div className="rs-card-meta">
               Protect your account with an authenticator app (Aegis, 1Password, Authy, Google Authenticator).
@@ -217,7 +217,7 @@ function TwoFactorCard({ token }) {
       )}
 
       {phase === 'idle' && enabled && (
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="rs-flex rs-gap-4 rs-items-center rs-flex-wrap">
           <div style={{ flex: 1, minWidth: 200 }}>
             <div className="rs-card-meta">
               2FA is active. {status?.recovery_codes_left ?? 0} recovery {(status?.recovery_codes_left ?? 0) === 1 ? 'code' : 'codes'} remaining.
@@ -228,7 +228,7 @@ function TwoFactorCard({ token }) {
       )}
 
       {phase === 'confirming' && enrollment && (
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div className="rs-flex rs-gap-5 rs-flex-wrap rs-items-start">
           {enrollment.qr_png_b64 && (
             <img
               src={`data:image/png;base64,${enrollment.qr_png_b64}`}
@@ -237,7 +237,7 @@ function TwoFactorCard({ token }) {
             />
           )}
           <div style={{ flex: 1, minWidth: 240 }}>
-            <div className="rs-card-meta" style={{ marginBottom: 8 }}>
+            <div className="rs-card-meta rs-mb-2">
               Scan the code, or paste this secret manually:
             </div>
             <code
@@ -261,7 +261,7 @@ function TwoFactorCard({ token }) {
               onChange={e => setVerifyCode(e.target.value.replace(/\D/g, ''))}
               placeholder="000000"
             />
-            <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <div className="rs-flex rs-gap-3 rs-mt-4">
               <button className="rs-btn-primary" onClick={confirmEnrol}>CONFIRM</button>
               <button className="rs-pill" onClick={cancelEnrol}>CANCEL</button>
             </div>
@@ -271,7 +271,7 @@ function TwoFactorCard({ token }) {
 
       {phase === 'showing-codes' && recoveryCodes && (
         <div>
-          <div className="rs-card-meta" style={{ marginBottom: 12 }}>
+          <div className="rs-card-meta rs-mb-3">
             Save these recovery codes somewhere safe. Each works once and replaces the 6-digit code
             if you ever lose your authenticator. <strong>You will not see them again.</strong>
           </div>
@@ -311,7 +311,7 @@ function TwoFactorCard({ token }) {
             value={disableCode}
             onChange={e => setDisableCode(e.target.value.replace(/\D/g, ''))}
           />
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div className="rs-flex rs-gap-3">
             <button className="rs-btn-primary" onClick={disable2fa}>DISABLE 2FA</button>
             <button className="rs-pill" onClick={() => { setPhase('idle'); setError('') }}>CANCEL</button>
           </div>
@@ -460,7 +460,7 @@ export default function ProfilePage({
             </div>
             <button className="rs-btn-primary" style={{ padding: '12px 24px', fontSize: 'var(--rs-fs-small)' }} onClick={handleSaveProfile}>SAVE CHANGES</button>
           </div>
-          <div className="rs-card-meta" style={{ marginTop: 20, display: 'flex', gap: 32 }}>
+          <div className="rs-card-meta rs-mt-5 rs-flex rs-gap-6">
             <div>
               <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>ACCOUNT EMAIL</div>
               <div style={{ fontSize: 'var(--rs-fs-body)', marginTop: 4 }}>{user?.email}</div>
@@ -499,7 +499,7 @@ export default function ProfilePage({
           <div className="rs-card-head">
             <span className="rs-card-label">ENVIRONMENT</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="rs-flex rs-flex-col rs-gap-2">
             {(ENVIRONMENTS[universe] || []).map(e => (
               <button 
                 key={e.key} 
@@ -518,7 +518,7 @@ export default function ProfilePage({
           <div className="rs-card-head">
             <span className="rs-card-label">ATMOSPHERIC MOOD</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="rs-flex rs-flex-col rs-gap-2">
             {(MOODS[environment] || []).map(m => (
               <button 
                 key={m.key} 
@@ -538,8 +538,8 @@ export default function ProfilePage({
           <div className="rs-card-head">
             <span className="rs-card-label">PUSH NOTIFICATIONS</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1 }}>
+          <div className="rs-flex rs-items-center rs-gap-5 rs-flex-wrap">
+            <div className="rs-grow">
               <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)' }}>Device Push Alerts</div>
               <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)' }}>Enable push notifications to receive system briefings, alerts, and smart home events directly on this device.</div>
             </div>
@@ -563,13 +563,13 @@ export default function ProfilePage({
             <div className="rs-card-head">
               <span className="rs-card-label">CONNECTED ACCOUNTS</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="rs-flex rs-flex-col rs-gap-4">
               <p className="rs-card-meta">
                 Connect your personal accounts to enable analytics and integrations. 
                 Your credentials are securely stored and never shared.
               </p>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="rs-flex rs-flex-col rs-gap-3">
                 {SERVICES.map(service => {
                   // Status shape: { connected: bool, metadata: {...} } — never
                   // truthiness-check the object itself, it's always truthy.
@@ -591,7 +591,7 @@ export default function ProfilePage({
                         border: '1px solid var(--md-outline-variant)'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div className="rs-flex rs-items-center rs-gap-4">
                         <span className="material-symbols-rounded" style={{ fontSize: '24px', opacity: 0.8 }}>{service.icon}</span>
                         <div>
                           <div style={{ fontWeight: 600, color: 'var(--text-base)', fontSize: 'var(--rs-fs-small)' }}>

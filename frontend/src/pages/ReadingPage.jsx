@@ -83,10 +83,10 @@ export default function ReadingPage({ setAction }) {
   // Contextual Action Bar
   useEffect(() => {
     setAction(
-      <div className="rs-chat-input-controls" style={{ width: '100%' }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', width: '100%' }}>
+      <div className="rs-chat-input-controls rs-w-full">
+        <div className="rs-flex rs-gap-3 rs-items-center rs-w-full">
           <div className="rs-chat-input-container" style={{ flex: 1, padding: '8px 16px', background: 'color-mix(in srgb, var(--md-surface-container-low) 60%, transparent)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="rs-flex rs-items-center rs-gap-3">
               <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
               <input 
                 type="text" 
@@ -97,7 +97,7 @@ export default function ReadingPage({ setAction }) {
               />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="rs-flex rs-gap-2">
             {STATUSES.slice(1).map(s => (
                <button key={s.key} className={`rs-pill ${activeStatus === s.key ? 'is-active' : ''}`} onClick={() => setActiveStatus(activeStatus === s.key ? 'all' : s.key)}>
                  <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>{s.icon}</span>
@@ -122,7 +122,7 @@ export default function ReadingPage({ setAction }) {
       </header>
 
       {/* Cockpit Analytics Slate */}
-      <div className="rs-card-flow" style={{ marginBottom: 32 }}>
+      <div className="rs-card-flow rs-mb-6">
         <div className="rs-card is-wide is-elev">
            <div className="rs-card-inner">
              <div style={{ display: 'flex', gap: 64, flexWrap: 'wrap' }}>
@@ -179,10 +179,10 @@ export default function ReadingPage({ setAction }) {
                     </div>
                   )}
                 </div>
-                <div style={{ padding: 16 }}>
+                <div className="rs-p-4">
                   <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-small)', marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.2 }}>{book.title}</div>
                   <div className="rs-card-meta" style={{ marginTop: 6, fontSize: 'var(--rs-fs-nano)' }}>{book.author}</div>
-                  <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="rs-mt-4 rs-flex rs-justify-between rs-items-center">
                      <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{book.status.toUpperCase()}</span>
                      <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.3 }}>edit_note</span>
                   </div>
@@ -195,8 +195,8 @@ export default function ReadingPage({ setAction }) {
 
       <Sheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Archive Sources">
         <div style={{ padding: '0 16px 24px' }}>
-           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-             <p className="rs-card-meta" style={{ margin: 0 }}>Toggle frequency bands for digital integrations.</p>
+           <div className="rs-flex rs-justify-between rs-items-center rs-mb-5">
+             <p className="rs-card-meta rs-m-0">Toggle frequency bands for digital integrations.</p>
              <button className="rs-pill" onClick={() => setIntegrationsOpen(true)}>
                <span className="material-symbols-rounded">settings_input_antenna</span>
                INTEGRATIONS

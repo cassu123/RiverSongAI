@@ -33,7 +33,7 @@ export default function SetupPage() {
       <div className="rs-card is-elev" style={{ width: '100%', maxWidth: 460, padding: '3rem 2.5rem' }}>
         
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'center', marginBottom: 8 }}>
+          <div className="rs-flex rs-items-center rs-gap-4 rs-justify-center rs-mb-2">
             <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-h3)', padding: '12px 16px' }}>CORE</span>
             <span style={{ fontFamily: 'var(--font-mood)', fontSize: '1.6rem', letterSpacing: '0.2em', fontWeight: 600 }}>RIVER SONG</span>
           </div>
@@ -44,7 +44,7 @@ export default function SetupPage() {
           No admin account detected. Please define the primary identity for this node to begin installation.
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <form onSubmit={handleSubmit} className="rs-flex rs-flex-col rs-gap-4">
           <div>
             <div className="rs-card-label" style={{ marginBottom: 8, paddingLeft: 4 }}>PRIMARY OPERATOR</div>
             <input
@@ -87,7 +87,7 @@ export default function SetupPage() {
 
           {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)', textAlign: 'center' }}>{error.toUpperCase()}</div>}
 
-          <button className="rs-btn-primary" type="submit" disabled={loading} style={{ marginTop: 8 }}>
+          <button className="rs-btn-primary rs-mt-2" type="submit" disabled={loading}>
             {loading ? 'INITIALIZING KERNEL...' : 'PROVISION NODE'}
           </button>
         </form>

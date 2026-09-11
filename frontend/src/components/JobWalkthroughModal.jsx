@@ -151,7 +151,7 @@ export default function JobWalkthroughModal({ vehicle, checkpoint, onClose, onLo
         </div>
         
         <div style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
-          <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*,video/*" onChange={handleUpload} />
+          <input type="file" ref={fileInputRef} className="rs-hidden" accept="image/*,video/*" onChange={handleUpload} />
           <button className="rs-pill" onClick={() => fileInputRef.current.click()} disabled={busy}>+ UPLOAD MEDIA</button>
           <button className="rs-pill" onClick={handleArchiveWeb} disabled={busy}>FIND A GUIDE (WEB)</button>
         </div>

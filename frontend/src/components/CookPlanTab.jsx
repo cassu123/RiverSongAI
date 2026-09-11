@@ -360,8 +360,8 @@ export default function CookPlanTab({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 840, margin: '0 auto', width: '100%' }}>
         {/* Launcher Banner */}
         <div className="gh-card gh-glance-bar" style={{ padding: '24px 28px', flexDirection: 'column', alignItems: 'stretch' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div className="rs-flex rs-items-center rs-justify-between rs-gap-4">
+            <div className="rs-flex rs-items-center rs-gap-4">
               <div className="gh-glance-orb-wrap" style={{ width: 48, height: 48 }}>
                 <span className="material-symbols-rounded" style={{ fontSize: 26, color: 'var(--md-primary)' }}>skillet</span>
               </div>
@@ -388,9 +388,9 @@ export default function CookPlanTab({
                   No kitchen equipment registered. Add your appliances in settings.
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="rs-flex rs-flex-col rs-gap-3">
                   {availableEquipment.length > 1 && (
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <div className="rs-flex rs-gap-2 rs-flex-wrap">
                       {availableEquipment.map(eq => (
                         <button
                           key={eq.id}
@@ -424,7 +424,7 @@ export default function CookPlanTab({
         {/* Option 1: Tonight's Dinner */}
         {todayDinner && (
           <div className="gh-card" style={{ border: '1px solid rgba(0, 229, 255, 0.35)', background: 'rgba(0, 229, 255, 0.06)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <div className="rs-flex rs-items-center rs-justify-between rs-gap-4 rs-flex-wrap">
               <div>
                 <div className="gh-sensor-pill" style={{ color: 'var(--md-primary)', background: 'rgba(0, 229, 255, 0.15)', borderColor: 'rgba(0, 229, 255, 0.3)', marginBottom: 8 }}>
                   TONIGHT'S PLANNED DINNER
@@ -451,7 +451,7 @@ export default function CookPlanTab({
 
         {/* Option 2: Choose from Cookbook */}
         <div className="gh-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+          <div className="rs-flex rs-items-center rs-justify-between rs-gap-4 rs-mb-4 rs-flex-wrap">
             <div>
               <h3 style={{ margin: 0, fontSize: 'var(--rs-fs-body)', fontWeight: 700, color: 'var(--fg)' }}>Choose from Cookbook</h3>
               <div style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)' }}>Select any recipe to start guided cooking immediately</div>
@@ -498,8 +498,8 @@ export default function CookPlanTab({
                     </div>
                   </div>
                   <button
-                    className="gh-glance-action"
-                    style={{ width: '100%', justifyContent: 'center' }}
+                    className="gh-glance-action rs-w-full rs-justify-center"
+                   
                     disabled={busy}
                     onClick={() => handleCookSingleRecipe(r)}
                   >
@@ -511,7 +511,7 @@ export default function CookPlanTab({
           </div>
 
           {(recipes || []).length > 6 && (
-            <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <div className="rs-text-center rs-mt-4">
               <button
                 className="gh-kitchen-nav-btn"
                 style={{ display: 'inline-flex' }}
@@ -535,9 +535,9 @@ export default function CookPlanTab({
 
       {/* Top Banner: Meal Metadata & Controls */}
       <div className="gh-card" style={{ padding: '20px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <div className="rs-flex rs-items-center rs-justify-between rs-flex-wrap rs-gap-4">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="rs-flex rs-items-center rs-gap-3">
               <span className="gh-live-dot" />
               <span style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 800, color: 'var(--md-primary)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                 {cook ? 'ACTIVE COOKING SESSION' : 'COOK PLAN READY'}
@@ -551,7 +551,7 @@ export default function CookPlanTab({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="rs-flex rs-items-center rs-gap-3">
             {cook ? (
               <button
                 className="gh-kitchen-nav-btn"
@@ -633,7 +633,7 @@ export default function CookPlanTab({
 
       {/* PHASE 1: MISE EN PLACE */}
       {guidePhase === 'prep' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div className="rs-flex rs-flex-col rs-gap-5">
           <div style={{ padding: '0 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)' }}>
               Gather provisions and prepare equipment before heat goes on:
@@ -653,8 +653,8 @@ export default function CookPlanTab({
           {/* Measured Ingredients per recipe */}
           {plan.recipes.map(r => (
             <div key={r.id} className="gh-card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="rs-flex rs-items-center rs-justify-between rs-mb-4">
+                <div className="rs-flex rs-items-center rs-gap-3">
                   <div style={{ width: 4, height: 18, borderRadius: 2, background: colorFor[r.id] || '#00e5ff' }} />
                   <h3 style={{ margin: 0, fontSize: 'var(--rs-fs-body)', fontWeight: 700, color: 'var(--fg)' }}>
                     {r.title} · Measure & Prep
@@ -706,7 +706,7 @@ export default function CookPlanTab({
               <h3 style={{ margin: '0 0 12px 0', fontSize: 'var(--rs-fs-body)', fontWeight: 700, color: 'var(--fg)' }}>
                 Preliminary Prep & Knife Work
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="rs-flex rs-flex-col rs-gap-2">
                 {prepSteps.map(s => {
                   const isDone = done.has(s.key)
                   return (
@@ -727,7 +727,7 @@ export default function CookPlanTab({
                       <span className="material-symbols-rounded" style={{ fontSize: 20, color: isDone ? '#4ade80' : 'rgba(220, 230, 245, 0.4)', marginTop: 2 }}>
                         {isDone ? 'check_circle' : 'radio_button_unchecked'}
                       </span>
-                      <div style={{ flex: 1 }}>
+                      <div className="rs-grow">
                         <div style={{ fontSize: 'var(--rs-fs-small)', color: isDone ? 'rgba(220, 230, 245, 0.5)' : '#fff', textDecoration: isDone ? 'line-through' : 'none' }}>
                           {s.text}
                         </div>
@@ -744,7 +744,7 @@ export default function CookPlanTab({
 
           {/* Appliance Adaptation & Machine Check */}
           <div className="gh-card">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 12 }}>
+            <div className="rs-flex rs-items-center rs-justify-between rs-mb-3 rs-flex-wrap rs-gap-3">
               <div>
                 <h3 style={{ margin: 0, fontSize: 'var(--rs-fs-body)', fontWeight: 700, color: 'var(--fg)' }}>Appliance Stations & Adaptation</h3>
                 <div style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)' }}>Swap appliances to adapt cooking methods for your hardware</div>
@@ -756,15 +756,15 @@ export default function CookPlanTab({
             </div>
 
             {showAppliances && (
-              <div style={{ marginBottom: 16 }}>
+              <div className="rs-mb-4">
                 {availableEquipment.length === 0 ? (
                   <div style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)', padding: 12 }}>
                     No kitchen equipment registered.
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div className="rs-flex rs-flex-col rs-gap-3">
                     {availableEquipment.length > 1 && (
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <div className="rs-flex rs-gap-2 rs-flex-wrap">
                         {availableEquipment.map(eq => (
                           <button
                             key={eq.id}
@@ -788,7 +788,7 @@ export default function CookPlanTab({
               </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="rs-flex rs-flex-col rs-gap-3">
               {plan.recipes.map(r => (
                 <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '8px 12px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 12 }}>
                   <span style={{ fontWeight: 600, color: 'var(--fg)', fontSize: 'var(--rs-fs-small)', minWidth: 160 }}>{r.title}</span>
@@ -821,11 +821,11 @@ export default function CookPlanTab({
 
       {/* PHASE 2: GUIDED COOK (FOCUS STEPPING) */}
       {guidePhase === 'cook' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="rs-flex rs-flex-col rs-gap-4">
 
           {/* View Mode Toggle */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
+          <div className="rs-flex rs-justify-between rs-items-center rs-flex-wrap rs-gap-3">
+            <div className="rs-flex rs-gap-2">
               <button
                 className={`gh-kitchen-nav-btn ${viewMode === 'focus' ? 'is-active' : ''}`}
                 style={{ padding: '6px 14px', fontSize: 'var(--rs-fs-tiny)' }}
@@ -863,7 +863,7 @@ export default function CookPlanTab({
 
                 {/* Step Header */}
                 <div className="gh-cook-step-header">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div className="rs-flex rs-items-center rs-gap-3">
                     <span style={{
                       padding: '4px 10px',
                       borderRadius: 8,
@@ -903,7 +903,7 @@ export default function CookPlanTab({
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div className="rs-flex rs-gap-2 rs-items-center">
                       {cook && !(timersFor[currentStep.key] || []).length && (
                         <button
                           className="gh-cook-btn-next"
@@ -971,7 +971,7 @@ export default function CookPlanTab({
                 )}
               </div>
             ) : (
-              <div className="gh-card" style={{ padding: 48, textAlign: 'center' }}>
+              <div className="gh-card rs-p-7 rs-text-center">
                 <div style={{ fontSize: 'var(--rs-fs-h3)', fontWeight: 700, color: 'var(--fg)', marginBottom: 8 }}>
                   No Active Cooking Steps
                 </div>
@@ -993,8 +993,8 @@ export default function CookPlanTab({
 
           {/* VIEW MODE B: TIMELINE */}
           {viewMode === 'timeline' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div className="gh-card" style={{ padding: 20 }}>
+            <div className="rs-flex rs-flex-col rs-gap-4">
+              <div className="gh-card rs-p-5">
                 <CookPlanTimeline
                   plan={plan}
                   colorFor={colorFor}
@@ -1009,7 +1009,7 @@ export default function CookPlanTab({
                 />
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="rs-flex rs-flex-col rs-gap-2">
                 {cookSteps.map((s, idx) => {
                   const isDone = done.has(s.key)
                   const isCurrent = idx === activeStepIdx

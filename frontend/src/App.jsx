@@ -22,6 +22,8 @@ import './styles/fleet.css'
 import './styles/hangar.css'
 import './styles/responsive.css'
 import './styles/google-home.css'
+// Last: utility declarations replace inline styles, so ties go to them.
+import './styles/utilities.css'
 
 // Lazy load pages
 const LoginPage          = lazy(() => import('@pages/LoginPage.jsx'))

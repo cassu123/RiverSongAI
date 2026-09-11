@@ -45,7 +45,7 @@ export function BatteryBar({ pct }) {
   const v = Math.max(0, Math.min(100, Number(pct) || 0))
   const color = v < 20 ? 'var(--md-error)' : v < 45 ? 'var(--rs-status-warning, #f4b740)' : 'var(--rs-status-nominal, #36d399)'
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="rs-flex rs-items-center rs-gap-2">
       <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'var(--md-surface-container-high, #2a2a2a)', overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${v}%`, background: color, transition: 'width .4s ease' }} />
       </div>
@@ -124,7 +124,7 @@ export function MiniMap({ items, height = 220, selectedId }) {
 // spec: [{ command, label, icon?, params?, danger? }]
 export function CommandConsole({ spec, onSend, disabled }) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+    <div className="rs-flex rs-flex-wrap rs-gap-2">
       {spec.map(c => (
         <button
           key={c.command}
@@ -151,7 +151,7 @@ export function AlertsList({ program, unitId, alerts, onChange }) {
     return <div className="rs-card-meta" style={{ opacity: 0.6 }}>No active alerts.</div>
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="rs-flex rs-flex-col rs-gap-2">
       {alerts.map(a => {
         const crit = (a.level || '').toLowerCase() === 'critical' || (a.level || '').toLowerCase() === 'emergency'
         return (
@@ -163,7 +163,7 @@ export function AlertsList({ program, unitId, alerts, onChange }) {
             <span className="material-symbols-rounded" style={{ color: crit ? 'var(--md-error)' : 'var(--rs-status-warning,#f4b740)' }}>
               {crit ? 'error' : 'warning'}
             </span>
-            <div style={{ flex: 1 }}>
+            <div className="rs-grow">
               <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 600 }}>{a.message}</div>
               <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>{a.level} · {new Date(a.timestamp).toLocaleString()}</div>
             </div>
@@ -214,7 +214,7 @@ export function ClaimUnitModal({ program, onClose, onDone }) {
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
       <div onClick={e => e.stopPropagation()} className="rs-card" style={{ width: 'min(460px, 92vw)', padding: 22 }}>
-        <div className="rs-card-label" style={{ marginBottom: 8 }}>CLAIM A {program.toUpperCase()} UNIT</div>
+        <div className="rs-card-label rs-mb-2">CLAIM A {program.toUpperCase()} UNIT</div>
         {!result ? (
           <>
             <p className="rs-card-meta">Name the unit, then flash the returned token into the device firmware.</p>

@@ -25,7 +25,7 @@ export default function CookPlanTimeline({ plan, colorFor, nowMin = null, onPick
   }))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div className="rs-flex rs-flex-col rs-gap-2">
       <style>{`
         .cpt-lane { position: relative; height: 30px; border-radius: 6px;
                     background: var(--md-surface-container-low); overflow: hidden; }
@@ -43,7 +43,7 @@ export default function CookPlanTimeline({ plan, colorFor, nowMin = null, onPick
       `}</style>
 
       {lanes.map(lane => (
-        <div key={lane.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div key={lane.id} className="rs-flex rs-items-center rs-gap-2">
           <span
             title={lane.title}
             style={{
@@ -54,7 +54,7 @@ export default function CookPlanTimeline({ plan, colorFor, nowMin = null, onPick
             }}
           >{lane.title}</span>
 
-          <div className="cpt-lane" style={{ flex: 1 }}>
+          <div className="cpt-lane rs-grow">
             {lane.steps.map(s => (
               <button
                 key={s.key}

@@ -78,14 +78,14 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
     <Section title="NVIDIA NIM">
 
       {/* Connection status row — read-only, reflects .env */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="rs-flex rs-items-center rs-gap-3">
         <span
           className="material-symbols-rounded"
           style={{ fontSize: '1.4rem', color: enabled ? 'var(--primary)' : 'var(--md-error)' }}
         >
           {enabled ? 'cloud_done' : 'cloud_off'}
         </span>
-        <div style={{ flex: 1 }}>
+        <div className="rs-grow">
           <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>Free cloud inference · 100+ models</div>
           <div className="rs-card-meta">
             {enabled
@@ -133,8 +133,8 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
 
       {/* Rate monitor */}
       <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className="rs-flex rs-justify-between rs-items-center">
+          <div className="rs-flex rs-items-center rs-gap-2">
             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>monitoring</span>
             <span style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)', letterSpacing: '0.06em' }}>RATE MONITOR</span>
           </div>
@@ -142,7 +142,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
         </div>
 
         {/* Req/min gauge */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="rs-flex rs-flex-col rs-gap-2">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <span className="rs-card-meta">Requests this minute</span>
             <span style={{ fontWeight: 700, color: barColor, fontSize: 'var(--rs-fs-small)', fontVariantNumeric: 'tabular-nums' }}>
@@ -156,7 +156,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
               boxShadow: pct > 0 ? `0 0 8px ${barColor}60` : 'none',
             }} />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }} className="rs-card-meta">
+          <div className="rs-card-meta rs-flex rs-items-center rs-gap-1">
             <span className="material-symbols-rounded" style={{
               fontSize: '0.85rem',
               color: pct >= 90 ? 'var(--md-error)' : pct >= 60 ? 'var(--md-sys-color-tertiary)' : 'var(--primary)',
@@ -177,7 +177,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
             { value: `$${day.cost.toFixed(2)}`, label: 'cost accrued', icon: 'savings', color: 'var(--primary)' },
           ].map(({ value, label, icon, color }) => (
             <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div className="rs-flex rs-items-center rs-gap-1">
                 <span className="material-symbols-rounded" style={{ fontSize: '0.8rem', opacity: 0.6 }}>{icon}</span>
                 <span style={{ fontWeight: 700, fontSize: 'var(--rs-fs-body)', fontVariantNumeric: 'tabular-nums', color: color || 'inherit' }}>{value}</span>
               </div>
@@ -188,7 +188,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
       </div>
 
       {/* Model pill grid */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <div className="rs-flex rs-gap-2 rs-flex-wrap">
         {[
           { name: 'Kimi K2.6',          tag: 'Creative' },
           { name: 'Nemotron 253B',       tag: 'Reasoning' },

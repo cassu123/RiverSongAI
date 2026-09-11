@@ -51,9 +51,9 @@ export default function BriefingSection({ briefingSettings, setBriefingSettings,
               if (next.length > 0) saveBriefingSettings({ pulse_news_categories: next })
             }
             return (
-              <div style={{ marginTop: 10 }}>
+              <div className="rs-mt-3">
                 <div className="rs-card-label" style={{ marginBottom: 8, fontSize: 'var(--rs-fs-nano)' }}>NEWS SOURCE CATEGORIES</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <div className="rs-flex rs-flex-wrap rs-gap-2">
                   {PULSE_CATS.map(({ key, label }) => {
                     const on = active.includes(key)
                     return (
@@ -79,7 +79,7 @@ export default function BriefingSection({ briefingSettings, setBriefingSettings,
                     )
                   })}
                 </div>
-                <p className="rs-card-meta" style={{ marginTop: 6 }}>
+                <p className="rs-card-meta rs-mt-2">
                   Active categories feed the cycling ticker. Health and Entertainment excluded by default to avoid clickbait.
                 </p>
               </div>
@@ -108,10 +108,10 @@ export default function BriefingSection({ briefingSettings, setBriefingSettings,
           </p>
           <div style={{ height: 24 }} />
           
-          <div className="rs-card-label" style={{ marginBottom: 12 }}>LOCATION (FOR WEATHER & FLIGHTS)</div>
+          <div className="rs-card-label rs-mb-3">LOCATION (FOR WEATHER & FLIGHTS)</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <div className="rs-card-meta" style={{ marginBottom: 8 }}>Latitude</div>
+              <div className="rs-card-meta rs-mb-2">Latitude</div>
               <input
                 type="number"
                 step="any"
@@ -123,7 +123,7 @@ export default function BriefingSection({ briefingSettings, setBriefingSettings,
               />
             </div>
             <div>
-              <div className="rs-card-meta" style={{ marginBottom: 8 }}>Longitude</div>
+              <div className="rs-card-meta rs-mb-2">Longitude</div>
               <input
                 type="number"
                 step="any"
@@ -135,7 +135,7 @@ export default function BriefingSection({ briefingSettings, setBriefingSettings,
               />
             </div>
           </div>
-          <p className="rs-card-meta" style={{ marginTop: 8 }}>
+          <p className="rs-card-meta rs-mt-2">
             Setting coordinates here will override the .env defaults for Pulse features.
           </p>
         </Section>

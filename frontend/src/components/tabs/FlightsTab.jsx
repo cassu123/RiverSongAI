@@ -328,7 +328,7 @@ export default function FlightsTab({ token, active }) {
             onChange={e => handleRadiusChange(e.target.value)}
             style={{ width: '100%', accentColor: 'var(--primary)' }}
           />
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div className="rs-flex rs-justify-between">
             <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>~11 km</span>
             <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>~222 km</span>
           </div>
@@ -366,8 +366,8 @@ export default function FlightsTab({ token, active }) {
       </InlineSettingsSection>
 
       {/* Status row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div className="rs-flex rs-items-center rs-justify-between rs-mb-4">
+        <div className="rs-flex rs-items-center rs-gap-3">
           <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 700 }}>
             OVERHEAD RADAR
           </span>
@@ -390,12 +390,12 @@ export default function FlightsTab({ token, active }) {
       {/* No-location state */}
       {error === 'location' && (
         <div style={{ padding: '16px 0' }}>
-          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <div className="rs-text-center rs-mb-5">
             <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>
               flight
             </span>
-            <div className="rs-card-label" style={{ marginBottom: 6 }}>NO RADAR ORIGIN SET</div>
-            <div className="rs-card-meta" style={{ marginBottom: 16 }}>
+            <div className="rs-card-label rs-mb-2">NO RADAR ORIGIN SET</div>
+            <div className="rs-card-meta rs-mb-4">
               Set your location in Weather settings, or search here — coordinates are shared.
             </div>
           </div>
@@ -409,7 +409,7 @@ export default function FlightsTab({ token, active }) {
           <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>
             flight_off
           </span>
-          <div className="rs-card-meta" style={{ marginBottom: 12 }}>{error}</div>
+          <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={() => fetchFlights(flSettings, wxSettings)}>RETRY</button>
         </div>
       )}

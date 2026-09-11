@@ -27,7 +27,7 @@ function MapSelector({ position, onChange }) {
   const center = position.lat && position.lng ? [position.lat, position.lng] : defaultCenter
 
   return (
-    <div className="rs-map" style={{ marginBottom: 16 }}>
+    <div className="rs-map rs-mb-4">
       <MapContainer center={center} zoom={18} style={{ height: '100%', width: '100%', borderRadius: 8 }}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -172,22 +172,22 @@ export default function SetupWizard() {
     }
   }
 
-  if (loading) return <div style={{ padding: 24 }}>Loading unit data...</div>
+  if (loading) return <div className="rs-p-5">Loading unit data...</div>
 
   return (
     <div className="rs-card p-5 md:p-8" style={{ maxWidth: 800, margin: '0 auto' }}>
-      <h2 style={{ marginBottom: 8 }}>Setup Wizard: {id}</h2>
+      <h2 className="rs-mb-2">Setup Wizard: {id}</h2>
       <div style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: 'var(--rs-fs-small)' }}>Step {step} of 8</div>
 
       <form onSubmit={step === 8 ? (e)=>{e.preventDefault();handleSave()} : handleNext}>
         {step === 1 && (
           <div>
             <h3>Identity</h3>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Name</label>
               <input type="text" className="rs-input" required value={formData.name} onChange={e => updateField('name', e.target.value)} />
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Platform</label>
               <select className="rs-input" value={formData.platform} onChange={e => updateField('platform', e.target.value)}>
                 <option value="robot">Robot Mower</option>
@@ -195,7 +195,7 @@ export default function SetupWizard() {
                 <option value="push">Push Mower</option>
               </select>
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Timezone</label>
               <input type="text" className="rs-input" required value={formData.timezone} onChange={e => updateField('timezone', e.target.value)} />
             </div>
@@ -205,7 +205,7 @@ export default function SetupWizard() {
         {step === 2 && (
           <div>
             <h3>Drive System</h3>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Type</label>
               <select className="rs-input" value={formData.hardware.drive.type} onChange={e => updateField('hardware.drive.type', e.target.value)}>
                 <option value="clutch">Clutch</option>
@@ -214,19 +214,19 @@ export default function SetupWizard() {
                 <option value="hydrostatic">Hydrostatic</option>
               </select>
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Gears</label>
               <input type="number" className="rs-input" value={formData.hardware.drive.gears} onChange={e => updateField('hardware.drive.gears', Number(e.target.value))} />
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Max Speed (km/h)</label>
               <input type="number" step="0.1" className="rs-input" value={formData.hardware.drive.max_speed_kmh} onChange={e => updateField('hardware.drive.max_speed_kmh', Number(e.target.value))} />
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Turn Radius (m)</label>
               <input type="number" step="0.1" className="rs-input" value={formData.hardware.drive.turn_radius_m} onChange={e => updateField('hardware.drive.turn_radius_m', Number(e.target.value))} />
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Speed Control</label>
               <input type="text" className="rs-input" value={formData.hardware.drive.speed_control} onChange={e => updateField('hardware.drive.speed_control', e.target.value)} />
             </div>
@@ -236,11 +236,11 @@ export default function SetupWizard() {
         {step === 3 && (
           <div>
             <h3>Deck</h3>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Width (inches)</label>
               <input type="number" className="rs-input" value={formData.hardware.deck.width_inches} onChange={e => updateField('hardware.deck.width_inches', Number(e.target.value))} />
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Engagement</label>
               <select className="rs-input" value={formData.hardware.deck.engagement} onChange={e => updateField('hardware.deck.engagement', e.target.value)}>
                 <option value="electric">Electric PTO</option>
@@ -248,7 +248,7 @@ export default function SetupWizard() {
                 <option value="always_on">Always On</option>
               </select>
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Height Adjustable</label>
               <input type="checkbox" checked={formData.hardware.deck.height_adjustable} onChange={e => updateField('hardware.deck.height_adjustable', e.target.checked)} />
             </div>
@@ -258,11 +258,11 @@ export default function SetupWizard() {
         {step === 4 && (
           <div>
             <h3>Hardware & Sensors</h3>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Cameras Count</label>
               <input type="number" className="rs-input" value={formData.hardware.cameras.count} onChange={e => updateField('hardware.cameras.count', Number(e.target.value))} />
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">GPS Type</label>
               <select className="rs-input" value={formData.hardware.sensors.gps} onChange={e => updateField('hardware.sensors.gps', e.target.value)}>
                 <option value="none">None</option>
@@ -284,7 +284,7 @@ export default function SetupWizard() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: 16 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rs-mb-4">
               <div><label><input type="checkbox" checked={formData.hardware.sensors.imu} onChange={e => updateField('hardware.sensors.imu', e.target.checked)} /> IMU Installed</label></div>
               <div>
                 <label style={{ display: 'block', fontSize: 'var(--rs-fs-small)', marginBottom: 4 }}>Obstacle Sensors</label>
@@ -301,9 +301,9 @@ export default function SetupWizard() {
               <div><label><input type="checkbox" checked={formData.hardware.sensors.operator_presence} onChange={e => updateField('hardware.sensors.operator_presence', e.target.checked)} /> Operator Presence</label></div>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Pico Bridge</label>
-              <div style={{ display: 'flex', gap: 16 }}>
+              <div className="rs-flex rs-gap-4">
                 <input type="text" className="rs-input" placeholder="Port" value={formData.hardware.pico_bridge.port} onChange={e => updateField('hardware.pico_bridge.port', e.target.value)} />
                 <input type="number" className="rs-input" placeholder="Baud Rate" value={formData.hardware.pico_bridge.baud_rate} onChange={e => updateField('hardware.pico_bridge.baud_rate', Number(e.target.value))} />
               </div>
@@ -314,7 +314,7 @@ export default function SetupWizard() {
         {step === 5 && (
           <div>
             <h3>Power</h3>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Type</label>
               <select className="rs-input" value={formData.hardware.power.type} onChange={e => updateField('hardware.power.type', e.target.value)}>
                 <option value="electric">Electric (Battery)</option>
@@ -324,12 +324,12 @@ export default function SetupWizard() {
             
             {formData.hardware.power.type === 'electric' ? (
               <>
-                <div style={{ marginBottom: 16 }}><label className="rs-card-label">Nominal Voltage (V)</label><input type="number" className="rs-input" value={formData.hardware.power.nominal_voltage_v} onChange={e => updateField('hardware.power.nominal_voltage_v', Number(e.target.value))} /></div>
-                <div style={{ marginBottom: 16 }}><label className="rs-card-label">Battery Cells</label><input type="number" className="rs-input" value={formData.hardware.power.battery_cells} onChange={e => updateField('hardware.power.battery_cells', Number(e.target.value))} /></div>
-                <div style={{ marginBottom: 16 }}><label className="rs-card-label">Min Voltage (V)</label><input type="number" className="rs-input" value={formData.hardware.power.min_voltage_v} onChange={e => updateField('hardware.power.min_voltage_v', Number(e.target.value))} /></div>
+                <div className="rs-mb-4"><label className="rs-card-label">Nominal Voltage (V)</label><input type="number" className="rs-input" value={formData.hardware.power.nominal_voltage_v} onChange={e => updateField('hardware.power.nominal_voltage_v', Number(e.target.value))} /></div>
+                <div className="rs-mb-4"><label className="rs-card-label">Battery Cells</label><input type="number" className="rs-input" value={formData.hardware.power.battery_cells} onChange={e => updateField('hardware.power.battery_cells', Number(e.target.value))} /></div>
+                <div className="rs-mb-4"><label className="rs-card-label">Min Voltage (V)</label><input type="number" className="rs-input" value={formData.hardware.power.min_voltage_v} onChange={e => updateField('hardware.power.min_voltage_v', Number(e.target.value))} /></div>
               </>
             ) : (
-              <div style={{ marginBottom: 16 }}><label className="rs-card-label">Min Battery Voltage (V)</label><input type="number" className="rs-input" value={formData.hardware.power.min_battery_v || ''} onChange={e => updateField('hardware.power.min_battery_v', Number(e.target.value))} /></div>
+              <div className="rs-mb-4"><label className="rs-card-label">Min Battery Voltage (V)</label><input type="number" className="rs-input" value={formData.hardware.power.min_battery_v || ''} onChange={e => updateField('hardware.power.min_battery_v', Number(e.target.value))} /></div>
             )}
           </div>
         )}
@@ -337,23 +337,23 @@ export default function SetupWizard() {
         {step === 6 && (
           <div>
             <h3>Safety Floors</h3>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Min Obstacle Clearance (m)</label>
               <input type="number" step="0.01" className="rs-input" value={formData.safety_floors.min_obstacle_clearance_m} onChange={e => updateField('safety_floors.min_obstacle_clearance_m', Number(e.target.value))} />
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">IMU Tilt Cutoff (deg)</label>
               <input type="number" step="1" className="rs-input" value={formData.safety_floors.imu_tilt_cutoff_deg} onChange={e => updateField('safety_floors.imu_tilt_cutoff_deg', Number(e.target.value))} />
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Watchdog Timeout (ms)</label>
               <input type="number" step="1" className="rs-input" value={formData.safety_floors.watchdog_timeout_ms} onChange={e => updateField('safety_floors.watchdog_timeout_ms', Number(e.target.value))} />
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Min Battery V Cutoff</label>
               <input type="number" step="0.1" className="rs-input" value={formData.safety_floors.min_battery_v_cutoff} onChange={e => updateField('safety_floors.min_battery_v_cutoff', Number(e.target.value))} />
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">
                 <input type="checkbox" checked={formData.safety_floors.operator_presence_required_for_auto} onChange={e => updateField('safety_floors.operator_presence_required_for_auto', e.target.checked)} /> 
                 Operator Presence Required for Auto
@@ -373,10 +373,10 @@ export default function SetupWizard() {
                 updateField('home_position.lng', lng)
               }} 
             />
-            <div style={{ marginBottom: 16 }}>
+            <div className="rs-mb-4">
               <label className="rs-card-label">Heading (deg)</label>
-              <input type="range" min="0" max="359" style={{ width: '100%' }} value={formData.home_position.heading_deg} onChange={e => updateField('home_position.heading_deg', Number(e.target.value))} />
-              <div style={{ textAlign: 'center', marginTop: 8 }}>{formData.home_position.heading_deg}°</div>
+              <input type="range" min="0" max="359" className="rs-w-full" value={formData.home_position.heading_deg} onChange={e => updateField('home_position.heading_deg', Number(e.target.value))} />
+              <div className="rs-text-center rs-mt-2">{formData.home_position.heading_deg}°</div>
             </div>
           </div>
         )}
@@ -391,7 +391,7 @@ export default function SetupWizard() {
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 16, marginTop: 32, justifyContent: 'space-between' }}>
+        <div className="rs-flex rs-gap-4 rs-mt-6 rs-justify-between">
           <button type="button" className="rs-btn" disabled={step === 1} onClick={handleBack}>
             BACK
           </button>

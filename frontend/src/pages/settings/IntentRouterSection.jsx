@@ -53,9 +53,9 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
           )}
 
           {/* Sensitivity selector — min 44px touch targets */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap">
             <span className="rs-card-meta" style={{ margin: 0, flexShrink: 0 }}>Signal sensitivity</span>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div className="rs-flex rs-gap-2">
               {[
                 { n: 1, label: 'High',          desc: 'Routes on 1+ match' },
                 { n: 2, label: 'Balanced',      desc: 'Routes on 2+ matches' },
@@ -87,11 +87,11 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
                   : r.provider ? 'cloud' : null
               return (
                 <div key={r.intent} style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10, opacity: r.reachable ? 1 : 0.6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div className="rs-flex rs-items-center rs-gap-2">
                     <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.75 }}>{INTENT_ICONS[r.intent] || 'chat'}</span>
                     <span style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{r.label}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                  <div className="rs-flex rs-items-center rs-justify-between rs-gap-2">
                     <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {r.reachable ? r.display_name : 'No provider available'}
                     </span>

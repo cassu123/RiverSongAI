@@ -713,7 +713,7 @@ export default function SettingsPage({
         }
       `}</style>
 
-      <header className="rs-foyer-head" style={{ marginBottom: 20 }}>
+      <header className="rs-foyer-head rs-mb-5">
         <div className="rs-card-label" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>
             {activeHubTab === 'admin' ? 'shield_person' : activeHubTab === 'users' ? 'group' : activeHubTab === 'profile' ? 'account_circle' : 'tune'}
@@ -784,7 +784,7 @@ export default function SettingsPage({
           border: '1px solid color-mix(in srgb, var(--rs-status-warning) 40%, transparent)',
           borderRadius: 'var(--md-shape-sm)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="rs-flex rs-items-center rs-gap-2">
             <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)' }}>warning</span>
             <span style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
               LLM routing change saved — reload required to take effect.
@@ -975,11 +975,11 @@ export default function SettingsPage({
       {/* ================================================================ */}
       {showUser && (
       <Section title="VOICE RECOGNITION (STT)">
-        <p className="rs-card-meta" style={{ marginBottom: 16 }}>
+        <p className="rs-card-meta rs-mb-4">
           Select the Whisper model size for real-time speech-to-text. Smaller models respond instantly, larger models are more accurate. Runs 100% locally.
         </p>
-        <div style={{ marginTop: 8 }}>
-          <div className="rs-card-label" style={{ marginBottom: 6 }}>WHISPER MODEL SIZE</div>
+        <div className="rs-mt-2">
+          <div className="rs-card-label rs-mb-2">WHISPER MODEL SIZE</div>
           <select 
             className="settings-select"
             value={llmSettings?.whisper_model || 'base'}
@@ -1140,7 +1140,7 @@ export default function SettingsPage({
           <p className="rs-card-meta" style={{ marginTop: -8 }}>
             Select your preferred discovery and playback service.
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="rs-flex rs-flex-col rs-gap-3">
             <div className="toggle-row" style={{ padding: 0 }}>
               <span className="toggle-label">Preferred Provider</span>
               <select
@@ -1244,8 +1244,8 @@ export default function SettingsPage({
           <div className="rs-card-meta">
             <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>Retention Period</span>
             <select
-              className="settings-select"
-              style={{ width: '100%' }}
+              className="settings-select rs-w-full"
+             
               value={memSettings.default_ttl}
               onChange={e => saveMemory({ default_ttl: e.target.value })}
             >

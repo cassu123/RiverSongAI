@@ -227,7 +227,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
             {expandedCard === 'telemetry' && (
               <div className="rs-card-inner animate-fade-in">
                 <div className="rs-card-label">INTEGRATED COGNITIVE SKILLS & TOOLS</div>
-                <div className="rs-archives-grid" style={{ marginTop: 16 }}>
+                <div className="rs-archives-grid rs-mt-4">
                   <div className="rs-archive-item">
                     <div className="rs-card-label">GOOGLE TASKS</div>
                     <div className="rs-health-value">ACTIVE</div>
@@ -281,7 +281,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
             {expandedCard === 'pulse' && (
               <div className="rs-card-inner animate-fade-in">
                 <div className="rs-card-label">DETAILED ENVIRONMENT TELEMETRY</div>
-                <div className="rs-archives-grid" style={{ marginTop: 16 }}>
+                <div className="rs-archives-grid rs-mt-4">
                   <div className="rs-archive-item">
                     <div className="rs-card-label">ACTIVE ROOMS</div>
                     <div className="rs-health-value">
@@ -329,7 +329,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
           <div className="rs-card-inner">
             <div className="rs-card-head">
               <span className="rs-card-label">SYSTEM INTEGRITY</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="rs-flex rs-items-center rs-gap-2">
                 <span className="rs-status-dot" style={{ color: statusOk ? 'var(--rs-status-nominal)' : 'var(--rs-status-warning)' }} />
                 <span className="rs-card-label" style={{ color: statusOk ? 'var(--rs-status-nominal)' : 'var(--rs-status-warning)', opacity: 1 }}>
                   {statusOk ? 'NOMINAL' : 'DEGRADED'}
@@ -388,7 +388,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
             {expandedCard === 'archives' && (
               <div className="rs-card-inner animate-fade-in">
                 <div className="rs-card-label">RECENT KNOWLEDGE REVELATIONS & MEMORY STACKS</div>
-                <div className="rs-archives-grid" style={{ marginTop: 16 }}>
+                <div className="rs-archives-grid rs-mt-4">
                   {stats?.memory?.recent_facts?.length > 0 ? (
                     stats.memory.recent_facts.map((fact, idx) => (
                       <div key={`fact-${idx}-${String(fact).slice(0, 32)}`} className="rs-archive-item">

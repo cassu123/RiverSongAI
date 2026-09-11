@@ -201,14 +201,14 @@ export default function GooglePage() {
              <span className="rs-card-label">CONNECTION STATUS</span>
              {status.connected && <span className="rs-card-label" style={{ color: 'var(--md-tertiary)' }}>ACTIVE</span>}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="rs-flex rs-items-center rs-justify-between rs-gap-4 rs-flex-wrap">
+             <div className="rs-flex rs-items-center rs-gap-3">
                 <span className="rs-status-dot" style={{ background: status.loading ? 'var(--text-muted)' : (status.connected ? 'var(--md-tertiary)' : 'var(--md-outline)') }} />
                 <span style={{ fontSize: 'var(--rs-fs-small)', fontWeight: 500, letterSpacing: '0.05em' }}>
                    {status.loading ? 'CHECKING CONNECTION...' : (status.connected ? `CONNECTED AS ${status.email?.toUpperCase() || 'GOOGLE USER'}` : 'NOT CONNECTED')}
                 </span>
              </div>
-             <div style={{ display: 'flex', gap: 12 }}>
+             <div className="rs-flex rs-gap-3">
                 {status.connected && (
                   <button className="rs-pill" onClick={handleDisconnect} style={{ color: 'var(--md-error)' }}>
                     DISCONNECT
@@ -234,16 +234,16 @@ export default function GooglePage() {
              flexDirection: 'column'
            }}>
               <div className="rs-card-head">
-                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                 <div className="rs-flex rs-items-center rs-gap-2">
                     <IconCalendar />
                     <span className="rs-card-label">UPCOMING EVENTS</span>
                  </div>
               </div>
-              <div style={{ flex: 1 }}>
+              <div className="rs-grow">
                 {status.connected ? (
                   calendar.loading ? <div className="rs-card-meta">Loading events...</div> :
                   calendar.events.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div className="rs-flex rs-flex-col rs-gap-3">
                       {calendar.events.slice(0, 3).map(ev => (
                         <div key={ev.id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none' }}>
                           <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, color: 'var(--md-tertiary)', marginBottom: 2 }}>
@@ -265,8 +265,8 @@ export default function GooglePage() {
              display: 'flex',
              flexDirection: 'column'
            }}>
-              <div className="rs-card-head" style={{ justifyContent: 'space-between' }}>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="rs-card-head rs-justify-between">
+                 <div className="rs-flex rs-items-center rs-gap-2">
                     <IconMail />
                     <span className="rs-card-label">UNREAD MESSAGES</span>
                  </div>
@@ -292,16 +292,16 @@ export default function GooglePage() {
                    </button>
                  )}
               </div>
-              <div style={{ flex: 1 }}>
+              <div className="rs-grow">
                 {status.connected ? (
                   triage.messages.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div className="rs-flex rs-flex-col rs-gap-3">
                       {triage.messages.slice(0, 5).map(msg => {
                         const t = msg.triage || {}
                         const urgencyColor = t.urgency === 'high' ? 'var(--md-error)' : t.urgency === 'low' ? 'var(--md-on-surface-variant)' : 'var(--md-secondary)'
                         return (
                           <div key={msg.id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                            <div className="rs-flex rs-items-center rs-gap-2 rs-mb-1">
                               <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 7px', background: urgencyColor, color: 'var(--bg-base)' }}>
                                 {(t.urgency || 'med').toUpperCase()}
                               </span>
@@ -312,14 +312,14 @@ export default function GooglePage() {
                             <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{msg.subject}</div>
                             {t.summary && <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginTop: 4, lineHeight: 1.35 }}>{t.summary}</div>}
                             {(t.tags || []).length > 0 && (
-                              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+                              <div className="rs-flex rs-gap-1 rs-flex-wrap rs-mt-2">
                                 {t.tags.slice(0, 4).map((tag, i) => (
                                   <span key={i} className="rs-pill" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', padding: '1px 6px' }}>{tag}</span>
                                 ))}
                               </div>
                             )}
                             {t.draft_reply && (
-                              <details style={{ marginTop: 8 }}>
+                              <details className="rs-mt-2">
                                 <summary style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, opacity: 0.8, cursor: 'pointer' }}>DRAFT REPLY</summary>
                                 <div style={{ fontSize: 'var(--rs-fs-micro)', marginTop: 4, padding: 8, background: 'rgba(0,0,0,0.2)', borderRadius: 6, whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{t.draft_reply}</div>
                               </details>
@@ -331,7 +331,7 @@ export default function GooglePage() {
                   ) :
                   gmail.loading ? <div className="rs-card-meta">Loading messages...</div> :
                   gmail.messages.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div className="rs-flex rs-flex-col rs-gap-3">
                       {gmail.messages.slice(0, 3).map(msg => (
                         <div key={msg.id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none' }}>
                           <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, color: 'var(--md-secondary)', marginBottom: 2 }}>{msg.from.split('<')[0].trim()}</div>
@@ -353,16 +353,16 @@ export default function GooglePage() {
              flexDirection: 'column'
            }}>
               <div className="rs-card-head">
-                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                 <div className="rs-flex rs-items-center rs-gap-2">
                     <IconBooks />
                     <span className="rs-card-label">READING LIBRARY</span>
                  </div>
               </div>
-              <div style={{ flex: 1 }}>
+              <div className="rs-grow">
                 {status.connected ? (
                   books.loading ? <div className="rs-card-meta">Loading library...</div> :
                   books.library.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div className="rs-flex rs-flex-col rs-gap-3">
                       {books.library.slice(0, 3).map(b => (
                         <div key={b.volume_id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none', display: 'flex', gap: 12 }}>
                           {b.cover_url && (
@@ -373,7 +373,7 @@ export default function GooglePage() {
                             <div style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {b.authors.join(', ')}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                            <div className="rs-flex rs-items-center rs-gap-2 rs-mt-1">
                               <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px' }}>
                                 {b.status === 'reading' ? 'READING' : b.status === 'finished' ? 'FINISHED' : 'WANT TO READ'}
                               </span>
@@ -398,16 +398,16 @@ export default function GooglePage() {
              flexDirection: 'column'
            }}>
               <div className="rs-card-head">
-                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                 <div className="rs-flex rs-items-center rs-gap-2">
                     <IconTasks />
                     <span className="rs-card-label">GOOGLE TASKS</span>
                  </div>
               </div>
-              <div style={{ flex: 1 }}>
+              <div className="rs-grow">
                 {status.connected ? (
                   tasks.loading ? <div className="rs-card-meta">Loading tasks...</div> :
                   tasks.list.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div className="rs-flex rs-flex-col rs-gap-3">
                       {tasks.list.slice(0, 4).map(t => {
                         const completed = t.status === 'completed'
                         return (
@@ -460,14 +460,14 @@ export default function GooglePage() {
               borderRadius: 'var(--md-shape-xl)'
             }}>
               <div className="rs-card-head">
-                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                 <div className="rs-flex rs-items-center rs-gap-3">
                     <div style={{ color: 'var(--md-primary)' }}><Icon /></div>
                     <span className="rs-card-label">{title}</span>
                  </div>
                  {status.connected && <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', background: 'var(--md-tertiary-container)', color: 'var(--md-on-tertiary-container)' }}>ACTIVE</span>}
               </div>
               <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)', color: 'inherit', opacity: 0.8, margin: '12px 0' }}>{desc}</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <div className="rs-flex rs-flex-wrap rs-gap-2">
                 {tags.map(t => <span key={t} className="rs-pill" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{t}</span>)}
               </div>
             </div>

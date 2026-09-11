@@ -17,7 +17,7 @@ export function Section({ title, children }) {
       <div className="rs-card-head">
         <span className="rs-card-label">{title}</span>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="rs-flex rs-flex-col rs-gap-4">
         {children}
       </div>
     </div>

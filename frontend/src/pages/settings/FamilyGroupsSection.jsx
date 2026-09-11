@@ -108,7 +108,7 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
 
   return (
     <Section title="FAMILY GROUPS">
-      <p className="rs-card-meta" style={{ marginBottom: 16 }}>
+      <p className="rs-card-meta rs-mb-4">
         Family groups give multiple profiles shared data access to selected modules
         (culinary, inventory, store, maintenance). All members see and edit the
         same records. For controlling which features children can access, use
@@ -118,7 +118,7 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
       {err && <p style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)', marginBottom: 10 }}>{err}</p>}
 
       {/* Group list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+      <div className="rs-flex rs-flex-col rs-gap-3 rs-mb-4">
         {groups.length === 0 && !creating && (
           <p className="settings-hint">No family groups yet.</p>
         )}
@@ -143,7 +143,7 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
                 border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)',
                 borderRadius: 8, fontSize: 'var(--rs-fs-tiny)',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div className="rs-flex rs-items-center rs-gap-3">
                   <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-error)', flexShrink: 0 }}>warning</span>
                   <span style={{ flex: 1, color: 'var(--md-on-surface)' }}>
                     Delete <strong>{group.name}</strong>? Whatever the group holds has to go
@@ -154,7 +154,7 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
                 {/* Naming an heir is what lets the backend proceed when the
                     group still owns data; without one it refuses, and the
                     error below says by how much. */}
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="rs-flex rs-gap-2 rs-items-center rs-flex-wrap">
                   <select
                     className="settings-select"
                     value={heirId}
@@ -179,7 +179,7 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
 
       {/* Create new group */}
       {creating ? (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="rs-flex rs-gap-2 rs-items-center rs-flex-wrap">
           <input
             className="settings-input"
             placeholder="Group name (e.g. Smith Family)"
@@ -269,7 +269,7 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px' }}>
         <div style={{ flex: 1, fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>{group.name}</div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div className="rs-flex rs-gap-2">
           {ALL_MODULES.map(m => (
             <span key={m.key} style={{
               padding: '2px 8px', borderRadius: 12, fontSize: 'var(--rs-fs-micro)', fontWeight: 600,
@@ -297,9 +297,9 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
         <div style={{ borderTop: '1px solid var(--md-outline-variant)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
           {/* Rename */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="rs-flex rs-gap-2 rs-items-center">
             <span className="rs-card-label" style={{ minWidth: 60 }}>NAME</span>
-            <input className="settings-input" style={{ flex: 1 }} value={editName}
+            <input className="settings-input rs-grow" value={editName}
               onChange={e => setEditName(e.target.value)}
               onBlur={() => onRename(editName)}
               onKeyDown={e => e.key === 'Enter' && onRename(editName)}
@@ -309,7 +309,7 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
           {/* Module toggles */}
           <div>
             <div style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--md-outline)', marginBottom: 8 }}>Shared Modules</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div className="rs-flex rs-gap-2 rs-flex-wrap">
               {ALL_MODULES.map(m => {
                 const on = group.shared_modules?.includes(m.key)
                 return (
@@ -334,7 +334,7 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
             {(group.members || []).length === 0 && (
               <p className="rs-card-meta" style={{ margin: '0 0 8px' }}>No members yet.</p>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+            <div className="rs-flex rs-flex-col rs-gap-1 rs-mb-3">
               {(group.members || []).map(m => (
                 <div key={m.profile_id} style={{
                   display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--rs-fs-tiny)',
@@ -361,7 +361,7 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
                 border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)',
               }}>
                 <div style={{ fontSize: 'var(--rs-fs-tiny)', marginBottom: 8 }}>{confirmRemove.message}</div>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="rs-flex rs-gap-2">
                   <button
                     onClick={() => removeMember(confirmRemove.profileId, true)}
                     disabled={addWorking}
@@ -378,7 +378,7 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
             )}
 
             {/* Add member row */}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div className="rs-flex rs-gap-2 rs-flex-wrap rs-items-center">
               <select className="settings-select" value={addUserId} onChange={e => setAddUserId(e.target.value)}>
                 <option value="">— add member —</option>
                 {eligible.map(u => (

@@ -14,7 +14,7 @@ function Gauge({ label, pct, color }) {
   const v = Math.max(0, Math.min(100, pct || 0))
   return (
     <div style={{ flex: 1, minWidth: 120 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+      <div className="rs-flex rs-justify-between rs-mb-1">
         <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{label}</span>
         <span style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 700, color }}>{v}%</span>
       </div>
@@ -27,8 +27,8 @@ function Gauge({ label, pct, color }) {
 
 function Panel({ title, children }) {
   return (
-    <div className="rs-card" style={{ padding: 16, marginBottom: 16 }}>
-      <div className="rs-card-label" style={{ marginBottom: 12 }}>{title}</div>{children}
+    <div className="rs-card rs-p-4 rs-mb-4">
+      <div className="rs-card-label rs-mb-3">{title}</div>{children}
     </div>
   )
 }
@@ -44,7 +44,7 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, refresh, program 
   return (
     <div>
       <Panel title={`${unit.name || unit.unit_id} · ${t.casting ? 'CASTING' : 'IDLE'}`}>
-        <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div className="rs-flex rs-gap-6 rs-flex-wrap rs-mb-4">
           <MetricStat label="DEVICES" value={t.connected_devices ?? 0} accent="#22d3ee" />
           <MetricStat label="UPTIME" value={fmtUptime(t.uptime_s)} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -52,11 +52,11 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, refresh, program 
             <span style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>{t.casting ? (t.cast_target || 'on') : '—'}</span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 18 }}>
+        <div className="rs-flex rs-gap-5">
           <Gauge label="CPU" pct={t.cpu_pct} color="#22d3ee" />
           <Gauge label="MEMORY" pct={t.mem_pct} color="#818cf8" />
         </div>
-        <div style={{ marginTop: 14 }}>
+        <div className="rs-mt-4">
           <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>CPU LOAD</div>
           <Sparkline data={telemetry} field="cpu_pct" color="#22d3ee" />
         </div>

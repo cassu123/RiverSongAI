@@ -125,15 +125,15 @@ export default function UnitDetail() {
     }
   }
 
-  if (!unit) return <div style={{ padding: 20 }}>Loading unit...</div>
+  if (!unit) return <div className="rs-p-5">Loading unit...</div>
 
   const latestT = telemetry[0] || {}
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="rs-flex rs-justify-between rs-items-center">
         <h2>{unit.name || unit.unit_id}</h2>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div className="rs-flex rs-gap-3 rs-items-center">
           <span style={{ padding: '4px 8px', borderRadius: 4, background: unit.online ? 'rgba(0,255,0,0.2)' : 'rgba(255,0,0,0.2)' }}>
             {unit.online ? 'Online' : 'Offline'}
           </span>
@@ -154,7 +154,7 @@ export default function UnitDetail() {
 
       {tab === 'live' && (
         <div className="grid grid-cols-1 rail:grid-cols-[2fr_1fr] gap-5">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div className="rs-flex rs-flex-col rs-gap-5">
             {/* Telemetry Grid */}
             <div className="rs-card grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div><small style={{ color: 'var(--text-muted)' }}>Battery</small><div>{latestT.battery_pct ?? '--'}% ({latestT.battery_v ?? '--'}V)</div></div>
@@ -194,9 +194,9 @@ export default function UnitDetail() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div className="rs-flex rs-flex-col rs-gap-5">
             {/* Controls */}
-            <div className="rs-card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="rs-card rs-flex rs-flex-col rs-gap-3">
               <h3>Controls</h3>
               <button className="rs-btn-primary" onClick={() => sendCommand('mow_start')}>Start</button>
               <button className="rs-btn" onClick={() => sendCommand('mow_stop')}>Stop</button>
@@ -235,7 +235,7 @@ export default function UnitDetail() {
                 <button className="rs-btn-ghost" {...bindManualKey('manual.drive', { direction: 'reverse', throttle: 0.3, duration_ms: 500 })}>&#8595;</button>
                 <div />
               </div>
-              <div style={{ marginTop: 20 }}>
+              <div className="rs-mt-5">
                 <button className="rs-btn-primary" style={{ width: '100%', opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }} {...bindManualKey('manual.blades', { engage: true })}>Engage Blades</button>
               </div>
             </div>
@@ -249,20 +249,20 @@ export default function UnitDetail() {
             <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                  <th style={{ padding: 10 }}>Started At</th>
-                  <th style={{ padding: 10 }}>Program</th>
-                  <th style={{ padding: 10 }}>Status</th>
+                  <th className="rs-p-3">Started At</th>
+                  <th className="rs-p-3">Program</th>
+                  <th className="rs-p-3">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {sessions.map(s => (
                   <tr key={s.session_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: 10 }}>{new Date(s.started_at + 'Z').toLocaleString()}</td>
-                    <td style={{ padding: 10 }}>{s.program_id || 'Manual'}</td>
-                    <td style={{ padding: 10 }}>{s.status}</td>
+                    <td className="rs-p-3">{new Date(s.started_at + 'Z').toLocaleString()}</td>
+                    <td className="rs-p-3">{s.program_id || 'Manual'}</td>
+                    <td className="rs-p-3">{s.status}</td>
                   </tr>
                 ))}
-                {sessions.length === 0 && <tr><td colSpan="3" style={{ padding: 10, textAlign: 'center' }}>No sessions found</td></tr>}
+                {sessions.length === 0 && <tr><td colSpan="3" className="rs-p-3 rs-text-center">No sessions found</td></tr>}
               </tbody>
             </table>
           </div>

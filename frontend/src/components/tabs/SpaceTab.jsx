@@ -31,8 +31,8 @@ export default function SpaceTab({ token, active }) {
   if (error === 'location') return (
     <div style={{ padding: '40px 0', textAlign: 'center' }}>
       <span className="material-symbols-rounded" style={{ fontSize: '3rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>location_off</span>
-      <div className="rs-card-label" style={{ marginBottom: 6 }}>NO LOCATION SET</div>
-      <div className="rs-card-meta" style={{ marginBottom: 20 }}>Please set your location in Weather settings first.</div>
+      <div className="rs-card-label rs-mb-2">NO LOCATION SET</div>
+      <div className="rs-card-meta rs-mb-5">Please set your location in Weather settings first.</div>
     </div>
   )
   
@@ -46,10 +46,10 @@ export default function SpaceTab({ token, active }) {
       
       {/* Solar Activity */}
       <div className="rs-card" style={{ padding: '20px' }}>
-        <div className="rs-card-label" style={{ marginBottom: 16 }}>SOLAR ACTIVITY</div>
+        <div className="rs-card-label rs-mb-4">SOLAR ACTIVITY</div>
         {solar && (
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+            <div className="rs-flex rs-items-center rs-gap-4 rs-mb-5">
               <div style={{ fontSize: '3rem', fontWeight: 200, lineHeight: 1, letterSpacing: '-0.06em' }}>
                 {solar.kp_index?.toFixed(1) || '0.0'}
               </div>
@@ -93,7 +93,7 @@ export default function SpaceTab({ token, active }) {
 
       {/* Aurora */}
       <div className="rs-card" style={{ padding: '20px' }}>
-        <div className="rs-card-label" style={{ marginBottom: 16 }}>AURORA FORECAST</div>
+        <div className="rs-card-label rs-mb-4">AURORA FORECAST</div>
         {aurora && (
           <div>
             {aurora.ovation_img && (
@@ -116,9 +116,9 @@ export default function SpaceTab({ token, active }) {
 
       {/* Launches */}
       <div className="rs-card" style={{ padding: '20px', maxHeight: '500px', overflowY: 'auto' }}>
-        <div className="rs-card-label" style={{ marginBottom: 16 }}>UPCOMING LAUNCHES</div>
+        <div className="rs-card-label rs-mb-4">UPCOMING LAUNCHES</div>
         {launches?.length > 0 ? launches.map((l, i) => (
-          <div key={i} style={{ marginBottom: 16, display: 'flex', gap: 14 }}>
+          <div key={i} className="rs-mb-4 rs-flex rs-gap-4">
             {l.image_url ? (
               <img src={l.image_url} alt={l.name} style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
             ) : (

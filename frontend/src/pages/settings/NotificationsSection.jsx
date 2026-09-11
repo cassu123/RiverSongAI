@@ -83,7 +83,7 @@ export default function NotificationsSection({ token }) {
 
   return (
     <Section title="NOTIFICATIONS">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="rs-flex rs-items-center rs-justify-between">
         <div>
           <div style={{ fontWeight: 600 }}>PUSH NOTIFICATIONS</div>
           <p className="rs-card-meta">Receive proactive briefings and system alerts.</p>
@@ -96,7 +96,7 @@ export default function NotificationsSection({ token }) {
         />
       </div>
 
-      <p className="rs-card-meta" style={{ marginTop: 8 }}>
+      <p className="rs-card-meta rs-mt-2">
         {status === 'subscribed' && '✓ This device is active and receiving alerts.'}
         {status === 'idle' && 'Notifications are currently muted for this device.'}
         {status === 'unsupported' && '✗ Web Push is not supported by your browser.'}
@@ -104,7 +104,7 @@ export default function NotificationsSection({ token }) {
       </p>
 
       {status === 'subscribed' && (
-        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="rs-mt-3 rs-flex rs-items-center rs-gap-3">
           <button
             className="rs-pill"
             onClick={handleTest}

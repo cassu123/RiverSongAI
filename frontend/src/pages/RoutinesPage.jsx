@@ -107,7 +107,7 @@ export default function RoutinesPage({ setAction }) {
                   {r.last_output}
                 </div>
               )}
-              <div style={{ marginTop: 16 }}>
+              <div className="rs-mt-4">
                 <button className="rs-pill" onClick={() => runRoutine(r.id)}>
                   <span className="material-symbols-rounded">play_arrow</span> EXECUTE
                 </button>

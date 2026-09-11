@@ -33,14 +33,14 @@ export default function SignupPage({ onSwitchToLogin }) {
       <div className="rs-card is-elev" style={{ width: '100%', maxWidth: 420, padding: '2.5rem 1.5rem' }}>
         
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', marginBottom: 8 }}>
+          <div className="rs-flex rs-items-center rs-gap-3 rs-justify-center rs-mb-2">
             <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-body)', padding: '8px 12px' }}>RS</span>
             <span style={{ fontFamily: 'var(--font-mood)', fontSize: 'var(--rs-fs-h3)', letterSpacing: '0.12em', fontWeight: 600 }}>RIVER SONG</span>
           </div>
           <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>NEW OPERATOR REGISTRATION</div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <form onSubmit={handleSubmit} className="rs-flex rs-flex-col rs-gap-4">
           <div>
             <div className="rs-card-label" style={{ marginBottom: 6, paddingLeft: 4, fontSize: 'var(--rs-fs-nano)' }}>CALL-SIGN</div>
             <input
@@ -83,7 +83,7 @@ export default function SignupPage({ onSwitchToLogin }) {
 
           {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)', textAlign: 'center' }}>{error.toUpperCase()}</div>}
 
-          <button className="rs-btn-primary" type="submit" disabled={loading} style={{ marginTop: 4, width: '100%' }}>
+          <button className="rs-btn-primary rs-mt-1 rs-w-full" type="submit" disabled={loading}>
             {loading ? 'INITIALIZING...' : 'AUTHORIZE ACCOUNT'}
           </button>
         </form>

@@ -92,9 +92,9 @@ export default function RemoteOllamaPage({ setAction }) {
       </div>
 
       {draft && (
-        <div className="rs-card is-wide" style={{ padding: 16, marginBottom: 16 }}>
-          <div className="rs-card-label" style={{ marginBottom: 10 }}>{editId ? 'EDIT RIG' : 'NEW RIG'}</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="rs-card is-wide rs-p-4 rs-mb-4">
+          <div className="rs-card-label rs-mb-3">{editId ? 'EDIT RIG' : 'NEW RIG'}</div>
+          <div className="rs-flex rs-flex-col rs-gap-3">
             <input type="text" value={draft.label}    onChange={e => setDraft(d => ({ ...d, label: e.target.value }))}    placeholder="Label — e.g. workstation"   style={inputStyle} />
             <input type="text" value={draft.base_url} onChange={e => setDraft(d => ({ ...d, base_url: e.target.value }))} placeholder="Base URL — e.g. http://localhost:11500" style={inputStyle} />
             <textarea          value={draft.notes}    onChange={e => setDraft(d => ({ ...d, notes: e.target.value }))}    placeholder="Notes (optional)" rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
@@ -104,7 +104,7 @@ export default function RemoteOllamaPage({ setAction }) {
               </label>
             )}
             {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="rs-flex rs-gap-3">
               <button className="rs-pill is-active" onClick={save}>{editId ? 'UPDATE' : 'CREATE'}</button>
               <button className="rs-pill" onClick={cancel}>CANCEL</button>
             </div>
@@ -127,7 +127,7 @@ export default function RemoteOllamaPage({ setAction }) {
             <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginTop: 4 }}>{r.base_url}</div>
             {r.notes && <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginTop: 6 }}>{r.notes}</div>}
             {(r.last_models || []).length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+              <div className="rs-flex rs-flex-wrap rs-gap-1 rs-mt-2">
                 {r.last_models.slice(0, 6).map((m, i) => (
                   <span key={i} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px' }}>{m}</span>
                 ))}
@@ -136,7 +136,7 @@ export default function RemoteOllamaPage({ setAction }) {
                 )}
               </div>
             )}
-            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+            <div className="rs-mt-3 rs-flex rs-gap-2">
               <button className="rs-pill" onClick={() => probe(r.id)}>HEALTH-CHECK</button>
               <button className="rs-pill" onClick={() => editOne(r)}>EDIT</button>
               <button className="rs-pill" onClick={() => remove(r.id)} style={{ opacity: 0.6 }}>DELETE</button>

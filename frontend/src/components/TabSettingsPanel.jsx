@@ -83,7 +83,7 @@ export function InlineSettingsSection({
 
 export function SettingsRow({ label, children }) {
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="rs-mb-4">
       <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.12em', marginBottom: 8 }}>
         {label}
       </div>
@@ -94,7 +94,7 @@ export function SettingsRow({ label, children }) {
 
 export function ToggleGroup({ options, value, onChange }) {
   return (
-    <div style={{ display: 'flex', gap: 4 }}>
+    <div className="rs-flex rs-gap-1">
       {options.map(opt => (
         <button
           key={opt.value}
@@ -158,7 +158,7 @@ export default function TabSettingsPanel({ open, onClose, panelRef, title = 'SET
       boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
       minWidth: 280, maxWidth: 340,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div className="rs-flex rs-items-center rs-justify-between rs-mb-4">
         <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 800, letterSpacing: '0.1em' }}>{title}</span>
         <button onClick={onClose} style={{
           background: 'none', border: 'none', cursor: 'pointer', padding: 4,

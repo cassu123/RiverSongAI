@@ -248,7 +248,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
           {error && <div className="rs-status-strip" style={{ background: 'rgba(248,113,113,0.2)', color: 'var(--rs-status-critical)', marginBottom: 16 }}>{error}</div>}
 
           {!isNew && (
-            <div style={{ marginBottom: 24 }}>
+            <div className="rs-mb-5">
               <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
                 {attachments.map(att => (
                    <div key={att.id} style={{ position: 'relative', width: 120, height: 120, borderRadius: 8, overflow: 'hidden', background: 'var(--md-surface-container-high)', flexShrink: 0 }}>
@@ -265,7 +265,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
                     {uploadingImage ? 'hourglass_empty' : 'add_a_photo'}
                   </span>
                 </div>
-                <input type="file" accept="image/*" capture="environment" ref={photoInputRef} style={{ display: 'none' }} onChange={handleAddPhoto} />
+                <input type="file" accept="image/*" capture="environment" ref={photoInputRef} className="rs-hidden" onChange={handleAddPhoto} />
               </div>
             </div>
           )}
@@ -299,13 +299,13 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
             </div>
 
             <div className="rs-form-group" style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label className="rs-flex rs-justify-between rs-items-center">
                  Serial Number
                  <button type="button" className="rs-pill" onClick={() => document.getElementById('serialPhotoInput').click()} style={{ padding: '2px 8px', fontSize: 'var(--rs-fs-micro)', height: 'auto' }}>
                     <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4, verticalAlign: 'middle' }}>document_scanner</span>
                     Scan Plate
                  </button>
-                 <input type="file" accept="image/*" capture="environment" id="serialPhotoInput" style={{ display: 'none' }} onChange={handleSmartSerial} />
+                 <input type="file" accept="image/*" capture="environment" id="serialPhotoInput" className="rs-hidden" onChange={handleSmartSerial} />
               </label>
               <input type="text" className="rs-input" name="serial_number" value={formData.serial_number} onChange={handleChange} style={{ fontFamily: 'var(--font-mono)' }} />
             </div>
@@ -346,7 +346,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
                 <div>
                    <h4 style={{ margin: '0 0 8px 0', fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)' }}>RECEIPT</h4>
                    {item.receipt_image_path ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="rs-flex rs-items-center rs-gap-2">
                          <span className="material-symbols-rounded" style={{ color: 'var(--rs-status-nominal)' }}>check_circle</span>
                          <span style={{ fontSize: 'var(--rs-fs-tiny)' }}>Attached</span>
                          <button className="rs-pill" onClick={() => receiptInputRef.current.click()}>Replace</button>
@@ -356,12 +356,12 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
                         {uploadingReceipt ? 'Uploading...' : 'Upload Receipt'}
                       </button>
                    )}
-                   <input type="file" accept="image/*,application/pdf" ref={receiptInputRef} style={{ display: 'none' }} onChange={handleUploadReceipt} />
+                   <input type="file" accept="image/*,application/pdf" ref={receiptInputRef} className="rs-hidden" onChange={handleUploadReceipt} />
                 </div>
                 <div>
                    <h4 style={{ margin: '0 0 8px 0', fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)' }}>WARRANTY</h4>
                    {item.warranty_image_path ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="rs-flex rs-items-center rs-gap-2">
                          <span className="material-symbols-rounded" style={{ color: 'var(--rs-status-nominal)' }}>check_circle</span>
                          <span style={{ fontSize: 'var(--rs-fs-tiny)' }}>Attached</span>
                          <button className="rs-pill" onClick={() => warrantyInputRef.current.click()}>Replace</button>
@@ -371,26 +371,26 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
                         {uploadingWarranty ? 'Uploading...' : 'Upload Warranty'}
                       </button>
                    )}
-                   <input type="file" accept="image/*,application/pdf" ref={warrantyInputRef} style={{ display: 'none' }} onChange={handleUploadWarranty} />
+                   <input type="file" accept="image/*,application/pdf" ref={warrantyInputRef} className="rs-hidden" onChange={handleUploadWarranty} />
                 </div>
              </div>
           )}
           
           {!isNew && item.qr_code_data && (
-             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+             <div className="rs-flex rs-justify-center rs-mb-5">
                 <img src={`data:image/png;base64,${item.qr_code_data}`} alt="QR Code" style={{ width: 120, height: 120, imageRendering: 'pixelated' }} />
              </div>
           )}
 
         </div>
         
-        <div className="rs-modal-footer" style={{ justifyContent: 'space-between' }}>
+        <div className="rs-modal-footer rs-justify-between">
           {!isNew ? (
              <button className="rs-btn-primary" style={{ background: 'transparent', color: 'var(--rs-status-critical)', border: '1px solid #f87171' }} onClick={handleDelete}>
                DELETE
              </button>
           ) : <div></div>}
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div className="rs-flex rs-gap-3">
             <button className="rs-pill" onClick={onClose} disabled={saving}>CANCEL</button>
             <button className="rs-btn-primary" onClick={handleSave} disabled={saving || !formData.name}>
               {saving ? 'SAVING...' : 'SAVE ASSET'}

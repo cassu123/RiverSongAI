@@ -10,7 +10,7 @@ import { Section, Toggle } from './shared.jsx'
 export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
   return (
     <Section title="LOCAL AI FEATURES">
-          <p className="rs-card-meta" style={{ marginBottom: 16 }}>
+          <p className="rs-card-meta rs-mb-4">
             Toggle advanced AI capabilities. These are global settings that affect all users.
           </p>
           
@@ -42,8 +42,8 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
                 checked={!!aiFeatures.IMAGE_GENERATION_ENABLED}
                 onChange={v => saveAiFeature('IMAGE_GENERATION_ENABLED', v)}
               />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                <p className="rs-card-meta" style={{ margin: 0 }}>Local product/recipe visuals</p>
+              <div className="rs-flex rs-items-center rs-gap-2 rs-mt-2">
+                <p className="rs-card-meta rs-m-0">Local product/recipe visuals</p>
                 <span className="rs-card-label" style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-nano)' }}>GPU REQ</span>
               </div>
             </div>
@@ -75,8 +75,8 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
                 checked={!!aiFeatures.CHATTERBOX_ENABLED}
                 onChange={v => saveAiFeature('CHATTERBOX_ENABLED', v)}
               />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                <p className="rs-card-meta" style={{ margin: 0 }}>AI voice cloning for River</p>
+              <div className="rs-flex rs-items-center rs-gap-2 rs-mt-2">
+                <p className="rs-card-meta rs-m-0">AI voice cloning for River</p>
                 <span className="rs-card-label" style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-nano)' }}>GPU REQ</span>
               </div>
             </div>

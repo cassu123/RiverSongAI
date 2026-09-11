@@ -107,7 +107,7 @@ export default function SkillsPage({ setAction }) {
 
   useEffect(() => {
     setAction(
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div className="rs-flex rs-gap-2">
         <button className="rs-pill" onClick={startNew}>+ ADD</button>
       </div>
     )
@@ -136,11 +136,11 @@ export default function SkillsPage({ setAction }) {
       </div>
 
       {draft && (
-        <div className="rs-card is-wide" style={{ padding: 16, marginBottom: 16 }}>
-          <div className="rs-card-label" style={{ marginBottom: 10 }}>
+        <div className="rs-card is-wide rs-p-4 rs-mb-4">
+          <div className="rs-card-label rs-mb-3">
             {activeId ? 'EDIT' : 'NEW'}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="rs-flex rs-flex-col rs-gap-3">
             <input
               type="text"
               value={draft.name}
@@ -163,7 +163,7 @@ export default function SkillsPage({ setAction }) {
               style={{ ...inputStyle, resize: 'vertical' }}
             />
             {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="rs-flex rs-gap-3">
               <button className="rs-pill is-active" onClick={save} disabled={saving}>
                 {saving ? 'SAVING…' : (activeId ? 'UPDATE' : 'CREATE')}
               </button>
@@ -186,7 +186,7 @@ export default function SkillsPage({ setAction }) {
               </span>
             </div>
             {s.trigger_phrases && (
-              <div style={{ marginTop: 8, marginBottom: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <div className="rs-mt-2 rs-mb-2 rs-flex rs-flex-wrap rs-gap-2">
                 {s.trigger_phrases.split(',').map(t => t.trim()).filter(Boolean).map((t, i) => (
                   <span key={i} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>{t}</span>
                 ))}
@@ -195,7 +195,7 @@ export default function SkillsPage({ setAction }) {
             <div style={{ fontSize: 'var(--rs-fs-small)', lineHeight: 1.5, marginTop: 6, whiteSpace: 'pre-wrap', opacity: 0.9 }}>
               {s.prompt}
             </div>
-            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+            <div className="rs-mt-3 rs-flex rs-gap-2">
               <button className="rs-pill" onClick={() => editExisting(s)}>EDIT</button>
               <button className="rs-pill" onClick={() => toggleActive(s)}>
                 {s.is_active ? 'DEACTIVATE' : 'ACTIVATE'}

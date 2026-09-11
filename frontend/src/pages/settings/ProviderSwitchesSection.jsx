@@ -43,7 +43,7 @@ const PROVIDER_LABEL = {
  */
 function Switch({ on, onClick, disabled, label, labelOn = 'ON', labelOff = 'OFF' }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+    <div className="rs-flex rs-items-center rs-gap-2">
       <button
         role="switch"
         aria-checked={on}
@@ -129,7 +129,7 @@ export default function ProviderSwitchesSection({ token }) {
 
   return (
     <Section title="PROVIDER ACCESS">
-      <p className="rs-card-meta" style={{ marginBottom: 4 }}>
+      <p className="rs-card-meta rs-mb-1">
         <strong>Allowed</strong> is the hard gate — when off, nothing routes to that
         provider, including River&rsquo;s automatic model choice and including admins.
         <strong> Users</strong> controls whether non-admin accounts can select it.

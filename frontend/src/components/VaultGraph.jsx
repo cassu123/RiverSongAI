@@ -334,7 +334,7 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
 
       {/* ── Legend + hint ── */}
       <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', flexDirection: 'column', gap: 6, pointerEvents: 'none' }}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div className="rs-flex rs-gap-3 rs-items-center">
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} />
           <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>Personal</span>
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--md-sys-color-tertiary)', display: 'inline-block', marginLeft: 8 }} />

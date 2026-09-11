@@ -97,8 +97,8 @@ export default function EarthTab({ token, active }) {
   if (error === 'location') return (
     <div style={{ padding: '40px 0', textAlign: 'center' }}>
       <span className="material-symbols-rounded" style={{ fontSize: '3rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>location_off</span>
-      <div className="rs-card-label" style={{ marginBottom: 6 }}>NO LOCATION SET</div>
-      <div className="rs-card-meta" style={{ marginBottom: 20 }}>Please set your location in Weather settings first.</div>
+      <div className="rs-card-label rs-mb-2">NO LOCATION SET</div>
+      <div className="rs-card-meta rs-mb-5">Please set your location in Weather settings first.</div>
     </div>
   )
   
@@ -112,16 +112,16 @@ export default function EarthTab({ token, active }) {
       
       {/* EONET Events */}
       <div className="rs-card" style={{ padding: '20px', maxHeight: '600px', overflowY: 'auto' }}>
-        <div className="rs-card-label" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+        <div className="rs-card-label rs-mb-4 rs-flex rs-justify-between">
           <span>NATURAL EVENTS</span>
           <span style={{ opacity: 0.5 }}>NASA EONET</span>
         </div>
         {eonet.length > 0 ? eonet.map((e, i) => (
           <div key={i} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: i < eonet.length - 1 ? '1px solid var(--md-outline-variant)' : 'none' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div className="rs-flex rs-items-start rs-justify-between rs-gap-3">
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, marginBottom: 4, lineHeight: 1.3 }}>{e.title}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="rs-flex rs-items-center rs-gap-2">
                   <div style={{ 
                     fontSize: 'var(--rs-fs-nano)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
                     background: e.category_color + '33', color: e.category_color
@@ -147,13 +147,13 @@ export default function EarthTab({ token, active }) {
 
       {/* Near Earth Objects */}
       <div className="rs-card" style={{ padding: '20px' }}>
-        <div className="rs-card-label" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+        <div className="rs-card-label rs-mb-4 rs-flex rs-justify-between">
           <span>NEAR EARTH OBJECTS</span>
           <span style={{ opacity: 0.5 }}>NASA NeoWs</span>
         </div>
         {neows.length > 0 ? neows.map((n, i) => (
           <div key={i} style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--md-surface-container-high)', borderRadius: 8, border: n.hazardous ? '1px solid #ff440055' : '1px solid transparent' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div className="rs-flex rs-justify-between rs-items-center rs-mb-2">
               <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 800 }}>{n.name}</div>
               {n.hazardous && (
                 <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#ff440033', color: '#ff4400' }}>
@@ -187,7 +187,7 @@ export default function EarthTab({ token, active }) {
 
       {/* OCEARCH */}
       <div className="rs-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column' }}>
-        <div className="rs-card-label" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+        <div className="rs-card-label rs-mb-4 rs-flex rs-justify-between">
           <span>MARINE WILDLIFE</span>
           <span style={{ opacity: 0.5 }}>OCEARCH</span>
         </div>

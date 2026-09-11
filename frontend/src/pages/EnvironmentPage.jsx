@@ -206,20 +206,20 @@ export default function EnvironmentPage({ setAction }) {
                     </span>
                   </div>
 
-                  <div className="rs-card-meta" style={{ marginTop: 8 }}>Seen {timeAgo(r.last_updated)}</div>
+                  <div className="rs-card-meta rs-mt-2">Seen {timeAgo(r.last_updated)}</div>
 
-                  <div style={{ marginTop: 20, display: 'flex', gap: 8, width: '100%' }}>
+                  <div className="rs-mt-5 rs-flex rs-gap-2 rs-w-full">
                     <button 
-                      className="rs-pill" 
-                      style={{ flex: 1 }}
+                      className="rs-pill rs-grow" 
+                     
                       onClick={() => markRoom(key, 1, 'present')}
                       disabled={acting === key}
                     >
                       OCCUPIED
                     </button>
                     <button 
-                      className="rs-pill" 
-                      style={{ flex: 1 }}
+                      className="rs-pill rs-grow" 
+                     
                       onClick={() => markRoom(key, 0, 'empty')}
                       disabled={acting === key}
                     >
@@ -282,7 +282,7 @@ export default function EnvironmentPage({ setAction }) {
               </div>
 
               {user.role === 'admin' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="rs-flex rs-flex-col rs-gap-2">
                   <button className="rs-btn-primary" style={{ minWidth: 120 }} onClick={() => sendRoverCommand('set_mode', {mode: 'HOLD'})} disabled={acting === 'rover'}>HOLD</button>
                   <button className="rs-btn-primary" style={{ minWidth: 120 }} onClick={() => sendRoverCommand('set_mode', {mode: 'AUTO'})} disabled={acting === 'rover'}>AUTO</button>
                   <button className="rs-btn-primary" style={{ minWidth: 120 }} onClick={() => sendRoverCommand('set_mode', {mode: 'RTL'})} disabled={acting === 'rover'}>RTL</button>
@@ -293,7 +293,7 @@ export default function EnvironmentPage({ setAction }) {
 
             <div className="rs-card" style={{ borderStyle: 'dashed', background: 'transparent', backdropFilter: 'var(--glass-blur-sm)' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-tiny)', color: 'var(--primary)' }}>◈ GPS: {rover.lat}, {rover.lon}</div>
-              <div className="rs-card-meta" style={{ marginTop: 4 }}>Full real-time map integration is planned for Phase 14.</div>
+              <div className="rs-card-meta rs-mt-1">Full real-time map integration is planned for Phase 14.</div>
             </div>
           </>
         )}

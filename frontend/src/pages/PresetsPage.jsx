@@ -119,9 +119,9 @@ export default function PresetsPage({ setAction }) {
       </div>
 
       {draft && (
-        <div className="rs-card is-wide" style={{ padding: 16, marginBottom: 16 }}>
-          <div className="rs-card-label" style={{ marginBottom: 10 }}>{editId ? 'EDIT PRESET' : 'NEW PRESET'}</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="rs-card is-wide rs-p-4 rs-mb-4">
+          <div className="rs-card-label rs-mb-3">{editId ? 'EDIT PRESET' : 'NEW PRESET'}</div>
+          <div className="rs-flex rs-flex-col rs-gap-3">
             <input
               type="text"
               value={draft.name}
@@ -148,7 +148,7 @@ export default function PresetsPage({ setAction }) {
               rows={3}
               style={{ ...inputStyle, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', resize: 'vertical' }}
             />
-            <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="rs-flex rs-gap-4 rs-items-center rs-flex-wrap">
               <label style={checkLabel}>
                 <input type="checkbox" checked={!!draft.config.web_search} onChange={e => set('web_search', e.target.checked)} /> Web search
               </label>
@@ -162,7 +162,7 @@ export default function PresetsPage({ setAction }) {
               )}
             </div>
             {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="rs-flex rs-gap-3">
               <button className="rs-pill is-active" onClick={save}>{editId ? 'UPDATE' : 'CREATE'}</button>
               <button className="rs-pill" onClick={cancel}>CANCEL</button>
             </div>
@@ -173,7 +173,7 @@ export default function PresetsPage({ setAction }) {
       <div className="rs-card-flow">
         {presets.length === 0 && !draft && <div className="rs-card-meta">No presets yet. Tap + NEW PRESET.</div>}
         {presets.map(p => (
-          <div key={p.id} className="rs-card is-wide" style={{ padding: 16 }}>
+          <div key={p.id} className="rs-card is-wide rs-p-4">
             <div className="rs-card-head">
               <span className="rs-card-label">
                 {p.is_default && <span style={{ marginRight: 4 }}>★</span>}
@@ -181,14 +181,14 @@ export default function PresetsPage({ setAction }) {
               </span>
               <span className="rs-card-label" style={{ opacity: 0.4 }}>{new Date(p.updated_at).toLocaleDateString()}</span>
             </div>
-            <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <div className="rs-mt-2 rs-flex rs-flex-wrap rs-gap-2">
               {Object.entries(p.config || {}).map(([k, v]) => (
                 <span key={k} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>
                   {k.toUpperCase()}: {String(v).slice(0, 30).toUpperCase()}
                 </span>
               ))}
             </div>
-            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+            <div className="rs-mt-3 rs-flex rs-gap-2">
               <button className="rs-pill" onClick={() => editExisting(p)}>EDIT</button>
               <button className="rs-pill" onClick={() => remove(p.id)} style={{ opacity: 0.6 }}>DELETE</button>
             </div>

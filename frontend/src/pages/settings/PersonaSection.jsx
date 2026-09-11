@@ -33,7 +33,7 @@ export default function PersonaSection({ personaSettings, setPersonaSettings, sa
             Defines her personality and knowledge. Changes take effect on the next session.
           </p>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
+          <div className="rs-flex rs-flex-wrap rs-gap-3 rs-mt-4">
             <button className="rs-btn-primary" onClick={() => savePersona(personaSettings.system_prompt)}>
               SAVE CHANGES
             </button>

@@ -26,11 +26,11 @@ function LineChart({ data }) {
   const color = up ? 'oklch(71% 0.17 145)' : 'oklch(64% 0.17 22)'
   const last = closes[closes.length - 1]
   return (
-    <div style={{ marginBottom: 12 }}>
+    <div className="rs-mb-3">
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H }} preserveAspectRatio="none">
         <polyline points={pts} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" />
       </svg>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <div className="rs-flex rs-justify-between">
         <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
           {data[0]?.date} → {data[data.length - 1]?.date}
         </span>
@@ -297,7 +297,7 @@ export default function StocksTab({ token, active }) {
       </InlineSettingsSection>
 
       {/* Search row */}
-      <div style={{ marginBottom: 20 }}>
+      <div className="rs-mb-5">
         <div style={{ position: 'relative' }}>
           <input
             type="text" className="rs-input"
@@ -351,13 +351,13 @@ export default function StocksTab({ token, active }) {
       {loading ? <StocksSkeleton /> : error ? (
         <div style={{ padding: '24px 0', textAlign: 'center' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, display: 'block', marginBottom: 8 }}>trending_flat</span>
-          <div className="rs-card-meta" style={{ marginBottom: 12 }}>{error}</div>
+          <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={fetchQuotes}>RETRY</button>
         </div>
       ) : quotes.length === 0 ? (
         <div style={{ padding: '24px 0', textAlign: 'center' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>candlestick_chart</span>
-          <div className="rs-card-label" style={{ marginBottom: 6 }}>EMPTY WATCHLIST</div>
+          <div className="rs-card-label rs-mb-2">EMPTY WATCHLIST</div>
           <div className="rs-card-meta">Search for a ticker symbol above to start tracking.</div>
         </div>
       ) : (
@@ -375,7 +375,7 @@ export default function StocksTab({ token, active }) {
 
       {/* Chart pane */}
       {settings?.show_charts && selectedTicker && (
-        <div style={{ marginTop: 20 }}>
+        <div className="rs-mt-5">
           <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 10 }}>
             {selectedTicker} · 30-DAY CHART
           </div>
@@ -391,7 +391,7 @@ export default function StocksTab({ token, active }) {
 
       {/* News pane */}
       {settings?.show_news && selectedTicker && (
-        <div style={{ marginTop: 20 }}>
+        <div className="rs-mt-5">
           <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 10 }}>
             {selectedTicker} · RECENT NEWS
           </div>
@@ -408,7 +408,7 @@ export default function StocksTab({ token, active }) {
 
 function StocksSkeleton() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="rs-flex rs-flex-col">
       {[0, 1, 2, 3].map(i => (
         <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--md-outline-variant)', alignItems: 'center' }}>
           <div style={{ minWidth: 52, display: 'flex', flexDirection: 'column', gap: 4 }}>

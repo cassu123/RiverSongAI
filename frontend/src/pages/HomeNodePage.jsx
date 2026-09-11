@@ -397,7 +397,7 @@ export default function HomeNodePage({ setAction }) {
       {!loading && !status?.configured && <NotConfigured />}
 
       {!loading && status?.configured && !status?.reachable && (
-        <div className="rs-card is-wide animate-fade-in" style={{ padding: 24, textAlign: 'center' }}>
+        <div className="rs-card is-wide animate-fade-in rs-p-5 rs-text-center">
           <span className="material-symbols-rounded" style={{ fontSize: 48, color: 'var(--warn)', marginBottom: 12 }}>
             cloud_off
           </span>
@@ -469,7 +469,7 @@ export default function HomeNodePage({ setAction }) {
           )}
 
           {operable.length === 0 && (
-            <div className="rs-card is-wide animate-fade-in" style={{ textAlign: 'center', padding: 32 }}>
+            <div className="rs-card is-wide animate-fade-in rs-text-center rs-p-6">
               <span className="material-symbols-rounded" style={{ fontSize: 44, color: 'var(--text-muted)', marginBottom: 12 }}>
                 devices
               </span>
@@ -484,7 +484,7 @@ export default function HomeNodePage({ setAction }) {
           )}
 
           {/* Safety Rules Engine Integration */}
-          <div style={{ marginTop: 40 }}>
+          <div className="rs-mt-7">
             <SafetyRules />
           </div>
         </>
@@ -871,19 +871,19 @@ function SensorPill({ device }) {
 /** First-time setup instructions */
 function NotConfigured() {
   return (
-    <div className="rs-card is-wide animate-fade-in" style={{ padding: 28 }}>
-      <div className="rs-card-head" style={{ marginBottom: 12 }}>
+    <div className="rs-card is-wide animate-fade-in rs-p-6">
+      <div className="rs-card-head rs-mb-3">
         <span className="rs-card-label">SETUP HOME ASSISTANT</span>
       </div>
       <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)', marginBottom: 20 }}>
         River Song connects directly to your local or remote Home Assistant instance. Add your URL and long-lived access token to <code>.env</code> to activate tactile smart home controls.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div className="rs-flex rs-flex-col rs-gap-4">
+        <div className="rs-flex rs-gap-3 rs-items-center">
           <span className="gh-chip" style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }}>1</span>
           <span>Home Assistant → User Profile → Long-lived access tokens → Create token</span>
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div className="rs-flex rs-gap-3 rs-items-center">
           <span className="gh-chip" style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }}>2</span>
           <span>Add to your backend <code>.env</code> file:</span>
         </div>
@@ -899,7 +899,7 @@ function NotConfigured() {
           <div>HOME_ASSISTANT_URL=http://homeassistant.local:8123</div>
           <div>HOME_ASSISTANT_TOKEN=your_token_here</div>
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div className="rs-flex rs-gap-3 rs-items-center">
           <span className="gh-chip" style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }}>3</span>
           <span>Restart the service, then tap the Sync button above.</span>
         </div>

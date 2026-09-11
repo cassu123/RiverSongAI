@@ -118,8 +118,8 @@ export default function ConversationPage({ setAction }) {
 
   return (
     <div className="rs-speak-stage">
-      <div className="rs-speak-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="rs-speak-status rs-flex rs-flex-col rs-items-center">
+        <div className="rs-flex rs-items-center rs-gap-2">
           <span className="rs-status-dot" style={{ background: isActive ? 'var(--md-tertiary, #4ade80)' : 'var(--primary)' }} />
           <span style={{ fontWeight: 600, letterSpacing: '0.15em', fontSize: 'var(--rs-fs-h3)', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
             {convState === 'idle' ? 'SYSTEM AUTONOMOUS' : convState.toUpperCase()}

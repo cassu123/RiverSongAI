@@ -119,7 +119,7 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
                       <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: rcpt.ok ? '#4CAF50' : '#dc3c3c' }}>
                         {rcpt.ok ? 'check_circle' : 'error'}
                       </span>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <div className="rs-flex rs-flex-col">
                         <span style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>{rcpt.tool}</span>
                         <span style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.8 }}>{rcpt.summary}</span>
                       </div>

@@ -71,9 +71,9 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
 
   return (
     <Section title="TOKEN USAGE">
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="rs-flex rs-gap-3 rs-mb-4 rs-items-center rs-flex-wrap">
         <span className="rs-card-label">PERIOD</span>
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div className="rs-flex rs-gap-1">
           {[7, 30, 90].map(d => (
             <button
               key={d}
@@ -89,7 +89,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
             Now that it depends on who is asking, the number means nothing
             unless it says who it is counting. */}
         <span className="rs-card-label">WHOSE</span>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        <div className="rs-flex rs-gap-1 rs-flex-wrap">
           {[
             { id: 'mine', label: 'ME' },
             ...(isParent && children.length ? [{ id: 'dependents', label: 'ME + KIDS' }] : []),
@@ -150,7 +150,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
           {bySource.length > 0 && (
             <>
               <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 8 }}>WHERE</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
+              <div className="rs-flex rs-flex-col rs-gap-2 rs-mb-5">
                 {bySource.map(src => {
                   const meta = SOURCE_LABELS[src.source] || { label: src.source.toUpperCase(), icon: 'more_horiz' }
                   const total = src.input_tokens + src.output_tokens
@@ -164,7 +164,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
                         background: 'var(--md-surface-container-low)',
                         border: '1px solid var(--md-outline-variant)',
                       }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <div className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap">
                         <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.7 }}>{meta.icon}</span>
                         <span style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)', letterSpacing: '0.06em', flex: 1, minWidth: 120 }}>{meta.label}</span>
                         <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', fontVariantNumeric: 'tabular-nums' }}>
@@ -178,7 +178,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
                         <div style={{ height: '100%', width: `${pct}%`, borderRadius: 2, background: 'var(--primary)', opacity: 0.85 }} />
                       </div>
                       {open && (
-                        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div className="rs-mt-3 rs-flex rs-flex-col rs-gap-1">
                           {src.models.map((m, i) => (
                             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 'var(--rs-fs-nano)', opacity: 0.85, flexWrap: 'wrap' }}>
                               <span>{m.model} <span style={{ opacity: 0.5 }}>({m.provider})</span></span>
@@ -229,7 +229,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
             </>
           )}
 
-          <p className="rs-card-meta" style={{ marginTop: 12 }}>
+          <p className="rs-card-meta rs-mt-3">
             Cost estimates use public list prices. Ollama (local) is always free.
           </p>
         </>

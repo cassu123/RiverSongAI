@@ -13,8 +13,8 @@ const COMMANDS = [
 
 function Panel({ title, children }) {
   return (
-    <div className="rs-card" style={{ padding: 16, marginBottom: 16 }}>
-      <div className="rs-card-label" style={{ marginBottom: 12 }}>{title}</div>{children}
+    <div className="rs-card rs-p-4 rs-mb-4">
+      <div className="rs-card-label rs-mb-3">{title}</div>{children}
     </div>
   )
 }
@@ -25,7 +25,7 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, refresh, program 
   return (
     <div>
       <Panel title={`${unit.name || unit.unit_id} · ${(t.mode || 'parked').toUpperCase()}`}>
-        <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', marginBottom: 14, alignItems: 'flex-start' }}>
+        <div className="rs-flex rs-gap-6 rs-flex-wrap rs-mb-4 rs-items-start">
           <MetricStat label="SPEED" value={t.speed_kph ?? 0} unit="km/h" accent="#a78bfa" />
           <MetricStat label="GEAR" value={t.gear || 'P'} />
           <MetricStat label="ODOMETER" value={Math.round(t.odometer_km ?? 0)} unit="km" />
@@ -39,7 +39,7 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, refresh, program 
           </div>
         </div>
         <BatteryBar pct={t.battery_pct} />
-        <div style={{ marginTop: 14 }}>
+        <div className="rs-mt-4">
           <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>SPEED (km/h)</div>
           <Sparkline data={telemetry} field="speed_kph" color="#a78bfa" />
         </div>

@@ -35,7 +35,7 @@ export default function HappeningsTab({ token, active }) {
       
       {/* Trending (HN + Reddit) */}
       <div className="rs-card" style={{ padding: '20px', maxHeight: '800px', overflowY: 'auto' }}>
-        <div className="rs-card-label" style={{ marginBottom: 16 }}>TRENDING DISCUSSIONS</div>
+        <div className="rs-card-label rs-mb-4">TRENDING DISCUSSIONS</div>
         {trending.length > 0 ? trending.map((t, i) => (
           <div key={i} style={{ marginBottom: 16, display: 'flex', gap: 12, borderBottom: i < trending.length - 1 ? '1px solid var(--md-outline-variant)' : 'none', paddingBottom: 16 }}>
             <div style={{ 
@@ -58,11 +58,11 @@ export default function HappeningsTab({ token, active }) {
                 </div>
               )}
               <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="rs-flex rs-items-center rs-gap-1">
                   <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>arrow_upward</span>
                   {t.score.toLocaleString()}
                 </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="rs-flex rs-items-center rs-gap-1">
                   <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>chat_bubble</span>
                   {t.comments.toLocaleString()}
                 </span>
@@ -84,7 +84,7 @@ export default function HappeningsTab({ token, active }) {
 
       {/* Events Nearby */}
       <div className="rs-card" style={{ padding: '20px', maxHeight: '800px', overflowY: 'auto' }}>
-        <div className="rs-card-label" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+        <div className="rs-card-label rs-mb-4 rs-flex rs-justify-between">
           <span>EVENTS NEARBY</span>
           <span style={{ opacity: 0.5 }}>Eventbrite</span>
         </div>

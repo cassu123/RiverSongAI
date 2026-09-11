@@ -10,13 +10,13 @@ import { Section } from './shared.jsx'
 export default function HardwareCookbookSection({ hardwareCookbook }) {
   return (
     <Section title="HARDWARE COOKBOOK">
-          <p className="rs-card-meta" style={{ marginBottom: 12 }}>
+          <p className="rs-card-meta rs-mb-3">
             What runs well on this rig. Detected GPU/RAM/CPU vs. every local model in the registry.
           </p>
 
           {/* Detected hardware row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" style={{ marginBottom: 14 }}>
-            <div className="rs-card" style={{ padding: 10 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 rs-mb-4">
+            <div className="rs-card rs-p-3">
               <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>GPU</div>
               {hardwareCookbook.hardware.gpus.length === 0 ? (
                 <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No NVIDIA GPU detected.</div>
@@ -29,7 +29,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
                 </div>
               ))}
             </div>
-            <div className="rs-card" style={{ padding: 10 }}>
+            <div className="rs-card rs-p-3">
               <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>RAM</div>
               <div style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>
                 {hardwareCookbook.hardware.ram_gb.total_gb} GB
@@ -38,7 +38,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
                 {hardwareCookbook.hardware.ram_gb.available_gb} GB available
               </div>
             </div>
-            <div className="rs-card" style={{ padding: 10 }}>
+            <div className="rs-card rs-p-3">
               <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>CPU</div>
               <div style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {hardwareCookbook.hardware.cpu.model}
@@ -50,7 +50,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
           </div>
 
           {/* Fit summary pills */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+          <div className="rs-flex rs-gap-2 rs-flex-wrap rs-mb-3">
             {[
               ['fits', 'FITS GPU', 'var(--md-primary)'],
               ['tight', 'TIGHT', 'var(--rs-status-warning)'],
@@ -64,7 +64,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
           </div>
 
           {/* Per-model fit list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className="rs-flex rs-flex-col rs-gap-1">
             {hardwareCookbook.models.map(m => {
               const palette = {
                 fits:         { dot: 'var(--md-primary)',         label: 'FITS GPU' },
@@ -74,7 +74,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
                 unknown:      { dot: 'var(--md-outline-variant)', label: '?' },
               }[m.status] || { dot: 'var(--md-outline-variant)', label: '?' }
               return (
-                <div key={m.model_id} className="toggle-row" style={{ alignItems: 'center', gap: 8 }} title={m.reason}>
+                <div key={m.model_id} className="toggle-row rs-items-center rs-gap-2" title={m.reason}>
                   <span style={{
                     width: 8, height: 8, borderRadius: '50%',
                     background: palette.dot, flexShrink: 0,

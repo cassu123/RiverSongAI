@@ -6,7 +6,7 @@ export default function CapabilityFlagsSection({ data }) {
 
   return (
     <Section title="ENVIRONMENT CAPABILITY FLAGS">
-      <p className="rs-card-meta" style={{ marginBottom: 16 }}>
+      <p className="rs-card-meta rs-mb-4">
         These core capabilities are hard-toggled via <code>.env</code> on the server and require a system restart to take effect. <strong>They are read-only here.</strong>
       </p>
 
@@ -18,7 +18,7 @@ export default function CapabilityFlagsSection({ data }) {
             border: '1px solid var(--md-outline-variant)',
             borderRadius: 'var(--md-shape-md)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div className="rs-flex rs-items-center rs-justify-between rs-mb-2">
               <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)', color: 'var(--md-on-surface)' }}>
                 {flag.key}
               </div>

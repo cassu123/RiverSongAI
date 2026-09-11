@@ -39,7 +39,7 @@ export default function ParentChildrenSection({ data, token, onChanged }) {
 
   return (
     <Section title="MY CHILDREN">
-      <p className="rs-card-meta" style={{ marginBottom: 16 }}>
+      <p className="rs-card-meta rs-mb-4">
         Enable features for each child.
       </p>
       {(data.children || []).length === 0 && (
@@ -47,7 +47,7 @@ export default function ParentChildrenSection({ data, token, onChanged }) {
       )}
       {(data.children || []).map(child => (
         <div key={child.id} className="rs-card" style={{ background: 'var(--md-surface-container-low)', marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
             <div style={{ fontWeight: 600 }}>{child.display_name}</div>
             {saving === child.id && <span className="rs-card-label" style={{ color: 'var(--primary)' }}>SAVING…</span>}
           </div>

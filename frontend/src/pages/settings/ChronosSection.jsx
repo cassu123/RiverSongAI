@@ -11,9 +11,9 @@ export default function ChronosSection({ scribeEnabled, saveScribeEnabled, daemo
   return (
     <Section title="CHRONOS · MEMORY VAULT">
           {/* Header row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="rs-flex rs-items-center rs-gap-3">
             <span className="material-symbols-rounded" style={{ fontSize: '1.6rem', color: 'var(--primary)', flexShrink: 0 }}>history_edu</span>
-            <div style={{ flex: 1 }}>
+            <div className="rs-grow">
               <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>Local markdown vault · Obsidian-style</div>
               <div className="rs-card-meta">Voice-to-note · Conversation memory · Editable facts · Backlinks</div>
             </div>
@@ -28,7 +28,7 @@ export default function ChronosSection({ scribeEnabled, saveScribeEnabled, daemo
               { path: 'Shared with me/', desc: 'Explicit invites',    icon: 'group',        color: 'var(--md-sys-color-secondary)' },
             ].map(({ path, desc, icon, color }) => (
               <div key={path} style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="rs-flex rs-items-center rs-gap-2">
                   <span className="material-symbols-rounded" style={{ fontSize: '0.95rem', color }}>{icon}</span>
                   <code style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 600 }}>{path}</code>
                 </div>
@@ -38,7 +38,7 @@ export default function ChronosSection({ scribeEnabled, saveScribeEnabled, daemo
           </div>
 
           {/* Scribe daemon toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="rs-flex rs-items-center rs-gap-3">
             <Toggle
               id="scribe-toggle"
               label="Enable Scribe Daemon"

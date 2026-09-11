@@ -139,7 +139,7 @@ export default function MemoryPage({ setAction }) {
 
   useEffect(() => {
     setAction(
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div className="rs-flex rs-gap-3 rs-items-center">
         <div className="rs-card" style={{ flex: 1, padding: '8px 16px', background: 'var(--md-surface-container-low)' }}>
           <input 
             type="text" 
@@ -256,21 +256,21 @@ export default function MemoryPage({ setAction }) {
               </div>
               
               {editingId === m.id ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="rs-flex rs-flex-col rs-gap-2">
                   {m._type === 'FACT' && (
                     <>
-                      <input className="rs-card" value={editForm.key} onChange={e => setEditForm({...editForm, key: e.target.value})} style={{ padding: 8 }} />
-                      <input className="rs-card" value={editForm.value} onChange={e => setEditForm({...editForm, value: e.target.value})} style={{ padding: 8 }} />
+                      <input className="rs-card rs-p-2" value={editForm.key} onChange={e => setEditForm({...editForm, key: e.target.value})} />
+                      <input className="rs-card rs-p-2" value={editForm.value} onChange={e => setEditForm({...editForm, value: e.target.value})} />
                     </>
                   )}
                   {m._type === 'PREFERENCE' && (
                     <>
-                      <input className="rs-card" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} style={{ padding: 8 }} />
-                      <input className="rs-card" value={editForm.value} onChange={e => setEditForm({...editForm, value: e.target.value})} style={{ padding: 8 }} />
+                      <input className="rs-card rs-p-2" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} />
+                      <input className="rs-card rs-p-2" value={editForm.value} onChange={e => setEditForm({...editForm, value: e.target.value})} />
                     </>
                   )}
                   {m._type === 'SUMMARY' && (
-                    <select className="rs-card" value={editForm.ttl_setting} onChange={e => setEditForm({...editForm, ttl_setting: e.target.value})} style={{ padding: 8 }}>
+                    <select className="rs-card rs-p-2" value={editForm.ttl_setting} onChange={e => setEditForm({...editForm, ttl_setting: e.target.value})}>
                       <option value="short">Short</option>
                       <option value="standard">Standard</option>
                       <option value="extended">Extended</option>
@@ -278,7 +278,7 @@ export default function MemoryPage({ setAction }) {
                       <option value="forever">Forever</option>
                     </select>
                   )}
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="rs-flex rs-gap-2">
                     <button className="rs-pill" onClick={() => handleUpdate(m.id, m._type)} style={{ background: 'var(--text)', color: 'var(--bg)' }}>SAVE</button>
                     <button className="rs-pill" onClick={() => setEditingId(null)}>CANCEL</button>
                   </div>

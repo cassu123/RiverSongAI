@@ -60,8 +60,8 @@ export default function AdminWakeWordSection({ token }) {
         onChange={v => setForm({ ...form, enabled: v })}
       />
 
-      <div style={{ marginTop: 20 }}>
-        <div className="rs-card-label" style={{ marginBottom: 6 }}>WAKE PHRASE</div>
+      <div className="rs-mt-5">
+        <div className="rs-card-label rs-mb-2">WAKE PHRASE</div>
         <select
           className="settings-select"
           value={form.phrase}
@@ -72,27 +72,27 @@ export default function AdminWakeWordSection({ token }) {
           <option value="hey_jarvis">Hey Jarvis</option>
           <option value="hey_mycroft">Hey Mycroft</option>
         </select>
-        <p className="rs-card-meta" style={{ marginTop: 6 }}>Select the phrase River will listen for in ambient mode.</p>
+        <p className="rs-card-meta rs-mt-2">Select the phrase River will listen for in ambient mode.</p>
       </div>
 
-      <div style={{ marginTop: 20 }}>
-        <div className="rs-card-label" style={{ marginBottom: 6 }}>
+      <div className="rs-mt-5">
+        <div className="rs-card-label rs-mb-2">
           SENSITIVITY: <span style={{ fontVariantNumeric: 'tabular-nums' }}>{form.sensitivity}</span>
         </div>
         <input
           type="range" min="0.1" max="0.95" step="0.05"
           value={form.sensitivity}
           onChange={e => setForm({ ...form, sensitivity: Number(e.target.value) })}
-          style={{ width: '100%', marginTop: 8 }}
+          className="rs-w-full rs-mt-2"
         />
-        <p className="rs-card-meta" style={{ marginTop: 6 }}>Higher = more sensitive, but more false positives.</p>
+        <p className="rs-card-meta rs-mt-2">Higher = more sensitive, but more false positives.</p>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24 }}>
+      <div className="rs-flex rs-items-center rs-gap-3 rs-mt-5">
         <button className="rs-btn-primary" onClick={handleSave} disabled={saving}>
           {saving ? 'SAVING…' : 'SAVE WAKE WORD CONFIG'}
         </button>
-        {msg && <span className="rs-card-meta" style={{ margin: 0 }}>{msg}</span>}
+        {msg && <span className="rs-card-meta rs-m-0">{msg}</span>}
       </div>
     </Section>
   )

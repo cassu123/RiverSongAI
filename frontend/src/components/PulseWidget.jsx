@@ -67,7 +67,7 @@ export default function PulseWidget({ token }) {
   const marketColor = markets?.error ? C.muted : (marketUp ? C.green : C.red)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="rs-flex rs-flex-col">
 
       {currentNews && (
         <PulseRow
@@ -280,7 +280,7 @@ function PulseSkeleton() {
     }} />
   )
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="rs-flex rs-flex-col">
       {[0, 1, 2].map((i) => (
         <React.Fragment key={i}>
           {i > 0 && <div style={{ height: 1, background: C.divider }} />}

@@ -112,7 +112,7 @@ export function MusicDiscoveryCard({
               </div>
             </div>
             
-            <div style={{ marginTop: 10 }}>
+            <div className="rs-mt-3">
               <div style={{ 
                 fontSize: 'var(--rs-fs-tiny)', 
                 fontWeight: 600, 

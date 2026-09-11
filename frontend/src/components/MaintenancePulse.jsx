@@ -240,7 +240,7 @@ function SpecsEditor({ vehicle, token, onUpdated, isNonRoad }) {
 
   return (
     <div className="specs-editor">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div className="rs-flex rs-justify-between rs-items-center rs-mb-4">
         <span className="card-metric-label" style={{ fontSize: 'var(--rs-fs-micro)', letterSpacing: '0.12em' }}>
           CHECKPOINTS &amp; SPECIFICATIONS MASTER ROSTER ({(vehicle.check_points || []).length})
         </span>
@@ -264,7 +264,7 @@ function SpecsEditor({ vehicle, token, onUpdated, isNonRoad }) {
         </div>
       )}
 
-      <ul className="cp-list" style={{ marginBottom: 16 }}>
+      <ul className="cp-list rs-mb-4">
         {(vehicle.check_points || []).map((cp) => (
           <CheckPointRow key={cp.id} cp={cp} token={token} vehicleId={vehicle.id} onUpdated={onUpdated} isNonRoad={isNonRoad} />
         ))}
@@ -276,7 +276,7 @@ function SpecsEditor({ vehicle, token, onUpdated, isNonRoad }) {
           <span>ADD CHECKPOINT</span>
         </button>
       ) : (
-        <div className="rs-card is-wide" style={{ padding: 20 }}>
+        <div className="rs-card is-wide rs-p-5">
           <h4 style={{ margin: '0 0 14px 0', color: 'var(--primary)', fontSize: 'var(--rs-fs-small)' }}>&gt; CREATE NEW CHECKPOINT</h4>
           <div className="cp-edit-grid">
             <div className="cockpit-input-box" style={{ gridColumn: 'span 2' }}>
@@ -375,18 +375,18 @@ function PeopleSettings({ token, people, onRefresh }) {
   };
 
   return (
-    <div className="rs-card is-wide" style={{ padding: 24 }}>
-      <div className="rs-card-head" style={{ marginBottom: 14 }}>
+    <div className="rs-card is-wide rs-p-5">
+      <div className="rs-card-head rs-mb-4">
         <span className="rs-card-label">&gt; MAINTENANCE CREW ROSTER</span>
       </div>
       <p style={{ color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-small)', marginTop: 0, marginBottom: 16 }}>
         Add authorized crew members by email. Assigned crew will appear in the "Performed By" selector when logging maintenance.
       </p>
 
-      {msg && <div className="mp-flash--ok" style={{ marginBottom: 14 }}>{msg}</div>}
-      {error && <div className="mp-error" style={{ marginBottom: 14 }}>{error}</div>}
+      {msg && <div className="mp-flash--ok rs-mb-4">{msg}</div>}
+      {error && <div className="mp-error rs-mb-4">{error}</div>}
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+      <div className="rs-flex rs-gap-3 rs-mb-5">
         <input
           className="cockpit-input-raw"
           style={{ flex: 1, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 14px' }}
@@ -405,12 +405,12 @@ function PeopleSettings({ token, people, onRefresh }) {
       ) : (
         <ul className="cp-list">
           {people.map(p => (
-            <li key={p.id} className="cp-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <li key={p.id} className="cp-row rs-flex rs-flex-row rs-items-center rs-justify-between">
               <div>
                 <strong style={{ fontSize: 'var(--rs-fs-body)', color: 'var(--fg)' }}>{p.display_name || p.email}</strong>
                 {p.display_name && <div style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--md-on-surface-variant)' }}>{p.email}</div>}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div className="rs-flex rs-items-center rs-gap-3">
                 {p.vehicle_ids?.length > 0 && (
                   <span className="cp-spec-tag">{p.vehicle_ids.length} vehicle(s)</span>
                 )}
@@ -480,13 +480,13 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
   const currentV = vehicles.find(v => String(v.id) === String(vehicleId));
 
   return (
-    <div className="rs-card is-wide" style={{ padding: 24 }}>
-      <div className="rs-card-head" style={{ marginBottom: 14 }}>
+    <div className="rs-card is-wide rs-p-5">
+      <div className="rs-card-head rs-mb-4">
         <span className="rs-card-label">&gt; VEHICLE ASSIGNMENTS &amp; OPERATORS</span>
       </div>
 
-      {msg && <div className="mp-flash--ok" style={{ marginBottom: 14 }}>{msg}</div>}
-      {error && <div className="mp-error" style={{ marginBottom: 14 }}>{error}</div>}
+      {msg && <div className="mp-flash--ok rs-mb-4">{msg}</div>}
+      {error && <div className="mp-error rs-mb-4">{error}</div>}
 
       <div className="cockpit-input-box" style={{ maxWidth: 360, marginBottom: 20 }}>
         <span className="card-metric-label">TARGET VEHICLE</span>
@@ -502,11 +502,11 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
         {/* Assigned */}
         <div style={{ background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="card-metric-label" style={{ marginBottom: 12 }}>
+          <div className="card-metric-label rs-mb-3">
             ASSIGNED TO {currentV?.nickname?.toUpperCase() || currentV?.model?.toUpperCase() || 'VEHICLE'}
           </div>
           {assignments.length === 0 ? (
-            <div className="mp-empty-specs" style={{ padding: 16 }}>No crew assigned to this vehicle yet.</div>
+            <div className="mp-empty-specs rs-p-4">No crew assigned to this vehicle yet.</div>
           ) : (
             <ul className="cp-list">
               {assignments.map(a => (
@@ -523,9 +523,9 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
 
         {/* Unassigned */}
         <div style={{ background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="card-metric-label" style={{ marginBottom: 12 }}>AVAILABLE ROSTER MEMBERS</div>
+          <div className="card-metric-label rs-mb-3">AVAILABLE ROSTER MEMBERS</div>
           {unassigned.length === 0 ? (
-            <div className="mp-empty-specs" style={{ padding: 16 }}>All registered members are assigned.</div>
+            <div className="mp-empty-specs rs-p-4">All registered members are assigned.</div>
           ) : (
             <ul className="cp-list">
               {unassigned.map(p => (
@@ -600,8 +600,8 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
   };
 
   return (
-    <div className="rs-card is-wide" style={{ padding: 24 }}>
-      <div className="rs-card-head" style={{ marginBottom: 14 }}>
+    <div className="rs-card is-wide rs-p-5">
+      <div className="rs-card-head rs-mb-4">
         <span className="rs-card-label">&gt; AUTOMATED MANUAL IMPORT &amp; SPECS EXTRACTION</span>
       </div>
       <p style={{ color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-small)', marginTop: 0, marginBottom: 16 }}>
@@ -609,14 +609,14 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
       </p>
 
       {result && (
-        <div className="mp-flash--ok" style={{ marginBottom: 16 }}>
+        <div className="mp-flash--ok rs-mb-4">
           Successfully applied! {result.updated} updated, {result.created} new checkpoints configured ({result.total} total found).
         </div>
       )}
-      {error && <div className="mp-error" style={{ marginBottom: 16 }}>{error}</div>}
+      {error && <div className="mp-error rs-mb-4">{error}</div>}
 
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
-        <input ref={fileRef} type="file" accept="application/pdf" style={{ display: 'none' }} onChange={e => { setFile(e.target.files?.[0] || null); setPreview(null); }} />
+      <div className="rs-flex rs-gap-3 rs-items-center rs-flex-wrap rs-mb-5">
+        <input ref={fileRef} type="file" accept="application/pdf" className="rs-hidden" onChange={e => { setFile(e.target.files?.[0] || null); setPreview(null); }} />
         <button className="rs-pill" onClick={() => fileRef.current?.click()}>
           <span className="material-symbols-rounded">upload_file</span>
           <span>{file ? file.name : 'SELECT PDF MANUAL'}</span>
@@ -633,14 +633,14 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
 
       {preview && (
         <div style={{ marginTop: 16, background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 12 }}>
-          <div className="card-metric-label" style={{ marginBottom: 12 }}>PREVIEW — {preview.length} ITEMS DETECTED</div>
+          <div className="card-metric-label rs-mb-3">PREVIEW — {preview.length} ITEMS DETECTED</div>
           {preview.length === 0 ? (
             <div className="mp-empty-specs">No structured maintenance items detected in this document.</div>
           ) : (
             <ul className="cp-list">
               {preview.map((item, i) => (
                 <li key={i} className="cp-row" style={{ padding: '10px 14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap">
                     <span className="cp-svc-badge">{item.service_level || 'INSPECT'}</span>
                     <strong style={{ color: 'var(--fg)' }}>{item.description}</strong>
                     {item.expected_spec && <span className="cp-spec-tag">{item.expected_spec}</span>}
@@ -751,19 +751,19 @@ function VehicleRAG({ token, vehicleId, currentOdometer, onUpdated }) {
   };
 
   return (
-    <div className="rs-card is-wide" style={{ padding: 24 }}>
-      <div className="rs-card-head" style={{ marginBottom: 14 }}>
+    <div className="rs-card is-wide rs-p-5">
+      <div className="rs-card-head rs-mb-4">
         <span className="rs-card-label">&gt; CONVERSATIONAL TECHNICAL DOSSIER</span>
       </div>
       <p style={{ color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-small)', marginTop: 0, marginBottom: 16 }}>
         Ask River Song about fluid capacities, torque specs, part numbers, or upcoming service schedules grounded in your vehicle's technical manual.
       </p>
 
-      {notice && <div className="mp-flash--ok" style={{ marginBottom: 14 }}>{notice}</div>}
-      {error && <div className="mp-error" style={{ marginBottom: 14 }}>{error}</div>}
+      {notice && <div className="mp-flash--ok rs-mb-4">{notice}</div>}
+      {error && <div className="mp-error rs-mb-4">{error}</div>}
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 18 }}>
-        <input ref={fileRef} type="file" accept=".pdf,.txt" style={{ display: 'none' }} onChange={e => setFile(e.target.files?.[0] || null)} />
+      <div className="rs-flex rs-gap-3 rs-items-center rs-mb-5">
+        <input ref={fileRef} type="file" accept=".pdf,.txt" className="rs-hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
         <button className="rs-pill" onClick={() => fileRef.current?.click()}>
           <span className="material-symbols-rounded">upload_file</span>
           <span>{file ? file.name : 'UPLOAD MANUAL / DOSSIER'}</span>
@@ -775,7 +775,7 @@ function VehicleRAG({ token, vehicleId, currentOdometer, onUpdated }) {
         )}
       </div>
 
-      <form onSubmit={handleAsk} style={{ display: 'flex', gap: 10 }}>
+      <form onSubmit={handleAsk} className="rs-flex rs-gap-3">
         <input
           className="cockpit-input-raw"
           style={{ flex: 1, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 14px' }}
@@ -790,14 +790,14 @@ function VehicleRAG({ token, vehicleId, currentOdometer, onUpdated }) {
       </form>
 
       {answer && (
-        <div className="mp-rag-answer animate-fade-in" style={{ marginTop: 20 }}>
+        <div className="mp-rag-answer animate-fade-in rs-mt-5">
           <div style={{ fontSize: 'var(--rs-fs-small)', lineHeight: 1.6, color: 'var(--fg)' }}>
             {answer.response}
           </div>
           {answer.chunks?.length > 0 && (
             <details style={{ marginTop: 14, opacity: 0.8, fontSize: 'var(--rs-fs-tiny)' }}>
               <summary style={{ cursor: 'pointer', color: 'var(--primary)' }}>View Citations ({answer.chunks.length})</summary>
-              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div className="rs-mt-2 rs-flex rs-flex-col rs-gap-2">
                 {answer.chunks.map((c, idx) => (
                   <div key={idx} style={{ padding: '6px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 6 }}>
                     {c.text}
@@ -1161,8 +1161,8 @@ export default function MaintenancePulse({
   // Contextual Action Bar in Cockpit
   useEffect(() => {
     setAction(
-      <div className="rs-chat-input-controls" style={{ width: '100%', justifyContent: 'center' }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="rs-chat-input-controls rs-w-full rs-justify-center">
+        <div className="rs-flex rs-gap-3 rs-items-center rs-flex-wrap">
           <button className="rs-btn-primary" onClick={() => setActiveTab('log')}>
             <span className="material-symbols-rounded">edit_note</span>
             <span className="rs-speak-actions-label">LOG SERVICE</span>
@@ -1188,7 +1188,7 @@ export default function MaintenancePulse({
           <span className="material-symbols-rounded">arrow_back</span>
           <span>HANGAR</span>
         </button>
-        <div className="mp-empty-specs" style={{ marginTop: 32 }}>No vehicle telemetry detected.</div>
+        <div className="mp-empty-specs rs-mt-6">No vehicle telemetry detected.</div>
       </div>
     );
   }
@@ -1209,8 +1209,8 @@ export default function MaintenancePulse({
   return (
     <div className="rs-foyer rs-mode-workshop animate-page-in">
       {/* Cockpit Header: Back to Hangar + Vehicle Title + Dropdown Switcher + Details Button */}
-      <div className="rs-foyer-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="rs-foyer-head rs-flex rs-justify-between rs-items-center rs-flex-wrap rs-gap-4 rs-mb-5">
+        <div className="rs-flex rs-items-center rs-gap-3">
           <button className="rs-pill" onClick={onBack} title="Back to Hangar Overview">
             <span className="material-symbols-rounded">arrow_back</span>
             <span>HANGAR</span>
@@ -1222,7 +1222,7 @@ export default function MaintenancePulse({
         </div>
 
         {/* Quick Vehicle Switcher & Details Drawer Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap">
           <div className="rs-vehicle-select-box">
             <select
               className="rs-vehicle-select-dropdown"
@@ -1258,7 +1258,7 @@ export default function MaintenancePulse({
       {showDetailsDrawer && (
         <div className="rs-card is-wide is-elev" style={{ marginBottom: 24, borderTop: '2px solid var(--primary)' }}>
           <div className="rs-card-inner">
-            <div className="rs-card-head" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="rs-card-head rs-mb-4 rs-flex rs-justify-between rs-items-center">
               <span className="rs-card-label" style={{ color: 'var(--primary)' }}>&gt; VEHICLE SPECIFICATIONS &amp; HARDWARE TELEMETRY</span>
               <button className="rs-pill" onClick={() => setShowDetailsDrawer(false)}>
                 <span className="material-symbols-rounded">close</span>
@@ -1315,7 +1315,7 @@ export default function MaintenancePulse({
                 <button type="button" className="rs-pill btn-danger" onClick={handleDeleteVehicle}>
                   DELETE VEHICLE
                 </button>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div className="rs-flex rs-gap-3">
                   <button type="button" className="rs-pill" onClick={() => setShowDetailsDrawer(false)}>CANCEL</button>
                   <button type="submit" className="rs-btn-primary" disabled={savingDetails}>
                     {savingDetails ? 'SAVING...' : 'SAVE CHANGES'}
@@ -1345,7 +1345,7 @@ export default function MaintenancePulse({
         </div>
 
         {/* Delta & Inline Update */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <div className="rs-flex rs-items-center rs-gap-4 rs-flex-wrap">
           <div className={`odometer-delta-badge ${isOverdue ? 'is-due' : 'is-nominal'}`}>
             <span className="rs-status-dot" style={{ background: isOverdue ? 'var(--rs-status-critical, #ff8b8b)' : 'var(--rs-status-nominal, #4ade80)' }} />
             <span>
@@ -1365,7 +1365,7 @@ export default function MaintenancePulse({
               <span>UPDATE ODOMETER</span>
             </button>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="rs-flex rs-items-center rs-gap-2">
               <input
                 className="cockpit-input-raw"
                 type="number"
@@ -1509,7 +1509,7 @@ export default function MaintenancePulse({
           </div>
 
           {/* Active Maintenance Checkpoints */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
             <span className="card-metric-label" style={{ fontSize: 'var(--rs-fs-micro)', letterSpacing: '0.12em' }}>
               ACTIVE PROCEDURES FOR THIS INTERVAL ({activeProcedures.length})
             </span>
@@ -1527,8 +1527,8 @@ export default function MaintenancePulse({
                 const st = checkStatuses[cp.id] || 'nominal';
                 return (
                   <div key={cp.id} className="cockpit-item-card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="rs-flex rs-justify-between rs-items-start rs-gap-3">
+                      <div className="rs-flex rs-items-center rs-gap-3">
                         <button
                           className="rs-pill is-active"
                           style={{ minWidth: 32, height: 32, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -1554,7 +1554,7 @@ export default function MaintenancePulse({
                     </div>
 
                     {(cp.min_value != null || cp.unit) && (
-                      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="rs-mt-3 rs-flex rs-items-center rs-gap-2">
                         <span style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--md-on-surface-variant)' }}>Measured:</span>
                         <input
                           className="cockpit-input-raw"
@@ -1578,13 +1578,13 @@ export default function MaintenancePulse({
           ===================================================================== */}
       {activeTab === 'log' && (
         <div className="mp-log-form animate-page-in">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div className="rs-flex rs-justify-between rs-items-center rs-mb-5">
             <h3 style={{ margin: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
               <span className="material-symbols-rounded">edit_calendar</span>
               <span>LOG VEHICLE MAINTENANCE</span>
             </h3>
             {/* Mode Switcher */}
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div className="rs-flex rs-gap-2">
               <button
                 type="button"
                 className={`rs-pill ${!logForm.is_pro_service ? 'is-active' : ''}`}
@@ -1688,8 +1688,8 @@ export default function MaintenancePulse({
 
             {/* DIY Mode: Checkpoints Checklist */}
             {!logForm.is_pro_service && (currentVehicle?.check_points || []).length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div className="rs-mb-5">
+                <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
                   <span className="card-metric-label">CHECKPOINTS COMPLETED IN THIS EVENT</span>
                   <button
                     type="button"
@@ -1718,7 +1718,7 @@ export default function MaintenancePulse({
                           }));
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div className="rs-flex rs-items-center rs-gap-3">
                           <span className="material-symbols-rounded" style={{ color: isDone ? 'var(--primary)' : 'var(--md-on-surface-variant)' }}>
                             {isDone ? 'check_box' : 'check_box_outline_blank'}
                           </span>
@@ -1732,7 +1732,7 @@ export default function MaintenancePulse({
             )}
 
             {/* Generic Observations and Notes */}
-            <div className="cockpit-input-box" style={{ marginBottom: 24 }}>
+            <div className="cockpit-input-box rs-mb-5">
               <span className="card-metric-label">PROCEDURAL NOTES / OBSERVATIONS</span>
               <textarea
                 className="cockpit-input-raw"
@@ -1781,7 +1781,7 @@ export default function MaintenancePulse({
             <div className="mp-history-list">
               {logs.map(log => (
                 <div key={log.id} className="mp-history-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="rs-flex rs-justify-between rs-items-center">
                     <span style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 800, color: 'var(--fg)' }}>{log.service_type || 'Maintenance'}</span>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-tiny)', color: 'var(--primary)' }}>
                       {log.service_date ? new Date(log.service_date).toLocaleDateString() : ''}
@@ -1802,7 +1802,7 @@ export default function MaintenancePulse({
                   )}
 
                   {log.check_results?.length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                    <div className="rs-flex rs-gap-2 rs-flex-wrap rs-mt-2">
                       {log.check_results.map(cr => {
                         const failed = cr.passed === false || cr.status === 'fail';
                         return (

@@ -265,8 +265,8 @@ export default function WeatherTab({ token, active }) {
       {noLocation && (
         <div style={{ padding: '40px 0', textAlign: 'center' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '3rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>location_off</span>
-          <div className="rs-card-label" style={{ marginBottom: 6 }}>NO LOCATION SET</div>
-          <div className="rs-card-meta" style={{ marginBottom: 20 }}>Search for your city to get started.</div>
+          <div className="rs-card-label rs-mb-2">NO LOCATION SET</div>
+          <div className="rs-card-meta rs-mb-5">Search for your city to get started.</div>
           <div style={{ maxWidth: 380, margin: '0 auto' }}>
             <LocationSearch onSelect={handleLocationSelect} />
           </div>
@@ -277,7 +277,7 @@ export default function WeatherTab({ token, active }) {
       {error && error !== 'location' && (
         <div style={{ padding: '24px 0', textAlign: 'center' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>cloud_off</span>
-          <div className="rs-card-meta" style={{ marginBottom: 12 }}>{error}</div>
+          <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={fetchWeather}>RETRY</button>
         </div>
       )}
@@ -288,7 +288,7 @@ export default function WeatherTab({ token, active }) {
         <>
           {/* Severe alerts */}
           {alertsEnabled && alerts.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="rs-flex rs-flex-col rs-gap-2">
               {alerts.slice(0, 2).map(a => (
                 <div key={a.id} style={{
                   background: (ALERT_COLORS[a.severity] || '#88888822') + '22',
@@ -333,7 +333,7 @@ function HeroCard({ current, today, location_name, unit }) {
   const lo = today?.temp_min != null ? Math.round(today.temp_min) : null
   return (
     <div className="rs-wx-panel is-hero">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+      <div className="rs-flex rs-items-center rs-gap-5 rs-flex-wrap">
         <span
           className="material-symbols-rounded"
           style={{
@@ -380,7 +380,7 @@ function HeroCard({ current, today, location_name, unit }) {
 function DetailCard({ label, value, sub, color, badge }) {
   return (
     <div className="rs-wx-panel is-detail">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="rs-flex rs-justify-between rs-items-start">
         <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>{label}</div>
         {badge && (
           <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', padding: '2px 4px', background: 'var(--md-surface-container-highest)', borderRadius: 4, whiteSpace: 'nowrap' }}>
@@ -490,7 +490,7 @@ function HourlyStrip({ hourly, unit }) {
           </svg>
 
           {/* Temp labels under curve */}
-          <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+          <div className="rs-flex rs-items-start">
             {hourly.map((h, i) => (
               <div key={i} style={{ width: W_PER_HOUR, textAlign: 'center' }}>
                 <div style={{
@@ -504,7 +504,7 @@ function HourlyStrip({ hourly, unit }) {
           </div>
 
           {/* Icon row */}
-          <div style={{ display: 'flex', marginTop: 6 }}>
+          <div className="rs-flex rs-mt-2">
             {hourly.map((h, i) => (
               <div key={i} style={{ width: W_PER_HOUR, textAlign: 'center' }}>
                 <span
@@ -551,7 +551,7 @@ function HourlyStrip({ hourly, unit }) {
           </div>
 
           {/* Time labels */}
-          <div style={{ display: 'flex', marginTop: 4 }}>
+          <div className="rs-flex rs-mt-1">
             {hourly.map((h, i) => (
               <div key={i} style={{ width: W_PER_HOUR, textAlign: 'center' }}>
                 <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: i === 0 ? 0.9 : 0.45 }}>
@@ -583,7 +583,7 @@ function DailyForecast({ daily, unit }) {
   return (
     <div className="rs-wx-panel">
       <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>7-DAY FORECAST</div>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="rs-flex rs-flex-col">
         {daily.map((d, i) => {
           const minPct = d.temp_min != null ? ((d.temp_min - weekMin) / weekRange) * 100 : 0
           const maxPct = d.temp_max != null ? ((d.temp_max - weekMin) / weekRange) * 100 : 0
@@ -763,19 +763,19 @@ function WeatherSkeleton() {
     <div style={{ height: h, width: w, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
   )
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+    <div className="rs-flex rs-flex-col rs-gap-5">
+      <div className="rs-flex rs-gap-4 rs-items-center">
         <div style={{ width: 80, height: 80, borderRadius: 16, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="rs-flex rs-flex-col rs-gap-3">
           {bar('120px', 50)}{bar('160px', 12)}{bar('100px', 10)}
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 10 }}>
+      <div className="rs-flex rs-gap-3">
         {[0, 1, 2, 3].map(i => (
           <div key={i} style={{ height: 60, flex: 1, borderRadius: 12, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div className="rs-flex rs-gap-2">
         {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
           <div key={i} style={{ width: 52, height: 110, borderRadius: 8, background: 'var(--md-outline-variant)', opacity: 0.25 }} />
         ))}

@@ -66,7 +66,7 @@ export default function Drawer({
         aria-hidden={!open}
       >
         <div className="rs-drawer-head">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="rs-flex rs-items-center rs-gap-3">
             <RsMark mark="mono" size={26} />
             <span style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>
               Spaces & Services
@@ -102,7 +102,7 @@ export default function Drawer({
 
         {/* Account & Quick Controls Footer */}
         <div className="rs-drawer-footer" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 14, marginTop: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div className="rs-flex rs-items-center rs-justify-between rs-gap-3">
             <button
               className={`rs-drawer-profile ${currentPage === 'profile' ? 'is-active' : ''}`}
               onClick={() => navigate('profile')}

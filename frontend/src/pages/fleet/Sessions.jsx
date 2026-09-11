@@ -62,9 +62,9 @@ export default function Sessions() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="rs-flex rs-justify-between rs-items-center rs-mb-5">
         <h2>Session History</h2>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="rs-flex rs-gap-3">
           <select className="rs-input" value={filterUnit} onChange={e => setFilterUnit(e.target.value)}>
             <option value="">All Units</option>
             {units.map(u => <option key={u.unit_id} value={u.unit_id}>{u.name || u.unit_id}</option>)}
@@ -87,11 +87,11 @@ export default function Sessions() {
           <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                <th style={{ padding: 10 }}>Started At</th>
-                <th style={{ padding: 10 }}>Unit</th>
-                <th style={{ padding: 10 }}>Program</th>
-                <th style={{ padding: 10 }}>Duration (min)</th>
-                <th style={{ padding: 10 }}>Status</th>
+                <th className="rs-p-3">Started At</th>
+                <th className="rs-p-3">Unit</th>
+                <th className="rs-p-3">Program</th>
+                <th className="rs-p-3">Duration (min)</th>
+                <th className="rs-p-3">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -110,11 +110,11 @@ export default function Sessions() {
 
                 return (
                   <tr key={s.session_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }} onClick={() => openSessionDetail(s)}>
-                    <td style={{ padding: 10 }}>{new Date(s.started_at + 'Z').toLocaleString()}</td>
-                    <td style={{ padding: 10 }}>{u ? u.name : s.unit_id}</td>
-                    <td style={{ padding: 10 }}>{p ? p.name : s.program_id}</td>
-                    <td style={{ padding: 10 }}>{duration}</td>
-                    <td style={{ padding: 10 }}>
+                    <td className="rs-p-3">{new Date(s.started_at + 'Z').toLocaleString()}</td>
+                    <td className="rs-p-3">{u ? u.name : s.unit_id}</td>
+                    <td className="rs-p-3">{p ? p.name : s.program_id}</td>
+                    <td className="rs-p-3">{duration}</td>
+                    <td className="rs-p-3">
                       <span style={{ 
                         padding: '2px 8px', borderRadius: 4, fontSize: '0.8em',
                         background: s.status === 'completed' ? 'rgba(0,255,0,0.2)' : 
@@ -124,7 +124,7 @@ export default function Sessions() {
                   </tr>
                 )
               })}
-              {filtered.length === 0 && <tr><td colSpan="5" style={{ padding: 10, textAlign: 'center' }}>No sessions found</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan="5" className="rs-p-3 rs-text-center">No sessions found</td></tr>}
             </tbody>
           </table>
         </div>
@@ -133,7 +133,7 @@ export default function Sessions() {
       {selectedSession && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div className="rs-card" style={{ width: 'min(95vw, 1000px)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className="rs-flex rs-justify-between">
               <h3>Session Details: {selectedSession.session_id.substring(0,8)}...</h3>
               <button className="rs-btn-ghost" onClick={() => setSelectedSession(null)}>Close</button>
             </div>
@@ -149,7 +149,7 @@ export default function Sessions() {
               sessionDetails.error ? (
                 <div style={{ textAlign: 'center', padding: 20, color: 'var(--danger)' }}>{sessionDetails.error}</div>
               ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div className="rs-flex rs-flex-col rs-gap-5">
                 {sessionDetails.telemetry && sessionDetails.telemetry.length > 0 && (
                   <div>
                     <h4>Telemetry Over Time (Battery %)</h4>
@@ -185,7 +185,7 @@ export default function Sessions() {
               </div>
               )
             ) : (
-              <div style={{ textAlign: 'center', padding: 20 }}>Loading details...</div>
+              <div className="rs-text-center rs-p-5">Loading details...</div>
             )}
           </div>
         </div>

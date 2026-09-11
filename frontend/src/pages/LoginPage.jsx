@@ -125,7 +125,7 @@ export default function LoginPage({ onSwitchToSignup }) {
       <div className="rs-card is-elev" style={{ width: '100%', maxWidth: 400, padding: '2.25rem 1.75rem' }}>
 
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', marginBottom: 8 }}>
+          <div className="rs-flex rs-items-center rs-gap-3 rs-justify-center rs-mb-2">
             <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-small)', padding: '7px 11px' }}>RS</span>
             <span style={{ fontFamily: 'var(--font-mood)', fontSize: 'var(--rs-fs-h3)', letterSpacing: '0.12em', fontWeight: 600 }}>RIVER SONG</span>
           </div>
@@ -133,7 +133,7 @@ export default function LoginPage({ onSwitchToSignup }) {
         </div>
 
         {!challengeToken ? (
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <form onSubmit={handleSubmit} className="rs-flex rs-flex-col rs-gap-4">
           <div>
             <div className="rs-card-label" style={{ color: 'var(--text-muted)', marginBottom: 6, paddingLeft: 2, fontSize: 'var(--rs-fs-nano)' }}>IDENTIFIER</div>
             <input
@@ -166,7 +166,7 @@ export default function LoginPage({ onSwitchToSignup }) {
           </button>
         </form>
         ) : (
-        <form onSubmit={handleTotpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <form onSubmit={handleTotpSubmit} className="rs-flex rs-flex-col rs-gap-4">
           <div className="rs-card-label" style={{ textAlign: 'center', fontSize: 'var(--rs-fs-nano)', opacity: 0.85, marginBottom: 4 }}>
             TWO-FACTOR REQUIRED
           </div>
@@ -206,7 +206,7 @@ export default function LoginPage({ onSwitchToSignup }) {
             {loading ? 'VERIFYING...' : 'VERIFY'}
           </button>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+          <div className="rs-flex rs-justify-between rs-items-center rs-mt-1">
             <button
               type="button"
               onClick={() => { setUseRecovery(!useRecovery); setError(''); setTotpCode(''); setRecoveryCode('') }}
