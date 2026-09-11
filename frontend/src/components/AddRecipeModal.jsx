@@ -38,7 +38,7 @@ const inputStyle = {
 function Field({ label, children }) {
   return (
     <label className="rs-flex rs-flex-col" style={{ gap: 5 }}>
-      <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{label}</span>
+      <span className="rs-card-label rs-type-nano">{label}</span>
       {children}
     </label>
   )
@@ -176,7 +176,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
         <div className="rs-card-inner rs-flex rs-flex-col rs-gap-4">
 
           <div className="rs-flex rs-items-center rs-justify-between">
-            <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 800 }}>
+            <div className="rs-card-value rs-type-body" style={{ fontWeight: 800 }}>
               Add a recipe
             </div>
             <button className="rs-pill" onClick={onClose} aria-label="Close">
@@ -189,12 +189,10 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
             {MODES.map((m) => (
               <button
                 key={m.id}
-                className="rs-pill rs-flex rs-items-center"
+                className="rs-pill rs-flex rs-items-center rs-pointer rs-type-nano"
                 onClick={() => { setMode(m.id); setError('') }}
                 style={{
                   gap: 5,
-                  cursor: 'pointer',
-                  fontSize: 'var(--rs-fs-nano)',
                   background: mode === m.id
                     ? 'color-mix(in srgb, var(--primary) 22%, transparent)' : 'transparent',
                   color: mode === m.id ? 'var(--primary)' : 'inherit',
@@ -206,18 +204,17 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
               </button>
             ))}
           </div>
-          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginTop: -10 }}>
+          <div className="rs-card-meta rs-type-nano" style={{ marginTop: -10 }}>
             {MODES.find((m) => m.id === mode)?.hint}
           </div>
 
           {error && (
             <div
-              className="rs-flex rs-gap-2" style={{
+              className="rs-flex rs-gap-2 rs-type-micro" style={{
                 padding: '10px 12px',
                 borderRadius: 8,
                 background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
-                fontSize: 'var(--rs-fs-micro)',
                 lineHeight: 1.5,
               }}
             >
@@ -319,7 +316,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
                 />
               </Field>
-              <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginTop: -4 }}>
+              <p className="rs-card-meta rs-type-nano" style={{ marginTop: -4 }}>
                 Some sites block automated requests. If one does, copy the text and use
                 PASTE instead — or MANUAL, which needs nothing running.
               </p>
@@ -327,7 +324,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
           )}
 
           <div className="rs-flex rs-gap-2" style={{ justifyContent: 'flex-end', paddingTop: 4 }}>
-            <button className="rs-pill" onClick={onClose} disabled={busy} style={{ cursor: 'pointer' }}>
+            <button className="rs-pill rs-pointer" onClick={onClose} disabled={busy}>
               CANCEL
             </button>
             <button

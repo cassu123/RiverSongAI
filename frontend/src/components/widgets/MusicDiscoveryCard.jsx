@@ -71,21 +71,18 @@ export function MusicDiscoveryCard({
         {tracks.map((track) => (
           <div 
             key={track.videoId} 
-            style={{ 
-              flex: '0 0 160px', 
+            className="rs-pointer rs-relative" style={{
+              flex: '0 0 160px',
               scrollSnapAlign: 'start',
-              cursor: 'pointer',
-              position: 'relative'
             }}
             onClick={() => onPlay(track.videoId)}
             className="is-tappable"
           >
-            <div style={{ position: 'relative', width: 160, height: 160 }}>
+            <div className="rs-relative" style={{ width: 160, height: 160 }}>
               <img 
                 src={track.thumbnail} 
                 alt={track.title}
-                className="rs-w-full" style={{
-                  height: '100%',
+                className="rs-w-full rs-h-full" style={{
                   objectFit: 'cover',
                   borderRadius: 16,
                   boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
@@ -107,21 +104,13 @@ export function MusicDiscoveryCard({
             </div>
             
             <div className="rs-mt-3">
-              <div style={{ 
-                fontSize: 'var(--rs-fs-tiny)', 
-                fontWeight: 600, 
-                whiteSpace: 'nowrap', 
-                overflow: 'hidden', 
-                textOverflow: 'ellipsis',
-                color: 'var(--md-on-surface)'
+              <div className="rs-type-tiny rs-nowrap rs-clip rs-ellipsis" style={{
+                fontWeight: 600,
+                color: 'var(--md-on-surface)',
               }}>
                 {track.title}
               </div>
-              <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)',
-                whiteSpace: 'nowrap', 
-                overflow: 'hidden', 
-                textOverflow: 'ellipsis'
-              }}>
+              <div className="rs-muted rs-type-micro rs-nowrap rs-clip rs-ellipsis">
                 {track.artist}
               </div>
             </div>

@@ -28,7 +28,7 @@ function MapSelector({ position, onChange }) {
 
   return (
     <div className="rs-map rs-mb-4">
-      <MapContainer center={center} zoom={18} className="rs-w-full" style={{ height: '100%', borderRadius: 8 }}>
+      <MapContainer center={center} zoom={18} className="rs-w-full rs-h-full" style={{ borderRadius: 8 }}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="&copy; OpenStreetMap contributors"
@@ -177,7 +177,7 @@ export default function SetupWizard() {
   return (
     <div className="rs-card p-5 md:p-8" style={{ maxWidth: 800, margin: '0 auto' }}>
       <h2 className="rs-mb-2">Setup Wizard: {id}</h2>
-      <div className="rs-mb-5" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-small)' }}>Step {step} of 8</div>
+      <div className="rs-mb-5 rs-muted rs-type-small">Step {step} of 8</div>
 
       <form onSubmit={step === 8 ? (e)=>{e.preventDefault();handleSave()} : handleNext}>
         {step === 1 && (
@@ -287,7 +287,7 @@ export default function SetupWizard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rs-mb-4">
               <div><label><input type="checkbox" checked={formData.hardware.sensors.imu} onChange={e => updateField('hardware.sensors.imu', e.target.checked)} /> IMU Installed</label></div>
               <div>
-                <label className="rs-mb-1" style={{ display: 'block', fontSize: 'var(--rs-fs-small)' }}>Obstacle Sensors</label>
+                <label className="rs-mb-1 rs-type-small" style={{ display: 'block' }}>Obstacle Sensors</label>
                 <select className="rs-input" value={formData.hardware.sensors.obstacle} onChange={e => updateField('hardware.sensors.obstacle', e.target.value)}>
                   <option value="none">None</option>
                   <option value="ultrasonic">Ultrasonic</option>
@@ -384,7 +384,7 @@ export default function SetupWizard() {
         {step === 8 && (
           <div>
             <h3>Review & Save</h3>
-            <pre className="rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, fontSize: 'var(--rs-fs-tiny)', overflowX: 'auto' }}>
+            <pre className="rs-p-4 rs-type-tiny" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, overflowX: 'auto' }}>
               {JSON.stringify(formData, null, 2)}
             </pre>
             {error && <div className="rs-mt-4" style={{ color: 'var(--md-error)' }}>{error}</div>}

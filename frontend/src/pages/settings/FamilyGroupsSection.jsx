@@ -115,7 +115,7 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
         Parental Controls below.
       </p>
 
-      {err && <p className="rs-mb-3" style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)' }}>{err}</p>}
+      {err && <p className="rs-mb-3 rs-type-tiny" style={{ color: 'var(--md-error)' }}>{err}</p>}
 
       {/* Group list */}
       <div className="rs-flex rs-flex-col rs-gap-3 rs-mb-4">
@@ -137,15 +137,14 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
               working={working}
             />
             {confirmDelId === group.id && (
-              <div className="rs-flex rs-flex-col rs-gap-3 rs-mt-1" style={{
+              <div className="rs-flex rs-flex-col rs-gap-3 rs-mt-1 rs-type-tiny" style={{
                 padding: '10px 14px',
                 background: 'color-mix(in srgb, var(--md-error) 10%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)',
                 borderRadius: 8,
-                fontSize: 'var(--rs-fs-tiny)',
               }}>
                 <div className="rs-flex rs-items-center rs-gap-3">
-                  <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-error)', flexShrink: 0 }}>warning</span>
+                  <span className="material-symbols-rounded rs-no-shrink" style={{ fontSize: '1rem', color: 'var(--md-error)' }}>warning</span>
                   <span className="rs-grow" style={{ color: 'var(--md-on-surface)' }}>
                     Delete <strong>{group.name}</strong>? Whatever the group holds has to go
                     to someone — nothing records who contributed which row, so it moves
@@ -166,11 +165,11 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
                       <option key={m.profile_id} value={m.profile_id}>{m.display_name}</option>
                     ))}
                   </select>
-                  <button className="rs-pill" style={{ color: 'var(--md-error)', borderColor: 'color-mix(in srgb, var(--md-error) 50%, transparent)', cursor: 'pointer' }}
+                  <button className="rs-pill rs-pointer" style={{ color: 'var(--md-error)', borderColor: 'color-mix(in srgb, var(--md-error) 50%, transparent)' }}
                     onClick={() => deleteGroup(group.id, heirId || null)} disabled={working}>
                     DELETE
                   </button>
-                  <button className="rs-pill" style={{ cursor: 'pointer' }} onClick={() => { setConfirmDelId(null); setHeirId('') }}>CANCEL</button>
+                  <button className="rs-pill rs-pointer" onClick={() => { setConfirmDelId(null); setHeirId('') }}>CANCEL</button>
                 </div>
               </div>
             )}
@@ -189,18 +188,18 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
             onKeyDown={e => e.key === 'Enter' && createGroup()}
             autoFocus
           />
-          <button className="rs-btn-primary" onClick={createGroup} disabled={working || !newName.trim()}
-            style={{ fontSize: 'var(--rs-fs-tiny)', padding: '8px 16px' }}>
+          <button className="rs-btn-primary rs-type-tiny" onClick={createGroup} disabled={working || !newName.trim()}
+            style={{ padding: '8px 16px' }}>
             {working ? 'Creating…' : 'Create'}
           </button>
-          <button className="rs-pill" onClick={() => { setCreating(false); setNewName('') }}
-            style={{ cursor: 'pointer' }}>
+          <button className="rs-pill rs-pointer" onClick={() => { setCreating(false); setNewName('') }}
+           >
             Cancel
           </button>
         </div>
       ) : (
-        <button className="rs-pill rs-items-center rs-gap-2" onClick={() => setCreating(true)}
-          style={{ cursor: 'pointer', display: 'inline-flex' }}>
+        <button className="rs-pill rs-items-center rs-gap-2 rs-pointer" onClick={() => setCreating(true)}
+          style={{ display: 'inline-flex' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>add</span>
           New Family Group
         </button>
@@ -261,19 +260,20 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
   }
 
   return (
-    <div style={{
+    <div className="rs-clip" style={{
       background: 'var(--md-surface-container)',
       border: '1px solid var(--md-outline-variant)',
       borderRadius: 10,
-      overflow: 'hidden',
     }}>
       {/* Header row */}
       <div className="rs-flex rs-items-center rs-gap-3" style={{ padding: '12px 16px' }}>
-        <div className="rs-grow" style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>{group.name}</div>
+        <div className="rs-grow rs-type-small" style={{ fontWeight: 600 }}>{group.name}</div>
         <div className="rs-flex rs-gap-2">
           {ALL_MODULES.map(m => (
-            <span key={m.key} style={{
-              padding: '2px 8px', borderRadius: 12, fontSize: 'var(--rs-fs-micro)', fontWeight: 600,
+            <span key={m.key} className="rs-type-micro" style={{
+              padding: '2px 8px',
+              borderRadius: 12,
+              fontWeight: 600,
               background: group.shared_modules?.includes(m.key) ? 'var(--md-primary-container)' : 'var(--md-surface-container-high)',
               color: group.shared_modules?.includes(m.key) ? 'var(--md-on-primary-container)' : 'var(--md-outline)',
             }}>
@@ -281,15 +281,15 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
             </span>
           ))}
         </div>
-        <span style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--md-outline)' }}>
+        <span className="rs-type-micro" style={{ color: 'var(--md-outline)' }}>
           {(group.members || []).length} member{(group.members || []).length !== 1 ? 's' : ''}
         </span>
         <button onClick={onToggleExpand}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-primary)', fontSize: 'var(--rs-fs-micro)', padding: '2px 8px' }}>
+          className="rs-pointer rs-type-micro" style={{ background: 'none', border: 'none', color: 'var(--md-primary)', padding: '2px 8px' }}>
           {expanded ? 'Close' : 'Edit'}
         </button>
         <button onClick={onDelete} disabled={working}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)', padding: '2px 8px' }}>
+          className="rs-pointer rs-type-micro" style={{ background: 'none', border: 'none', color: 'var(--md-error)', padding: '2px 8px' }}>
           Delete
         </button>
       </div>
@@ -309,14 +309,15 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
 
           {/* Module toggles */}
           <div>
-            <div className="rs-mb-2" style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--md-outline)' }}>Shared Modules</div>
+            <div className="rs-mb-2 rs-type-micro" style={{ color: 'var(--md-outline)' }}>Shared Modules</div>
             <div className="rs-flex rs-gap-2 rs-flex-wrap">
               {ALL_MODULES.map(m => {
                 const on = group.shared_modules?.includes(m.key)
                 return (
                   <button key={m.key} onClick={() => onToggleModule(m.key)} disabled={working}
-                    style={{
-                      padding: '5px 14px', borderRadius: 20, fontSize: 'var(--rs-fs-tiny)', cursor: 'pointer',
+                    className="rs-type-tiny rs-pointer" style={{
+                      padding: '5px 14px',
+                      borderRadius: 20,
                       border: `1px solid ${on ? 'var(--md-primary)' : 'var(--md-outline-variant)'}`,
                       background: on ? 'var(--md-primary-container)' : 'var(--md-surface-container-high)',
                       color: on ? 'var(--md-on-primary-container)' : 'var(--md-on-surface-variant)',
@@ -331,26 +332,27 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
 
           {/* Members */}
           <div>
-            <div className="rs-mb-2" style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--md-outline)' }}>Members</div>
+            <div className="rs-mb-2 rs-type-micro" style={{ color: 'var(--md-outline)' }}>Members</div>
             {(group.members || []).length === 0 && (
               <p className="rs-card-meta" style={{ margin: '0 0 8px' }}>No members yet.</p>
             )}
             <div className="rs-flex rs-flex-col rs-gap-1 rs-mb-3">
               {(group.members || []).map(m => (
-                <div key={m.profile_id} className="rs-flex rs-items-center rs-gap-3" style={{
-                  fontSize: 'var(--rs-fs-tiny)',
+                <div key={m.profile_id} className="rs-flex rs-items-center rs-gap-3 rs-type-tiny" style={{
                   padding: '6px 10px',
                   background: 'var(--md-surface-container-high)',
                   borderRadius: 8,
                 }}>
                   <span className="rs-grow" style={{ fontWeight: 500 }}>{m.display_name}</span>
-                  <span style={{ color: 'var(--md-outline)', fontSize: 'var(--rs-fs-micro)' }}>{m.email}</span>
-                  <span style={{
-                    padding: '1px 8px', borderRadius: 12, fontSize: 'var(--rs-fs-nano)',
-                    background: 'var(--md-secondary-container)', color: 'var(--md-on-secondary-container)',
+                  <span className="rs-type-micro" style={{ color: 'var(--md-outline)' }}>{m.email}</span>
+                  <span className="rs-type-nano" style={{
+                    padding: '1px 8px',
+                    borderRadius: 12,
+                    background: 'var(--md-secondary-container)',
+                    color: 'var(--md-on-secondary-container)',
                   }}>{m.relationship}</span>
                   <button onClick={() => removeMember(m.profile_id)} disabled={addWorking}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>
+                    className="rs-pointer rs-type-micro" style={{ background: 'none', border: 'none', color: 'var(--md-error)' }}>
                     Remove
                   </button>
                 </div>
@@ -364,17 +366,17 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
                 background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)',
               }}>
-                <div className="rs-mb-2" style={{ fontSize: 'var(--rs-fs-tiny)' }}>{confirmRemove.message}</div>
+                <div className="rs-mb-2 rs-type-tiny">{confirmRemove.message}</div>
                 <div className="rs-flex rs-gap-2">
                   <button
                     onClick={() => removeMember(confirmRemove.profileId, true)}
                     disabled={addWorking}
-                    style={{ background: 'none', border: '1px solid var(--md-error)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>
+                    className="rs-pointer rs-type-micro" style={{ background: 'none', border: '1px solid var(--md-error)', borderRadius: 6, padding: '4px 10px', color: 'var(--md-error)' }}>
                     Remove anyway
                   </button>
                   <button
                     onClick={() => setConfirmRemove(null)}
-                    style={{ background: 'none', border: '1px solid var(--md-outline-variant)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 'var(--rs-fs-micro)' }}>
+                    className="rs-pointer rs-type-micro" style={{ background: 'none', border: '1px solid var(--md-outline-variant)', borderRadius: 6, padding: '4px 10px' }}>
                     Cancel
                   </button>
                 </div>
@@ -392,12 +394,12 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
               <select className="settings-select" value={addRelation} onChange={e => setAddRelation(e.target.value)}>
                 {RELATIONSHIPS.map(r => <option key={r}>{r}</option>)}
               </select>
-              <button className="rs-btn-primary" onClick={addMember} disabled={addWorking || !addUserId}
-                style={{ padding: '6px 14px', fontSize: 'var(--rs-fs-micro)' }}>
+              <button className="rs-btn-primary rs-type-micro" onClick={addMember} disabled={addWorking || !addUserId}
+                style={{ padding: '6px 14px' }}>
                 {addWorking ? 'Adding…' : 'Add'}
               </button>
             </div>
-            {addErr && <p className="rs-mt-2" style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{addErr}</p>}
+            {addErr && <p className="rs-mt-2 rs-type-micro" style={{ color: 'var(--md-error)' }}>{addErr}</p>}
           </div>
         </div>
       )}

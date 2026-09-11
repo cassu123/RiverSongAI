@@ -117,26 +117,24 @@ export default function ChatToolsSection({ data, token, onChanged }) {
             {saving && <span style={{ marginLeft: 8, color: 'var(--primary)' }}>SAVING…</span>}
           </p>
           <div className="rs-flex rs-items-center rs-gap-2">
-            <span style={{
-              fontSize: 'var(--rs-fs-micro)',
+            <span className="rs-type-micro" style={{
               fontWeight: 700,
               padding: '3px 10px',
               borderRadius: 12,
               background: 'color-mix(in srgb, var(--rs-status-nominal) 15%, transparent)',
               color: 'var(--rs-status-nominal)',
-              border: '1px solid color-mix(in srgb, var(--rs-status-nominal) 30%, transparent)'
+              border: '1px solid color-mix(in srgb, var(--rs-status-nominal) 30%, transparent)',
             }}>
               {enabledCount} ACTIVE
             </span>
             {disabledCount > 0 && (
-              <span style={{
-                fontSize: 'var(--rs-fs-micro)',
+              <span className="rs-type-micro" style={{
                 fontWeight: 700,
                 padding: '3px 10px',
                 borderRadius: 12,
                 background: 'color-mix(in srgb, var(--md-error) 15%, transparent)',
                 color: 'var(--md-error)',
-                border: '1px solid color-mix(in srgb, var(--md-error) 30%, transparent)'
+                border: '1px solid color-mix(in srgb, var(--md-error) 30%, transparent)',
               }}>
                 {disabledCount} DISABLED
               </span>
@@ -159,14 +157,13 @@ export default function ChatToolsSection({ data, token, onChanged }) {
               placeholder="Search chat & voice tools..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="rs-w-full" style={{
+              className="rs-w-full rs-type-tiny" style={{
                 all: 'unset',
-                fontSize: 'var(--rs-fs-tiny)',
                 color: 'var(--md-on-surface)',
               }}
             />
             {search && (
-              <button onClick={() => setSearch('')} style={{ all: 'unset', cursor: 'pointer', opacity: 0.6 }}>
+              <button onClick={() => setSearch('')} className="rs-pointer" style={{ all: 'unset', opacity: 0.6 }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>close</span>
               </button>
             )}
@@ -174,16 +171,16 @@ export default function ChatToolsSection({ data, token, onChanged }) {
 
           <button
             type="button"
-            className="rs-pill"
-            style={{ fontSize: 'var(--rs-fs-micro)', padding: '6px 12px' }}
+            className="rs-pill rs-type-micro"
+            style={{ padding: '6px 12px' }}
             onClick={() => handleToggleAll(true)}
           >
             ENABLE ALL
           </button>
           <button
             type="button"
-            className="rs-pill"
-            style={{ fontSize: 'var(--rs-fs-micro)', padding: '6px 12px' }}
+            className="rs-pill rs-type-micro"
+            style={{ padding: '6px 12px' }}
             onClick={() => handleToggleAll(false)}
           >
             DISABLE ALL
@@ -226,30 +223,27 @@ export default function ChatToolsSection({ data, token, onChanged }) {
                       <span className="material-symbols-rounded" style={{ fontSize: '1.25rem', color: isEnabled ? 'var(--primary)' : 'var(--md-outline)' }}>
                         {tool.icon || 'handyman'}
                       </span>
-                      <span style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)', color: 'var(--md-on-surface)' }}>
+                      <span className="rs-type-small" style={{ fontWeight: 600, color: 'var(--md-on-surface)' }}>
                         {tool.label}
                       </span>
                     </div>
-                    <span style={{
-                      fontSize: 'var(--rs-fs-nano)',
+                    <span className="rs-type-nano" style={{
                       fontFamily: 'var(--font-mono, monospace)',
                       padding: '2px 6px',
                       borderRadius: 4,
                       background: 'var(--md-surface-container)',
-                      color: 'var(--md-outline)'
+                      color: 'var(--md-outline)',
                     }}>
                       {tool.category}
                     </span>
                   </div>
 
-                  <p className="rs-m-0" style={{
-                    fontSize: 'var(--rs-fs-micro)',
+                  <p className="rs-m-0 rs-type-micro rs-clip" style={{
                     color: 'var(--md-on-surface-variant)',
                     lineHeight: 1.35,
                     display: '-webkit-box',
                     WebkitLineClamp: 3,
                     WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
                   }}>
                     {tool.description}
                   </p>
@@ -259,11 +253,10 @@ export default function ChatToolsSection({ data, token, onChanged }) {
                   paddingTop: 8,
                   borderTop: '1px solid color-mix(in srgb, var(--md-outline-variant) 50%, transparent)',
                 }}>
-                  <span style={{
-                    fontSize: 'var(--rs-fs-micro)',
+                  <span className="rs-type-micro" style={{
                     fontFamily: 'var(--font-mono, monospace)',
                     color: 'var(--md-outline)',
-                    userSelect: 'all'
+                    userSelect: 'all',
                   }}>
                     {tool.name}
                   </span>
@@ -279,7 +272,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         </div>
 
         {filteredTools.length === 0 && (
-          <div className="rs-p-5 rs-text-center" style={{ color: 'var(--md-outline)', fontSize: 'var(--rs-fs-tiny)' }}>
+          <div className="rs-p-5 rs-text-center rs-type-tiny" style={{ color: 'var(--md-outline)' }}>
             No tools found matching "{search}".
           </div>
         )}

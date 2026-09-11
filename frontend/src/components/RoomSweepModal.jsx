@@ -116,9 +116,9 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
       <div className="rs-modal rs-p-5" style={{ width: 400, maxWidth: '90vw' }}>
         <h2 className="rs-mb-2 rs-flex rs-justify-between" style={{ marginTop: 0 }}>
           Room Sweep
-          <button className="rs-pill" onClick={handleFinish} style={{ padding: '4px 12px', fontSize: 'var(--rs-fs-small)' }}>Done</button>
+          <button className="rs-pill rs-type-small" onClick={handleFinish} style={{ padding: '4px 12px' }}>Done</button>
         </h2>
-        <p style={{ color: 'var(--text-muted)', margin: 0, marginBottom: 24, fontSize: 'var(--rs-fs-small)' }}>Captured this session: <strong>{count}</strong> items</p>
+        <p className="rs-muted rs-m-0 rs-mb-5 rs-type-small">Captured this session: <strong>{count}</strong> items</p>
         
         <div className="rs-form-group rs-mb-5">
           <label>Room / Location</label>
@@ -144,12 +144,12 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
         {!photoFile ? (
           <div className="rs-text-center rs-mt-6">
             <button 
-              className="rs-btn-primary rs-w-full rs-gap-3" 
+              className="rs-btn-primary rs-w-full rs-gap-3 rs-type-h3" 
               onClick={() => {
                 if (!location) { alert("Set location first!"); return; }
                 fileInputRef.current?.click();
               }} 
-              style={{ height: 64, fontSize: 'var(--rs-fs-h3)' }}
+              style={{ height: 64 }}
             >
               <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>photo_camera</span>
               SNAP NEXT ITEM

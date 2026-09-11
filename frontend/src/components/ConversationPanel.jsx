@@ -62,11 +62,15 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
             'Run a maintenance check',
             'Add milk to grocery list'
           ].map((chip, idx) => (
-            <button key={idx} style={{
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '20px', padding: '10px 16px', fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)',
-              cursor: 'pointer', transition: 'all 0.2s', backdropFilter: 'blur(10px)',
-              animation: `slideUpFade 0.4s ease-out ${idx * 0.1 + 0.2}s both`
+            <button key={idx} className="rs-type-tiny rs-pointer" style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '20px',
+              padding: '10px 16px',
+              color: 'var(--md-on-surface-variant)',
+              transition: 'all 0.2s',
+              backdropFilter: 'blur(10px)',
+              animation: `slideUpFade 0.4s ease-out ${idx * 0.1 + 0.2}s both`,
             }} onClick={() => {
               const e = new CustomEvent('rs-chip-click', { detail: chip });
               window.dispatchEvent(e);
@@ -111,7 +115,7 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
               )}
               {msg.meta && msg.meta.receipts && msg.meta.receipts.length > 0 && (
                 <div className="rs-mt-3 rs-p-3" style={{ background: 'var(--bg-elev)', borderRadius: 8, border: '1px solid var(--md-outline-variant)' }}>
-                  <div className="rs-mb-2" style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--primary)', fontWeight: 600, textTransform: 'uppercase' }}>
+                  <div className="rs-mb-2 rs-type-micro" style={{ color: 'var(--primary)', fontWeight: 600, textTransform: 'uppercase' }}>
                     Agent Tasks Completed
                   </div>
                   {msg.meta.receipts.map((rcpt, i) => (
@@ -120,8 +124,8 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
                         {rcpt.ok ? 'check_circle' : 'error'}
                       </span>
                       <div className="rs-flex rs-flex-col">
-                        <span style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>{rcpt.tool}</span>
-                        <span style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.8 }}>{rcpt.summary}</span>
+                        <span className="rs-type-tiny rs-mono" style={{ fontWeight: 500 }}>{rcpt.tool}</span>
+                        <span className="rs-type-micro" style={{ opacity: 0.8 }}>{rcpt.summary}</span>
                       </div>
                     </div>
                   ))}
@@ -130,7 +134,7 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
               {msg.chunks && msg.chunks.length > 0 && (
                 <div className="rs-mt-3 rs-flex rs-flex-wrap rs-gap-2" style={{ borderTop: '1px solid var(--md-outline-variant)', paddingTop: 8 }}>
                   {msg.chunks.map((chunk, i) => (
-                    <span key={i} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px', opacity: 0.8 }} title={chunk.text}>
+                    <span key={i} className="rs-pill rs-type-nano" style={{ padding: '2px 8px', opacity: 0.8 }} title={chunk.text}>
                       SOURCE: {chunk.source?.toUpperCase() || 'DOCUMENT'}
                     </span>
                   ))}

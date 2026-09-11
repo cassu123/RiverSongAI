@@ -13,7 +13,7 @@ export default function PreviewRoot() {
         <h1 style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '3rem', letterSpacing: '0.1em' }}>
           SPATIAL INTERFACE V2.0
         </h1>
-        <div className="rs-mt-5 rs-text-center" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-h3)', maxWidth: 600, lineHeight: 1.6 }}>
+        <div className="rs-mt-5 rs-text-center rs-muted rs-type-h3" style={{ maxWidth: 600, lineHeight: 1.6 }}>
           This sandbox is isolated from the main application. 
           Use this route to experiment with double-bezel cards, tactile pills, 
           and per-environment (Universe/Environment/Mood) SVG backdrops.

@@ -185,7 +185,7 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
               </div>
             </div>
             <div className="rs-flex rs-gap-2">
-              <input type="file" accept=".csv" onChange={e => setCsvFile(e.target.files[0])} className="rs-grow" style={{ fontSize: 'var(--rs-fs-tiny)' }} />
+              <input type="file" accept=".csv" onChange={e => setCsvFile(e.target.files[0])} className="rs-grow rs-type-tiny" />
               <button className="rs-pill is-active" disabled={!csvFile} onClick={handleCsvImport}>IMPORT</button>
             </div>
           </div>

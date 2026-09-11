@@ -309,8 +309,8 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       <textarea
         ref={inputRef}
         rows={1}
-        className="rs-chat-textarea"
-        style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 500 }}
+        className="rs-chat-textarea rs-type-body"
+        style={{ fontWeight: 500 }}
         placeholder="Ask River Song..."
         value={inputText}
         onChange={e => setInputText(e.target.value)}
@@ -358,7 +358,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       
       {embedded && (
         <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
-          <h3 className="rs-m-0" style={{ fontSize: 'var(--rs-fs-h3)', color: 'var(--primary)' }}>Vehicle Assistant</h3>
+          <h3 className="rs-m-0 rs-type-h3" style={{ color: 'var(--primary)' }}>Vehicle Assistant</h3>
           <button className="rs-pill" onClick={onClose}>
             <span className="material-symbols-rounded">close</span>
           </button>
@@ -385,7 +385,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
           <div className="rs-card-inner">
             <div className="rs-card-label">System Directives</div>
             <textarea
-              className="rs-w-full rs-mt-3" style={{ all: 'unset', fontSize: 'var(--rs-fs-small)', minHeight: '80px', color: 'var(--fg)', fontFamily: 'var(--font-mono)' }}
+              className="rs-w-full rs-mt-3 rs-type-small rs-mono" style={{ all: 'unset', minHeight: '80px', color: 'var(--fg)' }}
               placeholder="Inject custom neural constraints..."
               value={systemPrompt}
               onChange={e => setSystemPrompt(e.target.value)}
@@ -422,36 +422,34 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
             </div>
           )}
           {modelNotice && (
-            <div className="rs-model-notice animate-fade-in rs-flex rs-items-center rs-gap-3 rs-mb-4" style={{
+            <div className="rs-model-notice animate-fade-in rs-flex rs-items-center rs-gap-3 rs-mb-4 rs-type-small" style={{
               padding: '10px 16px',
               borderRadius: 10,
               background: 'rgba(230,170,60,0.13)',
               border: '1px solid rgba(230,170,60,0.3)',
               color: '#e6c07b',
-              fontSize: 'var(--rs-fs-small)',
             }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>info</span>
               <span className="rs-grow">
                 {modelNotice.name} is unavailable{modelNotice.reason ? ` — ${modelNotice.reason}` : '.'}
                 {modelNotice.usingName ? ` Using ${modelNotice.usingName} for now.` : ' Pick another model to continue.'}
               </span>
-              <button onClick={() => setModelNotice(null)} style={{ all: 'unset', cursor: 'pointer', opacity: 0.7 }}>
+              <button onClick={() => setModelNotice(null)} className="rs-pointer" style={{ all: 'unset', opacity: 0.7 }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>close</span>
               </button>
             </div>
           )}
           {error && (
-            <div className="rs-error-banner animate-fade-in rs-flex rs-items-center rs-gap-3 rs-mb-4" style={{
+            <div className="rs-error-banner animate-fade-in rs-flex rs-items-center rs-gap-3 rs-mb-4 rs-type-small" style={{
               padding: '10px 16px',
               borderRadius: 10,
               background: 'rgba(220,60,60,0.15)',
               border: '1px solid rgba(220,60,60,0.3)',
               color: 'var(--rs-status-critical)',
-              fontSize: 'var(--rs-fs-small)',
             }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>error</span>
               <span className="rs-grow">{error}</span>
-              <button onClick={() => setError(null)} style={{ all: 'unset', cursor: 'pointer', opacity: 0.7 }}>
+              <button onClick={() => setError(null)} className="rs-pointer" style={{ all: 'unset', opacity: 0.7 }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>close</span>
               </button>
             </div>

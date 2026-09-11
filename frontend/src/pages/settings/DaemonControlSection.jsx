@@ -18,11 +18,11 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             {/* WARDEN */}
             <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>WARDEN (Vision/Security)</div>
+                <div className="rs-min-w-0">
+                  <div className="rs-type-tiny" style={{ fontWeight: 600 }}>WARDEN (Vision/Security)</div>
                   <div className="rs-card-meta rs-m-0">RTSP Camera Monitoring</div>
                 </div>
-                <div className="rs-flex rs-items-center rs-gap-3" style={{ flexShrink: 0 }}>
+                <div className="rs-flex rs-items-center rs-gap-3 rs-no-shrink">
                   <span className="rs-card-label" style={{ color: daemonStatus.warden?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
                     {daemonStatus.warden?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
@@ -39,11 +39,11 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             {/* MECHANIC */}
             <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>MECHANIC (Telemetry)</div>
+                <div className="rs-min-w-0">
+                  <div className="rs-type-tiny" style={{ fontWeight: 600 }}>MECHANIC (Telemetry)</div>
                   <div className="rs-card-meta rs-m-0">MAVLink / ArduRover Link</div>
                 </div>
-                <div className="rs-flex rs-items-center rs-gap-3" style={{ flexShrink: 0 }}>
+                <div className="rs-flex rs-items-center rs-gap-3 rs-no-shrink">
                   <span className="rs-card-label" style={{ color: daemonStatus.mechanic?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
                     {daemonStatus.mechanic?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
@@ -66,11 +66,11 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             {/* PULSE */}
             <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>PULSE (Ambient Feeds)</div>
+                <div className="rs-min-w-0">
+                  <div className="rs-type-tiny" style={{ fontWeight: 600 }}>PULSE (Ambient Feeds)</div>
                   <div className="rs-card-meta rs-m-0">News, Markets, and Flights Poller</div>
                 </div>
-                <div className="rs-flex rs-items-center rs-gap-3" style={{ flexShrink: 0 }}>
+                <div className="rs-flex rs-items-center rs-gap-3 rs-no-shrink">
                   <span className="rs-card-label" style={{ color: daemonStatus.pulse?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
                     {daemonStatus.pulse?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
@@ -87,11 +87,11 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             {/* SCRIBE */}
             <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>SCRIBE (Chronos Heuristics)</div>
+                <div className="rs-min-w-0">
+                  <div className="rs-type-tiny" style={{ fontWeight: 600 }}>SCRIBE (Chronos Heuristics)</div>
                   <div className="rs-card-meta rs-m-0">Schedule & Chronobiology Heuristics</div>
                 </div>
-                <div className="rs-flex rs-items-center rs-gap-3" style={{ flexShrink: 0 }}>
+                <div className="rs-flex rs-items-center rs-gap-3 rs-no-shrink">
                   <span className="rs-card-label" style={{ color: daemonStatus.scribe?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
                     {daemonStatus.scribe?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>
@@ -108,11 +108,11 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             {/* SIFTER */}
             <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>SIFTER (RAG)</div>
+                <div className="rs-min-w-0">
+                  <div className="rs-type-tiny" style={{ fontWeight: 600 }}>SIFTER (RAG)</div>
                   <div className="rs-card-meta rs-m-0">Background Document Indexing</div>
                 </div>
-                <div className="rs-flex rs-items-center rs-gap-3" style={{ flexShrink: 0 }}>
+                <div className="rs-flex rs-items-center rs-gap-3 rs-no-shrink">
                   <span className="rs-card-label" style={{ color: daemonStatus.sifter?.alive ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
                     {daemonStatus.sifter?.alive ? '● ONLINE' : '○ OFFLINE'}
                   </span>

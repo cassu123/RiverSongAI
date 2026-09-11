@@ -80,7 +80,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
       <div className="rs-card-label rs-mb-2">
         WHAT IS PRINTED ON IT
       </div>
-      <div className="rs-card-meta rs-mb-3" style={{ fontSize: 'var(--rs-fs-micro)', lineHeight: 1.5 }}>
+      <div className="rs-card-meta rs-mb-3 rs-type-micro" style={{ lineHeight: 1.5 }}>
         {confirmed
           ? 'Confirmed from the machine. Retick if anything is wrong.'
           : 'Guessed from the name. Two appliances can share a name and differ by one button — tick what you can actually see.'}
@@ -93,7 +93,8 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
           <Group rows={scheduled} on={on} toggle={toggle} />
           {other.length > 0 && (
             <>
-              <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', margin: '14px 0 8px',
+              <div className="rs-card-meta rs-muted rs-type-nano" style={{
+                margin: '14px 0 8px',
               }}>
                 ON THE MACHINE, NOT PART OF A PLAN
               </div>
@@ -101,7 +102,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
             </>
           )}
 
-          <div className="rs-card-meta rs-mt-4" style={{ fontSize: 'var(--rs-fs-micro)' }}>
+          <div className="rs-card-meta rs-mt-4 rs-type-micro">
             {stations.length
               ? <>This makes it a <strong style={{ color: 'var(--primary)' }}>
                   {stations.join(', ').replace(/_/g, ' ')}
@@ -144,13 +145,11 @@ function Group({ rows, on, toggle }) {
             type="button"
             onClick={() => toggle(row.key)}
             aria-pressed={active}
-            style={{
+            className="rs-type-micro rs-pointer" style={{
               padding: '7px 13px',
               borderRadius: 999,
-              fontSize: 'var(--rs-fs-micro)',
               fontWeight: 800,
               letterSpacing: '0.04em',
-              cursor: 'pointer',
               border: active
                 ? '1px solid var(--primary)'
                 : '1px solid var(--rs-border, rgba(128,128,128,0.35))',

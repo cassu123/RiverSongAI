@@ -100,7 +100,7 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
     <>
       <p className="rs-card-meta rs-mb-4">
         <strong>{voiceSettings.provider_label}</strong> · Active:{' '}
-        <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-micro)' }}>{voiceSettings.active_voice}</span>
+        <span className="rs-pill is-active rs-type-micro">{voiceSettings.active_voice}</span>
       </p>
 
       {/* ELEVENLABS STATUS (Admin Only) — credentials live in .env */}
@@ -177,20 +177,20 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
                         onClick={() => v.installed && !v.active && handleSelect(v.voice_id)}
                         style={{ opacity: v.installed ? 1 : 0.5, borderColor: v.active ? 'var(--primary)' : undefined }}
                       >
-                        <div className="rs-card-value rs-mb-2" style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 600 }}>
+                        <div className="rs-card-value rs-mb-2 rs-type-body" style={{ fontWeight: 600 }}>
                           {v.display_name}
                         </div>
 
                         <div className="rs-flex rs-flex-wrap rs-gap-1 rs-mb-2">
-                          <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>
+                          <span className="rs-pill rs-type-nano" style={{ padding: '2px 8px' }}>
                             {QUALITY_LABELS[v.quality] || v.quality}
                           </span>
-                          <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>
+                          <span className="rs-pill rs-type-nano" style={{ padding: '2px 8px' }}>
                             {ENGINE_LABELS[v.engine] || v.engine}
                           </span>
                         </div>
 
-                        <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', lineHeight: 1.4 }}>
+                        <div className="rs-card-meta rs-type-micro" style={{ lineHeight: 1.4 }}>
                           {v.description}
                         </div>
 
@@ -198,8 +198,8 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
                           <button
                             onClick={e => { e.stopPropagation(); handlePreview(v.voice_id) }}
                             disabled={previewing === v.voice_id}
-                            className="rs-pill rs-mt-3"
-                            style={{ fontSize: 'var(--rs-fs-nano)' }}
+                            className="rs-pill rs-mt-3 rs-type-nano"
+                           
                           >
                             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>{previewing === v.voice_id ? 'volume_up' : 'play_arrow'}</span>
                             {previewing === v.voice_id ? 'PLAYING…' : 'PREVIEW'}

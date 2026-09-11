@@ -60,7 +60,7 @@ function Switch({ on, onClick, disabled, label, labelOn = 'ON', labelOff = 'OFF'
       </button>
       {/* nowrap: "ADMIN" and "VISIBLE" were breaking mid-word on phones,
           rendering as ADMI / N beside the knob. */}
-      <span className="toggle-value" style={{ minWidth: 30, fontSize: 'var(--rs-fs-nano)', whiteSpace: 'nowrap' }}>
+      <span className="toggle-value rs-type-nano rs-nowrap" style={{ minWidth: 30 }}>
         {on ? labelOn : labelOff}
       </span>
     </div>
@@ -143,12 +143,11 @@ export default function ProviderSwitchesSection({ token }) {
       {error && (
         <div
           role="alert"
-          className="rs-flex rs-gap-2 rs-mb-3" style={{
+          className="rs-flex rs-gap-2 rs-mb-3 rs-type-micro" style={{
             padding: '10px 12px',
             borderRadius: 8,
             background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
             border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
-            fontSize: 'var(--rs-fs-micro)',
           }}
         >
           <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>error</span>
@@ -165,9 +164,9 @@ export default function ProviderSwitchesSection({ token }) {
           borderBottom: '1px solid var(--md-outline-variant)',
         }}
       >
-        <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>PROVIDER</span>
-        <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>ALLOWED</span>
-        <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>USERS</span>
+        <span className="rs-card-label rs-type-nano">PROVIDER</span>
+        <span className="rs-card-label rs-type-nano">ALLOWED</span>
+        <span className="rs-card-label rs-type-nano">USERS</span>
       </div>
 
       <div className="rs-flex rs-flex-col" style={{ gap: 2 }}>
@@ -197,9 +196,9 @@ export default function ProviderSwitchesSection({ token }) {
                 opacity: r.enabled ? 1 : 0.62,
               }}
             >
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>{meta.name}</div>
-                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>
+              <div className="rs-min-w-0">
+                <div className="rs-type-tiny" style={{ fontWeight: 600 }}>{meta.name}</div>
+                <div className="rs-card-meta rs-type-nano">
                   {blockedReason ? (
                     <span
                       style={{

@@ -54,7 +54,7 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
 
           {/* Sensitivity selector — min 44px touch targets */}
           <div className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap">
-            <span className="rs-card-meta rs-m-0" style={{ flexShrink: 0 }}>Signal sensitivity</span>
+            <span className="rs-card-meta rs-m-0 rs-no-shrink">Signal sensitivity</span>
             <div className="rs-flex rs-gap-2">
               {[
                 { n: 1, label: 'High',          desc: 'Routes on 1+ match' },
@@ -89,14 +89,15 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
                 <div key={r.intent} className="rs-flex rs-flex-col rs-gap-1" style={{ padding: '10px 12px', background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10, opacity: r.reachable ? 1 : 0.6 }}>
                   <div className="rs-flex rs-items-center rs-gap-2">
                     <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.75 }}>{INTENT_ICONS[r.intent] || 'chat'}</span>
-                    <span style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{r.label}</span>
+                    <span className="rs-type-micro" style={{ fontWeight: 600 }}>{r.label}</span>
                   </div>
                   <div className="rs-flex rs-items-center rs-justify-between rs-gap-2">
-                    <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span className="rs-card-meta rs-type-nano rs-min-w-0 rs-clip rs-ellipsis">
                       {r.reachable ? r.display_name : 'No provider available'}
                     </span>
                     {where && (
-                      <span className="rs-pill" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', padding: '1px 6px', flexShrink: 0,
+                      <span className="rs-pill rs-muted rs-type-nano rs-no-shrink" style={{
+                        padding: '1px 6px',
                         background: where === 'local' ? 'color-mix(in srgb, var(--primary) 12%, transparent)' :
                           where === 'NIM' ? 'color-mix(in srgb, var(--md-sys-color-tertiary) 12%, transparent)' :
                             'color-mix(in srgb, var(--md-sys-color-secondary) 12%, transparent)',
@@ -104,7 +105,7 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
                     )}
                   </div>
                   {r.fell_back && (
-                    <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.8 }}>
+                    <span className="rs-card-meta rs-type-nano" style={{ opacity: 0.8 }}>
                       {r.first_choice_display_name} unavailable
                     </span>
                   )}
@@ -112,7 +113,7 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
               )
             })}
             {(intentRouterSettings.routes || []).length === 0 && (
-              <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>Routing map unavailable.</p>
+              <p className="rs-card-meta rs-type-nano">Routing map unavailable.</p>
             )}
           </div>
         </Section>

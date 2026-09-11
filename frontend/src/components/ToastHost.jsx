@@ -44,14 +44,12 @@ export default function ToastHost() {
           <div
             key={t.id}
             onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}
-            style={{
+            className="rs-type-tiny rs-pointer" style={{
               padding: '10px 14px',
               background: 'rgba(10, 10, 14, 0.92)',
               border: `1px solid ${c.border}`,
               borderRadius: 8,
               color: c.text,
-              fontSize: 'var(--rs-fs-tiny)',
-              cursor: 'pointer',
               boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
             }}
           >

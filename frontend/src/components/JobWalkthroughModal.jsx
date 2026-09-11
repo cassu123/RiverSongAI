@@ -136,11 +136,11 @@ export default function JobWalkthroughModal({ vehicle, checkpoint, onClose, onLo
         <h3 className="rs-card-label">» MEDIA GALLERY</h3>
         <div className="rs-flex" style={{ gap: '10px', overflowX: 'auto', marginBottom: '20px', paddingBottom: '10px' }}>
           {media.map(m => (
-            <div key={m.id} style={{ position: 'relative', width: '150px', height: '100px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', background: '#000' }}>
-              <img src={`/api/vehicles/media/${m.id}?thumb=true`} className="rs-w-full" style={{ height: '100%', objectFit: 'cover', opacity: m.kind === 'video' ? 0.7 : 1 }} alt={m.title} 
+            <div key={m.id} className="rs-relative rs-no-shrink rs-clip" style={{ width: '150px', height: '100px', borderRadius: '8px', background: '#000' }}>
+              <img src={`/api/vehicles/media/${m.id}?thumb=true`} className="rs-w-full rs-h-full" style={{ objectFit: 'cover', opacity: m.kind === 'video' ? 0.7 : 1 }} alt={m.title} 
                    onError={(e) => { e.target.style.display = 'none'; }} />
               {m.kind === 'video' && <div style={{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'var(--fg)'}}>▶</div>}
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 'var(--rs-fs-nano)', padding: '4px' }}>
+              <div className="rs-type-nano" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px' }}>
                 {m.title}
               </div>
               <a href={`/api/vehicles/media/${m.id}`} target="_blank" rel="noreferrer" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />

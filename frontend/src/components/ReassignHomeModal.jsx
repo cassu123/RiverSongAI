@@ -40,8 +40,8 @@ export default function ReassignHomeModal({ homeId, homes, token, onClose, onCom
 
   return (
     <div className="barcode-scanner-modal rs-flex rs-items-center rs-justify-center" role="dialog" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-      <div className="rs-card is-elev rs-w-full rs-p-5" style={{ maxWidth: 500, position: 'relative' }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg)' }}>
+      <div className="rs-card is-elev rs-w-full rs-p-5 rs-relative" style={{ maxWidth: 500 }}>
+        <button onClick={onClose} className="rs-pointer" style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--fg)' }}>
           <span className="material-symbols-rounded">close</span>
         </button>
         
@@ -57,7 +57,7 @@ export default function ReassignHomeModal({ homeId, homes, token, onClose, onCom
         ) : (
           <form onSubmit={handleReassign}>
             <div className="rs-mb-4">
-              <label className="rs-mb-2" style={{ color: 'var(--text-muted)', display: 'block', fontSize: 'var(--rs-fs-tiny)', textTransform: 'uppercase', letterSpacing: 1 }}>Destination Home</label>
+              <label className="rs-mb-2 rs-muted rs-type-tiny" style={{ display: 'block', textTransform: 'uppercase', letterSpacing: 1 }}>Destination Home</label>
               <select 
                 className="rs-input rs-w-full" 
                 style={{ background: 'var(--md-surface-container)' }} 

@@ -15,11 +15,11 @@ function Gauge({ label, pct, color }) {
   return (
     <div className="rs-grow" style={{ minWidth: 120 }}>
       <div className="rs-flex rs-justify-between rs-mb-1">
-        <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{label}</span>
+        <span className="rs-card-label rs-type-nano">{label}</span>
         <span style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 700, color }}>{v}%</span>
       </div>
-      <div style={{ height: 8, borderRadius: 4, background: 'var(--md-surface-container-high,#2a2a2a)', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${v}%`, background: color, transition: 'width .4s ease' }} />
+      <div className="rs-clip" style={{ height: 8, borderRadius: 4, background: 'var(--md-surface-container-high,#2a2a2a)' }}>
+        <div className="rs-h-full" style={{ width: `${v}%`, background: color, transition: 'width .4s ease' }} />
       </div>
     </div>
   )
@@ -48,8 +48,8 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, refresh, program 
           <MetricStat label="DEVICES" value={t.connected_devices ?? 0} accent="#22d3ee" />
           <MetricStat label="UPTIME" value={fmtUptime(t.uptime_s)} />
           <div className="rs-flex rs-flex-col" style={{ gap: 2 }}>
-            <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>CASTING</div>
-            <span style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>{t.casting ? (t.cast_target || 'on') : '—'}</span>
+            <div className="rs-card-label rs-type-nano">CASTING</div>
+            <span className="rs-type-tiny" style={{ fontWeight: 600 }}>{t.casting ? (t.cast_target || 'on') : '—'}</span>
           </div>
         </div>
         <div className="rs-flex rs-gap-5">
@@ -57,7 +57,7 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, refresh, program 
           <Gauge label="MEMORY" pct={t.mem_pct} color="#818cf8" />
         </div>
         <div className="rs-mt-4">
-          <div className="rs-card-label rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>CPU LOAD</div>
+          <div className="rs-card-label rs-mb-1 rs-type-nano">CPU LOAD</div>
           <Sparkline data={telemetry} field="cpu_pct" color="#22d3ee" />
         </div>
       </Panel>

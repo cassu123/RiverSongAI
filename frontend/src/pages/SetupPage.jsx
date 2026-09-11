@@ -34,7 +34,7 @@ export default function SetupPage() {
         
         <div className="rs-text-center" style={{ marginBottom: '2.5rem' }}>
           <div className="rs-flex rs-items-center rs-gap-4 rs-justify-center rs-mb-2">
-            <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-h3)', padding: '12px 16px' }}>CORE</span>
+            <span className="rs-pill is-active rs-type-h3" style={{ padding: '12px 16px' }}>CORE</span>
             <span style={{ fontFamily: 'var(--font-mood)', fontSize: '1.6rem', letterSpacing: '0.2em', fontWeight: 600 }}>RIVER SONG</span>
           </div>
           <div className="rs-card-label" style={{ opacity: 0.5 }}>INITIAL SYSTEM BOOTSTRAP</div>
@@ -49,8 +49,8 @@ export default function SetupPage() {
             <div className="rs-card-label rs-mb-2" style={{ paddingLeft: 4 }}>PRIMARY OPERATOR</div>
             <input
               type="text"
-              className="rs-pill rs-w-full"
-              style={{ padding: '14px 20px', fontSize: 'var(--rs-fs-body)', background: 'var(--md-surface-container)' }}
+              className="rs-pill rs-w-full rs-type-body"
+              style={{ padding: '14px 20px', background: 'var(--md-surface-container)' }}
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
               placeholder="Real name or call-sign"
@@ -63,8 +63,8 @@ export default function SetupPage() {
             <div className="rs-card-label rs-mb-2" style={{ paddingLeft: 4 }}>SYSTEM IDENTIFIER</div>
             <input
               type="email"
-              className="rs-pill rs-w-full"
-              style={{ padding: '14px 20px', fontSize: 'var(--rs-fs-body)', background: 'var(--md-surface-container)' }}
+              className="rs-pill rs-w-full rs-type-body"
+              style={{ padding: '14px 20px', background: 'var(--md-surface-container)' }}
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="admin@riversong.node"
@@ -76,8 +76,8 @@ export default function SetupPage() {
             <div className="rs-card-label rs-mb-2" style={{ paddingLeft: 4 }}>MASTER KEY</div>
             <input
               type="password"
-              className="rs-pill rs-w-full"
-              style={{ padding: '14px 20px', fontSize: 'var(--rs-fs-body)', background: 'var(--md-surface-container)' }}
+              className="rs-pill rs-w-full rs-type-body"
+              style={{ padding: '14px 20px', background: 'var(--md-surface-container)' }}
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -85,7 +85,7 @@ export default function SetupPage() {
             />
           </div>
 
-          {error && <div className="rs-text-center" style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)' }}>{error.toUpperCase()}</div>}
+          {error && <div className="rs-text-center rs-type-tiny" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
 
           <button className="rs-btn-primary rs-mt-2" type="submit" disabled={loading}>
             {loading ? 'INITIALIZING KERNEL...' : 'PROVISION NODE'}

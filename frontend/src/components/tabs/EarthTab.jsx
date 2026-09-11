@@ -50,7 +50,7 @@ function OcearchMap({ lat, lon, sharks }) {
     })
   }, [sharks, mapReady])
 
-  return <div ref={mapRef} className="rs-w-full" style={{ height: '100%', borderRadius: 8, overflow: 'hidden' }} />
+  return <div ref={mapRef} className="rs-w-full rs-h-full rs-clip" style={{ borderRadius: 8 }} />
 }
 
 export default function EarthTab({ token, active }) {
@@ -119,29 +119,32 @@ export default function EarthTab({ token, active }) {
         {eonet.length > 0 ? eonet.map((e, i) => (
           <div key={i} className="rs-mb-4" style={{ paddingBottom: 14, borderBottom: i < eonet.length - 1 ? '1px solid var(--md-outline-variant)' : 'none' }}>
             <div className="rs-flex rs-items-start rs-justify-between rs-gap-3">
-              <div style={{ minWidth: 0 }}>
-                <div className="rs-mb-1" style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, lineHeight: 1.3 }}>{e.title}</div>
+              <div className="rs-min-w-0">
+                <div className="rs-mb-1 rs-type-tiny" style={{ fontWeight: 700, lineHeight: 1.3 }}>{e.title}</div>
                 <div className="rs-flex rs-items-center rs-gap-2">
-                  <div style={{ 
-                    fontSize: 'var(--rs-fs-nano)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                    background: e.category_color + '33', color: e.category_color
+                  <div className="rs-type-nano" style={{
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    background: e.category_color + '33',
+                    color: e.category_color,
                   }}>
                     {e.category}
                   </div>
-                  <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>
+                  <div className="rs-card-meta rs-type-nano">
                     {e.distance_mi.toLocaleString()} mi away
                   </div>
                 </div>
               </div>
               {e.source_url && (
-                <a href={e.source_url} target="_blank" rel="noreferrer" style={{ color: 'var(--md-on-surface-variant)', flexShrink: 0 }}>
+                <a href={e.source_url} target="_blank" rel="noreferrer" className="rs-no-shrink" style={{ color: 'var(--md-on-surface-variant)' }}>
                   <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>open_in_new</span>
                 </a>
               )}
             </div>
           </div>
         )) : (
-          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No nearby events reported recently.</div>
+          <div className="rs-card-meta rs-type-micro">No nearby events reported recently.</div>
         )}
       </div>
 
@@ -154,34 +157,34 @@ export default function EarthTab({ token, active }) {
         {neows.length > 0 ? neows.map((n, i) => (
           <div key={i} className="rs-mb-4" style={{ padding: '12px 14px', background: 'var(--md-surface-container-high)', borderRadius: 8, border: n.hazardous ? '1px solid #ff440055' : '1px solid transparent' }}>
             <div className="rs-flex rs-justify-between rs-items-center rs-mb-2">
-              <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 800 }}>{n.name}</div>
+              <div className="rs-type-tiny" style={{ fontWeight: 800 }}>{n.name}</div>
               {n.hazardous && (
-                <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#ff440033', color: '#ff4400' }}>
+                <div className="rs-type-nano" style={{ fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#ff440033', color: '#ff4400' }}>
                   HAZARDOUS
                 </div>
               )}
             </div>
             <div className="rs-gap-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
               <div>
-                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 2 }}>APPROACH</div>
-                <div style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{new Date(n.approach_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
+                <div className="rs-card-meta rs-type-nano" style={{ marginBottom: 2 }}>APPROACH</div>
+                <div className="rs-type-micro" style={{ fontWeight: 600 }}>{new Date(n.approach_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
               </div>
               <div>
-                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 2 }}>MISS DISTANCE</div>
-                <div style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{n.miss_distance_lunar.toFixed(1)} LD</div>
+                <div className="rs-card-meta rs-type-nano" style={{ marginBottom: 2 }}>MISS DISTANCE</div>
+                <div className="rs-type-micro" style={{ fontWeight: 600 }}>{n.miss_distance_lunar.toFixed(1)} LD</div>
               </div>
               <div>
-                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 2 }}>VELOCITY</div>
-                <div style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{n.velocity_kph.toLocaleString()} km/h</div>
+                <div className="rs-card-meta rs-type-nano" style={{ marginBottom: 2 }}>VELOCITY</div>
+                <div className="rs-type-micro" style={{ fontWeight: 600 }}>{n.velocity_kph.toLocaleString()} km/h</div>
               </div>
               <div>
-                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 2 }}>EST. DIAMETER</div>
-                <div style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{n.diameter_m} m</div>
+                <div className="rs-card-meta rs-type-nano" style={{ marginBottom: 2 }}>EST. DIAMETER</div>
+                <div className="rs-type-micro" style={{ fontWeight: 600 }}>{n.diameter_m} m</div>
               </div>
             </div>
           </div>
         )) : (
-          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No close approaches today.</div>
+          <div className="rs-card-meta rs-type-micro">No close approaches today.</div>
         )}
       </div>
 
@@ -192,11 +195,11 @@ export default function EarthTab({ token, active }) {
           <span style={{ opacity: 0.5 }}>OCEARCH</span>
         </div>
         {ocearch.length > 0 && weatherLatLon ? (
-          <div style={{ height: 300, position: 'relative', borderRadius: 8, overflow: 'hidden' }}>
+          <div className="rs-relative rs-clip" style={{ height: 300, borderRadius: 8 }}>
             <OcearchMap lat={weatherLatLon.lat} lon={weatherLatLon.lon} sharks={ocearch} />
           </div>
         ) : (
-          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No marine tracking data available.</div>
+          <div className="rs-card-meta rs-type-micro">No marine tracking data available.</div>
         )}
       </div>
 

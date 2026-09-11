@@ -84,15 +84,15 @@ export default function AdminModelFamiliesSection({ token }) {
             >
               <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>
+                  <div className="rs-type-small" style={{ fontWeight: 600 }}>
                     {family.displayName}
                     {ov.quirky_name && (
-                      <span style={{ marginLeft: 8, fontWeight: 400, fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-primary)' }}>
+                      <span className="rs-type-tiny" style={{ marginLeft: 8, fontWeight: 400, color: 'var(--md-primary)' }}>
                         → {ov.quirky_name}
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--md-outline)' }}>
+                  <div className="rs-type-nano" style={{ color: 'var(--md-outline)' }}>
                     {family.provider} · {family.blurb}
                   </div>
                 </div>
@@ -103,7 +103,7 @@ export default function AdminModelFamiliesSection({ token }) {
               </div>
 
               <div className="rs-gap-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-                <label style={{ fontSize: 'var(--rs-fs-micro)' }}>
+                <label className="rs-type-micro">
                   <span style={{ display: 'block', color: 'var(--md-outline)', marginBottom: 2 }}>
                     Quirky name
                   </span>
@@ -119,7 +119,7 @@ export default function AdminModelFamiliesSection({ token }) {
                 </label>
 
                 {TIER_ORDER.map(tier => (
-                  <label key={tier} style={{ fontSize: 'var(--rs-fs-micro)' }}>
+                  <label key={tier} className="rs-type-micro">
                     <span style={{ display: 'block', color: 'var(--md-outline)', marginBottom: 2 }}>
                       {TIER_META[tier].label} model_id
                     </span>

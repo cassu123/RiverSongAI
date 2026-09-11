@@ -30,17 +30,19 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, refresh, program 
           <MetricStat label="GEAR" value={t.gear || 'P'} />
           <MetricStat label="ODOMETER" value={Math.round(t.odometer_km ?? 0)} unit="km" />
           <div className="rs-flex rs-flex-col" style={{ gap: 2 }}>
-            <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>DOORS</div>
-            <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '3px 10px',
+            <div className="rs-card-label rs-type-nano">DOORS</div>
+            <span className="rs-pill rs-type-nano" style={{
+              padding: '3px 10px',
               color: t.locked ? 'var(--rs-status-nominal,#36d399)' : 'var(--rs-status-warning,#f4b740)',
-              borderColor: t.locked ? 'var(--rs-status-nominal,#36d399)' : 'var(--rs-status-warning,#f4b740)' }}>
+              borderColor: t.locked ? 'var(--rs-status-nominal,#36d399)' : 'var(--rs-status-warning,#f4b740)',
+            }}>
               {t.locked ? 'LOCKED' : 'UNLOCKED'}
             </span>
           </div>
         </div>
         <BatteryBar pct={t.battery_pct} />
         <div className="rs-mt-4">
-          <div className="rs-card-label rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>SPEED (km/h)</div>
+          <div className="rs-card-label rs-mb-1 rs-type-nano">SPEED (km/h)</div>
           <Sparkline data={telemetry} field="speed_kph" color="#a78bfa" />
         </div>
       </Panel>

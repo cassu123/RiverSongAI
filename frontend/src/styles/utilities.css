@@ -65,3 +65,30 @@
 .rs-p-5.rs-p-5 { padding: var(--rs-space-5); }
 .rs-p-6.rs-p-6 { padding: var(--rs-space-6); }
 .rs-p-7.rs-p-7 { padding: var(--rs-space-7); }
+
+/* --- Type roles -----------------------------------------------------------
+   The size rungs from chrome-shell.css, named so a component can ask for a
+   role instead of repeating the token. Alignment keeps the .rs-text-* prefix
+   it already had; sizes are .rs-type-* so the two never read as one family. */
+.rs-type-h3.rs-type-h3       { font-size: var(--rs-fs-h3); }
+.rs-type-body.rs-type-body   { font-size: var(--rs-fs-body); }
+.rs-type-small.rs-type-small { font-size: var(--rs-fs-small); }
+.rs-type-tiny.rs-type-tiny   { font-size: var(--rs-fs-tiny); }
+.rs-type-micro.rs-type-micro { font-size: var(--rs-fs-micro); }
+.rs-type-nano.rs-type-nano   { font-size: var(--rs-fs-nano); }
+
+.rs-muted.rs-muted           { color: var(--text-muted); }
+.rs-mono.rs-mono             { font-family: var(--font-mono); }
+
+.rs-text-left.rs-text-left   { text-align: left; }
+.rs-text-right.rs-text-right { text-align: right; }
+
+/* --- The rest of the repeated one-liners ---------------------------------- */
+.rs-nowrap.rs-nowrap         { white-space: nowrap; }
+.rs-ellipsis.rs-ellipsis     { text-overflow: ellipsis; }
+.rs-clip.rs-clip             { overflow: hidden; }
+.rs-no-shrink.rs-no-shrink   { flex-shrink: 0; }
+.rs-pointer.rs-pointer       { cursor: pointer; }
+.rs-relative.rs-relative     { position: relative; }
+.rs-h-full.rs-h-full         { height: 100%; }
+.rs-min-w-0.rs-min-w-0       { min-width: 0; }

@@ -37,13 +37,12 @@ export default function RateIndicator({ activeModel, token }) {
   if (!isNimOrAuto || rpm === null) return null
 
   return (
-    <span className="rs-pill" style={{
-      fontSize: 'var(--rs-fs-nano)',
+    <span className="rs-pill rs-type-nano" style={{
       marginLeft: 12,
       background: 'rgba(16, 185, 129, 0.15)',
       color: 'var(--rs-status-nominal)',
       border: '1px solid rgba(16, 185, 129, 0.3)',
-      fontWeight: 600
+      fontWeight: 600,
     }} title="NVIDIA NIM Requests Per Minute">
       <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', marginRight: 4 }}>speed</span>
       NIM {rpm} RPM

@@ -35,7 +35,7 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, commands, refresh
         </div>
         <BatteryBar pct={t.battery_pct} />
         <div className="rs-mt-4">
-          <div className="rs-card-label rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>ALTITUDE (m)</div>
+          <div className="rs-card-label rs-mb-1 rs-type-nano">ALTITUDE (m)</div>
           <Sparkline data={telemetry} field="altitude_m" color="var(--primary)" />
         </div>
       </Panel>
@@ -54,7 +54,7 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, commands, refresh
         {commands?.length ? (
           <div className="rs-flex rs-flex-col rs-gap-1">
             {commands.slice(0, 8).map(c => (
-              <div key={c.command_id} className="rs-flex rs-justify-between" style={{ fontSize: 'var(--rs-fs-micro)' }}>
+              <div key={c.command_id} className="rs-flex rs-justify-between rs-type-micro">
                 <span>{c.payload?.command}</span>
                 <span style={{ opacity: 0.55 }}>{c.status} · {new Date(c.issued_at).toLocaleTimeString()}</span>
               </div>

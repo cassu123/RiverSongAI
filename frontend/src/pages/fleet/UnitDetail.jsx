@@ -157,19 +157,19 @@ export default function UnitDetail() {
           <div className="rs-flex rs-flex-col rs-gap-5">
             {/* Telemetry Grid */}
             <div className="rs-card grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div><small style={{ color: 'var(--text-muted)' }}>Battery</small><div>{latestT.battery_pct ?? '--'}% ({latestT.battery_v ?? '--'}V)</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>Fuel</small><div>{latestT.fuel_pct ?? '--'}%</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>RPM</small><div>{latestT.rpm ?? '--'}</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>Speed</small><div>{latestT.speed_kmh ?? '--'} km/h</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>Temp</small><div>{latestT.temperature_c ?? '--'} &deg;C</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>Heading</small><div>{latestT.heading_deg ?? '--'}&deg;</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>Progress</small><div>{latestT.progress_pct ?? '--'}%</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>GPS Acc</small><div>{latestT.gps_accuracy_m ?? '--'}m</div></div>
+              <div><small className="rs-muted">Battery</small><div>{latestT.battery_pct ?? '--'}% ({latestT.battery_v ?? '--'}V)</div></div>
+              <div><small className="rs-muted">Fuel</small><div>{latestT.fuel_pct ?? '--'}%</div></div>
+              <div><small className="rs-muted">RPM</small><div>{latestT.rpm ?? '--'}</div></div>
+              <div><small className="rs-muted">Speed</small><div>{latestT.speed_kmh ?? '--'} km/h</div></div>
+              <div><small className="rs-muted">Temp</small><div>{latestT.temperature_c ?? '--'} &deg;C</div></div>
+              <div><small className="rs-muted">Heading</small><div>{latestT.heading_deg ?? '--'}&deg;</div></div>
+              <div><small className="rs-muted">Progress</small><div>{latestT.progress_pct ?? '--'}%</div></div>
+              <div><small className="rs-muted">GPS Acc</small><div>{latestT.gps_accuracy_m ?? '--'}m</div></div>
             </div>
 
             {/* Map */}
             <div className="rs-map">
-              <MapContainer center={[latestT.lat || 0, latestT.lng || 0]} zoom={18} className="rs-w-full" style={{ height: '100%' }}>
+              <MapContainer center={[latestT.lat || 0, latestT.lng || 0]} zoom={18} className="rs-w-full rs-h-full">
                 <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={20} />
                 {latestT.lat && <Marker position={[latestT.lat, latestT.lng]} />}
               </MapContainer>
@@ -178,12 +178,12 @@ export default function UnitDetail() {
             {/* Alerts */}
             <div className="rs-card">
               <h3>Recent Alerts</h3>
-              {alerts.length === 0 && <p style={{ color: 'var(--text-muted)' }}>No alerts.</p>}
+              {alerts.length === 0 && <p className="rs-muted">No alerts.</p>}
               {alerts.map(a => (
                 <div key={a.id} className="rs-flex rs-justify-between rs-p-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <div>
                     <strong style={{ color: a.level === 'critical' ? 'var(--danger)' : 'white' }}>{a.title}</strong>
-                    <div style={{ fontSize: '0.85em', color: 'var(--text-muted)' }}>{new Date(a.timestamp + 'Z').toLocaleString()}</div>
+                    <div className="rs-muted" style={{ fontSize: '0.85em' }}>{new Date(a.timestamp + 'Z').toLocaleString()}</div>
                     {a.message && <div style={{ fontSize: '0.9em' }}>{a.message}</div>}
                   </div>
                   {!a.acknowledged && (
@@ -246,7 +246,7 @@ export default function UnitDetail() {
       {tab === 'history' && (
         <div className="rs-card">
           <div className="rs-table-wrap">
-            <table className="rs-w-full" style={{ textAlign: 'left', borderCollapse: 'collapse' }}>
+            <table className="rs-w-full rs-text-left" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                   <th className="rs-p-3">Started At</th>

@@ -204,11 +204,11 @@ export default function DocumentsPage({ setAction }) {
             style={{ textAlign: 'left', padding: '8px 10px' }}
           >
             <div className="rs-flex rs-items-center rs-gap-2 rs-w-full">
-              {d.pinned && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>★</span>}
-              <span className="rs-grow" style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {d.pinned && <span className="rs-muted rs-type-nano">★</span>}
+              <span className="rs-grow rs-type-micro rs-clip rs-ellipsis rs-nowrap" style={{ fontWeight: 700 }}>
                 {d.title || 'Untitled'}
               </span>
-              <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{d.kind?.toUpperCase()}</span>
+              <span className="rs-card-label rs-muted rs-type-nano">{d.kind?.toUpperCase()}</span>
             </div>
           </button>
         ))}
@@ -226,13 +226,12 @@ export default function DocumentsPage({ setAction }) {
                 value={activeDoc.title}
                 onChange={onChangeTitle}
                 placeholder="Title"
-                className="rs-grow" style={{
+                className="rs-grow rs-type-small" style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(255,255,255,0.12)',
                   borderRadius: 8,
                   padding: '10px 12px',
                   color: 'var(--md-on-surface)',
-                  fontSize: 'var(--rs-fs-small)',
                   fontWeight: 700,
                   outline: 'none',
                   fontFamily: 'inherit',
@@ -241,13 +240,12 @@ export default function DocumentsPage({ setAction }) {
               <select
                 value={activeDoc.kind}
                 onChange={onChangeKind}
-                style={{
+                className="rs-type-nano" style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(255,255,255,0.12)',
                   borderRadius: 8,
                   padding: '9px 10px',
                   color: 'var(--md-on-surface)',
-                  fontSize: 'var(--rs-fs-nano)',
                   fontWeight: 700,
                   letterSpacing: '0.08em',
                   outline: 'none',
@@ -267,7 +265,7 @@ export default function DocumentsPage({ setAction }) {
               onChange={onChangeBody}
               placeholder="Type here. Auto-saves."
               spellCheck={true}
-              className="rs-grow rs-p-4" style={{
+              className="rs-grow rs-p-4 rs-type-small" style={{
                 minHeight: 'calc(100dvh - 300px)',
                 background: 'rgba(0,0,0,0.18)',
                 border: '1px solid rgba(255,255,255,0.08)',
@@ -276,14 +274,13 @@ export default function DocumentsPage({ setAction }) {
                 fontFamily: activeDoc.kind === 'markdown' || activeDoc.kind === 'csv' || activeDoc.kind === 'html'
                   ? 'ui-monospace, SFMono-Regular, Menlo, monospace'
                   : 'inherit',
-                fontSize: 'var(--rs-fs-small)',
                 lineHeight: 1.55,
                 outline: 'none',
                 resize: 'vertical',
               }}
             />
 
-            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
+            {error && <div className="rs-type-micro" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
           </>
         )}
       </div>

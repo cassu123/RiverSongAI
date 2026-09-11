@@ -315,7 +315,7 @@ export default function HomeNodePage({ setAction }) {
                 </span>
                 <span>{a.text}</span>
                 {(a.domain === 'lock' || a.domain === 'cover') && (
-                  <span style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.9, textDecoration: 'underline', marginLeft: 4 }}>
+                  <span className="rs-type-micro" style={{ opacity: 0.9, textDecoration: 'underline', marginLeft: 4 }}>
                     Secure
                   </span>
                 )}
@@ -401,7 +401,7 @@ export default function HomeNodePage({ setAction }) {
           <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: 48, color: 'var(--warn)' }}>
             cloud_off
           </span>
-          <h2 className="rs-mb-2" style={{ fontSize: 'var(--rs-fs-h3)', fontWeight: 600, color: 'var(--fg)' }}>
+          <h2 className="rs-mb-2 rs-type-h3" style={{ fontWeight: 600, color: 'var(--fg)' }}>
             Home Assistant Unreachable
           </h2>
           <p className="rs-card-meta" style={{ maxWidth: 440, margin: '0 auto 20px auto' }}>
@@ -470,10 +470,10 @@ export default function HomeNodePage({ setAction }) {
 
           {operable.length === 0 && (
             <div className="rs-card is-wide animate-fade-in rs-text-center rs-p-6">
-              <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: 44, color: 'var(--text-muted)' }}>
+              <span className="material-symbols-rounded rs-mb-3 rs-muted" style={{ fontSize: 44 }}>
                 devices
               </span>
-              <p className="rs-card-meta rs-mb-4" style={{ fontSize: 'var(--rs-fs-body)', color: 'var(--fg)' }}>
+              <p className="rs-card-meta rs-mb-4 rs-type-body" style={{ color: 'var(--fg)' }}>
                 No active devices found in Home Assistant.
               </p>
               <button className="gh-glance-action" style={{ margin: '0 auto' }} onClick={runSync} disabled={syncing}>
@@ -652,12 +652,11 @@ function ClimateTile({ device, busy, onAction }) {
           <span className="material-symbols-rounded">{isCooling ? 'ac_unit' : 'thermostat'}</span>
         </div>
         <span
-          className="gh-chip"
+          className="gh-chip rs-type-micro"
           style={{
             padding: '4px 10px',
-            fontSize: 'var(--rs-fs-micro)',
             color: isCooling ? '#96cbff' : isHeating ? '#fed7aa' : 'rgba(255,255,255,0.7)',
-            borderColor: isCooling ? 'rgba(0, 229, 255, 0.4)' : isHeating ? 'rgba(251, 146, 60, 0.4)' : undefined
+            borderColor: isCooling ? 'rgba(0, 229, 255, 0.4)' : isHeating ? 'rgba(251, 146, 60, 0.4)' : undefined,
           }}
         >
           {String(device.state).toUpperCase()}
@@ -875,7 +874,7 @@ function NotConfigured() {
       <div className="rs-card-head rs-mb-3">
         <span className="rs-card-label">SETUP HOME ASSISTANT</span>
       </div>
-      <p className="rs-card-meta rs-mb-5" style={{ fontSize: 'var(--rs-fs-small)' }}>
+      <p className="rs-card-meta rs-mb-5 rs-type-small">
         River Song connects directly to your local or remote Home Assistant instance. Add your URL and long-lived access token to <code>.env</code> to activate tactile smart home controls.
       </p>
       <div className="rs-flex rs-flex-col rs-gap-4">
@@ -887,14 +886,12 @@ function NotConfigured() {
           <span className="gh-chip rs-justify-center" style={{ width: 28, height: 28, padding: 0 }}>2</span>
           <span>Add to your backend <code>.env</code> file:</span>
         </div>
-        <div style={{
+        <div className="rs-mono rs-type-tiny" style={{
           padding: '14px 18px',
           background: 'rgba(0,0,0,0.35)',
           borderRadius: '16px',
-          fontFamily: 'var(--font-mono)',
-          fontSize: 'var(--rs-fs-tiny)',
           color: 'var(--md-primary)',
-          border: '1px solid rgba(0, 229, 255, 0.2)'
+          border: '1px solid rgba(0, 229, 255, 0.2)',
         }}>
           <div>HOME_ASSISTANT_URL=http://homeassistant.local:8123</div>
           <div>HOME_ASSISTANT_TOKEN=your_token_here</div>

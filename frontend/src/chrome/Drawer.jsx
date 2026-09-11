@@ -68,7 +68,7 @@ export default function Drawer({
         <div className="rs-drawer-head">
           <div className="rs-flex rs-items-center rs-gap-3">
             <RsMark mark="mono" size={26} />
-            <span style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>
+            <span className="rs-type-body" style={{ fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>
               Spaces & Services
             </span>
           </div>
@@ -141,7 +141,7 @@ export default function Drawer({
 
           {userIsAdmin && (
             <div className="rs-mt-3 rs-flex rs-items-center rs-justify-between" style={{ padding: '6px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)' }}>
-              <span style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)', fontWeight: 500 }}>Admin Mode</span>
+              <span className="rs-type-tiny rs-muted" style={{ fontWeight: 500 }}>Admin Mode</span>
               <button
                 className={`rs-drawer-toggle ${adminMode ? 'is-on' : ''}`}
                 onClick={() => onAdminToggle(!adminMode)}

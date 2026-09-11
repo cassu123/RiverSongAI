@@ -79,7 +79,7 @@ export default function NewsTab({ token, active }) {
   const renderSourcePicker = () => {
     if (!Object.keys(catMeta).length) {
       return (
-        <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>
+        <div className="rs-card-meta rs-muted rs-type-micro">
           Loading source catalogue…
         </div>
       )
@@ -104,7 +104,7 @@ export default function NewsTab({ token, active }) {
                 >
                   {meta?.icon || 'rss_feed'}
                 </span>
-                <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
+                <span className="rs-card-label rs-muted rs-type-nano">
                   {/* A category arriving without a label took the whole Feeds
                       page down with a render fault; fall back to its key. */}
                   {(meta?.label || cat).toUpperCase()}
@@ -220,7 +220,7 @@ function NewsSkeletons() {
     <div className="rs-flex rs-flex-col rs-gap-3">
       {[0, 1, 2, 3, 4].map(i => (
         <div key={i} className="rs-flex rs-gap-4" style={{ padding: '14px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
-          <div style={{ width: 80, height: 64, borderRadius: 6, background: 'var(--md-outline-variant)', flexShrink: 0, opacity: 0.4 }} />
+          <div className="rs-no-shrink" style={{ width: 80, height: 64, borderRadius: 6, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
           <div className="rs-grow rs-flex rs-flex-col rs-gap-2">
             <div style={{ height: 9, width: '35%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.5 }} />
             <div style={{ height: 12, width: '85%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />

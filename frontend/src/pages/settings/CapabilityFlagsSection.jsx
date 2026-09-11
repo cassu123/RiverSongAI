@@ -19,34 +19,32 @@ export default function CapabilityFlagsSection({ data }) {
             borderRadius: 'var(--md-shape-md)'
           }}>
             <div className="rs-flex rs-items-center rs-justify-between rs-mb-2">
-              <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)', color: 'var(--md-on-surface)' }}>
+              <div className="rs-type-small" style={{ fontWeight: 600, color: 'var(--md-on-surface)' }}>
                 {flag.key}
               </div>
-              <div style={{
-                fontSize: 'var(--rs-fs-micro)',
+              <div className="rs-type-micro" style={{
                 fontWeight: 700,
                 padding: '2px 8px',
                 borderRadius: '12px',
                 background: flag.enabled ? 'color-mix(in srgb, var(--rs-status-success) 15%, transparent)' : 'color-mix(in srgb, var(--md-outline) 15%, transparent)',
-                color: flag.enabled ? 'var(--rs-status-success)' : 'var(--md-on-surface-variant)'
+                color: flag.enabled ? 'var(--rs-status-success)' : 'var(--md-on-surface-variant)',
               }}>
                 {flag.enabled ? 'ON' : 'OFF'}
               </div>
             </div>
             
-            <p className="rs-mb-3" style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)', lineHeight: 1.4 }}>
+            <p className="rs-mb-3 rs-type-tiny" style={{ color: 'var(--md-on-surface-variant)', lineHeight: 1.4 }}>
               {flag.description}
             </p>
             
-            <div style={{
-              fontSize: 'var(--rs-fs-micro)',
+            <div className="rs-type-micro" style={{
               fontFamily: 'var(--font-mono, monospace)',
               background: 'var(--md-surface-container)',
               padding: '6px 10px',
               borderRadius: 'var(--md-shape-sm)',
               color: 'var(--md-on-surface)',
               userSelect: 'all',
-              border: '1px solid color-mix(in srgb, var(--md-outline) 20%, transparent)'
+              border: '1px solid color-mix(in srgb, var(--md-outline) 20%, transparent)',
             }}>
               {flag.env_var}={flag.enabled ? 'true' : 'false'}
             </div>

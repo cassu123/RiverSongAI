@@ -226,20 +226,19 @@ export default function ShoppingListTab({ api, refreshKey }) {
     return (
       <div
         key={item.id}
-        className="rs-pill rs-gap-3 rs-flex-wrap"
+        className="rs-pill rs-gap-3 rs-flex-wrap rs-relative"
         style={{
           justifyContent: 'flex-start',
           padding: '10px 14px',
           opacity: item.checked ? 0.45 : 1,
           background: 'var(--md-surface-container-low)',
-          position: 'relative',
         }}
       >
         <button
-          className="rs-pill rs-p-1"
+          className="rs-pill rs-p-1 rs-min-w-0"
           aria-label={item.checked ? `Uncheck ${item.name}` : `Check off ${item.name}`}
           aria-pressed={item.checked}
-          style={{ minWidth: 0, background: 'transparent' }}
+          style={{ background: 'transparent' }}
           disabled={busy}
           onClick={() => mutate(() => api.patch(`/grocery/${item.id}`, { checked: !item.checked }))}
         >
@@ -249,7 +248,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
         </button>
 
         {(item.qty || item.unit) && (
-          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--primary)', whiteSpace: 'nowrap' }}>
+          <span className="rs-mono rs-nowrap" style={{ fontWeight: 800, color: 'var(--primary)' }}>
             {[item.qty, item.unit].filter(Boolean).join(' ')}
           </span>
         )}
@@ -259,13 +258,12 @@ export default function ShoppingListTab({ api, refreshKey }) {
         </span>
 
         {/* Store Tag / Quick Store Selector */}
-        <div style={{ position: 'relative' }}>
+        <div className="rs-relative">
           <button
             type="button"
-            className="rs-pill rs-gap-1"
+            className="rs-pill rs-gap-1 rs-type-small"
             style={{
               padding: '2px 8px',
-              fontSize: 'var(--rs-fs-small)',
               fontWeight: 700,
               border: `1px solid ${storeMeta ? storeMeta.color : 'rgba(255,255,255,0.18)'}`,
               color: storeMeta ? storeMeta.color : 'inherit',
@@ -294,8 +292,8 @@ export default function ShoppingListTab({ api, refreshKey }) {
               }}
             >
               <button
-                className="rs-mpop-row"
-                style={{ padding: '6px 8px', fontSize: 'var(--rs-fs-small)' }}
+                className="rs-mpop-row rs-type-small"
+                style={{ padding: '6px 8px' }}
                 onClick={() => handleQuickStoreChange(item.id, null)}
               >
                 <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>remove_circle_outline</span>
@@ -306,8 +304,8 @@ export default function ShoppingListTab({ api, refreshKey }) {
                 return (
                   <button
                     key={st}
-                    className="rs-mpop-row"
-                    style={{ padding: '6px 8px', fontSize: 'var(--rs-fs-small)' }}
+                    className="rs-mpop-row rs-type-small"
+                    style={{ padding: '6px 8px' }}
                     onClick={() => handleQuickStoreChange(item.id, st)}
                   >
                     <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', color: meta.color }}>
@@ -322,17 +320,17 @@ export default function ShoppingListTab({ api, refreshKey }) {
         </div>
 
         <span
-          className="rs-card-label"
-          style={{ fontSize: 'var(--rs-fs-tiny)', whiteSpace: 'nowrap', color: SOURCE_COLORS[item.source] || 'inherit', opacity: 0.85 }}
+          className="rs-card-label rs-type-tiny rs-nowrap"
+          style={{ color: SOURCE_COLORS[item.source] || 'inherit', opacity: 0.85 }}
         >
           {SOURCE_LABELS[item.source] || item.source?.toUpperCase()}
           {item.added_by_name && !item.is_mine ? ` · ${item.added_by_name}` : ''}
         </span>
 
         <button
-          className="rs-pill rs-p-1"
+          className="rs-pill rs-p-1 rs-min-w-0"
           aria-label={`Remove ${item.name}`}
-          style={{ minWidth: 0, background: 'transparent' }}
+          style={{ background: 'transparent' }}
           disabled={busy}
           onClick={() => mutate(() => api.delete(`/grocery/${item.id}`))}
         >
@@ -349,9 +347,8 @@ export default function ShoppingListTab({ api, refreshKey }) {
       {/* Store Filter Tabs */}
       <div className="rs-flex rs-gap-2" style={{ overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
         <button
-          className="rs-pill"
+          className="rs-pill rs-type-small"
           style={{
-            fontSize: 'var(--rs-fs-small)',
             padding: '6px 12px',
             background: activeStoreFilter === 'all' ? 'var(--primary)' : 'var(--md-surface-container-low)',
             color: activeStoreFilter === 'all' ? '#000' : 'inherit',
@@ -368,9 +365,8 @@ export default function ShoppingListTab({ api, refreshKey }) {
           return (
             <button
               key={st}
-              className="rs-pill"
+              className="rs-pill rs-type-small"
               style={{
-                fontSize: 'var(--rs-fs-small)',
                 padding: '6px 12px',
                 gap: 5,
                 background: isActive ? (meta ? meta.color : 'var(--primary)') : 'var(--md-surface-container-low)',
@@ -602,9 +598,8 @@ export default function ShoppingListTab({ api, refreshKey }) {
                 return (
                   <button
                     key={st}
-                    className="rs-pill"
+                    className="rs-pill rs-type-small"
                     style={{
-                      fontSize: 'var(--rs-fs-small)',
                       padding: '4px 10px',
                       background: isSelected ? meta.color : 'var(--md-surface-container-low)',
                       color: isSelected ? '#fff' : 'inherit',
@@ -621,16 +616,16 @@ export default function ShoppingListTab({ api, refreshKey }) {
 
             <form onSubmit={saveMapping} className="rs-flex rs-gap-2 rs-flex-wrap">
               <input
-                className="rs-pill"
-                style={{ flex: '1 1 160px', minWidth: 0, background: 'var(--md-surface-container-low)', border: 'none' }}
+                className="rs-pill rs-min-w-0"
+                style={{ flex: '1 1 160px', background: 'var(--md-surface-container-low)', border: 'none' }}
                 placeholder="Ingredient / Item name"
                 aria-label="Ingredient name"
                 value={mapName}
                 onChange={e => setMapName(e.target.value)}
               />
               <input
-                className="rs-pill"
-                style={{ flex: '2 1 220px', minWidth: 0, background: 'var(--md-surface-container-low)', border: 'none' }}
+                className="rs-pill rs-min-w-0"
+                style={{ flex: '2 1 220px', background: 'var(--md-surface-container-low)', border: 'none' }}
                 placeholder={`${activeLinkStore.toUpperCase()} URL, SKU, or Product ID`}
                 aria-label="Store URL or Product ID"
                 value={mapId}
@@ -653,11 +648,11 @@ export default function ShoppingListTab({ api, refreshKey }) {
                       {meta?.icon || 'store'}
                     </span>
                     <span className="rs-grow" style={{ fontWeight: 600 }}>{m.ingredient_name}</span>
-                    <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-small)' }}>{m.store_item_id}</span>
+                    <span className="rs-muted rs-mono rs-type-small">{m.store_item_id}</span>
                     <button
-                      className="rs-pill rs-p-1"
+                      className="rs-pill rs-p-1 rs-min-w-0"
                       aria-label={`Unlink ${m.ingredient_name}`}
-                      style={{ minWidth: 0, background: 'transparent' }}
+                      style={{ background: 'transparent' }}
                       onClick={async () => {
                         await api.delete(`/store/mappings/${m.id}`)
                         loadMappings(activeLinkStore)

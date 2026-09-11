@@ -88,8 +88,8 @@ export default function AudioVisualizer({ audioLevel }) {
       ref={canvasRef}
       width={300}
       height={300}
-      className="audio-visualizer-canvas rs-w-full"
-      style={{ height: '100%', maxWidth: 300, maxHeight: 300 }}
+      className="audio-visualizer-canvas rs-w-full rs-h-full"
+      style={{ maxWidth: 300, maxHeight: 300 }}
       aria-hidden="true"
     />
   )

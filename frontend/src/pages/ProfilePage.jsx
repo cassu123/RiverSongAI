@@ -241,18 +241,17 @@ function TwoFactorCard({ token }) {
               Scan the code, or paste this secret manually:
             </div>
             <code
-              className="rs-mb-4" style={{
+              className="rs-mb-4 rs-type-tiny" style={{
                 display: 'block',
                 padding: '8px 12px',
                 background: 'var(--md-surface-container)',
                 borderRadius: 6,
-                fontSize: 'var(--rs-fs-tiny)',
                 wordBreak: 'break-all',
               }}
             >
               {enrollment.secret}
             </code>
-            <div className="rs-card-label rs-mb-2" style={{ fontSize: 'var(--rs-fs-nano)' }}>VERIFY WITH FIRST CODE</div>
+            <div className="rs-card-label rs-mb-2 rs-type-nano">VERIFY WITH FIRST CODE</div>
             <input
               type="text"
               inputMode="numeric"
@@ -286,7 +285,7 @@ function TwoFactorCard({ token }) {
             }}
           >
             {recoveryCodes.map((c, i) => (
-              <code key={i} className="rs-text-center" style={{ fontSize: 'var(--rs-fs-small)' }}>{c}</code>
+              <code key={i} className="rs-text-center rs-type-small">{c}</code>
             ))}
           </div>
           <button className="rs-btn-primary" onClick={dismissRecoveryCodes}>I'VE SAVED THEM</button>
@@ -452,25 +451,25 @@ export default function ProfilePage({
           </div>
           <div className="rs-flex rs-gap-5 rs-flex-wrap" style={{ alignItems: 'flex-end' }}>
             <div className="rs-grow" style={{ minWidth: 240 }}>
-              <div className="rs-card-label rs-mb-2" style={{ fontSize: 'var(--rs-fs-micro)' }}>DISPLAY NAME</div>
+              <div className="rs-card-label rs-mb-2 rs-type-micro">DISPLAY NAME</div>
               <input 
                 type="text" 
-                className="rs-pill rs-w-full" 
-                style={{ padding: '12px 18px', fontSize: 'var(--rs-fs-body)', background: 'var(--md-surface-container)' }}
+                className="rs-pill rs-w-full rs-type-body" 
+                style={{ padding: '12px 18px', background: 'var(--md-surface-container)' }}
                 value={displayName} 
                 onChange={e => setDisplayName(e.target.value)} 
               />
             </div>
-            <button className="rs-btn-primary" style={{ padding: '12px 24px', fontSize: 'var(--rs-fs-small)' }} onClick={handleSaveProfile}>SAVE CHANGES</button>
+            <button className="rs-btn-primary rs-type-small" style={{ padding: '12px 24px' }} onClick={handleSaveProfile}>SAVE CHANGES</button>
           </div>
           <div className="rs-card-meta rs-mt-5 rs-flex rs-gap-6">
             <div>
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>ACCOUNT EMAIL</div>
-              <div className="rs-mt-1" style={{ fontSize: 'var(--rs-fs-body)' }}>{user?.email}</div>
+              <div className="rs-card-label rs-type-nano">ACCOUNT EMAIL</div>
+              <div className="rs-mt-1 rs-type-body">{user?.email}</div>
             </div>
             <div>
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>ROLE & CLEARANCE</div>
-              <div className="rs-mt-1" style={{ fontSize: 'var(--rs-fs-body)', color: user?.role === 'admin' ? '#96cbff' : 'var(--primary)', fontWeight: 700 }}>
+              <div className="rs-card-label rs-type-nano">ROLE & CLEARANCE</div>
+              <div className="rs-mt-1 rs-type-body" style={{ color: user?.role === 'admin' ? '#96cbff' : 'var(--primary)', fontWeight: 700 }}>
                 {user?.role ? user.role.toUpperCase() : 'USER'}
               </div>
             </div>
@@ -490,8 +489,8 @@ export default function ProfilePage({
                 style={{ borderColor: universe === u.key ? 'var(--primary)' : undefined }}
                 onClick={() => onUniverseChange(u.key)}
               >
-                <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', letterSpacing: '0.06em' }}>{u.label}</div>
-                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-tiny)' }}>{u.hint}</div>
+                <div className="rs-card-value rs-type-body" style={{ letterSpacing: '0.06em' }}>{u.label}</div>
+                <div className="rs-card-meta rs-type-tiny">{u.hint}</div>
               </div>
             ))}
           </div>
@@ -543,8 +542,8 @@ export default function ProfilePage({
           </div>
           <div className="rs-flex rs-items-center rs-gap-5 rs-flex-wrap">
             <div className="rs-grow">
-              <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)' }}>Device Push Alerts</div>
-              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)' }}>Enable push notifications to receive system briefings, alerts, and smart home events directly on this device.</div>
+              <div className="rs-card-value rs-type-body">Device Push Alerts</div>
+              <div className="rs-card-meta rs-type-small">Enable push notifications to receive system briefings, alerts, and smart home events directly on this device.</div>
             </div>
             <button 
               className={`rs-btn-primary ${pushStatus === 'linked' ? 'is-active' : ''}`} 
@@ -594,11 +593,11 @@ export default function ProfilePage({
                       <div className="rs-flex rs-items-center rs-gap-4">
                         <span className="material-symbols-rounded" style={{ fontSize: '24px', opacity: 0.8 }}>{service.icon}</span>
                         <div>
-                          <div style={{ fontWeight: 600, color: 'var(--text-base)', fontSize: 'var(--rs-fs-small)' }}>
+                          <div className="rs-type-small" style={{ fontWeight: 600, color: 'var(--text-base)' }}>
                             {service.name}
                           </div>
                           {isConnected && (
-                            <div className="rs-mt-1 rs-flex rs-items-center rs-gap-1" style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--rs-status-nominal)' }}>
+                            <div className="rs-mt-1 rs-flex rs-items-center rs-gap-1 rs-type-micro" style={{ color: 'var(--rs-status-nominal)' }}>
                               <span className="material-symbols-rounded" style={{ fontSize: '12px' }}>check_circle</span>
                               Connected
                               {meta.email && ` as ${meta.email}`}
@@ -610,27 +609,27 @@ export default function ProfilePage({
                       
                       {isConnected ? (
                         <button
-                          className="rs-pill rs-justify-center"
+                          className="rs-pill rs-justify-center rs-type-nano"
                           onClick={() => handleDisconnect(service.key)}
                           disabled={disconnecting === service.key}
-                          style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-nano)', minWidth: '110px' }}
+                          style={{ padding: '6px 16px', minWidth: '110px' }}
                         >
                           {disconnecting === service.key ? 'DISCONNECTING...' : 'DISCONNECT'}
                         </button>
                       ) : service.comingSoon ? (
                         <button
-                          className="rs-pill rs-justify-center"
+                          className="rs-pill rs-justify-center rs-muted rs-type-nano"
                           disabled
                           title="This integration is not available yet."
-                          style={{ color: 'var(--text-muted)', padding: '6px 16px', fontSize: 'var(--rs-fs-nano)', minWidth: '110px' }}
+                          style={{ padding: '6px 16px', minWidth: '110px' }}
                         >
                           COMING SOON
                         </button>
                       ) : (
                         <button
-                          className="rs-btn-primary rs-justify-center"
+                          className="rs-btn-primary rs-justify-center rs-type-micro"
                           onClick={() => handleConnect(service.key)}
-                          style={{ padding: '8px 16px', fontSize: 'var(--rs-fs-micro)', minWidth: '110px', borderRadius: '4px' }}
+                          style={{ padding: '8px 16px', minWidth: '110px', borderRadius: '4px' }}
                         >
                           CONNECT
                         </button>

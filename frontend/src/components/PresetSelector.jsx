@@ -65,12 +65,12 @@ export default function PresetSelector({ onApply, onManage }) {
   }
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
+    <div className="rs-relative" style={{ display: 'inline-block' }}>
       <button
-        className="rs-pill"
+        className="rs-pill rs-type-nano"
         onClick={() => setOpen(o => !o)}
         title="Session presets"
-        style={{ fontSize: 'var(--rs-fs-nano)' }}
+       
       >
         <span className="material-symbols-rounded" style={{ fontSize: '0.95rem', marginRight: 4 }}>tune</span>
         <span className="rs-speak-actions-label">Presets</span>
@@ -99,25 +99,25 @@ export default function PresetSelector({ onApply, onManage }) {
             {presets.map(p => (
               <button
                 key={p.id}
-                className="rs-drawer-item rs-w-full"
+                className="rs-drawer-item rs-w-full rs-text-left"
                 onClick={() => apply(p)}
                 disabled={applying === p.id}
-                style={{ textAlign: 'left', padding: '8px 10px' }}
+                style={{ padding: '8px 10px' }}
               >
-                <span className="rs-grow" style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)' }}>
+                <span className="rs-grow rs-type-micro" style={{ fontWeight: 700 }}>
                   {p.is_default && <span style={{ marginRight: 4, opacity: 0.7 }}>★</span>}
                   {p.name}
                 </span>
-                {applying === p.id && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>APPLYING…</span>}
+                {applying === p.id && <span className="rs-muted rs-type-nano">APPLYING…</span>}
               </button>
             ))}
             {onManage && (
               <button
-                className="rs-drawer-item rs-w-full rs-mt-1"
+                className="rs-drawer-item rs-w-full rs-mt-1 rs-text-left"
                 onClick={() => { setOpen(false); onManage() }}
-                style={{ textAlign: 'left', padding: '8px 10px', opacity: 0.7, borderTop: '1px solid rgba(255,255,255,0.08)' }}
+                style={{ padding: '8px 10px', opacity: 0.7, borderTop: '1px solid rgba(255,255,255,0.08)' }}
               >
-                <span style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700 }}>+ MANAGE PRESETS</span>
+                <span className="rs-type-nano" style={{ fontWeight: 700 }}>+ MANAGE PRESETS</span>
               </button>
             )}
           </div>

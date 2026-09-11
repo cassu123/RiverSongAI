@@ -135,7 +135,7 @@ export default function WebhookTokensPage({ setAction }) {
             >COPY</button>
             <button className="rs-pill" onClick={() => setFreshlyMinted(null)}>DISMISS</button>
           </div>
-          <div className="rs-mt-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
+          <div className="rs-mt-2 rs-muted rs-type-nano">
             This is the only time the plaintext is shown. Only a sha256 digest is stored.
           </div>
         </div>
@@ -167,7 +167,7 @@ export default function WebhookTokensPage({ setAction }) {
               placeholder="Expires at (ISO-8601 UTC, optional) — e.g. 2026-12-31T23:59:59Z"
               style={inputStyle}
             />
-            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
+            {error && <div className="rs-type-micro" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
             <div className="rs-flex rs-gap-3">
               <button className="rs-pill is-active" onClick={create}>ISSUE</button>
               <button className="rs-pill" onClick={cancel}>CANCEL</button>
@@ -198,24 +198,23 @@ export default function WebhookTokensPage({ setAction }) {
             <div key={t.id} className="rs-card is-wide rs-p-4" style={{ opacity: dim ? 0.55 : 1 }}>
               <div className="rs-card-head">
                 <span className="rs-card-label">{t.label?.toUpperCase()}</span>
-                <span className="rs-pill" style={{
-                  fontSize: 'var(--rs-fs-nano)',
+                <span className="rs-pill rs-type-nano" style={{
                   background: revoked ? 'var(--md-error)' : expired ? 'rgba(255,255,255,0.15)' : 'var(--md-secondary)',
                   color: 'var(--bg-base)',
                 }}>{revoked ? 'REVOKED' : expired ? 'EXPIRED' : 'ACTIVE'}</span>
               </div>
-              <div className="rs-mt-1" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
+              <div className="rs-mt-1 rs-muted rs-type-nano">
                 ID {t.id} · USES {t.use_count}{t.last_used_at ? ` · LAST ${t.last_used_at}` : ''}
               </div>
               {(t.scopes || []).length > 0 && (
                 <div className="rs-flex rs-flex-wrap rs-gap-1 rs-mt-2">
                   {t.scopes.map((s, i) => (
-                    <span key={i} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px' }}>{s}</span>
+                    <span key={i} className="rs-pill rs-type-nano" style={{ padding: '1px 6px' }}>{s}</span>
                   ))}
                 </div>
               )}
               {t.expires_at && (
-                <div className="rs-mt-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
+                <div className="rs-mt-2 rs-muted rs-type-nano">
                   EXPIRES {t.expires_at}
                 </div>
               )}
@@ -244,9 +243,8 @@ export default function WebhookTokensPage({ setAction }) {
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="rs-p-5" style={{
+            className="rs-p-5 rs-h-full" style={{
               width: 'min(520px, 100vw)',
-              height: '100%',
               overflowY: 'auto',
               background: 'var(--bg-surface, #1a1a1a)',
               borderLeft: '1px solid rgba(255,255,255,0.1)',
@@ -261,10 +259,9 @@ export default function WebhookTokensPage({ setAction }) {
               <div className="rs-card-meta">No audit entries.</div>
             )}
             {!audit.loading && audit.entries.map(e => (
-              <div key={e.id} className="rs-p-3 rs-mb-2" style={{
+              <div key={e.id} className="rs-p-3 rs-mb-2 rs-type-micro" style={{
                 background: 'rgba(255,255,255,0.04)',
                 borderRadius: 6,
-                fontSize: 'var(--rs-fs-micro)',
               }}>
                 <div className="rs-flex rs-justify-between rs-mb-1">
                   <span style={{ fontWeight: 600 }}>{e.action?.toUpperCase()}</span>
@@ -272,11 +269,13 @@ export default function WebhookTokensPage({ setAction }) {
                 </div>
                 <div style={{ opacity: 0.7, marginBottom: 2 }}>ACTOR {e.actor || '—'}</div>
                 {!audit.tokenId && (
-                  <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>TOKEN {e.token_id}</div>
+                  <div className="rs-muted rs-type-nano">TOKEN {e.token_id}</div>
                 )}
                 {e.detail && (
-                  <pre style={{ color: 'var(--text-muted)', margin: '4px 0 0', fontSize: 'var(--rs-fs-nano)',
-                    whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                  <pre className="rs-muted rs-type-nano" style={{
+                    margin: '4px 0 0',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
                   }}>{e.detail}</pre>
                 )}
               </div>

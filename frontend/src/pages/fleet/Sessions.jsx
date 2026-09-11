@@ -84,7 +84,7 @@ export default function Sessions() {
 
       <div className="rs-card">
         <div className="rs-table-wrap">
-          <table className="rs-w-full" style={{ textAlign: 'left', borderCollapse: 'collapse' }}>
+          <table className="rs-w-full rs-text-left" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                 <th className="rs-p-3">Started At</th>
@@ -109,7 +109,7 @@ export default function Sessions() {
                 }
 
                 return (
-                  <tr key={s.session_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }} onClick={() => openSessionDetail(s)}>
+                  <tr key={s.session_id} className="rs-pointer" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }} onClick={() => openSessionDetail(s)}>
                     <td className="rs-p-3">{new Date(s.started_at + 'Z').toLocaleString()}</td>
                     <td className="rs-p-3">{u ? u.name : s.unit_id}</td>
                     <td className="rs-p-3">{p ? p.name : s.program_id}</td>
@@ -174,9 +174,9 @@ export default function Sessions() {
                     <div className="rs-p-3" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, maxHeight: 300, overflowY: 'auto' }}>
                       {sessionDetails.events.map((e, idx) => (
                         <div key={idx} style={{ padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.9em' }}>
-                          <span style={{ color: 'var(--text-muted)', marginRight: 10 }}>{new Date(e.timestamp + 'Z').toLocaleTimeString()}</span>
+                          <span className="rs-muted" style={{ marginRight: 10 }}>{new Date(e.timestamp + 'Z').toLocaleTimeString()}</span>
                           <strong>{e.event}</strong>
-                          <span style={{ color: 'var(--text-muted)', marginLeft: 10 }}>{e.data}</span>
+                          <span className="rs-muted" style={{ marginLeft: 10 }}>{e.data}</span>
                         </div>
                       ))}
                     </div>

@@ -141,7 +141,7 @@ export default function Programs() {
 
       <div className="rs-card">
         <div className="rs-table-wrap">
-          <table className="rs-w-full" style={{ textAlign: 'left', borderCollapse: 'collapse' }}>
+          <table className="rs-w-full rs-text-left" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                 <th className="rs-p-3">Name</th>

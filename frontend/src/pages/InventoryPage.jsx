@@ -143,7 +143,7 @@ export default function InventoryPage({ setAction }) {
               <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
               <input 
                 type="text" 
-                className="rs-w-full" style={{ all: 'unset', fontSize: 'var(--rs-fs-small)', fontWeight: 600 }} 
+                className="rs-w-full rs-type-small" style={{ all: 'unset', fontWeight: 600 }} 
                 placeholder="IDENTIFY ASSET..." 
                 value={query} 
                 onChange={e => setQuery(e.target.value)} 
@@ -286,15 +286,15 @@ export default function InventoryPage({ setAction }) {
              <div className="rs-flex rs-flex-wrap" style={{ gap: 64 }}>
                <div>
                  <div className="rs-card-label">TOTAL ASSETS</div>
-                 <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)' }}>{stats.total}</div>
+                 <div className="rs-card-value rs-mono" style={{ fontSize: '2.5rem' }}>{stats.total}</div>
                </div>
                <div>
                  <div className="rs-card-label" style={{ color: 'var(--md-primary)' }}>REPLACEMENT VALUE</div>
-                 <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)' }}>{stats.value}</div>
+                 <div className="rs-card-value rs-mono" style={{ fontSize: '2.5rem' }}>{stats.value}</div>
                </div>
                <div>
                  <div className="rs-card-label" style={{ color: 'var(--warn)' }}>MISSING INFO</div>
-                 <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)', color: stats.missingDocs > 0 ? 'var(--warn)' : 'inherit' }}>{stats.missingDocs}</div>
+                 <div className="rs-card-value rs-mono" style={{ fontSize: '2.5rem', color: stats.missingDocs > 0 ? 'var(--warn)' : 'inherit' }}>{stats.missingDocs}</div>
                </div>
                <div className="rs-grow rs-flex rs-items-center" style={{ minWidth: 200, justifyContent: 'flex-end' }}>
                   <div className="rs-status-strip">
@@ -323,11 +323,11 @@ export default function InventoryPage({ setAction }) {
                 <div className="rs-card-head">
                   <span className="rs-card-label">{(item.category || 'ASSET').toUpperCase()}</span>
                   <div className="rs-status-strip" style={{ background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 900 }}>{item.quantity}</span>
-                    <span style={{ fontSize: 'var(--rs-fs-nano)' }}>{(item.unit || 'UNIT').toUpperCase()}</span>
+                    <span className="rs-mono" style={{ fontWeight: 900 }}>{item.quantity}</span>
+                    <span className="rs-type-nano">{(item.unit || 'UNIT').toUpperCase()}</span>
                   </div>
                 </div>
-                <div className="rs-card-value rs-mb-1" style={{ fontSize: 'var(--rs-fs-h3)' }}>{item.name}</div>
+                <div className="rs-card-value rs-mb-1 rs-type-h3">{item.name}</div>
                 <div className="rs-card-meta rs-mb-3">
                   <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', verticalAlign: 'middle', marginRight: 6 }}>location_on</span>
                   {item.location || 'SECTOR UNKNOWN'}

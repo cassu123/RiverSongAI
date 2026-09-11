@@ -133,7 +133,7 @@ export default function SafetyRules() {
       </div>
 
       {rules && rules.length === 0 && (
-        <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)' }}>
+        <p className="rs-card-meta rs-type-small">
           No alert rules yet. The built-in pack is created on startup once
           Home Assistant is configured.
         </p>
@@ -151,13 +151,17 @@ export default function SafetyRules() {
               opacity: rule.enabled ? 1 : 0.55,
             }}>
               <div className="rs-flex rs-gap-3 rs-flex-wrap" style={{ alignItems: 'baseline' }}>
-                <span style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 700 }}>{rule.name}</span>
-                <span style={{ fontSize: 'var(--rs-fs-tiny)', color: tone, fontWeight: 700,
-                               letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                <span className="rs-type-body" style={{ fontWeight: 700 }}>{rule.name}</span>
+                <span className="rs-type-tiny" style={{
+                  color: tone,
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                }}>
                   {rule.severity}
                 </span>
                 {rule.builtin && (
-                  <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }}>BUILT-IN</span>
+                  <span className="rs-pill rs-type-tiny">BUILT-IN</span>
                 )}
                 <div className="rs-grow" />
                 <button className={rule.enabled ? 'rs-pill is-active' : 'rs-pill'}
@@ -167,16 +171,16 @@ export default function SafetyRules() {
                 </button>
               </div>
 
-              <div className="rs-card-meta rs-mt-2" style={{ fontSize: 'var(--rs-fs-small)' }}>
+              <div className="rs-card-meta rs-mt-2 rs-type-small">
                 Watches {watching(rule)}.
               </div>
 
               <div className="rs-flex rs-gap-2 rs-mt-3 rs-flex-wrap">
-                <button className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }}
+                <button className="rs-pill rs-type-tiny"
                         onClick={() => test(rule, false)} disabled={busy === rule.id}>
                   TEST
                 </button>
-                <button className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }}
+                <button className="rs-pill rs-type-tiny"
                         onClick={() => test(rule, true)} disabled={busy === rule.id}
                         title="Fires the real alert, including push">
                   SEND FOR REAL
@@ -184,10 +188,9 @@ export default function SafetyRules() {
               </div>
 
               {showing && (
-                <div className="rs-mt-3 rs-p-3" style={{
+                <div className="rs-mt-3 rs-p-3 rs-type-small" style={{
                   borderRadius: 8,
                   background: 'rgba(0,0,0,0.22)',
-                  fontSize: 'var(--rs-fs-small)',
                   border: `1px solid ${result.ok ? 'var(--secondary)' : 'var(--warn)'}`,
                 }}>
                   <div style={{ fontWeight: 700, color: result.ok ? 'var(--secondary)' : 'var(--warn)' }}>
@@ -209,7 +212,7 @@ export default function SafetyRules() {
                       Also matched: {result.others.join(', ')}
                     </div>
                   )}
-                  <div className="rs-mt-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-tiny)' }}>
+                  <div className="rs-mt-2 rs-muted rs-type-tiny">
                     Local time {result.localTime}
                   </div>
                 </div>
@@ -221,10 +224,10 @@ export default function SafetyRules() {
 
       {error && (
         <div className="rs-mt-3 rs-flex rs-gap-3 rs-items-center rs-flex-wrap">
-          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)', color: 'var(--md-error)' }}>
+          <span className="rs-card-meta rs-type-small" style={{ color: 'var(--md-error)' }}>
             {error}
           </span>
-          <button className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }} onClick={load}>
+          <button className="rs-pill rs-type-tiny" onClick={load}>
             RETRY
           </button>
         </div>

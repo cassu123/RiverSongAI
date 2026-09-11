@@ -33,28 +33,28 @@ function ModelCard({ model, isSelected, isDisabled, onSelect }) {
         opacity: isDisabled ? 0.5 : 1
       }}
     >
-      <div className="rs-card-value rs-mb-2" style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{model.display_name}</div>
+      <div className="rs-card-value rs-mb-2 rs-type-body rs-clip rs-ellipsis rs-nowrap" style={{ fontWeight: 600 }}>{model.display_name}</div>
 
       <div className="rs-flex rs-flex-wrap rs-gap-1">
         {model.vram_gb != null && (
           <>
-            <span className="rs-pill rs-items-center" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px', display: 'inline-flex', gap: 3 }}>
+            <span className="rs-pill rs-items-center rs-type-nano" style={{ padding: '2px 8px', display: 'inline-flex', gap: 3 }}>
               {model.vram_gb <= 4 && <span className="material-symbols-rounded" style={{ fontSize: '0.85rem' }}>bolt</span>}
               {model.vram_gb <= 4 ? 'GPU' : 'RAM'} {model.vram_gb}GB
             </span>
             {model.vram_gb <= 4 && (
-              <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>SPEAK</span>
+              <span className="rs-pill is-active rs-type-nano" style={{ padding: '2px 8px' }}>SPEAK</span>
             )}
           </>
         )}
 
         {model.is_cloud && (
           (model.cost_per_1k_input_usd === 0 && model.cost_per_1k_output_usd === 0) ? (
-            <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>FREE</span>
+            <span className="rs-pill is-active rs-type-nano" style={{ padding: '2px 8px' }}>FREE</span>
           ) : (
             <>
-              {inputCost && <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>IN {inputCost}</span>}
-              {outputCost && <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>OUT {outputCost}</span>}
+              {inputCost && <span className="rs-pill rs-type-nano" style={{ padding: '2px 8px' }}>IN {inputCost}</span>}
+              {outputCost && <span className="rs-pill rs-type-nano" style={{ padding: '2px 8px' }}>OUT {outputCost}</span>}
             </>
           )
         )}
@@ -114,7 +114,7 @@ export default function ModelSection({
           <div className="rs-flex rs-items-center rs-gap-3">
             <span className="material-symbols-rounded" style={{ fontSize: '1.4rem', color: 'var(--primary)' }}>auto_awesome</span>
             <div className="rs-grow">
-              <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 600 }}>Let River Decide</div>
+              <div className="rs-card-value rs-type-body" style={{ fontWeight: 600 }}>Let River Decide</div>
               <div className="rs-card-meta">
                 River picks the best engine per message — local first, then NVIDIA NIM (free)
                 or cloud, with an automatic local fallback if a cloud model is unavailable.
@@ -188,7 +188,7 @@ export default function ModelSection({
           </div>
 
           <div className="rs-card-label rs-mb-2">
-            <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px', background: 'var(--primary)', color: 'black' }}>LOCAL</span>
+            <span className="rs-pill rs-type-nano" style={{ padding: '2px 8px', background: 'var(--primary)', color: 'black' }}>LOCAL</span>
             {llmRoutingFlags?.local_enabled
               ? 'Ollama — runs on your machine'
               : 'Disabled globally by admin switch above.'}
@@ -209,7 +209,7 @@ export default function ModelSection({
         {/* Cloud models */}
         <div className="rs-flex rs-flex-col rs-gap-5 rs-mt-5">
           <div className="rs-card-label">
-            <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px', background: 'var(--md-tertiary)', color: 'black' }}>CLOUD</span>
+            <span className="rs-pill rs-type-nano" style={{ padding: '2px 8px', background: 'var(--md-tertiary)', color: 'black' }}>CLOUD</span>
             {llmRoutingFlags?.cloud_enabled
               ? 'API providers — costs per token · requires API key in .env'
               : 'Disabled globally by admin switch above.'}
@@ -233,16 +233,16 @@ export default function ModelSection({
             return (
               <div key={providerKey} style={{ opacity: enabled ? 1 : 0.6 }}>
                 <div className="rs-flex rs-items-center rs-gap-3 rs-mb-3">
-                  <span style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>{providerNames[providerKey]}</span>
+                  <span className="rs-type-small" style={{ fontWeight: 600 }}>{providerNames[providerKey]}</span>
                   {!enabled && (
-                    <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--md-error)' }}>
+                    <span className="rs-card-label rs-type-nano" style={{ color: 'var(--md-error)' }}>
                       {llmRoutingFlags?.cloud_enabled
                         ? 'LOCKED (MISSING KEY IN .ENV)'
                         : 'DISABLED GLOBALLY BY ADMIN SWITCH'}
                     </span>
                   )}
                   {enabled && (
-                    <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--rs-status-nominal)' }}>ENABLED</span>
+                    <span className="rs-card-label rs-type-nano" style={{ color: 'var(--rs-status-nominal)' }}>ENABLED</span>
                   )}
                 </div>
                 <div className="rs-flex rs-flex-wrap rs-gap-3">

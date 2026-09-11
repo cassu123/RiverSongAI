@@ -90,7 +90,7 @@ export default function ReadingPage({ setAction }) {
               <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
               <input 
                 type="text" 
-                className="rs-w-full" style={{ all: 'unset', fontSize: 'var(--rs-fs-small)', fontWeight: 600 }} 
+                className="rs-w-full rs-type-small" style={{ all: 'unset', fontWeight: 600 }} 
                 placeholder="SEARCH ARCHIVES..." 
                 value={search} 
                 onChange={e => setSearch(e.target.value)} 
@@ -128,15 +128,15 @@ export default function ReadingPage({ setAction }) {
              <div className="rs-flex rs-flex-wrap" style={{ gap: 64 }}>
                <div>
                  <div className="rs-card-label">TOTAL VOLUMES</div>
-                 <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)' }}>{stats.total}</div>
+                 <div className="rs-card-value rs-mono" style={{ fontSize: '2.5rem' }}>{stats.total}</div>
                </div>
                <div>
                  <div className="rs-card-label" style={{ color: 'var(--primary)' }}>ACTIVE READS</div>
-                 <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>{stats.reading}</div>
+                 <div className="rs-card-value rs-mono" style={{ fontSize: '2.5rem', color: 'var(--primary)' }}>{stats.reading}</div>
                </div>
                <div>
                  <div className="rs-card-label" style={{ color: 'var(--warn)' }}>QUEUE DEPTH</div>
-                 <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)', color: 'var(--warn)' }}>{stats.queue}</div>
+                 <div className="rs-card-value rs-mono" style={{ fontSize: '2.5rem', color: 'var(--warn)' }}>{stats.queue}</div>
                </div>
                <div className="rs-grow rs-flex rs-items-center" style={{ minWidth: 200, justifyContent: 'flex-end' }}>
                   <div className="rs-status-strip">
@@ -160,13 +160,13 @@ export default function ReadingPage({ setAction }) {
           </div>
         ) : (
           filtered.map(book => (
-            <div key={book.id} className="rs-card is-tappable animate-page-in" style={{ padding: 0, overflow: 'hidden' }}>
+            <div key={book.id} className="rs-card is-tappable animate-page-in rs-clip" style={{ padding: 0 }}>
               <div className="rs-card-inner" style={{ padding: 0, border: 'none', background: 'transparent' }}>
-                <div style={{ position: 'relative', aspectRatio: '2/3', background: 'var(--md-surface-container-highest)' }}>
+                <div className="rs-relative" style={{ aspectRatio: '2/3', background: 'var(--md-surface-container-highest)' }}>
                   {book.cover_url ? (
-                    <img src={book.cover_url} alt="" className="rs-w-full" style={{ height: '100%', objectFit: 'cover' }} />
+                    <img src={book.cover_url} alt="" className="rs-w-full rs-h-full" style={{ objectFit: 'cover' }} />
                   ) : (
-                    <div className="rs-w-full rs-flex rs-items-center rs-justify-center" style={{ height: '100%', opacity: 0.1 }}>
+                    <div className="rs-w-full rs-flex rs-items-center rs-justify-center rs-h-full" style={{ opacity: 0.1 }}>
                       <span className="material-symbols-rounded" style={{ fontSize: '3rem' }}>menu_book</span>
                     </div>
                   )}
@@ -175,15 +175,15 @@ export default function ReadingPage({ setAction }) {
                   </div>
                   {book.status === 'reading' && (
                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(0,0,0,0.3)' }}>
-                      <div style={{ width: `${book.progress_pct}%`, height: '100%', background: 'var(--primary)', boxShadow: '0 0 12px var(--primary)' }} />
+                      <div className="rs-h-full" style={{ width: `${book.progress_pct}%`, background: 'var(--primary)', boxShadow: '0 0 12px var(--primary)' }} />
                     </div>
                   )}
                 </div>
                 <div className="rs-p-4">
-                  <div className="rs-mb-1" style={{ fontWeight: 700, fontSize: 'var(--rs-fs-small)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.2 }}>{book.title}</div>
-                  <div className="rs-card-meta rs-mt-2" style={{ fontSize: 'var(--rs-fs-nano)' }}>{book.author}</div>
+                  <div className="rs-mb-1 rs-type-small rs-clip" style={{ fontWeight: 700, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.2 }}>{book.title}</div>
+                  <div className="rs-card-meta rs-mt-2 rs-type-nano">{book.author}</div>
                   <div className="rs-mt-4 rs-flex rs-justify-between rs-items-center">
-                     <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{book.status.toUpperCase()}</span>
+                     <span className="rs-card-label rs-type-nano">{book.status.toUpperCase()}</span>
                      <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.3 }}>edit_note</span>
                   </div>
                 </div>
@@ -213,7 +213,7 @@ export default function ReadingPage({ setAction }) {
                   }}>
                     <div className="rs-card-inner" style={{ background: active ? 'color-mix(in srgb, var(--primary) 10%, transparent)' : 'transparent', border: active ? '1px solid var(--primary)' : '1px solid transparent' }}>
                       <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '1.8rem', color: s.color }}>{s.icon}</span>
-                      <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)' }}>{s.label.toUpperCase()}</div>
+                      <div className="rs-type-micro" style={{ fontWeight: 700 }}>{s.label.toUpperCase()}</div>
                     </div>
                   </button>
                 )

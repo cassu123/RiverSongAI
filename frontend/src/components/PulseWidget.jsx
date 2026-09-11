@@ -78,28 +78,21 @@ export default function PulseWidget({ token }) {
           badge={newsItems.length > 1 ? `${newsIdx + 1}/${newsItems.length}` : null}
         >
           <div
-            className="rs-flex rs-items-center rs-gap-3" style={{
-              minWidth: 0,
+            className="rs-flex rs-items-center rs-gap-3 rs-min-w-0" style={{
               opacity: visible ? 1 : 0,
               transition: `opacity ${FADE_DURATION}ms ease`,
             }}
           >
-            <span className="rs-grow" style={{
-              fontSize: 'var(--rs-fs-tiny)',
+            <span className="rs-grow rs-type-tiny rs-nowrap rs-clip rs-ellipsis" style={{
               fontWeight: 550,
               color: C.text,
               letterSpacing: '-0.01em',
               lineHeight: 1.35,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
             }}>
               {currentNews.headline || 'No headlines.'}
             </span>
             {currentNews.source && (
-              <span style={{
-                flexShrink: 0,
-                fontSize: 'var(--rs-fs-nano)',
+              <span className="rs-no-shrink rs-type-nano rs-nowrap" style={{
                 fontWeight: 700,
                 letterSpacing: '0.07em',
                 textTransform: 'uppercase',
@@ -107,7 +100,6 @@ export default function PulseWidget({ token }) {
                 background: 'oklch(20% 0.01 265)',
                 padding: '2px 8px',
                 borderRadius: 4,
-                whiteSpace: 'nowrap',
               }}>
                 {currentNews.source}
               </span>
@@ -126,23 +118,19 @@ export default function PulseWidget({ token }) {
             time={fmtTs(ts?.markets)}
           >
             {markets.error ? (
-              <span style={{ fontSize: 'var(--rs-fs-micro)', color: C.muted, fontStyle: 'italic' }}>
+              <span className="rs-type-micro" style={{ color: C.muted, fontStyle: 'italic' }}>
                 No data
               </span>
             ) : (
               <div className="rs-flex rs-gap-3" style={{ alignItems: 'baseline' }}>
-                <span style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 'var(--rs-fs-nano)',
+                <span className="rs-mono rs-type-nano" style={{
                   fontWeight: 600,
                   letterSpacing: '0.05em',
                   color: C.muted,
                 }}>
                   {markets.symbol}
                 </span>
-                <span style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 'var(--rs-fs-body)',
+                <span className="rs-mono rs-type-body" style={{
                   fontWeight: 750,
                   letterSpacing: '-0.02em',
                   color: C.text,
@@ -152,9 +140,7 @@ export default function PulseWidget({ token }) {
                     : '--'}
                 </span>
                 {markets.change != null && markets.change_pct != null && (
-                  <span style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 'var(--rs-fs-micro)',
+                  <span className="rs-mono rs-type-micro" style={{
                     fontWeight: 650,
                     letterSpacing: '-0.01em',
                     color: marketColor,
@@ -178,9 +164,7 @@ export default function PulseWidget({ token }) {
             time={fmtTs(ts?.flights)}
           >
             <div className="rs-flex rs-gap-2" style={{ alignItems: 'baseline' }}>
-              <span style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 'var(--rs-fs-body)',
+              <span className="rs-mono rs-type-body" style={{
                 fontWeight: 800,
                 letterSpacing: '-0.04em',
                 lineHeight: 1,
@@ -188,8 +172,7 @@ export default function PulseWidget({ token }) {
               }}>
                 {flights.flights?.length ?? 0}
               </span>
-              <span style={{
-                fontSize: 'var(--rs-fs-micro)',
+              <span className="rs-type-micro" style={{
                 fontWeight: 500,
                 color: C.muted,
                 letterSpacing: '0.01em',
@@ -214,19 +197,17 @@ function PulseRow({ icon, iconColor, label, time, badge, children }) {
         marginBottom: 7,
       }}>
         <span
-          className="material-symbols-rounded"
+          className="material-symbols-rounded rs-no-shrink"
           style={{
             fontSize: '0.9rem',
             lineHeight: 1,
             color: iconColor,
-            flexShrink: 0,
             transition: 'color 0.3s ease',
           }}
         >
           {icon}
         </span>
-        <span className="rs-grow" style={{
-          fontSize: 'var(--rs-fs-nano)',
+        <span className="rs-grow rs-type-nano" style={{
           fontWeight: 800,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
@@ -235,9 +216,7 @@ function PulseRow({ icon, iconColor, label, time, badge, children }) {
           {label}
         </span>
         {badge && (
-          <span style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 'var(--rs-fs-nano)',
+          <span className="rs-mono rs-type-nano" style={{
             letterSpacing: '0.04em',
             color: C.dim,
             marginRight: 4,
@@ -245,16 +224,14 @@ function PulseRow({ icon, iconColor, label, time, badge, children }) {
             {badge}
           </span>
         )}
-        <span style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 'var(--rs-fs-nano)',
+        <span className="rs-mono rs-type-nano" style={{
           letterSpacing: '0.04em',
           color: C.dim,
         }}>
           {time}
         </span>
       </div>
-      <div style={{ paddingLeft: 20, minWidth: 0 }}>
+      <div className="rs-min-w-0" style={{ paddingLeft: 20 }}>
         {children}
       </div>
     </div>

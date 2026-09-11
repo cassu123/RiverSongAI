@@ -13,8 +13,7 @@ import { claimUnit, simulateUnit, ackAlert, isOnline } from './useFleet.js'
 export function UnitStatusPill({ unit }) {
   const live = isOnline(unit)
   return (
-    <span className="rs-pill rs-items-center" style={{
-      fontSize: 'var(--rs-fs-nano)',
+    <span className="rs-pill rs-items-center rs-type-nano" style={{
       padding: '2px 8px',
       display: 'inline-flex',
       gap: 5,
@@ -34,10 +33,13 @@ export function UnitStatusPill({ unit }) {
 export function MetricStat({ label, value, unit, accent }) {
   return (
     <div className="rs-flex rs-flex-col" style={{ gap: 2, minWidth: 86 }}>
-      <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{label}</div>
-      <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-h3)', fontVariantNumeric: 'tabular-nums',
-        color: accent || 'var(--text-primary, inherit)' }}>
-        {value}{unit && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', fontWeight: 500 }}> {unit}</span>}
+      <div className="rs-card-label rs-type-nano">{label}</div>
+      <div className="rs-type-h3" style={{
+        fontWeight: 700,
+        fontVariantNumeric: 'tabular-nums',
+        color: accent || 'var(--text-primary, inherit)',
+      }}>
+        {value}{unit && <span className="rs-muted rs-type-micro" style={{ fontWeight: 500 }}> {unit}</span>}
       </div>
     </div>
   )
@@ -49,8 +51,8 @@ export function BatteryBar({ pct }) {
   const color = v < 20 ? 'var(--md-error)' : v < 45 ? 'var(--rs-status-warning, #f4b740)' : 'var(--rs-status-nominal, #36d399)'
   return (
     <div className="rs-flex rs-items-center rs-gap-2">
-      <div className="rs-grow" style={{ height: 8, borderRadius: 4, background: 'var(--md-surface-container-high, #2a2a2a)', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${v}%`, background: color, transition: 'width .4s ease' }} />
+      <div className="rs-grow rs-clip" style={{ height: 8, borderRadius: 4, background: 'var(--md-surface-container-high, #2a2a2a)' }}>
+        <div className="rs-h-full" style={{ width: `${v}%`, background: color, transition: 'width .4s ease' }} />
       </div>
       <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, fontSize: 'var(--rs-fs-tiny)', color }}>{v}%</span>
     </div>
@@ -61,7 +63,7 @@ export function BatteryBar({ pct }) {
 export function Sparkline({ data, field, height = 44, color = 'var(--primary, #6ea8fe)' }) {
   const pts = (data || []).map(d => Number(d?.[field])).filter(v => Number.isFinite(v))
   if (pts.length < 2) {
-    return <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>waiting for telemetry…</div>
+    return <div className="rs-card-meta rs-muted rs-type-nano">waiting for telemetry…</div>
   }
   const w = 240, h = height
   const min = Math.min(...pts), max = Math.max(...pts)
@@ -70,7 +72,7 @@ export function Sparkline({ data, field, height = 44, color = 'var(--primary, #6
   const path = pts.map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * step).toFixed(1)},${(h - ((v - min) / span) * (h - 6) - 3).toFixed(1)}`).join(' ')
   const last = pts[pts.length - 1]
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="rs-relative">
       <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: '100%', height }}>
         <path d={path} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" />
       </svg>
@@ -95,7 +97,7 @@ export function MiniMap({ items, height = 220, selectedId }) {
     <div style={{ position: 'relative', height, borderRadius: 12, overflow: 'hidden',
       background: 'radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 70%), var(--md-surface-container-low, #161616)',
       border: '1px solid var(--md-outline-variant, #333)' }}>
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="rs-w-full" style={{ position: 'absolute', inset: 0, height: '100%' }}>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="rs-w-full rs-h-full" style={{ position: 'absolute', inset: 0 }}>
         {[20, 40, 60, 80].map(g => <line key={`h${g}`} x1="0" y1={g} x2="100" y2={g} stroke="var(--md-outline-variant,#333)" strokeWidth="0.2" />)}
         {[20, 40, 60, 80].map(g => <line key={`v${g}`} x1={g} y1="0" x2={g} y2="100" stroke="var(--md-outline-variant,#333)" strokeWidth="0.2" />)}
       </svg>
@@ -113,12 +115,12 @@ export function MiniMap({ items, height = 220, selectedId }) {
               background: p.online ? 'var(--rs-status-nominal,#36d399)' : 'var(--md-error)',
               boxShadow: p.online ? '0 0 10px var(--rs-status-nominal,#36d399)' : 'none',
               border: '2px solid rgba(0,0,0,0.4)' }} />
-            <span style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--text-secondary,#aaa)', whiteSpace: 'nowrap' }}>{p.label}</span>
+            <span className="rs-type-nano rs-nowrap" style={{ color: 'var(--text-secondary,#aaa)' }}>{p.label}</span>
           </div>
         )
       })}
       {pts.length === 0 && (
-        <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--text-secondary,#888)', fontSize: 'var(--rs-fs-tiny)' }}>
+        <div className="rs-type-tiny" style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--text-secondary,#888)' }}>
           No positioned units
         </div>
       )}
@@ -171,10 +173,10 @@ export function AlertsList({ program, unitId, alerts, onChange }) {
               {crit ? 'error' : 'warning'}
             </span>
             <div className="rs-grow">
-              <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 600 }}>{a.message}</div>
-              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>{a.level} · {new Date(a.timestamp).toLocaleString()}</div>
+              <div className="rs-type-tiny" style={{ fontWeight: 600 }}>{a.message}</div>
+              <div className="rs-card-meta rs-type-nano">{a.level} · {new Date(a.timestamp).toLocaleString()}</div>
             </div>
-            <button className="rs-btn-ghost" style={{ fontSize: 'var(--rs-fs-nano)', padding: '4px 10px' }}
+            <button className="rs-btn-ghost rs-type-nano" style={{ padding: '4px 10px' }}
               onClick={async () => { await ackAlert(program, unitId, a.id); onChange && onChange() }}>
               ACK
             </button>
@@ -189,8 +191,8 @@ export function AlertsList({ program, unitId, alerts, onChange }) {
 export function SimulateButton({ program, onDone }) {
   const [busy, setBusy] = useState(false)
   return (
-    <button className="rs-btn-primary rs-items-center rs-gap-2" disabled={busy}
-      style={{ fontSize: 'var(--rs-fs-micro)', padding: '8px 14px', display: 'inline-flex' }}
+    <button className="rs-btn-primary rs-items-center rs-gap-2 rs-type-micro" disabled={busy}
+      style={{ padding: '8px 14px', display: 'inline-flex' }}
       onClick={async () => {
         setBusy(true)
         try { await simulateUnit(program); onDone && onDone() } finally { setBusy(false) }
@@ -237,12 +239,11 @@ export function ClaimUnitModal({ program, onClose, onDone }) {
           <>
             <p className="rs-card-meta">Unit <strong>{result.unit_id}</strong> claimed. Copy this token into the device — it is shown only once.</p>
             <div className="rs-flex rs-gap-2 rs-items-center" style={{ margin: '12px 0' }}>
-              <code className="rs-grow" style={{
+              <code className="rs-grow rs-type-micro" style={{
                 padding: '10px 12px',
                 borderRadius: 8,
                 background: 'var(--md-surface-container-lowest,#0e0e0e)',
                 border: '1px solid var(--md-outline-variant,#333)',
-                fontSize: 'var(--rs-fs-micro)',
                 wordBreak: 'break-all',
               }}>
                 {result.unit_token}
@@ -251,7 +252,7 @@ export function ClaimUnitModal({ program, onClose, onDone }) {
                 {copied ? 'Copied' : 'Copy'}
               </button>
             </div>
-            <div className="rs-card-meta rs-mb-3" style={{ fontSize: 'var(--rs-fs-nano)' }}>
+            <div className="rs-card-meta rs-mb-3 rs-type-nano">
               Headless test: <code>python scripts/fleet_sim.py --program {program} --unit-id {result.unit_id} --token &lt;token&gt;</code>
             </div>
             <div className="rs-flex" style={{ justifyContent: 'flex-end' }}>

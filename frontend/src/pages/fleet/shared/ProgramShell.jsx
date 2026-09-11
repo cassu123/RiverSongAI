@@ -56,7 +56,7 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
 
       <div className="rs-flex rs-gap-2 rs-mb-5 rs-flex-wrap">
         <SimulateButton program={program} onDone={refresh} />
-        <button className="rs-btn-ghost rs-items-center rs-gap-2" style={{ fontSize: 'var(--rs-fs-micro)', padding: '8px 14px', display: 'inline-flex' }}
+        <button className="rs-btn-ghost rs-items-center rs-gap-2 rs-type-micro" style={{ padding: '8px 14px', display: 'inline-flex' }}
           onClick={() => setShowClaim(true)}>
           <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>add_link</span>
           Claim real unit
@@ -82,16 +82,16 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
                 className={`rs-card is-tappable ${selected?.unit_id === u.unit_id ? 'is-elev' : ''}`}
                 style={{ padding: 12, cursor: 'pointer', borderColor: selected?.unit_id === u.unit_id ? accent : undefined }}>
                 <div className="rs-flex rs-items-center rs-justify-between rs-gap-2">
-                  <span style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span className="rs-type-tiny rs-clip rs-ellipsis rs-nowrap" style={{ fontWeight: 600 }}>
                     {u.name || u.unit_id}
                   </span>
                   <UnitStatusPill unit={u} />
                 </div>
                 {(u.metadata?.simulated || String(u.unit_id).startsWith('sim-')) && (
-                  <span className="rs-pill rs-mt-2" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px', display: 'inline-block' }}>SIM</span>
+                  <span className="rs-pill rs-mt-2 rs-type-nano" style={{ padding: '1px 6px', display: 'inline-block' }}>SIM</span>
                 )}
                 <div className="rs-flex rs-gap-2 rs-mt-2">
-                  <button className="rs-btn-ghost" style={{ fontSize: 'var(--rs-fs-nano)', padding: '3px 8px', color: 'var(--md-error)', borderColor: 'var(--md-error)' }}
+                  <button className="rs-btn-ghost rs-type-nano" style={{ padding: '3px 8px', color: 'var(--md-error)', borderColor: 'var(--md-error)' }}
                     onClick={(e) => { e.stopPropagation(); remove(u) }}>Remove</button>
                 </div>
               </div>

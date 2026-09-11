@@ -99,11 +99,11 @@ export default function RemoteOllamaPage({ setAction }) {
             <input type="text" value={draft.base_url} onChange={e => setDraft(d => ({ ...d, base_url: e.target.value }))} placeholder="Base URL — e.g. http://localhost:11500" style={inputStyle} />
             <textarea          value={draft.notes}    onChange={e => setDraft(d => ({ ...d, notes: e.target.value }))}    placeholder="Notes (optional)" rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
             {editId && (
-              <label className="rs-flex rs-items-center rs-gap-2" style={{ fontSize: 'var(--rs-fs-micro)' }}>
+              <label className="rs-flex rs-items-center rs-gap-2 rs-type-micro">
                 <input type="checkbox" checked={!!draft.is_active} onChange={e => setDraft(d => ({ ...d, is_active: e.target.checked }))} /> Active
               </label>
             )}
-            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
+            {error && <div className="rs-type-micro" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
             <div className="rs-flex rs-gap-3">
               <button className="rs-pill is-active" onClick={save}>{editId ? 'UPDATE' : 'CREATE'}</button>
               <button className="rs-pill" onClick={cancel}>CANCEL</button>
@@ -118,21 +118,20 @@ export default function RemoteOllamaPage({ setAction }) {
           <div key={r.id} className="rs-card is-wide rs-p-4" style={{ opacity: r.is_active ? 1 : 0.55 }}>
             <div className="rs-card-head">
               <span className="rs-card-label">{r.label?.toUpperCase()}</span>
-              <span className="rs-pill" style={{
-                fontSize: 'var(--rs-fs-nano)',
+              <span className="rs-pill rs-type-nano" style={{
                 background: r.last_health === 'ok' ? 'var(--md-secondary)' : r.last_health === 'down' ? 'var(--md-error)' : 'rgba(255,255,255,0.1)',
                 color: 'var(--bg-base)',
               }}>{r.last_health?.toUpperCase() || 'UNKNOWN'}</span>
             </div>
-            <div className="rs-mt-1" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>{r.base_url}</div>
-            {r.notes && <div className="rs-mt-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>{r.notes}</div>}
+            <div className="rs-mt-1 rs-muted rs-type-micro">{r.base_url}</div>
+            {r.notes && <div className="rs-mt-2 rs-muted rs-type-micro">{r.notes}</div>}
             {(r.last_models || []).length > 0 && (
               <div className="rs-flex rs-flex-wrap rs-gap-1 rs-mt-2">
                 {r.last_models.slice(0, 6).map((m, i) => (
-                  <span key={i} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px' }}>{m}</span>
+                  <span key={i} className="rs-pill rs-type-nano" style={{ padding: '1px 6px' }}>{m}</span>
                 ))}
                 {r.last_models.length > 6 && (
-                  <span className="rs-pill" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', padding: '1px 6px' }}>+{r.last_models.length - 6}</span>
+                  <span className="rs-pill rs-muted rs-type-nano" style={{ padding: '1px 6px' }}>+{r.last_models.length - 6}</span>
                 )}
               </div>
             )}

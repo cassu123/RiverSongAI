@@ -129,9 +129,9 @@ export default function VoiceIDSection({ token }) {
       <div className="rs-mb-4">
         {status.enrolled ? (
           <div className="rs-flex rs-items-start rs-gap-2">
-            <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', color: 'var(--rs-status-nominal)', flexShrink: 0, marginTop: 1 }}>check_circle</span>
+            <span className="material-symbols-rounded rs-no-shrink" style={{ fontSize: '1.1rem', color: 'var(--rs-status-nominal)', marginTop: 1 }}>check_circle</span>
             <div>
-              <div style={{ color: 'var(--rs-status-nominal)', fontSize: 'var(--rs-fs-small)', fontWeight: 600 }}>
+              <div className="rs-type-small" style={{ color: 'var(--rs-status-nominal)', fontWeight: 600 }}>
                 ENROLLED — {status.sample_count} SAMPLES
               </div>
               <div className="rs-card-meta">
@@ -158,24 +158,23 @@ export default function VoiceIDSection({ token }) {
         </button>
 
         {status.sample_count > 0 && !recording && !confirmDelete && (
-          <button className="rs-pill" onClick={() => setConfirmDelete(true)} style={{ color: 'var(--md-error)', cursor: 'pointer' }}>
+          <button className="rs-pill rs-pointer" onClick={() => setConfirmDelete(true)} style={{ color: 'var(--md-error)' }}>
             DELETE ENROLLMENT
           </button>
         )}
       </div>
 
       {confirmDelete && (
-        <div className="rs-flex rs-items-center rs-gap-3 rs-mt-2" style={{
+        <div className="rs-flex rs-items-center rs-gap-3 rs-mt-2 rs-type-tiny" style={{
           padding: '10px 14px',
           background: 'color-mix(in srgb, var(--md-error) 10%, transparent)',
           border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)',
           borderRadius: 8,
-          fontSize: 'var(--rs-fs-tiny)',
         }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-error)', flexShrink: 0 }}>warning</span>
+          <span className="material-symbols-rounded rs-no-shrink" style={{ fontSize: '1rem', color: 'var(--md-error)' }}>warning</span>
           <span className="rs-grow">Delete your voice prints? River Song will no longer recognize your voice.</span>
-          <button className="rs-pill" style={{ color: 'var(--md-error)', cursor: 'pointer' }} onClick={deleteEnrollment}>DELETE</button>
-          <button className="rs-pill" style={{ cursor: 'pointer' }} onClick={() => setConfirmDelete(false)}>CANCEL</button>
+          <button className="rs-pill rs-pointer" style={{ color: 'var(--md-error)' }} onClick={deleteEnrollment}>DELETE</button>
+          <button className="rs-pill rs-pointer" onClick={() => setConfirmDelete(false)}>CANCEL</button>
         </div>
       )}
 

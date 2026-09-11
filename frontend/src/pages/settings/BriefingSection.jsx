@@ -52,7 +52,7 @@ export default function BriefingSection({ briefingSettings, setBriefingSettings,
             }
             return (
               <div className="rs-mt-3">
-                <div className="rs-card-label rs-mb-2" style={{ fontSize: 'var(--rs-fs-nano)' }}>NEWS SOURCE CATEGORIES</div>
+                <div className="rs-card-label rs-mb-2 rs-type-nano">NEWS SOURCE CATEGORIES</div>
                 <div className="rs-flex rs-flex-wrap rs-gap-2">
                   {PULSE_CATS.map(({ key, label }) => {
                     const on = active.includes(key)
@@ -60,17 +60,15 @@ export default function BriefingSection({ briefingSettings, setBriefingSettings,
                       <button
                         key={key}
                         onClick={() => toggle(key)}
-                        style={{
+                        className="rs-type-nano rs-pointer" style={{
                           padding: '4px 10px',
                           borderRadius: 4,
                           border: `1px solid ${on ? 'var(--primary)' : 'oklch(30% 0.01 265)'}`,
                           background: on ? 'oklch(20% 0.06 265)' : 'transparent',
                           color: on ? 'var(--primary)' : 'oklch(50% 0.01 265)',
-                          fontSize: 'var(--rs-fs-nano)',
                           fontWeight: 700,
                           letterSpacing: '0.06em',
                           textTransform: 'uppercase',
-                          cursor: 'pointer',
                           transition: 'all 0.15s ease',
                         }}
                       >

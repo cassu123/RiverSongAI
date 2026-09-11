@@ -286,7 +286,7 @@ export default function ChronosPage({ setAction }) {
             </button>
           </div>
 
-          <div className="rs-card-label rs-grow" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div className="rs-card-label rs-grow rs-nowrap rs-clip rs-ellipsis">
             {viewMode === 'graph'
               ? `GRAPH · ${graphData.nodes.filter(n => !n.ghost).length} notes · ${graphData.edges.length} links`
               : (activeNote?.path || 'CHRONOS VAULT')}
@@ -314,9 +314,9 @@ export default function ChronosPage({ setAction }) {
 
         {/* Graph view */}
         {viewMode === 'graph' ? (
-          <div className="rs-grow" style={{ position: 'relative' }}>
+          <div className="rs-grow rs-relative">
             {graphLoading ? (
-              <div className="rs-flex rs-items-center rs-justify-center" style={{ height: '100%' }}>
+              <div className="rs-flex rs-items-center rs-justify-center rs-h-full">
                 <span className="rs-card-meta">LOADING GRAPH...</span>
               </div>
             ) : (
@@ -335,7 +335,7 @@ export default function ChronosPage({ setAction }) {
             <div className="rs-card-meta">RETRIEVING DATA...</div>
           ) : activeNote ? (
             editMode ? (
-              <div style={{ height: '100%' }}>
+              <div className="rs-h-full">
                 <CodeMirror
                   value={editorContent}
                   height="100%"
@@ -356,8 +356,8 @@ export default function ChronosPage({ setAction }) {
                         const targetPath = `${activeRoot}/${title}.md`
                         return (
                           <button
-                            className="rs-pill"
-                            style={{ padding: '0 8px', height: '1.4rem', fontSize: 'var(--rs-fs-tiny)' }}
+                            className="rs-pill rs-type-tiny"
+                            style={{ padding: '0 8px', height: '1.4rem' }}
                             onClick={async () => {
                               const exists = await loadNote(targetPath)
                               if (!exists) {
@@ -382,7 +382,7 @@ export default function ChronosPage({ setAction }) {
               </div>
             )
           ) : (
-             <div className="rs-flex rs-items-center rs-justify-center" style={{ height: '100%', opacity: 0.2 }}>
+             <div className="rs-flex rs-items-center rs-justify-center rs-h-full" style={{ opacity: 0.2 }}>
                <span className="material-symbols-rounded" style={{ fontSize: '80px' }}>history</span>
              </div>
           )}
@@ -396,7 +396,7 @@ export default function ChronosPage({ setAction }) {
         <div className="rs-flex rs-flex-col rs-gap-2">
           {backlinks.map(b => (
             <div key={b.virtual_path} className="rs-card is-tappable rs-p-3" onClick={() => loadNote(b.virtual_path)}>
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{b.title}</div>
+              <div className="rs-card-label rs-type-nano">{b.title}</div>
             </div>
           ))}
           {backlinks.length === 0 && <div className="rs-card-meta">No references.</div>}
@@ -424,7 +424,7 @@ function TreeItem({ item, onSelect, activePath }) {
       <div>
         <button className="rs-drawer-item rs-drawer-item--compact rs-w-full" onClick={() => setExpanded(!expanded)}>
           <span className="material-symbols-rounded">{expanded ? 'expand_more' : 'chevron_right'}</span>
-          <span className="rs-grow" style={{ textAlign: 'left' }}>{item.name}</span>
+          <span className="rs-grow rs-text-left">{item.name}</span>
         </button>
         {expanded && <div style={{ paddingLeft: 12 }}><TreeList items={item.children} onSelect={onSelect} activePath={activePath} /></div>}
       </div>
@@ -434,7 +434,7 @@ function TreeItem({ item, onSelect, activePath }) {
   return (
     <button className={`rs-drawer-item rs-drawer-item--compact ${isSelected ? 'is-active' : ''}`} style={{ width: '100%' }} onClick={() => onSelect(item.path)}>
       <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>description</span>
-      <span className="rs-grow" style={{ textAlign: 'left' }}>{item.name.replace(/\.md$/, '')}</span>
+      <span className="rs-grow rs-text-left">{item.name.replace(/\.md$/, '')}</span>
     </button>
   )
 }

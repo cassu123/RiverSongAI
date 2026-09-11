@@ -161,7 +161,7 @@ export default function PresetsPage({ setAction }) {
                 </label>
               )}
             </div>
-            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
+            {error && <div className="rs-type-micro" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
             <div className="rs-flex rs-gap-3">
               <button className="rs-pill is-active" onClick={save}>{editId ? 'UPDATE' : 'CREATE'}</button>
               <button className="rs-pill" onClick={cancel}>CANCEL</button>
@@ -183,7 +183,7 @@ export default function PresetsPage({ setAction }) {
             </div>
             <div className="rs-mt-2 rs-flex rs-flex-wrap rs-gap-2">
               {Object.entries(p.config || {}).map(([k, v]) => (
-                <span key={k} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>
+                <span key={k} className="rs-pill rs-type-nano" style={{ padding: '2px 8px' }}>
                   {k.toUpperCase()}: {String(v).slice(0, 30).toUpperCase()}
                 </span>
               ))}

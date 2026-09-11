@@ -238,7 +238,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
       <div className="rs-modal rs-w-full" onClick={e => e.stopPropagation()} style={{ maxWidth: 700, margin: '0 auto', maxHeight: '80vh', overflowY: 'auto' }}>
         <div className="rs-modal-header">
           <h2>{isNew ? 'New Asset' : 'Edit Asset'}</h2>
-          {!isNew && item.ein && <div className="rs-pill" style={{ fontFamily: 'var(--font-mono)' }}>{item.ein}</div>}
+          {!isNew && item.ein && <div className="rs-pill rs-mono">{item.ein}</div>}
           <button className="rs-modal-close" onClick={onClose}>
             <span className="material-symbols-rounded">close</span>
           </button>
@@ -251,16 +251,16 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
             <div className="rs-mb-5">
               <div className="rs-flex rs-gap-4" style={{ overflowX: 'auto', paddingBottom: 8 }}>
                 {attachments.map(att => (
-                   <div key={att.id} style={{ position: 'relative', width: 120, height: 120, borderRadius: 8, overflow: 'hidden', background: 'var(--md-surface-container-high)', flexShrink: 0 }}>
-                     <img src={`/api/inventory/attachments/${att.id}/download?token=${token}`} alt="Attachment" className="rs-w-full" style={{ height: '100%', objectFit: 'cover' }} />
-                     <button onClick={() => deleteAttachment(att.id)} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer' }}>
+                   <div key={att.id} className="rs-relative rs-clip rs-no-shrink" style={{ width: 120, height: 120, borderRadius: 8, background: 'var(--md-surface-container-high)' }}>
+                     <img src={`/api/inventory/attachments/${att.id}/download?token=${token}`} alt="Attachment" className="rs-w-full rs-h-full" style={{ objectFit: 'cover' }} />
+                     <button onClick={() => deleteAttachment(att.id)} className="rs-pointer" style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24 }}>
                        <span className="material-symbols-rounded" style={{ fontSize: '14px' }}>close</span>
                      </button>
                    </div>
                 ))}
                 <div 
                   onClick={() => photoInputRef.current.click()}
-                  className="rs-flex rs-items-center rs-justify-center" style={{ width: 120, height: 120, borderRadius: 8, background: 'var(--md-surface-container)', border: '2px dashed var(--md-outline-variant)', cursor: 'pointer', flexShrink: 0, opacity: uploadingImage ? 0.5 : 1 }}>
+                  className="rs-flex rs-items-center rs-justify-center rs-pointer rs-no-shrink" style={{ width: 120, height: 120, borderRadius: 8, background: 'var(--md-surface-container)', border: '2px dashed var(--md-outline-variant)', opacity: uploadingImage ? 0.5 : 1 }}>
                   <span className="material-symbols-rounded" style={{ fontSize: '2rem', color: 'var(--md-on-surface-variant)' }}>
                     {uploadingImage ? 'hourglass_empty' : 'add_a_photo'}
                   </span>
@@ -301,13 +301,13 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
             <div className="rs-form-group" style={{ gridColumn: '1 / -1' }}>
               <label className="rs-flex rs-justify-between rs-items-center">
                  Serial Number
-                 <button type="button" className="rs-pill" onClick={() => document.getElementById('serialPhotoInput').click()} style={{ padding: '2px 8px', fontSize: 'var(--rs-fs-micro)', height: 'auto' }}>
+                 <button type="button" className="rs-pill rs-type-micro" onClick={() => document.getElementById('serialPhotoInput').click()} style={{ padding: '2px 8px', height: 'auto' }}>
                     <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4, verticalAlign: 'middle' }}>document_scanner</span>
                     Scan Plate
                  </button>
                  <input type="file" accept="image/*" capture="environment" id="serialPhotoInput" className="rs-hidden" onChange={handleSmartSerial} />
               </label>
-              <input type="text" className="rs-input" name="serial_number" value={formData.serial_number} onChange={handleChange} style={{ fontFamily: 'var(--font-mono)' }} />
+              <input type="text" className="rs-input rs-mono" name="serial_number" value={formData.serial_number} onChange={handleChange} />
             </div>
 
             <div className="rs-form-group">
@@ -332,7 +332,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
 
             <div className="rs-form-group rs-flex rs-items-center rs-gap-2" style={{ gridColumn: '1 / -1' }}>
               <input type="checkbox" name="is_insured" checked={formData.is_insured} onChange={handleChange} id="is_insured_chk" style={{ width: 18, height: 18 }} />
-              <label htmlFor="is_insured_chk" className="rs-m-0" style={{ cursor: 'pointer' }}>Separately Scheduled / Insured</label>
+              <label htmlFor="is_insured_chk" className="rs-m-0 rs-pointer">Separately Scheduled / Insured</label>
             </div>
 
             <div className="rs-form-group" style={{ gridColumn: '1 / -1' }}>
@@ -344,11 +344,11 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
           {!isNew && (
              <div className="rs-gap-4 rs-mb-5 rs-p-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: 'var(--md-surface-container)', borderRadius: 12 }}>
                 <div>
-                   <h4 style={{ margin: '0 0 8px 0', fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)' }}>RECEIPT</h4>
+                   <h4 className="rs-type-tiny" style={{ margin: '0 0 8px 0', color: 'var(--md-on-surface-variant)' }}>RECEIPT</h4>
                    {item.receipt_image_path ? (
                       <div className="rs-flex rs-items-center rs-gap-2">
                          <span className="material-symbols-rounded" style={{ color: 'var(--rs-status-nominal)' }}>check_circle</span>
-                         <span style={{ fontSize: 'var(--rs-fs-tiny)' }}>Attached</span>
+                         <span className="rs-type-tiny">Attached</span>
                          <button className="rs-pill" onClick={() => receiptInputRef.current.click()}>Replace</button>
                       </div>
                    ) : (
@@ -359,11 +359,11 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
                    <input type="file" accept="image/*,application/pdf" ref={receiptInputRef} className="rs-hidden" onChange={handleUploadReceipt} />
                 </div>
                 <div>
-                   <h4 style={{ margin: '0 0 8px 0', fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)' }}>WARRANTY</h4>
+                   <h4 className="rs-type-tiny" style={{ margin: '0 0 8px 0', color: 'var(--md-on-surface-variant)' }}>WARRANTY</h4>
                    {item.warranty_image_path ? (
                       <div className="rs-flex rs-items-center rs-gap-2">
                          <span className="material-symbols-rounded" style={{ color: 'var(--rs-status-nominal)' }}>check_circle</span>
-                         <span style={{ fontSize: 'var(--rs-fs-tiny)' }}>Attached</span>
+                         <span className="rs-type-tiny">Attached</span>
                          <button className="rs-pill" onClick={() => warrantyInputRef.current.click()}>Replace</button>
                       </div>
                    ) : (

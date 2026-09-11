@@ -72,10 +72,9 @@ function ListingBuilder({ product }) {
           {copied ? 'COPIED!' : 'COPY TO CLIPBOARD'}
         </button>
       </div>
-      <div className="rs-p-3" style={{
+      <div className="rs-p-3 rs-type-tiny" style={{
         background: 'rgba(0,0,0,0.2)',
         borderRadius: 8,
-        fontSize: 'var(--rs-fs-tiny)',
         maxHeight: 150,
         overflowY: 'auto',
         border: '1px solid var(--md-outline-variant)',
@@ -205,22 +204,20 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
 
   return (
     <div className="rs-card is-wide animate-fade-in rs-mb-6" style={{ border: '1px solid var(--primary)' }}>
-      {error && <div className="rs-mb-4" style={{ color: 'var(--rs-status-critical)', fontSize: 'var(--rs-fs-tiny)' }}>{error}</div>}
+      {error && <div className="rs-mb-4 rs-type-tiny" style={{ color: 'var(--rs-status-critical)' }}>{error}</div>}
       <div className="rs-flex rs-gap-5 rs-flex-wrap">
         <div style={{ width: 160 }}>
           <div 
-            className="rs-flex rs-items-center rs-justify-center" style={{
+            className="rs-flex rs-items-center rs-justify-center rs-pointer rs-clip" style={{
               width: 160,
               height: 160,
               border: '2px dashed var(--md-outline-variant)',
               borderRadius: 'var(--md-shape-lg)',
-              cursor: 'pointer',
-              overflow: 'hidden',
             }} 
             onClick={() => fileRef.current.click()}
           >
             {imagePreview
-              ? <img src={imagePreview} alt="preview" className="rs-w-full" style={{ height: '100%', objectFit: 'cover' }} />
+              ? <img src={imagePreview} alt="preview" className="rs-w-full rs-h-full" style={{ objectFit: 'cover' }} />
               : <span className="rs-card-label">+ IMAGE</span>
             }
           </div>
@@ -307,11 +304,11 @@ function ProductCard({ product, onEdit, onDelete, onGenerateImage }) {
   };
 
   return (
-    <div className="rs-card animate-fade-in rs-flex rs-flex-col" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ position: 'relative', height: 180, background: 'rgba(0,0,0,0.2)' }}>
+    <div className="rs-card animate-fade-in rs-flex rs-flex-col rs-clip" style={{ padding: 0 }}>
+      <div className="rs-relative" style={{ height: 180, background: 'rgba(0,0,0,0.2)' }}>
         {product.image_data
-          ? <img src={product.image_data} alt={product.name} className="rs-w-full" style={{ height: '100%', objectFit: 'cover' }} />
-          : <div className="rs-w-full rs-flex rs-items-center rs-justify-center" style={{ color: 'var(--text-muted)', height: '100%', fontSize: '2rem' }}>
+          ? <img src={product.image_data} alt={product.name} className="rs-w-full rs-h-full" style={{ objectFit: 'cover' }} />
+          : <div className="rs-w-full rs-flex rs-items-center rs-justify-center rs-muted rs-h-full" style={{ fontSize: '2rem' }}>
               {product.category?.slice(0,3).toUpperCase() || 'IMG'}
             </div>
         }
@@ -320,22 +317,22 @@ function ProductCard({ product, onEdit, onDelete, onGenerateImage }) {
         </div>
       </div>
       <div className="rs-p-4 rs-grow rs-flex rs-flex-col">
-        <div className="rs-card-label rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>{product.sku}</div>
-        <div className="rs-card-value rs-mb-2" style={{ fontSize: 'var(--rs-fs-body)' }}>{product.name}</div>
+        <div className="rs-card-label rs-mb-1 rs-type-nano">{product.sku}</div>
+        <div className="rs-card-value rs-mb-2 rs-type-body">{product.name}</div>
         <div className="rs-flex rs-justify-between rs-items-center rs-mb-4">
           <span className="rs-card-meta rs-m-0">{product.category}</span>
           {product.unit_price != null && <span style={{ color: 'var(--primary)', fontWeight: 600 }}>${Number(product.unit_price).toFixed(2)}</span>}
         </div>
         
         <div className="rs-flex rs-gap-2 rs-flex-wrap" style={{ marginTop: 'auto' }}>
-          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)' }} onClick={() => onEdit(product)}>EDIT</button>
-          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)' }} onClick={handleGen} disabled={generating}>
+          <button className="rs-pill rs-type-nano" style={{ padding: '4px 8px' }} onClick={() => onEdit(product)}>EDIT</button>
+          <button className="rs-pill rs-type-nano" style={{ padding: '4px 8px' }} onClick={handleGen} disabled={generating}>
             {generating ? '...' : 'GEN'}
           </button>
-          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)' }} onClick={() => setShowListing(!showListing)}>
+          <button className="rs-pill rs-type-nano" style={{ padding: '4px 8px' }} onClick={() => setShowListing(!showListing)}>
             {showListing ? 'HIDE' : 'LIST'}
           </button>
-          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)', color: 'var(--rs-status-critical)', borderColor: 'var(--rs-status-critical)' }} onClick={() => onDelete(product.id)}>DEL</button>
+          <button className="rs-pill rs-type-nano" style={{ padding: '4px 8px', color: 'var(--rs-status-critical)', borderColor: 'var(--rs-status-critical)' }} onClick={() => onDelete(product.id)}>DEL</button>
         </div>
 
         {showListing && <ListingBuilder product={product} />}
@@ -397,16 +394,15 @@ export default function CommercePage({ setAction }) {
 
     setAction(
       <div className="rs-flex rs-gap-3 rs-items-center rs-w-full" style={{ maxWidth: 800, margin: '0 auto' }}>
-        <div className="rs-grow" style={{ position: 'relative' }}>
+        <div className="rs-grow rs-relative">
           <span className="material-symbols-rounded" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>search</span>
           <input 
-            className="rs-w-full" style={{
+            className="rs-w-full rs-type-small" style={{
               background: 'rgba(255,255,255,0.08)',
               border: '1px solid var(--md-outline-variant)',
               borderRadius: 30,
               padding: '10px 12px 10px 40px',
               color: 'var(--fg)',
-              fontSize: 'var(--rs-fs-small)',
             }} 
             placeholder="Search products..." 
             value={search} 
@@ -584,7 +580,7 @@ function CreateWorkspaceForm({ token, onCreate }) {
     <div className="rs-card animate-fade-in" style={{ maxWidth: 500 }}>
       <span className="rs-card-label" style={{ color: 'var(--primary)' }}>CREATE YOUR FIRST WORKSPACE</span>
       <p className="rs-card-meta rs-mb-5">Workspaces organize your products, stock, and listings.</p>
-      {error && <div className="rs-mb-3" style={{ color: 'var(--rs-status-critical)', fontSize: 'var(--rs-fs-tiny)' }}>{error}</div>}
+      {error && <div className="rs-mb-3 rs-type-tiny" style={{ color: 'var(--rs-status-critical)' }}>{error}</div>}
       <div className="rs-flex rs-gap-3">
         <input 
           className="rs-grow rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, color: 'var(--fg)' }}

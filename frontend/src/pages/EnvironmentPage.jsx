@@ -177,25 +177,24 @@ export default function EnvironmentPage({ setAction }) {
               return (
                 <div 
                   key={key} 
-                  className="rs-card rs-flex rs-flex-col rs-items-center"
+                  className="rs-card rs-flex rs-flex-col rs-items-center rs-relative"
                   style={{
-                    position: 'relative',
                     opacity: r.stale ? 0.6 : 1,
                     border: r.persons > 0 ? '1px solid color-mix(in srgb, var(--md-tertiary) 40%, transparent)' : undefined,
                     boxShadow: r.persons > 0 ? '0 0 15px color-mix(in srgb, var(--md-tertiary) 10%, transparent)' : undefined,
                     backdropFilter: 'var(--glass-blur)',
                   }}
                 >
-                  {r.stale && <div className="rs-pill" style={{ position: 'absolute', top: 12, right: 12, fontSize: 'var(--rs-fs-nano)', background: 'var(--warn)', color: 'black' }}>STALE</div>}
+                  {r.stale && <div className="rs-pill rs-type-nano" style={{ position: 'absolute', top: 12, right: 12, background: 'var(--warn)', color: 'black' }}>STALE</div>}
                   <div className="rs-card-label">{key.replace('_', ' ').toUpperCase()}</div>
                   
                   <div style={{ fontSize: '4rem', fontWeight: 300, lineHeight: 1, margin: '12px 0' }}>{r.persons}</div>
                   
-                  <div style={{ color: act.color, fontSize: 'var(--rs-fs-micro)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  <div className="rs-type-micro" style={{ color: act.color, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                     {act.icon} {act.label}
                   </div>
 
-                  <div className="rs-mt-5 rs-w-full rs-flex rs-justify-between" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', fontFamily: 'var(--font-mono)' }}>
+                  <div className="rs-mt-5 rs-w-full rs-flex rs-justify-between rs-muted rs-type-micro rs-mono">
                     <span>{r.temperature ? `${r.temperature}°F` : '--°F'}</span>
                     <span style={{ color: r.lights_on ? 'var(--warn)' : 'inherit' }}>
                       {r.lights_on ? '◉ LIGHTS ON' : '◌ LIGHTS OFF'}
@@ -243,36 +242,36 @@ export default function EnvironmentPage({ setAction }) {
                 </div>
 
                 <div style={{ margin: '20px 0' }}>
-                  <div className="rs-flex rs-justify-between rs-mb-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
+                  <div className="rs-flex rs-justify-between rs-mb-2 rs-muted rs-type-nano">
                     <span>BATTERY</span>
                     <span>{rover.battery_pct}% ({rover.battery_v}V)</span>
                   </div>
-                  <div className="rs-w-full" style={{ height: 4, background: 'var(--md-surface-container-high)', borderRadius: 2, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${rover.battery_pct}%`, background: 'var(--md-primary)' }} />
+                  <div className="rs-w-full rs-clip" style={{ height: 4, background: 'var(--md-surface-container-high)', borderRadius: 2 }}>
+                    <div className="rs-h-full" style={{ width: `${rover.battery_pct}%`, background: 'var(--md-primary)' }} />
                   </div>
                 </div>
 
                 <div className="rs-gap-5 rs-mb-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                   <div>
-                    <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>SPEED</div>
-                    <div style={{ fontSize: 'var(--rs-fs-small)', fontWeight: 500 }}>{rover.speed_ms} m/s</div>
+                    <div className="rs-card-label rs-type-nano">SPEED</div>
+                    <div className="rs-type-small" style={{ fontWeight: 500 }}>{rover.speed_ms} m/s</div>
                   </div>
                   <div>
-                    <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>HEADING</div>
-                    <div style={{ fontSize: 'var(--rs-fs-small)', fontWeight: 500 }}>{rover.heading}°</div>
+                    <div className="rs-card-label rs-type-nano">HEADING</div>
+                    <div className="rs-type-small" style={{ fontWeight: 500 }}>{rover.heading}°</div>
                   </div>
                 </div>
 
                 <div className="rs-mb-3 rs-flex rs-justify-between" style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-                  <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>MISSION STATUS</div>
-                  <div style={{ fontSize: 'var(--rs-fs-tiny)' }}>
+                  <div className="rs-card-label rs-type-nano">MISSION STATUS</div>
+                  <div className="rs-type-tiny">
                     {rover.mission_total > 0 
                       ? `Waypoint ${rover.mission_current} of ${rover.mission_total}`
                       : 'No active mission'}
                   </div>
                 </div>
 
-                <div style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-nano)' }}>
+                <div className="rs-muted rs-mono rs-type-nano">
                   ◈ GPS: {rover.lat.toFixed(6)}, {rover.lon.toFixed(6)}
                 </div>
               </div>
@@ -288,7 +287,7 @@ export default function EnvironmentPage({ setAction }) {
             </div>
 
             <div className="rs-card" style={{ borderStyle: 'dashed', background: 'transparent', backdropFilter: 'var(--glass-blur-sm)' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-tiny)', color: 'var(--primary)' }}>◈ GPS: {rover.lat}, {rover.lon}</div>
+              <div className="rs-mono rs-type-tiny" style={{ color: 'var(--primary)' }}>◈ GPS: {rover.lat}, {rover.lon}</div>
               <div className="rs-card-meta rs-mt-1">Full real-time map integration is planned for Phase 14.</div>
             </div>
           </>

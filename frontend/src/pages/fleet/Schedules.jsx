@@ -106,7 +106,7 @@ export default function Schedules() {
 
       <div className="rs-card">
         <div className="rs-table-wrap">
-          <table className="rs-w-full" style={{ textAlign: 'left', borderCollapse: 'collapse' }}>
+          <table className="rs-w-full rs-text-left" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                 <th className="rs-p-3">Enabled</th>
@@ -127,7 +127,7 @@ export default function Schedules() {
                     </td>
                     <td className="rs-p-3">{s.name}</td>
                     <td className="rs-p-3">{p ? p.name : 'Unknown'}</td>
-                    <td className="rs-p-3">{renderCron(s.cron_utc)}<br/><small style={{color: 'var(--text-muted)'}}>{s.timezone_display}</small></td>
+                    <td className="rs-p-3">{renderCron(s.cron_utc)}<br/><small className="rs-muted">{s.timezone_display}</small></td>
                     <td className="rs-p-3">{s.next_run ? new Date(s.next_run + 'Z').toLocaleString() : 'Pending'}</td>
                     <td className="rs-p-3">
                       <button className="rs-btn-ghost" style={{ marginRight: 5 }} onClick={() => openEdit(s)}>Edit</button>

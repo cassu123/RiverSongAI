@@ -94,7 +94,7 @@ export default function Overview({ setAction }) {
       <h2>Overview</h2>
       <div className="grid grid-cols-1 rail:grid-cols-[3fr_2fr] gap-5">
         <div className="rs-map">
-          <MapContainer center={[0, 0]} zoom={2} className="rs-w-full" style={{ height: '100%' }}>
+          <MapContainer center={[0, 0]} zoom={2} className="rs-w-full rs-h-full">
             <TileLayer
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
               attribution="Tiles &copy; Esri"

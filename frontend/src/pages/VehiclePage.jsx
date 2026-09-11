@@ -248,8 +248,8 @@ export default function VehiclePage({ setAction, onNavigate }) {
                 <div className="cockpit-input-box">
                   <span className="card-metric-label">TYPE</span>
                   <select
-                    className="cockpit-input-raw"
-                    style={{ background: 'transparent', cursor: 'pointer' }}
+                    className="cockpit-input-raw rs-pointer"
+                    style={{ background: 'transparent' }}
                     value={newVehicle.vehicle_type}
                     onChange={e => setNewVehicle({ ...newVehicle, vehicle_type: e.target.value })}
                   >
@@ -402,7 +402,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
 
       {/* Sector Vehicles Grid */}
       <div className="rs-flex rs-justify-between rs-items-center rs-mt-3 rs-mb-2">
-        <span className="card-metric-label" style={{ fontSize: 'var(--rs-fs-micro)', letterSpacing: '0.12em' }}>
+        <span className="card-metric-label rs-type-micro" style={{ letterSpacing: '0.12em' }}>
           SECTOR VEHICLES ({vehicles.length})
         </span>
       </div>
@@ -474,7 +474,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
                       {odo > 0 ? (
                         <>{odo.toLocaleString()} <span className="card-metric-unit">{unit}</span></>
                       ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-small)' }}>Not set</span>
+                        <span className="rs-muted rs-type-small">Not set</span>
                       )}
                     </div>
                   </div>

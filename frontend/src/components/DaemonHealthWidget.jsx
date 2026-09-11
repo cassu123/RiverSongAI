@@ -118,11 +118,9 @@ export default function DaemonHealthWidget({ token }) {
         )
       })}
       <div
-        className="rs-mt-3" style={{
+        className="rs-mt-3 rs-mono rs-type-nano" style={{
           paddingTop: 8,
           borderTop: `1px solid ${C.divider}`,
-          fontFamily: 'var(--font-mono)',
-          fontSize: 'var(--rs-fs-nano)',
           letterSpacing: '0.06em',
           color: liveCount === names.length ? C.dim : C.amber,
           opacity: liveCount === names.length ? 0.7 : 1,
@@ -140,34 +138,27 @@ function DaemonRow({ name, alive, port, status, age, first }) {
     <div
       role="group"
       aria-label={`${name.replace(/_/g, ' ')}: ${alive ? 'alive' : 'no heartbeat'}`}
-      className="rs-flex rs-items-center rs-gap-2" style={{
+      className="rs-flex rs-items-center rs-gap-2 rs-min-w-0" style={{
         padding: '9px 0',
         borderTop: first ? 'none' : `1px solid ${C.divider}`,
-        minWidth: 0,
       }}
     >
       <span
         aria-hidden="true"
-        style={{
+        className="rs-no-shrink" style={{
           inlineSize: 7,
           blockSize: 7,
           borderRadius: '50%',
           background: tone,
           boxShadow: alive ? `0 0 8px ${tone}` : 'none',
-          flexShrink: 0,
         }}
       />
       <span
-        className="rs-grow" style={{
-          fontSize: 'var(--rs-fs-nano)',
+        className="rs-grow rs-type-nano rs-min-w-0 rs-clip rs-ellipsis rs-nowrap" style={{
           fontWeight: 800,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           color: alive ? C.text : C.dim,
-          minWidth: 0,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
         }}
       >
         {name.replace(/_/g, ' ')}
@@ -176,12 +167,9 @@ function DaemonRow({ name, alive, port, status, age, first }) {
           worth surfacing, the expected one is noise next to the dot. */}
       {status && status !== 'alive' && (
         <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 'var(--rs-fs-nano)',
+          className="rs-mono rs-type-nano rs-no-shrink" style={{
             letterSpacing: '0.04em',
             color: C.amber,
-            flexShrink: 0,
           }}
         >
           {String(status).toUpperCase()}
@@ -189,25 +177,19 @@ function DaemonRow({ name, alive, port, status, age, first }) {
       )}
       {port != null && (
         <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 'var(--rs-fs-nano)',
+          className="rs-mono rs-type-nano rs-no-shrink" style={{
             letterSpacing: '0.04em',
             color: C.dim,
-            flexShrink: 0,
           }}
         >
           :{port}
         </span>
       )}
       <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 'var(--rs-fs-nano)',
+        className="rs-mono rs-type-nano rs-no-shrink" style={{
           letterSpacing: '0.04em',
           color: alive ? C.dim : C.red,
           opacity: alive ? 0.75 : 1,
-          flexShrink: 0,
         }}
         title={alive ? 'Last heartbeat' : 'No heartbeat in over 60 seconds'}
       >
@@ -220,10 +202,8 @@ function DaemonRow({ name, alive, port, status, age, first }) {
 function Note({ children, tone = C.dim }) {
   return (
     <div
-      style={{
+      className="rs-mono rs-type-nano" style={{
         padding: '14px 0',
-        fontFamily: 'var(--font-mono)',
-        fontSize: 'var(--rs-fs-nano)',
         letterSpacing: '0.05em',
         color: tone,
       }}

@@ -143,7 +143,7 @@ export default function MemoryPage({ setAction }) {
         <div className="rs-card rs-grow" style={{ padding: '8px 16px', background: 'var(--md-surface-container-low)' }}>
           <input 
             type="text" 
-            className="rs-w-full" style={{ all: 'unset', fontSize: 'var(--rs-fs-small)' }} 
+            className="rs-w-full rs-type-small" style={{ all: 'unset' }} 
             placeholder="FILTER ARCHIVES..." 
             value={filter} 
             onChange={e => setFilter(e.target.value)} 
@@ -165,7 +165,7 @@ export default function MemoryPage({ setAction }) {
     const kind = m.source_kind || 'conversation'
     const ref = m.source_ref ? ` (${m.source_ref})` : ''
     const date = new Date(m.created_at || m.last_updated).toLocaleDateString()
-    return <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>Learned from {kind}{ref}, {date}</span>
+    return <span className="rs-muted rs-type-nano">Learned from {kind}{ref}, {date}</span>
   }
 
   return (
@@ -190,16 +190,16 @@ export default function MemoryPage({ setAction }) {
 
       {(activeTab === 'ALL' || activeTab === 'FACT') && (
         <form onSubmit={handleCreateFact} className="rs-card is-wide animate-page-in" style={addFormStyle}>
-          <span className="rs-card-label" style={{ flexShrink: 0, color: 'var(--primary)', alignSelf: isPhone ? 'flex-start' : 'center' }}>ADD FACT</span>
+          <span className="rs-card-label rs-no-shrink" style={{ color: 'var(--primary)', alignSelf: isPhone ? 'flex-start' : 'center' }}>ADD FACT</span>
           <input className="rs-card" placeholder="Key (e.g. name)" value={newFact.key} onChange={e => setNewFact({...newFact, key: e.target.value})} style={addInput(1)} />
           <input className="rs-card" placeholder="Value (e.g. Alice)" value={newFact.value} onChange={e => setNewFact({...newFact, value: e.target.value})} style={addInput(2)} />
-          <button type="submit" className="rs-pill" style={{ background: 'var(--primary)', color: 'var(--bg)', flexShrink: 0, whiteSpace: 'nowrap' }}>ADD</button>
+          <button type="submit" className="rs-pill rs-no-shrink rs-nowrap" style={{ background: 'var(--primary)', color: 'var(--bg)' }}>ADD</button>
         </form>
       )}
 
       {(activeTab === 'ALL' || activeTab === 'PREFERENCE') && (
         <form onSubmit={handleCreatePref} className="rs-card is-wide animate-page-in" style={addFormStyle}>
-          <span className="rs-card-label" style={{ flexShrink: 0, color: 'var(--rs-status-warning)', alignSelf: isPhone ? 'flex-start' : 'center' }}>ADD PREF</span>
+          <span className="rs-card-label rs-no-shrink" style={{ color: 'var(--rs-status-warning)', alignSelf: isPhone ? 'flex-start' : 'center' }}>ADD PREF</span>
           <input className="rs-card" placeholder="Category" value={newPref.category} onChange={e => setNewPref({...newPref, category: e.target.value})} style={addInput(1)} />
           <input className="rs-card" placeholder="Value" value={newPref.value} onChange={e => setNewPref({...newPref, value: e.target.value})} style={addInput(2)} />
           <select className="rs-card" value={newPref.confidence} onChange={e => setNewPref({...newPref, confidence: e.target.value})} style={{ ...addInput('0 0 auto'), padding: 8 }}>
@@ -207,7 +207,7 @@ export default function MemoryPage({ setAction }) {
             <option value="medium">Medium</option>
             <option value="high">High</option>
           </select>
-          <button type="submit" className="rs-pill" style={{ background: 'var(--rs-status-warning)', color: 'var(--bg)', flexShrink: 0, whiteSpace: 'nowrap' }}>ADD</button>
+          <button type="submit" className="rs-pill rs-no-shrink rs-nowrap" style={{ background: 'var(--rs-status-warning)', color: 'var(--bg)' }}>ADD</button>
         </form>
       )}
 
@@ -230,26 +230,26 @@ export default function MemoryPage({ setAction }) {
                 </span>
                 
                 {m._type === 'FACT' && (
-                  <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 6px', background: m.source === 'explicit' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)' }}>
+                  <span className="rs-pill rs-type-nano" style={{ padding: '2px 6px', background: m.source === 'explicit' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)' }}>
                     {m.source.toUpperCase()}
                   </span>
                 )}
                 {m._type === 'PREFERENCE' && (
-                  <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 6px', opacity: 0.8 }}>
+                  <span className="rs-pill rs-type-nano" style={{ padding: '2px 6px', opacity: 0.8 }}>
                     CONFIDENCE: {m.confidence.toUpperCase()}
                   </span>
                 )}
                 
                 <div className="rs-flex rs-gap-2" style={{ marginLeft: 'auto' }}>
                   {m._type === 'SUGGESTION' && (
-                    <button className="rs-pill" onClick={() => handleApproveSuggestion(m.id)} style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)', background: 'var(--rs-status-success)' }}>
+                    <button className="rs-pill rs-type-nano" onClick={() => handleApproveSuggestion(m.id)} style={{ padding: '4px 8px', background: 'var(--rs-status-success)' }}>
                       APPROVE
                     </button>
                   )}
                   {editingId !== m.id && m._type !== 'SUGGESTION' && (
-                    <button className="rs-pill" onClick={() => startEdit(m)} style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)' }}>EDIT</button>
+                    <button className="rs-pill rs-type-nano" onClick={() => startEdit(m)} style={{ padding: '4px 8px' }}>EDIT</button>
                   )}
-                  <button className="rs-pill" onClick={() => handleDelete(m.id, m._type)} style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)', color: 'var(--rs-status-error)' }}>
+                  <button className="rs-pill rs-type-nano" onClick={() => handleDelete(m.id, m._type)} style={{ padding: '4px 8px', color: 'var(--rs-status-error)' }}>
                     {m._type === 'SUGGESTION' ? 'DISMISS' : 'DELETE'}
                   </button>
                 </div>
@@ -284,7 +284,7 @@ export default function MemoryPage({ setAction }) {
                   </div>
                 </div>
               ) : (
-                <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                <div className="rs-card-value rs-type-body" style={{ lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
                   {m.text}
                 </div>
               )}
@@ -292,7 +292,7 @@ export default function MemoryPage({ setAction }) {
               <div className="rs-mt-4 rs-flex rs-justify-between" style={{ alignItems: 'flex-end' }}>
                 {renderProvenance(m)}
                 {m._type === 'SUMMARY' && m.expires_at && (
-                  <span style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--rs-status-warning)' }}>
+                  <span className="rs-type-nano" style={{ color: 'var(--rs-status-warning)' }}>
                     Expires: {new Date(m.expires_at).toLocaleDateString()}
                   </span>
                 )}
